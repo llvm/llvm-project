@@ -15,7 +15,9 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICRTDYLDMEMORYMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMap.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/Support/Compiler.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -23,14 +25,13 @@ namespace llvm {
 namespace orc {
 
 /// Remote-mapped RuntimeDyld-compatible memory manager.
-class EPCGenericRTDyldMemoryManager : public RuntimeDyld::MemoryManager {
+class LLVM_ABI EPCGenericRTDyldMemoryManager
+    : public RuntimeDyld::MemoryManager {
 public:
-  /// Symbol addresses for memory access.
+  /// Bindings to the executor-side memory manager, plus the EH-frame
+  /// registration alloc-action wrappers.
   struct SymbolAddrs {
-    ExecutorAddr Instance;
-    ExecutorAddr Reserve;
-    ExecutorAddr Finalize;
-    ExecutorAddr Deallocate;
+    SimpleMemoryMapBindings MemMgr;
     ExecutorAddr RegisterEHFrame;
     ExecutorAddr DeregisterEHFrame;
   };
@@ -50,7 +51,7 @@ public:
   EPCGenericRTDyldMemoryManager(EPCGenericRTDyldMemoryManager &&) = delete;
   EPCGenericRTDyldMemoryManager &
   operator=(EPCGenericRTDyldMemoryManager &&) = delete;
-  ~EPCGenericRTDyldMemoryManager();
+  ~EPCGenericRTDyldMemoryManager() override;
 
   uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
                                unsigned SectionID,

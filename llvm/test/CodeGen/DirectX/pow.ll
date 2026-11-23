@@ -25,5 +25,31 @@ entry:
   ret half %elt.pow
 }
 
+define noundef float @powi_float(float noundef %a, i32 noundef %b) {
+entry:
+; CHECK: [[CAST:%.*]] = sitofp i32 %b to float
+; DOPCHECK: call float @dx.op.unary.f32(i32 23, float %a)
+; EXPCHECK: call float @llvm.log2.f32(float %a)
+; CHECK: fmul float %{{.*}}, [[CAST]]
+; DOPCHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}})
+; EXPCHECK: call float @llvm.exp2.f32(float %{{.*}})
+  %elt.powi = call float @llvm.powi.f32.i32(float %a, i32 %b)
+  ret float %elt.powi
+}
+
+define noundef half @powi_half(half noundef %a, i32 noundef %b) {
+entry:
+; CHECK: [[CAST:%.*]] = sitofp i32 %b to half
+; DOPCHECK: call half @dx.op.unary.f16(i32 23, half %a)
+; EXPCHECK: call half @llvm.log2.f16(half %a)
+; CHECK: fmul half %{{.*}}, [[CAST]]
+; DOPCHECK: call half @dx.op.unary.f16(i32 21, half %{{.*}})
+; EXPCHECK: call half @llvm.exp2.f16(half %{{.*}})
+  %elt.powi = call half @llvm.powi.f16.i32(half %a, i32 %b)
+  ret half %elt.powi
+}
+
 declare half @llvm.pow.f16(half,half)
 declare float @llvm.pow.f32(float,float)
+declare half @llvm.powi.f16.i32(half,i32)
+declare float @llvm.powi.f32.i32(float,i32)

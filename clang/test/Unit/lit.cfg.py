@@ -51,7 +51,7 @@ def find_shlibpath_var():
         yield "LD_LIBRARY_PATH"
     elif platform.system() == "Darwin":
         yield "DYLD_LIBRARY_PATH"
-    elif platform.system() == "Windows":
+    elif platform.system() == "Windows" or sys.platform == "cygwin":
         yield "PATH"
     elif platform.system() == "AIX":
         yield "LIBPATH"
@@ -73,6 +73,14 @@ else:
     lit_config.warning(
         "unable to inject shared library path on '{}'".format(platform.system())
     )
+
+# The unit tests on z/OS need auto-conversion turned on.
+if sys.platform == "zos":
+    config.environment["_BPXK_AUTOCVT"] = "ON"
+    config.environment["_TAG_REDIR_IN"] = "TXT"
+    config.environment["_TAG_REDIR_OUT"] = "TXT"
+    config.environment["_TAG_REDIR_ERR"] = "TXT"
+    config.environment["_CEE_RUNOPTS"] = "FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)"
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable

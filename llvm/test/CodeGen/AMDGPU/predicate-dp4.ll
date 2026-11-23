@@ -16,7 +16,7 @@ IF:                                             ; preds = %main_body
 
 ENDIF:                                            ; preds = %IF, %main_body
   %5 = phi float [%4, %IF], [0.000000e+00, %main_body]
-  %6 = insertelement <4 x float> undef, float %5, i32 0
+  %6 = insertelement <4 x float> poison, float %5, i32 0
   call void @llvm.r600.store.swizzle(<4 x float> %6, i32 0, i32 0)
   ret void
 }

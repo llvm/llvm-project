@@ -1,0 +1,77 @@
+# This is malformed DWARF where a subprogram is its own specification. Check
+# that parsing the function terminates instead of recursing forever.
+#
+# DW_TAG_compile_unit
+#   DW_AT_language    (DW_LANG_C99)
+#   DW_AT_low_pc      (0x1000)
+#   DW_AT_high_pc     (0x04)
+#
+#   DW_TAG_subprogram
+#     DW_AT_name           ("boom")
+#     DW_AT_low_pc         (0x1000)
+#     DW_AT_high_pc        (0x04)
+#     DW_AT_specification  (0x0000001a "boom")
+#
+#   NULL
+
+# RUN: yaml2obj %s > %t
+# RUN: %lldb %t -o "image lookup -v -n boom" -o exit | FileCheck %s
+
+# CHECK: 1 match found
+# CHECK: Function: id = {0x0000001a}, name = "boom"
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    Size:            0x4
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref4
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0C
+            - Value:           0x1000
+            - Value:           0x04
+        - AbbrCode:        0x2
+          Values:
+            - CStr:            boom
+            - Value:           0x1000
+            - Value:           0x04
+            - Value:           0x1A
+        - AbbrCode:        0x0

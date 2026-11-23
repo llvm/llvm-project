@@ -1,4 +1,8 @@
+! RUN: llvm-mc %s -triple=sparc -mcpu=v9 -show-encoding | FileCheck %s
 ! RUN: llvm-mc %s -triple=sparc64-unknown-linux-gnu -show-encoding | FileCheck %s
+
+!! All V9 instructions, including 64-bit ones, should be available in 32-bit
+!! mode when CPU is set to V9.
 
         ! CHECK: sllx %g1, %i2, %i0  ! encoding: [0xb1,0x28,0x50,0x1a]
         sllx %g1, %i2, %i0
@@ -35,4 +39,3 @@
 
         ! CHECK: udivx %g1, 63, %i0  ! encoding: [0xb0,0x68,0x60,0x3f]
         udivx %g1, 63, %i0
-

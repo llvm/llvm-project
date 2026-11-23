@@ -1,8 +1,8 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
-; RUN:   -stop-before=finalize-isel -verify-machineinstrs | \
+; RUN:   -stop-before=finalize-isel | \
 ; RUN:   FileCheck -check-prefix=BEFORE-FINALIZE-ISEL %s
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
-; RUN:   -stop-after=finalize-isel -verify-machineinstrs | \
+; RUN:   -stop-after=finalize-isel | \
 ; RUN:   FileCheck -check-prefix=AFTER-FINALIZE-ISEL %s
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s
@@ -36,7 +36,7 @@ entry:
   ret double %0
 
 ; BEFORE-FINALIZE-ISEL: test_setrnd
-; BEFORE-FINALIZE-ISEL: SETRND killed %1, implicit-def dead $rm, implicit $rm
+; BEFORE-FINALIZE-ISEL: SETRND %1, implicit-def dead $rm, implicit $rm
 
 ; AFTER-FINALIZE-ISEL: test_setrnd
 ; AFTER-FINALIZE-ISEL: MFFS implicit $rm

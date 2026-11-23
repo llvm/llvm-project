@@ -105,9 +105,9 @@ func.func @ipowi32_fold(%result : memref<?xi32>) {
 
 // --- Test vector folding ---
   %arg11_base = arith.constant 2 : i32
-  %arg11_base_vec = vector.splat %arg11_base : vector<2x2xi32>
+  %arg11_base_vec = vector.broadcast %arg11_base : i32 to vector<2x2xi32>
   %arg11_power = arith.constant 30 : i32
-  %arg11_power_vec = vector.splat %arg11_power : vector<2x2xi32>
+  %arg11_power_vec = vector.broadcast %arg11_power : i32 to vector<2x2xi32>
   %res11_vec = math.ipowi %arg11_base_vec, %arg11_power_vec : vector<2x2xi32>
   %i11 = arith.constant 11 : index
   %res11 = vector.extract %res11_vec[1, 1] : i32 from vector<2x2xi32>

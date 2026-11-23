@@ -12,8 +12,7 @@
 
 // Make sure __debug_less asserts when the comparator is not consistent.
 
-// REQUIRES: has-unix-headers, libcpp-hardening-mode=debug
-// UNSUPPORTED: c++03
+// REQUIRES: can-test-hardening-assertions-debug
 
 #include <algorithm>
 #include <iterator>

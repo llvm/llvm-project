@@ -4,8 +4,6 @@
 
 // REQUIRES: z3
 
-// expected-error@1 {{Z3 refutation rate:1/2}}
-
 int accepting(int n) {
   if (n == 4) {
     n = n / (n-4); // expected-warning {{Division by zero}}

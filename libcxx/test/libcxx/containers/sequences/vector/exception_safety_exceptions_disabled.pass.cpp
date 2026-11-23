@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-#error exceptions should be disabled.
+#  error exceptions should be disabled.
 #endif
 
 bool allow_moves = false;

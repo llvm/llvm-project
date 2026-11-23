@@ -17,7 +17,6 @@
 
 struct PlatformConnectOptions;
 struct PlatformShellCommand;
-class ProcessInstanceInfoMatch;
 
 namespace lldb {
 
@@ -111,6 +110,9 @@ public:
   explicit operator bool() const;
 
   bool IsValid() const;
+
+  /// Returns true if this platform is the host platform, otherwise false.
+  bool IsHost() const;
 
   void Clear();
 

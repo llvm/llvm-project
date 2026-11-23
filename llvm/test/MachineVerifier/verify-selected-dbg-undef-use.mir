@@ -1,4 +1,4 @@
-# RUN: not --crash llc -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 --- |
@@ -15,12 +15,10 @@ name: selected_notrack
 regBankSelected: true
 selected: true
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
    ; CHECK-NOT: function: selected_notrack
-   DBG_VALUE %0, $noreg, $noreg, $noreg, $noreg
+   DBG_VALUE %0:_, $noreg, $noreg, $noreg, $noreg
 ...
 
 ---
@@ -28,13 +26,11 @@ name: selected_track
 regBankSelected: true
 selected: true
 tracksDebugUserValues: true
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
-   ; CHECK: *** Bad machine code: Generic virtual register invalid in a Selected function ***
+   ; CHECK: Bad machine code: Generic virtual register invalid in a Selected function
    ; CHECK: function: selected_track
    ; CHECK: instruction: DBG_VALUE %0:_
    ; CHECK: operand 0: %0
-   DBG_VALUE %0, $noreg, $noreg, $noreg, $noreg
+   DBG_VALUE %0:_, $noreg, $noreg, $noreg, $noreg
 ...

@@ -22,6 +22,10 @@ class LLDB_API SBQueueItem {
 public:
   SBQueueItem();
 
+  SBQueueItem(const lldb::SBQueueItem &rhs);
+
+  lldb::SBQueueItem &operator=(const lldb::SBQueueItem &rhs);
+
   ~SBQueueItem();
 
   explicit operator bool() const;

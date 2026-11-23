@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // CHECK-LABEL: def X {
 //       CHECK:   int a = 6;

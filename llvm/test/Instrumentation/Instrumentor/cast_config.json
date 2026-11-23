@@ -1,0 +1,48 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_",
+    "runtime_prefix.description": "The runtime API prefix.",
+    "runtime_stubs_file": "",
+    "runtime_stubs_file.description": "The file into which runtime stubs should be written.",
+    "demangle_function_names": true,
+    "demangle_function_names.description": "Demangle functions names passed to the runtime."
+  },
+  "instruction_pre": {
+    "cast": {
+      "enabled": true,
+      "input": true,
+      "input.description": "The input value of the cast.",
+      "input_type_id": true,
+      "input_type_id.description": "The type id of the input value.",
+      "input_size": true,
+      "input_size.description": "The size of the input value.",
+      "result.description": "The result of the cast.",
+      "result_type_id": true,
+      "result_type_id.description": "The type id of the result value.",
+      "result_size": true,
+      "result_size.description": "The size of the result value.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction."
+    }
+  },
+  "instruction_post": {
+    "cast": {
+      "enabled": true,
+      "input": true,
+      "input.description": "The input value of the cast.",
+      "input_type_id": true,
+      "input_type_id.description": "The type id of the input value.",
+      "input_size": true,
+      "input_size.description": "The size of the input value.",
+      "result": true,
+      "result.replace": true,
+      "result.description": "The result of the cast.",
+      "result_type_id": true,
+      "result_type_id.description": "The type id of the result value.",
+      "result_size": true,
+      "result_size.description": "The size of the result value.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction."
+    }
+  }
+}

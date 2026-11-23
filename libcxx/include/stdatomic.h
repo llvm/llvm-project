@@ -20,6 +20,7 @@ template<class T>
 
 #define ATOMIC_BOOL_LOCK_FREE see below
 #define ATOMIC_CHAR_LOCK_FREE see below
+#define ATOMIC_CHAR8_T_LOCK_FREE see below
 #define ATOMIC_CHAR16_T_LOCK_FREE see below
 #define ATOMIC_CHAR32_T_LOCK_FREE see below
 #define ATOMIC_WCHAR_T_LOCK_FREE see below
@@ -231,7 +232,7 @@ using std::atomic_store_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_signal_fence _LIBCPP_USING_IF_EXISTS;
 using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 
-#  elif defined(_LIBCPP_COMPILER_CLANG_BASED)
+#  elif !defined(__cplusplus) || defined(_LIBCPP_COMPILER_CLANG_BASED)
 
 // Before C++23, we include the next <stdatomic.h> on the path to avoid hijacking
 // the header. We do this because Clang has historically shipped a <stdatomic.h>

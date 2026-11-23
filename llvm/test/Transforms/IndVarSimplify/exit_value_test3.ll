@@ -4,9 +4,9 @@
 ; is high because the loop can be deleted after the exit value rewrite.
 ;
 ; CHECK-LABEL: @_Z3fooPKcjj(
-; CHECK: udiv
 ; CHECK: [[LABEL:^[a-zA-Z0-9_.]+]]:
 ; CHECK-NOT: br {{.*}} [[LABEL]]
+; CHECK: udiv
 
 define i32 @_Z3fooPKcjj(ptr nocapture readnone %s, i32 %len, i32 %c) #0 {
 entry:

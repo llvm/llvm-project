@@ -20,6 +20,11 @@
 # FIXME: WebAssemblyInstPrinter does not print immediates.
 0x11 0x80 0x01 0x00
 
+# A non-zero table index (a multi-table module, or misaligned bytes fed to the
+# disassembler) must be printed rather than trigger an assertion.
+# CHECK: call_indirect 1, 0
+0x11 0x00 0x01
+
 # CHECK: call 0
 0x10 0x00
 

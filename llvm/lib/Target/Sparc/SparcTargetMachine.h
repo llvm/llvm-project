@@ -16,23 +16,39 @@
 #include "SparcInstrInfo.h"
 #include "SparcSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 namespace llvm {
 
 class SparcTargetMachine : public CodeGenTargetMachineImpl {
+  const SparcOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  bool is64Bit;
   mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS, SoftFloat;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             SoftFloat == RHS.SoftFloat;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<SparcSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   SparcTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
                      std::optional<Reloc::Model> RM,
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                     bool JIT, bool is64bit);
+                     bool JIT);
   ~SparcTargetMachine() override;
+
+  const SparcOptions &getCLOpts() const { return CLOpts; }
 
   const SparcSubtarget *getSubtargetImpl(const Function &F) const override;
 
@@ -41,10 +57,19 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 
 /// Sparc 32-bit target machine

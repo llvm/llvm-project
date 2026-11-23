@@ -41,6 +41,10 @@ if (CLANG_LINK_CLANG_DYLIB)
   set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
 endif()
 
+if (HAIKU)
+  list(APPEND _DEPS network)
+endif()
+
 add_clang_library(clang-cpp
                   SHARED
                   ${INSTALL_WITH_TOOLCHAIN}
@@ -57,7 +61,7 @@ endif()
 
 # Optimize function calls for default visibility definitions to avoid PLT and
 # reduce dynamic relocations.
-if (NOT APPLE AND NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+if (NOT APPLE AND LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
   target_link_options(clang-cpp PRIVATE LINKER:-Bsymbolic-functions)
 endif()
 if (MINGW OR CYGWIN)

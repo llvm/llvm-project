@@ -1,4 +1,4 @@
-//===--- AvoidEndlCheck.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,6 @@ namespace clang::tidy::performance {
 void AvoidEndlCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          unless(isExpansionInSystemHeader()),
           anyOf(cxxOperatorCallExpr(
                     hasOverloadedOperatorName("<<"),
                     hasRHS(declRefExpr(to(namedDecl(hasName("::std::endl"))))
@@ -42,7 +41,7 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
   // 'std::cout << "Hi" << std::endl;' into
   // 'std::cout << "Hi\n"';
 
-  if (llvm::isa<DeclRefExpr>(Expression)) {
+  if (isa<DeclRefExpr>(Expression)) {
     // Handle the more common streaming '... << std::endl' case
     const CharSourceRange TokenRange =
         CharSourceRange::getTokenRange(Expression->getSourceRange());
@@ -50,14 +49,14 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
         TokenRange, *Result.SourceManager, Result.Context->getLangOpts());
     if (SourceText.empty())
       SourceText = "std::endl";
-    auto Diag = diag(Expression->getBeginLoc(),
-                     "do not use '%0' with streams; use '\\n' instead")
-                << SourceText;
+    const auto Diag = diag(Expression->getBeginLoc(),
+                           "do not use '%0' with streams; use '\\n' instead")
+                      << SourceText;
     if (TokenRange.isValid())
       Diag << FixItHint::CreateReplacement(TokenRange, "'\\n'");
   } else {
     // Handle the less common function call 'std::endl(...)' case
-    const auto *CallExpression = llvm::cast<CallExpr>(Expression);
+    const auto *CallExpression = cast<CallExpr>(Expression);
     assert(CallExpression->getNumArgs() == 1);
 
     StringRef SourceText = Lexer::getSourceText(
@@ -66,9 +65,9 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
         *Result.SourceManager, Result.Context->getLangOpts());
     if (SourceText.empty())
       SourceText = "std::endl";
-    auto Diag = diag(CallExpression->getBeginLoc(),
-                     "do not use '%0' with streams; use '\\n' instead")
-                << SourceText;
+    const auto Diag = diag(CallExpression->getBeginLoc(),
+                           "do not use '%0' with streams; use '\\n' instead")
+                      << SourceText;
 
     const CharSourceRange ArgTokenRange = CharSourceRange::getTokenRange(
         CallExpression->getArg(0)->getSourceRange());

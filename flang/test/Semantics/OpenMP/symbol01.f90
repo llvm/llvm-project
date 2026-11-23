@@ -16,53 +16,53 @@ module md
   integer :: b
  end type myty
 end module md
-!DEF: /mm MainProgram
-program mm
+!DEF: /MM MainProgram
+program MM
  !REF: /md
  use :: md
- !DEF: /mm/c CommonBlockDetails
- !DEF: /mm/x ObjectEntity REAL(4)
- !DEF: /mm/y ObjectEntity REAL(4)
+ !DEF: /MM/c CommonBlockDetails
+ !DEF: /MM/x (InCommonBlock) ObjectEntity REAL(4)
+ !DEF: /MM/y (InCommonBlock) ObjectEntity REAL(4)
  common /c/x, y
- !REF: /mm/x
- !REF: /mm/y
+ !REF: /MM/x
+ !REF: /MM/y
  real x, y
- !DEF: /mm/myty Use
- !DEF: /mm/t ObjectEntity TYPE(myty)
+ !DEF: /MM/myty Use
+ !DEF: /MM/t ObjectEntity TYPE(myty)
  type(myty) :: t
- !DEF: /mm/b ObjectEntity INTEGER(4)
+ !DEF: /MM/b ObjectEntity INTEGER(4)
  integer b(10)
- !REF: /mm/t
+ !REF: /MM/t
  !REF: /md/myty/a
  t%a = 3.14
- !REF: /mm/t
+ !REF: /MM/t
  !REF: /md/myty/b
  t%b = 1
- !REF: /mm/b
+ !REF: /MM/b
  b = 2
- !DEF: /mm/a (Implicit) ObjectEntity REAL(4)
+ !DEF: /MM/a (Implicit) ObjectEntity REAL(4)
  a = 1.0
- !DEF: /mm/c (Implicit) ObjectEntity REAL(4)
+ !DEF: /MM/c (Implicit) ObjectEntity REAL(4)
  c = 2.0
 !$omp parallel do  private(a,t,/c/) shared(c)
- !DEF: /mm/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /MM/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,10
-  !DEF: /mm/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(4)
-  !DEF: /mm/OtherConstruct1/b HostAssoc INTEGER(4)
-  !REF: /mm/OtherConstruct1/i
+  !DEF: /MM/OtherConstruct1/a (OmpPrivate, OmpExplicit) HostAssoc REAL(4)
+  !DEF: /MM/OtherConstruct1/b (OmpShared) HostAssoc INTEGER(4)
+  !REF: /MM/OtherConstruct1/i
   a = a+b(i)
-  !DEF: /mm/OtherConstruct1/t (OmpPrivate) HostAssoc TYPE(myty)
+  !DEF: /MM/OtherConstruct1/t (OmpPrivate, OmpExplicit) HostAssoc TYPE(myty)
   !REF: /md/myty/a
-  !REF: /mm/OtherConstruct1/i
+  !REF: /MM/OtherConstruct1/i
   t%a = i
-  !DEF: /mm/OtherConstruct1/y (OmpPrivate) HostAssoc REAL(4)
+  !DEF: /MM/OtherConstruct1/y (OmpPrivate, OmpExplicit) HostAssoc REAL(4)
   y = 0.
-  !DEF: /mm/OtherConstruct1/x (OmpPrivate) HostAssoc REAL(4)
-  !REF: /mm/OtherConstruct1/a
-  !REF: /mm/OtherConstruct1/i
-  !REF: /mm/OtherConstruct1/y
+  !DEF: /MM/OtherConstruct1/x (OmpPrivate, OmpExplicit) HostAssoc REAL(4)
+  !REF: /MM/OtherConstruct1/a
+  !REF: /MM/OtherConstruct1/i
+  !REF: /MM/OtherConstruct1/y
   x = a+i+y
-  !DEF: /mm/OtherConstruct1/c (OmpShared) HostAssoc REAL(4)
+  !DEF: /MM/OtherConstruct1/c (OmpShared, OmpExplicit) HostAssoc REAL(4)
   c = 3.0
  end do
 end program

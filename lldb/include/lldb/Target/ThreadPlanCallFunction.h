@@ -19,7 +19,7 @@ namespace lldb_private {
 
 class ThreadPlanCallFunction : public ThreadPlan {
   // Create a thread plan to call a function at the address passed in the
-  // "function" argument.  If you plan to call GetReturnValueObject, then pass
+  // "function" argument.  If you plan to call GetReturnValue, then pass
   // in the return type, otherwise just pass in an invalid CompilerType.
 public:
   ThreadPlanCallFunction(Thread &thread, const Address &function,
@@ -59,8 +59,10 @@ public:
   // plan is complete, you can call "GetReturnValue()" to retrieve the value
   // that was extracted.
 
-  lldb::ValueObjectSP GetReturnValueObject() override {
-    return m_return_valobj_sp;
+  ThreadPlanReturnValue GetReturnValue() override {
+    if (m_return_valobj_sp)
+      return ReturnedValue{m_return_valobj_sp};
+    return {};
   }
 
   // Return the stack pointer that the function received on entry.  Any stack
@@ -95,6 +97,10 @@ public:
   void ThreadDestroyed() override { m_takedown_done = true; }
 
   void SetStopOthers(bool new_value) override;
+
+  /// Whether the call completed by throwing an error that reached the
+  /// language runtime's error backstop.
+  bool HitErrorBackstop() const { return m_hit_error_backstop; }
 
 protected:
   void ReportRegisterState(const char *message);
@@ -143,6 +149,11 @@ protected:
   bool m_should_clear_cxx_exception_bp;
   lldb::addr_t m_stop_address; // This is the address we stopped at.  Also set
                                // in DoTakedown;
+  /// The runtime that catches errors the expression doesn't handle, if it
+  /// runs as top-level code.
+  LanguageRuntime *m_error_backstop_runtime = nullptr;
+  lldb::BreakpointSP m_error_backstop_bp_sp;
+  bool m_hit_error_backstop = false;
 
 private:
   CompilerType m_return_type;

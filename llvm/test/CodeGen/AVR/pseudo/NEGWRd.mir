@@ -12,6 +12,7 @@
 
 ---
 name:            test_negwrd
+tracksRegLiveness: false
 body: |
   bb.0.entry:
     liveins: $r15r14

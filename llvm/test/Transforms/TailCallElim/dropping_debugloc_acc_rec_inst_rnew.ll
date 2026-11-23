@@ -41,9 +41,9 @@ declare i32 @test6_helper()
 define i32 @test7_multiple_accumulators(i32 %a) local_unnamed_addr !dbg !18 {
 ; CHECK-LABEL: define i32 @test7_multiple_accumulators(
 ; CHECK:  if.end3:
-; CHECK:    [[ACCUMULATOR_RET_TR:%.*]] = add nsw i32 %accumulator.tr, [[ACCUMULATE2:.*]]{{$}}
+; CHECK:    [[ACCUMULATOR_RET_TR:%.*]] = add i32 %accumulator.tr, [[ACCUMULATE2:.*]]{{$}}
 ; CHECK:  return:
-; CHECK:    [[ACCUMULATOR_RET_TR1:%.*]] = add nsw i32 %accumulator.tr, 0{{$}}
+; CHECK:    [[ACCUMULATOR_RET_TR1:%.*]] = add i32 %accumulator.tr, 0{{$}}
 ;
 entry:
   %tobool = icmp eq i32 %a, 0, !dbg !19

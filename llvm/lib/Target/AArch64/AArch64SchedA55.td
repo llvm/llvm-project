@@ -33,6 +33,8 @@ def CortexA55Model : SchedMachineModel {
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -426,7 +428,7 @@ def : InstRW<[CortexA55WriteAluVq_1], (instregex "(AND|EOR|NOT|ORN)v16i8",
   "(ORR|BIC)v(16i8|4i32|8i16)$", "MVNIv(4i32|4s|8i16)")>;
 // ASIMD max/min, basic
 def : InstRW<[CortexA55WriteAluVd_2], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
-def : InstRW<[CortexA55WriteAluVq_2], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
+def : InstRW<[CortexA55WriteAluVq_2], (instregex "[SU](MIN|MAX)P?v(16i8|4i32|8i16)")>;
 // SIMD max/min, reduce
 def : InstRW<[CortexA55WriteAluVq_4], (instregex "[SU](MAX|MIN)Vv")>;
 // ASIMD multiply, by element

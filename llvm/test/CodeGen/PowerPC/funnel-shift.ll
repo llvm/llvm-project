@@ -270,116 +270,92 @@ declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-LABEL: fshl_i37:
 ; CHECK32_32:       # %bb.0:
-; CHECK32_32-NEXT:    mflr 0
-; CHECK32_32-NEXT:    stwu 1, -32(1)
-; CHECK32_32-NEXT:    stw 0, 36(1)
-; CHECK32_32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK32_32-NEXT:    .cfi_offset lr, 4
-; CHECK32_32-NEXT:    .cfi_offset r27, -20
-; CHECK32_32-NEXT:    .cfi_offset r28, -16
-; CHECK32_32-NEXT:    .cfi_offset r29, -12
-; CHECK32_32-NEXT:    .cfi_offset r30, -8
-; CHECK32_32-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 27, 5
-; CHECK32_32-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 28, 3
-; CHECK32_32-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 29, 4
-; CHECK32_32-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 30, 6
-; CHECK32_32-NEXT:    clrlwi 3, 7, 27
-; CHECK32_32-NEXT:    mr 4, 8
-; CHECK32_32-NEXT:    li 5, 0
-; CHECK32_32-NEXT:    li 6, 37
-; CHECK32_32-NEXT:    bl __umoddi3
-; CHECK32_32-NEXT:    rotlwi 5, 30, 27
-; CHECK32_32-NEXT:    rlwimi 5, 27, 27, 0, 4
-; CHECK32_32-NEXT:    andi. 3, 4, 32
-; CHECK32_32-NEXT:    mr 6, 5
+; CHECK32_32-NEXT:    srwi 10, 8, 18
+; CHECK32_32-NEXT:    clrlwi 8, 8, 14
+; CHECK32_32-NEXT:    rlwimi 10, 7, 14, 14, 17
+; CHECK32_32-NEXT:    sub 8, 8, 10
+; CHECK32_32-NEXT:    rlwinm 7, 7, 28, 31, 31
+; CHECK32_32-NEXT:    add 7, 8, 7
+; CHECK32_32-NEXT:    lis 9, -17713
+; CHECK32_32-NEXT:    addi 7, 7, 2
+; CHECK32_32-NEXT:    ori 9, 9, 37197
+; CHECK32_32-NEXT:    addis 7, 7, 8
+; CHECK32_32-NEXT:    mulhwu 8, 7, 9
+; CHECK32_32-NEXT:    sub 9, 7, 8
+; CHECK32_32-NEXT:    srwi 9, 9, 1
+; CHECK32_32-NEXT:    add 8, 9, 8
+; CHECK32_32-NEXT:    srwi 8, 8, 5
+; CHECK32_32-NEXT:    mulli 8, 8, 37
+; CHECK32_32-NEXT:    sub 8, 7, 8
+; CHECK32_32-NEXT:    andi. 7, 8, 32
+; CHECK32_32-NEXT:    rotlwi 7, 6, 27
+; CHECK32_32-NEXT:    rlwimi 7, 5, 27, 0, 4
+; CHECK32_32-NEXT:    mr 5, 7
 ; CHECK32_32-NEXT:    bne 0, .LBB3_2
 ; CHECK32_32-NEXT:  # %bb.1:
-; CHECK32_32-NEXT:    mr 6, 29
+; CHECK32_32-NEXT:    mr 5, 4
 ; CHECK32_32-NEXT:  .LBB3_2:
-; CHECK32_32-NEXT:    clrlwi 4, 4, 27
-; CHECK32_32-NEXT:    subfic 7, 4, 32
-; CHECK32_32-NEXT:    srw 3, 6, 7
+; CHECK32_32-NEXT:    clrlwi 8, 8, 27
+; CHECK32_32-NEXT:    subfic 9, 8, 32
+; CHECK32_32-NEXT:    srw 10, 5, 9
 ; CHECK32_32-NEXT:    bne 0, .LBB3_4
 ; CHECK32_32-NEXT:  # %bb.3:
-; CHECK32_32-NEXT:    mr 29, 28
+; CHECK32_32-NEXT:    mr 4, 3
 ; CHECK32_32-NEXT:  .LBB3_4:
-; CHECK32_32-NEXT:    slw 8, 29, 4
-; CHECK32_32-NEXT:    or 3, 8, 3
+; CHECK32_32-NEXT:    slw 3, 4, 8
+; CHECK32_32-NEXT:    or 3, 3, 10
 ; CHECK32_32-NEXT:    beq 0, .LBB3_6
 ; CHECK32_32-NEXT:  # %bb.5:
-; CHECK32_32-NEXT:    slwi 5, 30, 27
+; CHECK32_32-NEXT:    slwi 7, 6, 27
 ; CHECK32_32-NEXT:  .LBB3_6:
-; CHECK32_32-NEXT:    srw 5, 5, 7
-; CHECK32_32-NEXT:    slw 4, 6, 4
-; CHECK32_32-NEXT:    or 4, 4, 5
-; CHECK32_32-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 27, 12(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 0, 36(1)
-; CHECK32_32-NEXT:    addi 1, 1, 32
-; CHECK32_32-NEXT:    mtlr 0
+; CHECK32_32-NEXT:    srw 4, 7, 9
+; CHECK32_32-NEXT:    slw 5, 5, 8
+; CHECK32_32-NEXT:    or 4, 5, 4
 ; CHECK32_32-NEXT:    blr
 ;
 ; CHECK32_64-LABEL: fshl_i37:
 ; CHECK32_64:       # %bb.0:
-; CHECK32_64-NEXT:    mflr 0
-; CHECK32_64-NEXT:    stwu 1, -32(1)
-; CHECK32_64-NEXT:    stw 0, 36(1)
-; CHECK32_64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK32_64-NEXT:    .cfi_offset lr, 4
-; CHECK32_64-NEXT:    .cfi_offset r27, -20
-; CHECK32_64-NEXT:    .cfi_offset r28, -16
-; CHECK32_64-NEXT:    .cfi_offset r29, -12
-; CHECK32_64-NEXT:    .cfi_offset r30, -8
-; CHECK32_64-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 27, 5
-; CHECK32_64-NEXT:    li 5, 0
-; CHECK32_64-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 28, 3
-; CHECK32_64-NEXT:    clrlwi 3, 7, 27
-; CHECK32_64-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 29, 4
-; CHECK32_64-NEXT:    mr 4, 8
-; CHECK32_64-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 30, 6
-; CHECK32_64-NEXT:    li 6, 37
-; CHECK32_64-NEXT:    bl __umoddi3
-; CHECK32_64-NEXT:    rotlwi 5, 30, 27
-; CHECK32_64-NEXT:    andi. 3, 4, 32
-; CHECK32_64-NEXT:    rlwimi 5, 27, 27, 0, 4
-; CHECK32_64-NEXT:    mr 6, 5
+; CHECK32_64-NEXT:    srwi 10, 8, 18
+; CHECK32_64-NEXT:    clrlwi 8, 8, 14
+; CHECK32_64-NEXT:    rlwimi 10, 7, 14, 14, 17
+; CHECK32_64-NEXT:    rlwinm 7, 7, 28, 31, 31
+; CHECK32_64-NEXT:    sub 8, 8, 10
+; CHECK32_64-NEXT:    add 7, 8, 7
+; CHECK32_64-NEXT:    lis 9, -17713
+; CHECK32_64-NEXT:    addi 7, 7, 2
+; CHECK32_64-NEXT:    ori 9, 9, 37197
+; CHECK32_64-NEXT:    addis 7, 7, 8
+; CHECK32_64-NEXT:    mulhwu 8, 7, 9
+; CHECK32_64-NEXT:    sub 9, 7, 8
+; CHECK32_64-NEXT:    srwi 9, 9, 1
+; CHECK32_64-NEXT:    add 8, 9, 8
+; CHECK32_64-NEXT:    srwi 8, 8, 5
+; CHECK32_64-NEXT:    mulli 8, 8, 37
+; CHECK32_64-NEXT:    sub 8, 7, 8
+; CHECK32_64-NEXT:    andi. 7, 8, 32
+; CHECK32_64-NEXT:    rotlwi 7, 6, 27
+; CHECK32_64-NEXT:    rlwimi 7, 5, 27, 0, 4
+; CHECK32_64-NEXT:    mr 5, 7
 ; CHECK32_64-NEXT:    bne 0, .LBB3_2
 ; CHECK32_64-NEXT:  # %bb.1:
-; CHECK32_64-NEXT:    mr 6, 29
+; CHECK32_64-NEXT:    mr 5, 4
 ; CHECK32_64-NEXT:  .LBB3_2:
-; CHECK32_64-NEXT:    clrlwi 4, 4, 27
-; CHECK32_64-NEXT:    subfic 7, 4, 32
-; CHECK32_64-NEXT:    srw 3, 6, 7
+; CHECK32_64-NEXT:    clrlwi 8, 8, 27
+; CHECK32_64-NEXT:    subfic 9, 8, 32
+; CHECK32_64-NEXT:    srw 10, 5, 9
 ; CHECK32_64-NEXT:    bne 0, .LBB3_4
 ; CHECK32_64-NEXT:  # %bb.3:
-; CHECK32_64-NEXT:    mr 29, 28
+; CHECK32_64-NEXT:    mr 4, 3
 ; CHECK32_64-NEXT:  .LBB3_4:
-; CHECK32_64-NEXT:    slw 8, 29, 4
-; CHECK32_64-NEXT:    or 3, 8, 3
+; CHECK32_64-NEXT:    slw 3, 4, 8
+; CHECK32_64-NEXT:    or 3, 3, 10
 ; CHECK32_64-NEXT:    beq 0, .LBB3_6
 ; CHECK32_64-NEXT:  # %bb.5:
-; CHECK32_64-NEXT:    slwi 5, 30, 27
+; CHECK32_64-NEXT:    slwi 7, 6, 27
 ; CHECK32_64-NEXT:  .LBB3_6:
-; CHECK32_64-NEXT:    srw 5, 5, 7
-; CHECK32_64-NEXT:    slw 4, 6, 4
-; CHECK32_64-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    or 4, 4, 5
-; CHECK32_64-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    lwz 27, 12(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    lwz 0, 36(1)
-; CHECK32_64-NEXT:    addi 1, 1, 32
-; CHECK32_64-NEXT:    mtlr 0
+; CHECK32_64-NEXT:    srw 4, 7, 9
+; CHECK32_64-NEXT:    slw 5, 5, 8
+; CHECK32_64-NEXT:    or 4, 5, 4
 ; CHECK32_64-NEXT:    blr
 ;
 ; CHECK64-LABEL: fshl_i37:
@@ -536,118 +512,94 @@ declare i37 @llvm.fshr.i37(i37, i37, i37)
 define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-LABEL: fshr_i37:
 ; CHECK32_32:       # %bb.0:
-; CHECK32_32-NEXT:    mflr 0
-; CHECK32_32-NEXT:    stwu 1, -32(1)
-; CHECK32_32-NEXT:    stw 0, 36(1)
-; CHECK32_32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK32_32-NEXT:    .cfi_offset lr, 4
-; CHECK32_32-NEXT:    .cfi_offset r27, -20
-; CHECK32_32-NEXT:    .cfi_offset r28, -16
-; CHECK32_32-NEXT:    .cfi_offset r29, -12
-; CHECK32_32-NEXT:    .cfi_offset r30, -8
-; CHECK32_32-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 27, 5
-; CHECK32_32-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 28, 3
-; CHECK32_32-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 29, 4
-; CHECK32_32-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
-; CHECK32_32-NEXT:    mr 30, 6
-; CHECK32_32-NEXT:    clrlwi 3, 7, 27
-; CHECK32_32-NEXT:    mr 4, 8
-; CHECK32_32-NEXT:    li 5, 0
-; CHECK32_32-NEXT:    li 6, 37
-; CHECK32_32-NEXT:    bl __umoddi3
-; CHECK32_32-NEXT:    rotlwi 5, 30, 27
-; CHECK32_32-NEXT:    addi 3, 4, 27
-; CHECK32_32-NEXT:    andi. 4, 3, 32
-; CHECK32_32-NEXT:    rlwimi 5, 27, 27, 0, 4
-; CHECK32_32-NEXT:    mr 4, 5
+; CHECK32_32-NEXT:    srwi 10, 8, 18
+; CHECK32_32-NEXT:    clrlwi 8, 8, 14
+; CHECK32_32-NEXT:    rlwimi 10, 7, 14, 14, 17
+; CHECK32_32-NEXT:    sub 8, 8, 10
+; CHECK32_32-NEXT:    rlwinm 7, 7, 28, 31, 31
+; CHECK32_32-NEXT:    add 7, 8, 7
+; CHECK32_32-NEXT:    lis 9, -17713
+; CHECK32_32-NEXT:    addi 7, 7, 2
+; CHECK32_32-NEXT:    ori 9, 9, 37197
+; CHECK32_32-NEXT:    addis 7, 7, 8
+; CHECK32_32-NEXT:    mulhwu 8, 7, 9
+; CHECK32_32-NEXT:    sub 9, 7, 8
+; CHECK32_32-NEXT:    srwi 9, 9, 1
+; CHECK32_32-NEXT:    add 8, 9, 8
+; CHECK32_32-NEXT:    srwi 8, 8, 5
+; CHECK32_32-NEXT:    mulli 8, 8, 37
+; CHECK32_32-NEXT:    sub 7, 7, 8
+; CHECK32_32-NEXT:    addi 8, 7, 27
+; CHECK32_32-NEXT:    andi. 7, 8, 32
+; CHECK32_32-NEXT:    rotlwi 7, 6, 27
+; CHECK32_32-NEXT:    rlwimi 7, 5, 27, 0, 4
+; CHECK32_32-NEXT:    mr 5, 7
 ; CHECK32_32-NEXT:    beq 0, .LBB11_2
 ; CHECK32_32-NEXT:  # %bb.1:
-; CHECK32_32-NEXT:    mr 4, 29
+; CHECK32_32-NEXT:    mr 5, 4
 ; CHECK32_32-NEXT:  .LBB11_2:
-; CHECK32_32-NEXT:    clrlwi 6, 3, 27
-; CHECK32_32-NEXT:    srw 3, 4, 6
+; CHECK32_32-NEXT:    clrlwi 8, 8, 27
+; CHECK32_32-NEXT:    srw 10, 5, 8
 ; CHECK32_32-NEXT:    beq 0, .LBB11_4
 ; CHECK32_32-NEXT:  # %bb.3:
-; CHECK32_32-NEXT:    mr 29, 28
+; CHECK32_32-NEXT:    mr 4, 3
 ; CHECK32_32-NEXT:  .LBB11_4:
-; CHECK32_32-NEXT:    subfic 7, 6, 32
-; CHECK32_32-NEXT:    slw 8, 29, 7
-; CHECK32_32-NEXT:    or 3, 8, 3
+; CHECK32_32-NEXT:    subfic 9, 8, 32
+; CHECK32_32-NEXT:    slw 3, 4, 9
+; CHECK32_32-NEXT:    or 3, 3, 10
 ; CHECK32_32-NEXT:    bne 0, .LBB11_6
 ; CHECK32_32-NEXT:  # %bb.5:
-; CHECK32_32-NEXT:    slwi 5, 30, 27
+; CHECK32_32-NEXT:    slwi 7, 6, 27
 ; CHECK32_32-NEXT:  .LBB11_6:
-; CHECK32_32-NEXT:    srw 5, 5, 6
-; CHECK32_32-NEXT:    slw 4, 4, 7
-; CHECK32_32-NEXT:    or 4, 4, 5
-; CHECK32_32-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 27, 12(1) # 4-byte Folded Reload
-; CHECK32_32-NEXT:    lwz 0, 36(1)
-; CHECK32_32-NEXT:    addi 1, 1, 32
-; CHECK32_32-NEXT:    mtlr 0
+; CHECK32_32-NEXT:    srw 4, 7, 8
+; CHECK32_32-NEXT:    slw 5, 5, 9
+; CHECK32_32-NEXT:    or 4, 5, 4
 ; CHECK32_32-NEXT:    blr
 ;
 ; CHECK32_64-LABEL: fshr_i37:
 ; CHECK32_64:       # %bb.0:
-; CHECK32_64-NEXT:    mflr 0
-; CHECK32_64-NEXT:    stwu 1, -32(1)
-; CHECK32_64-NEXT:    stw 0, 36(1)
-; CHECK32_64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK32_64-NEXT:    .cfi_offset lr, 4
-; CHECK32_64-NEXT:    .cfi_offset r27, -20
-; CHECK32_64-NEXT:    .cfi_offset r28, -16
-; CHECK32_64-NEXT:    .cfi_offset r29, -12
-; CHECK32_64-NEXT:    .cfi_offset r30, -8
-; CHECK32_64-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 27, 5
-; CHECK32_64-NEXT:    li 5, 0
-; CHECK32_64-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 28, 3
-; CHECK32_64-NEXT:    clrlwi 3, 7, 27
-; CHECK32_64-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 29, 4
-; CHECK32_64-NEXT:    mr 4, 8
-; CHECK32_64-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
-; CHECK32_64-NEXT:    mr 30, 6
-; CHECK32_64-NEXT:    li 6, 37
-; CHECK32_64-NEXT:    bl __umoddi3
-; CHECK32_64-NEXT:    rotlwi 5, 30, 27
-; CHECK32_64-NEXT:    addi 3, 4, 27
-; CHECK32_64-NEXT:    andi. 4, 3, 32
-; CHECK32_64-NEXT:    rlwimi 5, 27, 27, 0, 4
-; CHECK32_64-NEXT:    mr 4, 5
+; CHECK32_64-NEXT:    srwi 10, 8, 18
+; CHECK32_64-NEXT:    clrlwi 8, 8, 14
+; CHECK32_64-NEXT:    rlwimi 10, 7, 14, 14, 17
+; CHECK32_64-NEXT:    rlwinm 7, 7, 28, 31, 31
+; CHECK32_64-NEXT:    sub 8, 8, 10
+; CHECK32_64-NEXT:    add 7, 8, 7
+; CHECK32_64-NEXT:    lis 9, -17713
+; CHECK32_64-NEXT:    addi 7, 7, 2
+; CHECK32_64-NEXT:    ori 9, 9, 37197
+; CHECK32_64-NEXT:    addis 7, 7, 8
+; CHECK32_64-NEXT:    mulhwu 8, 7, 9
+; CHECK32_64-NEXT:    sub 9, 7, 8
+; CHECK32_64-NEXT:    srwi 9, 9, 1
+; CHECK32_64-NEXT:    add 8, 9, 8
+; CHECK32_64-NEXT:    srwi 8, 8, 5
+; CHECK32_64-NEXT:    mulli 8, 8, 37
+; CHECK32_64-NEXT:    sub 7, 7, 8
+; CHECK32_64-NEXT:    addi 8, 7, 27
+; CHECK32_64-NEXT:    andi. 7, 8, 32
+; CHECK32_64-NEXT:    rotlwi 7, 6, 27
+; CHECK32_64-NEXT:    rlwimi 7, 5, 27, 0, 4
+; CHECK32_64-NEXT:    mr 5, 7
 ; CHECK32_64-NEXT:    beq 0, .LBB11_2
 ; CHECK32_64-NEXT:  # %bb.1:
-; CHECK32_64-NEXT:    mr 4, 29
+; CHECK32_64-NEXT:    mr 5, 4
 ; CHECK32_64-NEXT:  .LBB11_2:
-; CHECK32_64-NEXT:    clrlwi 6, 3, 27
-; CHECK32_64-NEXT:    srw 3, 4, 6
+; CHECK32_64-NEXT:    clrlwi 8, 8, 27
+; CHECK32_64-NEXT:    srw 10, 5, 8
 ; CHECK32_64-NEXT:    beq 0, .LBB11_4
 ; CHECK32_64-NEXT:  # %bb.3:
-; CHECK32_64-NEXT:    mr 29, 28
+; CHECK32_64-NEXT:    mr 4, 3
 ; CHECK32_64-NEXT:  .LBB11_4:
-; CHECK32_64-NEXT:    subfic 7, 6, 32
-; CHECK32_64-NEXT:    slw 8, 29, 7
-; CHECK32_64-NEXT:    or 3, 8, 3
+; CHECK32_64-NEXT:    subfic 9, 8, 32
+; CHECK32_64-NEXT:    slw 3, 4, 9
+; CHECK32_64-NEXT:    or 3, 3, 10
 ; CHECK32_64-NEXT:    bne 0, .LBB11_6
 ; CHECK32_64-NEXT:  # %bb.5:
-; CHECK32_64-NEXT:    slwi 5, 30, 27
+; CHECK32_64-NEXT:    slwi 7, 6, 27
 ; CHECK32_64-NEXT:  .LBB11_6:
-; CHECK32_64-NEXT:    srw 5, 5, 6
-; CHECK32_64-NEXT:    slw 4, 4, 7
-; CHECK32_64-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    or 4, 4, 5
-; CHECK32_64-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    lwz 27, 12(1) # 4-byte Folded Reload
-; CHECK32_64-NEXT:    lwz 0, 36(1)
-; CHECK32_64-NEXT:    addi 1, 1, 32
-; CHECK32_64-NEXT:    mtlr 0
+; CHECK32_64-NEXT:    srw 4, 7, 8
+; CHECK32_64-NEXT:    slw 5, 5, 9
+; CHECK32_64-NEXT:    or 4, 5, 4
 ; CHECK32_64-NEXT:    blr
 ;
 ; CHECK64-LABEL: fshr_i37:

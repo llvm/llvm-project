@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sme -verify-machineinstrs < %s | FileCheck %s --check-prefix=DARWIN
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
-; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sme -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
+; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sme -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
 
 ; Test that the PCS attribute is accepted and uses the correct register mask.
 ;
@@ -64,6 +64,6 @@ define i64 @test_sme_calling_convention_x2() nounwind {
   ret i64 %pstate.sm
 }
 
-declare void @__arm_tpidr2_save()
-declare i64 @__arm_get_current_vg()
-declare {i64, i64} @__arm_sme_state()
+declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_save()
+declare aarch64_sme_preservemost_from_x1 i64 @__arm_get_current_vg()
+declare aarch64_sme_preservemost_from_x2 {i64, i64} @__arm_sme_state()

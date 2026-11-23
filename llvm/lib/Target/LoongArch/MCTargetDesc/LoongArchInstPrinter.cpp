@@ -26,10 +26,21 @@ using namespace llvm;
 #include "LoongArchGenAsmWriter.inc"
 
 static cl::opt<bool>
+    NoAliases("loongarch-no-aliases",
+              cl::desc("Disable the emission of assembler pseudo instructions"),
+              cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
     NumericReg("loongarch-numeric-reg",
                cl::desc("Print numeric register names rather than the ABI "
                         "names (such as $r0 instead of $zero)"),
                cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
+    Annotate("loongarch-annotate",
+             cl::desc("Print human-readable annotations for some instructions "
+                      "(such as the barrier semantics of dbar hints)"),
+             cl::init(false), cl::Hidden);
 
 // The command-line flag above is used by llvm-mc and llc. It can be used by
 // `llvm-objdump`, but we override the value here to handle options passed to
@@ -37,25 +48,67 @@ static cl::opt<bool>
 // be an easier way to allow these options in all these tools, without doing it
 // this way.
 bool LoongArchInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
+  if (Opt == "no-aliases") {
+    PrintAliases = false;
+    return true;
+  }
+
   if (Opt == "numeric") {
     NumericReg = true;
+    return true;
+  }
+
+  if (Opt == "annotate") {
+    Annotate = true;
     return true;
   }
 
   return false;
 }
 
+// Describe the barrier semantics of a DBAR hint in the same format as GNU
+// objdump's `-M annotate`. For hints 0-0x1f the layout is `CRW|RW`, where the
+// left side of `|` lists the preceding accesses (R: loads, W: stores) and the
+// right side the succeeding accesses ordered by the barrier, and `C` (Cached)
+// is printed when bit 4 is set. 0x700 is the same-address read-after-read
+// barrier. Other hints are reserved and are not annotated. For more detailed
+// description, see LoongArch Documents Volume 1.
+static void printDbarAnnotation(uint64_t Hint, raw_ostream &OS) {
+  if (Hint == 0x700) {
+    OS << "SA-RAR\n";
+    return;
+  }
+  // 0xf and 0x1f are reserved.
+  if (Hint > 0x1f || (Hint & 0xf) == 0xf)
+    return;
+  char Buf[] = "   |  ";
+  if (Hint & 0x10)
+    Buf[0] = 'C';
+  if (!(Hint & 0x8))
+    Buf[1] = 'R';
+  if (!(Hint & 0x4))
+    Buf[2] = 'W';
+  if (!(Hint & 0x2))
+    Buf[4] = 'R';
+  if (!(Hint & 0x1))
+    Buf[5] = 'W';
+
+  OS << StringRef(Buf).rtrim() << '\n';
+}
+
 void LoongArchInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                      StringRef Annot,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (!printAliasInstr(MI, Address, STI, O))
+  if (!PrintAliases || NoAliases || !printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
+  if (Annotate && CommentStream && MI->getOpcode() == LoongArch::DBAR)
+    printDbarAnnotation(MI->getOperand(0).getImm(), *CommentStream);
   printAnnotation(O, Annot);
 }
 
 void LoongArchInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
-  O << '$' << getRegisterName(Reg);
+  markup(O, Markup::Register) << '$' << getRegisterName(Reg);
 }
 
 void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -69,12 +122,12 @@ void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    O << MO.getImm();
+    markup(O, Markup::Immediate) << formatImm(MO.getImm());
     return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void LoongArchInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
@@ -83,6 +136,27 @@ void LoongArchInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
   const MCOperand &MO = MI->getOperand(OpNo);
   assert(MO.isReg() && "printAtomicMemOp can only print register operands");
   printRegName(O, MO.getReg());
+}
+
+void LoongArchInstPrinter::printCFRSetDest(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  printRegName(O, MI->getOperand(OpNo).getReg());
+  O << ", ";
+  printRegName(O, LoongArch::F0);
+  O << ", ";
+  printRegName(O, LoongArch::F0);
+}
+
+void LoongArchInstPrinter::printBranchOperand(const MCInst *MI,
+                                              uint64_t Address, unsigned OpNo,
+                                              const MCSubtargetInfo &STI,
+                                              raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
+  return printOperand(MI, OpNo, STI, O);
 }
 
 const char *LoongArchInstPrinter::getRegisterName(MCRegister Reg) {

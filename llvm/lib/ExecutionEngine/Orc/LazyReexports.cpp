@@ -8,8 +8,10 @@
 
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -275,9 +277,6 @@ public:
 
   void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override {}
-
-private:
-  std::mutex M;
 };
 
 LazyReexportsManager::Listener::~Listener() = default;
@@ -323,13 +322,24 @@ void LazyReexportsManager::handleTransferResources(JITDylib &JD,
     } else {
       auto &SrcAddrs = I->second;
       auto &DstAddrs = J->second;
-      DstAddrs.insert(DstAddrs.end(), SrcAddrs.begin(), SrcAddrs.end());
+      llvm::append_range(DstAddrs, SrcAddrs);
       KeyToReentryAddrs.erase(I);
     }
     if (L)
       L->onLazyReexportsTransfered(JD, DstK, SrcK);
   }
 }
+
+// Spec for the call-controller handler that the ORC runtime calls to
+// resolve lazy reexports.
+namespace lazy_reexports_sps_handlers {
+struct Resolve
+    : sps::HandlerSpec<shared::SPSExpected<shared::SPSExecutorSymbolDef>(
+          shared::SPSExecutorAddr)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_resolve_tag");
+};
+} // namespace lazy_reexports_sps_handlers
 
 LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
                                            RedirectableSymbolManager &RSMgr,
@@ -339,16 +349,11 @@ LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
       EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr), L(L) {
 
   using namespace shared;
-
   ErrorAsOutParameter _(&Err);
-
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
-  WFs[ES.intern("__orc_rt_resolve_tag")] =
-      ES.wrapAsyncWithSPS<SPSExpected<SPSExecutorSymbolDef>(SPSExecutorAddr)>(
-          this, &LazyReexportsManager::resolve);
-
-  Err = ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  Err = ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandler<lazy_reexports_sps_handlers::Resolve>(
+          this, &LazyReexportsManager::resolve));
 }
 
 std::unique_ptr<MaterializationUnit>
@@ -387,7 +392,7 @@ void LazyReexportsManager::emitRedirectableSymbols(
   SymbolMap Redirs;
   size_t I = 0;
   for (auto &[Name, AI] : Reexports)
-    Redirs[Name] = (*ReentryPoints)[I++];
+    Redirs[Name] = {(*ReentryPoints)[I++].getAddress(), AI.AliasFlags};
 
   I = 0;
   if (!Reexports.empty()) {
@@ -429,21 +434,23 @@ void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
   if (L)
     L->onLazyReexportCalled(LandingInfo);
 
-  SymbolInstance LandingSym(LandingInfo.JD, std::move(LandingInfo.BodyName));
-  LandingSym.lookupAsync([this, JD = std::move(LandingInfo.JD),
-                          ReentryName = std::move(LandingInfo.Name),
-                          SendResult = std::move(SendResult)](
-                             Expected<ExecutorSymbolDef> Result) mutable {
-    if (Result) {
-      // FIXME: Make RedirectionManager operations async, then use the async
-      //        APIs here.
-      if (auto Err = RSMgr.redirect(*JD, ReentryName, *Result))
-        SendResult(std::move(Err));
-      else
-        SendResult(std::move(Result));
-    } else
-      SendResult(std::move(Result));
-  });
+  ES.lookup(
+      LookupKind::Static,
+      {{LandingInfo.JD.get(), JITDylibLookupFlags::MatchAllSymbols}},
+      SymbolLookupSet(std::move(LandingInfo.BodyName)), SymbolState::Ready,
+      [this, JD = std::move(LandingInfo.JD),
+       ReentryName = std::move(LandingInfo.Name),
+       SendResult = std::move(SendResult)](Expected<SymbolMap> Result) mutable {
+        if (!Result)
+          return SendResult(Result.takeError());
+
+        assert(Result->size() == 1 && "Unexpected number of results");
+        auto BodySym = Result->begin()->second;
+        if (auto Err = RSMgr.redirect(*JD, ReentryName, BodySym))
+          SendResult(std::move(Err));
+        SendResult(BodySym);
+      },
+      NoDependenciesToRegister);
 }
 
 class SimpleLazyReexportsSpeculator::SpeculateTask : public IdleTask {
@@ -503,7 +510,7 @@ void SimpleLazyReexportsSpeculator::onLazyReexportsTransfered(
   } else {
     auto &SrcNames = J->second;
     auto &DstNames = K->second;
-    DstNames.insert(DstNames.end(), SrcNames.begin(), SrcNames.end());
+    llvm::append_range(DstNames, SrcNames);
     MapForJD.erase(J);
   }
 }

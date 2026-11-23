@@ -54,7 +54,6 @@ static cl::opt<std::string> InputFilename(cl::Positional,
 static cl::opt<std::string>
 InputDataFilename("data",
   cl::desc("<data file>"),
-  cl::Optional,
   cl::cat(BoltCategory));
 
 static cl::alias
@@ -63,7 +62,7 @@ BoltProfile("b",
   cl::aliasopt(InputDataFilename),
   cl::cat(BoltCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     LogFile("log-file",
             cl::desc("redirect journaling to a file instead of stdout/stderr"),
             cl::Hidden, cl::cat(BoltCategory));
@@ -71,7 +70,6 @@ cl::opt<std::string>
 static cl::opt<std::string>
 InputDataFilename2("data2",
   cl::desc("<data file>"),
-  cl::Optional,
   cl::cat(BoltCategory));
 
 static cl::opt<std::string>
@@ -105,23 +103,12 @@ static void printBoltRevision(llvm::raw_ostream &OS) {
 void perf2boltMode(int argc, char **argv) {
   cl::HideUnrelatedOptions(ArrayRef(opts::Perf2BoltCategories));
   cl::AddExtraVersionPrinter(printBoltRevision);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::parseCommandLineOptions(
+      opts::LibraryOptionsCtx, ArrayRef(argv, argc),
       "perf2bolt - BOLT data aggregator\n"
       "\nEXAMPLE: perf2bolt -p=perf.data executable -o data.fdata\n");
-  if (opts::PerfData.empty()) {
-    errs() << ToolName << ": expected -perfdata=<filename> option.\n";
-    exit(1);
-  }
   if (!opts::InputDataFilename.empty()) {
     errs() << ToolName << ": unknown -data option.\n";
-    exit(1);
-  }
-  if (!sys::fs::exists(opts::PerfData))
-    report_error(opts::PerfData, errc::no_such_file_or_directory);
-  if (!DataAggregator::checkPerfDataMagic(opts::PerfData)) {
-    errs() << ToolName << ": '" << opts::PerfData
-           << "': expected valid perf.data file.\n";
     exit(1);
   }
   if (opts::OutputFilename.empty()) {
@@ -135,8 +122,8 @@ void perf2boltMode(int argc, char **argv) {
 void boltDiffMode(int argc, char **argv) {
   cl::HideUnrelatedOptions(ArrayRef(opts::BoltDiffCategories));
   cl::AddExtraVersionPrinter(printBoltRevision);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::parseCommandLineOptions(
+      opts::LibraryOptionsCtx, ArrayRef(argv, argc),
       "llvm-boltdiff - BOLT binary diff tool\n"
       "\nEXAMPLE: llvm-boltdiff -data=a.fdata -data2=b.fdata exec1 exec2\n");
   if (opts::InputDataFilename2.empty()) {
@@ -164,23 +151,13 @@ void boltMode(int argc, char **argv) {
   cl::AddExtraVersionPrinter(printBoltRevision);
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::parseCommandLineOptions(opts::LibraryOptionsCtx, ArrayRef(argv, argc),
                               "BOLT - Binary Optimization and Layout Tool\n");
 
   if (opts::OutputFilename.empty()) {
     errs() << ToolName << ": expected -o=<output file> option.\n";
     exit(1);
   }
-}
-
-static std::string GetExecutablePath(const char *Argv0) {
-  SmallString<256> ExecutablePath(Argv0);
-  // Do a PATH lookup if Argv0 isn't a valid path.
-  if (!llvm::sys::fs::exists(ExecutablePath))
-    if (llvm::ErrorOr<std::string> P =
-            llvm::sys::findProgramByName(ExecutablePath))
-      ExecutablePath = *P;
-  return std::string(ExecutablePath);
 }
 
 int main(int argc, char **argv) {
@@ -190,16 +167,18 @@ int main(int argc, char **argv) {
 
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  std::string ToolPath = GetExecutablePath(argv[0]);
+  std::string ToolPath = llvm::sys::fs::getMainExecutable(argv[0], nullptr);
 
   // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
-  llvm::InitializeAllDisassemblers();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
 
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
+#include "bolt/Core/TargetConfig.def"
 
   ToolName = argv[0];
 
@@ -245,24 +224,24 @@ int main(int argc, char **argv) {
       if (Error E = RIOrErr.takeError())
         report_error(opts::InputFilename, std::move(E));
       RewriteInstance &RI = *RIOrErr.get();
+
+      if (opts::AggregateOnly && !RI.getBinaryContext().isAArch64() &&
+          opts::ArmSPE) {
+        errs() << ToolName << ": -spe is available only on AArch64.\n";
+        exit(1);
+      }
+
       if (!opts::PerfData.empty()) {
-        if (!opts::AggregateOnly) {
-          errs() << ToolName
-                 << ": WARNING: reading perf data directly is unsupported, "
-                    "please use "
-                    "-aggregate-only or perf2bolt.\n!!! Proceed on your own "
-                    "risk. !!!\n";
-        }
-        if (Error E = RI.setProfile(opts::PerfData))
-          report_error(opts::PerfData, std::move(E));
+        for (StringRef Filename : opts::PerfData)
+          if (Error E = RI.setProfile(Filename))
+            report_error(Filename, std::move(E));
+      } else if (opts::AggregateOnly) {
+        errs() << ToolName << ": missing required -perfdata option.\n";
+        exit(1);
       }
       if (!opts::InputDataFilename.empty()) {
         if (Error E = RI.setProfile(opts::InputDataFilename))
           report_error(opts::InputDataFilename, std::move(E));
-      }
-      if (opts::AggregateOnly && opts::PerfData.empty()) {
-        errs() << ToolName << ": missing required -perfdata option.\n";
-        exit(1);
       }
 
       if (Error E = RI.run())

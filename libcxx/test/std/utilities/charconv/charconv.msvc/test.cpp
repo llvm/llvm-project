@@ -1080,4 +1080,6 @@ int main(int argc, char** argv) {
     } else if (ms > 30'000) {
         puts("That was slow. Consider tuning PrefixesToTest and FractionBits to test fewer cases.");
     }
+
+    return 0;
 }

@@ -1,3 +1,6 @@
+import re
+import struct
+
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -30,10 +33,39 @@ class TestGdbRemoteSegFault(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(hex_exit_code)
         self.assertEqual(int(hex_exit_code, 16), expected_signo)
 
-    @skipIfWindows  # No signal is sent on Windows.
+    @requireSignals
     def test_inferior_seg_fault_received(self):
         self.build()
         if self.platformIsDarwin():
             self.inferior_seg_fault_received(self.GDB_REMOTE_STOP_CODE_BAD_ACCESS)
         else:
             self.inferior_seg_fault_received(lldbutil.get_signal_number("SIGSEGV"))
+
+    @skipUnlessPlatform(["linux"])
+    @skipIf(archs=no_match(["x86_64", "i386"]))
+    def test_siginfo_after_memory_allocation(self):
+        """Test that allocating memory (which runs a syscall in the inferior)
+        does not change the siginfo of the thread."""
+        self.build()
+        self.inferior_seg_fault_received(lldbutil.get_signal_number("SIGSEGV"))
+
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $_M1000,rw#00",
+                {"direction": "send", "regex": r"^\$[0-9a-f]+#[0-9a-fA-F]{2}$"},
+                "read packet: $qXfer:siginfo:read::0,80:#00",
+                {
+                    "direction": "send",
+                    "regex": re.compile(
+                        r"^\$l(.*)#[0-9a-fA-F]{2}$", re.MULTILINE | re.DOTALL
+                    ),
+                    "capture": {1: "siginfo"},
+                },
+            ],
+            True,
+        )
+        context = self.expect_gdbremote_sequence()
+        siginfo = self.decode_gdbremote_binary(context["siginfo"]).encode("latin1")
+        (signo,) = struct.unpack_from("=i", siginfo)
+        self.assertEqual(signo, lldbutil.get_signal_number("SIGSEGV"))

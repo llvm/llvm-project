@@ -25,9 +25,11 @@
 #ifndef LLVM_IR_LEGACYPASSNAMEPARSER_H
 #define LLVM_IR_LEGACYPASSNAMEPARSER_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
@@ -38,8 +40,8 @@ namespace llvm {
 // PassNameParser class - Make use of the pass registration mechanism to
 // automatically add a command line argument to opt for each pass.
 //
-class PassNameParser : public PassRegistrationListener,
-                       public cl::parser<const PassInfo*> {
+class LLVM_ABI PassNameParser : public PassRegistrationListener,
+                                public cl::parser<const PassInfo *> {
 public:
   PassNameParser(cl::Option &O);
   ~PassNameParser() override;
@@ -67,7 +69,7 @@ public:
   //
   void passRegistered(const PassInfo *P) override {
     if (ignorablePass(P)) return;
-    if (findOption(P->getPassArgument().data()) != getNumOptions()) {
+    if (!PassArguments.insert(P->getPassArgument()).second) {
       errs() << "Two passes with the same argument (-"
            << P->getPassArgument() << ") attempted to be registered!\n";
       llvm_unreachable(nullptr);
@@ -85,6 +87,9 @@ public:
   }
 
 private:
+  // The arguments of the passes added so far.
+  DenseSet<StringRef> PassArguments;
+
   // ValCompare - Provide a sorting comparator for Values elements...
   static int ValCompare(const PassNameParser::OptionInfo *VT1,
                         const PassNameParser::OptionInfo *VT2) {

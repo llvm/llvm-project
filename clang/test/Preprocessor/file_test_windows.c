@@ -24,19 +24,20 @@
 filename: __FILE__
 #include "Inputs/include-file-test/file_test.h"
 
-// CHECK: filename: "A:\\UNLIKELY_PATH\\empty\\file_test_windows.c"
-// CHECK: filename: "A:\\UNLIKELY_PATH\\empty\\Inputs/include-file-test/file_test.h"
-// CHECK: basefile: "A:\\UNLIKELY_PATH\\empty\\file_test_windows.c"
+// Forward or backward slashes can be used depending on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+// CHECK: filename: "A:{{[/\\]+}}UNLIKELY_PATH{{[/\\]+}}empty{{[/\\]+}}file_test_windows.c"
+// CHECK: filename: "A:{{[/\\]+}}UNLIKELY_PATH{{[/\\]+}}empty{{[/\\]+}}Inputs/include-file-test/file_test.h"
+// CHECK: basefile: "A:{{[/\\]+}}UNLIKELY_PATH{{[/\\]+}}empty{{[/\\]+}}file_test_windows.c"
 // CHECK-NOT: filename:
 
-// CHECK-EVIL: filename: "A:\\UNLIKELY_PATH=empty\\file_test_windows.c"
-// CHECK-EVIL: filename: "A:\\UNLIKELY_PATH=empty\\Inputs/include-file-test/file_test.h"
-// CHECK-EVIL: basefile: "A:\\UNLIKELY_PATH=empty\\file_test_windows.c"
+// CHECK-EVIL: filename: "A:{{[/\\]+}}UNLIKELY_PATH=empty{{[/\\]+}}file_test_windows.c"
+// CHECK-EVIL: filename: "A:{{[/\\]+}}UNLIKELY_PATH=empty{{[/\\]+}}Inputs/include-file-test/file_test.h"
+// CHECK-EVIL: basefile: "A:{{[/\\]+}}UNLIKELY_PATH=empty{{[/\\]+}}file_test_windows.c"
 // CHECK-EVIL-NOT: filename:
 
-// CHECK-CASE: filename: "A:\\UNLIKELY_PATH_BASE\\file_test_windows.c"
-// CHECK-CASE: filename: "A:\\UNLIKELY_PATH_INC\\include-file-test/file_test.h"
-// CHECK-CASE: basefile: "A:\\UNLIKELY_PATH_BASE\\file_test_windows.c"
+// CHECK-CASE: filename: "A:{{[/\\]+}}UNLIKELY_PATH_BASE{{[/\\]+}}file_test_windows.c"
+// CHECK-CASE: filename: "A:{{[/\\]+}}UNLIKELY_PATH_INC{{[/\\]+}}include-file-test/file_test.h"
+// CHECK-CASE: basefile: "A:{{[/\\]+}}UNLIKELY_PATH_BASE{{[/\\]+}}file_test_windows.c"
 // CHECK-CASE-NOT: filename:
 
 // CHECK-REMOVE: filename: "file_test_windows.c"
@@ -44,23 +45,23 @@ filename: __FILE__
 // CHECK-REMOVE: basefile: "file_test_windows.c"
 // CHECK-REMOVE-NOT: filename:
 
-// CHECK-REPRODUCIBLE: filename: "A:\\UNLIKELY_PATH\\empty\\file_test_windows.c"
-// CHECK-REPRODUCIBLE: filename: "A:\\UNLIKELY_PATH\\empty\\Inputs\\include-file-test\\file_test.h"
-// CHECK-REPRODUCIBLE: basefile: "A:\\UNLIKELY_PATH\\empty\\file_test_windows.c"
+// CHECK-REPRODUCIBLE: filename: "A:{{[/\\]+}}UNLIKELY_PATH{{[/\\]+}}empty{{[/\\]+}}file_test_windows.c"
+// CHECK-REPRODUCIBLE: filename: "A:{{[/\\]+}}UNLIKELY_PATH{{[/\\]+}}empty{{[/\\]+}}Inputs{{[/\\]+}}include-file-test{{[/\\]+}}file_test.h"
+// CHECK-REPRODUCIBLE: basefile: "A:{{[/\\]+}}UNLIKELY_PATH{{[/\\]+}}empty{{[/\\]+}}file_test_windows.c"
 // CHECK-REPRODUCIBLE-NOT: filename:
 
-// CHECK-EVIL-REPRODUCIBLE: filename: "A:\\UNLIKELY_PATH=empty\\file_test_windows.c"
-// CHECK-EVIL-REPRODUCIBLE: filename: "A:\\UNLIKELY_PATH=empty\\Inputs\\include-file-test\\file_test.h"
-// CHECK-EVIL-REPRODUCIBLE: basefile: "A:\\UNLIKELY_PATH=empty\\file_test_windows.c"
+// CHECK-EVIL-REPRODUCIBLE: filename: "A:{{[/\\]+}}UNLIKELY_PATH=empty{{[/\\]+}}file_test_windows.c"
+// CHECK-EVIL-REPRODUCIBLE: filename: "A:{{[/\\]+}}UNLIKELY_PATH=empty{{[/\\]+}}Inputs{{[/\\]+}}include-file-test{{[/\\]+}}file_test.h"
+// CHECK-EVIL-REPRODUCIBLE: basefile: "A:{{[/\\]+}}UNLIKELY_PATH=empty{{[/\\]+}}file_test_windows.c"
 // CHECK-EVIL-REPRODUCIBLE-NOT: filename:
 
-// CHECK-CASE-REPRODUCIBLE: filename: "A:\\UNLIKELY_PATH_BASE\\file_test_windows.c"
-// CHECK-CASE-REPRODUCIBLE: filename: "A:\\UNLIKELY_PATH_INC\\include-file-test\\file_test.h"
-// CHECK-CASE-REPRODUCIBLE: basefile: "A:\\UNLIKELY_PATH_BASE\\file_test_windows.c"
+// CHECK-CASE-REPRODUCIBLE: filename: "A:{{[/\\]+}}UNLIKELY_PATH_BASE{{[/\\]+}}file_test_windows.c"
+// CHECK-CASE-REPRODUCIBLE: filename: "A:{{[/\\]+}}UNLIKELY_PATH_INC{{[/\\]+}}include-file-test{{[/\\]+}}file_test.h"
+// CHECK-CASE-REPRODUCIBLE: basefile: "A:{{[/\\]+}}UNLIKELY_PATH_BASE{{[/\\]+}}file_test_windows.c"
 // CHECK-CASE-REPRODUCIBLE-NOT: filename:
 
 // CHECK-REMOVE-REPRODUCIBLE: filename: "file_test_windows.c"
-// CHECK-REMOVE-REPRODUCIBLE: filename: "Inputs\\include-file-test\\file_test.h"
+// CHECK-REMOVE-REPRODUCIBLE: filename: "Inputs{{[/\\]+}}include-file-test{{[/\\]+}}file_test.h"
 // CHECK-REMOVE-REPRODUCIBLE: basefile: "file_test_windows.c"
 // CHECK-REMOVE-REPRODUCIBLE-NOT: filename:
 

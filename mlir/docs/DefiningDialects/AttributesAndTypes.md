@@ -105,6 +105,9 @@ def My_IntegerType : MyDialect_Type<"Integer", "int"> {
 
   /// Indicate that our type will add additional verification to the parameters.
   let genVerifyDecl = 1;
+
+  /// Indicate that our type will use the mnemonic as alias in assembly.
+  let genMnemonicAlias = 1;
 }
 ```
 
@@ -133,7 +136,7 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   /// Here we've defined two parameters, one is a "self" type parameter, and the
   /// other is the integer value of the attribute. The self type parameter is
   /// specially handled by the assembly format.
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, APIntParameter<"">:$value);
 
   /// Here we've defined a custom builder for the type, that removes the need to pass
   /// in an MLIRContext instance; as it can be infered from the `type`.
@@ -160,6 +163,9 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   /// Indicate to the ODS generator that we do not want the default builders,
   /// as we have defined our own simpler ones.
   let skipDefaultBuilders = 1;
+
+  /// Indicate that our attribute will use the mnemonic as alias in assembly.
+  let genMnemonicAlias = 1;
 }
 ```
 
@@ -517,21 +523,32 @@ and Types with no parameters need not use either of these fields, in which case
 the syntax for the Attribute or Type is simply the mnemonic.
 
 For each dialect, two "dispatch" functions will be created: one for parsing and
-one for printing. These static functions placed alongside the class definitions
-and have the following function signatures:
+one for printing. These static functions are placed alongside the class
+definitions and have the following function signatures:
 
 ```c++
-static ParseResult generatedAttributeParser(DialectAsmParser& parser, StringRef *mnemonic, Type attrType, Attribute &result);
-static LogicalResult generatedAttributePrinter(Attribute attr, DialectAsmPrinter& printer);
+static OptionalParseResult generatedAttributeParser(
+    AsmParser &parser, StringRef *mnemonic, Type type, Attribute &value);
+static LogicalResult generatedAttributePrinter(Attribute def,
+                                               AsmPrinter &printer);
 
-static ParseResult generatedTypeParser(DialectAsmParser& parser, StringRef *mnemonic, Type &result);
-static LogicalResult generatedTypePrinter(Type type, DialectAsmPrinter& printer);
+static OptionalParseResult generatedTypeParser(
+    AsmParser &parser, StringRef *mnemonic, Type &value);
+static LogicalResult generatedTypePrinter(Type def, AsmPrinter &printer);
 ```
 
-The above functions should be added to the respective in your
-`Dialect::printType` and `Dialect::parseType` methods, or consider using the
-`useDefaultAttributePrinterParser` and `useDefaultTypePrinterParser` ODS Dialect
-options if all attributes or types define a mnemonic.
+If `*mnemonic` is empty, the parsers first parse the mnemonic. Otherwise, they
+use `*mnemonic` without parsing it. If an attribute or type has the mnemonic,
+they call its parser and return whether it succeeded. Otherwise, they set
+`*mnemonic` to the mnemonic and return `std::nullopt`, so that the dialect can
+try to parse it in other ways. The printers return `failure` if the attribute
+or type is not one of the generated ones with a mnemonic.
+
+The above functions should be called from your `Dialect::parseAttribute`,
+`Dialect::printAttribute`, `Dialect::parseType` and `Dialect::printType`
+methods, or consider using the `useDefaultAttributePrinterParser` and
+`useDefaultTypePrinterParser` ODS Dialect options if all attributes or types
+define a mnemonic.
 
 The mnemonic, hasCustomAssemblyFormat, and assemblyFormat fields are optional.
 If none are defined, the generated code will not include any parsing or printing
@@ -558,6 +575,11 @@ For Attributes, these methods will have the form:
 - `static Attribute MyAttr::parse(AsmParser &parser, Type attrType)`
 
 - `void MyAttr::print(AsmPrinter &p) const`
+
+It is possible to use newlines and indents in custom `print` methods.
+However, multiline Types or Attributes are not recommended nor allowed in the upstream MLIR dialects.
+They can be used in custom dialects to improve flexibility and readability, e.g. in cases of
+multiple nested Types and Attributes.
 
 #### Using `assemblyFormat`
 
@@ -842,9 +864,9 @@ if they are not present.
 
 ###### `struct` Directive
 
-The `struct` directive accepts a list of variables to capture and will generate
-a parser and printer for a comma-separated list of key-value pairs. If an
-optional parameter is included in the `struct`, it can be elided. The variables
+The `struct` directive accepts a list of variables or directives to capture and 
+will generate a parser and printer for a comma-separated list of key-value pairs. 
+If an optional parameter is included in the `struct`, it can be elided. The variables
 are printed in the order they are specified in the argument list **but can be
 parsed in any order**. For example:
 
@@ -875,6 +897,19 @@ assembly format of `` `<` struct(params) `>` `` will result in:
 
 The order in which the parameters are printed is the order in which they are
 declared in the attribute's or type's `parameter` list.
+
+An `EnumAttrParameter`, `OptionalEnumAttrParameter`, or
+`DefaultValuedEnumAttrParameter` captured by `struct` uses the underlying enum
+syntax. This omits the enum attribute's mnemonic and assembly-format
+delimiters. For example, an enum attribute whose standalone syntax is
+`#my_dialect.enum<case>` is printed as `kind = case` in a `struct`.
+
+Passing `custom<Foo>($variable)` allows providing a custom printer and parser
+for the encapsulated variable. Check the
+[custom and ref directive](#custom-and-ref-directive) section for more
+information about how to define the printer and parser functions. Note that a
+custom directive within a struct directive can only encapsulate a single
+variable.
 
 ###### `custom` and `ref` directive
 
@@ -972,9 +1007,16 @@ wrapped by the `Attribute` and `Type` classes. Every Attribute or Type class has
 a corresponding storage class, that can be accessed via the protected
 `getImpl()` method.
 
+Note: While storage instances are generally immortal and live as long as the
+`MLIRContext`, the context also supports *transient scopes*
+(`MLIRContext::TransientScope` RAII guard, or `beginTransientScope`/`endTransientScope`).
+Storage instances allocated while in a transient scope are reclaimed when the
+scope ends, allowing temporary types and attributes to be discarded in $O(1)$
+without tearing down loaded dialects.
+
 In most cases the storage class is auto generated, but if necessary it can be
 manually defined by setting the `genStorageClass` field to 0. The name and
-namespace (defaults to `detail`) can additionally be controlled via the The
+namespace (defaults to `detail`) can additionally be controlled via the
 `storageClass` and `storageNamespace` fields.
 
 #### Defining a storage class
@@ -1181,6 +1223,13 @@ by the Attribute or Type's C++ class name.
 Note that these are mechanisms intended for long-tail cases by power users; for
 not-yet-implemented widely-applicable cases, improving the infrastructure is
 preferable.
+
+### Mnemonic Alias in Assembly
+
+Attribute and Type can use aliases in the assembly to reduce verbosity.
+In such cases, `OpAsmAttrInterface` and `OpAsmTypeInterface` can be used to generate aliases.
+Often, a simple mnemonic alias is enough; then enabling `genMnemonicAlias` automatically
+generates an `getAlias` implementation using the Attribute or Type's mnemonic.
 
 ### Registering with the Dialect
 

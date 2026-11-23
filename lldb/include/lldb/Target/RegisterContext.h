@@ -10,6 +10,7 @@
 #define LLDB_TARGET_REGISTERCONTEXT_H
 
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

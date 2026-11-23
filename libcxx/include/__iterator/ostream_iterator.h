@@ -24,15 +24,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp, class _CharT = char, class _Traits = char_traits<_CharT> >
-class _LIBCPP_TEMPLATE_VIS ostream_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<output_iterator_tag, void, void, void, void>
-#endif
-{
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-
+class ostream_iterator
+    : public __iterator_base<ostream_iterator<_Tp, _CharT, _Traits>, output_iterator_tag, void, void, void, void> {
 public:
   typedef output_iterator_tag iterator_category;
   typedef void value_type;
@@ -52,22 +46,20 @@ private:
   const char_type* __delim_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s) _NOEXCEPT
-      : __out_stream_(std::addressof(__s)),
-        __delim_(nullptr) {}
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
+  ostream_iterator(ostream_type& __s) _NOEXCEPT : __out_stream_(std::addressof(__s)), __delim_(nullptr) {}
+  ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
       : __out_stream_(std::addressof(__s)),
         __delim_(__delimiter) {}
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator=(const _Tp& __value) {
+  ostream_iterator& operator=(const _Tp& __value) {
     *__out_stream_ << __value;
     if (__delim_)
       *__out_stream_ << __delim_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator*() { return *this; }
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++() { return *this; }
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++(int) { return *this; }
+  [[__nodiscard__]] ostream_iterator& operator*() { return *this; }
+  ostream_iterator& operator++() { return *this; }
+  ostream_iterator& operator++(int) { return *this; }
 };
 
 _LIBCPP_END_NAMESPACE_STD

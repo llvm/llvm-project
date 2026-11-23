@@ -14,6 +14,10 @@ export namespace std {
   using std::invoke_r;
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+  using std::basic_common_reference;
+#endif
+
   // [refwrap], reference_wrapper
   using std::reference_wrapper;
 
@@ -90,6 +94,10 @@ export namespace std {
   using std::bad_function_call;
 
   using std::function;
+
+#if _LIBCPP_STD_VER >= 26
+  using std::function_ref;
+#endif // _LIBCPP_STD_VER >= 26
 
   using std::swap;
 

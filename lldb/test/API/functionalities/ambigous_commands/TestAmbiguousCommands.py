@@ -24,7 +24,7 @@ class AmbiguousCommandTestCase(TestBase):
         self.assertFalse(result.Succeeded())
         self.assertEqual(
             result.GetError(),
-            "Ambiguous command 'co'. Possible matches:\n\tcommand\n\tcontinue\n\tcorefile\n",
+            "error: ambiguous command 'co'. Possible matches:\n\tcommand\n\tcontinue\n\tcorefile\n",
         )
 
         command_interpreter.HandleCommand("command unalias continue", result)

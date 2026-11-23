@@ -37,22 +37,13 @@ static cl::opt<uint32_t>
     BranchRelaxSafetyBuffer("branch-relax-safety-buffer", cl::init(200),
                             cl::Hidden, cl::desc("safety buffer size"));
 
-namespace llvm {
-
-  FunctionPass *createHexagonBranchRelaxation();
-  void initializeHexagonBranchRelaxationPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
   struct HexagonBranchRelaxation : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonBranchRelaxation() : MachineFunctionPass(ID) {
-      initializeHexagonBranchRelaxationPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonBranchRelaxation() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -67,7 +58,6 @@ namespace {
 
   private:
     const HexagonInstrInfo *HII;
-    const HexagonRegisterInfo *HRI;
 
     bool relaxBranches(MachineFunction &MF);
     void computeOffset(MachineFunction &MF,
@@ -94,7 +84,6 @@ bool HexagonBranchRelaxation::runOnMachineFunction(MachineFunction &MF) {
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
-  HRI = HST.getRegisterInfo();
 
   bool Changed = false;
   Changed = relaxBranches(MF);

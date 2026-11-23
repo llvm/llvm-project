@@ -1,0 +1,33 @@
+!RUN: %flang_fc1 -fdebug-unparse %s | FileCheck %s
+module rgbCUDA
+  type rgb
+    real v(3)
+  end type
+  interface assignment (=)
+     module procedure rgbEqR3
+  end interface
+  interface operator(*)
+     module procedure rgbTimesR
+  end interface
+contains
+  attributes(device) subroutine rgbEqR3(rgbout, rin)
+    type(rgb), intent(out) :: rgbout
+    real(4), intent(in) :: rin(3)
+    rgbout%v = rin
+  end
+  attributes(device) function rgbTimesR(rgbin, rin) result(res)
+    type(rgb), intent(in) :: rgbin
+    real(4), intent(in) :: rin
+    real(4) :: res(3)
+    res = rgbin%v * rin
+  end
+  attributes(device) function color() result(res)
+    type(rgb) :: res
+    real :: attenuation
+!CHECK: CALL rgbeqr3(res,[REAL(4)::0._4,0._4,0._4])
+    res = [0.0, 0.0, 0.0]
+    attenuation = 0.5
+!CHECK: CALL rgbeqr3(res,rgbtimesr(res,attenuation))
+    res = res * attenuation
+  end
+end

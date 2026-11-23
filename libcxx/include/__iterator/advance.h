@@ -35,14 +35,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void
+_LIBCPP_CONSTEXPR_SINCE_CXX17 void
 __advance(_InputIter& __i, typename iterator_traits<_InputIter>::difference_type __n, input_iterator_tag) {
   for (; __n > 0; --__n)
     ++__i;
 }
 
 template <class _BiDirIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void
+_LIBCPP_CONSTEXPR_SINCE_CXX17 void
 __advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type __n, bidirectional_iterator_tag) {
   if (__n >= 0)
     for (; __n > 0; --__n)
@@ -53,7 +53,7 @@ __advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type
 }
 
 template <class _RandIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void
+_LIBCPP_CONSTEXPR_SINCE_CXX17 void
 __advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_type __n, random_access_iterator_tag) {
   __i += __n;
 }
@@ -62,12 +62,11 @@ template < class _InputIter,
            class _Distance,
            class _IntegralDistance = decltype(std::__convert_to_integral(std::declval<_Distance>())),
            __enable_if_t<is_integral<_IntegralDistance>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i, _Distance __orig_n) {
+_LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i, _Distance __orig_n) {
   typedef typename iterator_traits<_InputIter>::difference_type _Difference;
   _Difference __n = static_cast<_Difference>(std::__convert_to_integral(__orig_n));
-  // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
-  _LIBCPP_ASSERT_PEDANTIC(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
-                          "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
+  _LIBCPP_ASSERT_PEDANTIC(__has_bidirectional_iterator_category<_InputIter>::value || __n >= 0,
+                          "std::advance: Can only pass a negative `n` with a bidirectional_iterator.");
   std::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
 }
 
@@ -79,7 +78,7 @@ namespace ranges {
 struct __advance {
 private:
   template <class _Ip>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_forward(_Ip& __i, iter_difference_t<_Ip> __n) {
+  static constexpr void __advance_forward(_Ip& __i, iter_difference_t<_Ip> __n) {
     while (__n > 0) {
       --__n;
       ++__i;
@@ -87,7 +86,7 @@ private:
   }
 
   template <class _Ip>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_backward(_Ip& __i, iter_difference_t<_Ip> __n) {
+  static constexpr void __advance_backward(_Ip& __i, iter_difference_t<_Ip> __n) {
     while (__n < 0) {
       ++__n;
       --__i;
@@ -97,10 +96,9 @@ private:
 public:
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
-    // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
-    _LIBCPP_ASSERT_PEDANTIC(
-        __n >= 0 || bidirectional_iterator<_Ip>, "If `n < 0`, then `bidirectional_iterator<I>` must be true.");
+  constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
+    _LIBCPP_ASSERT_PEDANTIC(bidirectional_iterator<_Ip> || __n >= 0,
+                            "ranges::advance: Can only pass a negative `n` with a bidirectional_iterator.");
 
     // If `I` models `random_access_iterator`, equivalent to `i += n`.
     if constexpr (random_access_iterator<_Ip>) {
@@ -122,7 +120,7 @@ public:
   // Preconditions: Either `assignable_from<I&, S> || sized_sentinel_for<S, I>` is modeled, or [i, bound_sentinel)
   // denotes a range.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, _Sp __bound_sentinel) const {
+  constexpr void operator()(_Ip& __i, _Sp __bound_sentinel) const {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound_sentinel)`.
     if constexpr (assignable_from<_Ip&, _Sp>) {
       __i = std::move(__bound_sentinel);
@@ -147,11 +145,10 @@ public:
   //   `same_as<I, S>`.
   // Returns: `n - M`, where `M` is the difference between the ending and starting position.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip>
-  operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound_sentinel) const {
-    // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
-    _LIBCPP_ASSERT_PEDANTIC((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
-                            "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
+  constexpr iter_difference_t<_Ip> operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound_sentinel) const {
+    _LIBCPP_ASSERT_PEDANTIC(
+        (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>) || (__n >= 0),
+        "ranges::advance: Can only pass a negative `n` with a bidirectional_iterator coming from a common_range.");
     // If `S` and `I` model `sized_sentinel_for<S, I>`:
     if constexpr (sized_sentinel_for<_Sp, _Ip>) {
       // If |n| >= |bound_sentinel - i|, equivalent to `ranges::advance(i, bound_sentinel)`.

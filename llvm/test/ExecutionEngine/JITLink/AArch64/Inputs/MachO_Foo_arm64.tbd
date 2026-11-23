@@ -1,0 +1,23 @@
+--- !tapi-tbd
+tbd-version: 4
+targets:  [ arm64-macos ]
+uuids:
+  - target: arm64-macos
+    value: 00000000-0000-0000-0000-000000000000
+flags: [ installapi ]
+install-name: Foo.framework/Foo
+current-version: 1.2.3
+compatibility-version: 1.2
+swift-abi-version: 5
+parent-umbrella:
+  - targets: [ arm64-macos ]
+    umbrella: System
+exports:
+  - targets: [ arm64-macos ]
+    symbols: [ _foo ]
+    objc-classes: []
+    objc-eh-types: []
+    objc-ivars: []
+    weak-symbols: []
+    thread-local-symbols: []
+...

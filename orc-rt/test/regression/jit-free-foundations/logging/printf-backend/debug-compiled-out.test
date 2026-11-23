@@ -1,0 +1,12 @@
+# Check the compile-time ceiling: on a build whose ceiling is above debug, the
+# debug level is compiled out entirely, and the runtime ORC_RT_LOG variable
+# cannot resurrect it (runtime narrowing only removes levels, never adds them).
+#
+# REQUIRES: orc-rt-log-level-error, !orc-rt-log-level-debug
+# RUN: env ORC_RT_LOG=debug orc-rt-log-check 2>&1 | FileCheck %s
+
+# Even with ORC_RT_LOG=debug requested, no debug record is emitted; error (which
+# is always compiled in) still is, so the "no debug" check is not vacuous.
+# CHECK-NOT: [orc-rt:General:DEBUG]
+# CHECK: [orc-rt:General:ERROR] error message
+# CHECK-NOT: [orc-rt:General:DEBUG]

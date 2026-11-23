@@ -33,6 +33,7 @@
 #include <cassert>
 #include <climits>
 #include <string>
+#include <utility>
 
 namespace clang::include_cleaner {
 
@@ -56,17 +57,27 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   const auto &SM = PP.getSourceManager();
   // This is duplicated in writeHTMLReport, changes should be mirrored there.
   tooling::stdlib::Recognizer Recognizer;
-  for (auto *Root : ASTRoots) {
-    walkAST(*Root, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-      auto FID = SM.getFileID(SM.getSpellingLoc(Loc));
-      if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
-        return;
-      // FIXME: Most of the work done here is repetitive. It might be useful to
-      // have a cache/batching.
-      SymbolReference SymRef{ND, Loc, RT};
-      return CB(SymRef, headersForSymbol(ND, PP, PI));
-    });
-  }
+  walkAST(ASTRoots, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
+    auto SpellLoc = SM.getSpellingLoc(Loc);
+    // Tokens resulting from macro concatenation ends up in scratch space and
+    // clang currently doesn't have a good/simple APIs for tracking where
+    // pieces of a concatenated token originated from.
+    // So we use the macro expansion location instead, and downgrade reference
+    // type to ambiguous to prevent false negatives.
+    if (SM.isWrittenInScratchSpace(SpellLoc)) {
+      Loc = SM.getExpansionLoc(Loc);
+      if (RT == RefType::Explicit)
+        RT = RefType::Ambiguous;
+      SpellLoc = SM.getSpellingLoc(Loc);
+    }
+    auto FID = SM.getFileID(SpellLoc);
+    if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
+      return;
+    // FIXME: Most of the work done here is repetitive. It might be useful to
+    // have a cache/batching.
+    SymbolReference SymRef{ND, Loc, RT};
+    return CB(SymRef, headersForSymbol(ND, PP, PI));
+  });
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)) ||

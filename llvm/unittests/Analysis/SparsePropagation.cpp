@@ -140,7 +140,7 @@ public:
   /// instruction. We only handle the few instructions needed for the tests.
   void ComputeInstructionState(
       Instruction &I,
-      SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
+      SmallMapVector<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
       SparseSolver<TestLatticeKey, TestLatticeVal> &SS) override {
     switch (I.getOpcode()) {
     case Instruction::Call:
@@ -159,9 +159,10 @@ private:
   /// of the current formal argument state with the call site's corresponding
   /// actual argument state. The call site state is the merge of the call site
   /// state with the returned value state of the called function.
-  void visitCallBase(CallBase &I,
-                     SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
-                     SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
+  void visitCallBase(
+      CallBase &I,
+      SmallMapVector<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
+      SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     Function *F = I.getCalledFunction();
     auto RegI = TestLatticeKey(&I, IPOGrouping::Register);
     if (!F) {
@@ -183,9 +184,10 @@ private:
 
   /// Handle return instructions. The function's return state is the merge of
   /// the returned value state and the function's current return state.
-  void visitReturn(ReturnInst &I,
-                   SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
-                   SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
+  void
+  visitReturn(ReturnInst &I,
+              SmallMapVector<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
+              SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     Function *F = I.getParent()->getParent();
     if (F->getReturnType()->isVoidTy())
       return;
@@ -199,9 +201,10 @@ private:
   /// global variable, we attempt to track the value. The global variable state
   /// is the merge of the stored value state with the current global variable
   /// state.
-  void visitStore(StoreInst &I,
-                  SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
-                  SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
+  void
+  visitStore(StoreInst &I,
+             SmallMapVector<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
+             SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     auto *GV = dyn_cast<GlobalVariable>(I.getPointerOperand());
     if (!GV)
       return;
@@ -213,9 +216,10 @@ private:
 
   /// Handle all other instructions. All other instructions are marked
   /// overdefined.
-  void visitInst(Instruction &I,
-                 SmallDenseMap<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
-                 SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
+  void
+  visitInst(Instruction &I,
+            SmallMapVector<TestLatticeKey, TestLatticeVal, 16> &ChangedValues,
+            SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
     auto RegI = TestLatticeKey(&I, IPOGrouping::Register);
     ChangedValues[RegI] = getOverdefinedVal();
   }
@@ -232,8 +236,7 @@ protected:
   SparseSolver<TestLatticeKey, TestLatticeVal> Solver;
 
 public:
-  SparsePropagationTest()
-      : M("", Context), Builder(Context), Solver(&Lattice) {}
+  SparsePropagationTest() : M("", Context), Builder(M), Solver(&Lattice) {}
 };
 } // namespace
 
@@ -278,12 +281,12 @@ TEST_F(SparsePropagationTest, MarkBlockExecutable) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
@@ -319,12 +322,12 @@ TEST_F(SparsePropagationTest, GlobalVariableConstant) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 0, i64* @gv
+///   store i64 0, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
@@ -357,9 +360,9 @@ TEST_F(SparsePropagationTest, GlobalVariableOverDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:
@@ -397,9 +400,9 @@ TEST_F(SparsePropagationTest, FunctionDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:

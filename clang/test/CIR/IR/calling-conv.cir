@@ -1,0 +1,38 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // CHECK: cir.func @default_cc(%arg0: !s32i) -> !s32i
+  cir.func @default_cc(%arg0: !s32i) -> !s32i {
+    cir.return %arg0 : !s32i
+  }
+
+  // CHECK: cir.func @amdgpu_kernel_func() cc(amdgpu_kernel)
+  cir.func @amdgpu_kernel_func() cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func @spir_kernel_func() cc(spir_kernel)
+  cir.func @spir_kernel_func() cc(spir_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func @spir_function_func() cc(spir_function)
+  cir.func @spir_function_func() cc(spir_function) {
+    cir.return
+  }
+
+  // CHECK: cir.func @ptx_kernel_func() cc(ptx_kernel)
+  cir.func @ptx_kernel_func() cc(ptx_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func no_inline dso_local @amdgpu_noinline() cc(amdgpu_kernel)
+  cir.func no_inline dso_local @amdgpu_noinline() cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func private @amdgpu_decl() cc(amdgpu_kernel)
+  cir.func private @amdgpu_decl() cc(amdgpu_kernel)
+}

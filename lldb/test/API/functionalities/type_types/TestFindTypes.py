@@ -3,11 +3,13 @@ Test the SBModule and SBTarget type lookup APIs to find multiple types.
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
 class TypeFindFirstTestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_find_first_type(self):
         """
         Test SBTarget::FindTypes() and SBModule::FindTypes() APIs.

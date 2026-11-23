@@ -127,12 +127,12 @@ using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-class _LIBCPP_TEMPLATE_VIS istreambuf_iterator;
+class istreambuf_iterator;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-class _LIBCPP_TEMPLATE_VIS ostreambuf_iterator;
+class ostreambuf_iterator;
 
 template <class _State>
-class _LIBCPP_TEMPLATE_VIS fpos;
+class fpos;
 typedef fpos<mbstate_t> streampos;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 typedef fpos<mbstate_t> wstreampos;
@@ -143,7 +143,7 @@ typedef fpos<mbstate_t> u8streampos;
 typedef fpos<mbstate_t> u16streampos;
 typedef fpos<mbstate_t> u32streampos;
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT>>
 class basic_syncbuf;
@@ -161,7 +161,7 @@ using osyncstream = basic_osyncstream<char>;
 using wosyncstream = basic_osyncstream<wchar_t>;
 #    endif
 
-#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 template <class _CharT, class _Traits>
 class __save_flags {

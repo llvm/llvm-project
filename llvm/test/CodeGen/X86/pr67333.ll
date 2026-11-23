@@ -7,19 +7,25 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
 define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-LABEL: SHA256_Compress_Generic:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movbel 0, %eax
-; CHECK-NEXT:    movbel 12(%rdi), %ecx
+; CHECK-NEXT:    movl 0, %eax
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movl 12(%rdi), %ecx
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [128,128,128,128,0,1,2,3,128,128,128,128,128,128,128,128]
 ; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsrld $17, %xmm2, %xmm0
 ; CHECK-NEXT:    vpslld $15, %xmm2, %xmm3
-; CHECK-NEXT:    vpor %xmm0, %xmm3, %xmm0
-; CHECK-NEXT:    vpsrld $19, %xmm2, %xmm3
+; CHECK-NEXT:    vpor %xmm0, %xmm3, %xmm3
+; CHECK-NEXT:    vpsrld $19, %xmm2, %xmm0
 ; CHECK-NEXT:    vpslld $13, %xmm2, %xmm4
-; CHECK-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpxor %xmm3, %xmm0, %xmm3
-; CHECK-NEXT:    vpxor %xmm2, %xmm3, %xmm0
+; CHECK-NEXT:    vpor %xmm0, %xmm4, %xmm0
+; CHECK-NEXT:    vpxor %xmm0, %xmm3, %xmm0
+; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %ecx, %xmm4
 ; CHECK-NEXT:    vpshufb %xmm1, %xmm4, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm1

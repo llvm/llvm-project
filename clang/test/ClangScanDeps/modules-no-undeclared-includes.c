@@ -1,6 +1,4 @@
-// Unsupported on AIX because we don't support the requisite "__clangast"
-// section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// REQUIRES: object-wrapped-module
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: split-file %s %t
@@ -31,7 +29,9 @@ module User [no_undeclared_includes] { header "user.h" }
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:        {
 // CHECK-NEXT:   "modules": [

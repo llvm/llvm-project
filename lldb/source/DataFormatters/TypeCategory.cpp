@@ -14,47 +14,26 @@ using namespace lldb;
 using namespace lldb_private;
 
 TypeCategoryImpl::TypeCategoryImpl(IFormatChangeListener *clist,
-                                   ConstString name)
+                                   std::string name)
     : m_format_cont(clist), m_summary_cont(clist), m_filter_cont(clist),
       m_synth_cont(clist), m_enabled(false), m_change_listener(clist),
-      m_mutex(), m_name(name), m_languages() {}
+      m_mutex(), m_name(std::move(name)), m_languages() {}
 
 static bool IsApplicable(lldb::LanguageType category_lang,
                          lldb::LanguageType valobj_lang) {
-  switch (category_lang) {
-  // Unless we know better, allow only exact equality.
-  default:
-    return category_lang == valobj_lang;
-
-  // the C family, we consider it as one
-  case eLanguageTypeC89:
-  case eLanguageTypeC:
-  case eLanguageTypeC99:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99;
-
-  // ObjC knows about C and itself
-  case eLanguageTypeObjC:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99 || valobj_lang == eLanguageTypeObjC;
-
-  // C++ knows about C and C++
-  case eLanguageTypeC_plus_plus:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99 ||
-           valobj_lang == eLanguageTypeC_plus_plus;
-
-  // ObjC++ knows about C,C++,ObjC and ObjC++
-  case eLanguageTypeObjC_plus_plus:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99 ||
-           valobj_lang == eLanguageTypeC_plus_plus ||
-           valobj_lang == eLanguageTypeObjC;
-
   // Categories with unspecified language match everything.
-  case eLanguageTypeUnknown:
+  if (category_lang == eLanguageTypeUnknown)
     return true;
-  }
+
+  // No language plugin claims C, whose versions we consider as one.
+  if (Language::LanguageIsC(category_lang))
+    return Language::LanguageIsC(valobj_lang);
+
+  if (Language *language = Language::FindPlugin(category_lang))
+    return language->IsCategoryApplicable(category_lang, valobj_lang);
+
+  // Unless we know better, allow only exact equality.
+  return category_lang == valobj_lang;
 }
 
 bool TypeCategoryImpl::IsApplicable(lldb::LanguageType lang) {
@@ -148,7 +127,7 @@ void TypeCategoryImpl::Clear(FormatCategoryItems items) {
     m_synth_cont.Clear();
 }
 
-bool TypeCategoryImpl::Delete(ConstString name, FormatCategoryItems items) {
+bool TypeCategoryImpl::Delete(llvm::StringRef name, FormatCategoryItems items) {
   bool success = false;
 
   if (items & eFormatCategoryItemFormat)
@@ -185,48 +164,27 @@ uint32_t TypeCategoryImpl::GetCount(FormatCategoryItems items) {
 }
 
 bool TypeCategoryImpl::AnyMatches(
-    const FormattersMatchCandidate &candidate_type, FormatCategoryItems items,
-    bool only_enabled, const char **matching_category,
-    FormatCategoryItems *matching_type) {
-  if (!IsEnabled() && only_enabled)
-    return false;
-
+    const FormattersMatchCandidate &candidate_type, FormatCategoryItems items) {
   if (items & eFormatCategoryItemFormat) {
     if (m_format_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemFormat;
       return true;
     }
   }
 
   if (items & eFormatCategoryItemSummary) {
     if (m_summary_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemSummary;
       return true;
     }
   }
 
   if (items & eFormatCategoryItemFilter) {
     if (m_filter_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemFilter;
       return true;
     }
   }
 
   if (items & eFormatCategoryItemSynth) {
     if (m_synth_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemSynth;
       return true;
     }
   }
@@ -318,7 +276,7 @@ std::string TypeCategoryImpl::GetDescription() {
   StreamString stream;
   stream.Printf("%s (%s", GetName(), (IsEnabled() ? "enabled" : "disabled"));
   StreamString lang_stream;
-  lang_stream.Printf(", applicable for language(s): ");
+  lang_stream.PutCString(", applicable for language(s): ");
   bool print_lang = false;
   for (size_t idx = 0; idx < GetNumLanguages(); idx++) {
     const lldb::LanguageType lang = GetLanguageAtIndex(idx);

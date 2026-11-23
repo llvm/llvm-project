@@ -1,7 +1,8 @@
 // REQUIRES: osx-ld64-live_support
 // REQUIRES: lto
 
-// RUN: %clang_profgen=%t.profraw -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -Wl,-dead_strip -o %t %s
+// RUN: %clang_profgen=%t.profraw -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -Wl,-dead_strip \
+// RUN:   -Wl,-sectalign,__DATA,__llvm_prf_cnts,0x1000 -Wl,-sectalign,__DATA,__llvm_prf_data,0x1000 -Wl,-sectalign,__DATA,__llvm_prf_bits,0x1000 -o %t %s
 // RUN: %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-profdata show --all-functions %t.profdata | FileCheck %s -check-prefix=PROF
@@ -10,7 +11,8 @@
 // RUN: otool -V -s __DATA __llvm_prf_names %t | FileCheck %s -check-prefix=PRF_NAMES
 // RUN: otool -V -s __DATA __llvm_prf_cnts %t | FileCheck %s -check-prefix=PRF_CNTS
 
-// RUN: %clang_lto_profgen=%t.lto.profraw -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -Wl,-dead_strip -flto -o %t.lto %s
+// RUN: %clang_lto_profgen=%t.lto.profraw -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -Wl,-dead_strip -Wl,-w -flto \
+// RUN:   -Wl,-sectalign,__DATA,__llvm_prf_cnts,0x1000 -Wl,-sectalign,__DATA,__llvm_prf_data,0x1000 -Wl,-sectalign,__DATA,__llvm_prf_bits,0x1000 -o %t.lto %s
 // RUN: %run %t.lto
 // RUN: llvm-profdata merge -o %t.lto.profdata %t.lto.profraw
 // RUN: llvm-profdata show --all-functions %t.lto.profdata | FileCheck %s -check-prefix=PROF
@@ -25,7 +27,8 @@
 // Note: When there is no code in a program, we expect to see the exact same
 // set of external functions provided by the profile runtime.
 
-// RUN: %clang_profgen -fcoverage-mapping -Wl,-dead_strip -dynamiclib -o %t.nocode.dylib %s
+// RUN: %clang_profgen -fcoverage-mapping -Wl,-dead_strip -Wl,-sectalign,__DATA,__llvm_prf_cnts,0x1000 \
+// RUN:   -Wl,-sectalign,__DATA,__llvm_prf_data,0x1000 -Wl,-sectalign,__DATA,__llvm_prf_bits,0x1000 -dynamiclib -o %t.nocode.dylib %s
 // RUN: nm -jgU %t.nocode.dylib > %t.nocode.syms
 // RUN: nm -jgU %t | sed -e '/_\{1,\}main/d' -e '/_\{1,\}mh_execute_header/d' > %t.code.syms
 // RUN: diff %t.nocode.syms %t.code.syms

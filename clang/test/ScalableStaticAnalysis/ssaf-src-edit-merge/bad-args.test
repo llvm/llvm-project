@@ -1,0 +1,10 @@
+# Required-arg checks for clang-ssaf-src-edit-merge.
+
+# Missing -o.
+# RUN: not clang-ssaf-src-edit-merge dummy.yaml 2>&1 | FileCheck %s --check-prefix=NEED-O
+# NEED-O: -o
+# NEED-O-SAME: must be specified
+
+# Missing positional inputs.
+# RUN: not clang-ssaf-src-edit-merge -o /tmp/out.yaml 2>&1 | FileCheck %s --check-prefix=NEED-INPUTS
+# NEED-INPUTS: at least 1 positional argument

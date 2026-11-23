@@ -1,6 +1,6 @@
 // Implement WorstCase functions to compute the worst case for x mod C, with
 // the exponent of x ranges from emin to emax, and precision of x is p.
-// Adapted to Sollya from the Maple function in 
+// Adapted to Sollya from the Maple function in
 //   J-M. Muller, "Elementary Functions", 3rd ed, Section 11.3.2.
 //
 // Some examples:
@@ -8,7 +8,7 @@
 // 1) Worst case for trig range reduction fast passes:
 //
 // Single precision
-// > WorstCase(24, -6, 32, pi/32, 128); 
+// > WorstCase(24, -6, 32, pi/32, 128);
 // numbermin :  10741887
 // expmin    :  7
 // Worst case:  0x1.47d0fep30

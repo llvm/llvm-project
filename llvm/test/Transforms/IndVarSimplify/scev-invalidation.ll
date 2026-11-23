@@ -80,7 +80,7 @@ define i8 @l(i32 %inc, i1 %tobool.not.i) {
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[C_05_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[INNER]] ], [ 0, [[OUTER_HEADER]] ]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[C_05_I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ugt i32 [[C_05_I]], 0
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp samesign ugt i32 [[C_05_I]], 0
 ; CHECK-NEXT:    [[OR_COND_I:%.*]] = select i1 [[CMP_I]], i1 true, i1 [[TOBOOL_NOT_I:%.*]]
 ; CHECK-NEXT:    br i1 [[OR_COND_I]], label [[OUTER_LATCH:%.*]], label [[INNER]]
 ; CHECK:       outer.latch:

@@ -3,7 +3,7 @@
 // RUN: not llvm-mc -triple thumbv7-pc-win32 -filetype=obj -o /dev/null %s 2>&1 | FileCheck %s
 
 // CHECK: error: Stray .seh_endepilogue in func1
-// CHECK: error: Prologue in func2 not correctly terminated
+// CHECK: error: starting epilogue (.seh_startepilogue) before prologue has ended (.seh_endprologue) in func2
 // CHECK: error: Epilogue in func3 not correctly terminated
 // CHECK: error: Epilogue in func4 not correctly terminated
 

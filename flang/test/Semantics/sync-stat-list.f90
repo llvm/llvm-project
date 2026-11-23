@@ -16,7 +16,7 @@ program test_sync_stat_list
   character(len=128) error_message, superfluous_errmsg, coindexed_character[*]
   logical invalid_type
   type(team_type) :: home
-  type(lock_type) :: latch
+  type(lock_type) :: latch[*]
 
   ! valid
   change team (home, stat=sync_status, errmsg=error_message)

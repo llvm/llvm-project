@@ -1,4 +1,4 @@
-//===-- Exhaustive test for cospif16 --------------------------------------===//
+//===-- Exhaustive test for tanpif16 --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/optimization.h"
 #include "src/math/tanpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcTanpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
@@ -27,7 +34,8 @@ TEST_F(LlvmLibcTanpif16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanpi, x,
-                                   LIBC_NAMESPACE::tanpif16(x), 0.5);
+                                   LIBC_NAMESPACE::tanpif16(x),
+                                   TOLERANCE + 0.5);
   }
 }
 
@@ -35,6 +43,23 @@ TEST_F(LlvmLibcTanpif16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanpi, x,
-                                   LIBC_NAMESPACE::tanpif16(x), 0.5);
+                                   LIBC_NAMESPACE::tanpif16(x),
+                                   TOLERANCE + 0.5);
+  }
+}
+
+TEST_F(LlvmLibcTanpif16Test, IntegerSigns) {
+  // The MPFR matcher does not distinguish the signs of zeros.
+  constexpr struct {
+    float16 input, expected;
+  } ZERO_TESTS[] = {{1.0f16, neg_zero},
+                    {2.0f16, zero},
+                    {0x1.004p10f16, neg_zero}, // 2^10 + 1 is odd.
+                    {0x1.004p11f16, zero}};    // 2^11 + 2 is even.
+  for (const auto &test : ZERO_TESTS) {
+    EXPECT_FP_EQ_ALL_ROUNDING(test.expected,
+                              LIBC_NAMESPACE::tanpif16(test.input));
+    EXPECT_FP_EQ_ALL_ROUNDING(-test.expected,
+                              LIBC_NAMESPACE::tanpif16(-test.input));
   }
 }

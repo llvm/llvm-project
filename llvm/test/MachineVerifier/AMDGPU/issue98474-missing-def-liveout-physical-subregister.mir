@@ -1,5 +1,5 @@
 # XFAIL: *
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -run-pass=none -filetype=null %s
+# RUN: not --crash llc -mtriple=amdgpu9.00-amd-amdpal -run-pass=none -filetype=null %s
 
 # FIXME: This should fail the machine verifier. There is a missing def
 # of $vgpr2 in bb.1, which is needed since it's live into bb.3

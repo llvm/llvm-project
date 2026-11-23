@@ -101,3 +101,8 @@
 // RUN:   | FileCheck %s --check-prefix CHECK-WINDOWS-MSVC-BFD
 // CHECK-WINDOWS-MSVC-BFD: "{{.*}}ld.bfd"
 // CHECK-WINDOWS-MSVC-BFD-SAME: "-o"
+
+// RUN: %clang %s -### -fuse-ld=lld \
+// RUN:     --target=x86_64-unknown-uefi 2>&1 \
+// RUN:   | FileCheck %s --check-prefix CHECK-UEFI-LLD-LINK
+// CHECK-UEFI-LLD-LINK: "{{.*}}lld-link

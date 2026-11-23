@@ -5,7 +5,7 @@ REQUIRES: x86
 
 RUN: split-file %s %ts
 RUN: llvm-mc -filetype=obj -triple=x86_64 %ts/asm.s -o %t.o
-RUN: ld.lld -o %t -T %ts/script %t.o
+RUN: ld.lld -o %t --image-base=0 -T %ts/script %t.o
 RUN: llvm-readelf -S %t | FileCheck %s
 
 CHECK: .text             PROGBITS        0000000000001000

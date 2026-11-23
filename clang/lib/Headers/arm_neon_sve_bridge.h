@@ -172,6 +172,19 @@ svbfloat16_t svdup_neonq(bfloat16x8_t);
 __ai __attribute__((__clang_arm_builtin_alias(__builtin_sve_svdup_neonq_bf16)))
 svbfloat16_t svdup_neonq_bf16(bfloat16x8_t);
 
+__aio __attribute__((__clang_arm_builtin_alias(__builtin_sve_svset_neonq_mf8)))
+svmfloat8_t svset_neonq(svmfloat8_t, mfloat8x16_t);
+__ai __attribute__((__clang_arm_builtin_alias(__builtin_sve_svset_neonq_mf8)))
+svmfloat8_t svset_neonq_mf8(svmfloat8_t, mfloat8x16_t);
+__aio __attribute__((__clang_arm_builtin_alias(__builtin_sve_svget_neonq_mf8)))
+mfloat8x16_t svget_neonq(svmfloat8_t);
+__ai __attribute__((__clang_arm_builtin_alias(__builtin_sve_svget_neonq_mf8)))
+mfloat8x16_t svget_neonq_mf8(svmfloat8_t);
+__aio __attribute__((__clang_arm_builtin_alias(__builtin_sve_svdup_neonq_mf8)))
+svmfloat8_t svdup_neonq(mfloat8x16_t);
+__ai __attribute__((__clang_arm_builtin_alias(__builtin_sve_svdup_neonq_mf8)))
+svmfloat8_t svdup_neonq_mf8(mfloat8x16_t);
+
 #undef __ai
 #undef __aio
 

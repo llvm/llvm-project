@@ -48,6 +48,19 @@ constexpr bool test() {
   test_one<SplitViewDiff>(" ");
   test_one<SplitViewInput>(' ');
 
+  {
+    CopyableView input = "a";
+    SplitViewCopyable v(input, "b");
+    auto val = *v.begin();
+    assert(val.begin().base() == input.begin());
+  }
+  {
+    InputView input = "a";
+    SplitViewInput v(input, 'b');
+    auto val = *v.begin();
+    assert(*val.begin().base() == *input.begin());
+  }
+
   return true;
 }
 

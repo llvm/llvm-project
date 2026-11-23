@@ -2,11 +2,6 @@
 ; RUN: llc %s -fast-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,FAST %s
 ; RUN: llc %s -global-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,GLOBAL %s
 
-;; Run with experimental debuginfo iterators.
-; RUN: llc --try-experimental-debuginfo-iterators %s -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,DAG %s
-; RUN: llc --try-experimental-debuginfo-iterators %s -fast-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,FAST %s
-; RUN: llc --try-experimental-debuginfo-iterators %s -global-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,GLOBAL %s
-
 ;; Run with assignment tracking enabled (use sed to add the module flag).
 ; RUN: sed 's/;Uncomment-with-sed//g' < %s \
 ; RUN: | llc -global-isel=false -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - \
@@ -28,10 +23,10 @@
 ; FAST-DAG: DBG_VALUE $noreg, $noreg, [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
 ; FAST: DBG_VALUE $noreg, $noreg, [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), debug-location
 ; FAST: DBG_VALUE $noreg, $noreg, [[D_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_eq, DW_OP_LLVM_arg, 0, DW_OP_ne, DW_OP_LLVM_arg, 1, DW_OP_gt, DW_OP_LLVM_arg, 0, DW_OP_lt, DW_OP_LLVM_arg, 1, DW_OP_le), debug-location
-; GLOBAL-DAG: DBG_VALUE $noreg, 0, [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
-; GLOBAL-DAG: DBG_VALUE $noreg, 0, [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
-; GLOBAL: DBG_VALUE $noreg, 0, [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), debug-location
-; GLOBAL: DBG_VALUE $noreg, 0, [[D_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_eq, DW_OP_LLVM_arg, 0, DW_OP_ne, DW_OP_LLVM_arg, 1, DW_OP_gt, DW_OP_LLVM_arg, 0, DW_OP_lt, DW_OP_LLVM_arg, 1, DW_OP_le), debug-location
+; GLOBAL-DAG: DBG_VALUE_LIST [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %0, debug-location
+; GLOBAL-DAG: DBG_VALUE_LIST [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %1, debug-location
+; GLOBAL: DBG_VALUE_LIST [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %0, %1, debug-location
+; GLOBAL: DBG_VALUE_LIST [[D_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_eq, DW_OP_LLVM_arg, 0, DW_OP_ne, DW_OP_LLVM_arg, 1, DW_OP_gt, DW_OP_LLVM_arg, 0, DW_OP_lt, DW_OP_LLVM_arg, 1, DW_OP_le), %0, %1, debug-location
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.16.27034"

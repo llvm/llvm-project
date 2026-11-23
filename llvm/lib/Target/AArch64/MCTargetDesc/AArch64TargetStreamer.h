@@ -9,7 +9,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
-#include "AArch64MCExpr.h"
+#include "AArch64MCAsmInfo.h"
+#include "AArch64MCOptions.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -24,6 +25,8 @@ class AArch64ELFStreamer;
 namespace llvm {
 
 class AArch64TargetStreamer : public MCTargetStreamer {
+  const AArch64MCOptions &CLOpts;
+
 public:
   AArch64TargetStreamer(MCStreamer &S);
   ~AArch64TargetStreamer() override;
@@ -55,6 +58,9 @@ public:
   /// Callback used to implement the .variant_pcs directive.
   virtual void emitDirectiveVariantPCS(MCSymbol *Symbol) {};
 
+  virtual void emitDirectiveArch(StringRef Name) {};
+  virtual void emitDirectiveArchExtension(StringRef Name) {};
+
   virtual void emitARM64WinCFIAllocStack(unsigned Size) {}
   virtual void emitARM64WinCFISaveR19R20X(int Offset) {}
   virtual void emitARM64WinCFISaveFPLR(int Offset) {}
@@ -73,6 +79,7 @@ public:
   virtual void emitARM64WinCFINop() {}
   virtual void emitARM64WinCFISaveNext() {}
   virtual void emitARM64WinCFIPrologEnd() {}
+  virtual void emitARM64WinCFIEndC() {}
   virtual void emitARM64WinCFIEpilogStart() {}
   virtual void emitARM64WinCFIEpilogEnd() {}
   virtual void emitARM64WinCFITrapFrame() {}
@@ -93,22 +100,22 @@ public:
   virtual void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFIAllocZ(int Offset) {}
+  virtual void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISavePReg(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
   virtual void
-  emitAtributesSubsection(StringRef VendorName,
+  emitAttributesSubsection(StringRef VendorName,
                           AArch64BuildAttributes::SubsectionOptional IsOptional,
                           AArch64BuildAttributes::SubsectionType ParameterType);
-  virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
-                             std::string String, bool Override);
-  void activateAtributesSubsection(StringRef VendorName);
+  virtual void emitAttribute(StringRef VendorName, unsigned Tag, uint64_t Value,
+                             std::string String);
+  void activateAttributesSubsection(StringRef VendorName);
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
-  getActiveAtributesSubsection();
+  getActiveAttributesSubsection();
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
-  getAtributesSubsectionByName(StringRef Name);
-  void
-  insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
-                         MCELFStreamer::AttributeSubSection &AttSubSection);
+  getAttributesSubsectionByName(StringRef Name);
 
   SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
@@ -123,12 +130,12 @@ private:
   MCSection *AttributeSection = nullptr;
 
   /// Build attributes implementation
-  void emitAtributesSubsection(
+  void emitAttributesSubsection(
       StringRef VendorName,
       AArch64BuildAttributes::SubsectionOptional IsOptional,
       AArch64BuildAttributes::SubsectionType ParameterType) override;
-  void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
-                     std::string String, bool Override = false) override;
+  void emitAttribute(StringRef VendorName, unsigned Tag, uint64_t Value,
+                     std::string String) override;
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
   void finish() override;
@@ -138,12 +145,6 @@ public:
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
-private:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
-  // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
 public:
   AArch64TargetWinCOFFStreamer(llvm::MCStreamer &S)
     : AArch64TargetStreamer(S) {}
@@ -168,6 +169,7 @@ public:
   void emitARM64WinCFINop() override;
   void emitARM64WinCFISaveNext() override;
   void emitARM64WinCFIPrologEnd() override;
+  void emitARM64WinCFIEndC() override;
   void emitARM64WinCFIEpilogStart() override;
   void emitARM64WinCFIEpilogEnd() override;
   void emitARM64WinCFITrapFrame() override;
@@ -188,6 +190,9 @@ public:
   void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFIAllocZ(int Offset) override;
+  void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISavePReg(unsigned Reg, int Offset) override;
 
 private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);

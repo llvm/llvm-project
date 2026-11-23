@@ -89,8 +89,8 @@ void LiveIntervalCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
   // Step 2: Extend live segments to all uses, constructing SSA form as
   // necessary.
   if (LI.hasSubRanges()) {
+    LiveIntervalCalc SubLIC;
     for (LiveInterval::SubRange &S : LI.subranges()) {
-      LiveIntervalCalc SubLIC;
       SubLIC.reset(MF, Indexes, DomTree, Alloc);
       SubLIC.extendToUses(S, Reg, S.LaneMask, &LI);
     }
@@ -117,18 +117,6 @@ void LiveIntervalCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
   }
   resetLiveOutMap();
   extendToUses(MainRange, LI.reg(), LaneBitmask::getAll(), &LI);
-}
-
-void LiveIntervalCalc::createDeadDefs(LiveRange &LR, Register Reg) {
-  const MachineRegisterInfo *MRI = getRegInfo();
-  SlotIndexes *Indexes = getIndexes();
-  VNInfo::Allocator *Alloc = getVNAlloc();
-  assert(MRI && Indexes && "call reset() first");
-
-  // Visit all def operands. If the same instruction has multiple defs of Reg,
-  // LR.createDeadDef() will deduplicate.
-  for (MachineOperand &MO : MRI->def_operands(Reg))
-    createDeadDef(*Indexes, *Alloc, LR, MO);
 }
 
 void LiveIntervalCalc::extendToUses(LiveRange &LR, Register Reg,

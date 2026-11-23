@@ -9,7 +9,7 @@ declare void @bar(ptr)
 
 define void @foo(ptr %m, i32 %off0) {
 .thread1653:
-  br i1 undef, label %0, label %.thread1880
+  br i1 poison, label %0, label %.thread1880
 
   %1 = icmp eq i32 undef, 0
   %.not = xor i1 %1, true

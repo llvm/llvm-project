@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 # MIR test case produced by compiling:
 #
@@ -90,7 +90,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 16, size: 4, alignment: 16, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }

@@ -1,0 +1,633 @@
+// RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_cta_1
+llvm.func @nvvm_tcgen05_mma_cta_1(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1) {
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_cta_2
+llvm.func @nvvm_tcgen05_mma_cta_2(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1) {
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f16, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = tf32, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, /* kind=i8 */ i32 3, /* cta_group= */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d
+  , kind = i8, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1)
+
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_scale_d_imm_cta_1
+llvm.func @nvvm_tcgen05_mma_scale_d_imm_cta_1(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1) {
+
+  %scale_d_imm = llvm.mlir.constant(0:i64) : i64
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_scale_d_imm_cta_2
+llvm.func @nvvm_tcgen05_mma_scale_d_imm_cta_2(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1) {
+
+  %scale_d_imm = llvm.mlir.constant(0:i64) : i64
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = f16, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm
+  , kind = tf32, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64)
+
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_disable_output_lane_cta_1
+llvm.func @nvvm_tcgen05_mma_disable_output_lane_cta_1(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1, %disableOutputLane : vector<4 x i32>) {
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <4 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<4 x i32>)
+
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_disable_output_lane_cta_2
+llvm.func @nvvm_tcgen05_mma_disable_output_lane_cta_2(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1, %disableOutputLane: vector<8 x i32>) {
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=f8f6f4 */ i32 2, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = f8f6f4, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, <8 x i32> {{%[0-9]+}}, /* kind=i8 */ i32 3, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d mask = %disableOutputLane
+  , kind = i8, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, vector<8 x i32>)
+
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_scale_d_imm_disable_output_lane_cta_1
+llvm.func @nvvm_tcgen05_mma_scale_d_imm_disable_output_lane_cta_1(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1, %disableOutputLane: vector<4 x i32>) {
+
+  %scale_d_imm = llvm.mlir.constant(0:i64) : i64
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <4 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_1> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<4 x i32>)
+
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_tcgen05_mma_scale_d_imm_disable_output_lane_cta_2
+llvm.func @nvvm_tcgen05_mma_scale_d_imm_disable_output_lane_cta_2(%d_tmem : !llvm.ptr<6>, %a_tmem: !llvm.ptr<6>, %adesc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1, %disableOutputLane: vector<8 x i32>) {
+
+  %scale_d_imm = llvm.mlir.constant(0:i64) : i64
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2.ashift(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = lastuse a_shift : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = fill : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=f16 */ i32 0, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = f16, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  // CHECK: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2(ptr addrspace(6) {{%[0-9]+}}, ptr addrspace(6) {{%[0-9]+}}, i64 {{%[0-9]+}}, i32 {{%[0-9]+}}, i1 {{%[0-9]+}}, i64 0, <8 x i32> {{%[0-9]+}}, /* kind=tf32 */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  nvvm.tcgen05.mma %d_tmem, %a_tmem, %b_desc, %idesc, %enable_input_d scale = %scale_d_imm mask = %disableOutputLane
+  , kind = tf32, cta_group = <cta_2> collector_a = use : (!llvm.ptr<6>, !llvm.ptr<6>, i64, i32, i1, i64, vector<8 x i32>)
+
+  llvm.return
+}

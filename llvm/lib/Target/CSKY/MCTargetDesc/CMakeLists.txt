@@ -4,7 +4,6 @@ add_llvm_component_library(LLVMCSKYDesc
   CSKYELFStreamer.cpp
   CSKYInstPrinter.cpp
   CSKYMCAsmInfo.cpp
-  CSKYMCExpr.cpp
   CSKYMCTargetDesc.cpp
   CSKYMCCodeEmitter.cpp
   CSKYTargetStreamer.cpp
@@ -13,6 +12,7 @@ add_llvm_component_library(LLVMCSKYDesc
   CSKYInfo
   CodeGenTypes
   MC
+  Option
   Support
   TargetParser
 

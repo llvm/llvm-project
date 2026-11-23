@@ -51,17 +51,7 @@ def ApplyFoldTensorEmptyPatternsOp : Op<Transform_Dialect,
   }];
 
   let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
-  let assemblyFormat = "attr-dict";
-}
-def ApplyFoldIntoPackAndUnpackPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.tensor.fold_into_pack_and_unpack",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Indicates that operations like tensor.pad and tensor.extract_slice should
-    be folded into tensor.pack and tensor.unpack operations, respectively.
-  }];
-
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "oilist(`fold_single_use_only` `=` $fold_single_use_only) attr-dict";
 }
 
 def ApplyFoldTensorSubsetOpsPatternsOp : Op<Transform_Dialect,
@@ -106,6 +96,17 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
     Indicates that reassociative reshapes (tensor.collapse_shape /
     tensor.expand_shape) should be folded with inverse rank expansions / rank
     reductions (via tensor.insert_slice / tensor.extract_slice).
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyBubbleUpExtractSlicePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.bubble_up_extract_slice",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that producers of tensor.extract_slice should swap and operate on 
+    the result of the slice.
   }];
 
   let assemblyFormat = "attr-dict";
@@ -160,7 +161,7 @@ def MakeLoopIndependentOp
   let arguments = (ins TransformHandleTypeInterface:$target, I64Attr:$num_loops);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat =
-      "$target attr-dict `:` functional-type($target, $transformed)";
+      "$target `num_loops` `=` $num_loops attr-dict `:` functional-type($target, $transformed)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
-# RUN:    -experimental-debug-variable-locations -run-pass=livedebugvalues
+# RUN:    -experimental-debug-variable-locations -run-pass=live-debug-values
 #
 # Regression test for a rare crash with InstrRefBasedLDV. It would be quite
 # wild for a transfer (copy/spill/restore) instruction to write to $rsp, but if

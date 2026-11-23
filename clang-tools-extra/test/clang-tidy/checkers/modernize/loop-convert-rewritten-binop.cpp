@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
 
 namespace std {
 struct strong_ordering {
@@ -47,7 +47,7 @@ void rewritten() {
     (void)*It;
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int & It : Oeo)
+  // CHECK-FIXES: for (int & It : Oeo) {
   // CHECK-FIXES-NEXT: (void)It;
 
   HasSpaceshipMem Hsm;
@@ -55,6 +55,6 @@ void rewritten() {
     (void)*It;
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
-  // CHECK-FIXES: for (int & It : Hsm)
+  // CHECK-FIXES: for (int & It : Hsm) {
   // CHECK-FIXES-NEXT: (void)It;
 }

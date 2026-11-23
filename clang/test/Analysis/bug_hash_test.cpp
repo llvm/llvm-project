@@ -65,7 +65,7 @@ void AA::X::OutOfLine() {
 
 void testLambda() {
   []() {
-    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void testLambda()::(anonymous class)::operator()() const$29$clang_analyzer_hashDump(5);$Category}}
+    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void testLambda()::(lambda)::operator()() const$29$clang_analyzer_hashDump(5);$Category}}
   }();
 }
 

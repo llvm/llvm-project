@@ -78,7 +78,7 @@ void __attribute__((target_version("rdm+rng+crc"))) redef(void) {}
 
 int def(void);
 void __attribute__((target_version("dit"))) nodef(void);
-void __attribute__((target_version("ls64"))) nodef(void);
+void __attribute__((target_version("wfxt"))) nodef(void);
 void __attribute__((target_version("aes"))) ovl(void);
 void __attribute__((target_version("default"))) ovl(void);
 int bar() {
@@ -88,7 +88,8 @@ int bar() {
   nodef();
   return def();
 }
-// expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
+// expected-error@+2 {{function declaration cannot become a multiversioned function after first usage}}
+// expected-note@-13 {{previous declaration is here}}
 int __attribute__((target_version("sha2"))) def(void) { return 1; }
 
 int __attribute__((target_version("sve"))) prot();
@@ -116,3 +117,14 @@ int unspec_args_implicit_default_first();
 int __attribute__((target_version("aes"))) unspec_args_implicit_default_first() { return -1; }
 // expected-note@+1 {{function multiversioning caused by this declaration}}
 int __attribute__((target_version("default"))) unspec_args_implicit_default_first() { return 0; }
+
+int __attribute__((target_version("aes + sve2 ; priority=100"))) priority_whitespace(void) { return 0; }
+
+//expected-warning@+1 {{unsupported 'priority=10' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+int __attribute__((target_version("priority=10;aes"))) priority_before_features(void) { return 0; }
+
+//expected-warning@+1 {{version priority '256' is outside the allowed range [1-255]; ignoring priority}}
+int __attribute__((target_version("aes;priority=256"))) priority_out_of_range(void) { return 0; }
+
+//expected-warning@+1 {{priority of default version cannot be overridden; ignoring priority}}
+int __attribute__((target_version("default;priority=10"))) priority_default_version(void) { return 0; }

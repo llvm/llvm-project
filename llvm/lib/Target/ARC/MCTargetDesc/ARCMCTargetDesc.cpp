@@ -55,7 +55,7 @@ static MCSubtargetInfo *createARCMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createARCMCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TT,
                                      const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new ARCMCAsmInfo(TT);
+  MCAsmInfo *MAI = new ARCMCAsmInfo(TT, Options);
 
   // Initial state of the frame pointer is SP.
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, ARC::SP, 0);
@@ -81,6 +81,10 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
   return new ARCTargetStreamer(S);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new ARCTargetStreamer(S);
+}
+
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTargetMC() {
   // Register the MC asm info.
@@ -102,4 +106,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTargetMC() {
 
   TargetRegistry::RegisterAsmTargetStreamer(TheARCTarget,
                                             createTargetAsmStreamer);
+
+  TargetRegistry::RegisterNullTargetStreamer(TheARCTarget,
+                                             createNullTargetStreamer);
 }

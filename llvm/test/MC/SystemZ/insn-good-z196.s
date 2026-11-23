@@ -245,16 +245,16 @@
 	axtra	%f8, %f8, %f8, 8
 
 #CHECK: brcth	%r0, .[[LAB:L.*]]-4294967296 # encoding: [0xcc,0x06,A,A,A,A]
-#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-4294967296)+2, kind: FK_390_PC32DBL
+#CHECK:  fixup A - offset: 2, value: .[[LAB]]-4294967296+2, kind: FK_390_PC32DBL
 	brcth	%r0, -0x100000000
 #CHECK: brcth	%r0, .[[LAB:L.*]]-2	# encoding: [0xcc,0x06,A,A,A,A]
-#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC32DBL
+#CHECK:  fixup A - offset: 2, value: .[[LAB]]-2+2, kind: FK_390_PC32DBL
 	brcth	%r0, -2
 #CHECK: brcth	%r0, .[[LAB:L.*]]	# encoding: [0xcc,0x06,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC32DBL
 	brcth	%r0, 0
 #CHECK: brcth	%r0, .[[LAB:L.*]]+4294967294 # encoding: [0xcc,0x06,A,A,A,A]
-#CHECK:  fixup A - offset: 2, value: (.[[LAB]]+4294967294)+2, kind: FK_390_PC32DBL
+#CHECK:  fixup A - offset: 2, value: .[[LAB]]+4294967294+2, kind: FK_390_PC32DBL
 	brcth	%r0, 0xfffffffe
 
 #CHECK: brcth	%r0, foo                # encoding: [0xcc,0x06,A,A,A,A]
@@ -266,9 +266,9 @@
 	brcth	%r15,foo
 
 #CHECK: brcth	%r3, bar+100            # encoding: [0xcc,0x36,A,A,A,A]
-# fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC32DBL
+# fixup A - offset: 2, value: bar+100+2, kind: FK_390_PC32DBL
 #CHECK: brcth	%r4, bar+100            # encoding: [0xcc,0x46,A,A,A,A]
-# fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC32DBL
+# fixup A - offset: 2, value: bar+100+2, kind: FK_390_PC32DBL
 
 	brcth	%r3,bar+100
 	brcth	%r4,bar+100

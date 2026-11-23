@@ -51,6 +51,17 @@ Options
       pair<Obj, Obj> other = std::move(p);
     }
 
+.. option:: AllowImplicitMove
+
+   If set to `true`, the check recognizes implicit move ``return param;``
+   where ``param`` is a rvalue reference parameter. Default is `false`.
+
+  .. code-block:: c++
+
+    A f(A&& a) {
+      return a; // no warning with AllowImplicitMove = true
+    }
+
 .. option:: IgnoreUnnamedParams
 
    If set to `true`, the check ignores unnamed rvalue reference parameters.
@@ -78,6 +89,10 @@ Options
     void forwarding_ref(T&& t) {
       T other = std::forward<T>(t);
     }
+
+.. option:: MoveFunction
+
+   Specify the function used for moving. Default is `::std::move`.
 
 This check implements `F.18
 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f18-for-will-move-from-parameters-pass-by-x-and-stdmove-the-parameter>`_

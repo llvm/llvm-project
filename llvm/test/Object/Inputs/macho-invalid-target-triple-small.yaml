@@ -1,0 +1,17 @@
+## LC_TARGET_TRIPLE with a cmdsize smaller than the target_triple_command
+## struct (12 bytes).
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x00000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      8
+  flags:           0x00000000
+LoadCommands:
+  - cmd:             LC_TARGET_TRIPLE
+    cmdsize:         8
+    triple:          19
+...

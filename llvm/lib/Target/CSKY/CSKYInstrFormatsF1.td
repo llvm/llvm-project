@@ -91,15 +91,21 @@ multiclass FT_XZ<bits<6> sop, string op, PatFrag opnode> {
 }
 
 let vrz = 0, isCompare = 1 in {
-class F_CMPXY<bits<5> datatype, bits<6> sop, string op, string op_su, RegisterOperand regtype>
-  : F_XYZ_BASE<datatype, sop, (outs CARRY:$ca), (ins regtype:$vrx, regtype:$vry), !strconcat(op#op_su, "\t$vrx, $vry"),
-  []>;
+  class F_CMPXY<bits<5> datatype, bits<6> sop, string op, string op_su,
+                RegisterOperand regtype>
+      : F_XYZ_BASE<datatype, sop, (outs CARRY:$ca),
+                   (ins regtype:$vrx, regtype:$vry),
+                   !strconcat(op#op_su, "\t$vrx, $vry"), []> {
+    bits<0> ca;
+  }
 
-let vry = 0 in{
-class F_CMPZX<bits<5> datatype, bits<6> sop, string op, string op_su, RegisterOperand regtype>
-  : F_XYZ_BASE<datatype, sop, (outs CARRY:$ca), (ins regtype:$vrx), !strconcat(op#op_su, "\t$vrx"),
-  []>;
-}
+  let vry = 0 in
+  class F_CMPZX<bits<5> datatype, bits<6> sop, string op, string op_su,
+                RegisterOperand regtype>
+      : F_XYZ_BASE<datatype, sop, (outs CARRY:$ca), (ins regtype:$vrx),
+                   !strconcat(op#op_su, "\t$vrx"), []> {
+    bits<0> ca;
+  }
 }
 
 class F_XYZ<bits<5> datatype, bits<6> sop, string op, string op_su, PatFrag opnode, RegisterOperand regtype>

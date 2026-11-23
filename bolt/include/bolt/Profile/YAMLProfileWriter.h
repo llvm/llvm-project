@@ -36,16 +36,15 @@ public:
       DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>;
   struct InlineTreeDesc {
     template <typename T> using GUIDMapTy = std::unordered_map<uint64_t, T>;
-    using GUIDNodeMap = GUIDMapTy<const MCDecodedPseudoProbeInlineTree *>;
     using GUIDNumMap = GUIDMapTy<uint32_t>;
-    GUIDNodeMap TopLevelGUIDToInlineTree;
     GUIDNumMap GUIDIdxMap;
     GUIDNumMap HashIdxMap;
   };
 
   static std::tuple<std::vector<yaml::bolt::InlineTreeNode>, InlineTreeMapTy>
   convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
-                      const InlineTreeDesc &InlineTree, uint64_t GUID);
+                      const InlineTreeDesc &InlineTree,
+                      const BinaryFunction &BF);
 
   static std::tuple<yaml::bolt::ProfilePseudoProbeDesc, InlineTreeDesc>
   convertPseudoProbeDesc(const MCPseudoProbeDecoder &PseudoProbeDecoder);
@@ -74,25 +73,24 @@ private:
   collectInlineTree(const MCPseudoProbeDecoder &Decoder,
                     const MCDecodedPseudoProbeInlineTree &Root);
 
-  // 0 - block probe, 1 - indirect call, 2 - direct call
-  using ProbeList = std::array<SmallVector<uint64_t, 0>, 3>;
-  using NodeIdToProbes = DenseMap<uint32_t, ProbeList>;
-  static std::vector<yaml::bolt::PseudoProbeInfo>
-  convertNodeProbes(NodeIdToProbes &NodeProbes);
-
 public:
-  template <typename T>
-  static std::vector<yaml::bolt::PseudoProbeInfo>
-  writeBlockProbes(T Probes, const InlineTreeMapTy &InlineTreeNodeId) {
-    NodeIdToProbes NodeProbes;
-    for (const MCDecodedPseudoProbe &Probe : Probes) {
-      auto It = InlineTreeNodeId.find(Probe.getInlineTreeNode());
-      if (It == InlineTreeNodeId.end())
-        continue;
-      NodeProbes[It->second][Probe.getType()].emplace_back(Probe.getIndex());
-    }
-    return convertNodeProbes(NodeProbes);
-  }
+  class BlockProbeCtx {
+    struct Call {
+      uint64_t Id;
+      uint32_t Node;
+      bool Indirect;
+      bool Used;
+    };
+    // Group block probes by node id.
+    DenseMap<uint32_t, std::vector<uint64_t>> NodeToProbes;
+    // Offset -> call probe
+    DenseMap<uint32_t, Call> CallProbes;
+
+  public:
+    void addBlockProbe(const InlineTreeMapTy &Map,
+                       const MCDecodedPseudoProbe &Probe, uint32_t ProbeOffset);
+    void finalize(yaml::bolt::BinaryBasicBlockProfile &YamlBB);
+  };
 };
 } // namespace bolt
 } // namespace llvm

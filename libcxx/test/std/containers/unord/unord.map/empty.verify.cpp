@@ -17,6 +17,6 @@
 #include <unordered_map>
 
 void f() {
-    std::unordered_map<int, int> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::unordered_map<int, int> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

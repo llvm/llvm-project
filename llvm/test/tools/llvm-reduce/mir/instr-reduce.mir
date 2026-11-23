@@ -28,4 +28,3 @@ body:             |
     $x10 = COPY %40
     PseudoRET implicit $x10
 ...
----

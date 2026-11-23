@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
@@ -15,6 +16,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
 
@@ -138,7 +140,15 @@ bool SBInstructionList::GetDescription(lldb::SBStream &stream) {
   return GetDescription(stream.ref());
 }
 
-bool SBInstructionList::GetDescription(Stream &sref) {
+bool SBInstructionList::GetDescription(lldb::SBStream &stream,
+                                       lldb::SBExecutionContext &exe_ctx) {
+  LLDB_INSTRUMENT_VA(this, stream);
+  ExecutionContext exe_ctx_wrapper(exe_ctx.get());
+  return GetDescription(stream.ref(), &exe_ctx_wrapper);
+}
+
+bool SBInstructionList::GetDescription(
+    Stream &sref, lldb_private::ExecutionContext *exe_ctx) {
 
   if (m_opaque_sp) {
     size_t num_instructions = GetSize();
@@ -148,7 +158,7 @@ bool SBInstructionList::GetDescription(Stream &sref) {
       const uint32_t max_opcode_byte_size =
           m_opaque_sp->GetInstructionList().GetMaxOpcocdeByteSize();
       FormatEntity::Entry format;
-      FormatEntity::Parse("${addr}: ", format);
+      FormatEntity::Parse("${addr-file-or-load}: ", format);
       SymbolContext sc;
       SymbolContext prev_sc;
 
@@ -172,7 +182,7 @@ bool SBInstructionList::GetDescription(Stream &sref) {
         if (next_addr && *next_addr != addr)
           sref.EOL();
         inst->Dump(&sref, max_opcode_byte_size, true, false,
-                   /*show_control_flow_kind=*/false, nullptr, &sc, &prev_sc,
+                   /*show_control_flow_kind=*/false, exe_ctx, &sc, &prev_sc,
                    &format, 0);
         sref.EOL();
         next_addr = addr;

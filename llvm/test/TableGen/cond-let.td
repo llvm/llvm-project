@@ -1,6 +1,5 @@
 // Check support for `!cond' operator as part of a `let' statement.
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 
 class C<bits<3> x, bits<4> y, bit z> {

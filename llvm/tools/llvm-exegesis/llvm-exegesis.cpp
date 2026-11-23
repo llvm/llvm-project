@@ -40,6 +40,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -300,18 +301,6 @@ T ExitOnFileError(const Twine &FileName, Expected<T> &&E) {
   return std::move(*E);
 }
 
-static const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
-                                                unsigned Opcode) {
-  const MCInstrDesc &InstrDesc = State.getIC().getInstr(Opcode).Description;
-  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
-    return "Unsupported opcode: isPseudo/usesCustomInserter";
-  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
-    return "Unsupported opcode: isBranch/isIndirectBranch";
-  if (InstrDesc.isCall() || InstrDesc.isReturn())
-    return "Unsupported opcode: isCall/isReturn";
-  return nullptr;
-}
-
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
 // `SnippetsFile`.
@@ -370,7 +359,8 @@ static Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode,
                  const BitVector &ForbiddenRegs) {
   // Ignore instructions that we cannot run.
-  if (const char *Reason = getIgnoredOpcodeReasonOrNull(State, Opcode))
+  if (const char *Reason =
+          State.getExegesisTarget().getIgnoredOpcodeReasonOrNull(State, Opcode))
     return make_error<Failure>(Reason);
 
   const Instruction &Instr = State.getIC().getInstr(Opcode);
@@ -475,7 +465,7 @@ static void runBenchmarkConfigurations(
   }
 }
 
-void benchmarkMain() {
+void benchmarkMain(const cl::LibraryOptionsContext &LibraryOptions) {
   if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
       !UseDummyPerfCounters) {
 #ifndef HAVE_LIBPFM
@@ -493,11 +483,12 @@ void benchmarkMain() {
   InitializeAllExegesisTargets();
 #define LLVM_EXEGESIS(TargetName)                                              \
   LLVMInitialize##TargetName##AsmPrinter();                                    \
-  LLVMInitialize##TargetName##AsmParser();
+  LLVMInitialize##TargetName##AsmParser();                                     \
+  LLVMInitialize##TargetName##Disassembler();
 #include "llvm/Config/TargetExegesis.def"
 
-  const LLVMState State = ExitOnErr(
-      LLVMState::Create(TripleName, MCPU, MAttr, UseDummyPerfCounters));
+  const LLVMState State = ExitOnErr(LLVMState::create(
+      LibraryOptions, TripleName, MCPU, MAttr, UseDummyPerfCounters));
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
@@ -631,7 +622,7 @@ static void filterPoints(MutableArrayRef<Benchmark> Points,
   }
 }
 
-static void analysisMain() {
+static void analysisMain(const cl::LibraryOptionsContext &LibraryOptions) {
   ExitOnErr.setBanner("llvm-exegesis: ");
   if (BenchmarkFile.empty())
     ExitWithError("--benchmarks-file must be set");
@@ -676,8 +667,8 @@ static void analysisMain() {
          << TripleAndCpu.CpuName << "'\n";
 
   // Read benchmarks.
-  const LLVMState State = ExitOnErr(
-      LLVMState::Create(TripleAndCpu.LLVMTriple, TripleAndCpu.CpuName));
+  const LLVMState State = ExitOnErr(LLVMState::create(
+      LibraryOptions, TripleAndCpu.LLVMTriple, TripleAndCpu.CpuName));
   std::vector<Benchmark> Points = ExitOnFileError(
       BenchmarkFile, Benchmark::readYamls(State, *MemoryBuffer));
 
@@ -729,7 +720,8 @@ int main(int Argc, char **Argv) {
   cl::HideUnrelatedOptions({&exegesis::Options, &exegesis::BenchmarkOptions,
                             &exegesis::AnalysisOptions});
 
-  cl::ParseCommandLineOptions(Argc, Argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(Argv, Argc),
                               "llvm host machine instruction characteristics "
                               "measurment and analysis.\n");
 
@@ -740,9 +732,9 @@ int main(int Argc, char **Argv) {
   });
 
   if (exegesis::BenchmarkMode == exegesis::Benchmark::Unknown) {
-    exegesis::analysisMain();
+    exegesis::analysisMain(LibraryOptions);
   } else {
-    exegesis::benchmarkMain();
+    exegesis::benchmarkMain(LibraryOptions);
   }
   return EXIT_SUCCESS;
 }

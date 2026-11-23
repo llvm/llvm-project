@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel --output-asm-variant=0 %s | FileCheck %s
 
 .text
 // CHECK: movq    $msg, %rsi

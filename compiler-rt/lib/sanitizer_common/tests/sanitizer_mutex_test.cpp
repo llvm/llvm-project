@@ -74,7 +74,7 @@ class TestData {
   static const int kSize = 64;
   typedef u64 T;
   MutexType *mtx_;
-  char pad_[kCacheLineSize];
+  [[maybe_unused]] char pad_[kCacheLineSize];
   T data_[kSize];
 };
 
@@ -116,12 +116,6 @@ static void *read_write_thread(void *param) {
     data->Backoff();
   }
   return 0;
-}
-
-template<typename MutexType>
-static void check_locked(MutexType *mtx) {
-  GenericScopedLock<MutexType> l(mtx);
-  mtx->CheckLocked();
 }
 
 TEST(SanitizerCommon, SpinMutex) {

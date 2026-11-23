@@ -66,12 +66,10 @@
 
 #include "clang/AST/DeclTemplate.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "Iterator.h"
@@ -90,8 +88,9 @@ class IteratorModeling
                      check::PostStmt<MaterializeTemporaryExpr>,
                      check::Bind, check::LiveSymbols, check::DeadSymbols> {
 
-  using AdvanceFn = void (IteratorModeling::*)(CheckerContext &, const Expr *,
-                                               SVal, SVal, SVal) const;
+  using AdvanceFn = void (IteratorModeling::*)(CheckerContext &,
+                                               ConstCFGElementRef, SVal, SVal,
+                                               SVal) const;
 
   void handleOverloadedOperator(CheckerContext &C, const CallEvent &Call,
                                 OverloadedOperatorKind Op) const;
@@ -99,28 +98,30 @@ class IteratorModeling
                                  const Expr *OrigExpr,
                                  const AdvanceFn *Handler) const;
 
-  void handleComparison(CheckerContext &C, const Expr *CE, SVal RetVal,
-                        SVal LVal, SVal RVal, OverloadedOperatorKind Op) const;
+  void handleComparison(CheckerContext &C, const Expr *CE,
+                        ConstCFGElementRef Elem, SVal RetVal, SVal LVal,
+                        SVal RVal, OverloadedOperatorKind Op) const;
   void processComparison(CheckerContext &C, ProgramStateRef State,
                          SymbolRef Sym1, SymbolRef Sym2, SVal RetVal,
                          OverloadedOperatorKind Op) const;
-  void handleIncrement(CheckerContext &C, SVal RetVal, SVal Iter,
-                       bool Postfix) const;
-  void handleDecrement(CheckerContext &C, SVal RetVal, SVal Iter,
-                       bool Postfix) const;
-  void handleRandomIncrOrDecr(CheckerContext &C, const Expr *CE,
+  void handleIncrement(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
+                       SVal Iter, bool Postfix) const;
+  void handleDecrement(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
+                       SVal Iter, bool Postfix) const;
+  void handleRandomIncrOrDecr(CheckerContext &C, ConstCFGElementRef Elem,
                               OverloadedOperatorKind Op, SVal RetVal,
                               SVal Iterator, SVal Amount) const;
   void handlePtrIncrOrDecr(CheckerContext &C, const Expr *Iterator,
-                           OverloadedOperatorKind OK, SVal Offset) const;
-  void handleAdvance(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
-                     SVal Amount) const;
-  void handlePrev(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
-                  SVal Amount) const;
-  void handleNext(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
-                  SVal Amount) const;
-  void assignToContainer(CheckerContext &C, const Expr *CE, SVal RetVal,
-                         const MemRegion *Cont) const;
+                           ConstCFGElementRef Elem, OverloadedOperatorKind OK,
+                           SVal Offset) const;
+  void handleAdvance(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
+                     SVal Iter, SVal Amount) const;
+  void handlePrev(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
+                  SVal Iter, SVal Amount) const;
+  void handleNext(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
+                  SVal Iter, SVal Amount) const;
+  void assignToContainer(CheckerContext &C, ConstCFGElementRef Elem,
+                         SVal RetVal, const MemRegion *Cont) const;
   bool noChangeInAdvance(CheckerContext &C, SVal Iter, const Expr *CE) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
@@ -149,7 +150,8 @@ public:
   IteratorModeling() = default;
 
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
   void checkPostStmt(const UnaryOperator *UO, CheckerContext &C) const;
   void checkPostStmt(const BinaryOperator *BO, CheckerContext &C) const;
   void checkPostStmt(const MaterializeTemporaryExpr *MTE,
@@ -224,7 +226,7 @@ void IteratorModeling::checkPostCall(const CallEvent &Call,
             C.getASTContext()).getTypePtr() ==
         Call.getResultType().getDesugaredType(C.getASTContext()).getTypePtr()) {
       if (const auto *Pos = getIteratorPosition(State, Call.getArgSVal(i))) {
-        assignToContainer(C, OrigExpr, Call.getReturnValue(),
+        assignToContainer(C, Call.getCFGElementRef(), Call.getReturnValue(),
                           Pos->getContainer());
         return;
       }
@@ -233,7 +235,7 @@ void IteratorModeling::checkPostCall(const CallEvent &Call,
 }
 
 void IteratorModeling::checkBind(SVal Loc, SVal Val, const Stmt *S,
-                                 CheckerContext &C) const {
+                                 bool AtDeclInit, CheckerContext &C) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos) {
@@ -255,7 +257,7 @@ void IteratorModeling::checkPostStmt(const UnaryOperator *UO,
     return;
 
   auto &SVB = C.getSValBuilder();
-  handlePtrIncrOrDecr(C, UO->getSubExpr(),
+  handlePtrIncrOrDecr(C, UO->getSubExpr(), C.getCFGElementRef(),
                       isIncrementOperator(OK) ? OO_Plus : OO_Minus,
                       SVB.makeArrayIndex(1));
 }
@@ -266,12 +268,12 @@ void IteratorModeling::checkPostStmt(const BinaryOperator *BO,
   const BinaryOperatorKind OK = BO->getOpcode();
   const Expr *const LHS = BO->getLHS();
   const Expr *const RHS = BO->getRHS();
-  const SVal LVal = State->getSVal(LHS, C.getLocationContext());
-  const SVal RVal = State->getSVal(RHS, C.getLocationContext());
+  const SVal LVal = State->getSVal(LHS, C.getStackFrame());
+  const SVal RVal = State->getSVal(RHS, C.getStackFrame());
 
   if (isSimpleComparisonOperator(BO->getOpcode())) {
-    SVal Result = State->getSVal(BO, C.getLocationContext());
-    handleComparison(C, BO, Result, LVal, RVal,
+    SVal Result = State->getSVal(BO, C.getStackFrame());
+    handleComparison(C, BO, C.getCFGElementRef(), Result, LVal, RVal,
                      BinaryOperator::getOverloadedOperator(OK));
   } else if (isRandomIncrOrDecrOperator(OK)) {
     // In case of operator+ the iterator can be either on the LHS (eg.: it + 1),
@@ -284,8 +286,8 @@ void IteratorModeling::checkPostStmt(const BinaryOperator *BO,
     if (!AmountExpr->getType()->isIntegralOrEnumerationType())
       return;
     SVal AmountVal = IsIterOnLHS ? RVal : LVal;
-    handlePtrIncrOrDecr(C, IterExpr, BinaryOperator::getOverloadedOperator(OK),
-                        AmountVal);
+    handlePtrIncrOrDecr(C, IterExpr, C.getCFGElementRef(),
+                        BinaryOperator::getOverloadedOperator(OK), AmountVal);
   }
 }
 
@@ -351,27 +353,29 @@ IteratorModeling::handleOverloadedOperator(CheckerContext &C,
                                            OverloadedOperatorKind Op) const {
     if (isSimpleComparisonOperator(Op)) {
       const auto *OrigExpr = Call.getOriginExpr();
+      const auto Elem = Call.getCFGElementRef();
       if (!OrigExpr)
         return;
 
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleComparison(C, OrigExpr, Call.getReturnValue(),
+        handleComparison(C, OrigExpr, Elem, Call.getReturnValue(),
                          InstCall->getCXXThisVal(), Call.getArgSVal(0), Op);
         return;
       }
 
-      handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
-                         Call.getArgSVal(1), Op);
+      handleComparison(C, OrigExpr, Elem, Call.getReturnValue(),
+                       Call.getArgSVal(0), Call.getArgSVal(1), Op);
       return;
     } else if (isRandomIncrOrDecrOperator(Op)) {
       const auto *OrigExpr = Call.getOriginExpr();
+      const auto Elem = Call.getCFGElementRef();
       if (!OrigExpr)
         return;
 
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         if (Call.getNumArgs() >= 1 &&
               Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
-          handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
+          handleRandomIncrOrDecr(C, Elem, Op, Call.getReturnValue(),
                                  InstCall->getCXXThisVal(), Call.getArgSVal(0));
           return;
         }
@@ -391,30 +395,30 @@ IteratorModeling::handleOverloadedOperator(CheckerContext &C,
           SVal Iterator = IsIterFirst ? FirstArg : SecondArg;
           SVal Amount = IsIterFirst ? SecondArg : FirstArg;
 
-          handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
-                                 Iterator, Amount);
+          handleRandomIncrOrDecr(C, Elem, Op, Call.getReturnValue(), Iterator,
+                                 Amount);
           return;
         }
       }
     } else if (isIncrementOperator(Op)) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleIncrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
-                        Call.getNumArgs());
+        handleIncrement(C, Call.getCFGElementRef(), Call.getReturnValue(),
+                        InstCall->getCXXThisVal(), Call.getNumArgs());
         return;
       }
 
-      handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                      Call.getNumArgs());
+      handleIncrement(C, Call.getCFGElementRef(), Call.getReturnValue(),
+                      Call.getArgSVal(0), Call.getNumArgs());
       return;
     } else if (isDecrementOperator(Op)) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleDecrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
-                        Call.getNumArgs());
+        handleDecrement(C, Call.getCFGElementRef(), Call.getReturnValue(),
+                        InstCall->getCXXThisVal(), Call.getNumArgs());
         return;
       }
 
-      handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                        Call.getNumArgs());
+      handleDecrement(C, Call.getCFGElementRef(), Call.getReturnValue(),
+                      Call.getArgSVal(0), Call.getNumArgs());
       return;
     }
 }
@@ -425,7 +429,7 @@ IteratorModeling::handleAdvanceLikeFunction(CheckerContext &C,
                                             const Expr *OrigExpr,
                                             const AdvanceFn *Handler) const {
   if (!C.wasInlined) {
-    (this->**Handler)(C, OrigExpr, Call.getReturnValue(),
+    (this->**Handler)(C, Call.getCFGElementRef(), Call.getReturnValue(),
                       Call.getArgSVal(0), Call.getArgSVal(1));
     return;
   }
@@ -436,7 +440,7 @@ IteratorModeling::handleAdvanceLikeFunction(CheckerContext &C,
   if (IdInfo) {
     if (IdInfo->getName() == "advance") {
       if (noChangeInAdvance(C, Call.getArgSVal(0), OrigExpr)) {
-        (this->**Handler)(C, OrigExpr, Call.getReturnValue(),
+        (this->**Handler)(C, Call.getCFGElementRef(), Call.getReturnValue(),
                           Call.getArgSVal(0), Call.getArgSVal(1));
       }
     }
@@ -444,7 +448,8 @@ IteratorModeling::handleAdvanceLikeFunction(CheckerContext &C,
 }
 
 void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
-                                        SVal RetVal, SVal LVal, SVal RVal,
+                                        ConstCFGElementRef Elem, SVal RetVal,
+                                        SVal LVal, SVal RVal,
                                         OverloadedOperatorKind Op) const {
   // Record the operands and the operator of the comparison for the next
   // evalAssume, if the result is a symbolic expression. If it is a concrete
@@ -467,7 +472,7 @@ void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
   SymbolRef Sym;
   if (!LPos || !RPos) {
     auto &SymMgr = C.getSymbolManager();
-    Sym = SymMgr.conjureSymbol(CE, C.getLocationContext(),
+    Sym = SymMgr.conjureSymbol(Elem, C.getStackFrame(),
                                C.getASTContext().LongTy, C.blockCount());
     State = assumeNoOverflow(State, Sym, 4);
   }
@@ -492,10 +497,10 @@ void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
   // instead.
   if (RetVal.isUnknown()) {
     auto &SymMgr = C.getSymbolManager();
-    auto *LCtx = C.getLocationContext();
+    auto *SF = C.getStackFrame();
     RetVal = nonloc::SymbolVal(SymMgr.conjureSymbol(
-        CE, LCtx, C.getASTContext().BoolTy, C.blockCount()));
-    State = State->BindExpr(CE, LCtx, RetVal);
+        Elem, SF, C.getASTContext().BoolTy, C.blockCount()));
+    State = State->BindExpr(CE, SF, RetVal);
   }
 
   processComparison(C, State, LPos->getOffset(), RPos->getOffset(), RetVal, Op);
@@ -511,7 +516,7 @@ void IteratorModeling::processComparison(CheckerContext &C,
                                    (TruthVal->getValue()->getBoolValue())))) {
       C.addTransition(State);
     } else {
-      C.generateSink(State, C.getPredecessor());
+      C.addSink(State);
     }
     return;
   }
@@ -531,7 +536,8 @@ void IteratorModeling::processComparison(CheckerContext &C,
   }
 }
 
-void IteratorModeling::handleIncrement(CheckerContext &C, SVal RetVal,
+void IteratorModeling::handleIncrement(CheckerContext &C,
+                                       ConstCFGElementRef Elem, SVal RetVal,
                                        SVal Iter, bool Postfix) const {
   // Increment the symbolic expressions which represents the position of the
   // iterator
@@ -545,19 +551,22 @@ void IteratorModeling::handleIncrement(CheckerContext &C, SVal RetVal,
   auto NewState =
     advancePosition(State, Iter, OO_Plus,
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
-  assert(NewState &&
-         "Advancing position by concrete int should always be successful");
+  // FIXME: When the new offset is concrete, this fallback discards its value
+  // and its relation to the previous position.
+  if (!NewState)
+    NewState = createIteratorPosition(State, Iter, Pos->getContainer(), Elem,
+                                      C.getStackFrame(), C.blockCount());
 
   const auto *NewPos = getIteratorPosition(NewState, Iter);
   assert(NewPos &&
          "Iterator should have position after successful advancement");
 
-  State = setIteratorPosition(State, Iter, *NewPos);
-  State = setIteratorPosition(State, RetVal, Postfix ? *Pos : *NewPos);
+  State = setIteratorPosition(NewState, RetVal, Postfix ? *Pos : *NewPos);
   C.addTransition(State);
 }
 
-void IteratorModeling::handleDecrement(CheckerContext &C, SVal RetVal,
+void IteratorModeling::handleDecrement(CheckerContext &C,
+                                       ConstCFGElementRef Elem, SVal RetVal,
                                        SVal Iter, bool Postfix) const {
   // Decrement the symbolic expressions which represents the position of the
   // iterator
@@ -571,19 +580,22 @@ void IteratorModeling::handleDecrement(CheckerContext &C, SVal RetVal,
   auto NewState =
     advancePosition(State, Iter, OO_Minus,
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
-  assert(NewState &&
-         "Advancing position by concrete int should always be successful");
+  // FIXME: When the new offset is concrete, this fallback discards its value
+  // and its relation to the previous position.
+  if (!NewState)
+    NewState = createIteratorPosition(State, Iter, Pos->getContainer(), Elem,
+                                      C.getStackFrame(), C.blockCount());
 
   const auto *NewPos = getIteratorPosition(NewState, Iter);
   assert(NewPos &&
          "Iterator should have position after successful advancement");
 
-  State = setIteratorPosition(State, Iter, *NewPos);
-  State = setIteratorPosition(State, RetVal, Postfix ? *Pos : *NewPos);
+  State = setIteratorPosition(NewState, RetVal, Postfix ? *Pos : *NewPos);
   C.addTransition(State);
 }
 
-void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C, const Expr *CE,
+void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C,
+                                              ConstCFGElementRef Elem,
                                               OverloadedOperatorKind Op,
                                               SVal RetVal, SVal Iterator,
                                               SVal Amount) const {
@@ -617,12 +629,15 @@ void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C, const Expr *CE,
     State = setIteratorPosition(State, TgtVal, *NewPos);
     C.addTransition(State);
   } else {
-    assignToContainer(C, CE, TgtVal, Pos->getContainer());
+    // FIXME: A concrete new offset is replaced with a fresh symbol here,
+    // losing its value and its relation to the original position.
+    assignToContainer(C, Elem, TgtVal, Pos->getContainer());
   }
 }
 
 void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
                                            const Expr *Iterator,
+                                           ConstCFGElementRef Elem,
                                            OverloadedOperatorKind OK,
                                            SVal Offset) const {
   if (!isa<DefinedSVal>(Offset))
@@ -634,7 +649,7 @@ void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
   QualType ElementType = PtrType->getPointeeType();
 
   ProgramStateRef State = C.getState();
-  SVal OldVal = State->getSVal(Iterator, C.getLocationContext());
+  SVal OldVal = State->getSVal(Iterator, C.getStackFrame());
 
   const IteratorPosition *OldPos = getIteratorPosition(State, OldVal);
   if (!OldPos)
@@ -661,34 +676,36 @@ void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
     ProgramStateRef NewState = setIteratorPosition(State, NewVal, *NewPos);
     C.addTransition(NewState);
   } else {
-    assignToContainer(C, Iterator, NewVal, OldPos->getContainer());
+    // FIXME: A concrete new offset is replaced with a fresh symbol here,
+    // losing its value and its relation to the original position.
+    assignToContainer(C, Elem, NewVal, OldPos->getContainer());
   }
 }
 
-void IteratorModeling::handleAdvance(CheckerContext &C, const Expr *CE,
+void IteratorModeling::handleAdvance(CheckerContext &C, ConstCFGElementRef Elem,
                                      SVal RetVal, SVal Iter,
                                      SVal Amount) const {
-  handleRandomIncrOrDecr(C, CE, OO_PlusEqual, RetVal, Iter, Amount);
+  handleRandomIncrOrDecr(C, Elem, OO_PlusEqual, RetVal, Iter, Amount);
 }
 
-void IteratorModeling::handlePrev(CheckerContext &C, const Expr *CE,
+void IteratorModeling::handlePrev(CheckerContext &C, ConstCFGElementRef Elem,
                                   SVal RetVal, SVal Iter, SVal Amount) const {
-  handleRandomIncrOrDecr(C, CE, OO_Minus, RetVal, Iter, Amount);
+  handleRandomIncrOrDecr(C, Elem, OO_Minus, RetVal, Iter, Amount);
 }
 
-void IteratorModeling::handleNext(CheckerContext &C, const Expr *CE,
+void IteratorModeling::handleNext(CheckerContext &C, ConstCFGElementRef Elem,
                                   SVal RetVal, SVal Iter, SVal Amount) const {
-  handleRandomIncrOrDecr(C, CE, OO_Plus, RetVal, Iter, Amount);
+  handleRandomIncrOrDecr(C, Elem, OO_Plus, RetVal, Iter, Amount);
 }
 
-void IteratorModeling::assignToContainer(CheckerContext &C, const Expr *CE,
-                                         SVal RetVal,
+void IteratorModeling::assignToContainer(CheckerContext &C,
+                                         ConstCFGElementRef Elem, SVal RetVal,
                                          const MemRegion *Cont) const {
   Cont = Cont->getMostDerivedObjectRegion();
 
   auto State = C.getState();
-  const auto *LCtx = C.getLocationContext();
-  State = createIteratorPosition(State, RetVal, Cont, CE, LCtx, C.blockCount());
+  const auto *SF = C.getStackFrame();
+  State = createIteratorPosition(State, RetVal, Cont, Elem, SF, C.blockCount());
 
   C.addTransition(State);
 }

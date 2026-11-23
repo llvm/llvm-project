@@ -23,11 +23,13 @@ ObjectContainer::ObjectContainer(const lldb::ModuleSP &module_sp,
                                  lldb::offset_t data_offset)
     : ModuleChild(module_sp),
       m_file(), // This file can be different than the module's file spec
-      m_offset(file_offset), m_length(length) {
+      m_offset(file_offset), m_length(length),
+      m_extractor_sp(std::make_shared<DataExtractor>()) {
   if (file)
     m_file = *file;
-  if (data_sp)
-    m_data.SetData(data_sp, data_offset, length);
+  if (data_sp) {
+    m_extractor_sp->SetData(data_sp, data_offset, length);
+  }
 }
 
 ObjectContainerSP ObjectContainer::FindPlugin(const lldb::ModuleSP &module_sp,
@@ -43,14 +45,11 @@ ObjectContainerSP ObjectContainer::FindPlugin(const lldb::ModuleSP &module_sp,
                      module_sp->GetFileSpec().GetPath().c_str(),
                      static_cast<void *>(process_sp.get()), header_addr);
 
-  ObjectContainerCreateMemoryInstance create_callback;
-  for (size_t idx = 0;
-       (create_callback =
-            PluginManager::GetObjectContainerCreateMemoryCallbackAtIndex(
-                idx)) != nullptr;
-       ++idx) {
-    ObjectContainerSP object_container_sp(
-        create_callback(module_sp, data_sp, process_sp, header_addr));
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    if (!cbs.create_memory_callback)
+      continue;
+    ObjectContainerSP object_container_sp(cbs.create_memory_callback(
+        module_sp, data_sp, process_sp, header_addr));
     if (object_container_sp)
       return object_container_sp;
   }

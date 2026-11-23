@@ -121,7 +121,7 @@ struct testIndirectFieldDecl {
   };
 };
 // CHECK:      IndirectFieldDecl{{.*}} TestIndirectFieldDecl 'int'
-// CHECK-NEXT:   Field{{.*}} ''
+// CHECK-NEXT:   Field{{.*}} field_index 0
 // CHECK-NEXT:   Field{{.*}} 'TestIndirectFieldDecl'
 
 // FIXME: It would be nice to dump the enum and its enumerators.
@@ -172,7 +172,7 @@ extern int TestVarDeclSC;
 // CHECK:      VarDecl{{.*}} TestVarDeclSC 'int' extern
 
 __thread int TestVarDeclThread;
-// CHECK:      VarDecl{{.*}} TestVarDeclThread 'int' tls{{$}}
+// CHECK:      VarDecl{{.*}} TestVarDeclThread 'int' tls external-linkage{{$}}
 
 __module_private__ int TestVarDeclPrivate;
 // CHECK-MODULE:      VarDecl{{.*}} TestVarDeclPrivate 'int' __module_private__

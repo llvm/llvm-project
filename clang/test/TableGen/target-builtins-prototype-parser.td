@@ -10,57 +10,147 @@
 include "clang/Basic/BuiltinsBase.td"
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_01, "E8idE4b", "")
+// CHECK: Builtin::Info{{.*}} __builtin_01 {{.*}} /* E8idE4b */
   let Prototype = "_ExtVector<8,int>(double, _ExtVector<4,        bool>)";
   let Spellings = ["__builtin_01"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_02, "E8UiE4s", "")
+// CHECK: Builtin::Info{{.*}} __builtin_02 {{.*}} /* E8UiE4s */
   let Prototype = "_ExtVector<8,unsigned int>(_ExtVector<4, short>)";
   let Spellings = ["__builtin_02"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_03, "di", "")
+// CHECK: Builtin::Info{{.*}} __builtin_03 {{.*}} /* di */
   let Prototype = "double(int)";
   let Spellings = ["__builtin_03"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_04, "diIUi", "")
+// CHECK: Builtin::Info{{.*}} __builtin_04 {{.*}} /* diIUi */
  let Prototype = "double(int, _Constant unsigned int)";
   let Spellings = ["__builtin_04"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_05, "v&v&", "")
+// CHECK: Builtin::Info{{.*}} __builtin_05 {{.*}} /* v&v& */
  let Prototype = "void&(void&)";
   let Spellings = ["__builtin_05"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_06, "v*v*cC*.", "")
+// CHECK: Builtin::Info{{.*}} __builtin_06 {{.*}} /* v*v*cC*. */
  let Prototype = "void*(void*, char const*, ...)";
   let Spellings = ["__builtin_06"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_07, "E8iE4dE4b.", "")
+// CHECK: Builtin::Info{{.*}} __builtin_07 {{.*}} /* E8iE4dE4b. */
   let Prototype = "_ExtVector<8, int>(_ExtVector<4,double>, _ExtVector<4, bool>, ...)";
   let Spellings = ["__builtin_07"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_08, "di*R", "")
+// CHECK: Builtin::Info{{.*}} __builtin_08 {{.*}} /* di*R */
   let Prototype = "double(int * restrict)";
   let Spellings = ["__builtin_08"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_09, "V2yy", "")
+// CHECK: Builtin::Info{{.*}} __builtin_09 {{.*}} /* V2yy */
   let Prototype = "_Vector<2, __bf16>(__bf16)";
   let Spellings = ["__builtin_09"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_10 {{.*}} /* V2i*0 */
+  let Prototype = "_Vector<2, int address_space<0> *>()";
+  let Spellings = ["__builtin_10"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_11 {{.*}} /* V2i*0 */
+  let Prototype = "_Vector<2, int> address_space<0> *()";
+  let Spellings = ["__builtin_11"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_12 {{.*}} /* UBiUTiUZiUWi */
+  let Prototype = "uint8_t(uint16_t, uint32_t, uint64_t)";
+  let Spellings = ["__builtin_12"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_13 {{.*}} /* BiTiZiWi */
+  let Prototype = "int8_t(int16_t, int32_t, int64_t)";
+  let Spellings = ["__builtin_13"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_14 {{.*}} /* vV2iC* */
+  let Prototype = "void(_Vector<2, int> const *)";
+  let Spellings = ["__builtin_14"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_15 {{.*}} /* vV2iD* */
+  let Prototype = "void(_Vector<2, int> volatile *)";
+  let Spellings = ["__builtin_15"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_16 {{.*}} /* vV2iR* */
+  let Prototype = "void(_Vector<2, int> restrict *)";
+  let Spellings = ["__builtin_16"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_17 {{.*}} /* V2iC*i */
+  let Prototype = "_Vector<2, int> const *(int)";
+  let Spellings = ["__builtin_17"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_18 {{.*}} /* cC*vC*UcC*FC* */
+  let Prototype = "const char*(const void*, const unsigned char*, const constant_CFString*)";
+  let Spellings = ["__builtin_18"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_19 {{.*}} /* vvDC*iCcC*RcC*C* */
+  let Prototype = "void(const volatile void*, const int, const char* restrict, const char* const*)";
+  let Spellings = ["__builtin_19"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_20 {{.*}} /* vV2iC*E4fC*V2i* */
+  let Prototype = "void(const _Vector<2, int> *, const _ExtVector<4, float> *, _Vector<2, int> *)";
+  let Spellings = ["__builtin_20"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_21 {{.*}} /* V2iC*iC& */
+  let Prototype = "const _Vector<2, int> *(const int &)";
+  let Spellings = ["__builtin_21"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_22 {{.*}} /* vIUiCXdCLLiC* */
+  let Prototype = "void(const _Constant unsigned int, const _Complex double, const long long int*)";
+  let Spellings = ["__builtin_22"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_23 {{.*}} /* viC*4 */
+  let Prototype = "void(const int address_space<4> *)";
+  let Spellings = ["__builtin_23"];
+}
+
+def : Builtin, Template<["unsigned int"], [""]> {
+// CHECK: Builtin::Info{{.*}} __builtin_24 {{.*}} /* UiUiCUiC* */
+  let Prototype = "T(const T, const T*)";
+  let Spellings = ["__builtin_24"];
 }
 
 #ifdef ERROR_EXPECTED_LANES

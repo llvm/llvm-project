@@ -3,6 +3,7 @@
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 program main
     integer :: x(10) = (/0,0,0,0,0,0,0,0,0,0/)
     integer :: i = 1

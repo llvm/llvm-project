@@ -1,4 +1,4 @@
-//===--- DurationRewriter.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include <cinttypes>
+#include <cstdint>
 #include <optional>
 
 namespace clang::tidy::abseil {
@@ -28,11 +28,11 @@ enum class DurationScale : std::uint8_t {
 
 /// Given a `Scale`, return the appropriate factory function call for
 /// constructing a `Duration` for that scale.
-llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
+StringRef getDurationFactoryForScale(DurationScale Scale);
 
 /// Given a 'Scale', return the appropriate factory function call for
 /// constructing a `Time` for that scale.
-llvm::StringRef getTimeFactoryForScale(DurationScale Scale);
+StringRef getTimeFactoryForScale(DurationScale Scale);
 
 // Determine if `Node` represents a literal floating point or integral zero.
 bool isLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
@@ -63,20 +63,20 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
 
 /// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
 /// return its `DurationScale`, or `std::nullopt` if a match is not found.
-std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
+std::optional<DurationScale> getScaleForDurationInverse(StringRef Name);
 
 /// Given the name of an inverse Time function (e.g., `ToUnixSeconds`),
 /// return its `DurationScale`, or `std::nullopt` if a match is not found.
-std::optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
+std::optional<DurationScale> getScaleForTimeInverse(StringRef Name);
 
 /// Given a `Scale` return the fully qualified inverse functions for it.
 /// The first returned value is the inverse for `double`, and the second
 /// returned value is the inverse for `int64`.
-const std::pair<llvm::StringRef, llvm::StringRef> &
+const std::pair<StringRef, StringRef> &
 getDurationInverseForScale(DurationScale Scale);
 
 /// Returns the Time inverse function name for a given `Scale`.
-llvm::StringRef getTimeInverseForScale(DurationScale Scale);
+StringRef getTimeInverseForScale(DurationScale Scale);
 
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.
@@ -96,7 +96,7 @@ bool isInMacro(const ast_matchers::MatchFinder::MatchResult &Result,
                const Expr *E);
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
-                     DurationConversionFunction) {
+                     durationConversionFunction) {
   using namespace clang::ast_matchers;
   return functionDecl(
       hasAnyName("::absl::ToDoubleHours", "::absl::ToDoubleMinutes",
@@ -108,7 +108,7 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
 }
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
-                     DurationFactoryFunction) {
+                     durationFactoryFunction) {
   using namespace clang::ast_matchers;
   return functionDecl(hasAnyName("::absl::Nanoseconds", "::absl::Microseconds",
                                  "::absl::Milliseconds", "::absl::Seconds",
@@ -116,7 +116,7 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
 }
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
-                     TimeConversionFunction) {
+                     timeConversionFunction) {
   using namespace clang::ast_matchers;
   return functionDecl(hasAnyName(
       "::absl::ToUnixHours", "::absl::ToUnixMinutes", "::absl::ToUnixSeconds",
@@ -125,12 +125,12 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
 
 AST_MATCHER_FUNCTION_P(ast_matchers::internal::Matcher<Stmt>,
                        comparisonOperatorWithCallee,
-                       ast_matchers::internal::Matcher<Decl>, funcDecl) {
+                       ast_matchers::internal::Matcher<Decl>, FuncDecl) {
   using namespace clang::ast_matchers;
   return binaryOperator(
       anyOf(hasOperatorName(">"), hasOperatorName(">="), hasOperatorName("=="),
             hasOperatorName("<="), hasOperatorName("<")),
-      hasEitherOperand(ignoringImpCasts(callExpr(callee(funcDecl)))));
+      hasEitherOperand(ignoringImpCasts(callExpr(callee(FuncDecl)))));
 }
 
 } // namespace clang::tidy::abseil

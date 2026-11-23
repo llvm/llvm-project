@@ -11,7 +11,6 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
 
 namespace Fortran::semantics {
@@ -37,7 +36,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
               }
             },
             [&](const parser::StructureComponent &structureComponent) {
-              const auto &component{structureComponent.component};
+              const auto &component{structureComponent.Component()};
               SourceName at{component.source};
               if (const auto *checkedExpr{GetExpr(context_, pointerObject)}) {
                 if (auto whyNot{WhyNotDefinable(at, scope,

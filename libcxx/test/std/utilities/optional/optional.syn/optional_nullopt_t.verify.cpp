@@ -15,10 +15,15 @@
 
 #include <optional>
 
+#include "test_macros.h"
+
 void f() {
     std::optional<std::nullopt_t> opt; // expected-note 1 {{requested here}}
     std::optional<const std::nullopt_t> opt1; // expected-note 1 {{requested here}}
-    std::optional<std::nullopt_t &> opt2; // expected-note 1 {{requested here}}
-    std::optional<std::nullopt_t &&> opt3; // expected-note 1 {{requested here}}
-    // expected-error@optional:* 4 {{instantiation of optional with nullopt_t is ill-formed}}
+    // expected-error@*:* 2 {{instantiation of optional with nullopt_t is ill-formed}}
+#if TEST_STD_VER >= 26
+    std::optional<std::nullopt_t&> opt2;       // expected-note 1 {{requested here}}
+    std::optional<const std::nullopt_t&> opt3; // expected-note 1 {{requested here}}
+    // expected-error@*:* 2 {{instantiation of optional with nullopt_t is ill-formed}}
+#endif
 }

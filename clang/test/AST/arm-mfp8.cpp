@@ -49,7 +49,7 @@ public:
   }
 };
 
-//CHECK:       | |-CXXRecordDecl {{.*}} referenced class C1
+//CHECK:       | |-CXXRecordDecl {{.*}} class C1
 //CHECK-NEXT:  | |-FieldDecl {{.*}} f1c '__mfp8'
 //CHECK-NEXT:  | |-VarDecl {{.*}} f2c 'const __mfp8' static
 //CHECK-NEXT:  | |-FieldDecl {{.*}} f3c 'volatile __mfp8'

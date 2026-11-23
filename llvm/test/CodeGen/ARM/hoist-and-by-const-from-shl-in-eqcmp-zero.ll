@@ -1010,10 +1010,8 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM6-NEXT:    uxtb r1, r1
 ; ARM6-NEXT:    mov r2, #24
 ; ARM6-NEXT:    and r0, r0, r2, lsl r1
-; ARM6-NEXT:    sxtb r1, r0
-; ARM6-NEXT:    mov r0, #0
-; ARM6-NEXT:    cmp r1, #0
-; ARM6-NEXT:    movmi r0, #1
+; ARM6-NEXT:    mov r1, #1
+; ARM6-NEXT:    and r0, r1, r0, lsr #7
 ; ARM6-NEXT:    bx lr
 ;
 ; ARM78-LABEL: negative_scalar_i8_bitsinmiddle_slt:
@@ -1021,10 +1019,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM78-NEXT:    uxtb r1, r1
 ; ARM78-NEXT:    mov r2, #24
 ; ARM78-NEXT:    and r0, r0, r2, lsl r1
-; ARM78-NEXT:    sxtb r1, r0
-; ARM78-NEXT:    mov r0, #0
-; ARM78-NEXT:    cmp r1, #0
-; ARM78-NEXT:    movwmi r0, #1
+; ARM78-NEXT:    ubfx r0, r0, #7, #1
 ; ARM78-NEXT:    bx lr
 ;
 ; THUMB6-LABEL: negative_scalar_i8_bitsinmiddle_slt:
@@ -1033,14 +1028,8 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; THUMB6-NEXT:    movs r2, #24
 ; THUMB6-NEXT:    lsls r2, r1
 ; THUMB6-NEXT:    ands r2, r0
-; THUMB6-NEXT:    sxtb r0, r2
-; THUMB6-NEXT:    cmp r0, #0
-; THUMB6-NEXT:    bmi .LBB20_2
-; THUMB6-NEXT:  @ %bb.1:
-; THUMB6-NEXT:    movs r0, #0
-; THUMB6-NEXT:    bx lr
-; THUMB6-NEXT:  .LBB20_2:
-; THUMB6-NEXT:    movs r0, #1
+; THUMB6-NEXT:    lsls r0, r2, #24
+; THUMB6-NEXT:    lsrs r0, r0, #31
 ; THUMB6-NEXT:    bx lr
 ;
 ; THUMB78-LABEL: negative_scalar_i8_bitsinmiddle_slt:
@@ -1049,11 +1038,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; THUMB78-NEXT:    movs r2, #24
 ; THUMB78-NEXT:    lsl.w r1, r2, r1
 ; THUMB78-NEXT:    ands r0, r1
-; THUMB78-NEXT:    sxtb r1, r0
-; THUMB78-NEXT:    movs r0, #0
-; THUMB78-NEXT:    cmp r1, #0
-; THUMB78-NEXT:    it mi
-; THUMB78-NEXT:    movmi r0, #1
+; THUMB78-NEXT:    ubfx r0, r0, #7, #1
 ; THUMB78-NEXT:    bx lr
   %t0 = shl i8 24, %y
   %t1 = and i8 %t0, %x

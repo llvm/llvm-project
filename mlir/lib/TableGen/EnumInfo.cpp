@@ -1,0 +1,182 @@
+//===- EnumInfo.cpp - EnumInfo wrapper class ----------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/TableGen/EnumInfo.h"
+#include "mlir/TableGen/Attribute.h"
+#include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Record.h"
+
+using namespace mlir;
+using namespace mlir::tblgen;
+
+using llvm::DefInit;
+using llvm::Init;
+using llvm::Record;
+
+EnumCase::EnumCase(const Record *record) : def(record) {
+  assert(def->isSubClassOf("EnumCase") &&
+         "must be subclass of TableGen 'EnumCase' class");
+}
+
+EnumCase::EnumCase(const DefInit *init) : EnumCase(init->getDef()) {}
+
+StringRef EnumCase::getSymbol() const {
+  return def->getValueAsString("symbol");
+}
+
+StringRef EnumCase::getStr() const { return def->getValueAsString("str"); }
+
+int64_t EnumCase::getValue() const { return def->getValueAsInt("value"); }
+
+const Record &EnumCase::getDef() const { return *def; }
+
+EnumInfo::EnumInfo(const Record *record) : def(record) {
+  assert(isSubClassOf("EnumInfo") &&
+         "must be subclass of TableGen 'EnumInfo' class");
+}
+
+EnumInfo::EnumInfo(const Record &record) : EnumInfo(&record) {}
+
+EnumInfo::EnumInfo(const DefInit *init) : EnumInfo(init->getDef()) {}
+
+bool EnumInfo::isSubClassOf(StringRef className) const {
+  return def->isSubClassOf(className);
+}
+
+bool EnumInfo::isEnumAttr() const { return isSubClassOf("EnumAttrInfo"); }
+
+std::optional<Attribute> EnumInfo::asEnumAttr() const {
+  if (isEnumAttr())
+    return Attribute(def);
+  return std::nullopt;
+}
+
+bool EnumInfo::isBitEnum() const { return isSubClassOf("BitEnumBase"); }
+
+bool EnumInfo::isNewStyleBitEnum() const {
+  return isBitEnum() && !printBitEnumQuoted();
+}
+
+bool EnumInfo::hasParserPrinter() const {
+  std::optional<Attribute> enumAttrInfo = asEnumAttr();
+  return !getUnderlyingType().empty() &&
+         (!enumAttrInfo || !enumAttrInfo->getConstBuilderTemplate().empty());
+}
+
+StringRef EnumInfo::getEnumClassName() const {
+  return def->getValueAsString("className");
+}
+
+StringRef EnumInfo::getSummary() const {
+  return def->getValueAsString("summary");
+}
+
+StringRef EnumInfo::getDescription() const {
+  return def->getValueAsString("description");
+}
+
+StringRef EnumInfo::getCppNamespace() const {
+  return def->getValueAsString("cppNamespace");
+}
+
+std::string EnumInfo::getQualifiedName() const {
+  return (getCppNamespace() + "::" + getEnumClassName()).str();
+}
+
+int64_t EnumInfo::getBitwidth() const { return def->getValueAsInt("bitwidth"); }
+
+StringRef EnumInfo::getUnderlyingType() const {
+  return def->getValueAsString("underlyingType");
+}
+
+StringRef EnumInfo::getUnderlyingToSymbolFnName() const {
+  return def->getValueAsString("underlyingToSymbolFnName");
+}
+
+StringRef EnumInfo::getStringToSymbolFnName() const {
+  return def->getValueAsString("stringToSymbolFnName");
+}
+
+StringRef EnumInfo::getSymbolToStringFnName() const {
+  return def->getValueAsString("symbolToStringFnName");
+}
+
+StringRef EnumInfo::getSymbolToStringFnRetType() const {
+  return def->getValueAsString("symbolToStringFnRetType");
+}
+
+StringRef EnumInfo::getMaxEnumValFnName() const {
+  return def->getValueAsString("maxEnumValFnName");
+}
+
+std::vector<EnumCase> EnumInfo::getAllCases() const {
+  const auto *inits = def->getValueAsListInit("enumerants");
+
+  std::vector<EnumCase> cases;
+  cases.reserve(inits->size());
+
+  for (const Init *init : *inits) {
+    cases.emplace_back(cast<DefInit>(init));
+  }
+
+  return cases;
+}
+
+bool EnumInfo::genSpecializedAttr() const {
+  return isSubClassOf("EnumAttrInfo") &&
+         def->getValueAsBit("genSpecializedAttr");
+}
+
+const Record *EnumInfo::getBaseAttrClass() const {
+  return def->getValueAsDef("baseAttrClass");
+}
+
+StringRef EnumInfo::getSpecializedAttrClassName() const {
+  return def->getValueAsString("specializedAttrClassName");
+}
+
+bool EnumInfo::printBitEnumPrimaryGroups() const {
+  return def->getValueAsBit("printBitEnumPrimaryGroups");
+}
+
+bool EnumInfo::printBitEnumQuoted() const {
+  return def->getValueAsBit("printBitEnumQuoted");
+}
+
+StringRef EnumInfo::getBitEnumSeparator() const {
+  return def->getValueAsString("separator");
+}
+
+EnumInfo::BitEnumSeparatorKind EnumInfo::getBitEnumSeparatorKind() const {
+  StringRef separator = getBitEnumSeparator().trim();
+  if (separator == "|")
+    return BitEnumSeparatorKind::VerticalBar;
+  if (separator == ",")
+    return BitEnumSeparatorKind::Comma;
+  if (separator.empty())
+    return BitEnumSeparatorKind::Space;
+  PrintFatalError(def->getLoc(),
+                  "bit enum separator must be '|', ',', or a space ' '");
+}
+
+StringRef EnumInfo::getBitEnumSeparatorParser() const {
+  switch (getBitEnumSeparatorKind()) {
+  case BitEnumSeparatorKind::VerticalBar:
+    return "parseOptionalVerticalBar";
+  case BitEnumSeparatorKind::Comma:
+    return "parseOptionalComma";
+  case BitEnumSeparatorKind::Space:
+    // Whitespace is not a token, so there is nothing to parse between cases.
+    PrintFatalError(def->getLoc(),
+                    "a bit enum with a space separator has no separator "
+                    "parser");
+  }
+  llvm_unreachable("unknown bit enum separator kind");
+}
+
+const Record &EnumInfo::getDef() const { return *def; }

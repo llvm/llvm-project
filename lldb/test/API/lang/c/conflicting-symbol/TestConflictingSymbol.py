@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestConflictingSymbols(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -15,7 +16,6 @@ class TestConflictingSymbols(TestBase):
         lldbutil.mkdir_p(self.getBuildArtifact("One"))
         lldbutil.mkdir_p(self.getBuildArtifact("Two"))
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_conflicting_symbols(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -26,7 +26,7 @@ class TestConflictingSymbols(TestBase):
         # automatically uploaded
         environment = self.registerSharedLibrariesWithTarget(target, ["One", "Two"])
 
-        lldbutil.run_break_set_by_source_regexp(
+        one_bkpt_id = lldbutil.run_break_set_by_source_regexp(
             self, "// break here", extra_options="-f One.c", num_expected_locations=-2
         )
         lldbutil.run_break_set_by_source_regexp(
@@ -36,25 +36,21 @@ class TestConflictingSymbols(TestBase):
             self, "// break here", extra_options="-f main.c", num_expected_locations=1
         )
 
-        process = target.LaunchSimple(
-            None, environment, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(one_bkpt_id), launch_info
         )
 
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         # This should display correctly.
         self.expect(
-            "expr (unsigned long long)conflicting_symbol",
+            "expr conflicting_symbol",
             "Symbol from One should be found",
-            substrs=["11111"],
+            startstr="(void *)",
+            patterns=["0x0+1111$"],
         )
 
         self.runCmd("continue", RUN_SUCCEEDED)
@@ -69,9 +65,10 @@ class TestConflictingSymbols(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         self.expect(
-            "expr (unsigned long long)conflicting_symbol",
+            "expr conflicting_symbol",
             "Symbol from Two should be found",
-            substrs=["22222"],
+            startstr="(void *)",
+            patterns=["0x0+2222$"],
         )
 
         self.runCmd("continue", RUN_SUCCEEDED)
@@ -86,7 +83,7 @@ class TestConflictingSymbols(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         self.expect(
-            "expr (unsigned long long)conflicting_symbol",
+            "expr conflicting_symbol",
             "An error should be printed when symbols can't be ordered",
             error=True,
             substrs=["Multiple internal symbols"],
@@ -104,20 +101,15 @@ class TestConflictingSymbols(TestBase):
         # automatically uploaded
         environment = self.registerSharedLibrariesWithTarget(target, ["One", "Two"])
 
-        lldbutil.run_break_set_by_source_regexp(
+        bkpt_id = lldbutil.run_break_set_by_source_regexp(
             self, "// break here", extra_options="-f main.c", num_expected_locations=1
         )
 
-        process = target.LaunchSimple(
-            None, environment, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(bkpt_id), launch_info
         )
 
         # As we are shadowing the conflicting symbol, there should be no

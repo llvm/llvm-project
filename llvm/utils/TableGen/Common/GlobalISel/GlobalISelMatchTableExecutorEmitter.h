@@ -57,6 +57,10 @@ class GlobalISelMatchTableExecutorEmitter {
   /// opcodes.
   void emitMatchTable(raw_ostream &OS, const gi::MatchTable &Table);
 
+  /// Emits the getLLTForHwMode function which returns the type for an index
+  /// used by the *ByHwMode opcodes.
+  void emitLLTForHwModeFn(raw_ostream &OS);
+
   /// Helper function to emit `test` functions for the executor. This emits both
   /// an enum to reference predicates in the MatchTable, and a function to
   /// switch over the enum & execute the predicate's C++ code.
@@ -79,8 +83,8 @@ class GlobalISelMatchTableExecutorEmitter {
       raw_ostream &OS, StringRef TypeIdentifier, StringRef ArgType,
       StringRef ArgName, StringRef AdditionalArgs,
       StringRef AdditionalDeclarations, ArrayRef<PredicateObject> Predicates,
-      std::function<StringRef(PredicateObject)> GetPredEnumName,
-      std::function<StringRef(PredicateObject)> GetPredCode,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
       StringRef Comment) {
     if (!Comment.empty())
       OS << "// " << Comment << "\n";
@@ -135,11 +139,31 @@ protected:
   void emitMIPredicateFnsImpl(
       raw_ostream &OS, StringRef AdditionalDecls,
       ArrayRef<PredicateObject> Predicates,
-      std::function<StringRef(PredicateObject)> GetPredEnumName,
-      std::function<StringRef(PredicateObject)> GetPredCode,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
       StringRef Comment = "") {
     return emitCxxPredicateFns(
         OS, "MI", "const MachineInstr &", "MI", ", const MatcherState &State",
+        AdditionalDecls, Predicates, GetPredEnumName, GetPredCode, Comment);
+  }
+
+  /// Emits `testMOPredicate_MO`.
+  /// \tparam PredicateObject An object representing a predicate to emit.
+  /// \param OS Output stream.
+  /// \param AdditionalDecls Additional C++ variable declarations.
+  /// \param Predicates Predicates to emit.
+  /// \param GetPredEnumName Returns an enum name for a given predicate.
+  /// \param GetPredCode Returns the C++ code of a given predicate.
+  /// \param Comment Optional comment for the enum declaration.
+  template <typename PredicateObject>
+  void emitLeafPredicateFnsImpl(
+      raw_ostream &OS, StringRef AdditionalDecls,
+      ArrayRef<PredicateObject> Predicates,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
+      StringRef Comment = "") {
+    return emitCxxPredicateFns(
+        OS, "MO", "const MachineOperand &", "MO", ", const MatcherState &State",
         AdditionalDecls, Predicates, GetPredEnumName, GetPredCode, Comment);
   }
 
@@ -160,15 +184,15 @@ protected:
   void emitImmPredicateFnsImpl(
       raw_ostream &OS, StringRef TypeIdentifier, StringRef ArgType,
       ArrayRef<PredicateObject> Predicates,
-      std::function<StringRef(PredicateObject)> GetPredEnumName,
-      std::function<StringRef(PredicateObject)> GetPredCode,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredEnumName,
+      llvm::function_ref<StringRef(PredicateObject)> GetPredCode,
       StringRef Comment = "") {
     return emitCxxPredicateFns(OS, TypeIdentifier, ArgType, "Imm", "", "",
                                Predicates, GetPredEnumName, GetPredCode,
                                Comment);
   }
 
-  GlobalISelMatchTableExecutorEmitter() = default;
+  GlobalISelMatchTableExecutorEmitter();
 
 public:
   virtual ~GlobalISelMatchTableExecutorEmitter() = default;
@@ -188,6 +212,10 @@ public:
   /// Emit the `testMIPredicate_MI` function.
   /// Note: `emitMIPredicateFnsImpl` can be used to do most of the work.
   virtual void emitMIPredicateFns(raw_ostream &OS) = 0;
+
+  /// Emit the `testLeafPredicate` function
+  /// Note `emitLeafPredicateFnsImpl` can be used to do most of the work.
+  virtual void emitLeafPredicateFns(raw_ostream &OS) = 0;
 
   /// Emit the `testImmPredicate_I64` function.
   /// Note: `emitImmPredicateFnsImpl` can be used to do most of the work.

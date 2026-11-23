@@ -1,4 +1,4 @@
-; RUN: not llvm-ml -m64 -filetype=s %s /Fo /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+; RUN: not llvm-ml64 -filetype=s %s /Fo /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 .code
 

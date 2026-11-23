@@ -55,8 +55,10 @@ using namespace __asan;
     if (LIKELY(replace_intrin_cached)) {       \
       ASAN_READ_RANGE(ctx, from, size);        \
       ASAN_WRITE_RANGE(ctx, to, size);         \
+    } else if (UNLIKELY(!AsanInited())) {      \
+      return internal_memmove(to, from, size); \
     }                                          \
-    return internal_memmove(to, from, size);   \
+    return REAL(memmove)(to, from, size);      \
   } while (0)
 
 void *__asan_memcpy(void *to, const void *from, uptr size) {
@@ -101,6 +103,10 @@ extern "C" decltype(__asan_memset) memset[[gnu::alias("__asan_memset")]];
     ASAN_MEMSET_IMPL(ctx, block, c, size);                  \
   } while (false)
 
-#include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
+// Needed by the default fortified _chk implementations, which cannot use REAL()
+// until initialization has completed.
+#  define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!AsanInited())
+
+#  include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
 
 #endif  // SANITIZER_FUCHSIA

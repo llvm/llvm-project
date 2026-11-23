@@ -5,7 +5,7 @@
 // CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
-// CHECK-NEXT: RawDataSize: 8
+// CHECK-NEXT: RawDataSize: 0x8
 // CHECK-NEXT: PointerToRawData
 // CHECK-NEXT: PointerToRelocations
 // CHECK-NEXT: PointerToLineNumbers
@@ -23,7 +23,7 @@
 // CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
-// CHECK-NEXT: RawDataSize: 8
+// CHECK-NEXT: RawDataSize: 0x8
 // CHECK-NEXT: PointerToRawData
 // CHECK-NEXT: PointerToRelocations
 // CHECK-NEXT: PointerToLineNumbers
@@ -41,7 +41,7 @@
 // CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
-// CHECK-NEXT: RawDataSize: 8
+// CHECK-NEXT: RawDataSize: 0x8
 // CHECK-NEXT: PointerToRawData
 // CHECK-NEXT: PointerToRelocations
 // CHECK-NEXT: PointerToLineNumbers
@@ -68,8 +68,10 @@ foo:
     pushq %rbp
     .seh_pushreg %rbp
     .seh_endprologue
+    .seh_startepilogue
     popq %rbp
     addq $8, %rsp
+    .seh_endepilogue
     ret
     .seh_endproc
 
@@ -83,8 +85,10 @@ bar:
     pushq %rbp
     .seh_pushreg %rbp
     .seh_endprologue
+    .seh_startepilogue
     popq %rbp
     addq $8, %rsp
+    .seh_endepilogue
     ret
     .seh_endproc
 
@@ -98,8 +102,10 @@ baz:
     pushq %rbp
     .seh_pushreg %rbp
     .seh_endprologue
+    .seh_startepilogue
     popq %rbp
     addq $8, %rsp
+    .seh_endepilogue
     ret
     .seh_endproc
 

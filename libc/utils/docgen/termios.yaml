@@ -1,3 +1,17 @@
+posix: posix-2024
+types:
+  cc_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  speed_t:
+    in-latest-posix: ''
+  struct termios:
+    in-latest-posix: ''
+  struct winsize:
+    in-latest-posix: ''
+  tcflag_t:
+    in-latest-posix: ''
 macros:
   NCCS:
     in-latest-posix: ''
@@ -31,7 +45,7 @@ macros:
     in-latest-posix: ''
   IGNBRK:
     in-latest-posix: ''
-  IGNCR: 
+  IGNCR:
     in-latest-posix: ''
   IGNPAR:
     in-latest-posix: ''
@@ -64,7 +78,7 @@ macros:
     in-latest-posix: ''
   OFILL:
     in-latest-posix: ''
-    
+
   NLDLY:
     in-latest-posix: ''
   NL0:
@@ -139,7 +153,7 @@ macros:
     in-latest-posix: ''
   B2400:
     in-latest-posix: ''
-  B4800:  
+  B4800:
     in-latest-posix: ''
   B9600:
     in-latest-posix: ''
@@ -231,13 +245,13 @@ functions:
     in-latest-posix: ''
   tcgetattr:
     in-latest-posix: ''
-  tcgetsid: 
+  tcgetsid:
     in-latest-posix: ''
   tcgetwinsize:
     in-latest-posix: ''
   tcsendbreak:
     in-latest-posix: ''
-  tcsetattr: 
+  tcsetattr:
     in-latest-posix: ''
   tcsetwinsize:
     in-latest-posix: ''

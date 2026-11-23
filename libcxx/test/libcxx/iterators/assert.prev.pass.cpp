@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
 
 // <list>
 
@@ -31,7 +28,7 @@ int main(int, char**) {
     forward_iterator<int *> it(a+1);
     (void)std::prev(it, -1); // should work fine
     (void)std::prev(it, 0);  // should work fine
-    TEST_LIBCPP_ASSERT_FAILURE(std::prev(it, 1), "Attempt to prev(it, n) with a positive n on a non-bidirectional iterator");
+    TEST_LIBCPP_ASSERT_FAILURE(std::prev(it, 1), "std::advance: Can only pass a negative `n` with a bidirectional_iterator.");
 
     return 0;
 }

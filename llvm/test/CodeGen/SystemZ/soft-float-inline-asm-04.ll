@@ -7,4 +7,4 @@ define <2 x i64> @f1() {
   ret <2 x i64> %ret
 }
 
-; CHECK: error: couldn't allocate output register for constraint '{v0}'
+; CHECK: error: could not allocate output register for constraint '{v0}'

@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_SPARSEPROPAGATION_H
 #define LLVM_ANALYSIS_SPARSEPROPAGATION_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -88,7 +89,7 @@ public:
   /// of executing instruction \p I. Their associated LatticeVals are store in
   /// \p ChangedValues.
   virtual void ComputeInstructionState(
-      Instruction &I, SmallDenseMap<LatticeKey, LatticeVal, 16> &ChangedValues,
+      Instruction &I, SmallMapVector<LatticeKey, LatticeVal, 16> &ChangedValues,
       SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
 
   /// PrintLatticeVal - Render the given LatticeVal to the specified stream.
@@ -244,13 +245,13 @@ SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getValueState(LatticeKey Key) {
 template <class LatticeKey, class LatticeVal, class KeyInfo>
 void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::UpdateState(LatticeKey Key,
                                                                 LatticeVal LV) {
-  auto I = ValueState.find(Key);
-  if (I != ValueState.end() && I->second == LV)
+  auto [I, Inserted] = ValueState.try_emplace(Key);
+  if (!Inserted && I->second == LV)
     return; // No change.
 
   // Update the state of the given LatticeKey and add its corresponding LLVM
   // value to the work list.
-  ValueState[Key] = std::move(LV);
+  I->second = std::move(LV);
   if (Value *V = KeyInfo::getValueFromLatticeKey(Key))
     ValueWorkList.push_back(V);
 }
@@ -291,12 +292,12 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
   if (TI.getNumSuccessors() == 0)
     return;
 
-  if (BranchInst *BI = dyn_cast<BranchInst>(&TI)) {
-    if (BI->isUnconditional()) {
-      Succs[0] = true;
-      return;
-    }
+  if (isa<UncondBrInst>(&TI)) {
+    Succs[0] = true;
+    return;
+  }
 
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(&TI)) {
     LatticeVal BCValue;
     if (AggressiveUndef)
       BCValue =
@@ -400,7 +401,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitPHINode(PHINode &PN) {
   // computed from its incoming values.  For example, SSI form stores its sigma
   // functions as PHINodes with a single incoming value.
   if (LatticeFunc->IsSpecialCasedPHI(&PN)) {
-    SmallDenseMap<LatticeKey, LatticeVal, 16> ChangedValues;
+    SmallMapVector<LatticeKey, LatticeVal, 16> ChangedValues;
     LatticeFunc->ComputeInstructionState(PN, ChangedValues, *this);
     for (auto &ChangedValue : ChangedValues)
       if (ChangedValue.second != LatticeFunc->getUntrackedVal())
@@ -455,7 +456,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitInst(Instruction &I) {
 
   // Otherwise, ask the transfer function what the result is.  If this is
   // something that we care about, remember it.
-  SmallDenseMap<LatticeKey, LatticeVal, 16> ChangedValues;
+  SmallMapVector<LatticeKey, LatticeVal, 16> ChangedValues;
   LatticeFunc->ComputeInstructionState(I, ChangedValues, *this);
   for (auto &ChangedValue : ChangedValues)
     if (ChangedValue.second != LatticeFunc->getUntrackedVal())

@@ -24,7 +24,7 @@ namespace llvm {
 /// Symbolize using user-provided, C API, callbacks.
 ///
 /// See llvm-c/Disassembler.h.
-class MCExternalSymbolizer : public MCSymbolizer {
+class LLVM_ABI MCExternalSymbolizer : public MCSymbolizer {
 protected:
   /// \name Hooks for symbolic disassembly via the public 'C' interface.
   /// @{
@@ -52,7 +52,6 @@ public:
                                        int64_t Value,
                                        uint64_t Address) override;
 };
-
 }
 
 #endif

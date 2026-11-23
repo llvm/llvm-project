@@ -10,7 +10,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/support.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 
 using namespace Fortran::runtime;
 
@@ -42,7 +42,7 @@ void fir::runtime::genCopyAndUpdateDescriptor(fir::FirOpBuilder &builder,
     func.setArgAttr(0, noCapture, unitAttr);
     func.setArgAttr(1, noCapture, unitAttr);
   }
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 mlir::Value fir::runtime::genIsAssumedSize(fir::FirOpBuilder &builder,
@@ -52,5 +52,5 @@ mlir::Value fir::runtime::genIsAssumedSize(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(IsAssumedSize)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, box);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }

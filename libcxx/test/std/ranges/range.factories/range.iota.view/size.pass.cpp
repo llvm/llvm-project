@@ -16,7 +16,12 @@
 #include <ranges>
 
 #include "test_macros.h"
+#include "type_algorithms.h"
+
 #include "types.h"
+
+template <typename T>
+concept HasSize = requires(const T t) { t.size(); };
 
 constexpr bool test() {
   // Both are integer like and both are less than zero.
@@ -91,12 +96,23 @@ constexpr bool test() {
   }
 
   // Make sure iota_view<short, short> works properly. For details,
-  // see https://github.com/llvm/llvm-project/issues/67551.
+  // see https://llvm.org/PR67551.
   {
     static_assert(std::ranges::sized_range<std::ranges::iota_view<short, short>>);
     std::ranges::iota_view<short, short> io(10, 20);
     std::same_as<unsigned int> auto sz = io.size();
     assert(sz == 10);
+  }
+
+  // LWG3610: `iota_view::size` sometimes rejects integer-class types
+  // libc++ does not have integer-class types, so the resolution only impacts uses with `bool`.
+  {
+    types::for_each(types::integer_types{}, []<typename IntegerLikeT>() {
+      types::for_each(types::integer_types{}, []<typename BoundT>() {
+        // libc++ does not have integer-class types
+        static_assert(!HasSize<std::ranges::iota_view<IntegerLikeT, bool>>);
+      });
+    });
   }
 
   return true;

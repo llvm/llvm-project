@@ -28,12 +28,13 @@
 // CHECK-NEXT:     FEAT_FP16                                              Enable half-precision floating-point data processing
 // CHECK-NEXT:     FEAT_FP8                                               Enable FP8 instructions
 // CHECK-NEXT:     FEAT_FP8DOT2                                           Enable FP8 2-way dot instructions
+// CHECK-NEXT:     FEAT_FP8DOT4                                           Enable FP8 4-way dot instructions
+// CHECK-NEXT:     FEAT_FP8FMA                                            Enable Armv9.5-A FP8 multiply-add instructions
 // CHECK-NEXT:     FEAT_FPAC                                              Enable Armv8.3-A Pointer Authentication Faulting enhancement
 // CHECK-NEXT:     FEAT_FRINTTS                                           Enable FRInt[32|64][Z|X] instructions that round a floating-point number to an integer (in FP format) forcing it to fit into a 32- or 64-bit int
 // CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_FlagM2                                            Enable alternative NZCV format for floating point comparisons
 // CHECK-NEXT:     FEAT_HBC                                               Enable Armv8.8-A Hinted Conditional Branches Extension
-// CHECK-NEXT:     FEAT_HCX                                               Enable Armv8.7-A HCRX_EL2 system register
 // CHECK-NEXT:     FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
 // CHECK-NEXT:     FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     FEAT_LOR                                               Enable Armv8.1-A Limited Ordering Regions extension
@@ -68,8 +69,8 @@
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
 // CHECK-NEXT:     FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword SVE polynomial multiply instructions
 // CHECK-NEXT:     FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
-// CHECK-NEXT:     FEAT_SVE_SHA3                                          Enable SHA3 SVE2 instructions
-// CHECK-NEXT:     FEAT_SVE_SM4                                           Enable SM4 SVE2 instructions
+// CHECK-NEXT:     FEAT_SVE_SHA3                                          Enable SVE SHA3 instructions
+// CHECK-NEXT:     FEAT_SVE_SM4                                           Enable SVE SM4 instructions
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension

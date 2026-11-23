@@ -91,28 +91,28 @@ rcpss (%rax), %xmm1
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
 
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
+# BARCELONA-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BDVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BDVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
+# BROADWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BTVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# BTVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BTVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # HASWELL-NEXT:   1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# HASWELL-NEXT:          1     1.5    0.5    0.0       <total>
+# HASWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# SKYLAKE-NEXT:          1     1.5    0.5    0.0       <total>
+# SKYLAKE-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# ZNVER1-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER1-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER2-NEXT:    1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# ZNVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER2-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ALL:            [1] Code Region - test_sqrtsd
 
@@ -176,28 +176,28 @@ rcpss (%rax), %xmm1
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
 
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
+# BARCELONA-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BDVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BDVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
+# BROADWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BTVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# BTVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BTVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # HASWELL-NEXT:   1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# HASWELL-NEXT:          1     1.5    0.5    0.0       <total>
+# HASWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# SKYLAKE-NEXT:          1     1.5    0.5    0.0       <total>
+# SKYLAKE-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# ZNVER1-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER1-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER2-NEXT:    1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# ZNVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER2-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ALL:            [2] Code Region - test_rsqrtss
 
@@ -248,28 +248,28 @@ rcpss (%rax), %xmm1
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
 
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
+# BARCELONA-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BDVER2-NEXT:    1.     1     3.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BDVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
+# BROADWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BTVER2-NEXT:    1.     1     3.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# BTVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BTVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # HASWELL-NEXT:   1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# HASWELL-NEXT:          1     1.5    0.5    0.0       <total>
+# HASWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# SKYLAKE-NEXT:          1     1.5    0.5    0.0       <total>
+# SKYLAKE-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# ZNVER1-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER1-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER2-NEXT:    1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# ZNVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER2-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ALL:            [3] Code Region - test_rcp
 
@@ -320,25 +320,25 @@ rcpss (%rax), %xmm1
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
 
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
-# BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
+# BARCELONA-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BDVER2-NEXT:    1.     1     3.0    0.0    0.0       rcpss	(%rax), %xmm1
-# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BDVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
-# BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
+# BROADWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # BTVER2-NEXT:    1.     1     3.0    0.0    0.0       rcpss	(%rax), %xmm1
-# BTVER2-NEXT:           1     2.0    0.5    0.0       <total>
+# BTVER2-NEXT:        2     2.0    0.5    0.0       <total>
 
 # HASWELL-NEXT:   1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
-# HASWELL-NEXT:          1     1.5    0.5    0.0       <total>
+# HASWELL-NEXT:        2     1.5    0.5    0.0       <total>
 
 # SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
-# SKYLAKE-NEXT:          1     1.5    0.5    0.0       <total>
+# SKYLAKE-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
-# ZNVER1-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER1-NEXT:        2     1.5    0.5    0.0       <total>
 
 # ZNVER2-NEXT:    1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
-# ZNVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# ZNVER2-NEXT:        2     1.5    0.5    0.0       <total>

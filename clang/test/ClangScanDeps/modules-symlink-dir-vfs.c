@@ -5,7 +5,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// REQUIRES: shell
+// REQUIRES: symlinks
 
 // RUN: mkdir -p %t/frameworks-symlink
 // RUN: ln -s %t/frameworks/FW.framework %t/frameworks-symlink/FW.framework
@@ -74,6 +74,9 @@ framework module FW { umbrella header "FW.h" }
 // CHECK-NEXT:         "[[PREFIX]]/frameworks-symlink/FW.framework/Modules/module.modulemap",
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/frameworks-symlink/FW.framework/Headers"
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/frameworks-symlink/FW.framework/Modules/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/copy/FW.h",

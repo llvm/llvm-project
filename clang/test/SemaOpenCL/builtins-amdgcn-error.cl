@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu6.00-- -verify -S -o - %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 typedef unsigned long ulong;
@@ -166,6 +166,8 @@ void test_fence() {
 void test_s_setreg(int x, int y) {
   __builtin_amdgcn_s_setreg(x, 0); // expected-error {{argument to '__builtin_amdgcn_s_setreg' must be a constant integer}}
   __builtin_amdgcn_s_setreg(x, y); // expected-error {{argument to '__builtin_amdgcn_s_setreg' must be a constant integer}}
+  __builtin_amdgcn_s_setreg(193768, y); // expected-error {{argument value 193768 is outside the valid range [0, 65535]}}
+  __builtin_amdgcn_s_setreg(65536, y); // expected-error {{argument value 65536 is outside the valid range [0, 65535]}}
 }
 
 void test_atomic_inc32() {

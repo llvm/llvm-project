@@ -1,0 +1,24 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+RUN: %dexter_regression_test_cxx_build %S/Inputs/simple_prog.cpp -o %t/test
+RUN: %dexter_regression_test_run --binary %t/test \
+RUN:   --results-directory %t/results --source-root-dir %S/Inputs -- \
+RUN:   %S/Inputs/whole_file_test.dex 2>&1 | FileCheck %s
+RUN: diff %t/results/whole_file_test.dex %S/Inputs/whole_file_test_expected.dex
+
+Test that script rewriting still works when the test file is pure YAML, rather
+than a YAML Dexter script embedded in another file.
+
+NB: The exact contents of this file are compared against the expect file in
+    the Inputs/ directory; any changes to this file, including comments,
+    will require updating the corresponding expected file.
+    Although we perform an exact file comparison, we use `diff` over `cmp`
+    for more legible lit output.
+
+CHECK: Rewrote script to add 1 expected values.
+
+CHECK: total_watched_steps: 3
+CHECK: correct_steps: 3
+CHECK: incorrect_steps: 0
+CHECK: seen_values: 3
+CHECK: missing_values: 0

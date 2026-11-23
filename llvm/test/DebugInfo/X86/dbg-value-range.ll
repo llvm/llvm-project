@@ -49,9 +49,9 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 ;CHECK-NEXT: [[CLOBBER:Ltmp[0-9]*]]
 
 ;CHECK:Ldebug_loc0:
-;CHECK-NEXT: .set Lset{{.*}},
+;CHECK-NEXT: Lset{{.*}} =
 ;CHECK-NEXT:	.quad
-;CHECK-NEXT: .set [[CLOBBER_OFF:Lset.*]], [[CLOBBER]]-{{.*}}
+;CHECK-NEXT: [[CLOBBER_OFF:Lset.*]] = [[CLOBBER]]-{{.*}}
 ;CHECK-NEXT:	.quad	[[CLOBBER_OFF]]
 ;CHECK-NEXT:  .short 1 ## Loc expr size
 ;CHECK-NEXT:	.byte	85 ## DW_OP_reg

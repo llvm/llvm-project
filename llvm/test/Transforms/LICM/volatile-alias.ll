@@ -10,7 +10,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define i32 @foo(ptr dereferenceable(4) nonnull %p, ptr %q, i32 %n) #0 {
+define i32 @foo(ptr dereferenceable(4) nonnull %p, ptr %q, i32 %n) {
 entry:
   %p.addr = alloca ptr, align 8
   %q.addr = alloca ptr, align 8
@@ -51,5 +51,3 @@ for.end:                                          ; preds = %for.cond
   %8 = load i32, ptr %s, align 4
   ret i32 %8
 }
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

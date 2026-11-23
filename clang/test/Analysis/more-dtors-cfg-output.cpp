@@ -1,6 +1,6 @@
 // RUN: rm -f %t.14 %t.2a
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++14 -DCXX2A=0 -fblocks -Wall -Wno-unused -Werror %s > %t.14 2>&1
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++2a -DCXX2A=1 -fblocks -Wall -Wno-unused -Werror %s > %t.2a 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++14 -DCXX2A=0 -fblocks -Wall -Wno-unused -Werror -Wno-coroutines-unsupported-target %s > %t.14 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++2a -DCXX2A=1 -fblocks -Wall -Wno-unused -Werror -Wno-coroutines-unsupported-target %s > %t.2a 2>&1
 // RUN: FileCheck --input-file=%t.14 -check-prefixes=CHECK,CXX14 -implicit-check-not=destructor %s
 // RUN: FileCheck --input-file=%t.2a -check-prefixes=CHECK,CXX2A -implicit-check-not=destructor %s
 
@@ -234,7 +234,7 @@ void const_auto_obj() {
 void has_default_arg(Foo foo = get_foo());
 void test_default_arg() {
   // FIXME: This emits a destructor but no constructor.  Search CFG.cpp for
-  // 'PR13385' for details.
+  // 'GH13757' for details.
   has_default_arg();
 }
 // CHECK: void test_default_arg()
@@ -249,7 +249,7 @@ struct DefaultArgInCtor {
 void default_ctor_with_default_arg() {
   // FIXME: Default arguments are mishandled in two ways:
   // - The constructor is not emitted at all (not specific to arrays; see fixme
-  //   in CFG.cpp that mentions PR13385).
+  //   in CFG.cpp that mentions GH13757).
   // - The destructor is emitted once, even though the default argument will be
   //   constructed and destructed once per array element.
   // Ideally, the CFG would expand array constructions into a loop that

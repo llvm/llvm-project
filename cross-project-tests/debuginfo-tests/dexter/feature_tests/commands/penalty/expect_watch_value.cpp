@@ -5,8 +5,8 @@
 // UNSUPPORTED: system-darwin
 //
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_cxx_build %s -o %t
+// RUN: not %dexter_regression_test_run --use-heuristic --binary %t -- %s | FileCheck %s
 // CHECK: expect_watch_value.cpp:
 
 int main()

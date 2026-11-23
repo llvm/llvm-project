@@ -15,6 +15,18 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// has_sub_attr_or_type_v
+//===----------------------------------------------------------------------===//
+
+static_assert(!has_sub_attr_or_type_v<int64_t>);
+static_assert(!has_sub_attr_or_type_v<unsigned, ArrayRef<int64_t>>);
+static_assert(!has_sub_attr_or_type_v<std::tuple<unsigned, StringRef>>);
+static_assert(has_sub_attr_or_type_v<Type>);
+static_assert(has_sub_attr_or_type_v<unsigned, IntegerAttr>);
+static_assert(has_sub_attr_or_type_v<ArrayRef<NamedAttribute>>);
+static_assert(has_sub_attr_or_type_v<std::tuple<unsigned, ArrayRef<Type>>>);
+
+//===----------------------------------------------------------------------===//
 // CyclicAttrTypeReplacer
 //===----------------------------------------------------------------------===//
 
@@ -80,9 +92,9 @@ public:
     });
   }
 
-  Type getFunctionTypeChain(unsigned N) {
+  Type getFunctionTypeChain(unsigned n) {
     Type type = b.getIndexType();
-    for (unsigned i = 0; i < N; i++)
+    for (unsigned i = 0; i < n; i++)
       type = b.getFunctionType({}, type);
     return type;
   };
@@ -168,9 +180,9 @@ public:
     });
   }
 
-  Type getFunctionTypeTree(unsigned N) {
+  Type getFunctionTypeTree(unsigned n) {
     Type type = b.getIndexType();
-    for (unsigned i = 0; i < N; i++)
+    for (unsigned i = 0; i < n; i++)
       type = b.getFunctionType(type, type);
     return type;
   };

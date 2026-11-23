@@ -71,7 +71,7 @@ public:
   lldb::ThreadPlanSP GetPlanByIndex(uint32_t plan_idx,
                                     bool skip_private = true) const;
 
-  lldb::ValueObjectSP GetReturnValueObject() const;
+  ThreadPlanReturnValue GetReturnValue() const;
 
   lldb::ExpressionVariableSP GetExpressionVariable() const;
 
@@ -123,7 +123,9 @@ public:
   ThreadPlanStackMap(Process &process) : m_process(process) {}
   ~ThreadPlanStackMap() = default;
 
-  // Prune the map using the current_threads list.
+  // Prune the map using the current_threads list. The caller must have updated
+  // the list, because this runs as part of the update and therefore cannot
+  // recursively do the same.
   void Update(ThreadList &current_threads, bool delete_missing,
               bool check_for_new = true);
 

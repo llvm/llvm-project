@@ -10,6 +10,8 @@ from lldbsuite.test.lldbutil import symbol_type_to_str
 
 
 class ModuleAndSectionAPIsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_module_and_section(self):
         """Test module and section APIs."""
         self.build()

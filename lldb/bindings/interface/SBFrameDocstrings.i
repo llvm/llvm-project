@@ -79,6 +79,21 @@ See also SBThread."
 ) lldb::SBFrame::IsInlined;
 
 %feature("docstring", "
+    Returns an SBValueList which is an array of one or more register
+    sets that exist for this thread.  
+    Each SBValue in the SBValueList represents one register-set. 
+    The first register-set will be the general purpose registers -- 
+    the registers printed by the `register read` command-line in lldb, with 
+    no additional arguments.  
+    The register-set SBValue will have a name, e.g. 
+    SBFrame::GetRegisters().GetValueAtIndex(0).GetName() 
+    By convention, certain stubs choose to name their general-purpose 
+    register-set the 'General Purpose Registers', but that is not required.
+    A register-set SBValue will have children, one child per register 
+    in the register-set."
+) lldb::SBFrame::GetRegisters;
+
+%feature("docstring", "
     Return true if this frame is artificial (e.g a frame synthesized to
     capture a tail call). Local variables may not be available in an artificial
     frame."
@@ -115,7 +130,8 @@ See also SBThread."
 ) lldb::SBFrame::FindVariable;
 
 %feature("docstring", "
-    Get a lldb.SBValue for a variable path.
+    Get a lldb.SBValue for a variable path, using the Data Inspection
+    Language (DIL).
 
     Variable paths can include access to pointer or instance members: ::
 
@@ -137,11 +153,7 @@ See also SBThread."
         int_array[1]
         pt_ptr[22].x
 
-    Unlike `EvaluateExpression()` which returns :py:class:`SBValue` objects
-    with constant copies of the values at the time of evaluation,
-    the result of this function is a value that will continue to
-    track the current value of the value as execution progresses
-    in the current frame."
+    See https://lldb.llvm.org/resources/dil.html for more information."
 ) lldb::SBFrame::GetValueForVariablePath;
 
 %feature("docstring", "

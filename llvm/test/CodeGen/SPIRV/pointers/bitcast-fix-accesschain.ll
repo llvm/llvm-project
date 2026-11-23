@@ -26,9 +26,13 @@
 %struct.S = type { i32 }
 %struct.__wrapper_class = type { [7 x %struct.S] }
 
+@G_elem = global ptr null
+@G_data = global i64 0
+
 define spir_kernel void @foo1(ptr noundef byval(%struct.__wrapper_class) align 4 %_arg_Arr) {
 entry:
   %elem = getelementptr inbounds i8, ptr %_arg_Arr, i64 0
+  store ptr %elem, ptr @G_elem
   ret void
 }
 
@@ -36,5 +40,6 @@ define spir_kernel void @foo2(ptr noundef byval(%struct.__wrapper_class) align 4
 entry:
   %elem = getelementptr inbounds %struct.__wrapper_class, ptr %_arg_Arr, i64 0
   %data = load i64, ptr %elem
+  store i64 %data, ptr @G_data
   ret void
 }

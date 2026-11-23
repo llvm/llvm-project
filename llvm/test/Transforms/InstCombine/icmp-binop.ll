@@ -3,7 +3,6 @@
 
 declare void @use64(i64)
 declare void @llvm.assume(i1)
-
 define i1 @mul_unkV_oddC_eq(i32 %v) {
 ; CHECK-LABEL: @mul_unkV_oddC_eq(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V:%.*]], 0
@@ -37,11 +36,9 @@ define <2 x i1> @mul_unkV_oddC_ne_vec(<2 x i64> %v) {
 
 define i1 @mul_assumeoddV_asumeoddV_eq(i16 %v, i16 %v2) {
 ; CHECK-LABEL: @mul_assumeoddV_asumeoddV_eq(
-; CHECK-NEXT:    [[LB:%.*]] = and i16 [[V:%.*]], 1
-; CHECK-NEXT:    [[ODD:%.*]] = icmp ne i16 [[LB]], 0
+; CHECK-NEXT:    [[ODD:%.*]] = trunc i16 [[V:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ODD]])
-; CHECK-NEXT:    [[LB2:%.*]] = and i16 [[V2:%.*]], 1
-; CHECK-NEXT:    [[ODD2:%.*]] = icmp ne i16 [[LB2]], 0
+; CHECK-NEXT:    [[ODD2:%.*]] = trunc i16 [[V2:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ODD2]])
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -82,8 +79,7 @@ define i1 @mul_reused_unkV_oddC_ne(i64 %v) {
 
 define i1 @mul_assumeoddV_unkV_eq(i16 %v, i16 %v2) {
 ; CHECK-LABEL: @mul_assumeoddV_unkV_eq(
-; CHECK-NEXT:    [[LB:%.*]] = and i16 [[V2:%.*]], 1
-; CHECK-NEXT:    [[ODD:%.*]] = icmp ne i16 [[LB]], 0
+; CHECK-NEXT:    [[ODD:%.*]] = trunc i16 [[V2:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ODD]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[V:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -98,8 +94,7 @@ define i1 @mul_assumeoddV_unkV_eq(i16 %v, i16 %v2) {
 
 define i1 @mul_reusedassumeoddV_unkV_ne(i64 %v, i64 %v2) {
 ; CHECK-LABEL: @mul_reusedassumeoddV_unkV_ne(
-; CHECK-NEXT:    [[LB:%.*]] = and i64 [[V:%.*]], 1
-; CHECK-NEXT:    [[ODD:%.*]] = icmp ne i64 [[LB]], 0
+; CHECK-NEXT:    [[ODD:%.*]] = trunc i64 [[V:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ODD]])
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[V]], [[V2:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[V2]], 0
@@ -358,4 +353,289 @@ define i1 @test_icmp_sgt_and_negpow2_invalid_c(i32 %add) {
   %and = and i32 %add, -32
   %cmp = icmp sgt i32 %and, 48
   ret i1 %cmp
+}
+
+define i1 @icmp_eq_or_of_selects_with_constant(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s1 = select i1 %a, i64 65536, i64 0
+  %s2 = select i1 %b, i64 256, i64 0
+  %or = or i64 %s1, %s2
+  %cmp = icmp eq i64 %or, 65792
+  ret i1 %cmp
+}
+
+define i1 @icmp_slt_and_of_selects_with_constant(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_slt_and_of_selects_with_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s1 = select i1 %a, i8 1, i8 254
+  %s2 = select i1 %b, i8 1, i8 253
+  %and = and i8 %s1, %s2
+  %cmp = icmp slt i8 %and, 254
+  ret i1 %cmp
+}
+
+define i1 @icmp_sge_add_of_selects_with_constant(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_sge_add_of_selects_with_constant(
+; CHECK-NEXT:    ret i1 true
+;
+  %s1 = select i1 %a, i8 248, i8 7
+  %s2 = select i1 %b, i8 16, i8 0
+  %add = add i8 %s1, %s2
+  %cmp = icmp sge i8 %add, 247
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_or_of_selects_with_constant_multiuse_foldable(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant_multiuse_foldable(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[A:%.*]], i64 65536, i64 0
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], i64 256, i64 0
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[S1]], [[S2]]
+; CHECK-NEXT:    call void @use64(i64 [[OR]])
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s1 = select i1 %a, i64 65536, i64 0
+  %s2 = select i1 %b, i64 256, i64 0
+  %or = or i64 %s1, %s2
+  call void @use64(i64 %or)
+  %cmp = icmp eq i64 %or, 65792
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_eq_or_of_selects_with_constant_vectorized(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant_vectorized(
+; CHECK-NEXT:    [[CMP:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %s1 = select <2 x i1> %a, <2 x i64> <i64 65536, i64 65536>, <2 x i64> zeroinitializer
+  %s2 = select <2 x i1> %b, <2 x i64> <i64 256, i64 256>, <2 x i64> zeroinitializer
+  %or = or <2 x i64> %s1, %s2
+  %cmp = icmp eq <2 x i64> %or, <i64 65792, i64 65792>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_eq_or_of_selects_with_scalar_cond_constant_vectorized(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_or_of_selects_with_scalar_cond_constant_vectorized(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[A:%.*]], <2 x i64> splat (i64 65536), <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], <2 x i64> splat (i64 256), <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i64> [[S1]], [[S2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[OR]], splat (i64 65792)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %s1 = select i1 %a, <2 x i64> <i64 65536, i64 65536>, <2 x i64> zeroinitializer
+  %s2 = select i1 %b, <2 x i64> <i64 256, i64 256>, <2 x i64> zeroinitializer
+  %or  = or <2 x i64> %s1, %s2
+  %cmp = icmp eq <2 x i64> %or, <i64 65792, i64 65792>
+  ret <2 x i1> %cmp
+}
+
+; Negative tests.
+define i1 @icmp_eq_or_of_selects_with_constant_and_arg(i1 %a, i1 %b, i64 %arg) {
+; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant_and_arg(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[A:%.*]], i64 65536, i64 [[ARG:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], i64 256, i64 0
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[S1]], [[S2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 65792
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s1 = select i1 %a, i64 65536, i64 %arg
+  %s2 = select i1 %b, i64 256, i64 0
+  %or = or i64 %s1, %s2
+  %cmp = icmp eq i64 %or, 65792
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_or_of_selects_with_constant_multiuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant_multiuse(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[A:%.*]], i64 0, i64 65536
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], i64 0, i64 256
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[S1]], [[S2]]
+; CHECK-NEXT:    call void @use64(i64 [[OR]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 65792
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s1 = select i1 %a, i64 0, i64 65536
+  %s2 = select i1 %b, i64 0, i64 256
+  %or = or i64 %s1, %s2
+  call void @use64(i64 %or)
+  %cmp = icmp eq i64 %or, 65792
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_eq_or_of_selects_with_constant_vectorized_nonsplat(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant_vectorized_nonsplat(
+; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[A:%.*]], <2 x i64> splat (i64 65536), <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[S2:%.*]] = select <2 x i1> [[B:%.*]], <2 x i64> <i64 256, i64 128>, <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i64> [[S1]], [[S2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[OR]], <i64 65792, i64 65664>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %s1 = select <2 x i1> %a, <2 x i64> <i64 65536, i64 65536>, <2 x i64> zeroinitializer
+  %s2 = select <2 x i1> %b, <2 x i64> <i64 256, i64 128>, <2 x i64> zeroinitializer
+  %or = or <2 x i64> %s1, %s2
+  %cmp = icmp eq <2 x i64> %or, <i64 65792, i64 65664>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @pr173177(<2 x i1> %a, i1 %b) {
+; CHECK-LABEL: @pr173177(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[B:%.*]], <2 x i1> splat (i1 true), <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+entry:
+  %s1 = select <2 x i1> %a, <2 x i16> splat (i16 179), <2 x i16> splat (i16 1)
+  %s2 = select i1 %b, <2 x i16> zeroinitializer, <2 x i16> splat (i16 255)
+  %and = and <2 x i16> %s1, %s2
+  %cmp = icmp eq <2 x i16> %and, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+; verify icmp(binop(bool_map, bool_map), constant) coverage
+
+
+define i1 @icmp_ne_add_sext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_ne_add_sext_select(
+; CHECK-NEXT:    ret i1 true
+;
+  %s2 = sext i1 %a to i8
+  %s1 = select i1 %b, i8 5, i8 10
+  %add = add i8 %s1, %s2
+  %cmp = icmp ne i8 %add, 1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_ult_sub_sext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_ult_sub_sext_select(
+; CHECK-NEXT:    ret i1 false
+;
+  %s2 = sext i1 %a to i8
+  %s1 = select i1 %b, i8 5, i8 10
+  %sub = sub i8 %s1, %s2
+  %cmp = icmp ult i8 %sub, 3
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_mul_select_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_ugt_mul_select_select(
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = select i1 %a, i8 2, i8 1
+  %s1 = select i1 %b, i8 2, i8 1
+  %mul = mul i8 %s1, %s2
+  %cmp = icmp ugt i8 %mul, 1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_uge_or_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_uge_or_zext_select(
+; CHECK-NEXT:    ret i1 true
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 10, i8 3
+  %or = or i8 %s1, %s2
+  %cmp = icmp uge i8 %or, 3
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_slt_xor_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_slt_xor_zext_select(
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 10, i8 3
+  %xor = xor i8 %s1, %s2
+  %cmp = icmp slt i8 %xor, 5
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_sle_lshr_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_sle_lshr_zext_select(
+; CHECK-NEXT:    ret i1 true
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 4, i8 2
+  %lshr = lshr i8 %s1, %s2
+  %cmp = icmp sle i8 %lshr, 5
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_sgt_ashr_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_sgt_ashr_zext_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[B:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 4, i8 2
+  %ashr = ashr i8 %s1, %s2
+  %cmp = icmp sgt i8 %ashr, 1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_sge_shl_zext_sext(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_sge_shl_zext_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = sext i1 %b to i8
+  %shl = shl i8 %s1, %s2
+  %cmp = icmp sge i8 %shl, -1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_eq_add_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_add_zext_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 13, i8 19
+  %add = add i8 %s1, %s2
+  %cmp = icmp eq i8 %add, 20
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_eq_add_zext_select_i64(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_add_zext_select_i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[B:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i64
+  %s1 = select i1 %b, i64 13, i64 19
+  %add = add i64 %s1, %s2
+  %cmp = icmp eq i64 %add, 13
+  ret i1 %cmp
+}
+
+define <4 x i1> @icmp_ugt_mul_select_select_vec(<4 x i1> %a, <4 x i1> %b) {
+; CHECK-LABEL: @icmp_ugt_mul_select_select_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = or <4 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %s2 = select <4 x i1> %a, <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
+  %s1 = select <4 x i1> %b, <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
+  %mul = mul <4 x i8> %s1, %s2
+  %cmp = icmp ugt <4 x i8> %mul, splat (i8 1)
+  ret <4 x i1> %cmp
 }

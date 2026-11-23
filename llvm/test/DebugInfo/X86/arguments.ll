@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 
-; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-unknown-unknown -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-
 ; IR generated from clang -g with the following source:
 ; struct foo {
 ;   foo(const foo&);
@@ -44,7 +41,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

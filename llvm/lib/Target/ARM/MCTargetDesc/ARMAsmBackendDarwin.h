@@ -22,9 +22,8 @@ public:
   const MachO::CPUSubTypeARM Subtype;
   ARMAsmBackendDarwin(const Target &T, const MCSubtargetInfo &STI,
                       const MCRegisterInfo &MRI)
-      : ARMAsmBackend(T, STI.getTargetTriple().isThumb(),
-                      llvm::endianness::little),
-        MRI(MRI), TT(STI.getTargetTriple()),
+      : ARMAsmBackend(T, llvm::endianness::little), MRI(MRI),
+        TT(STI.getTargetTriple()),
         Subtype((MachO::CPUSubTypeARM)cantFail(
             MachO::getCPUSubType(STI.getTargetTriple()))) {}
 

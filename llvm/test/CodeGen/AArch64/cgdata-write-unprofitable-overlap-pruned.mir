@@ -1,0 +1,78 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=machine-outliner \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -machine-outliner-unprofitable-candidate-max-instrs=2 \
+# RUN:   -verify-machineinstrs -stats %s -o /dev/null 2>&1 | FileCheck %s
+#
+# In A-A-A-B, the A-A group keeps [0,1] and drops its self-overlapping [1,2]
+# match. A-B at [2,3] overlaps only the dropped match, so checking just the
+# retained candidates would miss the conflict. Both groups must be suppressed,
+# including the separate A-A and A-B sites.
+#
+# The F-F group also has a self-overlap, but no competing sequence. It must
+# still publish its two non-overlapping sites, one in F-F-F and one in F-F.
+# This checks that only cross-sequence conflicts suppress whole groups.
+#
+# CHECK: 1 machine-outliner - Number of locally unprofitable candidate groups published
+# CHECK: 2 machine-outliner - Number of locally unprofitable candidate sites published
+
+--- |
+  define void @aaab() noredzone { unreachable }
+  define void @aa() noredzone { unreachable }
+  define void @ab() noredzone { unreachable }
+  define void @fff() noredzone { unreachable }
+  define void @ff() noredzone { unreachable }
+...
+---
+name: aaab
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: aa
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: fff
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w5 = ORRWri $wzr, 6
+    $w5 = ORRWri $wzr, 6
+    $w5 = ORRWri $wzr, 6
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ff
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w5 = ORRWri $wzr, 6
+    $w5 = ORRWri $wzr, 6
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...

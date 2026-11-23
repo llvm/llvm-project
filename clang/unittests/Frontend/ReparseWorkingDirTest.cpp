@@ -28,7 +28,9 @@ class ReparseWorkingDirTest : public ::testing::Test {
   std::shared_ptr<PCHContainerOperations> PCHContainerOpts;
 
 public:
-  void SetUp() override { VFS = new vfs::InMemoryFileSystem(); }
+  void SetUp() override {
+    VFS = llvm::makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  }
   void TearDown() override {}
 
   void setWorkingDirectory(StringRef Path) {
@@ -57,14 +59,17 @@ public:
     CI->getFileSystemOpts().WorkingDir = *VFS->getCurrentWorkingDirectory();
     CI->getTargetOpts().Triple = "i386-unknown-linux-gnu";
 
+    auto DiagOpts = std::make_shared<DiagnosticOptions>();
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
+        CompilerInstance::createDiagnostics(*VFS, *DiagOpts,
                                             new DiagnosticConsumer));
 
-    FileManager *FileMgr = new FileManager(CI->getFileSystemOpts(), VFS);
+    auto FileMgr =
+        llvm::makeIntrusiveRefCnt<FileManager>(CI->getFileSystemOpts(), VFS);
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
-        CI, PCHContainerOpts, Diags, FileMgr, false, CaptureDiagsKind::None,
+        CI, PCHContainerOpts, DiagOpts, Diags, FileMgr, false,
+        CaptureDiagsKind::None,
         /*PrecompilePreambleAfterNParses=*/1);
     return AST;
   }
@@ -85,6 +90,10 @@ TEST_F(ReparseWorkingDirTest, ReparseWorkingDir) {
   WorkingDir = "/";
 #endif
   llvm::sys::path::append(WorkingDir, "root");
+  // Normalize to native path style to match FileManager's WorkingDir
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(WorkingDir);
   setWorkingDirectory(WorkingDir);
 
   SmallString<32> Header;

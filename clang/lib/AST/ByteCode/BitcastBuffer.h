@@ -89,6 +89,12 @@ struct BitcastBuffer {
     Data = std::make_unique<std::byte[]>(ByteSize);
   }
 
+  /// Returns the byte at the given offset.
+  std::byte *atByte(unsigned Offset) {
+    assert(Offset < FinalBitSize.roundToBytes());
+    return Data.get() + Offset;
+  }
+
   /// Returns the buffer size in bits.
   Bits size() const { return FinalBitSize; }
   Bytes byteSize() const { return FinalBitSize.toBytes(); }
@@ -113,6 +119,13 @@ struct BitcastBuffer {
   std::unique_ptr<std::byte[]> copyBits(Bits BitOffset, Bits BitWidth,
                                         Bits FullBitWidth,
                                         Endian TargetEndianness) const;
+
+  /// Dereferences the value at the given offset.
+  template <typename T> T deref(Bytes Offset) const {
+    assert(Offset.getQuantity() < FinalBitSize.roundToBytes());
+    assert((Offset.getQuantity() + sizeof(T)) <= FinalBitSize.roundToBytes());
+    return *reinterpret_cast<T *>(Data.get() + Offset.getQuantity());
+  }
 };
 
 } // namespace interp

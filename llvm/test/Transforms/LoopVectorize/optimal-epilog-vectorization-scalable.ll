@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes='loop-vectorize' -force-target-supports-scalable-vectors=true -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 --debug-only=loop-vectorize -S -scalable-vectorization=on 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='loop-vectorize' -force-target-supports-scalable-vectors=true -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 --debug-only=loop-vectorize --disable-output -S -scalable-vectorization=on 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
 
@@ -25,4 +25,4 @@ exit:
 }
 
 !0 = !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}

@@ -18,16 +18,16 @@
 
 template <class T>
 struct Hash {
-    std::size_t operator () (const T& lhs) const { return 0; }
+  std::size_t operator()(const T& lhs) const { return 0; }
 
-    Hash () {}
+  Hash() {}
+
 private:
-    Hash (const Hash &); // declared but not defined
+  Hash(const Hash&); // declared but not defined
 };
 
-
 int main(int, char**) {
-    std::unordered_map<int, int, Hash<int> > m;
+  std::unordered_map<int, int, Hash<int> > m;
 
   return 0;
 }

@@ -17,6 +17,7 @@ def OpenMP_Dialect : Dialect {
   let dependentDialects = ["::mlir::LLVM::LLVMDialect, ::mlir::func::FuncDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
+  let hasOperationAttrVerify = 1;
 }
 
 #endif  // OPENMP_DIALECT

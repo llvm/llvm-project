@@ -60,6 +60,8 @@ public:
   // enabled.
   virtual bool needsSyntheticLandingPad() { return false; }
 
+  uint64_t getDestVA() const;
+
   Defined *getThunkTargetSym() const { return syms[0]; }
 
   Ctx &ctx;
@@ -83,9 +85,12 @@ std::unique_ptr<Thunk> addThunk(Ctx &, const InputSection &isec,
 // are restricted.
 std::unique_ptr<Thunk> addLandingPadThunk(Ctx &, Symbol &s, int64_t a);
 
-void writePPC32PltCallStub(Ctx &, uint8_t *buf, uint64_t gotPltVA,
-                           const InputFile *file, int64_t addend);
-void writePPC64LoadAndBranch(Ctx &, uint8_t *buf, int64_t offset);
+// Call with addend as nullopt for an IPLT entry with no valid TOC pointer
+void writePPC32PltCallStub(Ctx &, uint8_t *buf, uint64_t p, uint64_t gotPltVA,
+                           const InputFile *file,
+                           std::optional<int64_t> addend);
+void writePPC64LoadAndBranch(Ctx &, uint8_t *buf, uint64_t p, uint64_t addr,
+                             bool toc = true);
 
 } // namespace lld::elf
 

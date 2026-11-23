@@ -137,20 +137,20 @@ std::string_view string_view_6_characters    = c_string_6_characters;
 std::string_view string_view_60_characters   = c_string_60_characters;
 std::string_view string_view_6000_characters = c_string_6000_characters;
 
-static void BM_sprintf(benchmark::State& state, const char* value) {
+static TEST_ALIGN_BENCHMARK void BM_sprintf(benchmark::State& state, const char* value) {
   std::array<char, 10'000> output;
   for (auto _ : state)
     benchmark::DoNotOptimize(std::sprintf(output.data(), "%s", value));
 }
 
 template <class T>
-static void BM_format(benchmark::State& state, const T& value) {
+static TEST_ALIGN_BENCHMARK void BM_format(benchmark::State& state, const T& value) {
   for (auto _ : state)
     benchmark::DoNotOptimize(std::format("{}", value));
 }
 
 template <class Container, class T>
-static void BM_format_to_back_inserter(benchmark::State& state, const T& value) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_back_inserter(benchmark::State& state, const T& value) {
   for (auto _ : state) {
     Container c;
     std::format_to(std::back_inserter(c), "{}", value);
@@ -159,7 +159,7 @@ static void BM_format_to_back_inserter(benchmark::State& state, const T& value) 
 }
 
 template <class T, class F>
-static void BM_format_to_iterator(benchmark::State& state, const T& value, F&& f) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_iterator(benchmark::State& state, const T& value, F&& f) {
   auto output = f();
   for (auto _ : state) {
     benchmark::DoNotOptimize(std::format_to(std::begin(output), "{}", value));

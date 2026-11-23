@@ -24,7 +24,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -32,7 +31,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory CatCategory("llvm-cat Options");
+static cl::OptionCategory CatCategory("llvm-cat Options");
 
 static cl::opt<bool>
     BinaryCat("b", cl::desc("Whether to perform binary concatenation"),

@@ -21,9 +21,6 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -94,7 +91,7 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
 
   ASTContext &Ctx = C.getASTContext();
   SValBuilder &SVB = C.getSValBuilder();
-  CanQualType SizeTy = Ctx.getSizeType();
+  QualType SizeTy = Ctx.getSizeType();
   uint64_t SizeMax =
       SVB.getBasicValueFactory().getMaxValue(SizeTy)->getZExtValue();
 
@@ -211,16 +208,15 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
 void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
                                     CheckerContext &C, SVal TaintedSVal) const {
   // Generate an error node.
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.addSink(State);
   if (!N)
     return;
 
-  SmallString<256> buf;
-  llvm::raw_svector_ostream os(buf);
-  os << "Declared variable-length array (VLA) ";
-  os << "has tainted (attacker controlled) size that can be 0 or negative";
-
-  auto report = std::make_unique<PathSensitiveBugReport>(TaintBT, os.str(), N);
+  auto report = std::make_unique<PathSensitiveBugReport>(
+      TaintBT,
+      "Declared variable-length array (VLA) has tainted (attacker controlled) "
+      "size that can be 0 or negative",
+      N);
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackExpressionValue(N, SizeE, *report);
   // The vla size may be a complex expression where multiple memory locations
@@ -233,7 +229,7 @@ void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
 void VLASizeChecker::reportBug(VLASize_Kind Kind, const Expr *SizeE,
                                ProgramStateRef State, CheckerContext &C) const {
   // Generate an error node.
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.addSink(State);
   if (!N)
     return;
 
@@ -298,9 +294,8 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
 
   // VLASizeChecker is responsible for defining the extent of the array.
   if (VD) {
-    State =
-        setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
-                         ArraySize.castAs<NonLoc>());
+    State = setDynamicExtent(State, State->getRegion(VD, C.getStackFrame()),
+                             ArraySize.castAs<NonLoc>());
   }
 
   // Remember our assumptions!

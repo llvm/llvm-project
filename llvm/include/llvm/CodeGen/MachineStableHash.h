@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_MACHINESTABLEHASH_H
 
 #include "llvm/ADT/StableHashing.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MachineBasicBlock;
@@ -22,12 +23,15 @@ class MachineFunction;
 class MachineInstr;
 class MachineOperand;
 
-stable_hash stableHashValue(const MachineOperand &MO);
-stable_hash stableHashValue(const MachineInstr &MI, bool HashVRegs = false,
-                            bool HashConstantPoolIndices = false,
-                            bool HashMemOperands = false);
-stable_hash stableHashValue(const MachineBasicBlock &MBB);
-stable_hash stableHashValue(const MachineFunction &MF);
+LLVM_ABI stable_hash stableHashValue(const MachineOperand &MO,
+                                     bool SourceQualifyLocalGlobals = false);
+LLVM_ABI stable_hash stableHashValue(const MachineInstr &MI,
+                                     bool HashVRegs = false,
+                                     bool HashConstantPoolIndices = false,
+                                     bool HashMemOperands = false,
+                                     bool SourceQualifyLocalGlobals = false);
+LLVM_ABI stable_hash stableHashValue(const MachineBasicBlock &MBB);
+LLVM_ABI stable_hash stableHashValue(const MachineFunction &MF);
 
 } // namespace llvm
 

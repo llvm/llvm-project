@@ -1,4 +1,4 @@
-//===--- AvoidUnconditionalPreprocessorIfCheck.cpp - clang-tidy -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
 
@@ -17,7 +19,6 @@ namespace clang::tidy::readability {
 
 namespace {
 struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
-
   explicit AvoidUnconditionalPreprocessorIfPPCallbacks(ClangTidyCheck &Check,
                                                        Preprocessor &PP)
       : Check(Check), PP(PP) {}
@@ -40,30 +41,16 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
 
   bool isImmutable(SourceManager &SM, const LangOptions &LangOpts,
                    SourceRange ConditionRange) {
-    SourceLocation Loc = ConditionRange.getBegin();
+    const SourceLocation Loc = ConditionRange.getBegin();
     if (Loc.isMacroID())
       return false;
 
-    Token Tok;
-    if (Lexer::getRawToken(Loc, Tok, SM, LangOpts, true)) {
-      std::optional<Token> TokOpt = Lexer::findNextToken(Loc, SM, LangOpts);
-      if (!TokOpt || TokOpt->getLocation().isMacroID())
-        return false;
-      Tok = *TokOpt;
-    }
-
-    while (Tok.getLocation() <= ConditionRange.getEnd()) {
-      if (!isImmutableToken(Tok))
-        return false;
-
-      std::optional<Token> TokOpt =
-          Lexer::findNextToken(Tok.getLocation(), SM, LangOpts);
-      if (!TokOpt || TokOpt->getLocation().isMacroID())
-        return false;
-      Tok = *TokOpt;
-    }
-
-    return true;
+    const std::vector<Token> Tokens = utils::lexer::getRawTokens(
+        CharSourceRange::getTokenRange(ConditionRange), SM, LangOpts);
+    if (Tokens.empty())
+      return false;
+    return llvm::all_of(
+        Tokens, [this](const Token &Tok) { return isImmutableToken(Tok); });
   }
 
   bool isImmutableToken(const Token &Tok) {

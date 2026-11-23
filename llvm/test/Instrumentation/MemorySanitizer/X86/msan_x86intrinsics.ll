@@ -63,7 +63,7 @@ declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %a, <8 x i16> %b) nounwind
 ; CHECK-ORIGINS: = bitcast <8 x i16> {{.*}} to i128
 ; CHECK-ORIGINS-NEXT: = icmp ne i128 {{.*}}, 0
 ; CHECK-ORIGINS-NEXT: = select i1 {{.*}}, i32 {{.*}}, i32
-; CHECK-NEXT: call <8 x i16> @llvm.x86.sse2.pmulhu.w
+; CHECK-NEXT: call <8 x i16> @llvm.umulh.v8i16
 ; CHECK-NEXT: store <8 x i16> {{.*}} @__msan_retval_tls
 ; CHECK-ORIGINS: store i32 {{.*}} @__msan_retval_origin_tls
 ; CHECK-NEXT: ret <8 x i16>

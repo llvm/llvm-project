@@ -8,11 +8,6 @@
 
 # Aliasing in Fortran
 
-```{contents}
----
-local:
----
-```
 
 ## Introduction
 
@@ -264,11 +259,51 @@ Fortran also has no rule against associating read-only data with a pointer.
 Cray pointers are, or were, an extension that attempted to provide
 some of the capabilities of modern pointers and allocatables before those
 features were standardized.
-They had some aliasing restrictions; in particular, Cray pointers were
-not allowed to alias each other.
 
-They are now more or less obsolete and we have no plan in place to
-support them.
+They had some aliasing restrictions; in particular, Cray pointers were not
+allowed to alias each other.
+
+In this example, `handle` aliases with `target`.
+
+```
+integer(kind=8) :: target(10)
+integer(kind=8) :: ptr
+integer(kind=8) :: handle(10)
+pointer(ptr, handle)
+target = 1
+ptr = loc(target)
+print *, target
+end
+```
+
+By default, optimizations assume that Cray pointers do not alias other
+variables unless the association is visible in the same procedure. In the
+above example, `ptr = loc(target)` causes accesses through `handle` and
+`target` to be treated as potentially aliasing. Lowering gives `target` the
+TARGET attribute in FIR so that this information is available to all FIR
+optimizations.
+
+If the association is not visible, Flang keeps the default assumption that the
+Cray pointee does not alias the target:
+
+```
+integer(kind=8) :: target(10)
+integer(kind=8) :: ptr
+integer(kind=8) :: handle(10)
+pointer(ptr, handle)
+call associate_target_to_cray_ptr(ptr, target) ! does ptr = loc(target)
+target = 1
+print *, target
+end
+```
+
+In order to disable optimizations that assume that there is no aliasing between
+Cray pointer targets and entities they alias with when the association is not
+visible, add the TARGET attribute to variables aliasing with a Cray pointer.
+
+There is also a flag, `-funsafe-cray-pointers`, which causes the compiler
+to assume that cray pointers alias with all data whether or not it has the
+TARGET attribute.
 
 ## Type considerations
 

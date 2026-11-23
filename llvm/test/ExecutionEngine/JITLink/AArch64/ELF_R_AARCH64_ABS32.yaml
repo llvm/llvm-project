@@ -11,7 +11,7 @@
 
 # jitlink-check: *{8}xptr = x
 
-# CHECK-ERROR: relocation target "x" {{.*}} is out of range of Pointer32 fixup
+# CHECK-ERROR: relocation target {{.*}} (x) is out of range of Pointer32 fixup
 
 --- !ELF
 FileHeader:

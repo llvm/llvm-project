@@ -19,6 +19,7 @@
 // the predicate register, they cannot use the .new form. In such cases it
 // is better to collapse them back to a single MUX instruction.
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -42,18 +43,10 @@
 #include <cassert>
 #include <iterator>
 #include <limits>
-#include <utility>
 
 #define DEBUG_TYPE "hexmux"
 
 using namespace llvm;
-
-namespace llvm {
-
-  FunctionPass *createHexagonGenMux();
-  void initializeHexagonGenMuxPass(PassRegistry& Registry);
-
-} // end namespace llvm
 
 // Initialize this to 0 to always prefer generating mux by default.
 static cl::opt<unsigned> MinPredDist("hexagon-gen-mux-threshold", cl::Hidden,
@@ -79,8 +72,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
   private:
@@ -184,7 +176,8 @@ void HexagonGenMux::buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
     I2X.insert(std::make_pair(&MI, Index));
     Defs.reset();
     Uses.reset();
-    getDefsUses(&MI, Defs, Uses);
+    if (!MI.isDebugInstr())
+      getDefsUses(&MI, Defs, Uses);
     DUM.insert(std::make_pair(Index, DefUseInfo(Defs, Uses)));
     Index++;
   }
@@ -251,8 +244,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
       F = CM.end();
     }
     if (F == CM.end()) {
-      auto It = CM.insert(std::make_pair(DR, CondsetInfo()));
-      F = It.first;
+      F = CM.try_emplace(DR).first;
       F->second.PredR = PR;
     }
     CondsetInfo &CI = F->second;
@@ -333,6 +325,10 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
     MachineBasicBlock &B = *MX.At->getParent();
     const DebugLoc &DL = B.findDebugLoc(MX.At);
+    // Only when the mux takes Def2's place do values in the gap precede it.
+    // Call before the mux is created.
+    if (&*MX.At == MX.Def2)
+      HII->moveDependentDebugValues(*MX.Def1, *MX.Def2);
     auto NewMux = BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
                       .addReg(MX.PredR)
                       .add(*MX.SrcT)

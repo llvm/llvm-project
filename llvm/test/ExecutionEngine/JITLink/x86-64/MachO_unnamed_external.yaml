@@ -7,6 +7,7 @@
 # CHECK: Symbol at index 1 has no name (string table index 0), but N_EXT bit
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

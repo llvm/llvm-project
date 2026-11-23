@@ -1,3 +1,6 @@
+; Calling JIT'd atexit destructors is not yet supported on arm64e.
+; UNSUPPORTED: host-jit-triple={{arm64e-.*}}
+;
 ; Test that global constructors and destructors are run:
 ;
 ; RUN: lli -jit-kind=orc-lazy -orc-lazy-debug=funcs-to-stdout -extra-module %s \

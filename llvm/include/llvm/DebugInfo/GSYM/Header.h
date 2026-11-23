@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_GSYM_HEADER_H
 #define LLVM_DEBUGINFO_GSYM_HEADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #include <cstddef>
@@ -16,14 +17,13 @@
 
 namespace llvm {
 class raw_ostream;
-class DataExtractor;
 
 namespace gsym {
 class FileWriter;
+class GsymDataExtractor;
 
 constexpr uint32_t GSYM_MAGIC = 0x4753594d; // 'GSYM'
 constexpr uint32_t GSYM_CIGAM = 0x4d595347; // 'MYSG'
-constexpr uint32_t GSYM_VERSION = 1;
 constexpr size_t GSYM_MAX_UUID_SIZE = 20;
 
 /// The GSYM header.
@@ -85,6 +85,18 @@ struct Header {
   /// be set to zero.
   uint8_t UUID[GSYM_MAX_UUID_SIZE];
 
+  /// Return the version of this header.
+  static constexpr uint32_t getVersion() { return 1; }
+
+  /// Return the on-disk encoded size of the header in bytes.
+  static constexpr uint64_t getEncodedSize() { return sizeof(Header); }
+
+  /// Return the size in bytes of address info offsets.
+  static constexpr uint8_t getAddressInfoOffsetSize() { return 4; }
+
+  /// Return the size in bytes of string table offsets.
+  static constexpr uint8_t getStringOffsetSize() { return 4; }
+
   /// Check if a header is valid and return an error if anything is wrong.
   ///
   /// This function can be used prior to encoding a header to ensure it is
@@ -98,7 +110,7 @@ struct Header {
   ///
   /// \returns An error if anything is wrong in the header, or Error::success()
   /// if there are no errors.
-  llvm::Error checkForError() const;
+  LLVM_ABI llvm::Error checkForError() const;
 
   /// Decode an object from a binary data stream.
   ///
@@ -108,7 +120,7 @@ struct Header {
   ///
   /// \returns A Header or an error describing the issue that was
   /// encountered during decoding.
-  static llvm::Expected<Header> decode(DataExtractor &Data);
+  LLVM_ABI static llvm::Expected<Header> decode(GsymDataExtractor &Data);
 
   /// Encode this object into FileWriter stream.
   ///
@@ -117,11 +129,11 @@ struct Header {
   ///
   /// \returns An error object that indicates success or failure of the
   /// encoding process.
-  llvm::Error encode(FileWriter &O) const;
+  LLVM_ABI llvm::Error encode(FileWriter &O) const;
 };
 
-bool operator==(const Header &LHS, const Header &RHS);
-raw_ostream &operator<<(raw_ostream &OS, const llvm::gsym::Header &H);
+LLVM_ABI bool operator==(const Header &LHS, const Header &RHS);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const llvm::gsym::Header &H);
 
 } // namespace gsym
 } // namespace llvm

@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/issignalingf128.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/math/issignalingf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(int, issignalingf128, (float128 x)) {
-  return fputil::issignaling_impl(x);
+  return math::issignalingf128(cpp::bit_cast<Float128>(x));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

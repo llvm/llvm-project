@@ -46,6 +46,14 @@ double_xlen_t test_R_wide_scalar(double_xlen_t p) {
   return ret;
 }
 
+double_xlen_t test_cR_wide_scalar(double_xlen_t p) {
+// CHECK-LABEL: define{{.*}} {{i128|i64}} @test_cR_wide_scalar(
+// CHECK: call {{i128|i64}} asm sideeffect "", "=^cR,^cR"({{i128|i64}} %{{.*}})
+  double_xlen_t ret;
+  asm volatile("" : "=cR"(ret) : "cR"(p));
+  return ret;
+}
+
 void test_I(void) {
 // CHECK-LABEL: define{{.*}} void @test_I()
 // CHECK: call void asm sideeffect "", "I"(i32 2047)
@@ -70,6 +78,7 @@ void test_K(void) {
 
 float f;
 double d;
+__bf16 bf;
 void test_f(void) {
 // CHECK-LABEL: define{{.*}} void @test_f()
 // CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load float, ptr @f
@@ -78,6 +87,9 @@ void test_f(void) {
 // CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load double, ptr @d
 // CHECK: call void asm sideeffect "", "f"(double [[FLT_ARG]])
   asm volatile ("" :: "f"(d));
+// CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load bfloat, ptr @bf
+// CHECK: call void asm sideeffect "", "f"(bfloat [[FLT_ARG]])
+  asm volatile ("" :: "f"(bf));
 }
 
 void test_A(int *p) {

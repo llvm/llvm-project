@@ -22,10 +22,10 @@ namespace Numbers {
 void test() {
   int i = Ints::zero;
   Ints::f(i);
-  
+
   float f = Floats::zero;
   Floats::f(f);
-  
+
   double n = Numbers::zero; // expected-error {{reference to 'zero' is ambiguous}}
   Numbers::f(n); // expected-error{{call to 'f' is ambiguous}}
   Numbers::f(i);
@@ -74,7 +74,7 @@ namespace inline_ns {
   int x; // expected-note 2{{found}}
   inline namespace A {
 #if __cplusplus <= 199711L // C++03 or earlier
-  // expected-warning@-2 {{inline namespaces are a C++11 feature}}
+  // expected-warning@-2 {{inline namespaces are a C++11 extension}}
 #endif
 
     int x; // expected-note 2{{found}}
