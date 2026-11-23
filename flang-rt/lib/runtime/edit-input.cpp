@@ -114,8 +114,8 @@ static RT_API_ATTRS bool EditSmallBOZInput(
   if (isHostLittleEndian) {
     runtime::memcpy(n, &value, bytes);
   } else {
-    runtime::memcpy(
-        n, reinterpret_cast<const char *>(&value) + sizeof value - bytes, bytes);
+    runtime::memcpy(n,
+        reinterpret_cast<const char *>(&value) + sizeof value - bytes, bytes);
   }
   io.GotChar(fastField.got());
   return CheckCompleteListDirectedField(io, edit);
