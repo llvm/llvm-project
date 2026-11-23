@@ -94,6 +94,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
   addFunctionPass(RISCVZacasABIFixPass(&getTM()), PMW);
@@ -336,8 +338,6 @@ void RISCVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void RISCVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(RISCVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "RISCVPassRegistry.def"

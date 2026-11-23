@@ -3995,6 +3995,25 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Truncated, Chain}, DL);
 }
 
+static RTLIB::Libcall getRoundingLibcall(unsigned Opc, MVT VT) {
+  switch (Opc) {
+  case ISD::FTRUNC:
+    return RTLIB::getTRUNC(VT);
+  case ISD::FFLOOR:
+    return RTLIB::getFLOOR(VT);
+  case ISD::FCEIL:
+    return RTLIB::getCEIL(VT);
+  case ISD::FRINT:
+    return RTLIB::getRINT(VT);
+  case ISD::FROUND:
+    return RTLIB::getROUND(VT);
+  case ISD::FROUNDEVEN:
+    return RTLIB::getROUNDEVEN(VT);
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+}
+
 static SDValue
 lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
@@ -4002,8 +4021,14 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   if (VT.isVector())
     return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
 
-  if (DAG.shouldOptForSize())
-    return SDValue();
+  // Only fall back to libcall expansion for size optimization if a libcall is
+  // actually available (e.g. f16 has no standard math libcalls).
+  if (DAG.shouldOptForSize()) {
+    RTLIB::Libcall LC = getRoundingLibcall(Op.getOpcode(), VT);
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
+      return SDValue();
+  }
 
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
@@ -21312,6 +21337,20 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
   return Result;
 }
 
+// Specially handle negative power of two cases as to avoid
+// overflow conditions.
+// X * (-2^N) -> sub (0, (shl X, C1))
+static SDValue expandMulByNegPowTwo(SDNode *N, SelectionDAG &DAG,
+                                    uint64_t MulAmt) {
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  SDValue X = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue ShiftAmt = DAG.getShiftAmountConstant(Log2_64(MulAmtLowBit), VT, DL);
+  SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
+  return DAG.getNegative(Shift, DL, VT);
+}
+
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
@@ -21510,8 +21549,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
+  // Only attempt to call expandMulToAddOrSubOfShl() on non
+  // power-of-two cases to avoid overflow conditions.
+  if (CNode->getAPIntValue().isNegatedPowerOf2()) {
+    return expandMulByNegPowTwo(N, DAG, MulAmt);
+  } else if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt)) {
     return V;
+  }
 
   if (!Subtarget.hasStdExtZmmul())
     return expandMulToNAFSequence(N, DAG, MulAmt);
