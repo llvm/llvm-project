@@ -105,6 +105,13 @@ Value spirv::Deserializer::getValue(uint32_t id) {
       value = spirv::UndefOp::create(opBuilder, unknownLoc, undef);
     return value;
   }
+  if (auto [type, functionID] = getConstantFunctionPointer(id); type) {
+    Value &value = blockConstantMap[{opBuilder.getInsertionBlock(), id}];
+    if (!value)
+      value = spirv::INTELConstantFunctionPointerOp::create(
+          opBuilder, unknownLoc, type, getFunctionSymbol(functionID));
+    return value;
+  }
   if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
           graphConstantARMInfo = getGraphConstantARM(id)) {
     IntegerAttr graphConstantID = graphConstantARMInfo->graphConstantID;
@@ -316,6 +323,8 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processSwitch(operands);
   case spirv::Opcode::OpUndef:
     return processUndef(operands);
+  case spirv::Opcode::OpConstantFunctionPointerINTEL:
+    return processConstantFunctionPointer(operands);
   default:
     break;
   }
@@ -411,6 +420,21 @@ LogicalResult spirv::Deserializer::processUndef(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown type <id> with OpUndef instruction");
   }
   undefMap[operands[1]] = type;
+  return success();
+}
+
+LogicalResult spirv::Deserializer::processConstantFunctionPointer(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 3) {
+    return emitError(unknownLoc,
+                     "OpConstantFunctionPointerINTEL must have 3 operands");
+  }
+  Type type = getType(operands[0]);
+  if (!type) {
+    return emitError(unknownLoc, "unknown type <id> with "
+                                 "OpConstantFunctionPointerINTEL instruction");
+  }
+  constantFunctionPointerMap[operands[1]] = {type, operands[2]};
   return success();
 }
 

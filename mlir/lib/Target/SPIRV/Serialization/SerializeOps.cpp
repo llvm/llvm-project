@@ -1107,6 +1107,23 @@ Serializer::processOp<spirv::ExecutionModeIdOp>(spirv::ExecutionModeIdOp op) {
 }
 
 template <>
+LogicalResult Serializer::processOp<spirv::INTELConstantFunctionPointerOp>(
+    spirv::INTELConstantFunctionPointerOp op) {
+  uint32_t &id = functionPointerIDMap[op.getFunction()];
+  if (!id) {
+    id = getNextID();
+    uint32_t typeID = 0;
+    if (failed(processType(op.getLoc(), op.getType(), typeID)))
+      return failure();
+    encodeInstructionInto(
+        typesGlobalValues, spirv::Opcode::OpConstantFunctionPointerINTEL,
+        {typeID, id, getOrCreateFunctionID(op.getFunction())});
+  }
+  valueIDMap[op.getResult()] = id;
+  return success();
+}
+
+template <>
 LogicalResult
 Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
   auto funcName = op.getCallee();
