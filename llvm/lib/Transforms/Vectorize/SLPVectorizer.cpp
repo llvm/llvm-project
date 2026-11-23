@@ -14865,7 +14865,7 @@ void BoUpSLP::transformNodes() {
     for (std::unique_ptr<TreeEntry> &E : VectorizableTree) {
       if (E->State == TreeEntry::CompressVectorize &&
           !DeletedNodes.contains(E.get()))
-        convertCompressedLoadToStrided(*E.get());
+        convertCompressedLoadToStrided(*E);
     }
   });
 
