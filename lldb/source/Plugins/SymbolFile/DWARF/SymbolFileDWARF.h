@@ -325,7 +325,9 @@ public:
   }
   StatsDuration::Duration GetDebugInfoIndexTime() override;
 
-  StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
+  /// The timer that parsing this file's debug info adds to. For a .dwo or
+  /// .dwp file, this is the timer of the module's symbol file.
+  virtual StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
 
   void ResetStatistics() override;
 

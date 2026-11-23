@@ -158,6 +158,10 @@ void SymbolFileDWARFDwo::FindGlobalVariables(
                                           variables);
 }
 
+StatsDuration &SymbolFileDWARFDwo::GetDebugInfoParseTimeRef() {
+  return GetBaseSymbolFile().GetDebugInfoParseTimeRef();
+}
+
 bool SymbolFileDWARFDwo::GetDebugInfoIndexWasLoadedFromCache() const {
   return GetBaseSymbolFile().GetDebugInfoIndexWasLoadedFromCache();
 }
