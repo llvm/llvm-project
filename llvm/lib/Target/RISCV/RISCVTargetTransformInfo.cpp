@@ -3297,11 +3297,25 @@ void RISCVTTIImpl::getUnrollingPreferences(
   if (ST->enableDefaultUnroll())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
 
-  // Unrolling an outer loop duplicates its inner loops while removing only
-  // the outer backedge. Use the smaller code-growth budget for these loops,
-  // even when aggressive full unrolling is enabled at O3.
-  if (!L->isInnermost())
-    UP.Threshold = std::min(UP.Threshold, UP.PartialThreshold);
+  // Full unrolling an outer loop duplicates every inner loop while only
+  // removing the outer backedge. The generic cost model cannot estimate
+  // nested loops, so for non-innermost loops with a known trip count, cap
+  // the full-unroll threshold at the partial-unroll threshold when the
+  // estimated fully-unrolled size would exceed that budget. Loops with an
+  // unknown trip count cannot be fully unrolled anyway, and small loops that
+  // fit within the partial budget keep their normal full-unroll behavior.
+  if (!L->isInnermost()) {
+    if (unsigned TripCount = SE.getSmallConstantMaxTripCount(L)) {
+      unsigned NumInsts = 0;
+      for (BasicBlock *BB : L->blocks())
+        NumInsts += BB->size();
+      unsigned LoopSize = std::max(NumInsts, UP.BEInsns + 1);
+      uint64_t UnrolledSize =
+          uint64_t(LoopSize - UP.BEInsns) * TripCount + UP.BEInsns;
+      if (UnrolledSize > UP.PartialThreshold)
+        UP.Threshold = std::min(UP.Threshold, UP.PartialThreshold);
+    }
+  }
 
   // Enable Upper bound unrolling universally, not dependent upon the conditions
   // below.
