@@ -156,6 +156,10 @@ static bool CanUseTaggingAbi() {
   // The platform must provide enough bits for HWASan tags.
   if (num_bits < kTagBits)
     return false;
+  // LAM's tag bits are [63 - num_bits, 63). Make sure ours fall inside them;
+  // e.g. aliasing mode tags bits [39, 42), which LAM can never ignore.
+  if (kAddressTagShift + num_bits < 63)
+    return false;
   return true;
 #  else
   // Check for ARM TBI support.
