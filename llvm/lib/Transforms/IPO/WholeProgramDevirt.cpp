@@ -754,30 +754,20 @@ struct DevirtIndex {
 };
 } // end anonymous namespace
 
-/// Invalidate each function individually to keep analyses like
-/// TargetLibraryInfo.
-static PreservedAnalyses invalidateFunctions(Module &M,
-                                             ModuleAnalysisManager &MAM) {
-  FunctionAnalysisManager &FAM =
-      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (Function &F : M)
-    FAM.invalidate(F, PreservedAnalyses::none());
-
-  PreservedAnalyses PA;
-  PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  return PA;
-}
-
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
   const bool DevirtualizeSpeculatively =
       DevirtSpeculatively || getIPOOptions(M).devirtualize_speculatively;
 
+  // Preserving the proxy invalidates each function individually, which keeps
+  // analyses like TargetLibraryInfo.
+  PreservedAnalyses ChangedPA;
+  ChangedPA.preserve<FunctionAnalysisManagerModuleProxy>();
+
   if (UseCommandLine) {
     if (!DevirtModule::runForTesting(M, MAM, DevirtualizeSpeculatively))
       return PreservedAnalyses::all();
-    return invalidateFunctions(M, MAM);
+    return ChangedPA;
   }
 
   // FIXME: The state of a run should not be kept in the pass. A more resilient
@@ -794,7 +784,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtualizeSpeculatively)
            .run())
     return PreservedAnalyses::all();
-  return invalidateFunctions(M, MAM);
+  return ChangedPA;
 }
 
 // Enable whole program visibility if enabled by client (e.g. linker) or
