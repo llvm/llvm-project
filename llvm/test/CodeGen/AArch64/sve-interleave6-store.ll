@@ -49,5 +49,3 @@ define void @interleave6_store_fixed(ptr %dst, <2 x double> %a, <2 x double> %b,
   ret void
 }
 
-declare <vscale x 12 x double> @llvm.vector.interleave6.nxv12f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>)
-declare <12 x double> @llvm.vector.interleave6.v12f64(<2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>)

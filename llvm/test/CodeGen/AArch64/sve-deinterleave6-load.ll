@@ -79,5 +79,3 @@ entry:
   ret void
 }
 
-declare void @llvm.fake.use(...)
-declare { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave6.nxv12f64(<vscale x 12 x double>)
