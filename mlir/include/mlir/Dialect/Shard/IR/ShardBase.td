@@ -31,8 +31,8 @@ def Shard_Dialect : Dialect {
     "arith::ArithDialect" // For materializeConstant()
   ];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
   let hasConstantMaterializer = 1;
 }
 

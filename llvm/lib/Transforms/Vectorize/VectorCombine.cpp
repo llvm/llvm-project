@@ -6481,10 +6481,6 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 /// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
 /// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
-  // This pattern involves bitcast that is not compatible with big endian.
-  if (DL->isBigEndian())
-    return false;
-
   using namespace PatternMatch;
   Value *DeinterleavedVal;
   if (!match(&I, m_Deinterleave2(m_Value(DeinterleavedVal))))
@@ -6513,6 +6509,9 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
       return false;
     OrigFields[Idx] = E;
   }
+
+  if (DL->isBigEndian())
+    std::swap(OrigFields[0], OrigFields[1]);
 
   // Find the merge instruction (i.e. OR) first.
   SmallVector<Instruction *, 2> MergeInsts;
@@ -6575,6 +6574,8 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
+    if (DL->isBigEndian())
+      Idx ^= 1;
     Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);

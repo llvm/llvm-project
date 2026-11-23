@@ -64,8 +64,8 @@ define void @ldexp_test(float %0, <8 x float> %1, i32 %2, <8 x i32> %3) {
 define void @frexp_test(float %0, <8 x float> %1) {
   ; CHECK:  llvm.intr.frexp(%{{.*}}) : (f32) -> !llvm.struct<(f32, i32)>
   %4 = call { float, i32 } @llvm.frexp.f32.i32(float %0)
-  ; CHECK:  llvm.intr.frexp(%{{.*}}) : (vector<8xf32>) -> !llvm.struct<(vector<8xf32>, i32)>
-  %5 = call { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float> %1)
+  ; CHECK:  llvm.intr.frexp(%{{.*}}) : (vector<8xf32>) -> !llvm.struct<(vector<8xf32>, vector<8xi32>)>
+  %5 = call { <8 x float>, <8 x i32> } @llvm.frexp.v8f32.v8i32(<8 x float> %1)
   ret void
 }
 
@@ -1810,7 +1810,7 @@ declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
 declare float @llvm.ldexp.f32.i32(float, i32)
 declare <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>)
 declare { float, i32 } @llvm.frexp.f32.i32(float)
-declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
+declare { <8 x float>, <8 x i32> } @llvm.frexp.v8f32.v8i32(<8 x float>)
 declare { float, float } @llvm.modf.f32(float)
 declare { <8 x float>, <8 x float> } @llvm.modf.v8f32(<8 x float>)
 declare float @llvm.log.f32(float)

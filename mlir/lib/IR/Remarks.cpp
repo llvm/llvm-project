@@ -232,6 +232,8 @@ struct RemarkEngine::RemarkHistory {
     llvm::BumpPtrAllocator allocator;
     llvm::UniqueStringSaver strings{allocator};
     std::vector<Entry> entries;
+    llvm::DenseMap<Location, SmallVector<size_t, 1>> entriesByLocation;
+    size_t indexedEntries = 0;
     // IDs already recorded.
     llvm::DenseSet<uint64_t> recordedIds;
   };
@@ -279,19 +281,40 @@ RemarkEngine::findRemarks(const RemarkQuery &query) const {
            matches(query.functionName, entry.function);
   };
   // Call policies without holding the history lock.
-  if (remarkEmittingPolicy)
-    remarkEmittingPolicy->forEachPendingRemark([&](const Remark &remark) {
+  if (remarkEmittingPolicy) {
+    auto addMatch = [&](const Remark &remark) {
       if (remark.getId() && matchesQuery(RemarkHistory::Entry::from(remark)))
         result.push_back(remark.getId());
-    });
+    };
+    if (query.location)
+      remarkEmittingPolicy->forEachPendingRemarkAt(*query.location, addMatch);
+    else
+      remarkEmittingPolicy->forEachPendingRemark(addMatch);
+  }
 
   {
     std::scoped_lock<std::mutex> lock(history->mutex);
     if (!history->storage)
       return {};
-    for (const RemarkHistory::Entry &entry : history->storage->entries)
-      if (matchesQuery(entry))
-        result.push_back(entry.id);
+    auto &storage = *history->storage;
+    if (query.location) {
+      while (storage.indexedEntries < storage.entries.size()) {
+        size_t i = storage.indexedEntries;
+        storage.entriesByLocation[storage.entries[i].location].push_back(i);
+        ++storage.indexedEntries;
+      }
+      auto entries = storage.entriesByLocation.find(*query.location);
+      if (entries != storage.entriesByLocation.end())
+        for (size_t index : entries->second) {
+          const auto &entry = storage.entries[index];
+          if (matchesQuery(entry))
+            result.push_back(entry.id);
+        }
+    } else {
+      for (const RemarkHistory::Entry &entry : storage.entries)
+        if (matchesQuery(entry))
+          result.push_back(entry.id);
+    }
   }
   llvm::sort(result, [](RemarkId lhs, RemarkId rhs) {
     return lhs.getValue() < rhs.getValue();
@@ -521,6 +544,16 @@ RemarkEmittingPolicyAll::RemarkEmittingPolicyAll() = default;
 
 RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
 
+unsigned RemarkEmittingPolicyFinal::RemarkPtrInfo::getHashValue(
+    const detail::Remark &remark) {
+  return llvm::DenseMapInfo<detail::Remark>::getHashValue(remark);
+}
+
+bool RemarkEmittingPolicyFinal::RemarkPtrInfo::isEqual(
+    const detail::Remark &lhs, const std::unique_ptr<detail::Remark> &rhs) {
+  return llvm::DenseMapInfo<detail::Remark>::isEqual(lhs, *rhs);
+}
+
 static void dropDiscardedLinks(detail::Remark &remark,
                                const llvm::DenseSet<uint64_t> &discardedIds) {
   if (discardedIds.empty())
@@ -535,20 +568,41 @@ static void dropDiscardedLinks(detail::Remark &remark,
 void RemarkEmittingPolicyFinal::reportRemark(const detail::Remark &remark) {
   detail::Remark copy = remark;
   std::scoped_lock<std::mutex> lock(mutex);
-  auto previous = pendingRemarks.find(copy);
+  auto previous = pendingRemarks.find_as(copy);
   if (previous != pendingRemarks.end()) {
-    if (previous->getId() && previous->getId() != copy.getId())
-      discardedIds.insert(previous->getId().getValue());
-    pendingRemarks.erase(previous);
+    auto &stored = **previous;
+    if (stored.getId() && stored.getId() != copy.getId())
+      discardedIds.insert(stored.getId().getValue());
+    // Replacement preserves the identity and address indexed by both maps.
+    stored = std::move(copy);
+    return;
   }
-  pendingRemarks.insert(std::move(copy));
+  auto stored = std::make_unique<detail::Remark>(std::move(copy));
+  if (pendingByLocation)
+    (*pendingByLocation)[stored->getLocation()].push_back(stored.get());
+  pendingRemarks.insert(std::move(stored));
 }
 
 void RemarkEmittingPolicyFinal::forEachPendingRemark(
     llvm::function_ref<void(const detail::Remark &)> callback) const {
   std::scoped_lock<std::mutex> lock(mutex);
   for (const auto &remark : pendingRemarks)
-    callback(remark);
+    callback(*remark);
+}
+
+void RemarkEmittingPolicyFinal::forEachPendingRemarkAt(
+    Location loc,
+    llvm::function_ref<void(const detail::Remark &)> callback) const {
+  std::scoped_lock<std::mutex> lock(mutex);
+  if (!pendingByLocation) {
+    pendingByLocation = std::make_unique<LocationIndex>();
+    for (const auto &remark : pendingRemarks)
+      (*pendingByLocation)[remark->getLocation()].push_back(remark.get());
+  }
+  auto remarks = pendingByLocation->find(loc);
+  if (remarks != pendingByLocation->end())
+    for (const auto *remark : remarks->second)
+      callback(*remark);
 }
 
 void RemarkEmittingPolicyFinal::finalize() {
@@ -558,8 +612,11 @@ void RemarkEmittingPolicyFinal::finalize() {
   llvm::DenseSet<uint64_t> discarded;
   {
     std::scoped_lock<std::mutex> lock(mutex);
-    remarks = llvm::to_vector<0>(pendingRemarks);
+    remarks.reserve(pendingRemarks.size());
+    for (const auto &remark : pendingRemarks)
+      remarks.push_back(std::move(*remark));
     pendingRemarks.clear();
+    pendingByLocation.reset();
     discarded.swap(discardedIds);
   }
 

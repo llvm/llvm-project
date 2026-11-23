@@ -248,7 +248,6 @@ private:
   DenseMap<const Value *, unsigned> DFSNumber;
   BBSideEffectsSet BBSideEffects;
   DenseSet<const BasicBlock *> HoistBarrier;
-  SmallVector<BasicBlock *, 32> IDFBlocks;
   unsigned NumFuncArgs;
   const bool HoistingGeps = false;
 

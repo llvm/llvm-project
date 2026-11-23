@@ -238,6 +238,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "ddivf128",
+    hdrs = ["DivTest.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+    ],
+)
+
+math_mpfr_test(
     name = "dfmal",
     hdrs = ["FmaTest.h"],
     deps = [

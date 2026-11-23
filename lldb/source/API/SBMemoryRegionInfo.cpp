@@ -14,6 +14,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringPool.h"
 #include <optional>
 
 using namespace lldb;
@@ -119,7 +120,7 @@ bool SBMemoryRegionInfo::IsMapped() {
 const char *SBMemoryRegionInfo::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetName().AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(m_opaque_up->GetName());
 }
 
 bool SBMemoryRegionInfo::HasDirtyMemoryPageList() {

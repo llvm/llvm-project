@@ -20,10 +20,6 @@ void AsyncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Async/IR/AsyncOps.cpp.inc"
       >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Async/IR/AsyncOpsTypes.cpp.inc"
-      >();
 }
 
 //===----------------------------------------------------------------------===//

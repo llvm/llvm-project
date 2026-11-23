@@ -1245,13 +1245,36 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
   }
 }
 
+namespace {
+/// Like PrettyStackTraceLoc, but computes the location of the statement only
+/// when a crash trace is printed.
+class PrettyStackTraceStmt : public llvm::PrettyStackTraceEntry {
+  const SourceManager &SM;
+  const Stmt *S;
+  const char *Message;
+
+public:
+  PrettyStackTraceStmt(const SourceManager &SM, const Stmt *S,
+                       const char *Message)
+      : SM(SM), S(S), Message(Message) {}
+
+  void print(raw_ostream &OS) const override {
+    SourceLocation Loc = S->getBeginLoc();
+    if (Loc.isValid()) {
+      Loc.print(OS, SM);
+      OS << ": ";
+    }
+    OS << Message << '\n';
+  }
+};
+} // namespace
+
 void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   // Reclaim any unnecessary nodes in the ExplodedGraph.
   G.reclaimRecentlyAllocatedNodes();
 
-  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
-                                currStmt->getBeginLoc(),
-                                "Error evaluating statement");
+  PrettyStackTraceStmt CrashInfo(getContext().getSourceManager(), currStmt,
+                                 "Error evaluating statement");
 
   // Remove dead bindings and symbols.
   ExplodedNodeSet CleanedStates;
@@ -1286,9 +1309,8 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
-  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
-                                S->getBeginLoc(),
-                                "Error evaluating end of the loop");
+  PrettyStackTraceStmt CrashInfo(getContext().getSourceManager(), S,
+                                 "Error evaluating end of the loop");
   ProgramStateRef NewState = Pred->getState();
 
   if(AMgr.options.ShouldUnrollLoops)
@@ -1301,9 +1323,8 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
 
 void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
                                     ExplodedNode *Pred) {
-  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
-                                S->getBeginLoc(),
-                                "Error evaluating end of a lifetime");
+  PrettyStackTraceStmt CrashInfo(getContext().getSourceManager(), S,
+                                 "Error evaluating end of a lifetime");
   LifetimeEnd PP(S, D, Pred->getStackFrame());
   ExplodedNode *Src = Engine.makeNode(PP, Pred->getState(), Pred);
 
@@ -1833,8 +1854,8 @@ ProgramStateRef ExprEngine::escapeValues(ProgramStateRef State,
 
 void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                        ExplodedNodeSet &Dst) {
-  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
-                                S->getBeginLoc(), "Error evaluating statement");
+  PrettyStackTraceStmt CrashInfo(getContext().getSourceManager(), S,
+                                 "Error evaluating statement");
 
   assert(!isa<Expr>(S) || S == cast<Expr>(S)->IgnoreParens());
 
@@ -2515,13 +2536,26 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   return nullptr;
 }
 
+namespace {
+class PrettyStackTraceBlockEntrance : public llvm::PrettyStackTraceEntry {
+  const BlockEntrance &Entrance;
+
+public:
+  PrettyStackTraceBlockEntrance(const BlockEntrance &Entrance)
+      : Entrance(Entrance) {}
+
+  void print(raw_ostream &OS) const override {
+    OS << "Processing block entrance B"
+       << Entrance.getPreviousBlock()->getBlockID() << " -> B"
+       << Entrance.getBlock()->getBlockID() << "\n";
+  }
+};
+} // namespace
+
 void ExprEngine::runCheckersForBlockEntrance(const BlockEntrance &Entrance,
                                              ExplodedNode *Pred,
                                              ExplodedNodeSet &Dst) {
-  llvm::PrettyStackTraceFormat CrashInfo(
-      "Processing block entrance B%d -> B%d",
-      Entrance.getPreviousBlock()->getBlockID(),
-      Entrance.getBlock()->getBlockID());
+  PrettyStackTraceBlockEntrance CrashInfo(Entrance);
   getCheckerManager().runCheckersForBlockEntrance(Dst, Pred, Entrance, *this);
 }
 
@@ -2731,9 +2765,8 @@ void ExprEngine::processBranch(
     Condition = Ex->IgnoreParens();
 
   Condition = ResolveCondition(Condition, getCurrBlock());
-  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
-                                Condition->getBeginLoc(),
-                                "Error evaluating branch");
+  PrettyStackTraceStmt CrashInfo(getContext().getSourceManager(), Condition,
+                                 "Error evaluating branch");
 
   ExplodedNodeSet CheckersOutSet;
   getCheckerManager().runCheckersForBranchCondition(Condition, CheckersOutSet,

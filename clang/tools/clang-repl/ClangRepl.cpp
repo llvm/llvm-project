@@ -25,6 +25,7 @@
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
@@ -260,19 +261,26 @@ int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   ExitOnErr.setBanner("clang-repl: ");
-  llvm::cl::ParseCommandLineOptions(argc, argv);
-
   llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  std::vector<const char *> ClangArgv(ClangArgs.size());
-  std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
-                 [](const std::string &s) -> const char * { return s.data(); });
   // Initialize all targets (required for device offloading)
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
+
+  // Parse after the target initialization, which registers target library
+  // options. Pass library options to the compiler as -mllvm.
+  llvm::cl::LibraryOptionsContext LibOpts;
+  llvm::cl::parseCommandLineOptions(LibOpts, llvm::ArrayRef(argv, argc));
+  std::vector<const char *> ClangArgv;
+  for (const std::string &Arg : ClangArgs)
+    ClangArgv.push_back(Arg.c_str());
+  for (const char *Arg : LibOpts.args()) {
+    ClangArgv.push_back("-mllvm");
+    ClangArgv.push_back(Arg);
+  }
 
   auto IEB = clang::IncrementalExecutorBuilder::createDefault();
   if (OptHostSupportsJit) {

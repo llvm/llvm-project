@@ -182,10 +182,10 @@ body:             |
     ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL %lo1, %mid2
     ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL %mid1, %lo2
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[UMULH]], [[MUL1]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD]](s32), [[MUL1]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[ADD]](s32), [[MUL1]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[MUL2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD1]](s32), [[MUL2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[ADD1]](s32), [[MUL2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
     ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ICMP]], [[ICMP1]]
     ; CHECK-NEXT: [[UMULH1:%[0-9]+]]:_(s32) = G_UMULH %mid1, %lo2

@@ -2361,10 +2361,8 @@ struct TestLibrary final : cl::LibraryOptions {
       return createStringError("bad value");
     return Error::success();
   }
-  void *global() const override { return &Args; }
   const void *getDefault() const override { return nullptr; }
   void *copyDefault(BumpPtrAllocator &) const override { return nullptr; }
-  void reset() const override { Args.clear(); }
 };
 
 TEST(CommandLineTest, LibraryOptions) {
@@ -2378,8 +2376,7 @@ TEST(CommandLineTest, LibraryOptions) {
   EXPECT_TRUE(
       cl::parseCommandLineOptions(C, Only, StringRef(), &llvm::nulls()));
   EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
-  cl::ResetAllOptionOccurrences();
-  EXPECT_TRUE(L.Args.empty());
+  L.Args.clear();
 
   // ParseCommandLineOptions, which takes no context, does not recognize them.
   std::string Unknown;
@@ -2398,7 +2395,6 @@ TEST(CommandLineTest, LibraryOptions) {
   EXPECT_EQ(Local, 3);
   EXPECT_THAT(L.Args,
               testing::ElementsAre("--library-int", "4", "-library-flag"));
-  cl::ResetAllOptionOccurrences();
 
   // A rejected value is still consumed.
   std::string Errs;
