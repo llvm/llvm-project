@@ -2111,7 +2111,7 @@ func.func @mask_transfer_read_vector_element_memref(
     %base: memref<4xvector<4xf32>>, %m: vector<4xi1>) -> vector<4x4xf32> {
   %c0 = arith.constant 0 : index
   %pad = arith.constant dense<0.0> : vector<4xf32>
-  // expected-error@+1 {{does not support masks with vector element type}}
+  // expected-error@+1 {{does not support masking a transfer operation on a source with vector element type}}
   %r = vector.mask %m {
     vector.transfer_read %base[%c0], %pad
       : memref<4xvector<4xf32>>, vector<4x4xf32>
@@ -2124,7 +2124,7 @@ func.func @mask_transfer_read_vector_element_memref(
 func.func @mask_transfer_write_vector_element_memref(
     %v: vector<4x4xf32>, %base: memref<4xvector<4xf32>>, %m: vector<4xi1>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{does not support masks with vector element type}}
+  // expected-error@+1 {{does not support masking a transfer operation on a source with vector element type}}
   vector.mask %m {
     vector.transfer_write %v, %base[%c0]
       : vector<4x4xf32>, memref<4xvector<4xf32>>
