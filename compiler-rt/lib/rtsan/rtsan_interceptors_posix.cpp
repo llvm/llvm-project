@@ -762,6 +762,27 @@ INTERCEPTOR(int, pthread_mutex_unlock, pthread_mutex_t *mutex) {
   return REAL(pthread_mutex_unlock)(mutex);
 }
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, pthread_mutex_timedlock, pthread_mutex_t *mutex,
+            const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("pthread_mutex_timedlock");
+  return REAL(pthread_mutex_timedlock)(mutex, abstime);
+}
+
+INTERCEPTOR(int, pthread_mutex_clocklock, pthread_mutex_t *mutex,
+            clockid_t clock, const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("pthread_mutex_clocklock");
+  return REAL(pthread_mutex_clocklock)(mutex, clock, abstime);
+}
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_MUTEX_TIMEDLOCK                          \
+  INTERCEPT_FUNCTION(pthread_mutex_timedlock)
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_MUTEX_CLOCKLOCK                          \
+  INTERCEPT_FUNCTION(pthread_mutex_clocklock)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_MUTEX_TIMEDLOCK
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_MUTEX_CLOCKLOCK
+#endif // SANITIZER_LINUX
+
 INTERCEPTOR(int, pthread_join, pthread_t thread, void **value_ptr) {
   __rtsan_notify_intercepted_call("pthread_join");
   return REAL(pthread_join)(thread, value_ptr);
@@ -795,6 +816,19 @@ INTERCEPTOR(int, pthread_cond_timedwait, pthread_cond_t *cond,
   return REAL(pthread_cond_timedwait)(cond, mutex, ts);
 }
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, pthread_cond_clockwait, pthread_cond_t *cond,
+            pthread_mutex_t *mutex, clockid_t clock,
+            const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("pthread_cond_clockwait");
+  return REAL(pthread_cond_clockwait)(cond, mutex, clock, abstime);
+}
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_COND_CLOCKWAIT                           \
+  INTERCEPT_FUNCTION(pthread_cond_clockwait)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_COND_CLOCKWAIT
+#endif // SANITIZER_LINUX
+
 INTERCEPTOR(int, pthread_cond_destroy, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_destroy");
   return REAL(pthread_cond_destroy)(cond);
@@ -814,6 +848,45 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
   __rtsan_notify_intercepted_call("pthread_rwlock_wrlock");
   return REAL(pthread_rwlock_wrlock)(lock);
 }
+
+#if SANITIZER_LINUX
+INTERCEPTOR(int, pthread_rwlock_timedrdlock, pthread_rwlock_t *lock,
+            const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("pthread_rwlock_timedrdlock");
+  return REAL(pthread_rwlock_timedrdlock)(lock, abstime);
+}
+
+INTERCEPTOR(int, pthread_rwlock_timedwrlock, pthread_rwlock_t *lock,
+            const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("pthread_rwlock_timedwrlock");
+  return REAL(pthread_rwlock_timedwrlock)(lock, abstime);
+}
+
+INTERCEPTOR(int, pthread_rwlock_clockrdlock, pthread_rwlock_t *lock,
+            clockid_t clock, const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("pthread_rwlock_clockrdlock");
+  return REAL(pthread_rwlock_clockrdlock)(lock, clock, abstime);
+}
+
+INTERCEPTOR(int, pthread_rwlock_clockwrlock, pthread_rwlock_t *lock,
+            clockid_t clock, const struct timespec *abstime) {
+  __rtsan_notify_intercepted_call("pthread_rwlock_clockwrlock");
+  return REAL(pthread_rwlock_clockwrlock)(lock, clock, abstime);
+}
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_TIMEDRDLOCK                       \
+  INTERCEPT_FUNCTION(pthread_rwlock_timedrdlock)
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_TIMEDWRLOCK                       \
+  INTERCEPT_FUNCTION(pthread_rwlock_timedwrlock)
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_CLOCKRDLOCK                       \
+  INTERCEPT_FUNCTION(pthread_rwlock_clockrdlock)
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_CLOCKWRLOCK                       \
+  INTERCEPT_FUNCTION(pthread_rwlock_clockwrlock)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_TIMEDRDLOCK
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_TIMEDWRLOCK
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_CLOCKRDLOCK
+#define RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_CLOCKWRLOCK
+#endif // SANITIZER_LINUX
 
 // Sleeping
 
@@ -1659,6 +1732,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_mutex_lock);
   INTERCEPT_FUNCTION(pthread_mutex_unlock);
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_MUTEX_TIMEDLOCK;
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_MUTEX_CLOCKLOCK;
   INTERCEPT_FUNCTION(pthread_join);
 
   // See the comment in tsan_interceptors_posix.cpp.
@@ -1679,10 +1754,15 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_cond_timedwait);
   INTERCEPT_FUNCTION(pthread_cond_destroy);
 #endif
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_COND_CLOCKWAIT;
 
   INTERCEPT_FUNCTION(pthread_rwlock_rdlock);
   INTERCEPT_FUNCTION(pthread_rwlock_unlock);
   INTERCEPT_FUNCTION(pthread_rwlock_wrlock);
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_TIMEDRDLOCK;
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_TIMEDWRLOCK;
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_CLOCKRDLOCK;
+  RTSAN_MAYBE_INTERCEPT_PTHREAD_RWLOCK_CLOCKWRLOCK;
 
   INTERCEPT_FUNCTION(sleep);
   INTERCEPT_FUNCTION(usleep);

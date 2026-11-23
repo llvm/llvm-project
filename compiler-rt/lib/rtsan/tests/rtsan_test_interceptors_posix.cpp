@@ -1241,6 +1241,117 @@ TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
 }
 #endif
 
+#if SANITIZER_LINUX
+static timespec OneSecondFromNowOn(clockid_t clock) {
+  timespec deadline{};
+  clock_gettime(clock, &deadline);
+  deadline.tv_sec += 1;
+  return deadline;
+}
+
+TEST(TestRtsanInterceptors, PthreadMutexTimedlockDiesWhenRealtime) {
+  pthread_mutex_t mutex;
+  ASSERT_EQ(0, pthread_mutex_init(&mutex, nullptr));
+  const timespec deadline = OneSecondFromNowOn(CLOCK_REALTIME);
+
+  auto Func = [&]() { pthread_mutex_timedlock(&mutex, &deadline); };
+  ExpectRealtimeDeath(Func, "pthread_mutex_timedlock");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_mutex_unlock(&mutex);
+  pthread_mutex_destroy(&mutex);
+}
+
+TEST(TestRtsanInterceptors, PthreadRwlockTimedrdlockDiesWhenRealtime) {
+  pthread_rwlock_t rw_lock;
+  ASSERT_EQ(0, pthread_rwlock_init(&rw_lock, nullptr));
+  const timespec deadline = OneSecondFromNowOn(CLOCK_REALTIME);
+
+  auto Func = [&]() { pthread_rwlock_timedrdlock(&rw_lock, &deadline); };
+  ExpectRealtimeDeath(Func, "pthread_rwlock_timedrdlock");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_rwlock_unlock(&rw_lock);
+  pthread_rwlock_destroy(&rw_lock);
+}
+
+TEST(TestRtsanInterceptors, PthreadRwlockTimedwrlockDiesWhenRealtime) {
+  pthread_rwlock_t rw_lock;
+  ASSERT_EQ(0, pthread_rwlock_init(&rw_lock, nullptr));
+  const timespec deadline = OneSecondFromNowOn(CLOCK_REALTIME);
+
+  auto Func = [&]() { pthread_rwlock_timedwrlock(&rw_lock, &deadline); };
+  ExpectRealtimeDeath(Func, "pthread_rwlock_timedwrlock");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_rwlock_unlock(&rw_lock);
+  pthread_rwlock_destroy(&rw_lock);
+}
+
+#if SANITIZER_GLIBC && __GLIBC_PREREQ(2, 30)
+TEST(TestRtsanInterceptors, PthreadMutexClocklockDiesWhenRealtime) {
+  pthread_mutex_t mutex;
+  ASSERT_EQ(0, pthread_mutex_init(&mutex, nullptr));
+  const timespec deadline = OneSecondFromNowOn(CLOCK_MONOTONIC);
+
+  auto Func = [&]() {
+    pthread_mutex_clocklock(&mutex, CLOCK_MONOTONIC, &deadline);
+  };
+  ExpectRealtimeDeath(Func, "pthread_mutex_clocklock");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_mutex_unlock(&mutex);
+  pthread_mutex_destroy(&mutex);
+}
+
+TEST(TestRtsanInterceptors, PthreadRwlockClockrdlockDiesWhenRealtime) {
+  pthread_rwlock_t rw_lock;
+  ASSERT_EQ(0, pthread_rwlock_init(&rw_lock, nullptr));
+  const timespec deadline = OneSecondFromNowOn(CLOCK_MONOTONIC);
+
+  auto Func = [&]() {
+    pthread_rwlock_clockrdlock(&rw_lock, CLOCK_MONOTONIC, &deadline);
+  };
+  ExpectRealtimeDeath(Func, "pthread_rwlock_clockrdlock");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_rwlock_unlock(&rw_lock);
+  pthread_rwlock_destroy(&rw_lock);
+}
+
+TEST(TestRtsanInterceptors, PthreadRwlockClockwrlockDiesWhenRealtime) {
+  pthread_rwlock_t rw_lock;
+  ASSERT_EQ(0, pthread_rwlock_init(&rw_lock, nullptr));
+  const timespec deadline = OneSecondFromNowOn(CLOCK_MONOTONIC);
+
+  auto Func = [&]() {
+    pthread_rwlock_clockwrlock(&rw_lock, CLOCK_MONOTONIC, &deadline);
+  };
+  ExpectRealtimeDeath(Func, "pthread_rwlock_clockwrlock");
+  ExpectNonRealtimeSurvival(Func);
+
+  pthread_rwlock_unlock(&rw_lock);
+  pthread_rwlock_destroy(&rw_lock);
+}
+
+TEST(TestRtsanInterceptors, PthreadCondClockwaitDiesWhenRealtime) {
+  pthread_cond_t cond;
+  pthread_mutex_t mutex;
+  ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));
+  ASSERT_EQ(0, pthread_mutex_init(&mutex, nullptr));
+  const timespec deadline = OneSecondFromNowOn(CLOCK_MONOTONIC);
+
+  auto Func = [&]() {
+    pthread_cond_clockwait(&cond, &mutex, CLOCK_MONOTONIC, &deadline);
+  };
+  ExpectRealtimeDeath(Func, "pthread_cond_clockwait");
+
+  pthread_cond_destroy(&cond);
+  pthread_mutex_destroy(&mutex);
+}
+#endif // SANITIZER_GLIBC && __GLIBC_PREREQ(2, 30)
+#endif // SANITIZER_LINUX
+
 TEST(TestRtsanInterceptors, PthreadCondInitDiesWhenRealtime) {
   pthread_cond_t cond{};
   auto Func = [&cond]() { pthread_cond_init(&cond, nullptr); };
