@@ -626,6 +626,25 @@ public:
   }
 };
 
+/// Converts SPIR-V ConstantOp with a null value to llvm.mlir.zero.
+class ConstantNullPattern : public SPIRVToLLVMConversion<spirv::ConstantOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ConstantOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ConstantOp constOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isa<spirv::NullAttr>(constOp.getValue()))
+      return failure();
+
+    Type dstType = getTypeConverter()->convertType(constOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(constOp, "type conversion failed");
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(constOp, dstType);
+    return success();
+  }
+};
+
 class BitFieldSExtractPattern
     : public SPIRVToLLVMConversion<spirv::BitFieldSExtractOp> {
 public:
@@ -773,6 +792,54 @@ public:
         op, adaptor.getSelector(), op.getDefaultTarget(),
         adaptor.getDefaultOperands(), caseValues, op.getTargets(),
         adaptor.getTargetOperands());
+    return success();
+  }
+};
+
+class CompositeConstructPattern
+    : public SPIRVToLLVMConversion<spirv::CompositeConstructOp> {
+public:
+  using SPIRVToLLVMConversion<
+      spirv::CompositeConstructOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CompositeConstructOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value result = LLVM::PoisonOp::create(rewriter, loc, dstType);
+    if (!isa<VectorType>(dstType)) {
+      for (auto [index, constituent] :
+           llvm::enumerate(adaptor.getConstituents()))
+        result = LLVM::InsertValueOp::create(
+            rewriter, loc, result, constituent,
+            ArrayRef<int64_t>{static_cast<int64_t>(index)});
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    unsigned position = 0;
+    auto insert = [&](Value element) {
+      Value index = createI32ConstantOf(loc, rewriter, position++);
+      result = LLVM::InsertElementOp::create(rewriter, loc, dstType, result,
+                                             element, index);
+    };
+    for (Value constituent : adaptor.getConstituents()) {
+      auto vecType = dyn_cast<VectorType>(constituent.getType());
+      if (!vecType) {
+        insert(constituent);
+        continue;
+      }
+      for (unsigned i : llvm::seq<unsigned>(vecType.getNumElements())) {
+        Value index = createI32ConstantOf(loc, rewriter, i);
+        insert(LLVM::ExtractElementOp::create(
+            rewriter, loc, vecType.getElementType(), constituent, index));
+      }
+    }
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -1286,6 +1353,30 @@ public:
   }
 };
 
+/// Converts `spirv.Dot` to `llvm.fmul` followed by an ordered
+/// `llvm.intr.vector.reduce.fadd`.
+class DotPattern : public SPIRVToLLVMConversion<spirv::DotOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::DotOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::DotOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value mul = LLVM::FMulOp::create(rewriter, loc, adaptor.getVector1(),
+                                     adaptor.getVector2());
+    // -0.0 is the identity of fadd.
+    Value start = createFPConstant(loc, op.getType(), dstType, rewriter, -0.0);
+    rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fadd>(op, dstType, start,
+                                                          mul);
+    return success();
+  }
+};
+
 /// Converts `spirv.SNegate` to `0 - x`.
 class SNegatePattern : public SPIRVToLLVMConversion<spirv::SNegateOp> {
 public:
@@ -1669,6 +1760,38 @@ public:
                                        {execution, memory, semantics});
 
     rewriter.replaceOp(controlBarrierOp, call);
+    return success();
+  }
+};
+
+class MemoryBarrierPattern
+    : public SPIRVToLLVMConversion<spirv::MemoryBarrierOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::MemoryBarrierOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::MemoryBarrierOp memoryBarrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Operation *symbolTable =
+        memoryBarrierOp->getParentWithTrait<OpTrait::SymbolTable>();
+
+    Type i32 = rewriter.getI32Type();
+
+    Type voidTy = rewriter.getType<LLVM::LLVMVoidType>();
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, "_Z21__spirv_MemoryBarrierii",
+                              {i32, i32}, voidTy, /*convergent=*/false);
+
+    Location loc = memoryBarrierOp->getLoc();
+    Value memory = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemoryScope()));
+    Value semantics = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemorySemantics()));
+
+    auto call =
+        createSPIRVBuiltinCall(loc, rewriter, func, {memory, semantics});
+
+    rewriter.replaceOp(memoryBarrierOp, call);
     return success();
   }
 };
@@ -2630,7 +2753,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, FModPattern,
-      SModPattern, VectorTimesScalarPattern, SNegatePattern,
+      SModPattern, VectorTimesScalarPattern, DotPattern, SNegatePattern,
       ArithmeticWithOverflowPattern<spirv::IAddCarryOp,
                                     LLVM::UAddWithOverflowOp>,
       ArithmeticWithOverflowPattern<spirv::ISubBorrowOp,
@@ -2691,7 +2814,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
 
       // Constant op
-      ConstantCompositePattern, ConstantScalarAndVectorPattern,
+      ConstantCompositePattern, ConstantNullPattern,
+      ConstantScalarAndVectorPattern,
 
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,
@@ -2790,6 +2914,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
       DirectConversionPattern<spirv::LogicalOrOp, LLVM::OrOp>,
+      DirectConversionPattern<spirv::AnyOp, LLVM::vector_reduce_or>,
+      DirectConversionPattern<spirv::AllOp, LLVM::vector_reduce_and>,
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
       NotPattern<spirv::LogicalNotOp>,
@@ -2807,9 +2933,14 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
-      CompositeExtractPattern, CompositeInsertPattern, CopyObjectPattern,
+      CompositeConstructPattern, CompositeExtractPattern,
+      CompositeInsertPattern, CopyObjectPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
+      DirectConversionPattern<spirv::VectorExtractDynamicOp,
+                              LLVM::ExtractElementOp>,
+      DirectConversionPattern<spirv::VectorInsertDynamicOp,
+                              LLVM::InsertElementOp>,
       VectorShufflePattern,
 
       // Shift ops
@@ -2827,6 +2958,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ControlBarrierPattern<spirv::ControlBarrierOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>,
+      MemoryBarrierPattern,
 
       // Group reduction operations
       GroupReducePattern<spirv::GroupIAddOp>,
