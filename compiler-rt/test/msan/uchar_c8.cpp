@@ -1,6 +1,6 @@
 // Test MSan interception on `mbrtoc8()` and `c8rtomb()`.
 //
-// REQUIRES: glibc-2.36
+// REQUIRES: have-uchar-c8
 // RUN: %clangxx_msan -std=c++20 -O0 -g %s -o %t
 // RUN: %run %t
 // RUN: not %run %t src 2>&1 | FileCheck %s
@@ -11,8 +11,7 @@
 #include <sanitizer/msan_interface.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <cuchar>
+#include <uchar.h>
 
 static bool set_utf8_locale() {
   return (setlocale(LC_CTYPE, "C.UTF-8") ||
@@ -26,14 +25,14 @@ static void test_uninit_src() {
   char src[4];
   __msan_poison(src, sizeof(src));
   char8_t c8;
-  (void)std::mbrtoc8(&c8, src, sizeof(src), &st);
+  (void)mbrtoc8(&c8, src, sizeof(src), &st);
 }
 
 static void test_uninit_state() {
   mbstate_t st;
   __msan_poison(&st, sizeof(st));
   char8_t c8;
-  (void)std::mbrtoc8(&c8, "a", 1, &st);
+  (void)mbrtoc8(&c8, "a", 1, &st);
 }
 
 static void test_mbrtoc8_partial_init() {
@@ -44,7 +43,7 @@ static void test_mbrtoc8_partial_init() {
 
   char8_t c8;
   __msan_poison(&c8, sizeof(c8));
-  assert(std::mbrtoc8(&c8, partial_init, sizeof(partial_init), &st) == 1);
+  assert(mbrtoc8(&c8, partial_init, sizeof(partial_init), &st) == 1);
   assert(__msan_test_shadow(&c8, sizeof(c8)) == -1);
   assert(c8 == u8'x');
 }
@@ -53,7 +52,7 @@ static void test_mbrtoc8_null_src() {
   mbstate_t st = {};
   char8_t c8;
   __msan_poison(&c8, sizeof(c8));
-  assert(std::mbrtoc8(&c8, nullptr, 4, &st) == 0);
+  assert(mbrtoc8(&c8, nullptr, 4, &st) == 0);
   assert(__msan_test_shadow(&c8, sizeof(c8)) == 0);
 }
 
@@ -61,7 +60,7 @@ static void test_mbrtoc8_zero_length() {
   mbstate_t st = {};
   char8_t c8;
   __msan_poison(&c8, sizeof(c8));
-  assert(std::mbrtoc8(&c8, "a", 0, &st) == (size_t)-2);
+  assert(mbrtoc8(&c8, "a", 0, &st) == (size_t)-2);
   assert(__msan_test_shadow(&c8, sizeof(c8)) == 0);
 }
 
@@ -69,7 +68,7 @@ static void test_c8rtomb_ascii() {
   mbstate_t st = {};
   char buf[16];
   __msan_poison(buf, sizeof(buf));
-  assert(std::c8rtomb(buf, u8'q', &st) == 1);
+  assert(c8rtomb(buf, u8'q', &st) == 1);
   assert(__msan_test_shadow(buf, 1) == -1);
   assert(__msan_test_shadow(buf + 1, 1) == 0);
   assert(buf[0] == 'q');
@@ -83,12 +82,12 @@ static void test_mbrtoc8_utf8_continuation() {
   mbstate_t st = {};
   char8_t out[4];
   __msan_poison(out, sizeof(out));
-  assert(std::mbrtoc8(&out[0], emoji, sizeof(emoji), &st) == 4);
+  assert(mbrtoc8(&out[0], emoji, sizeof(emoji), &st) == 4);
   assert(__msan_test_shadow(&out[0], 1) == -1);
   assert(__msan_test_shadow(&out[1], 1) == 0);
-  assert(std::mbrtoc8(&out[1], emoji + 4, 0, &st) == (size_t)-3);
-  assert(std::mbrtoc8(&out[2], emoji + 4, 0, &st) == (size_t)-3);
-  assert(std::mbrtoc8(&out[3], emoji + 4, 0, &st) == (size_t)-3);
+  assert(mbrtoc8(&out[1], emoji + 4, 0, &st) == (size_t)-3);
+  assert(mbrtoc8(&out[2], emoji + 4, 0, &st) == (size_t)-3);
+  assert(mbrtoc8(&out[3], emoji + 4, 0, &st) == (size_t)-3);
   assert(__msan_test_shadow(out, 4) == -1);
   assert(memcmp(out, emoji, 4) == 0);
 }
@@ -101,11 +100,11 @@ static void test_c8rtomb_utf8_multibyte() {
   mbstate_t st = {};
   char buf[16];
   __msan_poison(buf, sizeof(buf));
-  assert(std::c8rtomb(buf, static_cast<char8_t>(0xf0), &st) == 0);
+  assert(c8rtomb(buf, static_cast<char8_t>(0xf0), &st) == 0);
   assert(__msan_test_shadow(buf, 1) == 0);
-  assert(std::c8rtomb(buf, static_cast<char8_t>(0x9f), &st) == 0);
-  assert(std::c8rtomb(buf, static_cast<char8_t>(0xa4), &st) == 0);
-  assert(std::c8rtomb(buf, static_cast<char8_t>(0xa1), &st) == 4);
+  assert(c8rtomb(buf, static_cast<char8_t>(0x9f), &st) == 0);
+  assert(c8rtomb(buf, static_cast<char8_t>(0xa4), &st) == 0);
+  assert(c8rtomb(buf, static_cast<char8_t>(0xa1), &st) == 4);
   assert(__msan_test_shadow(buf, 4) == -1);
   assert(__msan_test_shadow(buf + 4, 1) == 0);
   assert(memcmp(buf, emoji, 4) == 0);
