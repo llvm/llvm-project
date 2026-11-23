@@ -232,6 +232,9 @@ public:
         VD->isCanonicalDecl()) {
       if (VarDecl *InitD = VD->getInitializingDeclaration()) {
         VarUseNode *N = G.addNode(VD);
+        ParentMapContext &PMC = VD->getASTContext().getParentMapContext();
+        if (PMC.getParents(*InitD).empty())
+          return true;
         VarUseCollector Collector(N, G);
         Collector.TraverseStmt(InitD->getInit());
       }
