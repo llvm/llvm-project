@@ -1,6 +1,7 @@
-## This regression test could only be applied to VE target at the moment
-## due to it's 8 byte instruction size, alignment and instructions that have
-## 4 bytes of leading zeroes in their encoding (nop in this case).
+## This regression test uses VE target since it has 8 byte instruction size,
+## alignment and instructions that have 4 bytes of leading zeroes in their encoding
+## (e.g. nop). Skipping disassembling only the minimum of 4 consecutive zeroes
+## would lead to losing alignment and incorrect disassembling.
 
 # REQUIRES: ve-registered-target
 # RUN: llvm-mc -triple=ve -filetype=obj %s -o %t
