@@ -8,10 +8,24 @@
 // RUN: cir-opt %t/combined.cir --verify-roundtrip -o /dev/null
 
 // COMBINE:      module attributes {cir.offload.container} {
-// COMBINE-NEXT:   module @host attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = false{{.*}}>, cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
+// COMBINE-NEXT:   module @host attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = false{{.*}}>, cir.offload.kind = #cir.offload<host>, cir.offload.source_name = "/src/k.cu", cir.triple = "x86_64-unknown-linux-gnu"} {
 // COMBINE-NEXT:     cir.func{{.*}} @host_fn
-// COMBINE:        module @device_0 attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = true{{.*}}>, cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// COMBINE:        module @device_0 attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = true{{.*}}>, cir.offload.kind = #cir.offload<device>, cir.offload.source_name = "/src/k.cu", cir.triple = "nvptx64-nvidia-cuda"} {
 // COMBINE-NEXT:     cir.func{{.*}} @device_fn
+
+// Split names each output <stem>-<kind>-<triple>.cir, like the driver names
+// offload files, with the stem taken from the source file. Each module gets
+// its original name back.
+// RUN: cir-offload-merge -split %t/combined.cir
+// RUN: FileCheck %s --check-prefix=SPLIT-HOST --implicit-check-not=cir.offload --implicit-check-not=device_fn --input-file=%t/k-host-x86_64-unknown-linux-gnu.cir
+// RUN: FileCheck %s --check-prefix=SPLIT-SM80 --implicit-check-not=cir.offload --implicit-check-not=host_fn --input-file=%t/k-cuda-nvptx64-nvidia-cuda.cir
+// RUN: cir-opt %t/k-host-x86_64-unknown-linux-gnu.cir --verify-roundtrip -o /dev/null
+// RUN: cir-opt %t/k-cuda-nvptx64-nvidia-cuda.cir --verify-roundtrip -o /dev/null
+
+// SPLIT-HOST:      module @"/src/k.cu" attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = false{{.*}}>, cir.triple = "x86_64-unknown-linux-gnu"} {
+// SPLIT-HOST-NEXT:   cir.func{{.*}} @host_fn
+// SPLIT-SM80:      module @"/src/k.cu" attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = true{{.*}}>, cir.triple = "nvptx64-nvidia-cuda"} {
+// SPLIT-SM80-NEXT:   cir.func{{.*}} @device_fn
 
 // The host module goes first whatever the input order; device modules keep
 // their relative order.
@@ -26,20 +40,51 @@
 // REORDER-NEXT:   module @host
 // REORDER:        module @device_0 attributes {{{.*}}cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
 // REORDER-NEXT:   }
-// REORDER-NEXT:   module @device_1 attributes {{{.*}}cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// REORDER-NEXT:   module @device_1 attributes {{{.*}}cir.offload.kind = #cir.offload<device>, cir.offload.source_name = "/src/k.cu", cir.triple = "nvptx64-nvidia-cuda"} {
 // REORDER-NEXT:     cir.func{{.*}} @device_fn
+
+// -o replaces the directory and stem. Devices that would get the same name
+// get their index among them appended, and a module that had no name gets
+// none back.
+// RUN: mkdir -p %t/out
+// RUN: cir-offload-merge -split %t/reordered.cir -o %t/out/split
+// RUN: FileCheck %s --check-prefix=SPLIT-SM90 --implicit-check-not=cir.offload --input-file=%t/out/split-cuda-nvptx64-nvidia-cuda-0.cir
+// RUN: FileCheck %s --check-prefix=SPLIT-SM80-REORDER --input-file=%t/out/split-cuda-nvptx64-nvidia-cuda-1.cir
+// RUN: test -f %t/out/split-host-x86_64-unknown-linux-gnu.cir
+
+// SPLIT-SM90:              module attributes {cir.lowering_options = #cir.lowering_options<{{.*}}>, cir.triple = "nvptx64-nvidia-cuda"} {
+// SPLIT-SM80-REORDER:      module @"/src/k.cu"
+// SPLIT-SM80-REORDER-NEXT:   cir.func{{.*}} @device_fn
+
+// A split module is printed as a top-level module, so it defines its type
+// aliases instead of spelling every type out at each use.
+// RUN: cir-offload-merge -split %t/aliases.cir
+// Without a source name or triple, the stem is the input's and only the kind
+// is added.
+// RUN: FileCheck %s --check-prefix=SPLIT-ALIASES --input-file=%t/aliases-host.cir
+// RUN: test -f %t/aliases-device.cir
+
+// SPLIT-ALIASES:      !s32i = !cir.int<s, 32>
+// SPLIT-ALIASES:      module {
+// SPLIT-ALIASES-NEXT:   cir.global external @g = #cir.int<0> : !s32i
 
 // RUN: cir-offload-merge -combine \
 // RUN:   %t/host-hip.cir \
-// RUN:   %t/device-gfx90a.cir | FileCheck %s --check-prefix=HIP
+// RUN:   %t/device-gfx90a.cir -o %t/hip.cir
+// RUN: FileCheck %s --check-prefix=HIP --input-file=%t/hip.cir
+// RUN: cir-offload-merge -split %t/hip.cir
+// RUN: test -f %t/hip-host.cir
+// RUN: test -f %t/hip-hip.cir
 
 // HIP:      module @host attributes {cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = false, hip = true{{.*}}>, cir.offload.kind = #cir.offload<host>
 // HIP:      module @device_0 attributes {{{.*}}cir.lowering_options = #cir.lowering_options<{{.*}}cuda_is_device = true, hip = true{{.*}}>, cir.offload.kind = #cir.offload<device>
 
 // RUN: not cir-offload-merge %t/host.cir -o %t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-MODE
-// ERR-NO-MODE: error: expected -combine
+// RUN: not cir-offload-merge -combine -split %t/host.cir -o %t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-MODE
+// ERR-NO-MODE: error: expected exactly one of -combine or -split
 
 // RUN: not cir-offload-merge -combine -o %t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-INPUT
+// RUN: not cir-offload-merge -split -o %t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-INPUT
 // ERR-NO-INPUT: error: no input files
 
 // RUN: not cir-offload-merge -combine %t/device-sm80.cir -o %t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-HOSTS
@@ -62,17 +107,29 @@
 // ERR-SYCL: device-sycl.cir{{.*}}: error: SYCL compilations are not supported yet
 
 // RUN: not cir-offload-merge -combine %t/invalid.cir %t/device-sm80.cir -o %t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-PARSE
+// RUN: not cir-offload-merge -split %t/invalid.cir 2>&1 | FileCheck %s --check-prefix=ERR-PARSE
 // ERR-PARSE: error: failed to parse input file '{{.*}}invalid.cir'
 
+// RUN: not cir-offload-merge -split %t/combined.cir %t/combined.cir 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-INPUTS
+// ERR-SPLIT-INPUTS: error: split mode expects exactly one input
+
+// RUN: not cir-offload-merge -split %t/host.cir 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-NOT-CONTAINER
+// ERR-SPLIT-NOT-CONTAINER: host.cir{{.*}}: error: expected input to be an offload container
+
+// The container verifier runs when the input is parsed.
+// RUN: not cir-offload-merge -split %t/missing-kind.cir 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-VERIFY
+// ERR-SPLIT-VERIFY: error: 'builtin.module' op expects 'cir.offload.kind'
+// ERR-SPLIT-VERIFY: error: failed to parse input file '{{.*}}missing-kind.cir'
+
 //--- host.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "x86_64-unknown-linux-gnu"} {
+module @"/src/k.cu" attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @host_fn() {
     cir.return
   }
 }
 
 //--- device-sm80.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
+module @"/src/k.cu" attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
   cir.func @device_fn() {
     cir.return
   }
@@ -104,3 +161,22 @@ module attributes {cir.lowering_options = #cir.lowering_options<exceptions = fal
 
 //--- invalid.cir
 module {
+
+//--- aliases.cir
+!s32i = !cir.int<s, 32>
+module attributes {cir.offload.container} {
+  module @host attributes {cir.offload.kind = #cir.offload<host>} {
+    cir.global external @g = #cir.int<0> : !s32i
+  }
+  module @device_0 attributes {cir.offload.kind = #cir.offload<device>} {
+  }
+}
+
+//--- missing-kind.cir
+module attributes {cir.offload.container} {
+  module @host attributes {cir.offload.kind = #cir.offload<host>} {
+  }
+  module @device_0 {
+  }
+}
+

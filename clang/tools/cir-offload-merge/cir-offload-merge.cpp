@@ -9,7 +9,8 @@
 // \file
 // This tool combines a host CIR module and its device CIR modules into a
 // single module marked as an offload container (carrying the
-// `cir.offload.container` unit attribute).
+// `cir.offload.container` unit attribute), and splits such a module back into
+// its nested modules.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,9 +23,12 @@
 #include "mlir/Support/FileUtilities.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/InitAllDialects.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #include <optional>
@@ -37,13 +41,19 @@ static llvm::cl::opt<bool> Combine("combine",
                                    llvm::cl::desc("Combine CIR inputs"),
                                    llvm::cl::cat(CIROffloadMergeCategory));
 
+static llvm::cl::opt<bool> Split("split",
+                                 llvm::cl::desc("Split a combined CIR input"),
+                                 llvm::cl::cat(CIROffloadMergeCategory));
+
 static llvm::cl::list<std::string>
     InputFileNames(llvm::cl::Positional, llvm::cl::desc("<input files>"),
                    llvm::cl::cat(CIROffloadMergeCategory));
 
 static llvm::cl::opt<std::string>
-    OutputFileName("o", llvm::cl::desc("Output CIR file"),
-                   llvm::cl::value_desc("filename"), llvm::cl::init("-"),
+    OutputFileName("o",
+                   llvm::cl::desc("Output CIR file. In split mode, the prefix "
+                                  "of the per-module output files"),
+                   llvm::cl::value_desc("filename"),
                    llvm::cl::cat(CIROffloadMergeCategory));
 
 // The host/device role and language of a module come from the LangOptions
@@ -72,6 +82,12 @@ getLoweringOptions(mlir::ModuleOp moduleOp) {
 
 static void setOffloadAttrs(mlir::ModuleOp moduleOp, llvm::StringRef name,
                             cir::OffloadKind offloadKind) {
+  // LoweringPrepare names global initializers after the module, so keep the
+  // name CIRGen gave it for split to restore.
+  if (std::optional<llvm::StringRef> sourceName = moduleOp.getSymName())
+    moduleOp->setAttr(
+        cir::CIRDialect::getOffloadSourceNameAttrName(),
+        mlir::StringAttr::get(moduleOp.getContext(), *sourceName));
   moduleOp.setSymName(name);
   moduleOp->setAttr(
       cir::CIRDialect::getOffloadKindAttrName(),
@@ -164,6 +180,97 @@ static int writeModuleToOutput(mlir::ModuleOp moduleOp,
   return 0;
 }
 
+// Undoes setOffloadAttrs.
+static void restoreModule(mlir::ModuleOp moduleOp) {
+  moduleOp->removeAttr(cir::CIRDialect::getOffloadKindAttrName());
+  auto sourceName = moduleOp->getAttrOfType<mlir::StringAttr>(
+      cir::CIRDialect::getOffloadSourceNameAttrName());
+  if (!sourceName) {
+    moduleOp.removeSymNameAttr();
+    return;
+  }
+  moduleOp.setSymNameAttr(sourceName);
+  moduleOp->removeAttr(cir::CIRDialect::getOffloadSourceNameAttrName());
+}
+
+// Follows the driver's naming of offload files: <stem>-<kind>-<triple>. The
+// stem comes from the source file the module was compiled from.
+static std::string getOutputBaseName(mlir::ModuleOp moduleOp, bool isHost,
+                                     llvm::StringRef inputFileName,
+                                     llvm::StringRef outputPrefix) {
+  llvm::SmallString<128> baseName(outputPrefix);
+  if (baseName.empty()) {
+    auto sourceName = moduleOp->getAttrOfType<mlir::StringAttr>(
+        cir::CIRDialect::getOffloadSourceNameAttrName());
+    baseName = llvm::sys::path::parent_path(inputFileName);
+    llvm::sys::path::append(
+        baseName, llvm::sys::path::stem(sourceName ? sourceName.getValue()
+                                                   : inputFileName));
+  }
+
+  auto loweringOpts = moduleOp->getAttrOfType<cir::LoweringOptionsAttr>(
+      cir::CIRDialect::getLoweringOptionsAttrName());
+  if (isHost)
+    baseName += "-host";
+  else if (!loweringOpts)
+    baseName += "-device";
+  else
+    baseName += loweringOpts.getHip() ? "-hip" : "-cuda";
+
+  if (auto triple = moduleOp->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getTripleAttrName())) {
+    baseName += "-";
+    baseName += triple.getValue();
+  }
+  return baseName.str().str();
+}
+
+// Writes each nested module of the container to its own file. Modules that
+// would get the same name, e.g. devices that only differ in their arch, get
+// their index among those modules appended.
+static int splitInput(llvm::StringRef inputFileName,
+                      llvm::StringRef outputPrefix,
+                      mlir::MLIRContext &context) {
+  mlir::OwningOpRef<mlir::ModuleOp> container =
+      mlir::parseSourceFile<mlir::ModuleOp>(inputFileName,
+                                            mlir::ParserConfig(&context));
+  if (!container) {
+    mlir::emitError(mlir::UnknownLoc::get(&context))
+        << "failed to parse input file '" << inputFileName << "'";
+    return 1;
+  }
+  if (!(*container)->hasAttr(cir::CIRDialect::getOffloadContainerAttrName())) {
+    mlir::emitError(container->getLoc(),
+                    "expected input to be an offload container");
+    return 1;
+  }
+
+  // The container verifier guarantees the host module comes first.
+  llvm::SmallVector<std::pair<mlir::ModuleOp, std::string>> outputs;
+  llvm::StringMap<unsigned> numUses;
+  for (mlir::ModuleOp nestedModule : container->getOps<mlir::ModuleOp>()) {
+    std::string baseName = getOutputBaseName(nestedModule, outputs.empty(),
+                                             inputFileName, outputPrefix);
+    ++numUses[baseName];
+    outputs.emplace_back(nestedModule, std::move(baseName));
+  }
+
+  llvm::StringMap<unsigned> nextIndex;
+  for (auto &[nestedModule, baseName] : outputs) {
+    std::string outputFileName = baseName;
+    if (numUses[baseName] > 1)
+      outputFileName += "-" + std::to_string(nextIndex[baseName]++);
+    outputFileName += ".cir";
+
+    nestedModule->remove();
+    mlir::OwningOpRef<mlir::ModuleOp> detachedModule(nestedModule);
+    restoreModule(*detachedModule);
+    if (int errorCode = writeModuleToOutput(*detachedModule, outputFileName))
+      return errorCode;
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
   llvm::cl::HideUnrelatedOptions(CIROffloadMergeCategory);
@@ -176,13 +283,21 @@ int main(int argc, char **argv) {
   context.loadDialect<cir::CIRDialect>();
   mlir::Location unknownLoc = mlir::UnknownLoc::get(&context);
 
-  if (!Combine) {
-    mlir::emitError(unknownLoc, "expected -combine");
+  if (Combine == Split) {
+    mlir::emitError(unknownLoc, "expected exactly one of -combine or -split");
     return 1;
   }
   if (InputFileNames.empty()) {
     mlir::emitError(unknownLoc, "no input files");
     return 1;
+  }
+
+  if (Split) {
+    if (InputFileNames.size() != 1) {
+      mlir::emitError(unknownLoc, "split mode expects exactly one input");
+      return 1;
+    }
+    return splitInput(InputFileNames.front(), OutputFileName, context);
   }
 
   mlir::OwningOpRef<mlir::ModuleOp> container = combineInputs(context);
@@ -193,5 +308,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  return writeModuleToOutput(*container, OutputFileName);
+  llvm::StringRef outputFileName = OutputFileName;
+  return writeModuleToOutput(*container,
+                             outputFileName.empty() ? "-" : outputFileName);
 }
