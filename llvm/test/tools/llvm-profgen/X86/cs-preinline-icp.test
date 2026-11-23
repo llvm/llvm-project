@@ -101,6 +101,43 @@
 ; CHECK-MAPHEAD:      t2:2000:260
 ; CHECK-MAPHEAD:      t3:2000:200
 
+; In a nested profile, the loader estimates the entry count of an inlined
+; target from its entry probe, not from the CS head count. The target maps stay
+; 600/200/200. In UNDER, t2 has head 200 but 300 samples at probe 1, so the
+; loader sees 300 of 1100 (27%) and promotes t2: it must be pre-inlined. In
+; OVER, t2 has head 300 but 200 at probe 1, so the loader sees 200 of 1000 (20%)
+; and rejects t2. Without a probe 1 record (MISSING), the first record depends
+; on later nesting, so the head count (200) is still used and t2 is rejected.
+; RUN: sed '/^\[quick_sort:4 @ t2\]/,/CFGChecksum/s/^ 1: 200/ 1: 300/' %S/Inputs/cs-preinline-icp.prof > %t-under.prof
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%t-under.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=1 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t-under
+; RUN: FileCheck %s --input-file %t-under --check-prefix=CHECK-UNDER
+; RUN: sed 's/^\[quick_sort:4 @ t2\]:2000:200/[quick_sort:4 @ t2]:2000:300/' %S/Inputs/cs-preinline-icp.prof > %t-over.prof
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%t-over.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=1 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t-over
+; RUN: FileCheck %s --input-file %t-over --check-prefix=CHECK-OVER
+; RUN: sed '/^\[quick_sort:4 @ t2\]/,/CFGChecksum/{/^ 1: 200/d}' %S/Inputs/cs-preinline-icp.prof > %t-missing.prof
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%t-missing.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=1 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t-missing
+; RUN: FileCheck %s --input-file %t-missing --check-prefix=CHECK-NESTED
+;; A CS profile is read with the CS head count, so UNDER keeps t2 outlined.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%t-under.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t-under-cs
+; RUN: FileCheck %s --input-file %t-under-cs --check-prefix=CHECK-ICP
+
+; CHECK-UNDER:      quick_sort:9200:1000
+; CHECK-UNDER-NEXT:  1: 1000
+; CHECK-UNDER-NEXT:  4: 200 t3:200
+; CHECK-UNDER-NEXT:  4: t1:6000
+; CHECK-UNDER:       4: t2:2000
+; CHECK-UNDER-NEXT:   1: 300
+; CHECK-UNDER-NOT:  {{^}}t2:
+; CHECK-UNDER:      t3:2000:200
+
+; CHECK-OVER:      quick_sort:7400:1000
+; CHECK-OVER-NEXT:  1: 1000
+; CHECK-OVER-NEXT:  4: 400 t2:200 t3:200
+; CHECK-OVER-NEXT:  4: t1:6000
+; CHECK-OVER-NOT:   4: t2:
+; CHECK-OVER:      t2:2000:300
+; CHECK-OVER-NEXT:  1: 200
+
 ; Probe 5 of quick_sort is a direct call. The single target at the indirect
 ; call is not hot enough for ICP, so it is not pre-inlined. The direct call
 ; site is not subject to ICP, so all its targets are pre-inlined.

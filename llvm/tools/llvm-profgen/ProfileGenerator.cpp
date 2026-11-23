@@ -109,7 +109,7 @@ static cl::opt<bool> UpdateTotalSamples(
     cl::desc("Update total samples by accumulating all its body samples."),
     cl::cat(ProfGenCategory));
 
-static cl::opt<bool> GenCSNestedProfile(
+cl::opt<bool> GenCSNestedProfile(
     "gen-cs-nested-profile", cl::Hidden, cl::init(true),
     cl::desc("Generate nested function profiles for CSSPGO"));
 

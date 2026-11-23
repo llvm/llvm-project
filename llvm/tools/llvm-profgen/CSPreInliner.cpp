@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSPreInliner.h"
+#include "Options.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -131,6 +132,23 @@ std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
   return Order;
 }
 
+// Return the entry count that the sample loader will see for a pre-inlined
+// target. The loader reads a nested profile as a non-CS profile, so
+// getHeadSamplesEstimate() there ignores the CS head count. It uses the first
+// body or call site record of the nested target instead. Probe 1 is the entry
+// block, so when it has samples it is that first record, and nesting does not
+// change it. Otherwise the first record depends on which callees get nested,
+// so keep the CS head estimate. A CS profile keeps the CS head count.
+static uint64_t getEntryEstimate(const FunctionSamples &Samples) {
+  if (GenCSNestedProfile) {
+    auto It = Samples.getBodySamples().find(LineLocation(1, 0));
+    if (It != Samples.getBodySamples().end())
+      return It->second.getSamples() ? It->second.getSamples()
+                                     : Samples.getTotalSamples() > 0;
+  }
+  return Samples.getHeadSamplesEstimate();
+}
+
 // Find indirect call targets to exclude from the pre-inline plan. Apply the
 // loader's promotion limits, using the contextless hot threshold as described
 // in the constructor. The loader (see
@@ -177,7 +195,7 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
     if (!Binary.isIndirectCallProbe(CallerGUID, CallSite.LineOffset))
       continue;
     CallSites[CallSite].push_back(
-        {CalleeNode, CalleeSamples->getHeadSamplesEstimate()});
+        {CalleeNode, getEntryEstimate(*CalleeSamples)});
   }
 
   for (auto &[CallSite, Callees] : CallSites) {
