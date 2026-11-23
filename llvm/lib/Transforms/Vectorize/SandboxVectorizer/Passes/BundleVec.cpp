@@ -506,7 +506,6 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << schedDirectionToStr(Dir)
                     << "Vec: Vectorization Actions:\n";
              Actions.dump());
-  Change |= !Actions.empty();
   emitVectors();
   DeadInstrMorgue.tryEraseDeadInstrs();
   return Change;

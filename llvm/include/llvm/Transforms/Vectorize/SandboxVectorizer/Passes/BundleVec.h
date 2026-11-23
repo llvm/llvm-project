@@ -83,7 +83,6 @@ private:
       Actions.push_back(std::move(ActPtr));
     }
     void clear() { Actions.clear(); }
-    bool empty() const { return Actions.empty(); }
 #ifndef NDEBUG
     void print(raw_ostream &OS) const;
     void dump() const;

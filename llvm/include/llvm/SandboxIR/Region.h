@@ -187,9 +187,6 @@ public:
 
   RegionClassID getSubclassID() const { return ID; }
 
-  /// Returns the function in which the region is defined.
-  Function &getParentFunction() const;
-
 #ifndef NDEBUG
   /// This is an expensive check, meant for testing.
   bool operator==(const Region &Other) const;

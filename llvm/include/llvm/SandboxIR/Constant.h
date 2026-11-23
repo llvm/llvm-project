@@ -61,7 +61,6 @@ public:
   void verify() const override {
     assert(isa<llvm::Constant>(Val) && "Expected Constant!");
   }
-  hash_code hash() const override { return User::hashHelper(); }
   void dumpOS(raw_ostream &OS) const override;
 #endif
 };
