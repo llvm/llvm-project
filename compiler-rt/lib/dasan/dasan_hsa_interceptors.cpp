@@ -335,6 +335,10 @@ INTERCEPTOR(hsa_status_t, hsa_amd_agents_allow_access, uint32_t NumAgents,
             const hsa_agent_t* Agents, const uint32_t* Flags, const void* Ptr) {
   DASAN_HSA_FORWARD(hsa_amd_agents_allow_access, NumAgents, Agents, Flags, Ptr);
 
+  // ROCr rejects an empty agent list and a non-null reserved flags pointer.
+  if (!NumAgents || !Agents || Flags || !Ptr)
+    return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+
   hsa_status_t Status;
   if (PlaceAllow(reinterpret_cast<uptr>(Ptr), Agents, NumAgents, &Status))
     return Status;

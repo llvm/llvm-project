@@ -113,6 +113,10 @@ bool Offload::Resolve() {
     return false;
   SANITIZER_HSA_FUNCTIONS(SANITIZER_HSA_RESOLVE)
 #undef SANITIZER_HSA_RESOLVE
+#define SANITIZER_HSA_RESOLVE_OPTIONAL(Name) \
+  Api.Name = reinterpret_cast<decltype(&::Name)>(dlsym(RTLD_NEXT, #Name));
+  SANITIZER_HSA_OPTIONAL_FUNCTIONS(SANITIZER_HSA_RESOLVE_OPTIONAL)
+#undef SANITIZER_HSA_RESOLVE_OPTIONAL
   return true;
 }
 
@@ -285,8 +289,11 @@ bool Offload::Init() {
     --Refs;
     return false;
   }
-  CheckHsa(Api.hsa_system_get_info(HSA_AMD_SYSTEM_INFO_EXT_VERSION_MINOR,
-                                   &AmdExtMinor));
+  AmdExtMinor = 0;
+  if (Api.hsa_system_get_info &&
+      Api.hsa_system_get_info(HSA_AMD_SYSTEM_INFO_EXT_VERSION_MINOR,
+                              &AmdExtMinor) != HSA_STATUS_SUCCESS)
+    AmdExtMinor = 0;
   VReport(1, "%s: device reporting on %zu GPU(s), AMD extension 1.%u%s\n",
           SanitizerToolName, DeviceList.size(), AmdExtMinor,
           CanLoadAtAddress() ? ", code objects can be placed" : "");
@@ -591,6 +598,8 @@ bool Offload::LoadCodeObjectAt(hsa_executable_t Exec, hsa_agent_t Agent,
 
 // Reserve exactly [Addr, Addr + Size), or nothing.
 bool Offload::ReserveAddress(uptr Addr, uptr Size) {
+  if (!Api.hsa_amd_vmem_address_reserve_align || !Api.hsa_amd_vmem_address_free)
+    return false;
   // The HSA call here is allowed to return an HSA_STATUS_SUCCESS if it failed
   // to reserve the specified range. The sanitizer requires an exact size, so we
   // need to detect this and return it as a failure..
@@ -609,11 +618,14 @@ bool Offload::ReserveAddress(uptr Addr, uptr Size) {
 }
 
 void Offload::FreeAddress(uptr Addr, uptr Size) {
-  Api.hsa_amd_vmem_address_free(reinterpret_cast<void*>(Addr), Size);
+  if (Api.hsa_amd_vmem_address_free)
+    Api.hsa_amd_vmem_address_free(reinterpret_cast<void*>(Addr), Size);
 }
 
 bool Offload::CreateHandle(hsa_amd_memory_pool_t Pool, uptr Size, u64 Flags,
                            u64* Handle) {
+  if (!Api.hsa_amd_vmem_handle_create)
+    return false;
   hsa_amd_vmem_alloc_handle_t H;
   if (Api.hsa_amd_vmem_handle_create(Pool, Size, MEMORY_TYPE_NONE, Flags, &H) !=
       HSA_STATUS_SUCCESS)
@@ -623,26 +635,33 @@ bool Offload::CreateHandle(hsa_amd_memory_pool_t Pool, uptr Size, u64 Flags,
 }
 
 void Offload::ReleaseHandle(u64 Handle) {
-  Api.hsa_amd_vmem_handle_release(hsa_amd_vmem_alloc_handle_t{Handle});
+  if (Api.hsa_amd_vmem_handle_release)
+    Api.hsa_amd_vmem_handle_release(hsa_amd_vmem_alloc_handle_t{Handle});
 }
 
 bool Offload::Map(uptr Addr, uptr Size, uptr Offset, u64 Handle) {
-  return Api.hsa_amd_vmem_map(reinterpret_cast<void*>(Addr), Size, Offset,
+  return Api.hsa_amd_vmem_map &&
+         Api.hsa_amd_vmem_map(reinterpret_cast<void*>(Addr), Size, Offset,
                               hsa_amd_vmem_alloc_handle_t{Handle},
                               0) == HSA_STATUS_SUCCESS;
 }
 
 void Offload::Unmap(uptr Addr, uptr Size) {
-  Api.hsa_amd_vmem_unmap(reinterpret_cast<void*>(Addr), Size);
+  if (Api.hsa_amd_vmem_unmap)
+    Api.hsa_amd_vmem_unmap(reinterpret_cast<void*>(Addr), Size);
 }
 
 bool Offload::SetAccess(uptr Addr, uptr Size,
                         const hsa_amd_memory_access_desc_t* Desc, uptr Count) {
-  return Api.hsa_amd_vmem_set_access(reinterpret_cast<void*>(Addr), Size, Desc,
+  return Api.hsa_amd_vmem_set_access &&
+         Api.hsa_amd_vmem_set_access(reinterpret_cast<void*>(Addr), Size, Desc,
                                      Count) == HSA_STATUS_SUCCESS;
 }
 
 bool Offload::CreateCommands() {
+  if (!Api.hsa_queue_create || !Api.hsa_queue_destroy ||
+      !Api.hsa_queue_add_write_index_screlease)
+    return true;
   auto Callback = [](hsa_status_t Status, hsa_queue_t*, void*) {
     Report("ERROR: %s: device write queue failed with HSA status %u",
            SanitizerToolName, Status);

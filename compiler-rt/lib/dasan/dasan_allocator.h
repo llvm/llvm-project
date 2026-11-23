@@ -140,6 +140,7 @@ class Allocator {
   struct ChunkState {
     u64 UserSize;
     u64 Mapped;
+    u32 MapFlags;
     uptr UserOffset;
     uptr RunStart;
     uptr RunLen;
@@ -172,6 +173,7 @@ class Allocator {
     uptr Begin;
     uptr Count;
     bool UserMapped;
+    u32 Flags;
   };
 
   struct FreeList {
@@ -241,7 +243,7 @@ class Allocator {
   uptr FreeListFor(uptr ClassId, hsa_amd_memory_pool_t Pool);
   void PushFree(uptr ClassId, uptr List, Run R);
   bool TakeFree(uptr ClassId, uptr List, uptr Need, uptr Stride, bool MapUser,
-                uptr* Begin);
+                u32 AllocFlags, uptr* Begin);
 
   bool CommitMap(uptr Addr, uptr Bytes, u64 Handle, hsa_amd_memory_pool_t Home);
   void RollbackMap();

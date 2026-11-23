@@ -97,7 +97,7 @@ void Allocator::PushFree(uptr ClassId, uptr List, Run R) {
     Run& F = Free[I];
     const bool Abut =
         F.Begin + F.Count == R.Begin || R.Begin + R.Count == F.Begin;
-    if (!Abut || F.UserMapped != R.UserMapped) {
+    if (!Abut || F.UserMapped != R.UserMapped || F.Flags != R.Flags) {
       ++I;
       continue;
     }
@@ -112,11 +112,13 @@ void Allocator::PushFree(uptr ClassId, uptr List, Run R) {
 }
 
 bool Allocator::TakeFree(uptr ClassId, uptr List, uptr Need, uptr Stride,
-                         bool MapUser, uptr* Begin) {
+                         bool MapUser, u32 AllocFlags, uptr* Begin) {
   auto& Free = Regions[ClassId].FreeLists[List].Free;
   for (uptr N = Free.size(); N-- > 0;) {
     const Run R = Free[N];
     if (!MapUser && R.UserMapped)
+      continue;
+    if (MapUser && R.UserMapped && R.Flags != AllocFlags)
       continue;
     const uptr Aligned = RoundUpTo(R.Begin, Stride);
     if (Aligned < R.Begin || Aligned - R.Begin > R.Count)
@@ -126,11 +128,12 @@ bool Allocator::TakeFree(uptr ClassId, uptr List, uptr Need, uptr Stride,
     Free[N] = Free.back();
     Free.pop_back();
     if (Aligned > R.Begin)
-      PushFree(ClassId, List, {R.Begin, Aligned - R.Begin, R.UserMapped});
+      PushFree(ClassId, List,
+               {R.Begin, Aligned - R.Begin, R.UserMapped, R.Flags});
     const uptr End = R.Begin + R.Count;
     if (Aligned + Need < End)
       PushFree(ClassId, List,
-               {Aligned + Need, End - (Aligned + Need), R.UserMapped});
+               {Aligned + Need, End - (Aligned + Need), R.UserMapped, R.Flags});
     *Begin = Aligned;
     return true;
   }
@@ -228,8 +231,12 @@ bool Allocator::MapUserChunk(hsa_amd_memory_pool_t Pool, uptr ClassId,
   uptr Want = RoundUpTo(Need, Granule);
   if (Want > Chunk)
     Want = Chunk;
-  if (S.Mapped >= Want)
-    return true;
+  if (S.Mapped) {
+    if (S.MapFlags != AllocFlags)
+      return false;
+    if (S.Mapped >= Want)
+      return true;
+  }
 
   const uptr Beg = ChunkBegin(ClassId, ChunkIdx) + S.Mapped;
   const uptr Bytes = Want - S.Mapped;
@@ -239,6 +246,7 @@ bool Allocator::MapUserChunk(hsa_amd_memory_pool_t Pool, uptr ClassId,
   if (!CommitMap(Beg, Bytes, H, Pool))
     return false;
   S.Mapped = Want;
+  S.MapFlags = AllocFlags;
   return true;
 }
 
@@ -313,7 +321,7 @@ bool Allocator::Grow(hsa_amd_memory_pool_t Pool, uptr ClassId, uptr List,
   // The caller maps this run. One reservation names it.
   if (!MapUser) {
     if (First > R.NextChunk)
-      PushFree(ClassId, List, {R.NextChunk, First - R.NextChunk, false});
+      PushFree(ClassId, List, {R.NextChunk, First - R.NextChunk, false, 0});
     R.NextChunk = End;
     *Begin = First;
     return true;
@@ -334,16 +342,21 @@ bool Allocator::Grow(hsa_amd_memory_pool_t Pool, uptr ClassId, uptr List,
     S.List = static_cast<u32>(List);
     // The batch map starts at NextChunk. A large class maps only the
     // prefix the caller asked for, after Grow returns.
-    if (Batch && I >= MapFrom)
+    if (Batch && I >= MapFrom) {
       S.Mapped = Chunk;
+      S.MapFlags = AllocFlags;
+    }
   }
 
   // Alignment padding. Mapped when it sits inside the batch, otherwise a
   // bare reservation a later run can claim.
+  const u32 FreeFlags = Batch ? AllocFlags : 0;
   if (First > R.NextChunk)
-    PushFree(ClassId, List, {R.NextChunk, First - R.NextChunk, Batch});
+    PushFree(ClassId, List,
+             {R.NextChunk, First - R.NextChunk, Batch, FreeFlags});
   if (First + Need < End)
-    PushFree(ClassId, List, {First + Need, End - (First + Need), Batch});
+    PushFree(ClassId, List,
+             {First + Need, End - (First + Need), Batch, FreeFlags});
   R.NextChunk = End;
   *Begin = First;
   return true;
@@ -610,11 +623,11 @@ uptr Allocator::Allocate(hsa_amd_memory_pool_t Pool, uptr ClassId, uptr Size,
   // Find a free chunk in the current free list.
   const uptr List = FreeListFor(ClassId, Pool);
   uptr Begin = 0;
-  if (!TakeFree(ClassId, List, Need, Stride, MapUser, &Begin) &&
+  if (!TakeFree(ClassId, List, Need, Stride, MapUser, AllocFlags, &Begin) &&
       !Grow(Pool, ClassId, List, Need, Stride, MapUser, AllocFlags, &Begin)) {
     bool Got = false;
     while (Recycle(ClassId, List)) {
-      if (TakeFree(ClassId, List, Need, Stride, MapUser, &Begin)) {
+      if (TakeFree(ClassId, List, Need, Stride, MapUser, AllocFlags, &Begin)) {
         Got = true;
         break;
       }
@@ -629,8 +642,10 @@ uptr Allocator::Allocate(hsa_amd_memory_pool_t Pool, uptr ClassId, uptr Size,
   if (MapUser && !MapPrefix(Pool, ClassId, Begin, Need, Bytes, AllocFlags)) {
     VReport(2, "%s: no backing for class %zu at chunk %zu\n", SanitizerToolName,
             ClassId, Begin);
-    const bool Mapped = Regions[ClassId].Chunks[Begin].Mapped != 0;
-    PushFree(ClassId, List, {Begin, Need, Mapped});
+    const ChunkState& Failed = Regions[ClassId].Chunks[Begin];
+    const bool Mapped = Failed.Mapped != 0;
+    PushFree(ClassId, List,
+             {Begin, Need, Mapped, Mapped ? Failed.MapFlags : 0});
     return 0;
   }
 
@@ -641,8 +656,10 @@ uptr Allocator::Allocate(hsa_amd_memory_pool_t Pool, uptr ClassId, uptr Size,
     MarkChunk(ClassId, Begin, List, Place);
     if (!Publish(ChunkBegin(ClassId, Begin) + Off, Size)) {
       ClearChunk(ClassId, Begin);
-      const bool Mapped = Regions[ClassId].Chunks[Begin].Mapped != 0;
-      PushFree(ClassId, List, {Begin, Need, Mapped});
+      const ChunkState& Failed = Regions[ClassId].Chunks[Begin];
+      const bool Mapped = Failed.Mapped != 0;
+      PushFree(ClassId, List,
+               {Begin, Need, Mapped, Mapped ? Failed.MapFlags : 0});
       return 0;
     }
   }
@@ -678,8 +695,8 @@ bool Allocator::Deallocate(uptr Addr, u32 Stack, u32 Tid) {
     return true;
   }
 
-  Quarantine(ClassId, S->List, {S->RunStart, S->RunLen, S->Mapped != 0}, Stack,
-             Tid);
+  Quarantine(ClassId, S->List,
+             {S->RunStart, S->RunLen, S->Mapped != 0, S->MapFlags}, Stack, Tid);
   ++Count.Freed;
   return true;
 }
@@ -704,7 +721,7 @@ void Allocator::Release(uptr Addr) {
     if (I + 1 != R.Reservations.size())
       R.Reservations[I] = R.Reservations.back();
     R.Reservations.pop_back();
-    PushFree(ClassId, List, {Idx, Len, false});
+    PushFree(ClassId, List, {Idx, Len, false, 0});
     if (Count.CodeObjectChunks >= Len)
       Count.CodeObjectChunks -= Len;
     if (Count.CodeObjects)

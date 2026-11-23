@@ -20,7 +20,6 @@
 
 #define SANITIZER_HSA_FUNCTIONS(X)        \
   X(hsa_iterate_agents)                   \
-  X(hsa_system_get_info)                  \
   X(hsa_agent_get_info)                   \
   X(hsa_executable_get_symbol_by_name)    \
   X(hsa_executable_symbol_get_info)       \
@@ -32,19 +31,22 @@
   X(hsa_amd_agent_memory_pool_get_info)   \
   X(hsa_amd_agent_iterate_memory_pools)   \
   X(hsa_system_get_major_extension_table) \
-  X(hsa_queue_create)                     \
-  X(hsa_queue_destroy)                    \
-  X(hsa_queue_add_write_index_screlease)  \
   X(hsa_amd_signal_create)                \
   X(hsa_signal_destroy)                   \
   X(hsa_signal_store_screlease)           \
-  X(hsa_signal_wait_scacquire)            \
-  X(hsa_amd_vmem_address_reserve_align)   \
-  X(hsa_amd_vmem_address_free)            \
-  X(hsa_amd_vmem_handle_create)           \
-  X(hsa_amd_vmem_handle_release)          \
-  X(hsa_amd_vmem_map)                     \
-  X(hsa_amd_vmem_unmap)                   \
+  X(hsa_signal_wait_scacquire)
+
+#define SANITIZER_HSA_OPTIONAL_FUNCTIONS(X) \
+  X(hsa_system_get_info)                    \
+  X(hsa_queue_create)                       \
+  X(hsa_queue_destroy)                      \
+  X(hsa_queue_add_write_index_screlease)    \
+  X(hsa_amd_vmem_address_reserve_align)     \
+  X(hsa_amd_vmem_address_free)              \
+  X(hsa_amd_vmem_handle_create)             \
+  X(hsa_amd_vmem_handle_release)            \
+  X(hsa_amd_vmem_map)                       \
+  X(hsa_amd_vmem_unmap)                     \
   X(hsa_amd_vmem_set_access)
 
 extern "C" {
@@ -92,6 +94,7 @@ typedef enum {
   HSA_STATUS_SUCCESS = 0,
   HSA_STATUS_INFO_BREAK = 0x1,
   HSA_STATUS_ERROR = 0x1000,
+  HSA_STATUS_ERROR_INVALID_ARGUMENT = 0x1001,
 } hsa_status_t;
 
 typedef enum {
