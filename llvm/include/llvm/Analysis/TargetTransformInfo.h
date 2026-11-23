@@ -1635,9 +1635,9 @@ public:
   /// provide even more information.
   /// \p TLibInfo is used to search for platform specific vector library
   /// functions for instructions that might be converted to calls (e.g. frem).
-  /// \p Scalars are the scalar instructions of the lanes of a vector operation,
-  /// if known. The target may use them for the properties that differ between
-  /// the lanes, where \p CtxI shows only one lane.
+  /// \p Scalars are the values of the lanes of a vector operation, if known.
+  /// The target may use them for the properties that differ between the lanes,
+  /// where \p CtxI shows only one lane.
   LLVM_ABI InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},

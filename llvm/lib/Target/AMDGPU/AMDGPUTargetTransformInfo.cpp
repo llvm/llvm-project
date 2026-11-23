@@ -664,9 +664,9 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && AllLanes([](const Value *V) {
+    if (SLT == MVT::f32 && AllLanes([&](const Value *V) {
           const auto *FPMO = dyn_cast<FPMathOperator>(V);
-          return !FPMO || FPMO->hasApproxFunc();
+          return !FPMO || FPMO->getOpcode() != Opcode || FPMO->hasApproxFunc();
         })) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
