@@ -57,7 +57,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -4467,7 +4468,8 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
         // must therefore stay within the storage.
         mlir::Type rankTy = getBoxEleTy(llvmBoxTy, {kRankPosInBox});
         mlir::LLVM::GEPOp rankAddr =
-            genGEP(loc, llvmBoxTy, rewriter, storage, 0, kRankPosInBox);
+            genGEP(loc, llvmBoxTy, rewriter, storage, 0,
+                   static_cast<int32_t>(kRankPosInBox));
         mlir::Value zero = mlir::LLVM::ConstantOp::create(
             rewriter, loc, rankTy, rewriter.getIntegerAttr(rankTy, 0));
         auto storeOp =
