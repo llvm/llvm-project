@@ -125,9 +125,13 @@ For a complete practical guide of using BOLT see [Optimizing Clang with BOLT](do
 
 In order to allow BOLT to re-arrange functions (in addition to re-arranging
 code within functions) in your program, it needs a little help from the linker.
-Add `--emit-relocs` and, if required, `--no-relax` to the final link step of
-your application. You can verify the presence of relocations by checking for
-`.rela.text` section in the binary.
+Add the `--emit-relocs` option and, if required, the `--no-relax` option to the
+final link step of your application.
+
+> [!NOTE]
+> You can verify the presence of relocations by checking for `.rela.text`
+> section in the binary. BOLT will also report if it detects relocations while
+> processing the binary.
 BOLT will also report if it detects relocations while processing the binary.
 
 ### Step 1: Collect Profile
