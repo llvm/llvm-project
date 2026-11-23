@@ -1,0 +1,3 @@
+call-stack-contains:InlinedViolation
+call-stack-contains:InlinedThenWork
+call-stack-contains:OuterIsSuppressed
