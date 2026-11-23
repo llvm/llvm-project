@@ -693,6 +693,23 @@ vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
   return Exits;
 }
 
+bool vputils::forceScalarEpilogue(VPBasicBlock &MiddleVPBB) {
+  VPlan &Plan = *MiddleVPBB.getPlan();
+  // A single successor is either the scalar preheader, in which case the scalar
+  // epilogue is already forced, or the exit block, which cannot be retargeted.
+  if (MiddleVPBB.getNumSuccessors() == 1)
+    return MiddleVPBB.getSingleSuccessor() == Plan.getScalarPreheader();
+
+  assert(MiddleVPBB.getNumSuccessors() == 2 && "must have 2 successors");
+  assert(MiddleVPBB.getSuccessors()[1] == Plan.getScalarPreheader() &&
+         "second successor must be scalar preheader");
+  auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB.getTerminator());
+  assert(BranchOnCond->getOpcode() == VPInstruction::BranchOnCond &&
+         "middle block must be terminated by branch-on-cond");
+  BranchOnCond->setOperand(0, Plan.getFalse());
+  return true;
+}
+
 VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,

@@ -3107,13 +3107,9 @@ void VPlanTransforms::createInterleaveGroups(
   // middle block to always branch to the scalar preheader, if it still has a
   // branch to it.
   if (RequiresScalarEpilogue) {
-    VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-    if (MiddleVPBB->getNumSuccessors() == 2) {
-      auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
-      assert(MiddleVPBB->getSuccessors()[1] == Plan.getScalarPreheader() &&
-             "second successor must be scalar preheader");
-      BranchOnCond->setOperand(0, Plan.getFalse());
-    }
+    [[maybe_unused]] bool Forced =
+        vputils::forceScalarEpilogue(*Plan.getMiddleBlock());
+    assert(Forced && "failed to force the scalar epilogue");
   }
 }
 
