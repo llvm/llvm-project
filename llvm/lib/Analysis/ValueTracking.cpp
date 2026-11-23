@@ -4846,10 +4846,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // So, -M <= X - tmp <= M.
       // That preserves the signed bit bound of X.
       if ((match(U->getOperand(1), m_AShr(m_Specific(X), m_Value())) &&
-          isGuaranteedNotToBeUndef(U->getOperand(0), Q.AC, Q.CtxI, Q.DT,
-                                   Depth + 1)) ||
+           isGuaranteedNotToBeUndef(U->getOperand(0), Q.AC, Q.CtxI, Q.DT,
+                                    Depth + 1)) ||
           (match(U->getOperand(1), m_LShr(m_Specific(X), m_Value()))) &&
-          isKnownNonNegative(X, Q, Depth + 1)) {
+              isKnownNonNegative(X, Q, Depth + 1)) {
         return ComputeNumSignBits(X, DemandedElts, Q, Depth + 1);
       }
 
