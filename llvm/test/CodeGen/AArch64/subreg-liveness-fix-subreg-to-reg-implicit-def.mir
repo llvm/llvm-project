@@ -9,7 +9,7 @@
   define void @test_implicit_def_d0_to_q0_and_d1_to_q1() { entry: unreachable }
   define void @test_implicit_def_d0_d1_d2_to_q0_q1_q2() { entry: unreachable }
   define void @test_implicit_def_d0_d1_d2_to_z0_z1_z2_with_sve() "target-features"="+sve" { entry: unreachable }
-
+...
 ---
 name: test_implicit_def_w1_to_x1
 isSSA: false

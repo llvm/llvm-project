@@ -40,22 +40,7 @@ def InsertNOPLoad: SubtargetFeature<
   "insertnopload",
   "InsertNOPLoad",
   "true",
-  "LEON3 erratum fix: Insert a NOP instruction after every single-cycle load instruction when the next instruction is another load/store instruction"
->;
-
-def DetectRoundChange : SubtargetFeature<
-  "detectroundchange",
-  "DetectRoundChange",
-  "true",
-  "LEON3 erratum detection: Detects any rounding mode change "
-  "request: use only the round-to-nearest rounding mode"
->;
-
-def FixAllFDIVSQRT : SubtargetFeature<
-  "fixallfdivsqrt",
-  "FixAllFDIVSQRT",
-  "true",
-  "LEON erratum fix: Fix FDIVS/FDIVD/FSQRTS/FSQRTD instructions with NOPs and floating-point store"
+  "LEON erratum fix: Insert a NOP instruction after every load instruction"
 >;
 
 def LeonCycleCounter

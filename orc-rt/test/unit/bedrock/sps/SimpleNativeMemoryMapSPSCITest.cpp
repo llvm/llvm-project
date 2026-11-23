@@ -120,9 +120,7 @@ protected:
   void SetUp() override {
     S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
                                   noErrors);
-    auto SNMMOrErr = SimpleNativeMemoryMap::Create(*S, CI);
-    ASSERT_THAT_EXPECTED(SNMMOrErr, Succeeded());
-    SNMM = std::move(*SNMMOrErr);
+    SNMM = std::make_unique<SimpleNativeMemoryMap>(*S);
   }
 
   void TearDown() override {
@@ -166,13 +164,16 @@ protected:
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), Bases);
   }
 
-  SimpleSymbolTable CI;
   std::unique_ptr<Session> S;
   std::unique_ptr<SimpleNativeMemoryMap> SNMM;
 };
 
-TEST_F(SimpleNativeMemoryMapSPSCITest, Registration) {
+TEST(SimpleNativeMemoryMapSPSCIRegistrationTest, Registration) {
+  SimpleSymbolTable CI;
+  ASSERT_THAT_ERROR(sps::ci::addSimpleNativeMemoryMap(CI), Succeeded());
 
+  EXPECT_TRUE(CI.count(
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_create")));
   EXPECT_TRUE(CI.count(
       SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve")));
   EXPECT_TRUE(CI.count(SymbolNameSpec::c(
@@ -347,4 +348,59 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeDetachShutdown) {
   SNMM.reset();
 
   EXPECT_EQ(SentinelValue, 42);
+}
+
+TEST(SimpleNativeMemoryMapSPSCICreateTest, SessionOwnsCreatedInstance) {
+  // Check that the create entrypoint returns a usable instance, and that the
+  // instance is owned by the calling Session: destroying the Session should
+  // shut the instance down, running the deallocation actions for its
+  // initialized memory.
+  auto S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
+                                     noErrors);
+
+  std::future<Expected<Expected<void *>>> CreateResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>()>::call(
+      DirectCaller(wrap(S.get()), orc_rt_ci_sps_SimpleNativeMemoryMap_create),
+      waitFor(CreateResult));
+  auto Instance = CreateResult.get();
+  ASSERT_THAT_EXPECTED(Instance, Succeeded());
+  ASSERT_THAT_EXPECTED(*Instance, Succeeded());
+  ASSERT_NE(**Instance, nullptr);
+
+  std::future<Expected<Expected<void *>>> ReserveResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize)>::
+      call(caller(orc_rt_ci_sps_SimpleNativeMemoryMap_reserve),
+           waitFor(ReserveResult), **Instance, size_t(1024 * 1024 * 1024));
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
+  ASSERT_THAT_EXPECTED(*Addr, Succeeded());
+
+  TestSNMMInitializeRequest IR;
+  char *InitializeBase = reinterpret_cast<char *>(**Addr) + 64 * 1024;
+  uint64_t SentinelValue = 0;
+
+  IR.Segments.push_back(
+      {MemProt::Read | MemProt::Write, InitializeBase, 64 * 1024});
+  IR.AAPs.push_back(
+      {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
+           write_value_sps_allocaction, ExecutorAddr::fromPtr(InitializeBase),
+           uint64_t(42)),
+       *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
+           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
+           ExecutorAddr::fromPtr(InitializeBase))});
+
+  std::future<Expected<Expected<void *>>> InitializeResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(
+      SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest)>::
+      call(caller(orc_rt_ci_sps_SimpleNativeMemoryMap_initialize),
+           waitFor(InitializeResult), **Instance, std::move(IR));
+  auto InitializeKey = InitializeResult.get();
+  ASSERT_THAT_EXPECTED(InitializeKey, Succeeded());
+  ASSERT_THAT_EXPECTED(*InitializeKey, Succeeded());
+
+  EXPECT_EQ(SentinelValue, 0U);
+
+  S.reset();
+
+  EXPECT_EQ(SentinelValue, 42U);
 }

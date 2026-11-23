@@ -212,12 +212,6 @@ def create_parser():
         help='Run "setting set SETTING VALUE" before executing any test.',
     )
     group.add_argument(
-        "-y",
-        type=int,
-        metavar="count",
-        help="Specify the iteration count used to collect our benchmarks. An example is the number of times to do 'thread step-over' to measure stepping speed.",
-    )
-    group.add_argument(
         "-#",
         type=int,
         metavar="sharp",

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxDiviTest.h"
+#include "test/src/stdfix/FxDiviTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/stdfix/rdivi.h"
 
 LIST_FXDIVI_TESTS(r, fract, int, LIBC_NAMESPACE::rdivi);

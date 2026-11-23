@@ -31,3 +31,4 @@ body:             |
     S2_storeri_io %4, 0, %0 :: (store (s32), align 64)
     S2_storeri_io %4, 4, %0 :: (store (s32))
     J2_jump %bb.1, implicit-def dead $pc
+...

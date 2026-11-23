@@ -7,17 +7,19 @@
 name:            cttz_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV32I-LABEL: name: cttz_s32
-    ; RV32I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32I-NEXT: [[CTZ:%[0-9]+]]:gpr = CTZ [[COPY]]
     ; RV32I-NEXT: $x10 = COPY [[CTZ]]
     ; RV32I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CTTZ %0
-    $x10 = COPY %1(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CTTZ %0
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...

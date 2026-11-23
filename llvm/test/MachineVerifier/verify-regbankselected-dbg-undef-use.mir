@@ -14,25 +14,21 @@
 name: regbankselected_notrack
 regBankSelected: true
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
    ; CHECK-NOT: function: regbankselected_notrack
-   DBG_VALUE %0(s64), $noreg, $noreg, $noreg, $noreg
+   DBG_VALUE %0:_(s64), $noreg, $noreg, $noreg, $noreg
 ...
 
 ---
 name: regbankselected_track
 regBankSelected: true
 tracksDebugUserValues: true
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
    ; CHECK: Bad machine code: Generic virtual register must have a bank in a RegBankSelected function
    ; CHECK: function: regbankselected_track
    ; CHECK: instruction: DBG_VALUE %0:_
    ; CHECK: operand 0: %0
-   DBG_VALUE %0(s64), $noreg, $noreg, $noreg, $noreg
+   DBG_VALUE %0:_(s64), $noreg, $noreg, $noreg, $noreg
 ...

@@ -5,9 +5,7 @@
 ---
 name:            test
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef:   true
-registers:
 liveins:
   - { reg: '$xmm0', virtual-reg: '%0' }
 frameInfo:

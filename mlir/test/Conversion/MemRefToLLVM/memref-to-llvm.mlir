@@ -521,6 +521,56 @@ llvm.func @generic_atomic_rmw_f16() {
 
 // -----
 
+// CHECK-LABEL: func @generic_atomic_rmw_external_i32
+// CHECK-SAME: %[[VALUE:[^:]+]]: i32
+func.func @generic_atomic_rmw_external_i32(%memref: memref<?xi32>, %index: index, %value: i32) -> i32 {
+  %result = memref.generic_atomic_rmw %memref[%index] : memref<?xi32> {
+  ^bb0(%current: i32):
+    memref.atomic_yield %value : i32
+  }
+  return %result : i32
+}
+// CHECK: ^{{.*}}(%[[LOADED:.*]]: i32):
+// CHECK: %[[PAIR:.*]] = llvm.cmpxchg %{{.*}}, %[[LOADED]], %[[VALUE]]
+// CHECK: %[[OLD:.*]] = llvm.extractvalue %[[PAIR]][0]
+// CHECK: return %[[OLD]] : i32
+
+// -----
+
+// CHECK-LABEL: func @generic_atomic_rmw_external_f32
+// CHECK-SAME: %[[VALUE:[^:]+]]: f32
+func.func @generic_atomic_rmw_external_f32(%memref: memref<f32>, %value: f32) -> f32 {
+  %result = memref.generic_atomic_rmw %memref[] : memref<f32> {
+  ^bb0(%current: f32):
+    memref.atomic_yield %value : f32
+  }
+  return %result : f32
+}
+// CHECK: ^{{.*}}(%[[LOADED:.*]]: i32):
+// CHECK: %[[VALUE_BITS:.*]] = llvm.bitcast %[[VALUE]] : f32 to i32
+// CHECK: %[[PAIR:.*]] = llvm.cmpxchg %{{.*}}, %[[LOADED]], %[[VALUE_BITS]]
+// CHECK: %[[OLD_BITS:.*]] = llvm.extractvalue %[[PAIR]][0]
+// CHECK: %[[OLD:.*]] = llvm.bitcast %[[OLD_BITS]] : i32 to f32
+// CHECK: return %[[OLD]] : f32
+
+// -----
+
+// CHECK-LABEL: func @generic_atomic_rmw_computed
+// CHECK-SAME: %[[VALUE:[^:]+]]: i32
+func.func @generic_atomic_rmw_computed(%memref: memref<i32>, %value: i32) -> i32 {
+  %result = memref.generic_atomic_rmw %memref[] : memref<i32> {
+  ^bb0(%current: i32):
+    %updated = llvm.add %current, %value : i32
+    memref.atomic_yield %updated : i32
+  }
+  return %result : i32
+}
+// CHECK: ^{{.*}}(%[[LOADED:.*]]: i32):
+// CHECK: %[[UPDATED:.*]] = llvm.add %[[LOADED]], %[[VALUE]] : i32
+// CHECK: llvm.cmpxchg %{{.*}}, %[[LOADED]], %[[UPDATED]]
+
+// -----
+
 // CHECK-LABEL: func @generic_atomic_rmw_in_alloca_scope
 llvm.func @generic_atomic_rmw_in_alloca_scope() {
   %c1 = arith.constant 1 : index

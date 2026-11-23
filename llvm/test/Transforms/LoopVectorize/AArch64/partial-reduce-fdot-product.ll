@@ -1129,7 +1129,7 @@ for.exit:
 }
 
 attributes #0 = { "target-features"="+sve2p1,+dotprod" }
-attributes #1 = { "target-features"="+sve" }
+attributes #1 = { "target-features"="+sve" vscale_range(1,16) }
 attributes #2 = { "target-features"="+dotprod" }
 
 !0 = distinct !{!0, !1}

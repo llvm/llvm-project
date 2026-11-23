@@ -176,6 +176,40 @@ def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
 
 // -----
 
+def SPIRV_CopyObjectOp : SPIRV_Op<"CopyObject", [
+    Pure, AllTypesMatch<["operand", "result"]>]> {
+  let summary = [{
+    Make a copy of Operand. There are no pointer dereferences involved.
+  }];
+
+  let description = [{
+    Result Type must equal Operand type. Result Type can be any type except
+    OpTypeVoid.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.CopyObject %0 : vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Type:$operand
+  );
+
+  let results = (outs
+    SPIRV_Type:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
+
+// -----
+
 def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
     Pure,
     TypesMatchWith<"type of 'result' matches element type of 'vector'",

@@ -78,7 +78,6 @@
 ---
 name:            long_branch_dbg_value
 tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0.bb:
     successors: %bb.1(0x40000000), %bb.4(0x40000000)

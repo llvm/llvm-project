@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "mulir.h"
+#include "src/stdfix/mulir.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"

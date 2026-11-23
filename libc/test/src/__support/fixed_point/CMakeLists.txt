@@ -11,6 +11,9 @@ add_libc_test(
   SRCS
     fx_bits_test.cpp
   DEPENDS
+    libc.include.llvm-libc-macros.stdfix_macros
+    libc.src.__support.CPP.bit
     libc.src.__support.fixed_point.fx_bits
+    libc.src.__support.fixed_point.fx_rep
     libc.src.__support.integer_literals
 )

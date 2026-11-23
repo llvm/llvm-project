@@ -14,8 +14,7 @@
 #include "gtest/gtest.h"
 
 #include "TestAttributes.h"
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsInterfaces.h"
 #include "TestTypes.h"
 
 using namespace mlir;
