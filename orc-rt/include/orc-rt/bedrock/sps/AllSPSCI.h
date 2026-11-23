@@ -16,11 +16,11 @@
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 /// Add all SPS interfaces to the controller interface.
 Error addAll(SimpleSymbolTable &ST);
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci
 
 #endif // ORC_RT_BEDROCK_SPS_ALLSPSCI_H

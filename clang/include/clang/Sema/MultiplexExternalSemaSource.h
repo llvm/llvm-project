@@ -392,6 +392,10 @@ public:
   bool MaybeDiagnoseMissingCompleteType(SourceLocation Loc,
                                         QualType T) override;
 
+  void StartedQualifiedLookup(const DeclContext *DC) override;
+
+  void FinishedQualifiedLookup(const DeclContext *DC) override;
+
   /// LLVM-style RTTI.
   /// \{
   bool isA(const void *ClassID) const override {

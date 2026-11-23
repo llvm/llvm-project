@@ -97,8 +97,7 @@ public:
   bool CallSafepointsEnabled;
 
   PlaceBackedgeSafepointsLegacyPass(bool CallSafepoints = false)
-      : FunctionPass(ID), CallSafepointsEnabled(CallSafepoints),
-        Opts(ScalarOptions::Global) {
+      : FunctionPass(ID), CallSafepointsEnabled(CallSafepoints) {
     initializePlaceBackedgeSafepointsLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -113,6 +112,7 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    Opts = &getScalarOptions(F);
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -134,7 +134,7 @@ public:
   }
 
 private:
-  const ScalarOptions &Opts;
+  const ScalarOptions *Opts = nullptr;
   ScalarEvolution *SE = nullptr;
   DominatorTree *DT = nullptr;
   LoopInfo *LI = nullptr;
@@ -191,8 +191,8 @@ bool PlaceBackedgeSafepointsLegacyPass::runOnLoop(Loop *L) {
     // Make a policy decision about whether this loop needs a safepoint or
     // not.  Note that this is about unburdening the optimizer in loops, not
     // avoiding the runtime cost of the actual safepoint.
-    if (!Opts.spp_all_backedges) {
-      if (mustBeFiniteCountedLoop(Opts, L, SE, Pred)) {
+    if (!Opts->spp_all_backedges) {
+      if (mustBeFiniteCountedLoop(*Opts, L, SE, Pred)) {
         LLVM_DEBUG(dbgs() << "skipping safepoint placement in finite loop\n");
         FiniteExecution++;
         continue;
@@ -245,7 +245,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
   if (!shouldRewriteFunction(F))
     return false;
 
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Modified = false;
 
   // In various bits below, we rely on the fact that uses are reachable from

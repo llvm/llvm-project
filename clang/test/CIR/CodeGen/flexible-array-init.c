@@ -4,9 +4,13 @@
 // RUN: FileCheck --check-prefix=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
+// RUN: %clang_cc1 -x c++ -std=gnu++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck --check-prefix=CXX %s
+// RUN: %clang_cc1 -x c++ -std=gnu++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CXX %s
 
-// CIR: !rec_S = !cir.struct<"S" {data !s32i, data !cir.array<!s8i x 0>}>
-// CIR: !rec_T = !cir.struct<"T" {data !cir.ptr<!s32i>, data !cir.array<!s32i x 0>}>
+// CIR-DAG: !rec_S = !cir.struct<"S" {data !s32i, data !cir.array<!s8i x 0>}>
+// CIR-DAG: !rec_T = !cir.struct<"T" {data !cir.ptr<!s32i>, data !cir.array<!s32i x 0>}>
+// CIR-DAG: !rec_U = !cir.union<"U" {data !cir.array<!s8i x 0>}>
+// CIR-DAG: !rec_PaddedU = !cir.union<"PaddedU" {data !cir.array<!s8i x 0>, data !s32i}>
 
 // 's1' lowers via the bulk constant-record path (LowerToLLVM.cpp ~line 2585):
 // every member can be lowered to a constant attribute.
@@ -58,3 +62,20 @@ struct __attribute__((packed)) Packed { int n; char data[]; };
 struct Packed packed1 = {1, {'a', 'b'}};
 // CIR: cir.global external @packed1 = #cir.const_record<{#cir.int<1> : !s32i, #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i]> : !cir.array<!s8i x 2>}> : !rec_Packed
 // LLVM: @packed1 = global <{ i32, [2 x i8] }> <{ i32 1, [2 x i8] c"ab" }>
+
+union U { char data[]; };
+union U u = {42};
+// CIR: cir.global external @u = #cir.const_record<{#cir.const_array<[#cir.int<42> : !s8i]> : !cir.array<!s8i x 1>}> : !rec_U
+// LLVM: @u = global { [1 x i8] } { [1 x i8] c"*" }, align 1
+// CXX: @u = global { [1 x i8] } { [1 x i8] c"*" }, align 1
+
+union PaddedU { char data[]; int n; };
+union PaddedU padded_u = {{1, 2, 3}};
+// CIR: cir.global external @padded_u = #cir.const_record<{#cir.const_array<[#cir.int<1> : !s8i, #cir.int<2> : !s8i, #cir.int<3> : !s8i]> : !cir.array<!s8i x 3>}> : !rec_PaddedU
+// LLVMCIR: @padded_u = global { [3 x i8], [1 x i8] } { [3 x i8] c"\01\02\03", [1 x i8] zeroinitializer }, align 4
+// OGCG: @padded_u = global { [3 x i8], i8 } { [3 x i8] c"\01\02\03", i8 0 }, align 4
+
+union PaddedU oversized_u = {{1, 2, 3, 4, 5}};
+// CIR: cir.global external @oversized_u = #cir.const_record<{#cir.const_array<[#cir.int<1> : !s8i, #cir.int<2> : !s8i, #cir.int<3> : !s8i, #cir.int<4> : !s8i, #cir.int<5> : !s8i]> : !cir.array<!s8i x 5>}> : !rec_PaddedU
+// LLVM: @oversized_u = global { [5 x i8] } { [5 x i8] c"\01\02\03\04\05" }, align 4
+// CXX: @oversized_u = global { [5 x i8] } { [5 x i8] c"\01\02\03\04\05" }, align 4

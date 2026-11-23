@@ -335,7 +335,7 @@ class VPRecipeValue : public VPValue {
   /// Returns true if this VPRecipeValue is defined by \p D.
   /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
   /// /p D are associated with its VPRecipeBase.
-  bool isDefinedBy(const VPDef *D) const;
+  LLVM_ABI_FOR_TEST bool isDefinedBy(const VPDef *D) const;
 #endif
 
 protected:
@@ -491,13 +491,8 @@ public:
     return false;
   }
 
-  /// Returns true if the VPUser only uses the first part of operand \p Op.
-  /// Conservatively returns false.
-  virtual bool usesFirstPartOnly(const VPValue *Op) const {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return false;
-  }
+  /// Returns true if the VPUser only uses the first part of all operands.
+  virtual bool usesFirstPartOnly() const { return false; }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.

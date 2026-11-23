@@ -694,6 +694,20 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
+TEST(KnownBitsTest, CtlzExhaustive) {
+  for (bool ZeroIsPoison : {false, true}) {
+    testUnaryOpExhaustive(
+        "ctlz",
+        [=](const KnownBits &Known) { return Known.ctlz(ZeroIsPoison); },
+        [=](const APInt &N) -> std::optional<APInt> {
+          if (ZeroIsPoison && N.isZero())
+            return std::nullopt;
+          return APInt(N.getBitWidth(), N.countl_zero());
+        },
+        /*CheckOptimality=*/false);
+  }
+}
+
 TEST(KnownBitsTest, NonZeroDenomSDiv) {
   KnownBits Num = KnownBits::makeConstant(APInt(4, -8, true));
 
@@ -1247,6 +1261,43 @@ TEST(KnownBitsTest, TruncateSatExhaustive) {
       });
     }
   }
+}
+
+TEST(KnownBitsTest, TightenDivisionBounds) {
+  KnownBits LHS(8);
+  KnownBits RHS(8);
+
+  // LHS = 0101 0??? (80-87)
+  LHS.One = APInt(8, 0x50);  // 0101 0000
+  LHS.Zero = APInt(8, 0xA8); // 1010 1000
+
+  // RHS = 0000 10?? (8-11)
+  RHS.One = APInt(8, 0x08);  // 0000 1000
+  RHS.Zero = APInt(8, 0xF4); // 1111 0100
+
+  // We try first with Exact set to false to get the result without tighter
+  // bounds
+  KnownBits InexactRes = KnownBits::udiv(LHS, RHS, /*Exact=*/false);
+
+  // Lower Bound: 0000 0111 (7)
+  // Upper Bound: 0000 1010 (10)
+  // Expected Inexact result: 0000 ????
+  // Only 4 Known bits are expected
+  EXPECT_EQ(InexactRes.Zero, APInt(8, 0xF0)); // 11110000
+  EXPECT_EQ(InexactRes.One, APInt(8, 0x00));  // 00000000
+  EXPECT_FALSE(InexactRes.hasConflict());
+
+  // We set now Exact to true to test the difference
+  KnownBits Res = KnownBits::udiv(LHS, RHS, /*Exact=*/true);
+
+  // Lower Bound: 0000 1000 (8)
+  // Upper Bound: 0000 1010 (10)
+  // Expected result: 0000 10??
+  // We get 6 known bits when tightening the bounds, 2 more than with Exact set
+  // to False
+  EXPECT_EQ(Res.Zero, APInt(8, 0xF4)); // 11110100
+  EXPECT_EQ(Res.One, APInt(8, 0x08));  // 00001000
+  EXPECT_FALSE(Res.hasConflict());
 }
 
 } // end anonymous namespace

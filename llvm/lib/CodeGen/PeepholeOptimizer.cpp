@@ -66,6 +66,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -105,34 +106,6 @@ using RegSubRegPairAndIdx = TargetInstrInfo::RegSubRegPairAndIdx;
 // Optimize Extensions
 static cl::opt<bool> Aggressive("aggressive-ext-opt", cl::Hidden,
                                 cl::desc("Aggressive extension optimization"));
-
-static cl::opt<bool>
-    DisablePeephole("disable-peephole", cl::Hidden, cl::init(false),
-                    cl::desc("Disable the peephole optimizer"));
-
-/// Specifiy whether or not the value tracking looks through
-/// complex instructions. When this is true, the value tracker
-/// bails on everything that is not a copy or a bitcast.
-static cl::opt<bool>
-    DisableAdvCopyOpt("disable-adv-copy-opt", cl::Hidden, cl::init(false),
-                      cl::desc("Disable advanced copy optimization"));
-
-static cl::opt<bool> DisableNAPhysCopyOpt(
-    "disable-non-allocatable-phys-copy-opt", cl::Hidden, cl::init(false),
-    cl::desc("Disable non-allocatable physical register copy optimization"));
-
-// Limit the number of PHI instructions to process
-// in PeepholeOptimizer::getNextSource.
-static cl::opt<unsigned>
-    RewritePHILimit("rewrite-phi-limit", cl::Hidden, cl::init(10),
-                    cl::desc("Limit the length of PHI chains to lookup"));
-
-// Limit the length of recurrence chain when evaluating the benefit of
-// commuting operands.
-static cl::opt<unsigned> MaxRecurrenceChain(
-    "recurrence-chain-limit", cl::Hidden, cl::init(3),
-    cl::desc("Maximum length of recurrence chain when evaluating the benefit "
-             "of commuting operands"));
 
 STATISTIC(NumReuse, "Number of extension results reused");
 STATISTIC(NumCmps, "Number of compares eliminated");
@@ -426,6 +399,7 @@ public:
 };
 
 class PeepholeOptimizer : private MachineFunction::Delegate {
+  const CodeGenOptions &Opts;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -433,8 +407,9 @@ class PeepholeOptimizer : private MachineFunction::Delegate {
   MachineLoopInfo *MLI = nullptr;
 
 public:
-  PeepholeOptimizer(MachineDominatorTree *DT, MachineLoopInfo *MLI)
-      : DT(DT), MLI(MLI) {}
+  PeepholeOptimizer(const CodeGenOptions &Opts, MachineDominatorTree *DT,
+                    MachineLoopInfo *MLI)
+      : Opts(Opts), DT(DT), MLI(MLI) {}
 
   bool run(MachineFunction &MF);
   /// Track Def -> Use info used for rewriting copies.
@@ -504,20 +479,20 @@ private:
 
   /// Check whether \p MI is understood by the register coalescer
   /// but may require some rewriting.
-  static bool isCoalescableCopy(const MachineInstr &MI) {
+  bool isCoalescableCopy(const MachineInstr &MI) const {
     // SubregToRegs are not interesting, because they are already register
     // coalescer friendly.
     return MI.isCopy() ||
-           (!DisableAdvCopyOpt && (MI.isRegSequence() || MI.isInsertSubreg() ||
-                                   MI.isExtractSubreg()));
+           (Opts.adv_copy_opt && (MI.isRegSequence() || MI.isInsertSubreg() ||
+                                  MI.isExtractSubreg()));
   }
 
   /// Check whether \p MI is a copy like instruction that is
   /// not recognized by the register coalescer.
-  static bool isUncoalescableCopy(const MachineInstr &MI) {
-    return MI.isBitcast() || (!DisableAdvCopyOpt && (MI.isRegSequenceLike() ||
-                                                     MI.isInsertSubregLike() ||
-                                                     MI.isExtractSubregLike()));
+  bool isUncoalescableCopy(const MachineInstr &MI) const {
+    return MI.isBitcast() || (Opts.adv_copy_opt && (MI.isRegSequenceLike() ||
+                                                    MI.isInsertSubregLike() ||
+                                                    MI.isExtractSubregLike()));
   }
 
   MachineInstr &rewriteSource(MachineInstr &CopyLike, RegSubRegPair Def,
@@ -688,6 +663,8 @@ public:
 /// Then, def can be rewritten into def = COPY v0.
 class ValueTracker {
 private:
+  const CodeGenOptions &Opts;
+
   /// The current point into the use-def chain.
   const MachineInstr *Def = nullptr;
 
@@ -740,9 +717,10 @@ public:
   /// Indeed, when \p Reg is a physical register that constructor does not
   /// know which definition of \p Reg it should track.
   /// Use the next constructor to track a physical register.
-  ValueTracker(Register Reg, unsigned DefSubReg, const MachineRegisterInfo &MRI,
+  ValueTracker(const CodeGenOptions &Opts, Register Reg, unsigned DefSubReg,
+               const MachineRegisterInfo &MRI,
                const TargetInstrInfo *TII = nullptr)
-      : DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
+      : Opts(Opts), DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
     if (!Reg.isPhysical()) {
       MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
       if (DI != MRI.def_end()) {
@@ -902,11 +880,8 @@ bool PeepholeOptimizer::optimizeExtInstr(
       if (PHIBBs.count(UseMBB))
         continue;
 
-      // About to add uses of DstReg, clear DstReg's kill flags.
-      if (!Changed) {
-        MRI->clearKillFlags(DstReg);
+      if (!Changed)
         MRI->constrainRegClass(DstReg, DstRC);
-      }
 
       // SubReg defs are illegal in machine SSA phase,
       // we should not generate SubReg defs.
@@ -1046,7 +1021,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       break;
     }
 
-    ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
+    ValueTracker ValTracker(Opts, CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
 
     // Follow the chain of copies until we find a more suitable source, a phi
     // or have to abort.
@@ -1080,7 +1055,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       unsigned NumSrcs = Res.getNumSources();
       if (NumSrcs > 1) {
         PHICount++;
-        if (PHICount >= RewritePHILimit) {
+        if (PHICount >= Opts.rewrite_phi_limit) {
           LLVM_DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
           Aborted = true;
           break;
@@ -1166,10 +1141,6 @@ static MachineInstr &insertPHI(MachineRegisterInfo &MRI,
   for (const RegSubRegPair &RegPair : SrcRegs) {
     MIB.addReg(RegPair.Reg, {}, RegPair.SubReg);
     MIB.addMBB(OrigPHI.getOperand(MBBOpIdx).getMBB());
-    // Since we're extended the lifetime of RegPair.Reg, clear the
-    // kill flags to account for that and make RegPair.Reg reaches
-    // the new PHI.
-    MRI.clearKillFlags(RegPair.Reg);
     MBBOpIdx += 2;
   }
 
@@ -1274,11 +1245,8 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
     }
 
     // Rewrite source.
-    if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg)) {
-      // We may have extended the live-range of NewSrc, account for that.
-      MRI->clearKillFlags(NewSrc.Reg);
+    if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg))
       Changed = true;
-    }
   }
 
   // TODO: We could have a clean-up method to tidy the instruction.
@@ -1371,11 +1339,6 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   LLVM_DEBUG(dbgs() << "   Replacing: " << CopyLike);
   LLVM_DEBUG(dbgs() << "        With: " << *NewCopy);
   MRI->replaceRegWith(Def.Reg, NewVReg);
-  MRI->clearKillFlags(NewVReg);
-
-  // We extended the lifetime of NewSrc.Reg, clear the kill flags to
-  // account for that.
-  MRI->clearKillFlags(NewSrc.Reg);
 
   return *NewCopy;
 }
@@ -1532,7 +1495,6 @@ bool PeepholeOptimizer::foldImmediate(
         if (DstReg.isVirtual() &&
             MRI->getRegClass(DstReg) == MRI->getRegClass(Reg)) {
           MRI->replaceRegWith(DstReg, Reg);
-          MRI->clearKillFlags(Reg);
           MI.eraseFromParent();
           Deleted = true;
         }
@@ -1588,9 +1550,6 @@ bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI) {
     return false;
 
   MRI->replaceRegWith(DstReg, PrevDstReg);
-
-  // Lifetime of the previous copy has been extended.
-  MRI->clearKillFlags(PrevDstReg);
   return true;
 }
 
@@ -1602,7 +1561,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
     MachineInstr &MI, DenseMap<Register, MachineInstr *> &NAPhysToVirtMIs) {
   assert(MI.isCopy() && "expected a COPY machine instruction");
 
-  if (DisableNAPhysCopyOpt)
+  if (!Opts.non_allocatable_phys_copy_opt)
     return false;
 
   Register DstReg = MI.getOperand(0).getReg();
@@ -1667,7 +1626,7 @@ bool PeepholeOptimizer::findTargetRecurrence(
     return false;
 
   // Give up if the reccurrence chain length is longer than the limit.
-  if (RC.size() >= MaxRecurrenceChain)
+  if (RC.size() >= Opts.recurrence_chain_limit)
     return false;
 
   MachineInstr &MI = *(MRI->use_instr_nodbg_begin(Reg));
@@ -1758,7 +1717,7 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
   auto *DT =
       Aggressive ? &MFAM.getResult<MachineDominatorTreeAnalysis>(MF) : nullptr;
   auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  PeepholeOptimizer Impl(DT, MLI);
+  PeepholeOptimizer Impl(getCodeGenOptions(MF), DT, MLI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -1775,7 +1734,7 @@ bool PeepholeOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
                  ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
                  : nullptr;
   auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  PeepholeOptimizer Impl(DT, MLI);
+  PeepholeOptimizer Impl(getCodeGenOptions(MF), DT, MLI);
   return Impl.run(MF);
 }
 
@@ -1784,7 +1743,7 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** PEEPHOLE OPTIMIZER **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << MF.getName() << '\n');
 
-  if (DisablePeephole)
+  if (!Opts.peephole)
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();
@@ -2246,7 +2205,7 @@ ValueTrackerResult ValueTracker::getNextSourceImpl() {
     return getNextSourceFromBitcast();
   // All the remaining cases involve "complex" instructions.
   // Bail if we did not ask for the advanced tracking.
-  if (DisableAdvCopyOpt)
+  if (!Opts.adv_copy_opt)
     return ValueTrackerResult();
   if (Def->isRegSequence() || Def->isRegSequenceLike())
     return getNextSourceFromRegSequence();

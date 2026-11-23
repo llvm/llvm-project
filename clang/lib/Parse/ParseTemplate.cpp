@@ -1375,7 +1375,8 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   else
     ExprArg = ParseConstantExpressionInExprEvalContext(
         TypoCorrectionTypeBehavior::AllowBoth);
-  if (ExprArg.isInvalid() || !ExprArg.get()) {
+  if (ExprArg.isInvalid() || !ExprArg.get() ||
+      ExprArg.get()->containsErrors()) {
     return ParsedTemplateArgument();
   }
 
@@ -1399,7 +1400,9 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
 
   do {
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
-    ParsedTemplateArgument Arg = ParseTemplateArgument();
+    ParsedTemplateArgument Arg;
+    StackHandler.runWithSufficientStackSpace(
+        OpenLoc, [&Arg, this] { Arg = ParseTemplateArgument(); });
     SourceLocation EllipsisLoc;
     if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
       Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);

@@ -30,8 +30,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ctx-instr-lower"
 
-bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled() {
-  return !InstrumentationOptions::Global.profile_context_root.empty();
+bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return !LibraryOptions.get<InstrumentationOptions>()
+              .profile_context_root.empty();
 }
 
 // the names of symbols we expect in compiler-rt. Using a namespace for
@@ -153,9 +155,10 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                                       I32Ty, /*NumCallsites*/
                                                   });
 
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // Define a global for each entrypoint. We'll reuse the entrypoint's name
   // as prefix. We assume the entrypoint names to be unique.
-  for (StringRef Fname : InstrumentationOptions::Global.profile_context_root) {
+  for (StringRef Fname : Opts.profile_context_root) {
     if (const auto *F = M.getFunction(Fname)) {
       if (F->isDeclaration())
         continue;
@@ -272,6 +275,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
+      Builder.disableGEPCanonicalization();
       Guid = Builder.getInt64(cast<Function>(*Mark->getNameValue()).getGUID());
       // The type of the context of this function is now knowable since we have
       // NumCallsites and NumCounters. We declare it here because it's more
@@ -348,6 +352,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
     for (auto &I : llvm::make_early_inc_range(BB)) {
       if (auto *Instr = dyn_cast<InstrProfCntrInstBase>(&I)) {
         IRBuilder<> Builder(Instr);
+        Builder.disableGEPCanonicalization();
         switch (Instr->getIntrinsicID()) {
         case llvm::Intrinsic::instrprof_increment:
         case llvm::Intrinsic::instrprof_increment_step: {
@@ -409,7 +414,7 @@ PreservedAnalyses NoinlineNonPrevailing::run(Module &M,
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    if (F.hasFnAttribute(Attribute::NoInline))
+    if (F.isNoInline())
       continue;
     if (!F.isWeakForLinker())
       continue;

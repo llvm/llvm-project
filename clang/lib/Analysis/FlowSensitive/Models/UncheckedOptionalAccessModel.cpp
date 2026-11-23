@@ -905,15 +905,12 @@ const Formula &evaluateEquality(Arena &A, const Formula &EqVal,
   // objects are engaged.
   //
   // We express this as two facts about the equality:
-  // a) EqVal => (LHS & RHS) v (!RHS & !LHS)
-  //    If they are equal, then either both are set or both are unset.
+  // a) EqVal => (LHS == RHS)
   // b) (!LHS & !RHS) => EqVal
   //    If neither is set, then they are equal.
   // We rewrite b) as !EqVal => (LHS v RHS), for a more compact formula.
-  return A.makeAnd(
-      A.makeImplies(EqVal, A.makeOr(A.makeAnd(LHS, RHS),
-                                    A.makeAnd(A.makeNot(LHS), A.makeNot(RHS)))),
-      A.makeImplies(A.makeNot(EqVal), A.makeOr(LHS, RHS)));
+  return A.makeAnd(A.makeImplies(EqVal, A.makeEquals(LHS, RHS)),
+                   A.makeImplies(A.makeNot(EqVal), A.makeOr(LHS, RHS)));
 }
 
 void transferOptionalAndOptionalCmp(const clang::CXXOperatorCallExpr *CmpExpr,

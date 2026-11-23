@@ -20,3 +20,13 @@ src:*bits/shared_ptr_base.h
 [cfi-icall]
 # Different callback types for C and C++.
 src:*llvm/include/llvm/IR/DiagnosticHandler.h
+src:*llvm/lib/IR/LLVMContext.cpp
+
+# Indirect calls into JIT-generated code.
+src:*llvm/lib/ExecutionEngine/MCJIT/MCJIT.cpp
+src:*llvm/lib/ExecutionEngine/Orc/ExecutionUtils.cpp
+src:*llvm/lib/ExecutionEngine/Orc/LLJIT.cpp
+src:*llvm/lib/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.cpp
+src:*llvm/tools/lli/lli.cpp
+src:*llvm/tools/llvm-rtdyld/llvm-rtdyld.cpp
+src:*llvm/unittests/ExecutionEngine/*

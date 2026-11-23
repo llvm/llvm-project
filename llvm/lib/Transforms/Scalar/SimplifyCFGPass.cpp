@@ -264,9 +264,12 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   return true;
 }
 
+static void applyCommandLineOverridesToOptions(const ScalarOptions &Opts,
+                                               SimplifyCFGOptions &Options);
+
 static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
-                                DominatorTree *DT,
-                                const SimplifyCFGOptions &Options) {
+                                DominatorTree *DT, SimplifyCFGOptions Options) {
+  applyCommandLineOverridesToOptions(getScalarOptions(F), Options);
   assert((!RequireAndPreserveDomTree ||
           (DT && DT->verify(DominatorTree::VerificationLevel::Full))) &&
          "Original domtree is invalid?");
@@ -281,8 +284,8 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
 }
 
 // Command-line settings override compile-time settings.
-static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+static void applyCommandLineOverridesToOptions(const ScalarOptions &Opts,
+                                               SimplifyCFGOptions &Options) {
   if (Opts.bonus_inst_threshold)
     Options.BonusInstThreshold = *Opts.bonus_inst_threshold;
   Options.ForwardSwitchCondToPhi =
@@ -304,14 +307,10 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
       valueOr(Opts.speculate_unpredictables, Options.SpeculateUnpredictables);
 }
 
-SimplifyCFGPass::SimplifyCFGPass() {
-  applyCommandLineOverridesToOptions(Options);
-}
+SimplifyCFGPass::SimplifyCFGPass() = default;
 
 SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &Opts)
-    : Options(Opts) {
-  applyCommandLineOverridesToOptions(Options);
-}
+    : Options(Opts) {}
 
 void SimplifyCFGPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -368,9 +367,6 @@ struct CFGSimplifyPass : public FunctionPass {
       : FunctionPass(ID), Options(Options_), PredicateFtor(std::move(Ftor)) {
 
     initializeCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
-
-    // Check for command-line overrides of options for debug/customization.
-    applyCommandLineOverridesToOptions(Options);
   }
 
   bool runOnFunction(Function &F) override {

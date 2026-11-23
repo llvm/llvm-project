@@ -1241,7 +1241,7 @@ define double @inner_chain_behind_fsub(ptr %p, double %a, double %b, double %c) 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double 1.000000e+00, double poison, double 1.000000e+00, double 1.000000e+00>, double [[A]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <4 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc contract <4 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd reassoc nsz contract double [[TMP3]], 1.000000e+00
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc nsz contract double [[B]], [[OP_RDX]]

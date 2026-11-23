@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 @a = global i32 1, !implicit.ref !0
 @b = global i32 2, !implicit.ref !1

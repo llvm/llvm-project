@@ -57,6 +57,18 @@ unsigned MachineOperand::getOperandNo() const {
   return getParent()->getOperandNo(this);
 }
 
+bool MachineOperand::isEarlyClobberDefOrUse() const {
+  assert(isReg() && "Wrong MachineOperand accessor");
+  if (isDef())
+    return isEarlyClobber();
+  if (!isTied())
+    return false;
+
+  const MachineInstr *MI = getParent();
+  return MI->getOperand(MI->findTiedOperandIdx(getOperandNo()))
+      .isEarlyClobber();
+}
+
 void MachineOperand::setReg(Register Reg) {
   if (getReg() == Reg)
     return; // No change.
@@ -1265,6 +1277,12 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (getFlags() & MachineMemOperand::MOTargetFlag4)
       OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag4)
          << "\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag5)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag5)
+         << "\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag6)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag6)
+         << "\" ";
   } else {
     if (getFlags() & MachineMemOperand::MOTargetFlag1)
       OS << "\"MOTargetFlag1\" ";
@@ -1274,6 +1292,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "\"MOTargetFlag3\" ";
     if (getFlags() & MachineMemOperand::MOTargetFlag4)
       OS << "\"MOTargetFlag4\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag5)
+      OS << "\"MOTargetFlag5\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag6)
+      OS << "\"MOTargetFlag6\" ";
   }
 
   assert((isLoad() || isStore()) &&

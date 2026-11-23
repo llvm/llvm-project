@@ -56,7 +56,7 @@ llvm.func @convert_float_to_tf32_rs_not_supported(%src : f32) -> i32 {
 // -----
 
 llvm.func @convert_f32x2_to_f8x2_rs_not_supported(%a : f32, %b : f32) {
-  // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to 'f8E4M3FN' and 'f8E5M2' types}}
+  // expected-error @below {{Only RN and RZ rounding modes are supported for conversions from f32x2 to 'f8E4M3FN' and 'f8E5M2' types}}
   %res = nvvm.convert.f32x2.to.f8x2 %a, %b rnd = <rs> sat = <satfinite> : i16 (f8E4M3FN)
   llvm.return
 }

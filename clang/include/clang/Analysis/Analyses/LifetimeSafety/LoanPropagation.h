@@ -53,13 +53,7 @@ public:
 
   /// Like the above, starting from the used origin holding \p TargetLoan. The
   /// casts that load the used variable itself are left out.
-  llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
-                                                   const LoanID TargetLoan,
-                                                   const CFG *Cfg) const;
-
-  /// Like the above, starting from the origin \p OEF lets escape. Empty if it
-  /// does not hold \p TargetLoan.
-  llvm::SmallVector<OriginID> buildOriginFlowChain(const OriginEscapesFact *OEF,
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const Fact *F,
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const;
 

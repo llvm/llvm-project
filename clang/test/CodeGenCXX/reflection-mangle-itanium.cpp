@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++26 -freflection -triple x86_64-unknown-linux-gnu \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++26 -freflection -triple x86_64-unknown-linux-gnu   -emit-llvm -o - %s | FileCheck %s %}
 
 using info = decltype(^^int);
 using Type = int;

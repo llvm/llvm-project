@@ -238,6 +238,12 @@ enum class DropTestKind {
   All,    /// Drop the type test and all uses.
 };
 
+/// Lower @llvm.type.checked.load[.relative] calls to the guarded load with
+/// the check assumed true, and erase the declaration once it has no users.
+/// Returns true if anything changed. Shared with FatLTOCleanup.
+LLVM_ABI bool cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
+                                     bool IsRelative);
+
 } // end namespace lowertypetests
 
 class LowerTypeTestsPass : public RequiredPassInfoMixin<LowerTypeTestsPass> {

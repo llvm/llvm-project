@@ -45,3 +45,10 @@ TEST_P(olGetContextInfoSizeTest, InvalidNullOut) {
       OL_ERRC_INVALID_NULL_POINTER,
       olGetContextInfoSize(Context, OL_CONTEXT_INFO_NUM_DEVICES, nullptr));
 }
+
+TEST_P(olGetContextInfoSizeTest, SuccessNativeHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(
+      olGetContextInfoSize(Context, OL_CONTEXT_INFO_NATIVE_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
+}

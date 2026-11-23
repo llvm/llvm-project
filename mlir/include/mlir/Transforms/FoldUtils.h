@@ -45,15 +45,26 @@ public:
   LogicalResult tryToFold(Operation *op, bool *inPlaceUpdate = nullptr,
                           int maxIterations = INT_MAX);
 
+  /// The effect of inserting a known constant on the IR.
+  enum class ConstantInsertionResult {
+    /// The operation was retained without modifying the IR.
+    Unchanged,
+    /// The operation was retained but moved to the insertion point.
+    Hoisted,
+    /// The operation was replaced with an existing constant and erased.
+    Replaced
+  };
+
   /// Tries to fold a pre-existing constant operation. `constValue` represents
   /// the value of the constant, and can be optionally passed if the value is
   /// already known (e.g. if the constant was discovered by m_Constant). This is
   /// purely an optimization opportunity for callers that already know the value
-  /// of the constant. Returns false if an existing constant for `op` already
+  /// of the constant. Returns Replaced if an existing constant for `op` already
   /// exists in the folder, in which case `op` is replaced and erased.
-  /// Otherwise, returns true and `op` is inserted into the folder (and
-  /// hoisted if necessary).
-  bool insertKnownConstant(Operation *op, Attribute constValue = {});
+  /// Otherwise, `op` is inserted into the folder (and hoisted if necessary),
+  /// returning Hoisted if it was moved or Unchanged if the IR was not modified.
+  ConstantInsertionResult insertKnownConstant(Operation *op,
+                                              Attribute constValue = {});
 
   /// Notifies that the given constant `op` should be remove from this
   /// OperationFolder's internal bookkeeping.

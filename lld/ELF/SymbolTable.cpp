@@ -31,12 +31,12 @@ using namespace lld::elf;
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
-  int &idx1 = symMap[CachedHashStringRef(sym->getName())];
-  int &idx2 = symMap[CachedHashStringRef(real->getName())];
-  int &idx3 = symMap[CachedHashStringRef(wrap->getName())];
-
-  idx2 = idx1;
-  idx1 = idx3;
+  auto lookup = [&](StringRef name) -> Symbol *& {
+    CachedHashStringRef key(name);
+    return getShard(key).map[key];
+  };
+  lookup(real->getName()) = sym;
+  lookup(sym->getName()) = wrap;
 
   // Propagate symbol usage information to the redirected symbols.
   if (sym->isUsedInRegularObj)
@@ -48,6 +48,15 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
     // no references to real (which has been redirected to sym), we only need to
     // keep sym if it was defined, otherwise it's unused and can be dropped.
     sym->isUsedInRegularObj = false;
+
+  if (ctx.hasDynDbg) {
+    if (sym->isDynDbgRef)
+      wrap->isDynDbgRef = true;
+    if (real->isDynDbgRef)
+      sym->isDynDbgRef = true;
+    else if (!sym->isDefined())
+      sym->isDynDbgRef = false;
+  }
 
   // Now renaming is complete, and no one refers to real. We drop real from
   // .symtab and .dynsym. If real is undefined, it is important that we don't
@@ -73,31 +82,32 @@ Symbol *SymbolTable::insert(StringRef name) {
   if (pos != StringRef::npos && pos + 1 < name.size() && name[pos + 1] == '@')
     stem = name.take_front(pos);
 
-  auto p = symMap.insert({CachedHashStringRef(stem), (int)symVector.size()});
-  if (!p.second) {
-    Symbol *sym = symVector[p.first->second];
-    if (stem.size() != name.size()) {
+  Symbol *sym = insert(intern(CachedHashStringRef(stem)));
+  if (pos != StringRef::npos) {
+    if (stem.size() != name.size())
       sym->setName(name);
-      sym->hasVersionSuffix = true;
-    }
-    return sym;
-  }
-
-  Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-  symVector.push_back(sym);
-
-  // make<SymbolUnion>() value-initializes the storage, so the Symbol fields
-  // are zero. Set the ones that need a non-zero value.
-  sym->setName(name);
-  sym->versionId = VER_NDX_GLOBAL;
-  if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
+  }
+  return sym;
+}
+
+Symbol *SymbolTable::intern(CachedHashStringRef name) {
+  Shard &shard = getShard(name);
+  auto l = shard.getLock(concurrent);
+  Symbol *&sym = shard.map[name];
+  if (!sym) {
+    // The storage is value-initialized, so the Symbol fields are zero. Set the
+    // ones that need a non-zero value.
+    sym = reinterpret_cast<Symbol *>(makeThreadLocal<SymbolUnion>());
+    sym->setName(name.val());
+    sym->versionId = VER_NDX_GLOBAL;
+  }
   return sym;
 }
 
 // This variant of addSymbol is used by BinaryFile::parse to check duplicate
 // symbol errors.
-Symbol *SymbolTable::addAndCheckDuplicate(Ctx &ctx, const Defined &newSym) {
+Symbol *SymbolTable::addAndCheckDuplicate(const Defined &newSym) {
   Symbol *sym = insert(newSym.getName());
   if (sym->isDefined())
     sym->checkDuplicate(ctx, newSym);
@@ -107,10 +117,10 @@ Symbol *SymbolTable::addAndCheckDuplicate(Ctx &ctx, const Defined &newSym) {
 }
 
 Symbol *SymbolTable::find(StringRef name) {
-  auto it = symMap.find(CachedHashStringRef(name));
-  if (it == symMap.end())
-    return nullptr;
-  return symVector[it->second];
+  assert(!concurrent && "find() must not run while workers intern symbols");
+  CachedHashStringRef key(name);
+  Symbol *sym = getShard(key).map.lookup(key);
+  return sym && sym->inserted ? sym : nullptr;
 }
 
 // A version script/dynamic list is only meaningful for a Defined symbol.

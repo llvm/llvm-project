@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-linux -fsanitize=address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,ASAN
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -fsanitize=address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,ASAN %}
 // RUN: %clang_cc1 -triple x86_64-linux -O2 -fsanitize=address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,ASAN
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -O2 -fsanitize=address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,ASAN %}
 // RUN: %clang_cc1 -triple x86_64-linux -fsanitize=kernel-address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,KASAN
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -fsanitize=kernel-address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,KASAN %}
 // RUN: %clang_cc1 -triple x86_64-linux -O2 -fsanitize=kernel-address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,KASAN
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -O2 -fsanitize=kernel-address -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,KASAN %}
 //
 // Not all platforms support aliases - test for Linux only.
 

@@ -122,6 +122,7 @@
 # CHECK: DW_AT_type{{.*}}0x00000000[[PTR_INNER_STRUCT]] "s1::s2 *"
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

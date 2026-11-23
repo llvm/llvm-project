@@ -72,6 +72,15 @@ public:
 
   void Dump(Stream &s) override;
 
+  StatsDuration::Duration GetIndexTime() override {
+    return DWARFIndex::GetIndexTime() + m_fallback.GetIndexTime();
+  }
+
+  void ResetStatistics() override {
+    DWARFIndex::ResetStatistics();
+    m_fallback.ResetStatistics();
+  }
+
 private:
   DebugNamesDWARFIndex(Module &module,
                        std::unique_ptr<llvm::DWARFDebugNames> debug_names_up,

@@ -81,6 +81,19 @@ subroutine array_section_shifted(a, mm, nn)
   end do
 end subroutine
 
+! A whole-array data clause alongside a reduction on a section of the same
+! variable gives that variable two mappings, describing different extents. The
+! reduction one describes the accumulator, through its own bounds and recipe, so
+! the region must declare from it rather than from the whole-array copy.
+subroutine array_section_with_copy(rarr)
+  real :: rarr(100)
+  integer :: i
+  !$acc parallel loop copy(rarr) reduction(+:rarr(3:10))
+  do i = 3, 10
+     rarr(i) = rarr(i) + 1.0
+  end do
+end subroutine
+
 ! CHECK-LABEL:   func.func @_QPscalar_combined(
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[DECLARE_Y:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[DUMMY_SCOPE_0]] arg 2 uniq_name("_QFscalar_combinedEy") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
@@ -243,5 +256,30 @@ end subroutine
 ! CHECK:             acc.yield
 ! CHECK:           }
 ! CHECK:           acc.copyout accVar(%[[COPYIN]] : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND0]]) to var(%[[DECLARE_A]]#0 : !fir.box<!fir.array<?xf32>>) dataClause(acc_reduction) implicit(true) name("a(11:20)")
+! CHECK:           return
+! CHECK:         }
+
+
+! CHECK-LABEL:   func.func @_QParray_section_with_copy(
+! CHECK:           %[[DECLARE_A:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) dummy_scope {{.*}} arg 1 uniq_name("_QFarray_section_with_copyErarr") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+! CHECK:           %[[COPY:.*]] = acc.copyin varPtr(%[[DECLARE_A]]#0 : !fir.ref<!fir.array<100xf32>>) dataClause(acc_copy) name("rarr") -> !fir.ref<!fir.array<100xf32>>
+! CHECK:           %[[BOUND0:.*]] = acc.bounds lowerbound(%c2{{.*}} : index) upperbound(%c9{{.*}} : index) {{.*}}
+! CHECK:           %[[RED_COPYIN:.*]] = acc.copyin varPtr(%[[DECLARE_A]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND0]]) dataClause(acc_reduction) implicit(true) name("rarr(3:10)") -> !fir.ref<!fir.array<100xf32>>
+! CHECK:           acc.parallel combined(loop) dataOperands(%[[COPY]], %[[RED_COPYIN]] : {{.*}}) {
+! CHECK:             %[[DECLARE_A_PAR:.*]]:2 = hlfir.declare %[[RED_COPYIN]]({{.*}}) dummy_scope {{.*}} arg 1 uniq_name("_QFarray_section_with_copyErarr")
+! CHECK:             %[[BOUND1:.*]] = acc.bounds lowerbound(%c2{{.*}} : index) upperbound(%c9{{.*}} : index) {{.*}}
+! CHECK:             %[[RED:.*]] = acc.reduction varPtr(%[[DECLARE_A_PAR]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND1]]) recipe(@reduction_add_section_lb2.ub9_ref_100xf32) name("rarr(3:10)") -> !fir.ref<!fir.array<100xf32>>
+! CHECK:             acc.loop combined(parallel) {{.*}} reduction(%[[RED]] : !fir.ref<!fir.array<100xf32>>) {{.*}} {
+! CHECK:               %[[DECLARE_A_RED:.*]]:2 = hlfir.declare %[[RED]]({{.*}}) dummy_scope {{.*}} arg 1 uniq_name("_QFarray_section_with_copyErarr")
+! CHECK:               %[[DESIGNATE_READ:.*]] = hlfir.designate %[[DECLARE_A_RED]]#0 ({{.*}}) : (!fir.ref<!fir.array<100xf32>>, i64) -> !fir.ref<f32>
+! CHECK:               {{.*}} = fir.load %[[DESIGNATE_READ]] : !fir.ref<f32>
+! CHECK:               %[[DESIGNATE_WRITE:.*]] = hlfir.designate %[[DECLARE_A_RED]]#0 ({{.*}}) : (!fir.ref<!fir.array<100xf32>>, i64) -> !fir.ref<f32>
+! CHECK:               hlfir.assign {{.*}} to %[[DESIGNATE_WRITE]] : f32, !fir.ref<f32>
+! CHECK:               acc.yield
+! CHECK:             }
+! CHECK:             acc.yield
+! CHECK:           }
+! CHECK:           acc.copyout accPtr(%[[COPY]] : !fir.ref<!fir.array<100xf32>>) to varPtr(%[[DECLARE_A]]#0 : !fir.ref<!fir.array<100xf32>>) dataClause(acc_copy) name("rarr")
+! CHECK:           acc.copyout accPtr(%[[RED_COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND0]]) to varPtr(%[[DECLARE_A]]#0 : !fir.ref<!fir.array<100xf32>>) dataClause(acc_reduction) implicit(true) name("rarr(3:10)")
 ! CHECK:           return
 ! CHECK:         }

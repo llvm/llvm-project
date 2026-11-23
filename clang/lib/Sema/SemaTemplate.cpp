@@ -3911,6 +3911,8 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
     if (!AliasTemplate->getDeclContext()->isFileContext())
       SavedContext.emplace(*this, AliasTemplate->getDeclContext());
 
+    // FIXME: Preserve the pattern's type source information during substitution
+    // while respecting underlying type changes made by mode attributes.
     CanonType =
         SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
                   AliasTemplate->getLocation(), AliasTemplate->getDeclName());
@@ -5606,6 +5608,22 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
     QualType NTTPType = NTTP->getType();
     if (NTTP->isParameterPack() && NTTP->isExpandedParameterPack())
       NTTPType = NTTP->getExpansionType(ArgumentPackIndex);
+
+    // C++26 [dcl.type.auto.deduct]p3:
+    //   If the placeholder-type-specifier is of the form type-constraint_opt
+    //   auto, [...] If E is a value synthesized for a constant template
+    //   parameter of type decltype(auto) ([temp.func.order]), the declaration
+    //   is ill-formed.
+    auto isUndeducedAuto = [](QualType T, bool DecltypeAuto) {
+      const AutoType *AT = T->getContainedAutoType();
+      return AT && AT->isDecltypeAuto() == DecltypeAuto &&
+             AT->getDeducedType().isNull();
+    };
+    if (CTAI.PartialOrdering &&
+        isUndeducedAuto(NTTPType, /*DecltypeAuto=*/false) &&
+        isUndeducedAuto(getTypeOfConstantTemplateParameter(Arg),
+                        /*DecltypeAuto=*/true))
+      return true;
 
     if (NTTPType->isInstantiationDependentType()) {
       // Do substitution on the type of the non-type template parameter.
@@ -10646,12 +10664,11 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                false, TypeResult(), /*IsTypeSpecifier*/ false,
                /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
+  assert(!IsDependent &&
+         "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
     return true;
-
-  assert(!IsDependent &&
-         "explicit instantiation of dependent name not yet handled");
 
   TagDecl *Tag = cast<TagDecl>(TagD);
   assert(!Tag->isEnum() && "shouldn't see enumerations here");

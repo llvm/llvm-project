@@ -10,28 +10,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "LeonPasses.h"
+#include "Sparc.h"
 #include "SparcSubtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
-char ErrataWorkaround::ID = 0;
+char SparcErrataWorkaroundLegacy::ID = 0;
 
-ErrataWorkaround::ErrataWorkaround() : MachineFunctionPass(ID) {
-  initializeErrataWorkaroundPass(*PassRegistry::getPassRegistry());
+SparcErrataWorkaroundLegacy::SparcErrataWorkaroundLegacy()
+    : MachineFunctionPass(ID) {
+  initializeSparcErrataWorkaroundLegacyPass(*PassRegistry::getPassRegistry());
 }
 
-INITIALIZE_PASS(ErrataWorkaround, "errata-workaround", "Errata workaround pass",
-                false, false)
+INITIALIZE_PASS(SparcErrataWorkaroundLegacy, "errata-workaround",
+                "Errata workaround pass", false, false)
 
 // Move iterator to the next instruction in the function, ignoring
 // meta instructions and inline assembly. Returns false when reaching
 // the end of the function.
-bool ErrataWorkaround::moveNext(MachineBasicBlock::iterator &I) {
+static bool moveNext(MachineBasicBlock::iterator &I) {
 
   MachineBasicBlock *MBB = I->getParent();
 
@@ -49,11 +55,12 @@ bool ErrataWorkaround::moveNext(MachineBasicBlock::iterator &I) {
   return true;
 }
 
-void ErrataWorkaround::insertNop(MachineBasicBlock::iterator I) {
+static void insertNop(MachineBasicBlock::iterator I,
+                      const TargetInstrInfo *TII) {
   BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(SP::NOP));
 }
 
-bool ErrataWorkaround::isFloat(MachineBasicBlock::iterator I) {
+static bool isFloat(MachineBasicBlock::iterator I) {
   if (I->getNumOperands() == 0)
     return false;
 
@@ -68,7 +75,7 @@ bool ErrataWorkaround::isFloat(MachineBasicBlock::iterator I) {
   return true;
 }
 
-bool ErrataWorkaround::isDivSqrt(MachineBasicBlock::iterator I) {
+static bool isDivSqrt(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   case SP::FDIVS:
   case SP::FDIVD:
@@ -79,7 +86,7 @@ bool ErrataWorkaround::isDivSqrt(MachineBasicBlock::iterator I) {
   return false;
 }
 
-bool ErrataWorkaround::isAtomic(MachineBasicBlock::iterator I) {
+static bool isAtomic(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   case SP::SWAPrr:
   case SP::SWAPri:
@@ -96,7 +103,8 @@ bool ErrataWorkaround::isAtomic(MachineBasicBlock::iterator I) {
 // (stb/sth/st/stf) -> (single non-store/load instruction) -> (any store)
 // If the sequence is detected a NOP instruction is inserted after
 // the first store instruction.
-bool ErrataWorkaround::checkSeqTN0009A(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0009A(MachineBasicBlock::iterator I,
+                            const TargetInstrInfo *TII) {
   switch (I->getOpcode()) {
   case SP::STrr:
   case SP::STri:
@@ -126,7 +134,7 @@ bool ErrataWorkaround::checkSeqTN0009A(MachineBasicBlock::iterator I) {
   if (!MI->mayStore())
     return false;
 
-  insertNop(PatchHere);
+  insertNop(PatchHere, TII);
   return true;
 }
 
@@ -134,7 +142,8 @@ bool ErrataWorkaround::checkSeqTN0009A(MachineBasicBlock::iterator I) {
 // (std/stdf) -> (any store)
 // If the sequence is detected a NOP instruction is inserted after
 // the first store instruction.
-bool ErrataWorkaround::checkSeqTN0009B(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0009B(MachineBasicBlock::iterator I,
+                            const TargetInstrInfo *TII) {
 
   switch (I->getOpcode()) {
   case SP::STDrr:
@@ -154,14 +163,15 @@ bool ErrataWorkaround::checkSeqTN0009B(MachineBasicBlock::iterator I) {
   if (!MI->mayStore())
     return false;
 
-  insertNop(MI);
+  insertNop(MI, TII);
   return true;
 }
 
 // Insert a NOP at branch target if load in delay slot and atomic
 // instruction at branch target. Also insert a NOP between load
 // instruction and atomic instruction (swap or casa).
-bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0010(MachineBasicBlock::iterator I,
+                           const TargetInstrInfo *TII) {
 
   // Check for load instruction or branch bundled with load instruction
   if (!I->mayLoad())
@@ -179,7 +189,7 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
       return false;
 
     if (isAtomic(MI))
-      insertNop(MI);
+      insertNop(MI, TII);
   }
 
   // Check for load followed by atomic instruction
@@ -189,12 +199,13 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
 
   if (!isAtomic(MI))
     return false;
-  insertNop(MI);
+  insertNop(MI, TII);
   return true;
 }
 
 // Do not allow functions to begin with an atomic instruction
-bool ErrataWorkaround::checkSeqTN0010First(MachineBasicBlock &MBB) {
+static bool checkSeqTN0010First(MachineBasicBlock &MBB,
+                                const TargetInstrInfo *TII) {
   MachineBasicBlock::iterator I = MBB.begin();
   while (I != MBB.end() && I->isMetaInstruction())
     I++;
@@ -202,13 +213,14 @@ bool ErrataWorkaround::checkSeqTN0010First(MachineBasicBlock &MBB) {
     return false;
   if (!isAtomic(I))
     return false;
-  insertNop(I);
+  insertNop(I, TII);
   return true;
 }
 
 // Inserts a NOP instruction at the target of an integer branch if the
 // target is a floating-point instruction or floating-point branch.
-bool ErrataWorkaround::checkSeqTN0012(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0012(MachineBasicBlock::iterator I,
+                           const TargetInstrInfo *TII) {
 
   if (I->getOpcode() != SP::BCOND && I->getOpcode() != SP::BCONDA)
     return false;
@@ -225,7 +237,7 @@ bool ErrataWorkaround::checkSeqTN0012(MachineBasicBlock::iterator I) {
   if (!isFloat(MI) && MI->getOpcode() != SP::FBCOND)
     return false;
 
-  insertNop(MI);
+  insertNop(MI, TII);
   return true;
 }
 
@@ -238,7 +250,9 @@ bool ErrataWorkaround::checkSeqTN0012(MachineBasicBlock::iterator I) {
 //
 // The function also prevents the following code sequence from being generated,
 // (div/sqrt) -> (branch), by inserting a NOP instruction after the (div/sqrt).
-bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0013(MachineBasicBlock::iterator I,
+                           const TargetInstrInfo *TII,
+                           const TargetRegisterInfo *TRI) {
 
   if (!isDivSqrt(I))
     return false;
@@ -250,7 +264,7 @@ bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
     return false;
 
   if (MI->isBranch()) {
-    insertNop(MI);
+    insertNop(MI, TII);
     return true;
   }
 
@@ -274,9 +288,9 @@ bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
       if (fpFound < 2)
         return false;
 
-      insertNop(PatchHere);
+      insertNop(PatchHere, TII);
       if (i == 2)
-        insertNop(PatchHere);
+        insertNop(PatchHere, TII);
       return true;
     }
 
@@ -288,173 +302,68 @@ bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
   return false;
 }
 
-bool ErrataWorkaround::runOnMachineFunction(MachineFunction &MF) {
-  bool Changed = false;
-  ST = &MF.getSubtarget<SparcSubtarget>();
+// On the AT697E and AT697F, a single-word load into an odd-numbered FP register
+// followed by a double-precision operation on the enclosing register pair can
+// give a wrong result (AT697E erratum 13, AT697F erratum 1). On the UT699, a
+// single-cycle load followed by another load or store can fail.
+//
+// Inserts a NOP after any LD or LDF instruction.
+static bool insertNOPLoad(MachineBasicBlock &MBB, const TargetInstrInfo *TII) {
+  bool Modified = false;
+  for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
+    unsigned Opcode = MBBI->getOpcode();
+    if (Opcode >= SP::LDDArr && Opcode <= SP::LDrr) {
+      BuildMI(MBB, std::next(MBBI), DebugLoc(), TII->get(SP::NOP));
+      Modified = true;
+    }
+  }
+  return Modified;
+}
 
-  if (!(ST->fixTN0009() || ST->fixTN0010() || ST->fixTN0012() ||
-        ST->fixTN0013()))
+static bool runErrataWorkaroundOnMachineFunction(MachineFunction &MF) {
+  bool Changed = false;
+  const SparcSubtarget *ST = &MF.getSubtarget<SparcSubtarget>();
+
+  if (!(ST->insertNOPLoad() || ST->fixTN0009() || ST->fixTN0010() ||
+        ST->fixTN0012() || ST->fixTN0013()))
     return false;
 
-  TII = ST->getInstrInfo();
-  TRI = ST->getRegisterInfo();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+  const TargetRegisterInfo *TRI = ST->getRegisterInfo();
+
+  if (ST->insertNOPLoad())
+    for (auto &MBB : MF)
+      Changed |= insertNOPLoad(MBB, TII);
 
   if (ST->fixTN0010())
-    Changed |= checkSeqTN0010First(MF.front());
+    Changed |= checkSeqTN0010First(MF.front(), TII);
 
   for (auto &MBB : MF) {
     for (auto &I : MBB) {
       if (ST->fixTN0009()) {
-        Changed |= checkSeqTN0009A(I);
-        Changed |= checkSeqTN0009B(I);
+        Changed |= checkSeqTN0009A(I, TII);
+        Changed |= checkSeqTN0009B(I, TII);
       }
       if (ST->fixTN0010())
-        Changed |= checkSeqTN0010(I);
+        Changed |= checkSeqTN0010(I, TII);
       if (ST->fixTN0012())
-        Changed |= checkSeqTN0012(I);
+        Changed |= checkSeqTN0012(I, TII);
       if (ST->fixTN0013())
-        Changed |= checkSeqTN0013(I);
+        Changed |= checkSeqTN0013(I, TII, TRI);
     }
   }
   return Changed;
 }
 
-LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
-    : MachineFunctionPass(ID) {}
-
-//*****************************************************************************
-//**** InsertNOPLoad pass
-//*****************************************************************************
-// This pass fixes the incorrectly working Load instructions that exists for
-// some earlier versions of the LEON processor line. NOP instructions must
-// be inserted after the load instruction to ensure that the Load instruction
-// behaves as expected for these processors.
-//
-// This pass inserts a NOP after any LD or LDF instruction.
-//
-char InsertNOPLoad::ID = 0;
-
-InsertNOPLoad::InsertNOPLoad() : LEONMachineFunctionPass(ID) {}
-
-bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget->insertNOPLoad())
-    return false;
-
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = DebugLoc();
-
-  bool Modified = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
-      MachineInstr &MI = *MBBI;
-      unsigned Opcode = MI.getOpcode();
-      if (Opcode >= SP::LDDArr && Opcode <= SP::LDrr) {
-        MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-        BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
-        Modified = true;
-      }
-    }
-  }
-
-  return Modified;
+bool SparcErrataWorkaroundLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runErrataWorkaroundOnMachineFunction(MF);
 }
 
-
-
-//*****************************************************************************
-//**** DetectRoundChange pass
-//*****************************************************************************
-// To prevent any explicit change of the default rounding mode, this pass
-// detects any call of the fesetround function.
-// A warning is generated to ensure the user knows this has happened.
-//
-// Detects an erratum in UT699 LEON 3 processor
-
-char DetectRoundChange::ID = 0;
-
-DetectRoundChange::DetectRoundChange() : LEONMachineFunctionPass(ID) {}
-
-bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget->detectRoundChange())
-    return false;
-
-  bool Modified = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      unsigned Opcode = MI.getOpcode();
-      if (Opcode == SP::CALL && MI.getNumOperands() > 0) {
-        MachineOperand &MO = MI.getOperand(0);
-
-        if (MO.isGlobal()) {
-          StringRef FuncName = MO.getGlobal()->getName();
-          if (FuncName.compare_insensitive("fesetround") == 0) {
-            errs() << "Error: You are using the detectroundchange "
-                      "option to detect rounding changes that will "
-                      "cause LEON errata. The only way to fix this "
-                      "is to remove the call to fesetround from "
-                      "the source code.\n";
-          }
-        }
-      }
-    }
-  }
-
-  return Modified;
-}
-
-//*****************************************************************************
-//**** FixAllFDIVSQRT pass
-//*****************************************************************************
-// This pass fixes the incorrectly working FDIVx and FSQRTx instructions that
-// exist for some earlier versions of the LEON processor line. Five NOP
-// instructions need to be inserted after these instructions to ensure the
-// correct result is placed in the destination registers before they are used.
-//
-// This pass implements two fixes:
-//  1) fixing the FSQRTS and FSQRTD instructions.
-//  2) fixing the FDIVS and FDIVD instructions.
-//
-// FSQRTS and FDIVS are converted to FDIVD and FSQRTD respectively earlier in
-// the pipeline when this option is enabled, so this pass needs only to deal
-// with the changes that still need implementing for the "double" versions
-// of these instructions.
-//
-char FixAllFDIVSQRT::ID = 0;
-
-FixAllFDIVSQRT::FixAllFDIVSQRT() : LEONMachineFunctionPass(ID) {}
-
-bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget->fixAllFDIVSQRT())
-    return false;
-
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = DebugLoc();
-
-  bool Modified = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
-      MachineInstr &MI = *MBBI;
-      unsigned Opcode = MI.getOpcode();
-
-      // Note: FDIVS and FSQRTS cannot be generated when this erratum fix is
-      // switched on so we don't need to check for them here. They will
-      // already have been converted to FSQRTD or FDIVD earlier in the
-      // pipeline.
-      if (Opcode == SP::FSQRTD || Opcode == SP::FDIVD) {
-        for (int InsertedCount = 0; InsertedCount < 5; InsertedCount++)
-          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-
-        MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-        for (int InsertedCount = 0; InsertedCount < 28; InsertedCount++)
-          BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
-
-        Modified = true;
-      }
-    }
-  }
-
-  return Modified;
+PreservedAnalyses
+SparcErrataWorkaroundPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  return runErrataWorkaroundOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

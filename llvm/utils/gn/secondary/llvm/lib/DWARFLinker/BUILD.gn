@@ -10,6 +10,7 @@ static_library("DWARFLinker") {
   ]
   sources = [
     "DWARFLinkerBase.cpp",
+    "RelocationFixups.cpp",
     "Utils.cpp",
   ]
 }

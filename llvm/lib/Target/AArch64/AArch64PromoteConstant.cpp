@@ -344,7 +344,9 @@ static bool shouldConvertImpl(const Constant *Cst) {
   if (Cst->getType()->isScalableTy())
     return false;
 
-  if (AArch64Options::Global.stress_promote_const)
+  const AArch64Options &CLOpts =
+      Cst->getContext().getLibraryOptions().get<AArch64Options>();
+  if (CLOpts.stress_promote_const)
     return true;
 
   // FIXME: see function \todo

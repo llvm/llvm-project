@@ -50,12 +50,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
 
-static BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
+static BasicBlock::iterator skipPastPhiNodes(BasicBlock::iterator Itr) {
   BasicBlock *BB = Itr->getParent();
   if (isa<PHINode>(Itr))
     Itr = BB->getFirstInsertionPt();
-  if (Itr != BB->end())
-    Itr = skipDebugIntrinsics(Itr);
   return Itr;
 }
 
@@ -389,6 +387,7 @@ Value *Scatterer::operator[](unsigned Frag) {
   if (CV[Frag])
     return CV[Frag];
   IRBuilder<> Builder(BBI);
+  Builder.disableGEPCanonicalization();
   if (IsPointer) {
     if (Frag == 0)
       CV[Frag] = V;
@@ -498,10 +497,9 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
       return Scatterer(Point->getIterator(), PoisonValue::get(V->getType()),
                        VS);
     // Put the scattered form of an instruction directly after the
-    // instruction, skipping over PHI nodes and debug intrinsics.
-    return Scatterer(
-        skipPastPhiNodesAndDbg(std::next(BasicBlock::iterator(VOp))), V, VS,
-        &Scattered[{V, VS.SplitTy}]);
+    // instruction, skipping over PHI nodes.
+    return Scatterer(skipPastPhiNodes(std::next(BasicBlock::iterator(VOp))), V,
+                     VS, &Scattered[{V, VS.SplitTy}]);
   }
   // In the fallback case, just put the scattered before Point and
   // keep the result local to Point.
@@ -875,6 +873,7 @@ bool ScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     return false;
 
   IRBuilder<> Builder(&GEPI);
+  Builder.disableGEPCanonicalization();
   unsigned NumIndices = GEPI.getNumIndices();
 
   // The base pointer and indices might be scalar even if it's a vector GEP.

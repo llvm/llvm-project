@@ -8,6 +8,9 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
@@ -459,6 +462,19 @@ TEST(CPlusPlusLanguage, MatchesCxx) {
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(msvcSymbol));
 }
 
+TEST(CPlusPlusLanguage, GetVersionWithLanguageInfo) {
+  SubsystemRAII<CPlusPlusLanguage> lang;
+  std::string info = CPlusPlusLanguage().GetVersionInfo();
+  if (info.empty())
+    GTEST_SKIP() << "built without VCS revisions";
+
+  // There is one CPlusPlusLanguage instance per C++ dialect, but its
+  // information must appear only once.
+  std::string version = Language::GetVersionWithLanguageInfo();
+  EXPECT_TRUE(llvm::StringRef(version).starts_with(GetVersion()));
+  EXPECT_EQ(llvm::StringRef(version).count(info), 1u);
+}
+
 struct ManglingSubstitutorTestCase {
   llvm::StringRef mangled;
   llvm::StringRef from;
@@ -630,4 +646,54 @@ TEST(CPlusPlusLanguage, ManglingSubstitutor_StructorAlias) {
     EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
     EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
   }
+}
+
+TEST(CPlusPlusLanguage, FormatterLanguages) {
+  CPlusPlusLanguage language;
+  std::vector<lldb::LanguageType> cplusplus = {lldb::eLanguageTypeC_plus_plus};
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC, lldb::eLanguageTypeC89, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC11, lldb::eLanguageTypeC_plus_plus,
+        lldb::eLanguageTypeC_plus_plus_03, lldb::eLanguageTypeC_plus_plus_11,
+        lldb::eLanguageTypeC_plus_plus_14})
+    EXPECT_EQ(language.GetFormatterLanguages(c_or_cplusplus), cplusplus);
+
+  EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC).empty());
+  EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC_plus_plus)
+                  .empty());
+}
+
+TEST(CPlusPlusLanguage, IsCategoryApplicable) {
+  CPlusPlusLanguage language;
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC89, lldb::eLanguageTypeC, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC_plus_plus})
+    EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                              c_or_cplusplus));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                             lldb::eLanguageTypeObjC));
+
+  // A category for a specific version of C++ only applies to its own values.
+  EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                            lldb::eLanguageTypeC_plus_plus_11));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                             lldb::eLanguageTypeC_plus_plus));
+}
+
+TEST(CPlusPlusLanguage, ExpressionOptions) {
+  std::unique_ptr<OptionGroupLanguageExpression> options =
+      CPlusPlusLanguage().CreateExpressionOptions();
+  ASSERT_TRUE(options);
+  llvm::ArrayRef<OptionDefinition> definitions = options->GetDefinitions();
+  ASSERT_EQ(definitions.size(), 1u);
+  EXPECT_STREQ(definitions[0].long_option, "c++-ignore-context-qualifiers");
+
+  EvaluateExpressionOptions expression_options;
+  options->OptionParsingStarting(nullptr);
+  options->Apply(expression_options);
+  EXPECT_FALSE(expression_options.GetCppIgnoreContextQualifiers());
+
+  ASSERT_TRUE(options->SetOptionValue(0, "", nullptr).Success());
+  options->Apply(expression_options);
+  EXPECT_TRUE(expression_options.GetCppIgnoreContextQualifiers());
 }

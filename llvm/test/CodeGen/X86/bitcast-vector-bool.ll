@@ -361,6 +361,51 @@ define i1 @trunc_v4i64_cmp(<4 x i64> %a0) nounwind {
   ret i1 %3
 }
 
+define i3 @bitcast_trunc_v3i64(<3 x i64> %a) nounwind {
+; SSE-LABEL: bitcast_trunc_v3i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andb $1, %dil
+; SSE-NEXT:    andb $1, %sil
+; SSE-NEXT:    leal (%rsi,%rsi), %ecx
+; SSE-NEXT:    orb %dil, %cl
+; SSE-NEXT:    andb $1, %dl
+; SSE-NEXT:    leal (,%rdx,4), %eax
+; SSE-NEXT:    orb %cl, %al
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: bitcast_trunc_v3i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovmskpd %ymm0, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: bitcast_trunc_v3i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsllq $63, %ymm0, %ymm0
+; AVX2-NEXT:    vmovmskpd %ymm0, %eax
+; AVX2-NEXT:    # kill: def $al killed $al killed $eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: bitcast_trunc_v3i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllq $63, %ymm0, %ymm0
+; AVX512-NEXT:    vptestmq %ymm0, %ymm0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %c = trunc <3 x i64> %a to <3 x i1>
+  %r = bitcast <3 x i1> %c to i3
+  ret i3 %r
+}
+
 define i4 @bitcast_v8i32_to_v2i4(<8 x i32> %a0) nounwind {
 ; SSE-LABEL: bitcast_v8i32_to_v2i4:
 ; SSE:       # %bb.0:

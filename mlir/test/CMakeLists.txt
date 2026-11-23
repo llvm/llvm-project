@@ -124,6 +124,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
+  mlir-capi-openacc-test
   mlir-capi-pass-test
   mlir-capi-quant-test
   mlir-capi-remarks-test
@@ -148,6 +149,7 @@ if(NOT MLIR_STANDALONE_BUILD)
   list(APPEND MLIR_TEST_DEPENDS
     FileCheck
     count
+    llvm-objdump
     llvm-strings
     not
     split-file

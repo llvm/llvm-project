@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utilities to analyze memory profile information.
+// This file contains utilities to analyze memory profile information for
+// profile-guided memory optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 
@@ -114,6 +115,8 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
 }
 
 std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
+  if (isAmbiguousAllocType((uint8_t)Type))
+    return "ambiguous";
   switch (Type) {
   case AllocationType::NotCold:
     return "notcold";
@@ -134,6 +137,12 @@ bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
   const unsigned NumAllocTypes = llvm::popcount(AllocTypes);
   assert(NumAllocTypes != 0);
   return NumAllocTypes == 1;
+}
+
+bool llvm::memprof::isAmbiguousAllocType(uint8_t AllocTypes) {
+  const uint8_t BothTypes =
+      (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold;
+  return (AllocTypes & BothTypes) == BothTypes;
 }
 
 void llvm::memprof::removeAnyExistingAmbiguousAttribute(CallBase *CB) {

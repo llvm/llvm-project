@@ -296,6 +296,10 @@ define void @load_store_same_pointer_with_different_sizes_unknown_dep(ptr %a, pt
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l.a = load i32, ptr %gep.a, align 1 ->
+; CHECK-NEXT:            store i8 0, ptr %gep.a, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -354,6 +358,10 @@ define void @stores_same_pointer_with_different_sizes_unknown_dep(ptr %a, i64 %k
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i32 0, ptr %gep.a, align 1 ->
+; CHECK-NEXT:            store i8 1, ptr %gep.a, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:

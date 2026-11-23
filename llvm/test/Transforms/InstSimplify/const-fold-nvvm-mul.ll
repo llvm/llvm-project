@@ -105,14 +105,6 @@ define float @test_1_25_times_2_rz_ftz_f() {
   ret float %res
 }
 
-define half @test_1_25_times_2_rm_f16() {
-; CHECK-LABEL: define half @test_1_25_times_2_rm_f16() {
-; CHECK-NEXT:    ret half 2.500000e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.25, half 2.0, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_1_25_times_2_rn_f16() {
 ; CHECK-LABEL: define half @test_1_25_times_2_rn_f16() {
 ; CHECK-NEXT:    ret half 2.500000e+00
@@ -121,51 +113,11 @@ define half @test_1_25_times_2_rn_f16() {
   ret half %res
 }
 
-define half @test_1_25_times_2_rp_f16() {
-; CHECK-LABEL: define half @test_1_25_times_2_rp_f16() {
-; CHECK-NEXT:    ret half 2.500000e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.25, half 2.0, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_1_25_times_2_rz_f16() {
-; CHECK-LABEL: define half @test_1_25_times_2_rz_f16() {
-; CHECK-NEXT:    ret half 2.500000e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.25, half 2.0, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define bfloat @test_1_25_times_2_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_1_25_times_2_rm_bf16() {
-; CHECK-NEXT:    ret bfloat 2.500000e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.25, bfloat 2.0, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_1_25_times_2_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_1_25_times_2_rn_bf16() {
 ; CHECK-NEXT:    ret bfloat 2.500000e+00
 ;
   %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.25, bfloat 2.0, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_1_25_times_2_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_1_25_times_2_rp_bf16() {
-; CHECK-NEXT:    ret bfloat 2.500000e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.25, bfloat 2.0, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_1_25_times_2_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_1_25_times_2_rz_bf16() {
-; CHECK-NEXT:    ret bfloat 2.500000e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.25, bfloat 2.0, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 
@@ -274,43 +226,11 @@ define float @test_1_times_subnorm_rz_ftz_f() {
   ret float %res
 }
 
-define half @test_1_times_subnorm_rm_f16() {
-; CHECK-LABEL: define half @test_1_times_subnorm_rm_f16() {
-; CHECK-NEXT:    ret half 5.960460e-08
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH0001, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_1_times_subnorm_rn_f16() {
 ; CHECK-LABEL: define half @test_1_times_subnorm_rn_f16() {
 ; CHECK-NEXT:    ret half 5.960460e-08
 ;
   %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH0001, /* rnd=rn */ i32 1)
-  ret half %res
-}
-
-define half @test_1_times_subnorm_rp_f16() {
-; CHECK-LABEL: define half @test_1_times_subnorm_rp_f16() {
-; CHECK-NEXT:    ret half 5.960460e-08
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH0001, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_1_times_subnorm_rz_f16() {
-; CHECK-LABEL: define half @test_1_times_subnorm_rz_f16() {
-; CHECK-NEXT:    ret half 5.960460e-08
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH0001, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define half @test_1_times_subnorm_rm_ftz_f16() {
-; CHECK-LABEL: define half @test_1_times_subnorm_rm_ftz_f16() {
-; CHECK-NEXT:    ret half 0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 1.0, half 0xH0001, /* rnd=rm */ i32 3)
   ret half %res
 }
 
@@ -322,51 +242,11 @@ define half @test_1_times_subnorm_rn_ftz_f16() {
   ret half %res
 }
 
-define half @test_1_times_subnorm_rp_ftz_f16() {
-; CHECK-LABEL: define half @test_1_times_subnorm_rp_ftz_f16() {
-; CHECK-NEXT:    ret half 0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 1.0, half 0xH0001, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_1_times_subnorm_rz_ftz_f16() {
-; CHECK-LABEL: define half @test_1_times_subnorm_rz_ftz_f16() {
-; CHECK-NEXT:    ret half 0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 1.0, half 0xH0001, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define bfloat @test_1_times_subnorm_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_1_times_subnorm_rm_bf16() {
-; CHECK-NEXT:    ret bfloat 9.183550e-41
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR0001, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_1_times_subnorm_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_1_times_subnorm_rn_bf16() {
 ; CHECK-NEXT:    ret bfloat 9.183550e-41
 ;
   %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR0001, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_1_times_subnorm_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_1_times_subnorm_rp_bf16() {
-; CHECK-NEXT:    ret bfloat 9.183550e-41
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR0001, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_1_times_subnorm_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_1_times_subnorm_rz_bf16() {
-; CHECK-NEXT:    ret bfloat 9.183550e-41
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR0001, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 
@@ -475,43 +355,11 @@ define float @test_1_times_neg_subnorm_rz_ftz_f() {
   ret float %res
 }
 
-define half @test_1_times_neg_subnorm_rm_f16() {
-; CHECK-LABEL: define half @test_1_times_neg_subnorm_rm_f16() {
-; CHECK-NEXT:    ret half -5.960460e-08
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH8001, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_1_times_neg_subnorm_rn_f16() {
 ; CHECK-LABEL: define half @test_1_times_neg_subnorm_rn_f16() {
 ; CHECK-NEXT:    ret half -5.960460e-08
 ;
   %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH8001, /* rnd=rn */ i32 1)
-  ret half %res
-}
-
-define half @test_1_times_neg_subnorm_rp_f16() {
-; CHECK-LABEL: define half @test_1_times_neg_subnorm_rp_f16() {
-; CHECK-NEXT:    ret half -5.960460e-08
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH8001, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_1_times_neg_subnorm_rz_f16() {
-; CHECK-LABEL: define half @test_1_times_neg_subnorm_rz_f16() {
-; CHECK-NEXT:    ret half -5.960460e-08
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 1.0, half 0xH8001, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define half @test_1_times_neg_subnorm_rm_ftz_f16() {
-; CHECK-LABEL: define half @test_1_times_neg_subnorm_rm_ftz_f16() {
-; CHECK-NEXT:    ret half -0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 1.0, half 0xH8001, /* rnd=rm */ i32 3)
   ret half %res
 }
 
@@ -523,51 +371,11 @@ define half @test_1_times_neg_subnorm_rn_ftz_f16() {
   ret half %res
 }
 
-define half @test_1_times_neg_subnorm_rp_ftz_f16() {
-; CHECK-LABEL: define half @test_1_times_neg_subnorm_rp_ftz_f16() {
-; CHECK-NEXT:    ret half -0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 1.0, half 0xH8001, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_1_times_neg_subnorm_rz_ftz_f16() {
-; CHECK-LABEL: define half @test_1_times_neg_subnorm_rz_ftz_f16() {
-; CHECK-NEXT:    ret half -0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 1.0, half 0xH8001, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define bfloat @test_1_times_neg_subnorm_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_1_times_neg_subnorm_rm_bf16() {
-; CHECK-NEXT:    ret bfloat -9.183550e-41
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR8001, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_1_times_neg_subnorm_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_1_times_neg_subnorm_rn_bf16() {
 ; CHECK-NEXT:    ret bfloat -9.183550e-41
 ;
   %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR8001, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_1_times_neg_subnorm_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_1_times_neg_subnorm_rp_bf16() {
-; CHECK-NEXT:    ret bfloat -9.183550e-41
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR8001, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_1_times_neg_subnorm_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_1_times_neg_subnorm_rz_bf16() {
-; CHECK-NEXT:    ret bfloat -9.183550e-41
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 1.0, bfloat 0xR8001, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 
@@ -675,43 +483,11 @@ define float @test_normal_times_normal_to_subnorm_rz_ftz_f() {
   ret float %res
 }
 
-define half @test_normal_times_normal_to_subnorm_rm_f16() {
-; CHECK-LABEL: define half @test_normal_times_normal_to_subnorm_rm_f16() {
-; CHECK-NEXT:    ret half 3.051760e-05
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 0xH0400, half 0.5, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_normal_times_normal_to_subnorm_rn_f16() {
 ; CHECK-LABEL: define half @test_normal_times_normal_to_subnorm_rn_f16() {
 ; CHECK-NEXT:    ret half 3.051760e-05
 ;
   %res = call half @llvm.nvvm.fmul.f16(half 0xH0400, half 0.5, /* rnd=rn */ i32 1)
-  ret half %res
-}
-
-define half @test_normal_times_normal_to_subnorm_rp_f16() {
-; CHECK-LABEL: define half @test_normal_times_normal_to_subnorm_rp_f16() {
-; CHECK-NEXT:    ret half 3.051760e-05
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 0xH0400, half 0.5, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_normal_times_normal_to_subnorm_rz_f16() {
-; CHECK-LABEL: define half @test_normal_times_normal_to_subnorm_rz_f16() {
-; CHECK-NEXT:    ret half 3.051760e-05
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 0xH0400, half 0.5, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define half @test_normal_times_normal_to_subnorm_rm_ftz_f16() {
-; CHECK-LABEL: define half @test_normal_times_normal_to_subnorm_rm_ftz_f16() {
-; CHECK-NEXT:    ret half 0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 0xH0400, half 0.5, /* rnd=rm */ i32 3)
   ret half %res
 }
 
@@ -723,51 +499,11 @@ define half @test_normal_times_normal_to_subnorm_rn_ftz_f16() {
   ret half %res
 }
 
-define half @test_normal_times_normal_to_subnorm_rp_ftz_f16() {
-; CHECK-LABEL: define half @test_normal_times_normal_to_subnorm_rp_ftz_f16() {
-; CHECK-NEXT:    ret half 0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 0xH0400, half 0.5, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_normal_times_normal_to_subnorm_rz_ftz_f16() {
-; CHECK-LABEL: define half @test_normal_times_normal_to_subnorm_rz_ftz_f16() {
-; CHECK-NEXT:    ret half 0.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.ftz.f16(half 0xH0400, half 0.5, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define bfloat @test_normal_times_normal_to_subnorm_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_normal_times_normal_to_subnorm_rm_bf16() {
-; CHECK-NEXT:    ret bfloat 5.877470e-39
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0xR0080, bfloat 0.5, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_normal_times_normal_to_subnorm_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_normal_times_normal_to_subnorm_rn_bf16() {
 ; CHECK-NEXT:    ret bfloat 5.877470e-39
 ;
   %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0xR0080, bfloat 0.5, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_normal_times_normal_to_subnorm_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_normal_times_normal_to_subnorm_rp_bf16() {
-; CHECK-NEXT:    ret bfloat 5.877470e-39
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0xR0080, bfloat 0.5, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_normal_times_normal_to_subnorm_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_normal_times_normal_to_subnorm_rz_bf16() {
-; CHECK-NEXT:    ret bfloat 5.877470e-39
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0xR0080, bfloat 0.5, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 
@@ -885,15 +621,6 @@ define float @test_2_times_nan_rz_ftz_f() {
   ret float %res
 }
 
-define half @test_2_times_nan_rm_f16() {
-; CHECK-LABEL: define half @test_2_times_nan_rm_f16() {
-; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmul.f16(half 2.000000e+00, half +qnan, /* rnd=rm */ i32 3)
-; CHECK-NEXT:    ret half [[RES]]
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 2.0, half 0xH7E00, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_2_times_nan_rn_f16() {
 ; CHECK-LABEL: define half @test_2_times_nan_rn_f16() {
 ; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmul.f16(half 2.000000e+00, half +qnan, /* rnd=rn */ i32 1)
@@ -903,57 +630,12 @@ define half @test_2_times_nan_rn_f16() {
   ret half %res
 }
 
-define half @test_2_times_nan_rp_f16() {
-; CHECK-LABEL: define half @test_2_times_nan_rp_f16() {
-; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmul.f16(half 2.000000e+00, half +qnan, /* rnd=rp */ i32 2)
-; CHECK-NEXT:    ret half [[RES]]
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 2.0, half 0xH7E00, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_2_times_nan_rz_f16() {
-; CHECK-LABEL: define half @test_2_times_nan_rz_f16() {
-; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmul.f16(half 2.000000e+00, half +qnan, /* rnd=rz */ i32 0)
-; CHECK-NEXT:    ret half [[RES]]
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 2.0, half 0xH7E00, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
-define bfloat @test_2_times_nan_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_2_times_nan_rm_bf16() {
-; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.000000e+00, bfloat +qnan, /* rnd=rm */ i32 3)
-; CHECK-NEXT:    ret bfloat [[RES]]
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.0, bfloat 0xR7FC0, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_2_times_nan_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_2_times_nan_rn_bf16() {
 ; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.000000e+00, bfloat +qnan, /* rnd=rn */ i32 1)
 ; CHECK-NEXT:    ret bfloat [[RES]]
 ;
   %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.0, bfloat 0xR7FC0, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_2_times_nan_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_2_times_nan_rp_bf16() {
-; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.000000e+00, bfloat +qnan, /* rnd=rp */ i32 2)
-; CHECK-NEXT:    ret bfloat [[RES]]
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.0, bfloat 0xR7FC0, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_2_times_nan_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_2_times_nan_rz_bf16() {
-; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.000000e+00, bfloat +qnan, /* rnd=rz */ i32 0)
-; CHECK-NEXT:    ret bfloat [[RES]]
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 2.0, bfloat 0xR7FC0, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 
@@ -1199,35 +881,11 @@ define double @test_mul_just_below_negative_1_rz_d() {
 ; - RN, RZ, RM round to 1.0 (rounding to nearest/zero/down)
 ; - RP rounds to 1.0 + 2^-10 (rounding up)
 
-define half @test_mul_just_above_1_rm_f16() {
-; CHECK-LABEL: define half @test_mul_just_above_1_rm_f16() {
-; CHECK-NEXT:    ret half 1.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 0.75, half 0xH3D56, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_mul_just_above_1_rn_f16() {
 ; CHECK-LABEL: define half @test_mul_just_above_1_rn_f16() {
 ; CHECK-NEXT:    ret half 1.000000e+00
 ;
   %res = call half @llvm.nvvm.fmul.f16(half 0.75, half 0xH3D56, /* rnd=rn */ i32 1)
-  ret half %res
-}
-
-define half @test_mul_just_above_1_rp_f16() {
-; CHECK-LABEL: define half @test_mul_just_above_1_rp_f16() {
-; CHECK-NEXT:    ret half 1.000980e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 0.75, half 0xH3D56, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_mul_just_above_1_rz_f16() {
-; CHECK-LABEL: define half @test_mul_just_above_1_rz_f16() {
-; CHECK-NEXT:    ret half 1.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half 0.75, half 0xH3D56, /* rnd=rz */ i32 0)
   ret half %res
 }
 
@@ -1241,35 +899,11 @@ define half @test_mul_just_above_1_rz_f16() {
 ; - RN, RZ, RM round to 1.0 (rounding to nearest/zero/down)
 ; - RP rounds to 1.0 + 2^-7 (rounding up)
 
-define bfloat @test_mul_just_above_1_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_mul_just_above_1_rm_bf16() {
-; CHECK-NEXT:    ret bfloat 1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0.75, bfloat 0xR3FAB, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_mul_just_above_1_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_mul_just_above_1_rn_bf16() {
 ; CHECK-NEXT:    ret bfloat 1.000000e+00
 ;
   %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0.75, bfloat 0xR3FAB, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_mul_just_above_1_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_mul_just_above_1_rp_bf16() {
-; CHECK-NEXT:    ret bfloat 1.007810e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0.75, bfloat 0xR3FAB, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_mul_just_above_1_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_mul_just_above_1_rz_bf16() {
-; CHECK-NEXT:    ret bfloat 1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat 0.75, bfloat 0xR3FAB, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 
@@ -1283,35 +917,11 @@ define bfloat @test_mul_just_above_1_rz_bf16() {
 ; - RN, RZ, RP round to -1.0 (rounding to nearest/zero/up)
 ; - RM rounds to -1.0 - 2^-10 (rounding down)
 
-define half @test_mul_just_below_negative_1_rm_f16() {
-; CHECK-LABEL: define half @test_mul_just_below_negative_1_rm_f16() {
-; CHECK-NEXT:    ret half -1.000980e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half -0.75, half 0xH3D56, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_mul_just_below_negative_1_rn_f16() {
 ; CHECK-LABEL: define half @test_mul_just_below_negative_1_rn_f16() {
 ; CHECK-NEXT:    ret half -1.000000e+00
 ;
   %res = call half @llvm.nvvm.fmul.f16(half -0.75, half 0xH3D56, /* rnd=rn */ i32 1)
-  ret half %res
-}
-
-define half @test_mul_just_below_negative_1_rp_f16() {
-; CHECK-LABEL: define half @test_mul_just_below_negative_1_rp_f16() {
-; CHECK-NEXT:    ret half -1.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half -0.75, half 0xH3D56, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_mul_just_below_negative_1_rz_f16() {
-; CHECK-LABEL: define half @test_mul_just_below_negative_1_rz_f16() {
-; CHECK-NEXT:    ret half -1.000000e+00
-;
-  %res = call half @llvm.nvvm.fmul.f16(half -0.75, half 0xH3D56, /* rnd=rz */ i32 0)
   ret half %res
 }
 
@@ -1325,35 +935,11 @@ define half @test_mul_just_below_negative_1_rz_f16() {
 ; - RN, RZ, RP round to -1.0 (rounding to nearest/zero/up)
 ; - RM rounds to -1.0 - 2^-7 (rounding down)
 
-define bfloat @test_mul_just_below_negative_1_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_mul_just_below_negative_1_rm_bf16() {
-; CHECK-NEXT:    ret bfloat -1.007810e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat -0.75, bfloat 0xR3FAB, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_mul_just_below_negative_1_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_mul_just_below_negative_1_rn_bf16() {
 ; CHECK-NEXT:    ret bfloat -1.000000e+00
 ;
   %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat -0.75, bfloat 0xR3FAB, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_mul_just_below_negative_1_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_mul_just_below_negative_1_rp_bf16() {
-; CHECK-NEXT:    ret bfloat -1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat -0.75, bfloat 0xR3FAB, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_mul_just_below_negative_1_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_mul_just_below_negative_1_rz_bf16() {
-; CHECK-NEXT:    ret bfloat -1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fmul.bf16(bfloat -0.75, bfloat 0xR3FAB, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 

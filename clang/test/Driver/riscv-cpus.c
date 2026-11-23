@@ -532,6 +532,17 @@
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr3-rv32 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR3-RV32 %s
 // MTUNE-SYNTACORE-SCR3-RV32: "-tune-cpu" "syntacore-scr3-rv32"
 
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=chipsalliance-veer-eh1 | FileCheck -check-prefix=MCPU-CHIPSALLIANCE-VEER-EH1 %s
+// MCPU-CHIPSALLIANCE-VEER-EH1: "-target-cpu" "chipsalliance-veer-eh1"
+// MCPU-CHIPSALLIANCE-VEER-EH1-SAME: "-target-feature" "+m"
+// MCPU-CHIPSALLIANCE-VEER-EH1-SAME: "-target-feature" "+c"
+// MCPU-CHIPSALLIANCE-VEER-EH1-SAME: "-target-feature" "+zicsr"
+// MCPU-CHIPSALLIANCE-VEER-EH1-SAME: "-target-feature" "+zifencei"
+// MCPU-CHIPSALLIANCE-VEER-EH1-SAME: "-target-abi" "ilp32"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=chipsalliance-veer-eh1 | FileCheck -check-prefix=MTUNE-CHIPSALLIANCE-VEER-EH1 %s
+// MTUNE-CHIPSALLIANCE-VEER-EH1: "-tune-cpu" "chipsalliance-veer-eh1"
+
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=syntacore-scr3-rv64 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR3-RV64 %s
 // MCPU-SYNTACORE-SCR3-RV64: "-target-cpu" "syntacore-scr3-rv64"
 // MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+m"

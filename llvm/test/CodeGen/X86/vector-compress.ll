@@ -4998,16 +4998,13 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind 
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    vextractps $1, %xmm0, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrd $2, %xmm1, %edx
-; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $3, %ecx
-; AVX2-NEXT:    vextractps $2, %xmm0, -24(%rsp,%rcx,4)
-; AVX2-NEXT:    andl $3, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rdx,4)
+; AVX2-NEXT:    subl %ecx, %eax
+; AVX2-NEXT:    leal (,%rax,4), %ecx
+; AVX2-NEXT:    vextractps $2, %xmm0, -24(%rsp,%rcx)
+; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX2-NEXT:    subl %ecx, %eax
+; AVX2-NEXT:    andl $3, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -5054,10 +5051,9 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    movl %esi, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrd $1, %xmm0, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    andl $3, %ecx
-; AVX2-NEXT:    movl %edx, -24(%rsp,%rcx,4)
+; AVX2-NEXT:    subl %ecx, %eax
+; AVX2-NEXT:    shll $2, %eax
+; AVX2-NEXT:    movl %edx, -24(%rsp,%rax)
 ; AVX2-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    vpextrb $4, %xmm0, %edx

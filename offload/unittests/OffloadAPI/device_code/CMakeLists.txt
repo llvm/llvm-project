@@ -11,6 +11,7 @@ add_offload_test_device_code(localmem_reduction.cpp localmem_reduction)
 add_offload_test_device_code(localmem_static.cpp localmem_static)
 add_offload_test_device_code(single_counter.cpp single_counter)
 add_offload_test_device_code(global.cpp global)
+add_offload_test_device_code(global_init.cpp global_init)
 add_offload_test_device_code(global_ctor.cpp global_ctor)
 add_offload_test_device_code(global_dtor.cpp global_dtor)
 add_offload_test_device_code(sequence.cpp sequence)
@@ -30,6 +31,7 @@ add_custom_target(offload_device_binaries DEPENDS
     localmem_static.bin
     single_counter.bin
     global.bin
+    global_init.bin
     global_ctor.bin
     global_dtor.bin
     sequence.bin

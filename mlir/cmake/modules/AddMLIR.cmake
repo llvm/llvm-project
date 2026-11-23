@@ -3,9 +3,15 @@ include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
 function(mlir_tablegen ofn)
-  tablegen(MLIR ${ARGV})
+  tablegen_internal(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       PARENT_SCOPE)
+endfunction()
+
+# Invokes mlir-src-sharder; see tablegen_internal() for the calling convention.
+function(mlir_src_sharder ofn)
+  tablegen_internal(MLIR_SRC_SHARDER ${ARGV})
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
 endfunction()
 
 # Clear out any pre-existing compile_commands file before processing. This
@@ -21,18 +27,10 @@ function(_pdll_tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
-  # CMake versions older than v3.30 on Windows to use the fallback behavior
-  # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
-  # https://gitlab.kitware.com/cmake/cmake/-/issues/25943
-  # CMake versions older than v3.23 on other platforms use the fallback
-  # behavior as v3.22 and earlier fail to parse some depfiles that get
-  # generated, and this behavior was fixed in CMake commit
-  # e04a352cca523eba2ac0d60063a3799f5bb1c69e.
+  # Use depfile instead of globbing arbitrary *.td(s). CMP0116 is always NEW
+  # for non-Ninja generators.
   cmake_policy(GET CMP0116 cmp0116_state)
-  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
-     AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30)
-     AND NOT (CMAKE_VERSION VERSION_LESS 3.23))
+  if(NOT CMAKE_GENERATOR MATCHES "Ninja" OR cmp0116_state STREQUAL NEW)
     # CMake emits build targets as relative paths but Ninja doesn't identify
     # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
     # CMake handles this discrepancy for us. Otherwise, we use the fallback
@@ -164,8 +162,7 @@ function(add_sharded_ops ops_target shard_count)
   foreach(index RANGE ${shard_count})
     set(SHARDED_SRC ${ops_target}.${index}.cpp)
     list(APPEND SHARDED_SRCS ${SHARDED_SRC})
-    tablegen(MLIR_SRC_SHARDER ${SHARDED_SRC} -op-shard-index=${index})
-    set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${SHARDED_SRC})
+    mlir_src_sharder(${SHARDED_SRC} -op-shard-index=${index})
   endforeach()
   add_mlir_dialect_tablegen_target(MLIR${ops_target}ShardGen)
   set(SHARDED_SRCS ${SHARDED_SRCS} PARENT_SCOPE)
@@ -207,7 +204,7 @@ endfunction()
 function(add_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
   # The MLIR docs use Hugo, so we allow Hugo specific features here.
-  tablegen(MLIR ${output_file}.md ${command} -allow-hugo-specific-features ${ARGN})
+  mlir_tablegen(${output_file}.md ${command} -allow-hugo-specific-features ${ARGN})
   set(GEN_DOC_FILE ${MLIR_BINARY_DIR}/docs/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}

@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandIRInsts.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -65,18 +66,6 @@ using namespace llvm;
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 }
-
-static cl::opt<unsigned>
-    ExpandFpConvertBits("expand-fp-convert-bits", cl::Hidden,
-                        cl::init(IntegerType::MAX_INT_BITS),
-                        cl::desc("fp convert instructions on integers with "
-                                 "more than <N> bits are expanded."));
-
-static cl::opt<unsigned>
-    ExpandDivRemBits("expand-div-rem-bits", cl::Hidden,
-                     cl::init(IntegerType::MAX_INT_BITS),
-                     cl::desc("div and rem instructions on integers with "
-                              "more than <N> bits are expanded."));
 
 static bool isConstantPowerOfTwo(Value *V, bool SignedOp) {
   auto *C = dyn_cast<ConstantInt>(V);
@@ -628,7 +617,7 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   // FIXME: fp16's range is covered by i32. So `fptoi half` can convert
   // to i32 first following a sext/zext to target integer type.
   Value *A1 = nullptr;
-  if (FloatVal->getType()->isHalfTy() && BitWidth >= 32) {
+  if (FloatVal->getType()->isHalfTy() && BitWidth >= 32 && !IsSaturating) {
     if (FPToI->getOpcode() == Instruction::FPToUI) {
       Value *A0 = Builder.CreateFPToUI(FloatVal, Builder.getInt32Ty());
       A1 = Builder.CreateZExt(A0, IntTy);
@@ -1278,14 +1267,11 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
                     const LibcallLoweringInfo &Libcalls, AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Worklist;
 
-  unsigned MaxLegalFpConvertBitWidth =
-      TLI.getMaxLargeFPConvertBitWidthSupported();
-  if (ExpandFpConvertBits != IntegerType::MAX_INT_BITS)
-    MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
-
-  unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
-  if (ExpandDivRemBits != IntegerType::MAX_INT_BITS)
-    MaxLegalDivRemBitWidth = ExpandDivRemBits;
+  const CodeGenOptions &Opts = getCodeGenOptions(F);
+  unsigned MaxLegalFpConvertBitWidth = Opts.expand_fp_convert_bits.value_or(
+      TLI.getMaxLargeFPConvertBitWidthSupported());
+  unsigned MaxLegalDivRemBitWidth =
+      Opts.expand_div_rem_bits.value_or(TLI.getMaxDivRemBitWidthSupported());
 
   bool DisableExpandLargeFp =
       MaxLegalFpConvertBitWidth >= IntegerType::MAX_INT_BITS;

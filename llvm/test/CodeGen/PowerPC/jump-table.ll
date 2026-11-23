@@ -1,12 +1,9 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel \
-; RUN: | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix -stop-after=finalize-isel \
-; RUN: | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-ibm-aix -stop-after=finalize-isel \
-; RUN: | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel \
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64-ibm-aix -stop-after=finalize-isel | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc-ibm-aix -stop-after=finalize-isel | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel \
 ; RUN: -min-jump-table-entries=4 | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel \
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -stop-after=finalize-isel \
 ; RUN: -ppc-min-jump-table-entries=4 | FileCheck %s -check-prefix=JT
 
 ; JT:   jumpTable:

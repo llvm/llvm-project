@@ -270,7 +270,4 @@ private:
     char buf[150];
 };
 
-using integrals =
-    types::concatenate_t<types::type_list<char>, types::signed_integer_types, types::unsigned_integer_types>;
-
 #endif // SUPPORT_CHARCONV_TEST_HELPERS_H

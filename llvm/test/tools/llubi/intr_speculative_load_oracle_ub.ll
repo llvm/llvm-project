@@ -5,7 +5,7 @@
 @a = global [6 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5]
 
 ; Returns one element more than the number of bytes from %p to %end.
-define i64 @oracle_off_by_one(ptr %p, ptr %end) memory(none) nounwind nosync willreturn {
+define internal i64 @oracle_off_by_one(ptr %p, ptr %end) memory(none) nounwind nosync willreturn "oracle-function" {
   %p.int = ptrtoaddr ptr %p to i64
   %end.int = ptrtoaddr ptr %end to i64
   %diff = sub i64 %end.int, %p.int
@@ -13,11 +13,11 @@ define i64 @oracle_off_by_one(ptr %p, ptr %end) memory(none) nounwind nosync wil
   ret i64 %n
 }
 
-define noundef i64 @oracle_noundef_ret(i64 %n) memory(none) nounwind nosync willreturn {
+define internal noundef i64 @oracle_noundef_ret(i64 %n) memory(none) nounwind nosync willreturn "oracle-function" {
   ret i64 poison
 }
 
-define i64 @oracle_noundef_arg(i64 noundef %n) memory(none) nounwind nosync willreturn {
+define internal i64 @oracle_noundef_arg(i64 noundef %n) memory(none) nounwind nosync willreturn "oracle-function" {
   ret i64 %n
 }
 

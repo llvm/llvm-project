@@ -28,20 +28,20 @@ struct nullopt_t {
   struct __secret_tag {
     explicit __secret_tag() = default;
   };
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
+  constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
 
 #  if _LIBCPP_STD_VER >= 20
 
-  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering operator<=>(nullopt_t, nullopt_t) = default;
+  constexpr friend strong_ordering operator<=>(nullopt_t, nullopt_t) = default;
 
 #  else
 
-  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator==(nullopt_t, nullopt_t) noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator!=(nullopt_t, nullopt_t) noexcept { return false; }
-  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator>(nullopt_t, nullopt_t) noexcept { return false; }
-  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator<(nullopt_t, nullopt_t) noexcept { return false; }
-  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator>=(nullopt_t, nullopt_t) noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator<=(nullopt_t, nullopt_t) noexcept { return true; }
+  constexpr friend bool operator==(nullopt_t, nullopt_t) noexcept { return true; }
+  constexpr friend bool operator!=(nullopt_t, nullopt_t) noexcept { return false; }
+  constexpr friend bool operator>(nullopt_t, nullopt_t) noexcept { return false; }
+  constexpr friend bool operator<(nullopt_t, nullopt_t) noexcept { return false; }
+  constexpr friend bool operator>=(nullopt_t, nullopt_t) noexcept { return true; }
+  constexpr friend bool operator<=(nullopt_t, nullopt_t) noexcept { return true; }
 
 #  endif // _LIBCPP_STD_VER >= 20
 };

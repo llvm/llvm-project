@@ -30,6 +30,8 @@ def C1PremiumModel : SchedMachineModel {
                                                      HasSVEBFSCALE,
                                                      HasCPA, HasCSSC,
                                                      HasMOPS, HasMOPS_GO]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

@@ -137,7 +137,10 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
 
 SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op0, SDValue Op1,
-    SDValue Size, RTLIB::Libcall LC) const {
+    SDValue Size, RTLIB::Libcall LC, bool &IsTailCall) const {
+  bool CanTailCall = IsTailCall;
+  IsTailCall = false;
+
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
@@ -184,18 +187,21 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
-  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      DAG.getLibcalls().getLibcallImplCallingConv(NewLCImpl), RetTy, Symbol,
-      std::move(Args));
+  CLI.setDebugLoc(DL)
+      .setChain(Chain)
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(NewLCImpl),
+                    RetTy, Symbol, std::move(Args))
+      .setTailCall(CanTailCall);
 
   auto [Result, ChainOut] = TLI->LowerCallTo(CLI);
+  IsTailCall = CLI.IsTailCall;
   return UsesResult ? DAG.getMergeValues({Result, ChainOut}, DL) : ChainOut;
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
-    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    bool AlwaysInline, bool &IsTailCall, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
@@ -210,14 +216,16 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (STI.getCLOpts().lower_to_sme_routines &&
       !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, DL, Chain, Dst, Src, Size,
-                                             RTLIB::MEMCPY);
+                                             RTLIB::MEMCPY, IsTailCall);
+
+  IsTailCall = false;
   return SDValue();
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo) const {
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
@@ -231,14 +239,17 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
   if (STI.getCLOpts().lower_to_sme_routines &&
       !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
-                                             RTLIB::MEMSET);
+                                             RTLIB::MEMSET, IsTailCall);
+
+  IsTailCall = false;
   return SDValue();
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
@@ -252,7 +263,9 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
   if (STI.getCLOpts().lower_to_sme_routines &&
       !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
-                                             RTLIB::MEMMOVE);
+                                             RTLIB::MEMMOVE, IsTailCall);
+
+  IsTailCall = false;
   return SDValue();
 }
 
@@ -263,8 +276,9 @@ std::pair<SDValue, SDValue> AArch64SelectionDAGInfo::EmitTargetCodeForMemchr(
   SMEAttrs Attrs = AFI->getSMEFnAttrs();
   if (DAG.getSubtarget<AArch64Subtarget>().getCLOpts().lower_to_sme_routines &&
       !Attrs.hasNonStreamingInterfaceAndBody()) {
+    bool IsTailCall = false;
     SDValue Result = EmitStreamingCompatibleMemLibCall(
-        DAG, dl, Chain, Src, Char, Length, RTLIB::MEMCHR);
+        DAG, dl, Chain, Src, Char, Length, RTLIB::MEMCHR, IsTailCall);
     return std::make_pair(Result.getValue(0), Result.getValue(1));
   }
   return std::make_pair(SDValue(), SDValue());

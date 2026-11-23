@@ -4,6 +4,7 @@
 # entry BB.
 ---
 name: argument_i32
+tracksRegLiveness: false
 # CHECK-LABEL: argument_i32
 body: |
   ; CHECK-LABEL: bb.0:
@@ -15,6 +16,7 @@ body: |
 ...
 ---
 name: argument_i64
+tracksRegLiveness: false
 # CHECK-LABEL: argument_i64
 body: |
   ; CHECK-LABEL: bb.0:
@@ -26,6 +28,7 @@ body: |
 ...
 ---
 name: argument_f32
+tracksRegLiveness: false
 # CHECK-LABEL: argument_f32
 body: |
   ; CHECK-LABEL: bb.0:
@@ -37,6 +40,7 @@ body: |
 ...
 ---
 name: argument_f64
+tracksRegLiveness: false
 # CHECK-LABEL: argument_f64
 body: |
   ; CHECK-LABEL: bb.0:
@@ -48,6 +52,7 @@ body: |
 ...
 ---
 name: argument_funcref
+tracksRegLiveness: false
 # CHECK-LABEL: argument_funcref
 body: |
   ; CHECK-LABEL: bb.0:
@@ -59,6 +64,7 @@ body: |
 ...
 ---
 name: argument_externref
+tracksRegLiveness: false
 # CHECK-LABEL: argument_externref
 body: |
   ; CHECK-LABEL: bb.0:
@@ -70,6 +76,7 @@ body: |
 ...
 ---
 name: argument_exnref
+tracksRegLiveness: false
 # CHECK-LABEL: argument_exnref
 body: |
   ; CHECK-LABEL: bb.0:

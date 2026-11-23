@@ -35,7 +35,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 using namespace clang;
@@ -462,7 +461,7 @@ private:
   bool mangleSubstitution(TemplateName Template);
   bool mangleSubstitution(uintptr_t Ptr);
 
-  void mangleExistingSubstitution(TemplateName name);
+  TemplateName mangleExistingSubstitution(TemplateName name);
 
   bool mangleStandardSubstitution(const NamedDecl *ND);
 
@@ -2644,7 +2643,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *TST =
         cast<TemplateSpecializationType>(Ty);
-    TemplateName TN = TST->getTemplateName();
+    TemplateName TN = mangleExistingSubstitution(TST->getTemplateName());
     switch (TN.getKind()) {
     case TemplateName::Template:
     case TemplateName::QualifiedTemplate: {
@@ -2670,12 +2669,9 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     case TemplateName::DeducedTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 
-    case TemplateName::SubstTemplateTemplateParm: {
-      SubstTemplateTemplateParmStorage *subst =
-          TN.getAsSubstTemplateTemplateParm();
-      mangleExistingSubstitution(subst->getReplacement());
+    case TemplateName::SubstTemplateTemplateParm:
+      // mangleExistingSubstitution already mangled a substitution for it.
       break;
-    }
 
     case TemplateName::SubstTemplateTemplateParmPack: {
       // FIXME: not clear how to mangle this!
@@ -4319,11 +4315,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert((T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) &&
+  assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4338,7 +4330,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     TypeNameOS << "int8";
     break;
   case BuiltinType::UChar:
-    if (T->getVectorKind() == VectorKind::RVVFixedLengthData)
+    if (isRVVFixedLengthDataVectorKind(T->getVectorKind()))
       TypeNameOS << "uint8";
     else
       TypeNameOS << "bool";
@@ -4379,38 +4371,16 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
   }
 
-  unsigned VecSizeInBits;
-  switch (T->getVectorKind()) {
-  case VectorKind::RVVFixedLengthMask_1:
-    VecSizeInBits = 1;
-    break;
-  case VectorKind::RVVFixedLengthMask_2:
-    VecSizeInBits = 2;
-    break;
-  case VectorKind::RVVFixedLengthMask_4:
-    VecSizeInBits = 4;
-    break;
-  default:
-    VecSizeInBits = getASTContext().getTypeInfo(T).Width;
-    break;
-  }
+  // A mask typedef is mangled with its lane count, which is less than its
+  // size in bits when it fits in a single byte.
+  unsigned VecSizeInBits = isRVVFixedLengthMaskVectorKind(T->getVectorKind())
+                               ? T->getRVVFixedLengthMaskLanes()
+                               : getASTContext().getTypeInfo(T).Width;
 
-  // Apend the LMUL suffix.
-  auto VScale = getASTContext().getTargetInfo().getVScaleRange(
-      getASTContext().getLangOpts(),
-      TargetInfo::ArmStreamingKind::NotStreaming);
-  unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
-
-  if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
-    TypeNameOS << 'm';
-    if (VecSizeInBits >= VLen)
-      TypeNameOS << (VecSizeInBits / VLen);
-    else
-      TypeNameOS << 'f' << (VLen / VecSizeInBits);
-  } else {
-    TypeNameOS << (VLen / VecSizeInBits);
-  }
-  TypeNameOS << "_t";
+  // Append the LMUL suffix of a data type, or the ratio of a mask type. Both
+  // are recorded in the vector kind, so the mangled name names the type the
+  // typedef was written against and does not depend on VLEN.
+  TypeNameOS << getRVVFixedLengthString(T->getVectorKind()) << "_t";
 
   Out << "9__RVV_VLSI";
   mangleVendorType(TypeNameStr);
@@ -4448,11 +4418,7 @@ void CXXNameMangler::mangleType(const VectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
+  } else if (isRVVFixedLengthVectorKind(T->getVectorKind())) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
@@ -4481,7 +4447,7 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
+  } else if (isRVVFixedLengthDataVectorKind(T->getVectorKind())) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
@@ -4945,7 +4911,13 @@ void CXXNameMangler::mangleCastExpression(const Expr *E, StringRef CastEncoding)
   const ExplicitCastExpr *ECE = cast<ExplicitCastExpr>(E);
   Out << CastEncoding;
   mangleType(ECE->getType());
-  mangleExpression(ECE->getSubExpr());
+  if (const auto *PLIE = dyn_cast<CXXParenListInitExpr>(ECE->getSubExpr())) {
+    ArrayRef<Expr *> Inits = PLIE->getUserSpecifiedInitExprs();
+    assert(Inits.size() == 1 && "cast must have exactly one operand");
+    mangleExpression(Inits.front());
+  } else {
+    mangleExpression(ECE->getSubExpr());
+  }
 }
 
 void CXXNameMangler::mangleInitListElements(const InitListExpr *InitList) {
@@ -5338,12 +5310,17 @@ recurse:
       else
         Out << "pi";
       const Expr *Init = New->getInitializer();
+      if (const auto *SILE = dyn_cast<CXXStdInitializerListExpr>(Init))
+        Init = SILE->getSubExpr()->IgnoreImplicit();
       if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init)) {
         // Directly inline the initializers.
         for (CXXConstructExpr::const_arg_iterator I = CCE->arg_begin(),
                                                   E = CCE->arg_end();
              I != E; ++I)
           mangleExpression(*I);
+      } else if (const auto *PLE = dyn_cast<CXXParenListInitExpr>(Init)) {
+        for (const Expr *Arg : PLE->getUserSpecifiedInitExprs())
+          mangleExpression(Arg);
       } else if (const ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init)) {
         for (unsigned i = 0, e = PLE->getNumExprs(); i != e; ++i)
           mangleExpression(PLE->getExpr(i));
@@ -5770,7 +5747,17 @@ recurse:
         Sub = CCE->getArg(0)->IgnoreImplicit();
     if (auto *StdInitList = dyn_cast<CXXStdInitializerListExpr>(Sub))
       Sub = StdInitList->getSubExpr()->IgnoreImplicit();
-    if (auto *IL = dyn_cast<InitListExpr>(Sub)) {
+    if (auto *PLIE = dyn_cast<CXXParenListInitExpr>(Sub)) {
+      ArrayRef<Expr *> Inits = PLIE->getUserSpecifiedInitExprs();
+      Out << "cv";
+      mangleType(E->getType());
+      if (Inits.size() != 1)
+        Out << '_';
+      for (const Expr *Init : Inits)
+        mangleExpression(Init);
+      if (Inits.size() != 1)
+        Out << 'E';
+    } else if (auto *IL = dyn_cast<InitListExpr>(Sub)) {
       Out << "tl";
       mangleType(E->getType());
       mangleInitListElements(IL);
@@ -7171,10 +7158,16 @@ void CXXNameMangler::mangleSeqID(unsigned SeqID) {
   Out << '_';
 }
 
-void CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
-  bool result = mangleSubstitution(tname);
-  assert(result && "no existing substitution for template name");
-  (void) result;
+TemplateName CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
+  while (SubstTemplateTemplateParmStorage *subst =
+             tname.getAsSubstTemplateTemplateParm()) {
+    if (mangleSubstitution(subst->getReplacement()))
+      return tname;
+    if (isCompatibleWith(LangOptions::ClangABI::Ver23))
+      return tname;
+    tname = subst->getReplacement();
+  }
+  return tname;
 }
 
 // <substitution> ::= S <seq-id> _

@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=x86_64-pc-win32 %s -o - | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=x86_64-pc-win32 -filetype=obj %s -o - | llvm-readobj -r - | FileCheck %s --check-prefix=RELOC
 ; RUN: llc -mtriple=x86_64-pc-win32 -filetype=obj %s -o - | llvm-readobj -S --section-data - | FileCheck %s --check-prefix=DATA
+; RUN: llc -mtriple=x86_64-w64-mingw32 %s -o - | FileCheck %s --check-prefix=X64
+; RUN: llc -mtriple=x86_64-w64-mingw32 -filetype=obj %s -o - | llvm-readobj -r - | FileCheck %s --check-prefix=RELOC
+; RUN: llc -mtriple=x86_64-w64-mingw32 -filetype=obj %s -o - | llvm-readobj -S --section-data - | FileCheck %s --check-prefix=DATA
 
 @__ImageBase = external global i8
 

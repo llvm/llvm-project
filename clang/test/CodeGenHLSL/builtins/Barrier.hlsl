@@ -48,7 +48,7 @@ void test_barrier() {
   Barrier(Bytes, GROUP_SCOPE | DEVICE_SCOPE);
 }
 
-// CHECK: declare void @llvm.dx.barrier.by.memory.type(i32, i32)
+// CHECK: declare void @llvm.dx.barrier.by.memory.type(i32 immarg, i32 immarg)
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 // CHECK: declare void @llvm.dx.barrier.by.memory.handle.tdx.TypedBuffer
 // CHECK-SAME: #[[ATTRS]]

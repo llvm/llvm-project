@@ -208,7 +208,7 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
 void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
                                     CheckerContext &C, SVal TaintedSVal) const {
   // Generate an error node.
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.addSink(State);
   if (!N)
     return;
 
@@ -229,7 +229,7 @@ void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
 void VLASizeChecker::reportBug(VLASize_Kind Kind, const Expr *SizeE,
                                ProgramStateRef State, CheckerContext &C) const {
   // Generate an error node.
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.addSink(State);
   if (!N)
     return;
 

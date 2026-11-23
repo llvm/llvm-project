@@ -13,13 +13,14 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/IR/Constants.h"
+#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cassert>
 #include <utility>
@@ -124,6 +126,11 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             ? TTI::PointersChainInfo::getUnknownStride()
             : TTI::PointersChainInfo::getKnownStride();
 
+    const bool IsSameBase =
+        !all_of(Ptrs, IsaPred<GetElementPtrInst>) ||
+        all_equal(map_range(Ptrs, [](Value *V) {
+          return cast<GetElementPtrInst>(V)->getPointerOperand();
+        }));
     // The GEPs of the masked gather loads are accessed with the loaded type
     // and form a chain only if the lanes share the base.
     Type *AccessTy = ScalarTy;
@@ -131,9 +138,7 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
           auto *Ptr = dyn_cast<GetElementPtrInst>(V);
           return Ptr && Ptr->hasOneUse() && isa<LoadInst>(Ptr->user_back());
         })) {
-      PtrsInfo.IsSameBaseAddress = all_equal(map_range(Ptrs, [](Value *V) {
-        return cast<GetElementPtrInst>(V)->getPointerOperand();
-      }));
+      PtrsInfo.IsSameBaseAddress = IsSameBase;
       AccessTy = Ptrs.front()->user_back()->getType();
     }
     ScalarCost =
@@ -144,7 +149,21 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
       if (It != Ptrs.end())
         BaseGEP = cast<GEPOperator>(*It);
     }
-    if (BaseGEP) {
+    if (!IsSameBase) {
+      // The different bases are not folded into the addressing of the vector
+      // access, the scaled indices are added to them.
+      const DataLayout &DL = cast<Instruction>(Ptrs.front())->getDataLayout();
+      Type *IdxTy = DL.getIndexType(VecTy);
+      VecCost = TTI.getArithmeticInstrCost(Instruction::Add, IdxTy, CostKind);
+      uint64_t Stride = DL.getTypeAllocSize(BaseGEP->getSourceElementType())
+                            .getKnownMinValue();
+      if (Stride != 1 && !all_of(Ptrs, [](Value *V) {
+            return isa<Constant>(cast<GetElementPtrInst>(V)->getOperand(1));
+          }))
+        VecCost += TTI.getArithmeticInstrCost(
+            isPowerOf2_64(Stride) ? Instruction::Shl : Instruction::Mul, IdxTy,
+            CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_None});
+    } else if (BaseGEP) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       VecCost = TTI.getGEPCost(BaseGEP->getSourceElementType(),
                                BaseGEP->getPointerOperand(), Indices, CostKind,
@@ -433,11 +452,15 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   Type *Int8Ty = Type::getInt8Ty(SrcTy->getContext());
   assert(BitWidth % 8 == 0 &&
          "The byte-multiple field width divides the result bit width.");
-  unsigned OutBytes = BitWidth / 8;
+  unsigned OutBytes = ResultTy->getScalarSizeInBits() / 8;
   auto *PackTy = FixedVectorType::get(Int8Ty, OutBytes);
   unsigned MinShiftWidth = 8;
   while (MinShiftWidth < MaxAmt + Info.FieldWidth)
     MinShiftWidth *= 2;
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  bool IsTrunc = IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts));
+  auto *FieldTy = FixedVectorType::get(
+      IntegerType::get(SrcTy->getContext(), Info.FieldWidth), NumElts);
   InstructionCost NewCost = InstructionCost::getInvalid();
   ShiftWidth = 0;
   for (unsigned W2 = MinShiftWidth; W2 <= BitWidth; W2 *= 2) {
@@ -449,17 +472,36 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
         getBitPackMask(Info, OutBytes, NumElts, BytesPerLane);
     InstructionCost C = TTI.getCastInstrCost(Instruction::BitCast, ResultTy,
                                              PackTy, CCH, CostKind);
-    // A plain byte reversal of the shifted lanes is a bswap, no shuffle.
-    if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
-      IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
-      C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
-    } else if (!ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+    if (IsTrunc) {
+      // Fields in lane order, possibly reversed, are a truncation of the
+      // shifted lanes. A reversal of byte fields is a bswap.
+      if (Info.FieldWidth < W2)
+        C += TTI.getCastInstrCost(Instruction::Trunc, FieldTy, ShiftTy,
+                                  TTI::CastContextHint::None, CostKind);
+      if (IsReversed && Info.FieldWidth == 8) {
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy,
+                                          {ResultTy});
+        C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+      } else if (IsReversed) {
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, FieldTy,
+                                FieldTy, CostKind);
+      }
+    } else {
+      // A narrowing shuffle is a shuffle at the source width followed by an
+      // extract of the low elements.
+      auto *SrcByteTy = FixedVectorType::get(Int8Ty, InBytes);
+      SmallVector<int> WideMask(Mask);
+      WideMask.resize(std::max(InBytes, OutBytes), PoisonMaskElem);
       C += TTI.getShuffleCost(
           is_contained(Info.LaneOfField, BitPackInfo::NoLane)
               ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc,
-          PackTy, FixedVectorType::get(Int8Ty, InBytes), CostKind, Mask,
-          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
+          FixedVectorType::get(Int8Ty, WideMask.size()), SrcByteTy, CostKind,
+          WideMask, /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
+      if (InBytes > OutBytes)
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                PackTy, SrcByteTy, CostKind, /*Mask=*/{},
+                                /*Index=*/0, PackTy, /*Args=*/{}, CtxI);
     }
     if (W2 != BitWidth && W2 != ZExtSrcWidth)
       C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy, CCH,
@@ -529,5 +571,289 @@ InstructionCost getNarrowedLeafOpsCost(
         {TTI::OK_AnyValue, TTI::OP_None},
         {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
   return Cost;
+}
+
+SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                           const Intrinsic::ID ID,
+                                           const unsigned VF, unsigned MinBW,
+                                           const TargetTransformInfo &TTI) {
+  SmallVector<Type *> ArgTys;
+  for (auto [Idx, Arg] : enumerate(CI->args())) {
+    if (ID != Intrinsic::not_intrinsic) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, &TTI)) {
+        ArgTys.push_back(Arg->getType());
+        continue;
+      }
+      if (MinBW > 0) {
+        ArgTys.push_back(
+            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
+        continue;
+      }
+    }
+    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
+  }
+  return ArgTys;
+}
+
+std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
+                   const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
+                   const TTI::TargetCostKind CostKind) {
+  auto Shape = VFShape::get(CI->getFunctionType(),
+                            ElementCount::getFixed(getNumElements(VecTy)),
+                            false /*HasGlobalPred*/);
+  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+  auto LibCost = InstructionCost::getInvalid();
+  if (!CI->isNoBuiltin() && VecFunc) {
+    // Calculate the cost of the vector library call.
+    // If the corresponding vector call is cheaper, return its cost.
+    LibCost = TTI.getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
+  }
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
+
+  // Calculate the cost of the vector intrinsic call.
+  FastMathFlags FMF;
+  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
+    FMF = FPCI->getFastMathFlags();
+  const InstructionCost ScalarLimit = 10000;
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF,
+                                    dyn_cast<IntrinsicInst>(CI),
+                                    LibCost.isValid() ? LibCost : ScalarLimit);
+  auto IntrinsicCost = TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+  if (LibCost.isValid()) {
+    if (IntrinsicCost > LibCost)
+      IntrinsicCost = InstructionCost::getInvalid();
+  } else if (IntrinsicCost > ScalarLimit) {
+    // A type-based query always scalarizes struct-returning intrinsics (e.g.
+    // llvm.sincos), which do not have a VFDatabase name mapping. Retry with an
+    // argument-aware query (as the loop vectorizer does) so such lowerings are
+    // taken into account.
+    SmallVector<const Value *> Args(CI->args());
+    IntrinsicCostAttributes ArgAwareAttrs(
+        ID, VecTy, Args, ArgTys, FMF, dyn_cast<IntrinsicInst>(CI), ScalarLimit);
+    IntrinsicCost = TTI.getIntrinsicInstrCost(ArgAwareAttrs, CostKind);
+    if (IntrinsicCost > ScalarLimit)
+      IntrinsicCost = InstructionCost::getInvalid();
+  }
+  if (ID == Intrinsic::sincos &&
+      shouldSplitVectorSinCos(TLI,
+                              CI->getArgOperand(0)->getType()->getScalarType(),
+                              Shape.VF, CI->getModule()))
+    IntrinsicCost =
+        2 * TTI.getCallInstrCost(nullptr, ArgTys.front(), ArgTys, CostKind);
+
+  return {IntrinsicCost, LibCost};
+}
+
+/// \returns the reciprocal-throughput cost of \p I widened to \p VF lanes (an
+/// arithmetic op or a vectorizable call).
+static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
+                                       const TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI,
+                                       const TTI::TargetCostKind CostKind) {
+  assert((isa<BinaryOperator, CallInst>(I)) &&
+         "getVectorOpCost expects an arithmetic op or a vectorizable call.");
+  Type *VecTy = getWidenedType(I->getType(), VF);
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
+    SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, TTI);
+    auto [IntrCost, LibCost] =
+        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+    return std::min(IntrCost, LibCost);
+  }
+  SmallVector<const Value *, 2> Args{I->getOperand(0), I->getOperand(1)};
+  return TTI.getArithmeticInstrCost(
+      I->getOpcode(), VecTy, CostKind, TTI::getOperandInfo(I->getOperand(0)),
+      TTI::getOperandInfo(I->getOperand(1)), Args, I);
+}
+
+/// Packs a type's kind and scalar width into one key, so an opcode/intrinsic
+/// id reused across scalar widths (e.g. fdiv float vs. fdiv double) is cached
+/// per width instead of sharing one verdict.
+static unsigned getPoorThroughputTypeKey(Type *Ty) {
+  return (static_cast<unsigned>(Ty->getTypeID()) << 16) |
+         Ty->getScalarSizeInBits();
+}
+
+bool isPoorThroughputOp(bool ReVec, Instruction *I,
+                        const TargetTransformInfo &TTI,
+                        const TargetLibraryInfo &TLI,
+                        PoorThroughputOpCache &Cache,
+                        const TTI::TargetCostKind CostKind,
+                        unsigned MaxVecRegSize) {
+  if (!isa<BinaryOperator, CallInst>(I))
+    return false;
+  Type *Ty = I->getType();
+  if ((Ty->isVectorTy() && !ReVec) || Ty->isAggregateType() ||
+      !isValidElementType(Ty, ReVec))
+    return false;
+  auto Analyze = [&]() {
+    InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
+    if (ScalarCost < TTI::TCC_Expensive)
+      return false;
+    constexpr unsigned MinVF = 2;
+    if (getVectorOpCost(I, MinVF, TTI, TLI, CostKind) < ScalarCost * MinVF)
+      return true;
+    // Some ops (e.g. div by constant) scalarize at VF=2 but have a cheap
+    // vector form at the full register width.
+    unsigned TyBits = Ty->getPrimitiveSizeInBits().getFixedValue();
+    unsigned MaxVF = TyBits ? llvm::bit_floor(MaxVecRegSize / TyBits) : 0;
+    return MaxVF > MinVF &&
+           getVectorOpCost(I, MaxVF, TTI, TLI, CostKind) < ScalarCost * MaxVF;
+  };
+  auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
+    if (IsCheap)
+      return false;
+    if (Analyze())
+      return true;
+    MarkCheap();
+    return false;
+  };
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (any_of(CI->args(), [&](const Value *Arg) {
+          return !isValidElementType(Arg->getType(), ReVec);
+        }))
+      return false;
+    // A call, used only as a select operand, may get the values rejected by the
+    // select condition, which the vector library call handles on its slow path.
+    if (!CI->use_empty() && !CI->hasNUsesOrMore(UsesLimit) &&
+        all_of(CI->users(), [&](User *U) {
+          return match(
+              U, m_Select(m_Unless(m_Specific(CI)), m_Value(), m_Value()));
+        }))
+      return false;
+    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
+      auto Key = std::make_pair(ID, getPoorThroughputTypeKey(Ty));
+      return CheckCached(Cache.CheapIntrinsics.contains(Key),
+                         [&] { Cache.CheapIntrinsics.insert(Key); });
+    }
+    // A call without the vector variants is never vectorized.
+    if (VFDatabase::getMappings(*CI).empty())
+      return false;
+    const Function *Callee = CI->getCalledFunction();
+    if (!Callee)
+      return Analyze();
+    return CheckCached(Cache.CheapCallees.contains(Callee),
+                       [&] { Cache.CheapCallees.insert(Callee); });
+  }
+  auto Key = std::make_pair(I->getOpcode(), getPoorThroughputTypeKey(Ty));
+  return CheckCached(Cache.CheapOpcodes.contains(Key),
+                     [&] { Cache.CheapOpcodes.insert(Key); });
+}
+
+bool isFusableFMulOperand(Value *Op, Instruction *I,
+                          const TargetTransformInfo &TTI) {
+  Instruction *FMul;
+  if (!match(Op, m_Instruction(FMul, m_OneUse(m_AllowContract(
+                                         m_FMul(m_Value(), m_Value()))))))
+    return false;
+  if (FMul->getParent() == I->getParent())
+    return true;
+  SmallVector<Use *> OpsToSink;
+  return TTI.isProfitableToSinkOperands(I, OpsToSink) &&
+         any_of(OpsToSink, [&](const Use *U) { return U->get() == FMul; });
+}
+
+bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
+                             Type *Ty, const TargetTransformInfo &TTI) {
+  if (hasNItemsOrMore(BB, ScheduleBudget))
+    return false;
+  const unsigned NumRegs = TTI.getNumberOfRegisters(
+      TTI.getRegisterClassForType(/*Vector=*/false, Ty));
+  auto IsLiveCandidate = [&](const Value *V) {
+    return isa<Instruction, Argument>(V) && V->getType()->getScalarType() == Ty;
+  };
+  SmallPtrSet<const Value *, 32> Live;
+  for (const Instruction &I : reverse(BB)) {
+    // The operands of the PHIs are live in the predecessors.
+    if (isa<PHINode>(I))
+      break;
+    Live.erase(&I);
+    Live.insert_range(make_filter_range(I.operand_values(), IsLiveCandidate));
+    if (Live.size() > NumRegs)
+      return true;
+  }
+  return false;
+}
+
+SmallBitVector selectBSwapGathers(
+    ArrayRef<SmallVector<Value *>> GatheredScalars, const DataLayout &DL,
+    const TargetTransformInfo &TTI, bool ReVec,
+    TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<std::optional<
+        std::tuple<const void *, FixedVectorType *, unsigned>>(Value *)>
+        GetVectorizedSource) {
+  struct SourceVector {
+    FixedVectorType *VecTy = nullptr;
+    APInt DemandedElts;
+    InstructionCost Cost = 0;
+    SmallVector<unsigned> Gathers;
+  };
+  SmallDenseMap<const void *, SourceVector> SourceVectors;
+  SmallBitVector BSwapGathers(GatheredScalars.size());
+  for (auto [Idx, VL] : enumerate(GatheredScalars)) {
+    std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+        matchGatheredExtractedFields(VL, DL);
+    if (!Fields)
+      continue;
+    auto &[Src, FieldWidth, Mask] = *Fields;
+    Type *SrcTy = Src->getType();
+    unsigned NumFields = SrcTy->getIntegerBitWidth() / FieldWidth;
+    if (FieldWidth != 8 || NumFields % 2 != 0 ||
+        !ShuffleVectorInst::isReverseMask(Mask, NumFields))
+      continue;
+    Type *ByteTy = Type::getInt8Ty(SrcTy->getContext());
+    auto *FieldVecTy = cast<VectorType>(getWidenedType(ByteTy, NumFields));
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcTy, {SrcTy});
+    InstructionCost BSwapCost = TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+    InstructionCost PermuteCost = getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                                                 FieldVecTy, CostKind, Mask);
+    std::optional<std::tuple<const void *, FixedVectorType *, unsigned>>
+        Source = GetVectorizedSource(Src);
+    if (!Source)
+      if (std::optional<unsigned> Lane = getElementIndex(Src)) {
+        auto *EE = cast<ExtractElementInst>(Src);
+        Source = std::make_tuple(
+            EE->getVectorOperand(),
+            cast<FixedVectorType>(EE->getVectorOperandType()), *Lane);
+      }
+    if (!Source) {
+      if (BSwapCost <= PermuteCost)
+        BSwapGathers.set(Idx);
+      continue;
+    }
+    auto &[Vec, VecTy, Lane] = *Source;
+    // The bytes of the scalar are either extracted from the vector as a
+    // subvector and permuted, or permuted from the whole vector directly.
+    auto *VecBytesTy = cast<VectorType>(
+        getWidenedType(ByteTy, NumFields * VecTy->getNumElements()));
+    for (int &I : Mask)
+      if (I != PoisonMaskElem)
+        I += Lane * NumFields;
+    PermuteCost =
+        std::min(PermuteCost + getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                                              VecBytesTy, CostKind, {},
+                                              Lane * NumFields, FieldVecTy),
+                 getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, VecBytesTy,
+                                CostKind, Mask));
+    auto [It, Inserted] = SourceVectors.try_emplace(Vec);
+    SourceVector &Info = It->second;
+    if (Inserted) {
+      Info.VecTy = VecTy;
+      Info.DemandedElts = APInt::getZero(VecTy->getNumElements());
+    }
+    Info.DemandedElts.setBit(Lane);
+    Info.Cost += BSwapCost - PermuteCost;
+    Info.Gathers.push_back(Idx);
+  }
+  for (const SourceVector &Info : make_second_range(SourceVectors)) {
+    InstructionCost ExtractCost = getScalarizationOverhead(
+        TTI, ReVec, Info.VecTy->getElementType(), Info.VecTy, Info.DemandedElts,
+        /*Insert=*/false, /*Extract=*/true, CostKind);
+    if (Info.Cost + ExtractCost <= 0)
+      for (unsigned Idx : Info.Gathers)
+        BSwapGathers.set(Idx);
+  }
+  return BSwapGathers;
 }
 } // namespace llvm::slpvectorizer

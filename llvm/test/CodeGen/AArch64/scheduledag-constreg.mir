@@ -23,6 +23,7 @@
 name: func
 body: |
   bb.0:
+    liveins: $w1, $w3
     dead $wzr = SUBSWri $w1, 0, 0, implicit-def dead $nzcv
     $w2 = COPY $wzr
     dead $wzr = SUBSWri $w3, 0, 0, implicit-def dead $nzcv
