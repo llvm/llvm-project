@@ -396,10 +396,10 @@
 ; LINUX-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; LINUX-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; LINUX-NEXT: declare x86_fp80 @fdiml(x86_fp80, x86_fp80) [[ERRNO_ATTRS]]
-; LINUX-NEXT: declare i32 @fegetenv(ptr)
-; LINUX-NEXT: declare i32 @fegetmode(ptr)
-; LINUX-NEXT: declare i32 @fesetenv(ptr)
-; LINUX-NEXT: declare i32 @fesetmode(ptr)
+; LINUX-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; LINUX-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; LINUX-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; LINUX-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @floorf128(fp128) [[NOMEM_ATTRS]]
@@ -560,6 +560,7 @@
 ; LINUX-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -936,10 +937,10 @@
 ; FREEBSD-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; FREEBSD-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; FREEBSD-NEXT: declare x86_fp80 @fdiml(x86_fp80, x86_fp80) [[ERRNO_ATTRS]]
-; FREEBSD-NEXT: declare i32 @fegetenv(ptr)
-; FREEBSD-NEXT: declare i32 @fegetmode(ptr)
-; FREEBSD-NEXT: declare i32 @fesetenv(ptr)
-; FREEBSD-NEXT: declare i32 @fesetmode(ptr)
+; FREEBSD-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; FREEBSD-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; FREEBSD-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; FREEBSD-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; FREEBSD-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare x86_fp80 @floorl(x86_fp80) [[NOMEM_ATTRS]]
@@ -1066,6 +1067,7 @@
 ; FREEBSD-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; FREEBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; FREEBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; FREEBSD-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; FREEBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -1442,10 +1444,10 @@
 ; OPENBSD-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; OPENBSD-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; OPENBSD-NEXT: declare x86_fp80 @fdiml(x86_fp80, x86_fp80) [[ERRNO_ATTRS]]
-; OPENBSD-NEXT: declare i32 @fegetenv(ptr)
-; OPENBSD-NEXT: declare i32 @fegetmode(ptr)
-; OPENBSD-NEXT: declare i32 @fesetenv(ptr)
-; OPENBSD-NEXT: declare i32 @fesetmode(ptr)
+; OPENBSD-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; OPENBSD-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; OPENBSD-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; OPENBSD-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; OPENBSD-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare x86_fp80 @floorl(x86_fp80) [[NOMEM_ATTRS]]
@@ -1572,6 +1574,7 @@
 ; OPENBSD-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; OPENBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; OPENBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; OPENBSD-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; OPENBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; OPENBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; OPENBSD-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }

@@ -1500,9 +1500,9 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// pointer (the prepended first block argument) and the function returns
 /// void.
 ///
-/// CIRGen emits a local `__retval` alloca and emits `cir.return %loaded`
-/// where `%loaded = cir.load __retval`.  The naive lowering -- store the
-/// loaded SSA value through the sret pointer -- byte-copies the record,
+/// CIRGen emits a local return slot alloca and emits `cir.return %loaded`
+/// where `%loaded = cir.load <slot>`.  The naive lowering, storing the
+/// loaded SSA value through the sret pointer, byte-copies the record,
 /// which is wrong for non-trivially-copyable types: e.g. libstdc++'s SSO
 /// `std::string` has a `_M_p` pointer that aliases the source's internal
 /// `_M_local_buf`, so a byte-copy leaves the destination pointing at the
@@ -1510,14 +1510,14 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// later `free()`s a stack pointer.
 ///
 /// Instead, route construction directly into the sret slot: find the
-/// `__retval` alloca, replace its uses with the sret pointer, and drop the
-/// trailing `cir.load __retval` so the rewritten return has no operand.
-/// The CIRGen-emitted constructor / store-into-`__retval` then targets the
+/// return slot alloca, replace its uses with the sret pointer, and drop the
+/// trailing `cir.load <slot>` so the rewritten return has no operand.
+/// The CIRGen-emitted constructor / store-into-slot then targets the
 /// sret slot uniformly, matching classic CodeGen's "construct directly into
 /// `%agg.result`" pattern.
 ///
-/// CIRGen emits one `%v = cir.load %__retval` / `cir.return %v` pair per
-/// return statement, and every such load reads the single `__retval`
+/// CIRGen emits one `%v = cir.load %slot` / `cir.return %v` pair per
+/// return statement, and every such load reads the single return slot
 /// alloca (CIR does not merge returns into a shared epilogue block).  The
 /// alloca is therefore rewired to the sret pointer once; each cir.return is
 /// then collapsed to a bare return and its now-dead load erased.  This
@@ -1525,7 +1525,7 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// CIRGen, so it is asserted via `cast<>` rather than guarded with a
 /// fallback.
 ///
-/// A `__retval` outside the sret pointer's address space is not replaced
+/// A return slot outside the sret pointer's address space is not replaced
 /// itself. Its address_space casts to the sret pointer's type are.
 void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
                       mlir::OpBuilder &builder) {
@@ -1544,7 +1544,7 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
     cir::LoadOp retLoad =
         mlir::cast<cir::LoadOp>(retOp.getInput()[0].getDefiningOp());
 
-    // Rewire the shared `__retval` alloca to the sret pointer once.
+    // Rewire the shared return slot alloca to the sret pointer once.
     // replaceAllUsesWith updates every load of the alloca (including those
     // feeding the other cir.return ops) to read from sretPtr instead, so
     // all returns are covered by this single rewiring.
@@ -1567,7 +1567,8 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
 
   if (retAlloca) {
     assert(retAlloca->use_empty() &&
-           "__retval used other than by its returns and address_space views");
+           "return slot used other than by its returns and address_space "
+           "views");
     retAlloca->erase();
   }
 }
@@ -1734,10 +1735,12 @@ rewriteIndirectReturnCall(cir::CallOp call, const FunctionClassification &fc,
   }
   if (!sretSlot) {
     cir::PointerType allocaPtrTy = getAllocaPtrTy(origRetTy, dl);
-    sretSlot = cir::AllocaOp::create(
+    auto slot = cir::AllocaOp::create(
         builder, call.getLoc(), allocaPtrTy,
-        /*name=*/builder.getStringAttr("sret"),
+        /*name=*/builder.getStringAttr(""),
         /*alignment=*/builder.getI64IntegerAttr(sretAlign));
+    slot.setReturnSlot(true);
+    sretSlot = slot;
     // The sret pointer can be outside the alloca address space.
     if (allocaPtrTy != ptrTy)
       sretSlot = cir::CastOp::create(builder, call.getLoc(), ptrTy,

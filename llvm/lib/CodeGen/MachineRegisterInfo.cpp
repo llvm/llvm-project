@@ -628,7 +628,8 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
   if (!IsUpdatedCSRsInitialized) {
     const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
     for (const MCPhysReg *I = CSR; *I; ++I)
-      UpdatedCSRs.push_back(*I);
+      if (!MF->getSubtarget().isRegisterReservedByUser(*I))
+        UpdatedCSRs.push_back(*I);
 
     // Zero value represents the end of the register list
     // (no more registers should be pushed).
@@ -652,7 +653,7 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
     if (MF->getSubtarget().isRegisterReservedByUser(Regs[I]))
       MF->getRegInfo().disableCalleeSavedRegister(Regs[I]);
 
-  return Regs;
+  return IsUpdatedCSRsInitialized ? UpdatedCSRs.data() : Regs;
 }
 
 void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {

@@ -1017,7 +1017,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1070,7 +1069,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1120,7 +1118,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1175,7 +1172,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1227,7 +1223,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1279,7 +1274,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -1324,7 +1318,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -1369,7 +1362,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1418,7 +1410,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1465,7 +1456,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1512,7 +1502,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1559,7 +1548,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1606,7 +1594,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1653,7 +1640,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1700,7 +1686,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1749,7 +1734,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1799,7 +1783,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1851,7 +1834,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1903,7 +1885,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -1963,7 +1944,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2026,7 +2006,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2086,7 +2065,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2146,7 +2124,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2206,7 +2183,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2268,7 +2244,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2330,7 +2305,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2393,7 +2367,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2453,7 +2426,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2512,7 +2484,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2571,7 +2542,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2630,7 +2600,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2690,7 +2659,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2782,7 +2750,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2841,7 +2808,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2900,7 +2866,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -2959,7 +2924,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3018,7 +2982,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3065,7 +3028,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3111,7 +3073,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3154,7 +3115,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3197,7 +3157,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3245,7 +3204,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3294,7 +3252,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3342,7 +3299,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3391,7 +3347,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3434,7 +3389,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3477,7 +3431,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3526,7 +3479,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3575,7 +3527,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3624,7 +3575,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3670,7 +3620,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3716,7 +3665,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3762,7 +3710,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -3805,7 +3752,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3859,7 +3805,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3912,7 +3857,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -3963,7 +3907,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4010,7 +3953,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4058,7 +4000,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4105,7 +4046,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4153,7 +4093,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4201,7 +4140,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4253,7 +4191,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4301,7 +4238,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4353,7 +4289,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4404,7 +4339,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4454,7 +4388,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4501,7 +4434,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4550,7 +4482,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4610,7 +4541,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4671,7 +4601,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4731,7 +4660,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4791,7 +4719,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4851,7 +4778,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4911,7 +4837,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -4970,7 +4895,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -5030,7 +4954,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -5089,7 +5012,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -5148,7 +5070,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -5207,7 +5128,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -5266,7 +5186,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -5314,7 +5233,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -5362,7 +5280,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$v2', virtual-reg: '%1' }
@@ -5410,7 +5327,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -5465,7 +5381,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -5514,10 +5429,6 @@ name:            testXOR
 # CHECK-ALL: name: testXOR
 alignment:       16
 exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -5564,7 +5475,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -5610,7 +5520,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -5653,7 +5562,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:

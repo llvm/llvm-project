@@ -91,10 +91,6 @@ addNamedOpBuilders(llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
 }
 
 void mlir::linalg::LinalgDialect::initialize() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgOpsAttrDefs.cpp.inc"
-      >();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgOps.cpp.inc"
