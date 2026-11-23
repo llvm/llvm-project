@@ -20,7 +20,9 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -36,12 +38,11 @@ extern cl::opt<bool> LArchAnnotateTableJump;
 
 namespace {
 
-class LoongArchPreRAExpandPseudo : public MachineFunctionPass {
+class LoongArchPreRAExpandPseudoLegacy : public MachineFunctionPass {
 public:
-  const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchPreRAExpandPseudo() : MachineFunctionPass(ID) {}
+  LoongArchPreRAExpandPseudoLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -52,140 +53,16 @@ public:
   StringRef getPassName() const override {
     return LOONGARCH_PRERA_EXPAND_PSEUDO_NAME;
   }
-
-private:
-  bool expandMBB(MachineBasicBlock &MBB);
-  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
-  bool expandPcaxxu12iInstPair(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI,
-                               MachineBasicBlock::iterator &NextMBBI,
-                               unsigned OpcodeHi, unsigned OpcodeLo,
-                               unsigned FlagsHi, unsigned FlagsLo);
-  bool expandLargeAddressLoad(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI,
-                              unsigned LastOpcode, unsigned IdentifyingMO);
-  bool expandLargeAddressLoad(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI,
-                              unsigned LastOpcode, unsigned IdentifyingMO,
-                              const MachineOperand &Symbol, Register DestReg,
-                              bool EraseFromParent);
-  bool expandLoadAddressPcrel(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI,
-                              bool Large = false);
-  bool expandLoadAddressGot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI,
-                            MachineBasicBlock::iterator &NextMBBI,
-                            bool Large = false);
-  bool expandLoadAddressTLSLE(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI);
-  bool expandLoadAddressTLSIE(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI,
-                              bool Large = false);
-  bool expandLoadAddressTLSLD(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI,
-                              bool Large = false);
-  bool expandLoadAddressTLSGD(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              MachineBasicBlock::iterator &NextMBBI,
-                              bool Large = false);
-  bool expandLoadAddressTLSDesc(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI,
-                                MachineBasicBlock::iterator &NextMBBI,
-                                bool Large = false);
-  bool expandFunctionCALL(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI,
-                          MachineBasicBlock::iterator &NextMBBI,
-                          bool IsTailCall);
-  bool expandMOVCF2GRViaFR(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI,
-                           MachineBasicBlock::iterator &NextMBBI);
-  void annotateTableJump(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI);
 };
 
-char LoongArchPreRAExpandPseudo::ID = 0;
+char LoongArchPreRAExpandPseudoLegacy::ID = 0;
 
-bool LoongArchPreRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  TII =
-      static_cast<const LoongArchInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  bool Modified = false;
-  for (auto &MBB : MF)
-    Modified |= expandMBB(MBB);
-  return Modified;
-}
-
-bool LoongArchPreRAExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
-
-bool LoongArchPreRAExpandPseudo::expandMI(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  switch (MBBI->getOpcode()) {
-  case LoongArch::PseudoLA_PCREL:
-    return expandLoadAddressPcrel(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_PCREL_LARGE:
-    return expandLoadAddressPcrel(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoLA_GOT:
-    return expandLoadAddressGot(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_GOT_LARGE:
-    return expandLoadAddressGot(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoLA_TLS_LE:
-    return expandLoadAddressTLSLE(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_TLS_IE:
-    return expandLoadAddressTLSIE(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_TLS_IE_LARGE:
-    return expandLoadAddressTLSIE(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoLA_TLS_LD:
-    return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_TLS_LD_LARGE:
-    return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoLA_TLS_GD:
-    return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_TLS_GD_LARGE:
-    return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoLA_TLS_DESC:
-    return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_TLS_DESC_LARGE:
-    return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoCALL_SMALL:
-  case LoongArch::PseudoCALL_LARGE:
-    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
-  case LoongArch::PseudoTAIL_SMALL:
-  case LoongArch::PseudoTAIL_LARGE:
-    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
-  case LoongArch::PseudoMOVCF2GRViaFR:
-    return expandMOVCF2GRViaFR(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoBRIND:
-    // If the PseudoBRIND is used to table jump, then emit a label to annotate
-    // the `jr` instruction, and save the instructions.
-    if (LArchAnnotateTableJump)
-      annotateTableJump(MBB, MBBI);
-    break;
-  }
-  return false;
-}
-
-bool LoongArchPreRAExpandPseudo::expandPcaxxu12iInstPair(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, unsigned OpcodeHi, unsigned OpcodeLo,
-    unsigned FlagsHi, unsigned FlagsLo) {
+static bool expandPcaxxu12iInstPair(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    MachineBasicBlock::iterator &NextMBBI,
+                                    unsigned OpcodeHi, unsigned OpcodeLo,
+                                    unsigned FlagsHi, unsigned FlagsLo,
+                                    const LoongArchInstrInfo *TII) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
@@ -224,21 +101,11 @@ bool LoongArchPreRAExpandPseudo::expandPcaxxu12iInstPair(
   return true;
 }
 
-bool LoongArchPreRAExpandPseudo::expandLargeAddressLoad(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, unsigned LastOpcode,
-    unsigned IdentifyingMO) {
-  MachineInstr &MI = *MBBI;
-  return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LastOpcode, IdentifyingMO,
-                                MI.getOperand(2), MI.getOperand(0).getReg(),
-                                true);
-}
-
-bool LoongArchPreRAExpandPseudo::expandLargeAddressLoad(
+static bool expandLargeAddressLoad(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI, unsigned LastOpcode,
     unsigned IdentifyingMO, const MachineOperand &Symbol, Register DestReg,
-    bool EraseFromParent) {
+    bool EraseFromParent, const LoongArchInstrInfo *TII) {
   // Code Sequence:
   //
   // Part1: pcalau12i  $scratch, %MO1(sym)
@@ -327,14 +194,24 @@ bool LoongArchPreRAExpandPseudo::expandLargeAddressLoad(
   return true;
 }
 
-bool LoongArchPreRAExpandPseudo::expandLoadAddressPcrel(
+static bool expandLargeAddressLoad(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool Large) {
+    MachineBasicBlock::iterator &NextMBBI, unsigned LastOpcode,
+    unsigned IdentifyingMO, const LoongArchInstrInfo *TII) {
+  MachineInstr &MI = *MBBI;
+  return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LastOpcode, IdentifyingMO,
+                                MI.getOperand(2), MI.getOperand(0).getReg(),
+                                true, TII);
+}
+
+static bool expandLoadAddressPcrel(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, const LoongArchInstrInfo *TII, bool Large = false) {
   if (Large)
     // Emit the 5-insn large address load sequence with the `%pc` family of
     // relocs.
     return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LoongArch::ADD_D,
-                                  LoongArchII::MO_PCREL_LO);
+                                  LoongArchII::MO_PCREL_LO, TII);
 
   // Code Sequence:
   //
@@ -356,17 +233,19 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressPcrel(
   unsigned FlagsLo =
       Has32S ? LoongArchII::MO_PCREL_LO : LoongArchII::MO_PCADD_LO;
   return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
-                                 FlagsHi, FlagsLo);
+                                 FlagsHi, FlagsLo, TII);
 }
 
-bool LoongArchPreRAExpandPseudo::expandLoadAddressGot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool Large) {
+static bool expandLoadAddressGot(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI,
+                                 MachineBasicBlock::iterator &NextMBBI,
+                                 const LoongArchInstrInfo *TII,
+                                 bool Large = false) {
   if (Large)
     // Emit the 5-insn large address load sequence with the `%got_pc` family
     // of relocs, loading the result from GOT with `ldx.d` in the end.
     return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LoongArch::LDX_D,
-                                  LoongArchII::MO_GOT_PC_HI);
+                                  LoongArchII::MO_GOT_PC_HI, TII);
 
   // Code Sequence:
   //
@@ -388,12 +267,12 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressGot(
   unsigned FlagsLo =
       Has32S ? LoongArchII::MO_GOT_PC_LO : LoongArchII::MO_GOT_PCADD_LO;
   return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
-                                 FlagsHi, FlagsLo);
+                                 FlagsHi, FlagsLo, TII);
 }
 
-bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
+static bool expandLoadAddressTLSLE(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
+    MachineBasicBlock::iterator &NextMBBI, const LoongArchInstrInfo *TII) {
   // Code Sequence:
   // lu12i.w $rd, %le_hi20_r(sym)
   // add.w/d $rd, $rd, $tp, %le_add_r(sym)
@@ -456,14 +335,16 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
   return true;
 }
 
-bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSIE(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool Large) {
+static bool expandLoadAddressTLSIE(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   const LoongArchInstrInfo *TII,
+                                   bool Large = false) {
   if (Large)
     // Emit the 5-insn large address load sequence with the `%ie_pc` family
     // of relocs, loading the result with `ldx.d` in the end.
     return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LoongArch::LDX_D,
-                                  LoongArchII::MO_IE_PC_LO);
+                                  LoongArchII::MO_IE_PC_LO, TII);
 
   // Code Sequence:
   //
@@ -485,17 +366,19 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSIE(
   unsigned FlagsLo =
       Has32S ? LoongArchII::MO_IE_PC_LO : LoongArchII::MO_IE_PCADD_LO;
   return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
-                                 FlagsHi, FlagsLo);
+                                 FlagsHi, FlagsLo, TII);
 }
 
-bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLD(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool Large) {
+static bool expandLoadAddressTLSLD(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   const LoongArchInstrInfo *TII,
+                                   bool Large = false) {
   if (Large)
     // Emit the 5-insn large address load sequence with the `%got_pc` family
     // of relocs, with the `pcalau12i` insn relocated with `%ld_pc_hi20`.
     return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LoongArch::ADD_D,
-                                  LoongArchII::MO_LD_PC_HI);
+                                  LoongArchII::MO_LD_PC_HI, TII);
 
   // Code Sequence:
   //
@@ -517,17 +400,19 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLD(
   unsigned FlagsLo =
       Has32S ? LoongArchII::MO_GOT_PC_LO : LoongArchII::MO_LD_PCADD_LO;
   return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
-                                 FlagsHi, FlagsLo);
+                                 FlagsHi, FlagsLo, TII);
 }
 
-bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool Large) {
+static bool expandLoadAddressTLSGD(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   const LoongArchInstrInfo *TII,
+                                   bool Large = false) {
   if (Large)
     // Emit the 5-insn large address load sequence with the `%got_pc` family
     // of relocs, with the `pcalau12i` insn relocated with `%gd_pc_hi20`.
     return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LoongArch::ADD_D,
-                                  LoongArchII::MO_GD_PC_HI);
+                                  LoongArchII::MO_GD_PC_HI, TII);
 
   // Code Sequence:
   //
@@ -549,12 +434,14 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
   unsigned FlagsLo =
       Has32S ? LoongArchII::MO_GOT_PC_LO : LoongArchII::MO_GD_PCADD_LO;
   return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
-                                 FlagsHi, FlagsLo);
+                                 FlagsHi, FlagsLo, TII);
 }
 
-bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool Large) {
+static bool expandLoadAddressTLSDesc(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     MachineBasicBlock::iterator &NextMBBI,
+                                     const LoongArchInstrInfo *TII,
+                                     bool Large = false) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
@@ -662,9 +549,9 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
   return true;
 }
 
-bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
+static bool expandFunctionCALL(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall) {
+    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall, const LoongArchInstrInfo *TII) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
 
@@ -697,7 +584,7 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
     unsigned MO = UseGOT ? LoongArchII::MO_GOT_PC_HI : LoongArchII::MO_PCREL_LO;
     unsigned LAOpcode = UseGOT ? LoongArch::LDX_D : LoongArch::ADD_D;
     expandLargeAddressLoad(MBB, MBBI, NextMBBI, LAOpcode, MO, Func, AddrReg,
-                           false);
+                           false, TII);
 
     // Mutate the pseudo into the JIRL in place, keeping its implicit operands.
     // Operand 0 becomes the address register; operand 1 is the jump offset.
@@ -710,7 +597,7 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
   llvm_unreachable("Unexpected code model");
 }
 
-void LoongArchPreRAExpandPseudo::annotateTableJump(
+static void annotateTableJump(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
@@ -747,6 +634,101 @@ void LoongArchPreRAExpandPseudo::annotateTableJump(
 
   // FindDepth = 4, probably sufficient.
   FindJTIMI(&*MBBI, /*FindDepth=*/4);
+}
+
+static bool expandMOVCF2GRViaFR(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                MachineBasicBlock::iterator &NextMBBI,
+                                const LoongArchInstrInfo *TII) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register TmpReg =
+      MF->getRegInfo().createVirtualRegister(&LoongArch::FPR32RegClass);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::MOVCF2FR_xS), TmpReg)
+      .addReg(MI.getOperand(1).getReg());
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::MOVFR2GR_S),
+          MI.getOperand(0).getReg())
+      .addReg(TmpReg);
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool expandMIPreRA(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, const LoongArchInstrInfo *TII) {
+  switch (MBBI->getOpcode()) {
+  case LoongArch::PseudoLA_PCREL:
+    return expandLoadAddressPcrel(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoLA_PCREL_LARGE:
+    return expandLoadAddressPcrel(MBB, MBBI, NextMBBI, TII, /*Large=*/true);
+  case LoongArch::PseudoLA_GOT:
+    return expandLoadAddressGot(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoLA_GOT_LARGE:
+    return expandLoadAddressGot(MBB, MBBI, NextMBBI, TII, /*Large=*/true);
+  case LoongArch::PseudoLA_TLS_LE:
+    return expandLoadAddressTLSLE(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoLA_TLS_IE:
+    return expandLoadAddressTLSIE(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoLA_TLS_IE_LARGE:
+    return expandLoadAddressTLSIE(MBB, MBBI, NextMBBI, TII, /*Large=*/true);
+  case LoongArch::PseudoLA_TLS_LD:
+    return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoLA_TLS_LD_LARGE:
+    return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI, TII, /*Large=*/true);
+  case LoongArch::PseudoLA_TLS_GD:
+    return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoLA_TLS_GD_LARGE:
+    return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI, TII, /*Large=*/true);
+  case LoongArch::PseudoLA_TLS_DESC:
+    return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoLA_TLS_DESC_LARGE:
+    return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, TII, /*Large=*/true);
+  case LoongArch::PseudoCALL_SMALL:
+  case LoongArch::PseudoCALL_LARGE:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false, TII);
+  case LoongArch::PseudoTAIL_SMALL:
+  case LoongArch::PseudoTAIL_LARGE:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true, TII);
+  case LoongArch::PseudoMOVCF2GRViaFR:
+    return expandMOVCF2GRViaFR(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoBRIND:
+    // If the PseudoBRIND is used to table jump, then emit a label to annotate
+    // the `jr` instruction, and save the instructions.
+    if (LArchAnnotateTableJump)
+      annotateTableJump(MBB, MBBI);
+    break;
+  }
+  return false;
+}
+
+static bool expandMBBPreRA(MachineBasicBlock &MBB,
+                           const LoongArchInstrInfo *TII) {
+  bool Modified = false;
+
+  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+  while (MBBI != E) {
+    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
+    Modified |= expandMIPreRA(MBB, MBBI, NMBBI, TII);
+    MBBI = NMBBI;
+  }
+
+  return Modified;
+}
+
+static bool expandPseudosPreRAInMF(MachineFunction &MF) {
+  const auto *TII =
+      static_cast<const LoongArchInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  bool Modified = false;
+  for (auto &MBB : MF)
+    Modified |= expandMBBPreRA(MBB, TII);
+  return Modified;
+}
+
+bool LoongArchPreRAExpandPseudoLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return expandPseudosPreRAInMF(MF);
 }
 
 class LoongArchExpandPseudo : public MachineFunctionPass {
@@ -951,27 +933,17 @@ bool LoongArchExpandPseudo::expandAddUpperImm(
   return true;
 }
 
-bool LoongArchPreRAExpandPseudo::expandMOVCF2GRViaFR(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  MachineFunction *MF = MBB.getParent();
-  MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
-
-  Register TmpReg =
-      MF->getRegInfo().createVirtualRegister(&LoongArch::FPR32RegClass);
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::MOVCF2FR_xS), TmpReg)
-      .addReg(MI.getOperand(1).getReg());
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::MOVFR2GR_S),
-          MI.getOperand(0).getReg())
-      .addReg(TmpReg);
-  MI.eraseFromParent();
-  return true;
-}
-
 } // end namespace
 
-INITIALIZE_PASS(LoongArchPreRAExpandPseudo, "loongarch-prera-expand-pseudo",
+PreservedAnalyses
+LoongArchPreRAExpandPseudoPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  return expandPseudosPreRAInMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                    : PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS(LoongArchPreRAExpandPseudoLegacy,
+                "loongarch-pre-ra-expand-pseudo",
                 LOONGARCH_PRERA_EXPAND_PSEUDO_NAME, false, false)
 
 INITIALIZE_PASS(LoongArchExpandPseudo, "loongarch-expand-pseudo",
@@ -979,8 +951,8 @@ INITIALIZE_PASS(LoongArchExpandPseudo, "loongarch-expand-pseudo",
 
 namespace llvm {
 
-FunctionPass *createLoongArchPreRAExpandPseudoPass() {
-  return new LoongArchPreRAExpandPseudo();
+FunctionPass *createLoongArchPreRAExpandPseudoLegacyPass() {
+  return new LoongArchPreRAExpandPseudoLegacy();
 }
 FunctionPass *createLoongArchExpandPseudoPass() {
   return new LoongArchExpandPseudo();
