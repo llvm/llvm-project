@@ -37,11 +37,13 @@ assignees: ''
 > FILL-ME: Are you planning to fix this issue? Are you planning to submit more
 > issues like this?
 
-## Related issues
+## Related issues / fuzzing campaign
 
-> FILL-ME: Have you checked that this issue has not been reported already? If
-> similar (but not identical) issue have been found, include Links. If
+> FILL-ME: Have you checked whether this issue has already been reported? If
+> similar (but not identical) issues have been found, include links. If
 > submitting multiple issues, create a meta-issue first and link it here.
+> Alternatively, if this is part of a fuzzing campaign reported on Discourse
+> with the tag `fuzzing-campaign`, link that thread instead.
 
 ## AI Declaration
 
