@@ -120,6 +120,8 @@ public:
   }
 
   void computeAllBlockSizes() {
+    MF.RenumberBlocks();
+    
     BBInfo.resize(MF.getNumBlockIDs());
     for (MachineBasicBlock &MBB : MF)
       computeBlockSize(&MBB);

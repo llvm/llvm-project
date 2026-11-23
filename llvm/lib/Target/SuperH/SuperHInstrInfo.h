@@ -72,6 +72,15 @@ class SuperHInstrInfo : public SuperHGenInstrInfo {
   const SuperHRegisterInfo RI;
 
 public:
+  enum BranchType {
+    BT_None,       // Couldn't analyze branch.
+    BT_NoBranch,   // No branches found.
+    BT_Uncond,     // One unconditional branch.
+    BT_Cond,       // One conditional branch.
+    BT_CondUncond, // A conditional branch followed by an unconditional branch.
+    BT_Indirect    // One indirct branch.
+  };
+
   explicit SuperHInstrInfo(const SuperHSubtarget &STI);
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
@@ -151,6 +160,28 @@ public:
                             MachineBasicBlock &RestoreBB,
                             const DebugLoc &DL, int64_t BrOffset,
                             RegScavenger *RS) const override;
+
+  // analyzeBranch - Analyzes basic block's branches and fills the branch
+  // instructions list.
+  BranchType analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                           MachineBasicBlock *&FBB,
+                           SmallVectorImpl<MachineOperand> &Cond,
+                           bool AllowModify,
+                           SmallVectorImpl<MachineInstr *> &BranchInstrs) const;
+
+  // isBranchAnalyzable - Gets whether the given opcode is analyzable.
+  bool isBranchAnalyzable(unsigned Opc) const;
+
+  // buildCondBr - Builds a conditional branch instruction.
+  void buildCondBr(MachineBasicBlock &MBB, 
+                   MachineBasicBlock *TBB,
+                   const DebugLoc &DL,
+                   ArrayRef<MachineOperand> &Cond) const;
+
+  // analyzeCondBr - Analyzes the conditional branch.
+  void analyzeCondBr(const MachineInstr *Inst, unsigned Opc,
+                     MachineBasicBlock *&MBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const;
 };
 } // namespace llvm
 

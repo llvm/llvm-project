@@ -1390,12 +1390,12 @@ include "SuperHInstrSH4.td"
 
 let isBranch = 1 in {
 
-let Uses = [SR] in
+let isTerminator = 1, Uses = [SR] in
 def BRCC        : SHPseudo<(outs), (ins brtarget:$bb, i8imm:$cc),
                           "! BRCC $bb, $cc",
                           []>;
 
-let Uses = [SR] in
+let isTerminator = 1, Uses = [SR] in
 def BRSCC       : SHPseudo<(outs), (ins brtarget:$bb, i8imm:$cc),
                           "! BRCC/s $bb, $cc",
                           []>;

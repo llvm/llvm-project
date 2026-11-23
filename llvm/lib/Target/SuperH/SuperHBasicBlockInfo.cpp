@@ -88,6 +88,7 @@ void SuperHBasicBlockUtils::adjustBBOffsetsAfter(MachineBasicBlock *BB) {
                     << "   - blocks: " << MF.getNumBlockIDs() << "\n");
 
   for (unsigned i = BBNum + 1, e = MF.getNumBlockIDs(); i < e; ++i) {
+
     // Get the offset and known bits at the end of the layout predecessor.
     // Include the alignment of the current block.
     const Align Align = MF.getBlockNumbered(i)->getAlignment();

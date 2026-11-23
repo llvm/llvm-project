@@ -463,7 +463,7 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
   SDValue Cmp = N->getOperand(3);
   SDLoc DL(N);
 
-  SDValue Ops[] = {Dest, CurDAG->getTargetConstant(CC, DL, MVT::i8), Cmp};
+  SDValue Ops[] = {Dest, CurDAG->getTargetConstant(CC, DL, MVT::i8), Chain, Cmp};
   MachineSDNode *Res = CurDAG->getMachineNode(ForceDelaySlot ? SH::BRSCC : SH::BRCC, 
                                               DL, MVT::Other, Ops);
 

@@ -170,7 +170,9 @@ bool SuperHExpandBR::expandMBB(MachineBasicBlock &MBB) {
     // Recalculate block size if the MBB changed.
     if (Modified) {
       BBUtils->computeBlockSize(&MBB);
-      BBUtils->adjustBBOffsetsAfter(&MBB);
+
+      if (MBBI != E)
+        BBUtils->adjustBBOffsetsAfter(&MBB);
     }
   }
 

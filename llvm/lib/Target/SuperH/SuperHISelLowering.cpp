@@ -165,6 +165,21 @@ static bool RetCC_SH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+//  Lower helper functions
+//===----------------------------------------------------------------------===//
+
+// addLiveIn - This helper function adds the specified physical register to the
+// MachineFunction as a live in value.  It also creates a corresponding
+// virtual register for it.
+static unsigned
+addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
+{
+  Register VReg = MF.getRegInfo().createVirtualRegister(RC);
+  MF.getRegInfo().addLiveIn(PReg, VReg);
+  return VReg;
+}
+
 
 
 
@@ -554,6 +569,7 @@ SDValue SuperHTargetLowering::LowerFormalArguments(
     // Arguments stored on registers.
     if (VA.isRegLoc()) {
       EVT RegVT = VA.getLocVT();
+      Register ArgReg = VA.getLocReg();
       const TargetRegisterClass *RC;
       if (RegVT == MVT::i8) {
         RC = &SH::GPR8RegClass;
@@ -564,10 +580,10 @@ SDValue SuperHTargetLowering::LowerFormalArguments(
       } else if (RegVT == MVT::f32) {
         RC = &SH::FR32RegClass;
       } else {
-        llvm_unreachable("Unknown argument type!");
+        RC = getRegClassFor(RegVT.getSimpleVT());
       }
 
-      Register Reg = MF.addLiveIn(VA.getLocReg(), RC);
+      Register Reg = addLiveIn(DAG.getMachineFunction(), ArgReg, RC);
       ArgValue = DAG.getCopyFromReg(Chain, dl, Reg, RegVT);
 
       // NOTE:  Clang should not promote any i8 or i16 to i32 but for safety the
@@ -1229,25 +1245,20 @@ SuperHTargetLowering::insertSELECTCC(MachineInstr &MI,
 
   MachineFunction *MF = MBB->getParent();
   const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator It = ++MBB->getIterator();
   MachineBasicBlock *FallThrough = MBB->getFallThrough();
 
   // If the current basic block falls through to another basic block,
   // we must insert an unconditional branch to the fallthrough destination
   // if we are to insert basic blocks at the prior fallthrough point.
   if (FallThrough != nullptr) {
-    BuildMI(MBB, DL, TII.get(SH::BRA)).addMBB(FallThrough);
+    BuildMI(MBB, DL, TII.get(SH::BR)).addMBB(FallThrough);
   }
 
   MachineBasicBlock *trueMBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *falseMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-
-  MachineFunction::iterator I;
-  for (I = MF->begin(); I != MF->end() && &(*I) != MBB; ++I)
-    ;
-  if (I != MF->end())
-    ++I;
-  MF->insert(I, trueMBB);
-  MF->insert(I, falseMBB);
+  MF->insert(It, trueMBB);
+  MF->insert(It, falseMBB);
 
   // Set the call frame size on entry to the new basic blocks.
   unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
@@ -1261,13 +1272,15 @@ SuperHTargetLowering::insertSELECTCC(MachineInstr &MI,
                   std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   trueMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
-  BuildMI(MBB, DL, TII.getBrCond(CC, false)).addMBB(trueMBB);
-  BuildMI(MBB, DL, TII.get(SH::BRA)).addMBB(falseMBB);
+  BuildMI(MBB, DL, TII.get(SH::BRCC))
+    .addMBB(trueMBB)
+    .addImm(CC);
+  BuildMI(MBB, DL, TII.get(SH::BR)).addMBB(falseMBB);
   MBB->addSuccessor(falseMBB);
   MBB->addSuccessor(trueMBB);
 
   // Unconditionally flow back to the true block
-  BuildMI(falseMBB, DL, TII.get(SH::BRA)).addMBB(trueMBB);
+  BuildMI(falseMBB, DL, TII.get(SH::BR)).addMBB(trueMBB);
   falseMBB->addSuccessor(trueMBB);
 
   // Set up the Phi node to determine where we came from

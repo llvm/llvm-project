@@ -249,6 +249,20 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Load from MACH
+  if (SrcReg == SH::MACHI && SH::GPRRegClass.contains(DestReg)) {
+    BuildMI(MBB, MI, DL, get(SH::STSMACH), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  // Store to MACH
+  if (SH::GPRRegClass.contains(SrcReg) && DestReg == SH::MACHI) {
+    BuildMI(MBB, MI, DL, get(SH::LDSMACH), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
   // If the targets are GPR registers, use MOV Rm, Rn.
   if (SH::GPRRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MI, DL, get(SH::MOV), DestReg)
@@ -410,189 +424,157 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *&FBB,
                                     SmallVectorImpl<MachineOperand> &Cond,
                                     bool AllowModify) const {
+  SmallVector<MachineInstr*, 2> BranchInstrs;
+  BranchType BT = analyzeBranch(MBB, TBB, FBB, Cond, AllowModify, BranchInstrs);
+
+  return (BT == BT_None) || (BT == BT_Indirect);
+}
+
+
+SuperHInstrInfo::BranchType 
+SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                           MachineBasicBlock *&FBB,
+                           SmallVectorImpl<MachineOperand> &Cond,
+                           bool AllowModify,
+                           SmallVectorImpl<MachineInstr *> &BranchInstrs) const {
+
   // Start from the bottom of the block and work up, examining the
   // terminator instructions.
-  MachineBasicBlock::iterator I = MBB.end();
-  MachineBasicBlock::iterator UnCondBrIter = MBB.end();
+  MachineBasicBlock::reverse_iterator I = MBB.rbegin(), REnd = MBB.rend();
 
-  while (I != MBB.begin()) {
-    --I;
-    if (I->isDebugInstr() || I->getOpcode() == SH::NOP) {
-      continue;
-    }
+  // Skip all the debug instructions.
+  while (I != REnd && I->isDebugInstr())
+    ++I;
 
-    // Working from the bottom, when we see a non-terminator
-    // instruction, we're done.
-    if (!isUnpredicatedTerminator(*I)) {
-      break;
-    }
-
-    // A terminator that isn't a branch can't easily be handled
-    // by this analysis.
-    if (!I->getDesc().isBranch()) {
-      return true;
-    }
-
-    switch(I->getOpcode()) {
-    default: break;
-    case SH::BR:
-    case SH::BRA:
-      UnCondBrIter = I;
-
-      if (!AllowModify) {
-        TBB = I->getOperand(0).getMBB();
-        continue;
-      }
-
-      // If the block has any instructions after a JMP, delete them.
-      MBB.erase(std::next(I), MBB.end());
-
-      Cond.clear();
-      FBB = nullptr;
-
-      // Delete the JMP if it's equivalent to a fall-through.
-      if (MBB.isLayoutSuccessor(I->getOperand(0).getMBB())) {
-        TBB = nullptr;
-        I->eraseFromParent();
-        I = MBB.end();
-        UnCondBrIter = MBB.end();
-        continue;
-      }
-
-      // TBB is used to indicate the unconditinal destination.
-      TBB = I->getOperand(0).getMBB();
-      continue;
-    }
-
-    // Handle conditional branches.
-    SHCC::CondCode BranchCode = getCondFromBranchOp(I->getOpcode());
-    if (BranchCode == SHCC::COND_INVALID) {
-      return true; // Can't handle indirect branch.
-    }
-
-    // Working from the bottom, handle the first conditional branch.
-    if (Cond.empty()) {
-      MachineBasicBlock *TargetBB = I->getOperand(0).getMBB();
-      if (AllowModify && UnCondBrIter != MBB.end() &&
-          MBB.isLayoutSuccessor(TargetBB)) {
-
-        BranchCode = getOppositeCondCode(BranchCode);
-        auto JNCC = getBrCond(BranchCode, false);
-        MachineBasicBlock::iterator OldInst = I;
-
-        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), JNCC)
-            .addMBB(UnCondBrIter->getOperand(0).getMBB());
-        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(SH::BR))
-            .addMBB(TargetBB);
-
-        OldInst->eraseFromParent();
-        UnCondBrIter->eraseFromParent();
-
-        // Restart the analysis.
-        UnCondBrIter = MBB.end();
-        I = MBB.end();
-        continue;
-      }
-
-      FBB = TBB;
-      TBB = I->getOperand(0).getMBB();
-      Cond.push_back(MachineOperand::CreateImm(BranchCode));
-      continue;
-    }
-
-    // Handle subsequent conditional branches. Only handle the case where all
-    // conditional branches branch to the same destination.
-    assert(Cond.size() == 1);
-    assert(TBB);
-
-    // Only handle the case where all conditional branches branch to
-    // the same destination.
-    if (TBB != I->getOperand(0).getMBB()) {
-      return true;
-    }
-
-    SHCC::CondCode OldBranchCode = (SHCC::CondCode)Cond[0].getImm();
-
-    // If the conditions are the same, we can leave them alone.
-    if (OldBranchCode == BranchCode) {
-      continue;
-    }
-
-    return true;
+  // Block with no branches, which implies it's a fallthrough.
+  if (I == REnd || !isUnpredicatedTerminator(*I)) {
+    TBB = FBB = nullptr;
+    return BT_NoBranch;
   }
 
-  // Don't know how to handle this.
-  return false;
+  MachineInstr *LastInst = &*I;
+  unsigned LastOpc = LastInst->getOpcode();
+  BranchInstrs.push_back(LastInst);
+
+  // Not an analyzable branch (e.g., indirect jump).
+  if (!isBranchAnalyzable(LastOpc))
+    return LastInst->isIndirectBranch() ? BT_Indirect : BT_None;
+
+  // Get the second to last instruction in the block.
+  unsigned SecondLastOpc = 0;
+  MachineInstr *SecondLastInst = nullptr;
+
+  // Skip past any debug instruction to see if the second last actual
+  // is a branch.
+  ++I;
+  while (I != REnd && I->isDebugInstr())
+    ++I;
+
+  if (I != REnd) {
+    SecondLastInst = &*I;
+    SecondLastOpc = isBranchAnalyzable(SecondLastInst->getOpcode()) ? 
+      SecondLastInst->getOpcode() : 0;
+
+    // Not an analyzable branch (must be an indirect jump).
+    if (isUnpredicatedTerminator(*SecondLastInst) && !SecondLastOpc)
+      return BT_None;
+  }
+
+  // If there is only one terminator instruction, process it.
+  if (!SecondLastOpc) {
+
+    // Unconditional branch.
+    if (LastInst->isUnconditionalBranch()) {
+      TBB = LastInst->getOperand(0).getMBB();
+      return BT_Uncond;
+    }
+
+    // Conditional branch
+    analyzeCondBr(LastInst, LastOpc, TBB, Cond);
+    return BT_Cond;
+  }
+
+  // If we reached here, there are two branches.
+  // If there are three terminators, we don't know what sort of block this is.
+  if (++I != REnd && isUnpredicatedTerminator(*I))
+    return BT_None;
+
+  BranchInstrs.insert(BranchInstrs.begin(), SecondLastInst);
+
+  // If second to last instruction is an unconditional branch,
+  // analyze it and remove the last instruction.
+  if (SecondLastInst->isUnconditionalBranch()) {
+    // Return if the last instruction cannot be removed.
+    if (!AllowModify)
+      return BT_None;
+
+    TBB = SecondLastInst->getOperand(0).getMBB();
+    LastInst->eraseFromParent();
+    BranchInstrs.pop_back();
+    return BT_Uncond;
+  }
+
+  // Conditional branch followed by an unconditional branch.
+  // The last one must be unconditional.
+  if (!LastInst->isUnconditionalBranch())
+    return BT_None;
+
+  analyzeCondBr(SecondLastInst, SecondLastOpc, TBB, Cond);
+  FBB = LastInst->getOperand(0).getMBB();
+
+  return BT_CondUncond;
 }
 
 unsigned SuperHInstrInfo::insertBranch(
     MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
     ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
-  if (BytesAdded)
-    *BytesAdded = 0;
-
-  LLVM_DEBUG(dbgs() << "insertBranch" << "\n");
 
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() == 1 || Cond.size() == 0) &&
-         "SH branch conditions have one component!");
+  assert(!BytesAdded && "code size not handled");
 
+  // All branch instructions take at least one cond
+  assert((Cond.size() <= 2) && "# of SH branch conditions must be <= 1!");
+
+  // Two-way conditional branch.
+  if (FBB) {
+    buildCondBr(MBB, TBB, DL, Cond);
+    BuildMI(&MBB, DL, get(SH::BR))
+        .addMBB(FBB)
+        ->setImplicitPhysRegDefsDead();
+    return 2;
+  }
+
+  // One-way unconditional branch
   if (Cond.empty()) {
-    assert(!FBB && "Unconditional branch with multiple successors!");
-    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA))
-      .addMBB(TBB);
-    if (BytesAdded)
-      *BytesAdded += getInstSizeInBytes(MI);
+    BuildMI(&MBB, DL, get(SH::BR))
+        .addMBB(TBB)
+        ->setImplicitPhysRegDefsDead();
     return 1;
   }
 
-  // Conditional branch.
-  unsigned Count = 0;
-  SHCC::CondCode CC = (SHCC::CondCode)Cond[0].getImm();
-  auto &CondMI = *BuildMI(&MBB, DL, getBrCond(CC, false))
-    .addMBB(TBB);
-  LLVM_DEBUG(dbgs() << "Created cc branch for " << getCondName(CC) << "...\n");
-
-  if (BytesAdded)
-    *BytesAdded += getInstSizeInBytes(CondMI);
-  ++Count;
-
-  if (FBB) {
-    // Two-way Conditional branch. Insert the second branch.
-    auto &MI = *BuildMI(&MBB, DL, get(SH::BR))
-      .addMBB(FBB);
-    if (BytesAdded)
-      *BytesAdded += getInstSizeInBytes(MI);
-    ++Count;
-  }
-
-  return Count;
+  // One-way conditional branch.
+  buildCondBr(MBB, TBB, DL, Cond);
+  return 1;
 }
 
 unsigned SuperHInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                        int *BytesRemoved) const {
-  if (BytesRemoved)
-    *BytesRemoved = 0;
-
-  LLVM_DEBUG(dbgs() << "removeBranch" << "\n");
+  assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
 
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugValue())
+
+    // Skip past debug instructions
+    if (I->isDebugInstr())
       continue;
 
-    unsigned Opcode = I->getOpcode();
-    if (Opcode != SH::BR && Opcode != SH::NOP &&
-        getCondFromBranchOp(Opcode) == SHCC::COND_INVALID)
+    if (!isBranchAnalyzable(I->getOpcode()))
       break;
 
-    // Remove the branch.
-    if (BytesRemoved)
-      *BytesRemoved += getInstSizeInBytes(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;
@@ -603,12 +585,8 @@ unsigned SuperHInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 bool SuperHInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() == 1 && "Invalid SH branch condition!");
-
-  LLVM_DEBUG(dbgs() << "reverseBranchCondition" << "\n");
-
-  SHCC::CondCode CC = (SHCC::CondCode)Cond[0].getImm();
-  Cond[0].setImm(getOppositeCondCode(CC));
+  assert(Cond.size() == 2 && "Invalid SH branch condition!");
+  Cond[1].setImm(getOppositeCondCode((SHCC::CondCode)Cond[1].getImm()));
   return false;
 }
 
@@ -644,16 +622,59 @@ bool SuperHInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   switch (BranchOp) {
   default:
     llvm_unreachable("unexpected opcode!");
+  case SH::BR:
   case SH::BRCC:
   case SH::BRSCC:
+    return true;
   case SH::BF:
   case SH::BT:
   case SH::BFS:
   case SH::BTS:
     return isIntN(8, BrOffset);
-  case SH::BR:
   case SH::BRA:
   case SH::BSR:
     return isIntN(12, BrOffset) && (BrOffset % 2 == 0); 
   }
+}
+
+
+bool SuperHInstrInfo::isBranchAnalyzable(unsigned Opc) const {
+  switch(Opc) {
+  default:
+    return false;
+  case SH::BR:
+  case SH::BRCC:
+  case SH::BRSCC:
+      return true;
+  }
+}
+
+void 
+SuperHInstrInfo::analyzeCondBr(const MachineInstr *Inst, unsigned Opc,
+                   MachineBasicBlock *&MBB,
+                   SmallVectorImpl<MachineOperand> &Cond) const {
+  assert(isBranchAnalyzable(Opc) && "Not an analyzable branch");
+  int NumOp = Inst->getNumExplicitOperands();
+
+  MBB = Inst->getOperand(0).getMBB();
+  Cond.push_back(MachineOperand::CreateImm(Opc));
+
+  for (int i = 1; i < NumOp; i++)
+    Cond.push_back(Inst->getOperand(i));
+}
+
+void 
+SuperHInstrInfo::buildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                 const DebugLoc &DL, ArrayRef<MachineOperand> &Cond) const {
+  unsigned Opc = Cond[0].getImm();
+  const MCInstrDesc &MCID = get(Opc);
+  MachineInstrBuilder MIB = BuildMI(&MBB, DL, MCID);
+
+  MIB.addMBB(TBB);
+  for (unsigned i = 1; i < Cond.size(); ++i) {
+    assert((Cond[i].isImm() || Cond[i].isReg()) &&
+           "Cannot copy operand for conditional branch!");
+    MIB.add(Cond[i]);
+  }
+  MIB->setImplicitPhysRegDefsDead();
 }
