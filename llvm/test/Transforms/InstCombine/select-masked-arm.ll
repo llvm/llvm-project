@@ -9,9 +9,7 @@ define i32 @shift_of_nonnegative(i32 %x) {
 ; CHECK-LABEL: @shift_of_nonnegative(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 23
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[S]], 255
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[S]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %s = lshr i32 %x, 23
   %c = icmp sgt i32 %x, -1
@@ -23,10 +21,8 @@ define i32 @shift_of_nonnegative(i32 %x) {
 define i32 @shift_of_nonnegative_false_arm(i32 %x) {
 ; CHECK-LABEL: @shift_of_nonnegative_false_arm(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 23
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[S]], 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 [[S]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %s = lshr i32 %x, 23
   %c = icmp slt i32 %x, 0
@@ -38,10 +34,8 @@ define i32 @shift_of_nonnegative_false_arm(i32 %x) {
 define i64 @shift_of_small(i64 %x) {
 ; CHECK-LABEL: @shift_of_small(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 12
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[X]], 1048576
 ; CHECK-NEXT:    [[A:%.*]] = and i64 [[S]], 4095
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i64 [[S]], i64 [[A]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 [[A]]
 ;
   %s = lshr i64 %x, 12
   %c = icmp ult i64 %x, 1048576
@@ -53,10 +47,8 @@ define i64 @shift_of_small(i64 %x) {
 define i64 @shift_of_small_false_arm(i64 %x) {
 ; CHECK-LABEL: @shift_of_small_false_arm(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 12
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[X]], 1048575
 ; CHECK-NEXT:    [[A:%.*]] = and i64 [[S]], 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i64 [[A]], i64 [[S]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 [[A]]
 ;
   %s = lshr i64 %x, 12
   %c = icmp ugt i64 %x, 1048575
@@ -68,10 +60,7 @@ define i64 @shift_of_small_false_arm(i64 %x) {
 define i32 @shift_of_nonnegative_select_shift(i32 %x) {
 ; CHECK-LABEL: @shift_of_nonnegative_select_shift(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 23
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[S]], 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[S]], i32 [[A]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %s = lshr i32 %x, 23
   %c = icmp slt i32 %x, 0
@@ -83,11 +72,7 @@ define i32 @shift_of_nonnegative_select_shift(i32 %x) {
 define i32 @bit_clear(i32 %x) {
 ; CHECK-LABEL: @bit_clear(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X]], 64
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[S]], 268435451
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 [[S]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %s = lshr i32 %x, 4
   %b = and i32 %x, 64
@@ -102,11 +87,7 @@ define i32 @bit_clear(i32 %x) {
 define i32 @two_bits_partial_mask(i32 %x) {
 ; CHECK-LABEL: @two_bits_partial_mask(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X]], 192
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[S]], 268435447
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 [[S]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %s = lshr i32 %x, 4
   %b = and i32 %x, 192
