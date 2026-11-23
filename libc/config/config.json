@@ -175,6 +175,10 @@
     "LIBC_ADD_NULL_CHECKS": {
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
+    },
+    "LIBC_COPT_PROVIDE_GNU_ALIASES": {
+      "value": false,
+      "doc": "Provide GNU/glibc compatibility symbol aliases (such as __errno_location)."
     }
   },
   "wctype": {
@@ -203,6 +207,16 @@
     "LIBC_COPT_HARDENING_MODE": {
       "value": "LIBC_HARDENING_MODE_NONE",
       "doc": "Hardening mode for the library."
+    }
+  },
+  "locale": {
+    "LIBC_CONF_DEFAULT_LOCALE": {
+      "value": "C.UTF-8",
+      "doc": "The default locale for the C library. Options: 'C', 'POSIX', 'C.UTF-8', 'en_US.UTF-8'."
+    },
+    "LIBC_CONF_ENABLE_RUNTIME_LOCALE": {
+      "value": true,
+      "doc": "Enable runtime locale switching. Disable to bypass runtime locale objects and use hardcoded lookups for embedded builds."
     }
   }
 }

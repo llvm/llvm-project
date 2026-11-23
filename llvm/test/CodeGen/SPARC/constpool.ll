@@ -36,9 +36,9 @@ entry:
 
 ; v8pic32: floatCP
 ; v8pic32: _GLOBAL_OFFSET_TABLE_
-; v8pic32: sethi %hi(.LCPI0_0), %[[R1:[gilo][0-7]]]
-; v8pic32: add %[[R1]], %lo(.LCPI0_0), %[[Goffs:[gilo][0-7]]]
-; v8pic32: ld [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]]
+; v8pic32: sethi %gdop_hix22(.LCPI0_0), %[[R1:[gilo][0-7]]]
+; v8pic32: xor %[[R1]], %gdop_lox10(.LCPI0_0), %[[Goffs:[gilo][0-7]]]
+; v8pic32: ld [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]], %gdop(.LCPI0_0)
 ; v8pic32: ld [%[[Gaddr]]], %f0
 ; v8pic32: ret
 ; v8pic32: restore
@@ -47,9 +47,9 @@ entry:
 
 ; v9pic32: floatCP
 ; v9pic32: _GLOBAL_OFFSET_TABLE_
-; v9pic32: sethi %hi(.LCPI0_0), %[[R1:[gilo][0-7]]]
-; v9pic32: add %[[R1]], %lo(.LCPI0_0), %[[Goffs:[gilo][0-7]]]
-; v9pic32: ldx [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]]
+; v9pic32: sethi %gdop_hix22(.LCPI0_0), %[[R1:[gilo][0-7]]]
+; v9pic32: xor %[[R1]], %gdop_lox10(.LCPI0_0), %[[Goffs:[gilo][0-7]]]
+; v9pic32: ldx [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]], %gdop(.LCPI0_0)
 ; v9pic32: ld [%[[Gaddr]]], %f0
 ; v9pic32: ret
 ; v9pic32: restore

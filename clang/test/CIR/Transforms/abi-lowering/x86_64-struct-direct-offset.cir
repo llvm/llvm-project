@@ -22,7 +22,7 @@ module attributes {
   // HiWord is 16 bytes: a leading ABI-empty byte, then an i64 at offset 8.
   // The low eightbyte carries no field (NO_CLASS), so the classifier passes
   // the value in one register taken from byte 8.
-  cir.func @take_hiword(%arg0: !rec_HiWord) -> !s64i {
+  cir.func @take_hiword(%arg0: !rec_HiWord) -> !s64i requires_call_conv_lowering {
     %0 = cir.alloca "h" align(8) : !cir.ptr<!rec_HiWord>
     cir.store %arg0, %0 : !rec_HiWord, !cir.ptr<!rec_HiWord>
     %1 = cir.get_member %0[1] {name = "hi"} : !cir.ptr<!rec_HiWord> -> !cir.ptr<!s64i>
@@ -41,7 +41,7 @@ module attributes {
   // CIR:   cir.copy %[[SLOT]] align(8) to %[[H]] align(8) : !cir.ptr<!rec_HiWord>
 
   // The return value is read in place from byte 8 of the local aggregate.
-  cir.func @give_hiword() -> !rec_HiWord {
+  cir.func @give_hiword() -> !rec_HiWord requires_call_conv_lowering {
     %0 = cir.alloca "h" align(8) : !cir.ptr<!rec_HiWord>
     %1 = cir.load %0 : !cir.ptr<!rec_HiWord>, !rec_HiWord
     cir.return %1 : !rec_HiWord
@@ -57,7 +57,7 @@ module attributes {
   // CIR:   cir.return %[[RVAL]] : !s64i
 
   // A 16-byte-aligned slot is only 8-byte aligned at byte 8.
-  cir.func @give_hiword_align16() -> !rec_HiWord {
+  cir.func @give_hiword_align16() -> !rec_HiWord requires_call_conv_lowering {
     %0 = cir.alloca "h" align(16) : !cir.ptr<!rec_HiWord>
     %1 = cir.load %0 : !cir.ptr<!rec_HiWord>, !rec_HiWord
     cir.return %1 : !rec_HiWord
@@ -73,7 +73,7 @@ module attributes {
   // CIR-NEXT:   cir.return %[[AVAL]] : !s64i
 
   // The u24 in the last 3 bytes of the 11-byte record is read in place.
-  cir.func @give_lead_pad3() -> !rec_LeadPad3 {
+  cir.func @give_lead_pad3() -> !rec_LeadPad3 requires_call_conv_lowering {
     %0 = cir.alloca "l" align(1) : !cir.ptr<!rec_LeadPad3>
     %1 = cir.load %0 : !cir.ptr<!rec_LeadPad3>, !rec_LeadPad3
     cir.return %1 : !rec_LeadPad3
@@ -89,7 +89,7 @@ module attributes {
   // CIR-NEXT:   cir.return %[[PVAL]] : !cir.int<u, 24>
 
   // The offset view of a slot keeps the slot's address space.
-  cir.func @give_hiword_as5() -> !rec_HiWord {
+  cir.func @give_hiword_as5() -> !rec_HiWord requires_call_conv_lowering {
     %0 = cir.alloca "h" align(8) : !cir.ptr<!rec_HiWord, target_address_space(5)>
     %1 = cir.load %0 : !cir.ptr<!rec_HiWord, target_address_space(5)>, !rec_HiWord
     cir.return %1 : !rec_HiWord
@@ -105,7 +105,7 @@ module attributes {
   // CIR-NEXT:   cir.return %[[SVAL]] : !s64i
 
   // Through a pointer argument the bytes are copied, then byte 8 is read.
-  cir.func @give_hiword_from_pointer(%arg0: !cir.ptr<!rec_HiWord>) -> !rec_HiWord {
+  cir.func @give_hiword_from_pointer(%arg0: !cir.ptr<!rec_HiWord>) -> !rec_HiWord requires_call_conv_lowering {
     %0 = cir.load %arg0 : !cir.ptr<!rec_HiWord>, !rec_HiWord
     cir.return %0 : !rec_HiWord
   }
@@ -122,7 +122,7 @@ module attributes {
 
   // The caller reconstructs the aggregate from the callee's i64 result, so
   // the received register is written back to byte 8 of a slot.
-  cir.func @call_hiword() -> !s64i {
+  cir.func @call_hiword() -> !s64i requires_call_conv_lowering {
     %0 = cir.call @give_hiword() : () -> !rec_HiWord
     %1 = cir.alloca "r" align(8) : !cir.ptr<!rec_HiWord>
     cir.store %0, %1 : !rec_HiWord, !cir.ptr<!rec_HiWord>
@@ -144,7 +144,7 @@ module attributes {
 
   // Passing an aggregate argument runs the extraction direction at the call
   // site: the operand's byte 8 is read out to form the register.
-  cir.func @pass_hiword(%arg0: !rec_HiWord) {
+  cir.func @pass_hiword(%arg0: !rec_HiWord) requires_call_conv_lowering {
     %0 = cir.call @take_hiword(%arg0) : (!rec_HiWord) -> !s64i
     cir.return
   }
@@ -162,7 +162,7 @@ module attributes {
 
   // The same offset-8 coercion from a leading pad field rather than a nested
   // empty record.  Only 4 live bytes in the high eightbyte, so i32 not i64.
-  cir.func @take_lead_pad(%arg0: !rec_LeadPad) -> !s32i {
+  cir.func @take_lead_pad(%arg0: !rec_LeadPad) -> !s32i requires_call_conv_lowering {
     %0 = cir.alloca "l" align(4) : !cir.ptr<!rec_LeadPad>
     cir.store %arg0, %0 : !rec_LeadPad, !cir.ptr<!rec_LeadPad>
     %1 = cir.get_member %0[1] {name = "data"} : !cir.ptr<!rec_LeadPad> -> !cir.ptr<!s32i>

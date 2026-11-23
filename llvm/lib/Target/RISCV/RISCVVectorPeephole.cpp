@@ -493,8 +493,13 @@ bool RISCVVectorPeepholeImpl::ensureDominates(
     assert(MO->getParent()->getParent() == Use.getParent());
     if (!MO->isReg() || !MO->getReg().isValid())
       continue;
+    if (MO->getReg().isPhysical())
+      return false;
 
     MachineInstr *Def = MRI->getVRegDef(MO->getReg());
+    if (!Def)
+      continue;
+
     if (Def->getParent() == Dest->getParent() &&
         !strictlyDominates(Def, *Dest)) {
       if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
@@ -537,7 +542,6 @@ bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
   MRI->constrainRegClass(MI.getOperand(2).getReg(),
                          MRI->getRegClass(MI.getOperand(0).getReg()));
   MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
-  MRI->clearKillFlags(MI.getOperand(2).getReg());
   MI.eraseFromParent();
   return true;
 }
@@ -774,7 +778,9 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
               MachineOperand::CreateReg(MaskOp.getReg(), false));
 
   // Update the passthru, AVL and policy.
-  True.getOperand(True.getNumExplicitDefs()).setReg(FalseReg);
+  MachineOperand &TruePassthruOp = True.getOperand(True.getNumExplicitDefs());
+  TruePassthruOp.setReg(FalseReg);
+  TruePassthruOp.setIsUndef(FalseOp.isUndef());
   True.removeOperand(RISCVII::getVLOpNum(True.getDesc()));
   True.insert(True.operands_begin() + RISCVII::getVLOpNum(True.getDesc()),
               MinVL);
@@ -788,8 +794,6 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
     MRI->constrainRegClass(
         MO.getReg(), True.getRegClassConstraint(MO.getOperandNo(), TII, TRI));
   }
-  // We should clear the IsKill flag since we have a new use now.
-  MRI->clearKillFlags(FalseReg);
   MI.eraseFromParent();
 
   // Cleanup all the COPYs on True's value. We have to manually do this because
@@ -938,7 +942,6 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
               Masked->getRegClassConstraint(MO.getOperandNo(), TII, TRI))
         MRI->constrainRegClass(MO.getReg(), RC);
     }
-    MRI->clearKillFlags(MaskReg);
     MI.eraseFromParent();
     Cmp.eraseFromParent();
     for (MachineInstr *CmpCopy : CmpCopies)

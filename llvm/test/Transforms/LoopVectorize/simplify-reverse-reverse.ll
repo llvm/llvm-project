@@ -20,10 +20,10 @@ define void @reverse_copy(ptr noalias %src, ptr noalias %dst, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -12
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -12
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -82,11 +82,11 @@ define void @reverse_binop(ptr noalias %src, ptr noalias %dst, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -12
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP8]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -12
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -147,11 +147,11 @@ define void @reverse_fneg(ptr noalias %src, ptr noalias %dst, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -12
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = fneg <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[DST]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -12
 ; CHECK-NEXT:    store <4 x float> [[REVERSE1]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

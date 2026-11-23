@@ -7,15 +7,11 @@ define i32 @test(ptr %Clause)  {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[CLAUSE]], i64 64
 ; CHECK-NEXT:    [[CLAUSE_VAL:%.*]] = load i32, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[CLAUSE]], i64 68
-; CHECK-NEXT:    [[CLAUSE_VAL51:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[ADD_I:%.*]] = sub i32 0, [[CLAUSE_VAL]]
 ; CHECK-NEXT:    br label %[[FOR_COND_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND_PREHEADER]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[CLAUSE]], i64 72
-; CHECK-NEXT:    [[ADD_I5667:%.*]] = add i32 [[CLAUSE_VAL51]], [[CLAUSE_VAL]]
-; CHECK-NEXT:    [[CLAUSE_VAL7_I68:%.*]] = load i32, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[ADD3_I69:%.*]] = add i32 [[ADD_I5667]], [[CLAUSE_VAL7_I68]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[ADD3_I69:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP470:%.*]] = icmp sgt i32 [[ADD3_I69]], 0
 ; CHECK-NEXT:    ret i32 0
 ;

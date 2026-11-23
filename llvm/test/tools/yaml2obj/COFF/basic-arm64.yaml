@@ -2,10 +2,12 @@
 # RUN: llvm-readobj --file-headers %t | FileCheck %s
 # RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP
 
+# CHECK: TimeDateStamp: 2018-11-27 20:47:38 (0x5BFDAD6A)
 # CHECK: OptionalHeaderSize: 240
 # CHECK: ImageBase: 0x140000000
 
 # ROUNDTRIP: ImageBase: 5368709120
+# ROUNDTRIP: TimeDateStamp: 1543351658
 # ROUNDTRIP: VirtualAddress:  4096
 # ROUNDTRIP: VirtualAddress:  8192
 # ROUNDTRIP: VirtualAddress:  12288
@@ -75,6 +77,7 @@ OptionalHeader:
     Size:            0
 header:
   Machine:         IMAGE_FILE_MACHINE_ARM64
+  TimeDateStamp:   1543351658
   Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
 sections:
   - Name:            .text

@@ -49,6 +49,8 @@ private:
 
   void addBTI(MachineBasicBlock &MBB, bool CouldCall, bool CouldJump,
               bool NeedsWinCFI);
+
+  bool replaceWithNonBranchTarget(MachineBasicBlock &MBB);
 };
 
 class AArch64BranchTargetsLegacy : public MachineFunctionPass {
@@ -112,6 +114,8 @@ bool AArch64BranchTargetsImpl::run(MachineFunction &MF) {
   bool MadeChange = false;
   bool HasWinCFI = MF.hasWinCFI();
   for (MachineBasicBlock &MBB : MF) {
+    MadeChange |= replaceWithNonBranchTarget(MBB);
+
     bool CouldCall = false, CouldJump = false;
     // If the function is address-taken or externally-visible, it could be
     // indirectly called. PLT entries and tail-calls use BR, but when they are
@@ -151,13 +155,7 @@ bool AArch64BranchTargetsImpl::run(MachineFunction &MF) {
   return MadeChange;
 }
 
-void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
-                                      bool CouldJump, bool HasWinCFI) {
-  LLVM_DEBUG(dbgs() << "Adding BTI " << (CouldJump ? "j" : "")
-                    << (CouldCall ? "c" : "") << " to " << MBB.getName()
-                    << "\n");
-
-  unsigned HintNum = getBTIHintNum(CouldCall, CouldJump);
+MachineBasicBlock::iterator getFirstExecutableInstr(MachineBasicBlock &MBB) {
   auto MBBI = MBB.begin();
 
   // If the block starts with EH_LABEL(s), skip them first.
@@ -172,12 +170,55 @@ void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
        ++MBBI)
     ;
 
-  // PACI[AB]SP are implicitly BTI c so insertion of a BTI can be skipped in
-  // this case. Depending on the runtime value of SCTLR_EL1.BT[01], they are not
-  // equivalent to a BTI jc, which still requires an additional BTI.
+  return MBBI;
+}
+
+bool AArch64BranchTargetsImpl::replaceWithNonBranchTarget(
+    MachineBasicBlock &MBB) {
+  bool MadeChange = false;
+  auto MF = MBB.getParent();
+  auto MBBI = getFirstExecutableInstr(MBB);
+
+  if (MBBI == MBB.end() ||
+      (&MBB == &MF->front() && (MBBI->getOpcode() == AArch64::PACIASPPC ||
+                                MBBI->getOpcode() == AArch64::PACIBSPPC)))
+    return MadeChange;
+
+  // If there are any PACI[AB]SPPC instructions after the first executable
+  // instruction, replace with the address signing opcode which is not a branch
+  // target to prevent an implicit BTI in the middle of the basic block.
+  for (; MBBI != MBB.end(); ++MBBI) {
+    if (MBBI->getOpcode() == AArch64::PACIASPPC ||
+        MBBI->getOpcode() == AArch64::PACIBSPPC) {
+      unsigned NBOp = MBBI->getOpcode() == AArch64::PACIASPPC
+                          ? AArch64::PACNBIASPPC
+                          : AArch64::PACNBIBSPPC;
+
+      MBBI->setDesc(Subtarget->getInstrInfo()->get(NBOp));
+      MadeChange = true;
+    }
+  }
+
+  return MadeChange;
+}
+
+void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
+                                      bool CouldJump, bool HasWinCFI) {
+  LLVM_DEBUG(dbgs() << "Adding BTI " << (CouldJump ? "j" : "")
+                    << (CouldCall ? "c" : "") << " to " << MBB.getName()
+                    << "\n");
+
+  unsigned HintNum = getBTIHintNum(CouldCall, CouldJump);
+  auto MBBI = getFirstExecutableInstr(MBB);
+
+  // PACI[AB]SP(PC)? are implicitly BTI c so insertion of a BTI can be skipped
+  // in this case. Depending on the runtime value of SCTLR_EL1.BT[01], they are
+  // not equivalent to a BTI jc, which still requires an additional BTI.
   if (MBBI != MBB.end() && ((HintNum & BTIMask) == BTIC) &&
       (MBBI->getOpcode() == AArch64::PACIASP ||
-       MBBI->getOpcode() == AArch64::PACIBSP))
+       MBBI->getOpcode() == AArch64::PACIBSP ||
+       MBBI->getOpcode() == AArch64::PACIASPPC ||
+       MBBI->getOpcode() == AArch64::PACIBSPPC))
     return;
 
   const AArch64InstrInfo *TII = Subtarget->getInstrInfo();

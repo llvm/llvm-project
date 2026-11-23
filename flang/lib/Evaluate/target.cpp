@@ -162,10 +162,10 @@ public:
       : targetCharacteristics_{targetCharacteristics}, precision_{p} {}
   using Result = std::optional<int>;
   using Types = IntegerTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::RANGE >= precision_ &&
-        targetCharacteristics_.IsTypeEnabled(T::category, T::kind)) {
-      return T::kind;
+  template <typename T> Result Test(int kind) const {
+    if (Scalar<T>::RANGE(kind) >= precision_ &&
+        targetCharacteristics_.IsTypeEnabled(T::category, kind)) {
+      return kind;
     } else {
       return std::nullopt;
     }
@@ -177,8 +177,7 @@ private:
 };
 
 int TargetCharacteristics::SelectedIntKind(std::int64_t precision) const {
-  if (auto kind{
-          common::SearchTypes(SelectedIntKindVisitor{*this, precision})}) {
+  if (auto kind{SearchTypes(SelectedIntKindVisitor{*this, precision})}) {
     return *kind;
   } else {
     return -1;
@@ -193,10 +192,10 @@ public:
       : targetCharacteristics_{targetCharacteristics}, bits_{bits} {}
   using Result = std::optional<int>;
   using Types = LogicalTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::bits >= bits_ &&
-        targetCharacteristics_.IsTypeEnabled(T::category, T::kind)) {
-      return T::kind;
+  template <typename T> Result Test(int kind) const {
+    if (Scalar<T>::bits(kind) >= bits_ &&
+        targetCharacteristics_.IsTypeEnabled(T::category, kind)) {
+      return kind;
     } else {
       return std::nullopt;
     }
@@ -208,7 +207,7 @@ private:
 };
 
 int TargetCharacteristics::SelectedLogicalKind(std::int64_t bits) const {
-  if (auto kind{common::SearchTypes(SelectedLogicalKindVisitor{*this, bits})}) {
+  if (auto kind{SearchTypes(SelectedLogicalKindVisitor{*this, bits})}) {
     return *kind;
   } else {
     return -1;
@@ -224,10 +223,11 @@ public:
                                                                           r} {}
   using Result = std::optional<int>;
   using Types = RealTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::PRECISION >= precision_ && Scalar<T>::RANGE >= range_ &&
-        targetCharacteristics_.IsTypeEnabled(T::category, T::kind)) {
-      return {T::kind};
+  template <typename T> Result Test(int kind) const {
+    if (Scalar<T>::PRECISION(kind) >= precision_ &&
+        Scalar<T>::RANGE(kind) >= range_ &&
+        targetCharacteristics_.IsTypeEnabled(T::category, kind)) {
+      return {kind};
     } else {
       return std::nullopt;
     }
@@ -243,15 +243,15 @@ int TargetCharacteristics::SelectedRealKind(
   if (radix != 2) {
     return -5;
   }
-  if (auto kind{common::SearchTypes(
-          SelectedRealKindVisitor{*this, precision, range})}) {
+  if (auto kind{
+          SearchTypes(SelectedRealKindVisitor{*this, precision, range})}) {
     return *kind;
   }
   // No kind has both sufficient precision and sufficient range.
   // The negative return value encodes whether any kinds exist that
   // could satisfy either constraint independently.
-  bool pOK{common::SearchTypes(SelectedRealKindVisitor{*this, precision, 0})};
-  bool rOK{common::SearchTypes(SelectedRealKindVisitor{*this, 0, range})};
+  bool pOK{SearchTypes(SelectedRealKindVisitor{*this, precision, 0})};
+  bool rOK{SearchTypes(SelectedRealKindVisitor{*this, 0, range})};
   if (pOK) {
     if (rOK) {
       return -4;

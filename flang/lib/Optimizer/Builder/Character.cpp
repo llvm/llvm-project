@@ -15,7 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -280,16 +280,6 @@ fir::factory::CharacterExprHelper::createElementAddr(mlir::Value buffer,
   return fir::CoordinateOp::create(builder, loc, singleRefTy, coor, i);
 }
 
-/// Load a character out of `buff` from offset `index`.
-/// `buff` must be a reference to memory.
-mlir::Value
-fir::factory::CharacterExprHelper::createLoadCharAt(mlir::Value buff,
-                                                    mlir::Value index) {
-  LLVM_DEBUG(llvm::dbgs() << "load a char: " << buff << " type: "
-                          << buff.getType() << " at: " << index << '\n');
-  return fir::LoadOp::create(builder, loc, createElementAddr(buff, index));
-}
-
 /// Store the singleton character `c` to `str` at offset `index`.
 /// `str` must be a reference to memory.
 void fir::factory::CharacterExprHelper::createStoreCharAt(mlir::Value str,
@@ -366,9 +356,8 @@ void fir::factory::CharacterExprHelper::createPadding(
       });
 }
 
-fir::CharBoxValue
-fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
-                                                       mlir::Value len) {
+fir::CharBoxValue fir::factory::CharacterExprHelper::createCharacterTemp(
+    mlir::Type type, mlir::Value len, bool useHeap) {
   auto kind = recoverCharacterType(type).getFKind();
   auto typeLen = fir::CharacterType::unknownLen();
   // If len is a constant, reflect the length in the type.
@@ -380,8 +369,10 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   llvm::SmallVector<mlir::Value> lenParams;
   if (typeLen == fir::CharacterType::unknownLen())
     lenParams.push_back(len);
-  auto ref = builder.allocateLocal(loc, charTy, "", ".chrtmp",
-                                   /*shape=*/{}, lenParams);
+  auto ref = useHeap ? builder.createHeapTemporary(loc, charTy, ".chrtmp",
+                                                   /*shape=*/{}, lenParams)
+                     : builder.allocateLocal(loc, charTy, "", ".chrtmp",
+                                             /*shape=*/{}, lenParams);
   return {ref, len};
 }
 
@@ -483,31 +474,6 @@ void fir::factory::CharacterExprHelper::createAssign(
         mlir::arith::SubIOp::create(builder, loc, lhs.getLen(), one);
     createPadding(lhs, copyCount, maxPadding);
   }
-}
-
-fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
-    const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs) {
-  auto lhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
-                                      lhs.getLen());
-  auto rhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
-                                      rhs.getLen());
-  mlir::Value len = mlir::arith::AddIOp::create(builder, loc, lhsLen, rhsLen);
-  auto temp = createCharacterTemp(getCharacterType(rhs), len);
-  createCopy(temp, lhs, lhsLen);
-  auto one = builder.createIntegerConstant(loc, len.getType(), 1);
-  auto upperBound = mlir::arith::SubIOp::create(builder, loc, len, one);
-  auto lhsLenIdx = builder.createConvert(loc, builder.getIndexType(), lhsLen);
-  auto fromBuff = getCharBoxBuffer(rhs);
-  auto toBuff = getCharBoxBuffer(temp);
-  fir::factory::DoLoopHelper{builder, loc}.createLoop(
-      lhsLenIdx, upperBound, one,
-      [&](fir::FirOpBuilder &bldr, mlir::Value index) {
-        auto rhsIndex =
-            mlir::arith::SubIOp::create(bldr, loc, index, lhsLenIdx);
-        auto charVal = createLoadCharAt(fromBuff, rhsIndex);
-        createStoreCharAt(toBuff, index, charVal);
-      });
-  return temp;
 }
 
 mlir::Value fir::factory::CharacterExprHelper::genSubstringBase(
@@ -796,7 +762,7 @@ fir::factory::getCharacterProcedureTupleType(mlir::Type funcPointerType) {
 }
 
 fir::CharBoxValue fir::factory::CharacterExprHelper::createCharExtremum(
-    bool predIsMin, llvm::ArrayRef<fir::CharBoxValue> opCBVs) {
+    bool predIsMin, llvm::ArrayRef<fir::CharBoxValue> opCBVs, bool useHeap) {
   // inputs: we are given a vector of all of the charboxes of the arguments
   // passed to hlfir.char_extremum, as well as the predicate for whether we
   // want llt or lgt
@@ -853,17 +819,17 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createCharExtremum(
 
   // now that we know the lexicographically biggest/smallest char and which char
   // had the biggest len, we can populate a temp CBV and return it
-  fir::CharBoxValue temp = createCharacterTemp(resultBuf.getType(), biggestLen);
+  fir::CharBoxValue temp =
+      createCharacterTemp(resultBuf.getType(), biggestLen, useHeap);
   auto toBuf = temp;
   fir::CharBoxValue fromBuf{resultBuf, resultLen};
   createAssign(toBuf, fromBuf);
   return temp;
 }
 
-fir::CharBoxValue
-fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
-                                   mlir::Location loc,
-                                   fir::CharBoxValue srcBoxChar, int toKind) {
+fir::CharBoxValue fir::factory::convertCharacterKind(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    fir::CharBoxValue srcBoxChar, int toKind, bool useHeap) {
   // Use char_convert. Each code point is translated from a
   // narrower/wider encoding to the target encoding. For example, 'A'
   // may be translated from 0x41 : i8 to 0x0041 : i16. The symbol
@@ -892,8 +858,10 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
   }
   mlir::Type toType =
       fir::CharacterType::getUnknownLen(builder.getContext(), toKind);
-  auto dest = builder.createTemporary(loc, toType, /*name=*/{}, /*shape=*/{},
-                                      mlir::ValueRange{bufferSize});
+  auto dest = useHeap ? builder.createHeapTemporary(loc, toType, /*name=*/{},
+                                                    /*shape=*/{}, {bufferSize})
+                      : builder.createTemporary(loc, toType, /*name=*/{},
+                                                /*shape=*/{}, {bufferSize});
   fir::CharConvertOp::create(builder, loc, boxCharAddr, srcBoxChar.getLen(),
                              dest);
   return fir::CharBoxValue{dest, srcBoxChar.getLen()};

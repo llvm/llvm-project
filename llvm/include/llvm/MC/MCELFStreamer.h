@@ -89,9 +89,9 @@ public:
       NumericAndTextAttributes
     } Type;
     unsigned Tag;
-    unsigned IntValue;
+    uint64_t IntValue;
     std::string StringValue;
-    AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
+    AttributeItem(Types Ty, unsigned Tg, uint64_t IV, std::string SV)
         : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
   };
 
@@ -106,11 +106,11 @@ public:
 
   // Attributes that are added and managed entirely by target.
   SmallVector<AttributeItem, 64> Contents;
-  void setAttributeItem(unsigned Attribute, unsigned Value,
+  void setAttributeItem(unsigned Attribute, uint64_t Value,
                         bool OverwriteExisting);
   void setAttributeItem(unsigned Attribute, StringRef Value,
                         bool OverwriteExisting);
-  void setAttributeItems(unsigned Attribute, unsigned IntValue,
+  void setAttributeItems(unsigned Attribute, uint64_t IntValue,
                          StringRef StringValue, bool OverwriteExisting);
   void emitAttributesSection(StringRef Vendor, const Twine &Section,
                              unsigned Type, MCSection *&AttributeSection) {

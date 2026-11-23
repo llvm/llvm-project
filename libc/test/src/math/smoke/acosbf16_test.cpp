@@ -65,7 +65,7 @@ TEST_F(LlvmLibcAcosBf16Test, SmallInputs) {
   const uint16_t inputs[] = {0x0001, 0x007f, 0x0080, 0x209d,
                              0x397f, 0x3980, 0x3981};
   const bfloat16 pi_2_lo = FPBits(uint16_t(0x3fc9)).get_val();
-  const bfloat16 pi_2_hi = FPBits(uint16_t(0x3fca)).get_val();
+  [[maybe_unused]] const bfloat16 pi_2_hi = FPBits(uint16_t(0x3fca)).get_val();
   for (uint16_t bits : inputs) {
     bfloat16 x = FPBits(bits).get_val();
     EXPECT_FP_EQ_ALL_ROUNDING(pi_2_lo, pi_2_hi, pi_2_lo, pi_2_lo,

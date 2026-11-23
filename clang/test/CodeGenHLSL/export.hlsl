@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s   -emit-llvm -disable-llvm-passes -o - | FileCheck %s %}
 
 // CHECK: define void @_Z2f1v() [[Attr:\#[0-9]+]]
 export void f1() {

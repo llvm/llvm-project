@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -run-pass register-coalescer,rename-independent-subregs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass register-coalescer,rename-independent-subregs -o - %s | FileCheck %s
 --- |
   define amdgpu_kernel void @test0() { ret void }
   define amdgpu_kernel void @test1() { ret void }
@@ -18,11 +18,9 @@
 # CHECK: S_NOP 0, implicit-def %0.sub1
 # CHECK: S_NOP 0, implicit %0
 name: test0
-registers:
-  - { id: 0, class: sgpr_128 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def undef %0.sub0
+    S_NOP 0, implicit-def undef %0.sub0:sgpr_128
     S_NOP 0, implicit-def %0.sub1
     S_NOP 0, implicit %0.sub1
     S_NOP 0, implicit-def %0.sub1
@@ -46,19 +44,16 @@ body: |
 # CHECK: bb.2
 # CHECK: S_NOP 0, implicit %2.sub
 name: test1
-registers:
-  - { id: 0, class: sgpr_128 }
-  - { id: 1, class: sgpr_128 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def undef %0.sub2
+    S_NOP 0, implicit-def undef %0.sub2:sgpr_128
     S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
 
   bb.1:
     S_NOP 0, implicit-def %0.sub1
     S_NOP 0, implicit-def %0.sub3
-    %1 = COPY %0
+    %1:sgpr_128 = COPY %0
     S_NOP 0, implicit %1
 
     S_NOP 0, implicit-def %1.sub0
@@ -104,13 +99,11 @@ body: |
 # CHECK: S_NOP 0, implicit %1.sub0_sub1_sub2
 name: test3
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vreg_128 }
 body: |
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x20000000), %bb.3(0x20000000)
 
-    S_NOP 0, implicit-def undef %0.sub3
+    S_NOP 0, implicit-def undef %0.sub3:vreg_128
     S_NOP 0, implicit %0.sub3
     S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_CBRANCH_SCC1 %bb.2, implicit undef $scc

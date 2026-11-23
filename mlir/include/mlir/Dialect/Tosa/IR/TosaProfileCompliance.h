@@ -111,17 +111,23 @@ public:
 
   void addType(Type t) { tyInfo.push_back(convertTypeToInfo(t)); }
   void addValue(Value v) { tyInfo.push_back(convertValueToInfo(v)); }
-  SmallVector<TypeInfo> getInfo() { return tyInfo; }
+  ArrayRef<TypeInfo> getInfo() const { return tyInfo; }
 
 private:
   TypeInfo convertTypeToInfo(Type type) {
+    // Treat the deprecated TOSA type as builtin mxi8 for compliance checks.
+    const auto getTypeID = [](Type type) {
+      if (isa<tosa::mxint8Type>(type))
+        return MXI8Type::getTypeID();
+      return type.getTypeID();
+    };
     if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type)) {
       Type valueTy = blockScaledTy.getValueType();
       Type scaleTy = blockScaledTy.getScaleType();
-      return {type.getTypeID(), tosa::getBitWidth(valueTy), valueTy.getTypeID(),
+      return {type.getTypeID(), tosa::getBitWidth(valueTy), getTypeID(valueTy),
               scaleTy.getTypeID(), blockScaledTy.getBlockShape()};
     }
-    return {type.getTypeID(), tosa::getBitWidth(type)};
+    return {getTypeID(type), tosa::getBitWidth(type)};
   }
 
   TypeInfo convertValueToInfo(Value value) {
@@ -161,11 +167,8 @@ public:
 
   // Accessor of the compliance info map.
   template <typename T>
-  std::unordered_map<std::string, SmallVector<OpComplianceInfo<T>>>
-  getProfileComplianceMap() {
-    // Only profile and extension compliance info are provided.
-    return {};
-  }
+  const std::unordered_map<std::string, SmallVector<OpComplianceInfo<T>>> &
+  getProfileComplianceMap() const;
 
   // Verify if the operation is allowed to be executed in the given target
   // environment.
@@ -177,7 +180,7 @@ public:
   LogicalResult checkProfileOrExtension(Operation *op,
                                         const tosa::TargetEnv &targetEnv);
 
-  bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
+  bool isSameTypeInfo(const TypeInfo &a, const TypeInfo &b) {
     return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&
            a.valueTypeID == b.valueTypeID && a.scaleTypeID == b.scaleTypeID &&
            a.blockShape == b.blockShape;
@@ -187,7 +190,7 @@ public:
   // to the operand type combination.
   template <typename T>
   SmallVector<OpComplianceInfo<T>>
-  findMatchedEntries(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
+  findMatchedEntries(Operation *op, ArrayRef<OpComplianceInfo<T>> compInfo);
 
   // Debug utilites.
   template <typename T>
@@ -207,6 +210,14 @@ private:
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;
 };
+
+template <>
+const OperationProfileComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Profile>() const;
+
+template <>
+const OperationExtensionComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Extension>() const;
 } // namespace tosa
 } // namespace mlir
 

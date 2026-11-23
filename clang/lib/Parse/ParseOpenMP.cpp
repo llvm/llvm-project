@@ -61,7 +61,7 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
                                                     SourceLocation Loc,
                                                     OpenMPDirectiveKind Kind,
                                                     StringRef Name) {
-  unsigned Version = P.getLangOpts().OpenMP;
+  llvm::omp::Version Version = P.getLangOpts().getOpenMPVersion();
   auto [D, VR] = getOpenMPDirectiveKindAndVersions(Name);
   // "ORDERED" is parsed as OMPD_ordered_standalone.
   if (D == Directive::OMPD_ordered_blockassoc)
@@ -69,7 +69,7 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
   assert(D == Kind && "Directive kind mismatch");
   // Ignore the case Version > VR.Max: In OpenMP 6.0 all prior spellings
   // are explicitly allowed.
-  if (static_cast<int>(Version) < VR.Min)
+  if (Version < VR.Min)
     P.Diag(Loc, diag::warn_omp_future_directive_spelling) << Name;
 
   return Kind;
@@ -2736,10 +2736,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // was specified without an associated directive variant. Only
       // 'otherwise' (or the deprecated 'default') has no context selectors.
       unsigned NumClauses = TraitInfos.size();
-      if (llvm::none_of(TraitInfos, [](const OMPTraitInfo *TI) {
-            return TI->Sets.empty();
-          }))
-        TraitInfos.push_back(&ASTContext.getNewOMPTraitInfo());
+      bool HasOtherwise = llvm::any_of(
+          TraitInfos, [](const OMPTraitInfo *TI) { return TI->Sets.empty(); });
+      unsigned NumVariants = NumClauses + (HasOtherwise ? 0 : 1);
 
       // Reuse the normal metadirective variant parse per clause so every
       // variant is a complete directive node with its own body and its own
@@ -2747,7 +2746,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // reported once per variant.
       SmallVector<Stmt *, 4> Variants;
       bool HasError = false;
-      for (unsigned I : llvm::seq<unsigned>(TraitInfos.size())) {
+      for (unsigned I : llvm::seq<unsigned>(NumVariants)) {
         bool HasDirective = false;
         if (I < NumClauses) {
           OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
@@ -2764,7 +2763,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         }
         // Re-parse the directive and body for every variant but the last.
         std::optional<TentativeParsingAction> VariantTPA;
-        if (I + 1 < TraitInfos.size())
+        if (I + 1 < NumVariants)
           VariantTPA.emplace(*this, /*Unannotated=*/true);
 
         StmtResult Variant;

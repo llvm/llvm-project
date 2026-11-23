@@ -80,15 +80,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 3, class: gprc, preferred-register: '' }
-  - { id: 4, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 5, class: crrc, preferred-register: '' }
-  - { id: 6, class: gprc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -128,7 +119,7 @@ body:             |
     ; CHECK-LATE: rlwinm.
     %5:crrc = COPY killed $cr0
     %6:gprc = ISEL %4, %2, %5.sub_eq
-    %7:g8rc = EXTSW_32_64 killed %6
+    %7:g8rc = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -141,15 +132,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: crrc, preferred-register: '' }
-  - { id: 6, class: gprc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -188,7 +170,7 @@ body:             |
     ; CHECK-LATE: andi. {{[0-9]+}}, [[IMM]], 0
     %5:crrc = COPY killed $cr0
     %6:gprc = ISEL %3, %2, %5.sub_eq
-    %7:g8rc = EXTSW_32_64 killed %6
+    %7:g8rc = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -201,15 +183,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: crrc, preferred-register: '' }
-  - { id: 6, class: gprc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -248,7 +221,7 @@ body:             |
     ; CHECK-LATE: rlwinm.
     %5:crrc = COPY killed $cr0
     %6:gprc = ISEL %3, %2, %5.sub_eq
-    %7:g8rc = EXTSW_32_64 killed %6
+    %7:g8rc = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -261,12 +234,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 3, class: crrc, preferred-register: '' }
-  - { id: 4, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -316,12 +283,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: crrc, preferred-register: '' }
-  - { id: 4, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -370,12 +331,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: crrc, preferred-register: '' }
-  - { id: 4, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }

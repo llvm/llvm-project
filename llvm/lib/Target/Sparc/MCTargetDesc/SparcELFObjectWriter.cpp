@@ -136,6 +136,7 @@ bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
     case ELF::R_SPARC_GOTDATA_LOX10:
     case ELF::R_SPARC_GOTDATA_OP_HIX22:
     case ELF::R_SPARC_GOTDATA_OP_LOX10:
+    case ELF::R_SPARC_GOTDATA_OP:
       return true;
   }
 }

@@ -1,0 +1,71 @@
+## Test that DT_STRSZ in generated ELF stubs is set to the size of .dynstr
+## (not .dynsym), both when .dynstr is larger than .dynsym (with DT_SONAME and
+## DT_NEEDED string offsets exceeding .dynsym's size) and when .dynstr is
+## minimal (1 byte).
+
+# RUN: llvm-ifs --output-elf=%t.elf64l --arch=x86_64 --bitwidth=64 --endianness=little %s
+# RUN: llvm-readobj -S --dynamic-table %t.elf64l | FileCheck %s --check-prefix=ELF -DDYNSYMSZ=48 -DDYNTABZ=000000000
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- --strip-ifs-target %t.elf64l | FileCheck %s --check-prefix=ROUNDTRIP
+
+# RUN: llvm-ifs --output-elf=%t.elf64b --arch=x86_64 --bitwidth=64 --endianness=big %s
+# RUN: llvm-readobj -S --dynamic-table %t.elf64b | FileCheck %s --check-prefix=ELF -DDYNSYMSZ=48 -DDYNTABZ=000000000
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- --strip-ifs-target %t.elf64b | FileCheck %s --check-prefix=ROUNDTRIP
+
+# RUN: llvm-ifs --output-elf=%t.elf32l --arch=x86_64 --bitwidth=32 --endianness=little %s
+# RUN: llvm-readobj -S --dynamic-table %t.elf32l | FileCheck %s --check-prefix=ELF -DDYNSYMSZ=32 -DDYNTABZ=0
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- --strip-ifs-target %t.elf32l | FileCheck %s --check-prefix=ROUNDTRIP
+
+# RUN: llvm-ifs --output-elf=%t.elf32b --arch=x86_64 --bitwidth=32 --endianness=big %s
+# RUN: llvm-readobj -S --dynamic-table %t.elf32b | FileCheck %s --check-prefix=ELF -DDYNSYMSZ=32 -DDYNTABZ=0
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- --strip-ifs-target %t.elf32b | FileCheck %s --check-prefix=ROUNDTRIP
+
+# RUN: llvm-ifs --output-elf=%t.empty %S/empty1.ifs
+# RUN: llvm-readobj -S --dynamic-table %t.empty | FileCheck %s --check-prefix=EMPTY
+
+--- !ifs-v1
+IfsVersion: 3.0
+SoName: libstrsz_test_soname.so
+NeededLibs:
+  - libneeded_dependency_one.so
+  - libneeded_dependency_two.so
+Symbols:
+  - { Name: _ZN10long_space15very_long_class20very_long_method_oneEv, Type: Func }
+...
+
+# ELF:      Name: .dynsym
+# ELF:      Size: [[DYNSYMSZ]]
+# ELF:      Name: .dynstr
+# ELF:      Size: 138
+
+# ELF:      DynamicSection [ (7 entries)
+# ELF-NEXT:   Tag                Type   Name/Value
+# ELF-NEXT:   0x[[DYNTABZ]]0000006 SYMTAB
+# ELF-NEXT:   0x[[DYNTABZ]]0000005 STRTAB
+# ELF-NEXT:   0x[[DYNTABZ]]000000A STRSZ  138 (bytes)
+# ELF-NEXT:   0x[[DYNTABZ]]0000001 NEEDED Shared library: [libneeded_dependency_one.so]
+# ELF-NEXT:   0x[[DYNTABZ]]0000001 NEEDED Shared library: [libneeded_dependency_two.so]
+# ELF-NEXT:   0x[[DYNTABZ]]000000E SONAME Library soname: [libstrsz_test_soname.so]
+# ELF-NEXT:   0x[[DYNTABZ]]0000000 NULL
+# ELF-NEXT: ]
+
+# ROUNDTRIP:      --- !ifs-v1
+# ROUNDTRIP-NEXT: IfsVersion: 3.0
+# ROUNDTRIP-NEXT: SoName: libstrsz_test_soname.so
+# ROUNDTRIP-NEXT: NeededLibs:
+# ROUNDTRIP-NEXT:   - libneeded_dependency_one.so
+# ROUNDTRIP-NEXT:   - libneeded_dependency_two.so
+# ROUNDTRIP-NEXT: Symbols:
+# ROUNDTRIP-NEXT:   - { Name: _ZN10long_space15very_long_class20very_long_method_oneEv, Type: Func }
+# ROUNDTRIP-NEXT: ...
+
+# EMPTY:      Name: .dynsym
+# EMPTY:      Size: 24
+# EMPTY:      Name: .dynstr
+# EMPTY:      Size: 1
+# EMPTY:      DynamicSection [ (4 entries)
+# EMPTY-NEXT:   Tag                Type   Name/Value
+# EMPTY-NEXT:   0x0000000000000006 SYMTAB
+# EMPTY-NEXT:   0x0000000000000005 STRTAB
+# EMPTY-NEXT:   0x000000000000000A STRSZ  1 (bytes)
+# EMPTY-NEXT:   0x0000000000000000 NULL
+# EMPTY-NEXT: ]
