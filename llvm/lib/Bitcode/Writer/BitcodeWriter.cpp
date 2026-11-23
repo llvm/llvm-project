@@ -516,6 +516,7 @@ public:
       : BitcodeWriterBase(Stream, StrtabBuilder), Index(Index),
         DecSummaries(DecSummaries),
         ModuleToSummariesForIndex(ModuleToSummariesForIndex) {
+
     if (ModuleToSummariesForIndex) {
       for (const auto &[ModPath, Summaries] : *ModuleToSummariesForIndex)
         llvm::append_range(SortedSummariesForIndex, Summaries);
@@ -5159,6 +5160,15 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   // Write the index flags.
   Stream.EmitRecord(bitc::FS_FLAGS, ArrayRef<uint64_t>{Index.getFlags()});
+
+  if (StringRef Config = Index.getLTOConfigJSON(); !Config.empty()) {
+    auto Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::FS_LTO_CONFIG));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+    unsigned Abbrev = Stream.EmitAbbrev(std::move(Abbv));
+    Stream.EmitRecordWithBlob(Abbrev, ArrayRef<uint64_t>{bitc::FS_LTO_CONFIG},
+                              Config);
+  }
 
   auto Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_VALUE_GUID));

@@ -1545,6 +1545,9 @@ private:
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
 
+  // Serialized backend configuration for distributed ThinLTO.
+  std::string LTOConfigJSON;
+
   BumpPtrAllocator TypeIdSaverAlloc;
   UniqueStringSaver TypeIdSaver;
 
@@ -1678,6 +1681,9 @@ public:
 
   LLVM_ABI uint64_t getFlags() const;
   LLVM_ABI void setFlags(uint64_t Flags);
+
+  StringRef getLTOConfigJSON() const { return LTOConfigJSON; }
+  void setLTOConfigJSON(std::string JSON) { LTOConfigJSON = std::move(JSON); }
 
   uint64_t getBlockCount() const { return BlockCount; }
   void addBlockCount(uint64_t C) { BlockCount += C; }

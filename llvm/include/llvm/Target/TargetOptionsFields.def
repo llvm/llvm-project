@@ -1,0 +1,195 @@
+//===- TargetOptionsFields.def - Target option fields -----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Define these macros before including this file.
+//   LLVM_TARGET_OPTION_FIELD(Type, Name, Initializer)
+//   LLVM_TARGET_OPTION_FIRST_BITFIELD(Name, Width, WireType)
+//   LLVM_TARGET_OPTION_BITFIELD(Name, Width, WireType)
+//   LLVM_TARGET_OPTION_MC_FIELD(Name)
+//
+//===----------------------------------------------------------------------===//
+
+/// NoZerosInBSS - By default some codegens place zero-initialized data to
+/// .bss section. This flag disables such behaviour (necessary, e.g. for
+/// crt*.o compiling).
+LLVM_TARGET_OPTION_FIRST_BITFIELD(NoZerosInBSS, 1, bool)
+
+/// GuaranteedTailCallOpt - This flag is enabled when -tailcallopt is
+/// specified on the commandline. When the flag is on, participating targets
+/// will perform tail call optimization on all calls which use the fastcc
+/// calling convention and which satisfy certain target-independent
+/// criteria (being at the end of a function, having the same return type
+/// as their parent function, etc.), using an alternate ABI if necessary.
+LLVM_TARGET_OPTION_BITFIELD(GuaranteedTailCallOpt, 1, bool)
+
+/// StackSymbolOrdering - When true, this will allow CodeGen to order
+/// the local stack symbols (for code size, code locality, or any other
+/// heuristics). When false, the local symbols are left in whatever order
+/// they were generated. Default is true.
+LLVM_TARGET_OPTION_BITFIELD(StackSymbolOrdering, 1, bool)
+
+/// EnableFastISel - This flag enables fast-path instruction selection
+/// which trades away generated code quality in favor of reducing
+/// compile time.
+LLVM_TARGET_OPTION_BITFIELD(EnableFastISel, 1, bool)
+
+/// EnableGlobalISel - This flag enables global instruction selection.
+LLVM_TARGET_OPTION_BITFIELD(EnableGlobalISel, 1, bool)
+
+/// EnableGlobalISelAbort - Control abort behaviour when global instruction
+/// selection fails to lower/select an instruction.
+LLVM_TARGET_OPTION_FIELD(GlobalISelAbortMode, GlobalISelAbort,
+                         = GlobalISelAbortMode::Enable)
+
+/// Control when and how the Swift async frame pointer bit should
+/// be set.
+LLVM_TARGET_OPTION_FIELD(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer,
+                         = SwiftAsyncFramePointerMode::Always)
+
+/// UseInitArray - Use .init_array instead of .ctors for static
+/// constructors.
+LLVM_TARGET_OPTION_BITFIELD(UseInitArray, 1, bool)
+
+/// Emit functions into separate sections.
+LLVM_TARGET_OPTION_BITFIELD(FunctionSections, 1, bool)
+
+/// Emit data into separate sections.
+LLVM_TARGET_OPTION_BITFIELD(DataSections, 1, bool)
+
+/// Do not emit visibility attribute for xcoff.
+LLVM_TARGET_OPTION_BITFIELD(IgnoreXCOFFVisibility, 1, bool)
+
+/// Emit XCOFF traceback table.
+LLVM_TARGET_OPTION_BITFIELD(XCOFFTracebackTable, 1, bool)
+
+LLVM_TARGET_OPTION_BITFIELD(UniqueSectionNames, 1, bool)
+
+/// Use unique names for basic block sections.
+LLVM_TARGET_OPTION_BITFIELD(UniqueBasicBlockSectionNames, 1, bool)
+
+/// Emit named sections with the same name into different sections.
+LLVM_TARGET_OPTION_BITFIELD(SeparateNamedSections, 1, bool)
+
+/// Emit target-specific trap instruction for 'unreachable' IR instructions.
+LLVM_TARGET_OPTION_BITFIELD(TrapUnreachable, 1, bool)
+
+/// Do not emit a trap instruction for 'unreachable' IR instructions behind
+/// noreturn calls, even if TrapUnreachable is true.
+LLVM_TARGET_OPTION_BITFIELD(NoTrapAfterNoreturn, 1, bool)
+
+/// Bit size of immediate TLS offsets (0 == use the default).
+LLVM_TARGET_OPTION_BITFIELD(TLSSize, 8, int)
+
+/// EmulatedTLS - This flag enables emulated TLS model, using emutls
+/// function in the runtime library..
+LLVM_TARGET_OPTION_BITFIELD(EmulatedTLS, 1, bool)
+
+/// EnableTLSDESC - This flag enables TLS Descriptors.
+LLVM_TARGET_OPTION_BITFIELD(EnableTLSDESC, 1, bool)
+
+/// This flag enables InterProcedural Register Allocation (IPRA).
+LLVM_TARGET_OPTION_BITFIELD(EnableIPRA, 1, bool)
+
+/// Emit section containing metadata on function stack sizes.
+LLVM_TARGET_OPTION_BITFIELD(EmitStackSizeSection, 1, bool)
+
+/// Enables the MachineOutliner pass.
+LLVM_TARGET_OPTION_BITFIELD(EnableMachineOutliner, 1, bool)
+
+/// Enables the StaticDataSplitter pass.
+LLVM_TARGET_OPTION_BITFIELD(EnableStaticDataPartitioning, 1, bool)
+
+/// Enable Machine verifier at the end of default codegen pipelines. (Only
+/// used with NPM)
+LLVM_TARGET_OPTION_BITFIELD(EnableDefaultMachineVerifier, 1, bool)
+
+/// Emit address-significance table.
+LLVM_TARGET_OPTION_BITFIELD(EmitAddrsig, 1, bool)
+
+// Emit the SHT_LLVM_BB_ADDR_MAP section containing basic block address
+// which can be used to map virtual addresses to machine basic blocks.
+LLVM_TARGET_OPTION_BITFIELD(BBAddrMap, 1, bool)
+
+/// Emit basic blocks into separate sections.
+LLVM_TARGET_OPTION_FIELD(BasicBlockSection, BBSections,
+                         = BasicBlockSection::None)
+
+/// Which functions are eligible for late function splitting.
+LLVM_TARGET_OPTION_FIELD(FunctionSplittingMode, FunctionSplitting,
+                         = FunctionSplittingMode::BBSectionsOnly)
+
+/// Memory Buffer that contains information on sampled basic blocks and used
+/// to selectively generate basic block sections.
+LLVM_TARGET_OPTION_FIELD(std::shared_ptr<MemoryBuffer>, BBSectionsFuncListBuf, )
+
+/// Emit section containing call graph metadata.
+LLVM_TARGET_OPTION_BITFIELD(EmitCallGraphSection, 1, bool)
+
+/// The flag enables call site info production. It is used only for debug
+/// info, and it is restricted only to optimized code. This can be used for
+/// something else, so that should be controlled in the frontend.
+LLVM_TARGET_OPTION_BITFIELD(EmitCallSiteInfo, 1, bool)
+/// When set to true, the EnableDebugEntryValues option forces production
+/// of debug entry values even if the target does not officially support
+/// it. Useful for testing purposes only. This flag should never be checked
+/// directly, always use \ref TargetMachine::shouldEmitDebugEntryValues
+/// instead.
+LLVM_TARGET_OPTION_BITFIELD(EnableDebugEntryValues, 1, bool)
+
+// When set to true, use experimental new debug variable location tracking,
+// which seeks to follow the values of variables rather than their location,
+// post isel.
+LLVM_TARGET_OPTION_BITFIELD(ValueTrackingVariableLocations, 1, bool)
+
+/// Emit DWARF debug frame section.
+LLVM_TARGET_OPTION_BITFIELD(ForceDwarfFrameSection, 1, bool)
+
+/// Emit XRay Function Index section
+LLVM_TARGET_OPTION_BITFIELD(XRayFunctionIndex, 1, bool)
+
+/// When set to true, don't use DWARF extensions in later DWARF versions.
+/// By default, it is set to false.
+LLVM_TARGET_OPTION_BITFIELD(DebugStrictDwarf, 1, bool)
+
+/// Enable JustMyCode instrumentation.
+LLVM_TARGET_OPTION_BITFIELD(JMCInstrument, 1, bool)
+
+/// Enable the CFIFixup pass.
+LLVM_TARGET_OPTION_BITFIELD(EnableCFIFixup, 1, bool)
+
+/// When set to true, enable MisExpect Diagnostics
+/// By default, it is set to false
+LLVM_TARGET_OPTION_BITFIELD(MisExpect, 1, bool)
+
+/// When set to true, const objects with relocatable address values are put
+/// into the RO data section.
+LLVM_TARGET_OPTION_BITFIELD(XCOFFReadOnlyPointers, 1, bool)
+
+/// When set to true, call/return argument extensions of narrow integers
+/// are verified in the target backend if it cares about them. This is off
+/// by default and enabled explicitly by each front-end separately.
+LLVM_TARGET_OPTION_BITFIELD(VerifyArgABICompliance, 1, bool)
+
+/// Name of the stack usage file (i.e., .su file) if user passes
+/// -fstack-usage. If empty, it can be implied that -fstack-usage is not
+/// passed on the command line.
+LLVM_TARGET_OPTION_FIELD(std::string, StackUsageFile, )
+
+/// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
+LLVM_TARGET_OPTION_FIELD(unsigned, LoopAlignment, = 0)
+
+/// Vector math library to use.
+LLVM_TARGET_OPTION_FIELD(VectorLibrary, VecLib, = VectorLibrary::NoLibrary)
+
+/// Machine level options.
+LLVM_TARGET_OPTION_MC_FIELD(MCOptions)
+
+/// Stores the filename/path of the final .o/.obj file, to be written in the
+/// debug information. This is used for emitting the CodeView S_OBJNAME
+/// record.
+LLVM_TARGET_OPTION_FIELD(std::string, ObjectFilenameForDebug, )

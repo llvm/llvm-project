@@ -1,0 +1,169 @@
+//===- ConfigFields.def - LTO configuration fields ---------------*- C++
+//-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Define these macros before including this file.
+//   LLVM_LTO_CONFIG_FIELD(Type, Name, Initializer)
+//   LLVM_LTO_CONFIG_PTO_FIELD(Type, Name)
+//
+// A field's name is its serialized key. Pipeline tuning options keep their
+// existing pto.* keys.
+//
+//===----------------------------------------------------------------------===//
+
+LLVM_LTO_CONFIG_FIELD(std::string, CPU, )
+LLVM_LTO_CONFIG_FIELD(TargetOptions, Options, )
+LLVM_LTO_CONFIG_FIELD(std::vector<std::string>, MAttrs, )
+LLVM_LTO_CONFIG_FIELD(std::vector<std::string>, MllvmArgs, )
+// Plugins that are passed by filename are loaded in lto::LTO::run(). Clients
+// that call lto::backend(), lto::thinBackend() or lto::opt() directly must
+// use LoadedPassPlugins.
+LLVM_LTO_CONFIG_FIELD(std::vector<std::string>, PassPluginFilenames, )
+LLVM_LTO_CONFIG_FIELD(std::optional<Reloc::Model>, RelocModel, = Reloc::PIC_)
+LLVM_LTO_CONFIG_FIELD(std::optional<CodeModel::Model>, CodeModel, )
+LLVM_LTO_CONFIG_FIELD(CodeGenOptLevel, CGOptLevel, = CodeGenOptLevel::Default)
+LLVM_LTO_CONFIG_FIELD(CodeGenFileType, CGFileType,
+                      = CodeGenFileType::ObjectFile)
+LLVM_LTO_CONFIG_FIELD(unsigned, OptLevel, = 2)
+LLVM_LTO_CONFIG_FIELD(bool, VerifyEach, = false)
+LLVM_LTO_CONFIG_FIELD(bool, DisableVerify, = false)
+
+/// Flag to indicate that the optimizer should not assume builtins are present
+/// on the target.
+LLVM_LTO_CONFIG_FIELD(bool, Freestanding, = false)
+
+/// Disable entirely the optimizer, including importing for ThinLTO
+LLVM_LTO_CONFIG_FIELD(bool, CodeGenOnly, = false)
+
+/// Run PGO context sensitive IR instrumentation.
+LLVM_LTO_CONFIG_FIELD(bool, RunCSIRInstr, = false)
+
+/// Turn on/off the warning about a hash mismatch in the PGO profile data.
+LLVM_LTO_CONFIG_FIELD(bool, PGOWarnMismatch, = true)
+
+/// Asserts whether we can assume whole program visibility during the LTO
+/// link.
+LLVM_LTO_CONFIG_FIELD(bool, HasWholeProgramVisibility, = false)
+
+/// We're validating that all native vtables have corresponding type infos.
+LLVM_LTO_CONFIG_FIELD(bool, ValidateAllVtablesHaveTypeInfos, = false)
+/// If all native vtables have corresponding type infos, allow
+/// usage of RTTI to block devirtualization on types used in native files.
+LLVM_LTO_CONFIG_FIELD(bool, AllVtablesHaveTypeInfos, = false)
+
+/// Always emit a Regular LTO object even when it is empty because no Regular
+/// LTO modules were linked. This option is useful for some build system which
+/// want to know a priori all possible output files.
+LLVM_LTO_CONFIG_FIELD(bool, AlwaysEmitRegularLTOObj, = false)
+
+/// If true, the LTO instance creates copies of the symbol names for LTO::run.
+/// The lld linker uses string saver to keep symbol names alive and doesn't
+/// need to create copies, so it can set this field to false.
+LLVM_LTO_CONFIG_FIELD(bool, KeepSymbolNameCopies, = true)
+
+/// This flag is used as one of parameters to calculate cache entries and to
+/// ensure that in-process cache and out-of-process (DTLTO) cache are
+/// distinguished.
+LLVM_LTO_CONFIG_FIELD(mutable bool, Dtlto, = 0)
+
+/// Allows non-imported definitions to get the potentially more constraining
+/// visibility from the prevailing definition. FromPrevailing is the default
+/// because it works for many binary formats. ELF can use the more optimized
+/// 'ELF' scheme.
+LLVM_LTO_CONFIG_FIELD(VisScheme, VisibilityScheme, = FromPrevailing)
+
+/// If this field is set, the set of passes run in the middle-end optimizer
+/// will be the one specified by the string. Only works with the new pass
+/// manager as the old one doesn't have this ability.
+LLVM_LTO_CONFIG_FIELD(std::string, OptPipeline, )
+
+// If this field is set, it has the same effect of specifying an AA pipeline
+// identified by the string. Only works with the new pass manager, in
+// conjunction OptPipeline.
+LLVM_LTO_CONFIG_FIELD(std::string, AAPipeline, )
+
+/// Setting this field will replace target triples in input files with this
+/// triple.
+LLVM_LTO_CONFIG_FIELD(std::string, OverrideTriple, )
+
+/// Setting this field will replace unspecified target triples in input files
+/// with this triple.
+LLVM_LTO_CONFIG_FIELD(std::string, DefaultTriple, )
+
+/// Context Sensitive PGO profile path.
+LLVM_LTO_CONFIG_FIELD(std::string, CSIRProfile, )
+
+/// Sample PGO profile path.
+LLVM_LTO_CONFIG_FIELD(std::string, SampleProfile, )
+
+/// Name remapping file for profile data.
+LLVM_LTO_CONFIG_FIELD(std::string, ProfileRemapping, )
+
+/// The directory to store .dwo files.
+LLVM_LTO_CONFIG_FIELD(std::string, DwoDir, )
+
+/// The name for the split debug info file used for the DW_AT_[GNU_]dwo_name
+/// attribute in the skeleton CU. This should generally only be used when
+/// running an individual backend directly via thinBackend(), as otherwise
+/// all objects would use the same .dwo file. Not used as output path.
+LLVM_LTO_CONFIG_FIELD(std::string, SplitDwarfFile, )
+
+/// The path to write a .dwo file to. This should generally only be used when
+/// running an individual backend directly via thinBackend(), as otherwise
+/// all .dwo files will be written to the same path. Not used in skeleton CU.
+LLVM_LTO_CONFIG_FIELD(std::string, SplitDwarfOutput, )
+
+/// Optimization remarks file path.
+LLVM_LTO_CONFIG_FIELD(std::string, RemarksFilename, )
+
+/// Optimization remarks pass filter.
+LLVM_LTO_CONFIG_FIELD(std::string, RemarksPasses, )
+
+/// Whether to emit optimization remarks with hotness informations.
+LLVM_LTO_CONFIG_FIELD(bool, RemarksWithHotness, = false)
+
+/// The minimum hotness value a diagnostic needs in order to be included in
+/// optimization diagnostics.
+///
+/// The threshold is an Optional value, which maps to one of the 3 states:
+/// 1. 0            => threshold disabled. All emarks will be printed.
+/// 2. positive int => manual threshold by user. Remarks with hotness exceed
+///                    threshold will be printed.
+/// 3. None         => 'auto' threshold by user. The actual value is not
+///                    available at command line, but will be synced with
+///                    hotness threhold from profile summary during
+///                    compilation.
+///
+/// If threshold option is not specified, it is disabled by default.
+LLVM_LTO_CONFIG_FIELD(std::optional<uint64_t>, RemarksHotnessThreshold, = 0)
+
+/// The format used for serializing remarks (default: YAML).
+LLVM_LTO_CONFIG_FIELD(std::string, RemarksFormat, )
+
+/// Whether to emit the pass manager debuggging informations.
+LLVM_LTO_CONFIG_FIELD(bool, DebugPassManager, = false)
+
+/// Statistics output file path.
+LLVM_LTO_CONFIG_FIELD(std::string, StatsFile, )
+
+/// Specific thinLTO modules to compile.
+LLVM_LTO_CONFIG_FIELD(std::vector<std::string>, ThinLTOModulesToCompile, )
+
+/// Time trace enabled.
+LLVM_LTO_CONFIG_FIELD(bool, TimeTraceEnabled, = false)
+
+/// Time trace granularity.
+LLVM_LTO_CONFIG_FIELD(unsigned, TimeTraceGranularity, = 500)
+
+LLVM_LTO_CONFIG_FIELD(bool, ShouldDiscardValueNames, = true)
+
+/// Add FSAFDO discriminators.
+LLVM_LTO_CONFIG_FIELD(bool, AddFSDiscriminator, = false)
+
+/// Tunable parameters for passes in the default pipelines.
+LLVM_LTO_CONFIG_PTO_FIELD(PipelineTuningOptions, PTO)
