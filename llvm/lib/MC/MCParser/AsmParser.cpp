@@ -130,11 +130,19 @@ private:
   AsmCond TheCondState;
   std::vector<AsmCond> TheCondStack;
 
+protected:
   /// maps directive names to handler methods in parser
   /// extensions. Extensions register themselves in this map by calling
   /// addDirectiveHandler.
   StringMap<ExtensionDirectiveHandler> ExtensionDirectiveMap;
 
+  /// The name of the HLASM label (column-1 name field) most recently parsed
+  /// by HLASMAsmParser::parseAsHLASMLabel.  Empty if no label was present on
+  /// the current statement.  Set by HLASMAsmParser, readable by extensions
+  /// (e.g. GOFFAsmParser) that need the section/symbol name.
+  std::string LastHLASMLabelName;
+
+private:
   /// Stack of active macro instantiations.
   std::vector<MacroInstantiation*> ActiveMacros;
 
@@ -204,6 +212,10 @@ public:
   ~AsmParser() override;
 
   bool Run(bool NoInitialTextSection, bool NoFinalize = false) override;
+
+  StringRef getLastHLASMLabelName() const override {
+    return LastHLASMLabelName;
+  }
 
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
@@ -1233,8 +1245,9 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym)
-      Sym = getContext().parseSymbol(MAI.isHLASM() ? SymbolName.upper()
-                                                   : SymbolName);
+      Sym = getContext().parseSymbol(
+          MAI.isHLASM() ? getContext().getCanonicalHLASMName(SymbolName)
+                        : SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -2943,6 +2956,76 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
   // separate tokens. At this level, we have already lexed so we cannot (currently)
   // handle this as a context dependent token, instead we detect adjacent tokens
   // and return the combined identifier.
+
+  // HLASM sequence symbols start with '.' and may be followed by '&' and more
+  // identifier characters (e.g. ".&ppa2").  Join adjacent name-constituent
+  // tokens the same way the '$'/'@' prefix logic does below.
+  if (MAI.isHLASM()) {
+    auto isHLASMNamePart = [](AsmToken::TokenKind K) {
+      return K == AsmToken::Identifier || K == AsmToken::Integer ||
+             K == AsmToken::Dot || K == AsmToken::Amp || K == AsmToken::Hash ||
+             K == AsmToken::At || K == AsmToken::Dollar ||
+             K == AsmToken::Real || K == AsmToken::String;
+    };
+    if (isHLASMNamePart(Lexer.getKind())) {
+      const char *Start = getLexer().getLoc().getPointer();
+      const char *End = Start;
+      std::string Combined;
+      bool MultiToken = false;
+
+      while (isHLASMNamePart(Lexer.getKind())) {
+        const char *TokPtr = getLexer().getLoc().getPointer();
+        if (TokPtr != End) {
+          // Tokens separated by an HLASM continuation (a newline followed by
+          // text resuming in column 16) form a single name.
+          const char *BufStart =
+              SrcMgr.getMemoryBuffer(CurBuffer)->getBufferStart();
+          const char *Q = TokPtr;
+          while (Q > BufStart && Q[-1] != '\n' && Q[-1] != '\r')
+            --Q;
+          bool IsContinuation = Q > End && (TokPtr - Q) == 15 &&
+                                StringRef(End, Q - End).contains('\n');
+          if (IsContinuation)
+            MultiToken = true;
+          else if (!MultiToken)
+            break;
+        }
+
+        std::string Part = getTok().getString().str();
+        if (getTok().is(AsmToken::String)) {
+          if (Part.size() >= 2 && Part.front() == '"' && Part.back() == '"')
+            Part = Part.substr(1, Part.size() - 2);
+          MultiToken = true;
+        }
+        Combined += Part;
+        End = TokPtr + getTok().getString().size();
+        Lex();
+
+        // If the next token is Space followed immediately by a newline,
+        // it may be trailing whitespace before an HLASM continuation line.
+        if (Lexer.is(AsmToken::Space)) {
+          const char *SpaceStart = getLexer().getLoc().getPointer();
+          const char *SpaceEnd = SpaceStart + getTok().getString().size();
+          if (SpaceEnd < SrcMgr.getMemoryBuffer(CurBuffer)->getBufferEnd() &&
+              (*SpaceEnd == '\n' || *SpaceEnd == '\r')) {
+            Lex(); // consume trailing spaces; Lexer handles \n continuation
+            if (isHLASMNamePart(Lexer.getKind()))
+              MultiToken = true;
+          }
+        }
+      }
+
+      if (Combined.empty())
+        return true;
+
+      if (MultiToken)
+        Res = getContext().allocateString(Combined);
+      else
+        Res = StringRef(Start, End - Start);
+      return false;
+    }
+  }
+
   if (Lexer.is(AsmToken::Dollar) || Lexer.is(AsmToken::At)) {
     SMLoc PrefixLoc = getLexer().getLoc();
 
@@ -6424,13 +6507,32 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
   SMLoc LabelLoc = LabelTok.getLoc();
   StringRef LabelVal;
 
-  if (parseIdentifier(LabelVal))
+  // An HLASM label starts at column 1 and spans all adjacent name tokens
+  // up to the first whitespace (e.g. "zos_ada#C", ".&ppa2", "L#PPA2").
+  const char *Start = getLexer().getLoc().getPointer();
+  const char *End = Start;
+  auto isHLASMLabelPart = [](AsmToken::TokenKind K) {
+    return K == AsmToken::Identifier || K == AsmToken::Integer ||
+           K == AsmToken::Dot || K == AsmToken::Amp || K == AsmToken::Hash ||
+           K == AsmToken::At || K == AsmToken::Dollar || K == AsmToken::Real;
+  };
+  while (isHLASMLabelPart(getLexer().getKind())) {
+    const char *TokPtr = getLexer().getLoc().getPointer();
+    if (TokPtr != End)
+      break;
+    End = TokPtr + getTok().getString().size();
+    Lex();
+  }
+  if (End == Start)
     return Error(LabelLoc, "The HLASM Label has to be an Identifier");
+  LabelVal = StringRef(Start, End - Start);
 
   // We have validated whether the token is an Identifier.
-  // Now we have to validate whether the token is a
-  // valid HLASM Label.
-  if (!getTargetParser().isLabel(LabelTok) || checkForValidSection())
+  // Now we have to validate whether the token is a valid HLASM Label.
+  // Use a synthetic token carrying the full (possibly multi-token-joined)
+  // LabelVal so that isLabel sees ".&ppa2" rather than just ".".
+  AsmToken LabelValTok(AsmToken::Identifier, LabelVal);
+  if (!getTargetParser().isLabel(LabelValTok) || checkForValidSection())
     return true;
 
   // Lex leading spaces to get to the next operand.
@@ -6442,8 +6544,35 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
     return Error(LabelLoc,
                  "Cannot have just a label for an HLASM inline asm statement");
 
-  MCSymbol *Sym = getContext().parseSymbol(
-      getContext().getAsmInfo().isHLASM() ? LabelVal.upper() : LabelVal);
+  // Record the label name so that directive handlers (e.g. GOFFAsmParser)
+  // can retrieve the column-1 name field even after we have consumed it.
+  // HLASM names are case-insensitive; keep the spelling of the first use.
+  if (getContext().getAsmInfo().isHLASM())
+    LastHLASMLabelName = getContext().getCanonicalHLASMName(LabelVal).str();
+  else
+    LastHLASMLabelName = LabelVal.str();
+
+  MCSymbol *Sym = getContext().parseSymbol(LastHLASMLabelName);
+
+  // In HLASM-for-GOFF, labels preceding CSECT/CATTR/XATTR are section or
+  // symbol names, not code labels.  Emitting them as labels in the current
+  // section (which may be a PR, ED, or unrelated SD) creates spurious
+  // symbols at the wrong offset.  Skip emitLabel for these directives; the
+  // GOFF directive handlers will use LastHLASMLabelName directly.
+  if (getContext().getAsmInfo().isHLASM()) {
+    StringRef MnemonicStr =
+        getTok().is(AsmToken::Identifier) ? getTok().getString() : StringRef();
+    std::string MnemonicU = MnemonicStr.upper();
+    if (MnemonicU == "CSECT" || MnemonicU == "CATTR" || MnemonicU == "XATTR" ||
+        MnemonicU == "EQU" || MnemonicU == "DS" || MnemonicU == "DC" ||
+        MnemonicU == "ALIAS") {
+      // Mark the symbol redefinable so that any prior or later CSECT/XATTR/EQU
+      // referencing the same name doesn't produce an "already defined" error.
+      Sym->setRedefinable(true);
+      // Do not emit the label into the current section.
+      return false;
+    }
+  }
 
   // Emit the label.
   Out.emitLabel(Sym, LabelLoc);
@@ -6471,6 +6600,16 @@ bool HLASMAsmParser::parseAsMachineInstruction(ParseStatementInfo &Info,
   // any spaces to get to the OperandEntries.
   lexLeadingSpaces();
 
+  // Check whether a platform-specific parser extension (e.g. GOFFAsmParser)
+  // has registered this directive.  HLASM directives (CSECT, CATTR, DC, DS,
+  // EXTRN, END, …) are not machine instructions, so they must be dispatched
+  // here before the target instruction parser gets a chance to reject them.
+  ExtensionDirectiveHandler ExtHandler =
+      ExtensionDirectiveMap.lookup(OperationEntryVal);
+  if (ExtHandler.first)
+    return (*ExtHandler.second)(ExtHandler.first, OperationEntryVal,
+                                OperationEntryLoc);
+
   return parseAndMatchAndEmitTargetInstruction(
       Info, OperationEntryVal, OperationEntryTok, OperationEntryLoc);
 }
@@ -6478,6 +6617,8 @@ bool HLASMAsmParser::parseAsMachineInstruction(ParseStatementInfo &Info,
 bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
                                     MCAsmParserSemaCallback *SI) {
   assert(!hasPendingError() && "parseStatement started with pending error");
+  // Clear the label name from the previous statement.
+  LastHLASMLabelName.clear();
 
   // Should the first token be interpreted as a HLASM Label.
   bool ShouldParseAsHLASMLabel = false;

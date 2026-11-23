@@ -55,6 +55,7 @@ enum {
   S_RCon, // Address of ADA of symbol.
   S_VCon, // Address of external function symbol.
   S_QCon, // Class-based offset.
+  S_JCon, // Length of element or part.
 };
 } // namespace SystemZ
 

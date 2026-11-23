@@ -32,6 +32,8 @@ public:
     Reloc_Type_QCon = 0x3,  // Offset of symbol in class.
     Reloc_Type_VCon = 0x4,  // Address of external symbol.
     Reloc_Type_RCon = 0x5,  // PSECT of symbol.
+    Reloc_Type_JCon = 0x6,  // Length of element or part.
+    Reloc_Type_LDCon = 0x7, // 20-bit long displacement.
   };
 
   ~MCGOFFObjectTargetWriter() override = default;

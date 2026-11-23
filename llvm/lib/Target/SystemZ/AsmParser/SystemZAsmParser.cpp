@@ -492,8 +492,10 @@ private:
     return isAlpha(C) || llvm::is_contained("_@#$", C);
   }
 
-  // A digit in HLASM is a number from 0 to 9.
-  inline bool isHLASMAlnum(char C) { return isHLASMAlpha(C) || isDigit(C); }
+  // An alphanumeric / symbol character in HLASM.
+  inline bool isHLASMAlnum(char C) {
+    return isHLASMAlpha(C) || isDigit(C) || llvm::is_contained(".&", C);
+  }
 
   // Are we parsing using the AD_HLASM dialect?
   inline bool isParsingHLASM() { return getMAIAssemblerDialect() == AD_HLASM; }
@@ -1751,14 +1753,20 @@ bool SystemZAsmParser::isLabel(AsmToken &Token) {
   if (RawLabel.size() > 63)
     return !Error(Loc, "Maximum length for HLASM Label is 63 characters");
 
-  // A label must start with an "alphabetic character".
-  if (!isHLASMAlpha(RawLabel[0]))
+  // A label must start with an "alphabetic character" or '.' (for HLASM
+  // sequence symbols like ".&ppa2").
+  if (!isHLASMAlpha(RawLabel[0]) && RawLabel[0] != '.') {
     return !Error(Loc, "HLASM Label has to start with an alphabetic "
                        "character or the underscore character");
+  }
 
-  // Now, we've established that the length is valid
-  // and the first character is alphabetic.
-  // Check whether remaining string is alphanumeric.
+  // For sequence symbols starting with '.', the remaining characters may
+  // include '&' (macro variable prefix) and alphanumerics — skip the strict
+  // isHLASMAlnum check for such names.
+  if (RawLabel[0] == '.')
+    return true;
+
+  // For ordinary symbol: check whether remaining string is alphanumeric.
   for (unsigned I = 1; I < RawLabel.size(); ++I)
     if (!isHLASMAlnum(RawLabel[I]))
       return !Error(Loc, "HLASM Label has to be alphanumeric");

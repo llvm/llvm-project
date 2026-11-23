@@ -307,7 +307,7 @@ TEST_F(SystemZAsmLexerZOS, CheckInvalidHLASMIntegers) {
   ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
   ExpectedTokens.push_back(AsmToken::Identifier);     // "fffh"
   ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
-  ExpectedTokens.push_back(AsmToken::Real);           // ".133"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // ".133"
   ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
   ExpectedTokens.push_back(AsmToken::Eof);
   lexAndCheckTokens(AsmStr, ExpectedTokens);
@@ -324,6 +324,14 @@ TEST_F(SystemZAsmLexerLinux, CheckDefaultIntegers) {
 
   SmallVector<int64_t> ExpectedValues({5, 0xDEADBEEF, 0xFFF});
   lexAndCheckIntegerTokensAndValues(AsmStr, ExpectedValues);
+}
+
+TEST_F(SystemZAsmLexerLinux, CheckDotDigitsIsStillReal) {
+  StringRef AsmStr = ".5\n";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  EXPECT_EQ(Parser->getLexer().getTok().getKind(), AsmToken::Real);
 }
 
 TEST_F(SystemZAsmLexerLinux, CheckDefaultFloats) {
@@ -527,7 +535,7 @@ TEST_F(SystemZAsmLexerZOS, CheckRejectCharLiterals) {
   lexAndCheckTokens(AsmStr, ExpectedTokens);
 }
 
-TEST_F(SystemZAsmLexerZOS, CheckRejectStringLiterals) {
+TEST_F(SystemZAsmLexerZOS, CheckAcceptStringLiterals) {
   StringRef AsmStr = "abc \"ef\"";
 
   // Setup.
@@ -537,9 +545,141 @@ TEST_F(SystemZAsmLexerZOS, CheckRejectStringLiterals) {
   Parser->getLexer().Lex();
 
   SmallVector<AsmToken::TokenKind> ExpectedTokens(
-      {AsmToken::Identifier, AsmToken::Space, AsmToken::Error,
-       AsmToken::Identifier, AsmToken::Error, AsmToken::EndOfStatement,
-       AsmToken::Eof});
+      {AsmToken::Identifier, AsmToken::Space, AsmToken::String,
+       AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+// Floating point literals are not lexed in HLASM; a leading '.' starts a
+// (sequence symbol) identifier instead.
+TEST_F(SystemZAsmLexerZOS, CheckDotDigitsIsIdentifier) {
+  StringRef AsmStr = ".5\n";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckDotDigitsExponentIsIdentifier) {
+  // On other targets ".5e3" is a Real.
+  StringRef AsmStr = ".5e3\n";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  AsmLexer &Lexer = Parser->getLexer();
+  EXPECT_EQ(Lexer.getTok().getKind(), AsmToken::Identifier);
+  EXPECT_EQ(Lexer.getTok().getString(), ".5e3");
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckDotDigitsFollowedByNameIsIdentifier) {
+  StringRef AsmStr = ".1243foo\n";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  AsmLexer &Lexer = Parser->getLexer();
+  EXPECT_EQ(Lexer.getTok().getKind(), AsmToken::Identifier);
+  EXPECT_EQ(Lexer.getTok().getString(), ".1243foo");
+}
+
+// Double quoted strings are accepted in HLASM.
+TEST_F(SystemZAsmLexerZOS, CheckDoubleQuotedStringOnly) {
+  StringRef AsmStr = "\"ab\"\n";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  AsmLexer &Lexer = Parser->getLexer();
+  EXPECT_EQ(Lexer.getTok().getKind(), AsmToken::String);
+  EXPECT_EQ(Lexer.getTok().getStringContents(), "ab");
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckDoubleQuotedStringWithSpace) {
+  StringRef AsmStr = "\"a b#c\"\n";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::String, AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+  EXPECT_EQ(Parser->getLexer().getTok().getKind(), AsmToken::Eof);
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckUnterminatedDoubleQuotedStringIsError) {
+  StringRef AsmStr = "\"abc";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  EXPECT_EQ(Parser->getLexer().getTok().getKind(), AsmToken::Error);
+}
+
+// HLASM continuation lines: a non-blank in column 72 (the continuation
+// indicator, which is not part of the statement) continues the statement on
+// the next line, where the text resumes in column 16.
+static std::string makeContinuedLine(unsigned NameLen, char Col72,
+                                     const char *EOL) {
+  // NameLen 'A' characters padded with blanks up to column 71, then Col72.
+  std::string S(NameLen, 'A');
+  S.resize(71, ' ');
+  S += Col72;
+  S += EOL;
+  S += std::string(15, ' ');
+  S += "BBB";
+  S += EOL;
+  return S;
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckContinuationLineLF) {
+  // Blank in column 71: the name ends there and the continuation starts a new
+  // token.  Column 72 ('X') is ignored.
+  std::string AsmStr = makeContinuedLine(10, 'X', "\n");
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::Space, AsmToken::Identifier,
+       AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckContinuationLineCRLF) {
+  std::string AsmStr = makeContinuedLine(10, 'X', "\r\n");
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::Space, AsmToken::Identifier,
+       AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckContinuationIndicatorIsNotPartOfName) {
+  // The name fills columns 1-71; the 'X' in column 72 must not be appended to
+  // it, and the continuation text (columns 16+) forms the next token.
+  std::string AsmStr = makeContinuedLine(71, 'X', "\n");
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  AsmLexer &Lexer = Parser->getLexer();
+  EXPECT_EQ(Lexer.getTok().getKind(), AsmToken::Identifier);
+  EXPECT_EQ(Lexer.getTok().getString(), std::string(71, 'A'));
+  Lexer.Lex();
+  EXPECT_EQ(Lexer.getTok().getKind(), AsmToken::Identifier);
+  EXPECT_EQ(Lexer.getTok().getString(), "BBB");
+}
+
+TEST_F(SystemZAsmLexerZOS, CheckShortLineIsNotContinued) {
+  // The line is shorter than 71 columns, so the newline ends the statement.
+  std::string AsmStr = "AAA X\n";
+  AsmStr += std::string(15, ' ');
+  AsmStr += "BBB\n";
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::Space, AsmToken::Identifier,
+       AsmToken::EndOfStatement, AsmToken::Space, AsmToken::Identifier,
+       AsmToken::EndOfStatement, AsmToken::Eof});
   lexAndCheckTokens(AsmStr, ExpectedTokens);
 }
 
@@ -559,7 +699,7 @@ TEST_F(SystemZAsmLexerLinux, CheckPrintAcceptableSymbol) {
   EXPECT_EQ(false, MAI->isValidUnquotedName(AsmStr));
 }
 
-TEST_F(SystemZAsmLexerZOS, CheckLabelCaseUpperCase) {
+TEST_F(SystemZAsmLexerZOS, CheckLabelCasePreserved) {
   StringRef AsmStr = "label";
 
   // Setup.
@@ -575,10 +715,10 @@ TEST_F(SystemZAsmLexerZOS, CheckLabelCaseUpperCase) {
   const MCSymbolRefExpr *SymbolExpr = dyn_cast<MCSymbolRefExpr>(Expr);
   EXPECT_NE(SymbolExpr, nullptr);
   EXPECT_NE(&SymbolExpr->getSymbol(), nullptr);
-  EXPECT_EQ((&SymbolExpr->getSymbol())->getName(), StringRef("LABEL"));
+  EXPECT_EQ((&SymbolExpr->getSymbol())->getName(), StringRef("label"));
 }
 
-TEST_F(SystemZAsmLexerLinux, CheckLabelUpperCase2) {
+TEST_F(SystemZAsmLexerLinux, CheckLabelPreserved2) {
   StringRef AsmStr = "label";
 
   // Setup.

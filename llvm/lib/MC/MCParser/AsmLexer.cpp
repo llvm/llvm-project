@@ -228,9 +228,42 @@ AsmToken AsmLexer::LexHexFloatLiteral(bool NoIntDigits) {
   return AsmToken(AsmToken::Real, StringRef(TokStart, CurPtr - TokStart));
 }
 
+/// HLASM continuation rules: a statement line continues on the next line when
+/// column 72 (the continuation-indicator field) is non-blank.  The next line
+/// must have blanks in columns 1-15, and the statement resumes in column 16.
+/// Returns true if the line starting at \p LineStart is continued; \p Resume
+/// then points at column 16 of the following line.
+static bool isHLASMContinuedLine(const char *LineStart, const char *BufEnd,
+                                 const char *&Resume) {
+  const char *EOL = LineStart;
+  while (EOL < BufEnd && *EOL != '\n' && *EOL != '\r')
+    ++EOL;
+  if (EOL - LineStart < 72 || LineStart[71] == ' ' || LineStart[71] == '\t')
+    return false;
+  const char *Next = EOL;
+  if (Next < BufEnd && *Next == '\r')
+    ++Next;
+  if (Next < BufEnd && *Next == '\n')
+    ++Next;
+  const char *P = Next;
+  while (P < BufEnd && (*P == ' ' || *P == '\t'))
+    ++P;
+  if (P - Next < 15 || P >= BufEnd || *P == '\n' || *P == '\r' || *P == '*')
+    return false;
+  Resume = Next + 15;
+  return true;
+}
+
+static const char *findLineStart(const char *Pos, const char *BufStart) {
+  while (Pos > BufStart && Pos[-1] != '\n' && Pos[-1] != '\r')
+    --Pos;
+  return Pos;
+}
+
 AsmToken AsmLexer::LexIdentifier() {
   // Check for floating point literals.
-  if (CurPtr[-1] == '.' && isDigit(*CurPtr)) {
+  if (!LexHLASMIntegers && !MAI.isHLASM() && CurPtr[-1] == '.' &&
+      isDigit(*CurPtr)) {
     // Disambiguate a .1243foo identifier from a floating literal.
     while (isDigit(*CurPtr))
       ++CurPtr;
@@ -241,7 +274,18 @@ AsmToken AsmLexer::LexIdentifier() {
       return LexFloatLiteral();
   }
 
-  while (isIdentifierChar(*CurPtr, AllowAtInIdentifier, AllowHashInIdentifier))
+  // In HLASM column 72 is the continuation-indicator field of a continued
+  // line and is not part of the statement, so a name never extends into it.
+  const char *Limit = nullptr;
+  if (MAI.isHLASM()) {
+    const char *LineStart = findLineStart(TokStart, CurBuf.data());
+    const char *Resume;
+    if (TokStart - LineStart < 71 &&
+        isHLASMContinuedLine(LineStart, CurBuf.end(), Resume))
+      Limit = LineStart + 71;
+  }
+  while (CurPtr != Limit &&
+         isIdentifierChar(*CurPtr, AllowAtInIdentifier, AllowHashInIdentifier))
     ++CurPtr;
 
   // Handle . as a special case.
@@ -541,6 +585,16 @@ AsmToken AsmLexer::LexDigit() {
   if (LexHLASMIntegers || CurPtr[-1] != '0' || CurPtr[0] == '.') {
     unsigned Radix = doHexLookAhead(CurPtr, 10, LexMasmIntegers);
 
+    // In HLASM column 72 of a continued line is the continuation indicator and
+    // is not part of the statement, so a number never extends into it.
+    if (MAI.isHLASM()) {
+      const char *LineStart = findLineStart(TokStart, CurBuf.data());
+      const char *Resume;
+      if (TokStart - LineStart < 71 && CurPtr > LineStart + 71 &&
+          isHLASMContinuedLine(LineStart, CurBuf.end(), Resume))
+        CurPtr = LineStart + 71;
+    }
+
     if (!LexHLASMIntegers) {
       bool IsHex = Radix == 16;
       // Check for floating point literals.
@@ -651,6 +705,25 @@ AsmToken AsmLexer::LexSingleQuote() {
 
   if (LexMasmStrings) {
     while (CurChar != EOF) {
+      if (MAI.isHLASM()) {
+        // A quoted HLASM string may run across a continued line.  Everything
+        // from column 72 up to the end of a continued line is not part of the
+        // statement, and the statement resumes in column 16 of the next line.
+        const char *Cur = CurPtr - 1;
+        const char *LineStart = findLineStart(Cur, CurBuf.data());
+        const char *Resume;
+        if (isHLASMContinuedLine(LineStart, CurBuf.end(), Resume)) {
+          if (CurChar == '\n' || CurChar == '\r') {
+            CurPtr = Resume;
+            CurChar = getNextChar();
+            continue;
+          }
+          if (Cur - LineStart >= 71) {
+            CurChar = getNextChar();
+            continue;
+          }
+        }
+      }
       if (CurChar != '\'') {
         CurChar = getNextChar();
       } else if (peekNextChar() == '\'') {
@@ -703,8 +776,6 @@ AsmToken AsmLexer::LexSingleQuote() {
 /// LexQuote: String: "..."
 AsmToken AsmLexer::LexQuote() {
   int CurChar = getNextChar();
-  if (LexHLASMStrings)
-    return ReturnError(TokStart, "invalid usage of string literals");
 
   if (LexMasmStrings) {
     while (CurChar != EOF) {
@@ -812,6 +883,21 @@ AsmToken AsmLexer::LexToken() {
   // This always consumes at least one character.
   int CurChar = getNextChar();
 
+  // In HLASM, column 72 of a continued line holds the continuation indicator.
+  // It is not part of the statement, and neither are columns 73-80, so skip
+  // everything up to the end of the line.
+  if (MAI.isHLASM() && CurChar != EOF && CurChar != ' ' && CurChar != '\t' &&
+      CurChar != '\n' && CurChar != '\r' && CurChar != 0) {
+    const char *LineStart = findLineStart(TokStart, CurBuf.data());
+    const char *Resume;
+    if (TokStart - LineStart == 71 &&
+        isHLASMContinuedLine(LineStart, CurBuf.end(), Resume)) {
+      while (CurPtr != CurBuf.end() && *CurPtr != '\n' && *CurPtr != '\r')
+        ++CurPtr;
+      return LexToken();
+    }
+  }
+
   if (!IsPeeking && CurChar == '#' && IsAtStartOfStatement) {
     // If this starts with a '#', this may be a cpp
     // hash directive and otherwise a line comment.
@@ -890,6 +976,16 @@ AsmToken AsmLexer::LexToken() {
     else
       return AsmToken(AsmToken::Space, StringRef(TokStart, CurPtr - TokStart));
   case '\r': {
+    if (MAI.isHLASM()) {
+      const char *Resume;
+      if (isHLASMContinuedLine(findLineStart(TokStart, CurBuf.data()),
+                               CurBuf.end(), Resume)) {
+        CurPtr = Resume;
+        IsAtStartOfLine = false;
+        IsAtStartOfStatement = false;
+        return LexToken();
+      }
+    }
     IsAtStartOfLine = true;
     IsAtStartOfStatement = true;
     // If this is a CR followed by LF, treat that as one token.
@@ -898,10 +994,21 @@ AsmToken AsmLexer::LexToken() {
     return AsmToken(AsmToken::EndOfStatement,
                     StringRef(TokStart, CurPtr - TokStart));
   }
-  case '\n':
+  case '\n': {
+    if (MAI.isHLASM()) {
+      const char *Resume;
+      if (isHLASMContinuedLine(findLineStart(TokStart, CurBuf.data()),
+                               CurBuf.end(), Resume)) {
+        CurPtr = Resume;
+        IsAtStartOfLine = false;
+        IsAtStartOfStatement = false;
+        return LexToken();
+      }
+    }
     IsAtStartOfLine = true;
     IsAtStartOfStatement = true;
     return AsmToken(AsmToken::EndOfStatement, StringRef(TokStart, 1));
+  }
   case ':': return AsmToken(AsmToken::Colon, StringRef(TokStart, 1));
   case '+': return AsmToken(AsmToken::Plus, StringRef(TokStart, 1));
   case '~': return AsmToken(AsmToken::Tilde, StringRef(TokStart, 1));

@@ -60,9 +60,15 @@ void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   if (Section->isPR()) {
     if (Section->getBeginSymbol() == nullptr)
       Section->setBeginSymbol(Symbol);
-    else if (!Symbol->isTemporary())
+    else if (Section->getBeginSymbol() != Symbol && !Symbol->isTemporary())
       getContext().reportError(
           Loc, "only one symbol can be defined in a PR section.");
+
+    // The symbol is being re-emitted if it's the same as
+    // Section->getBeginSymbol() (e.g. after XATTR + DS 0H on the same name).
+    // Fall through to MCObjectStreamer::emitLabel which will call
+    // redefineIfPossible() and correctly reposition the symbol to the current
+    // offset.
   }
   MCObjectStreamer::emitLabel(Symbol, Loc);
 }
