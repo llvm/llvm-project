@@ -599,7 +599,7 @@ MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
 }
 
 MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
-                                            const Twine &Suffix, unsigned Type,
+                                            StringRef Suffix, unsigned Type,
                                             unsigned Flags,
                                             unsigned EntrySize) {
   return getELFSection(Prefix + "." + Suffix, Type, Flags, EntrySize, Suffix,
@@ -608,11 +608,11 @@ MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
-                                       const Twine &Group, bool IsComdat,
+                                       StringRef Group, bool IsComdat,
                                        unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
-  if (!Group.isTriviallyEmpty() && !Group.str().empty())
+  if (!Group.empty())
     GroupSym = static_cast<MCSymbolELF *>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, IsComdat,
@@ -826,10 +826,10 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
-                                         unsigned Flags, const Twine &Group,
+                                         unsigned Flags, StringRef Group,
                                          unsigned UniqueID) {
   MCSymbolWasm *GroupSym = nullptr;
-  if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
+  if (!Group.empty()) {
     GroupSym = static_cast<MCSymbolWasm *>(getOrCreateSymbol(Group));
     GroupSym->setComdat(true);
     if (K.isMetadata() && !GroupSym->getType().has_value()) {
