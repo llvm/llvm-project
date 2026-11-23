@@ -748,8 +748,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmParser() {
 #include "AVRGenAsmMatcher.inc"
 
 // Uses enums defined in AVRGenAsmMatcher.inc
-unsigned AVRAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
-                                                  unsigned ExpectedKind) {
+unsigned
+AVRAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
+                                         unsigned ExpectedKind) {
   const AVROperand &Op = static_cast<const AVROperand &>(AsmOp);
   MatchClassKind Expected = static_cast<MatchClassKind>(ExpectedKind);
   if (Expected <= MCK_LAST_TOKEN || Expected > MCK_LAST_REGISTER)

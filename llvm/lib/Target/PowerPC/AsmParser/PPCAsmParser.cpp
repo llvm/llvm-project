@@ -1830,8 +1830,9 @@ LLVMInitializePowerPCAsmParser() {
 
 // Define this matcher function after the auto-generated include so we
 // have the match class enum definitions.
-unsigned PPCAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
-                                                  unsigned Kind) {
+unsigned
+PPCAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
+                                         unsigned Kind) {
   // If the kind is a token for a literal immediate, check if our asm
   // operand matches. This is for InstAliases which have a fixed-value
   // immediate in the syntax.
