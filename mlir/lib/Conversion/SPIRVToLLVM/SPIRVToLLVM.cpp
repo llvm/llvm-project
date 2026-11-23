@@ -2881,6 +2881,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       CompositeInsertPattern, CopyObjectPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
+      DirectConversionPattern<spirv::VectorExtractDynamicOp,
+                              LLVM::ExtractElementOp>,
+      DirectConversionPattern<spirv::VectorInsertDynamicOp,
+                              LLVM::InsertElementOp>,
       VectorShufflePattern,
 
       // Shift ops
