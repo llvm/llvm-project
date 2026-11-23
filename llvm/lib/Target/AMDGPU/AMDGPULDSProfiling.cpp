@@ -237,11 +237,16 @@ SiteKind AMDGPULDSProfilingImpl::classify(const MachineInstr &MI) const {
 /// Insert before \p MI the code which measures its bank conflict and adds the
 /// result to the counters of site \p SiteID.
 ///
-///   Head:      d, active, bank; skip to Remainder if no lane is active
+///   Head:      d, active, bank; skip to Remainder if no lane executes
+///   Check:     skip to Publish with n = 0 if no lane is active
 ///   Loop1:     reps
 ///   Loop2:     n
-///   Publish:   counters[SiteID] += { n, 1, n, 1 }, from one lane
+///   Publish:   counters[SiteID] += { n, 1, n, n != 0 }, from one lane
 ///   Remainder: MI and the rest of the block
+///
+/// An execution in which every lane is outside the allocation is a sample
+/// without a conflict. An execution by no lane is not a sample. There is no
+/// Check block when the size of the allocation is unknown.
 void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
                                         const GlobalVariable &Counters) {
   MachineBasicBlock &Head = *MI.getParent();
@@ -264,11 +269,18 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
         .addImm(0);
   }
 
+  // Lanes outside the allocation do not access a bank. The size of dynamic
+  // LDS is not known here, so there is no filter for it.
+  const bool HasFilter = !MFI.isDynamicLDSUsed();
+
+  MachineBasicBlock *Check = HasFilter ? MF.CreateMachineBasicBlock() : nullptr;
   MachineBasicBlock *Loop1 = MF.CreateMachineBasicBlock();
   MachineBasicBlock *Loop2 = MF.CreateMachineBasicBlock();
   MachineBasicBlock *Publish = MF.CreateMachineBasicBlock();
   MachineBasicBlock *Remainder = MF.CreateMachineBasicBlock();
   MachineFunction::iterator InsertPt = std::next(Head.getIterator());
+  if (Check)
+    MF.insert(InsertPt, Check);
   MF.insert(InsertPt, Loop1);
   MF.insert(InsertPt, Loop2);
   MF.insert(InsertPt, Publish);
@@ -277,8 +289,14 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
   Remainder->transferSuccessorsAndUpdatePHIs(&Head);
   Remainder->splice(Remainder->begin(), &Head, MI.getIterator(), Head.end());
 
-  Head.addSuccessor(Loop1);
+  // The block which enters the first loop.
+  MachineBasicBlock *LoopPred = Check ? Check : &Head;
   Head.addSuccessor(Remainder);
+  if (Check) {
+    Head.addSuccessor(Check);
+    Check->addSuccessor(Publish);
+  }
+  LoopPred->addSuccessor(Loop1);
   Loop1->addSuccessor(Loop1);
   Loop1->addSuccessor(Loop2);
   Loop2->addSuccessor(Loop2);
@@ -301,13 +319,12 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
       .addImm(2)
       .addReg(Addr);
 
-  // Lanes outside the allocation do not access a bank. The size of dynamic
-  // LDS is not known here, so there is no filter for it.
-  Register Active = MRI.createVirtualRegister(MaskRC);
-  if (MFI.isDynamicLDSUsed()) {
-    BuildMI(&Head, DL, TII.get(AMDGPU::S_MOV_B32), Active)
-        .addReg(AMDGPU::EXEC_LO);
-  } else {
+  Register Exec = MRI.createVirtualRegister(MaskRC);
+  BuildMI(&Head, DL, TII.get(AMDGPU::S_MOV_B32), Exec).addReg(AMDGPU::EXEC_LO);
+
+  Register Active = Exec;
+  if (HasFilter) {
+    Active = MRI.createVirtualRegister(MaskRC);
     // The LDS address space is 512 KiB.
     uint32_t LDSWords = std::min<uint32_t>(MFI.getLDSSize(), 1u << 19) / 4;
     Register Limit = SReg();
@@ -327,9 +344,15 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
   Register One = SReg();
   BuildMI(&Head, DL, TII.get(AMDGPU::S_MOV_B32), One).addImm(1);
 
-  BuildMI(&Head, DL, TII.get(AMDGPU::S_CMP_EQ_U32)).addReg(Active).addImm(0);
+  BuildMI(&Head, DL, TII.get(AMDGPU::S_CMP_EQ_U32)).addReg(Exec).addImm(0);
   BuildMI(&Head, DL, TII.get(AMDGPU::S_CBRANCH_SCC1)).addMBB(Remainder);
-  BuildMI(&Head, DL, TII.get(AMDGPU::S_BRANCH)).addMBB(Loop1);
+  BuildMI(&Head, DL, TII.get(AMDGPU::S_BRANCH)).addMBB(Check ? Check : Loop1);
+
+  if (Check) {
+    BuildMI(Check, DL, TII.get(AMDGPU::S_CMP_EQ_U32)).addReg(Active).addImm(0);
+    BuildMI(Check, DL, TII.get(AMDGPU::S_CBRANCH_SCC1)).addMBB(Publish);
+    BuildMI(Check, DL, TII.get(AMDGPU::S_BRANCH)).addMBB(Loop1);
+  }
 
   // One iteration of a reduction loop: select the lowest lane of Remaining,
   // and the lanes of Remaining with the same value of Val.
@@ -372,12 +395,12 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
   Register Reps = SReg(), NextReps = SReg();
   BuildMI(Loop1, DL, TII.get(AMDGPU::PHI), Rem)
       .addReg(Active)
-      .addMBB(&Head)
+      .addMBB(LoopPred)
       .addReg(NextRem)
       .addMBB(Loop1);
   BuildMI(Loop1, DL, TII.get(AMDGPU::PHI), Reps)
       .addReg(Zero)
-      .addMBB(&Head)
+      .addMBB(LoopPred)
       .addReg(NextReps)
       .addMBB(Loop1);
   Register Lane, Same;
@@ -417,10 +440,27 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
       .setOperandDead(3); // SCC
   BuildLoopEnd(Loop2, Left, Same, NextLeft, Publish);
 
-  // Publish. A single lane does the adds. Every VGPR used by them has to be
-  // written while only that lane is enabled, because it may not have been
-  // active before. EXEC is saved and restored with moves, not copies, so that
-  // they are not folded away.
+  // Publish. With a single service group, the total number of rounds is the
+  // N-way conflict, and the baseline is one round unless no lane was active.
+  Register Result = NextNWay, Baseline = One;
+  if (Check) {
+    Result = SReg();
+    BuildMI(Publish, DL, TII.get(AMDGPU::PHI), Result)
+        .addReg(NextNWay)
+        .addMBB(Loop2)
+        .addReg(Zero)
+        .addMBB(Check);
+    Baseline = SReg();
+    BuildMI(Publish, DL, TII.get(AMDGPU::S_MIN_U32), Baseline)
+        .addReg(Result)
+        .addReg(One)
+        .setOperandDead(3); // SCC
+  }
+
+  // A single lane does the adds. Every VGPR used by them has to be written
+  // while only that lane is enabled, because it may not have been active
+  // before. EXEC is saved and restored with moves, not copies, so that they
+  // are not folded away.
   Register SaveExec = MRI.createVirtualRegister(MaskRC);
   BuildMI(Publish, DL, TII.get(AMDGPU::S_MOV_B32), SaveExec)
       .addReg(AMDGPU::EXEC_LO);
@@ -434,13 +474,17 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
   Register VZero = VReg();
   BuildMI(Publish, DL, TII.get(AMDGPU::V_MOV_B32_e32), VZero).addImm(0);
   Register VNWay = VReg();
-  BuildMI(Publish, DL, TII.get(TargetOpcode::COPY), VNWay).addReg(NextNWay);
+  BuildMI(Publish, DL, TII.get(TargetOpcode::COPY), VNWay).addReg(Result);
   Register VOne = VReg();
   BuildMI(Publish, DL, TII.get(AMDGPU::V_MOV_B32_e32), VOne).addImm(1);
+  Register VBaseline = VOne;
+  if (Check) {
+    VBaseline = VReg();
+    BuildMI(Publish, DL, TII.get(TargetOpcode::COPY), VBaseline)
+        .addReg(Baseline);
+  }
 
-  // With a single service group, the total number of rounds is the N-way
-  // conflict, and the baseline is one round.
-  const Register Values[] = {VNWay, VOne, VNWay, VOne};
+  const Register Values[] = {VNWay, VOne, VNWay, VBaseline};
   for (unsigned I = 0; I != std::size(Values); ++I) {
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo(&Counters, RecordOffset + I * 4),

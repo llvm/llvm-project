@@ -331,9 +331,19 @@ void AMDGPUAsmPrinter::emitLDSProfilingInfo(const MachineFunction &MF) {
   if (Counters && NumSites) {
     const uint64_t Size = uint64_t(NumSites) * SiteRecordSize;
     MCSymbol *CountersSym = getSymbol(Counters);
-    OutStreamer->switchSection(getObjFileLowering().getBSSSection());
+    // The counters of a clone in a comdat belong to its group, so that they
+    // are kept or discarded together with it.
+    MCSection *CountersSection = getObjFileLowering().getBSSSection();
+    if (const Comdat *C = F.getComdat()) {
+      CountersSection = OutContext.getELFSection(
+          ".bss." + CountersSym->getName(), ELF::SHT_NOBITS,
+          ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_GROUP, 0, C->getName(),
+          /*IsComdat=*/true);
+    }
+    OutStreamer->switchSection(CountersSection);
     OutStreamer->emitValueToAlignment(Align(4));
-    OutStreamer->emitSymbolAttribute(CountersSym, MCSA_Global);
+    OutStreamer->emitSymbolAttribute(
+        CountersSym, F.isWeakForLinker() ? MCSA_Weak : MCSA_Global);
     OutStreamer->emitSymbolAttribute(CountersSym, MCSA_Protected);
     OutStreamer->emitSymbolAttribute(CountersSym, MCSA_ELF_TypeObject);
     OutStreamer->emitLabel(CountersSym);

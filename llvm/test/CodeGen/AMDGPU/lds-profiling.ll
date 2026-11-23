@@ -47,13 +47,18 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; OFF-NOT: amdgpu_lds_prof_sites
 
 ; ON-LABEL: {{^}}k.prof:
+; No lane executes the access: not a sample.
+; ON: s_mov_b32 [[EXEC:s[0-9]+]], exec_lo
+; ON: s_cmp_eq_u32 [[EXEC]], 0
 ; d = (addr + offset) >> 2, limited to the 1024 byte allocation.
 ; ON: v_add_nc_u32_e32 [[SUM:v[0-9]+]], 16, [[ADDR:v[0-9]+]]
 ; ON: v_lshrrev_b32_e32 [[D:v[0-9]+]], 2, [[SUM]]
 ; ON: v_cmp_gt_u32_e64 [[ACTIVE:s[0-9]+]], s{{[0-9]+}}, [[D]]
 ; ON: v_and_b32_e32 [[BANK:v[0-9]+]], 63, [[D]]
+; ON: s_cbranch_scc1 [[SKIP0:.LBB[0-9_]+]]
+; Every lane is outside the allocation: a sample without a conflict.
 ; ON: s_cmp_eq_u32 [[ACTIVE]], 0
-; ON-NEXT: s_cbranch_scc1 [[SKIP0:.LBB[0-9_]+]]
+; ON: s_cbranch_scc1 [[PUBLISH0:.LBB[0-9_]+]]
 ; One representative lane per distinct dword.
 ; ON: [[LOOP1:.LBB[0-9_]+]]:
 ; ON: s_ctz_i32_b32 [[LANE:s[0-9]+]], [[ACTIVE]]
@@ -68,18 +73,20 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; ON: s_bcnt1_i32_b32 [[COUNT:s[0-9]+]], [[BSAME]]
 ; ON: s_max_u32 [[NWAY:s[0-9]+]], [[NWAY]], [[COUNT]]
 ; ON: s_cbranch_scc1 [[LOOP2]]
-; One lane adds { n, 1, n, 1 } to the counters of site 0.
-; ON: s_mov_b32 [[SAVE:s[0-9]+]], exec_lo
+; One lane adds { n, 1, n, n != 0 } to the counters of site 0.
+; ON-NEXT: [[PUBLISH0]]:
+; ON-NEXT: s_min_u32 [[BASELINE:s[0-9]+]], [[NWAY]], s{{[0-9]+}}
+; ON-NEXT: s_mov_b32 [[SAVE:s[0-9]+]], exec_lo
 ; ON-NEXT: s_mov_b32 exec_lo, 1
 ; ON-NEXT: v_dual_mov_b32 [[ZERO:v[0-9]+]], 0 :: v_dual_mov_b32 [[VN:v[0-9]+]], [[NWAY]]
-; ON-NEXT: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
+; ON-NEXT: v_dual_mov_b32 [[ONE:v[0-9]+]], 1 :: v_dual_mov_b32 [[VBASE:v[0-9]+]], [[BASELINE]]
 ; ON-NEXT: s_get_pc_i64 [[PTR:s\[[0-9:]+\]]]
 ; ON-NEXT: s_add_nc_u64 [[PTR]], [[PTR]], k.prof.counters@rel64+4
 ; ON-NEXT: s_clause 0x3
 ; ON-NEXT: global_atomic_add_u32 [[ZERO]], [[VN]], [[PTR]] scope:SCOPE_SYS
 ; ON-NEXT: global_atomic_add_u32 [[ZERO]], [[ONE]], [[PTR]] offset:4 scope:SCOPE_SYS
 ; ON-NEXT: global_atomic_add_u32 [[ZERO]], [[VN]], [[PTR]] offset:8 scope:SCOPE_SYS
-; ON-NEXT: global_atomic_add_u32 [[ZERO]], [[ONE]], [[PTR]] offset:12 scope:SCOPE_SYS
+; ON-NEXT: global_atomic_add_u32 [[ZERO]], [[VBASE]], [[PTR]] offset:12 scope:SCOPE_SYS
 ; ON-NEXT: s_wait_xcnt 0x0
 ; ON-NEXT: s_mov_b32 exec_lo, [[SAVE]]
 ; ON-NEXT: [[SKIP0]]:

@@ -69,9 +69,14 @@ static bool shouldClone(const Function &F, const TargetMachine &TM) {
   if (F.hasFnAttribute(CloneAttr) || F.hasFnAttribute(OriginalAttr) ||
       F.hasFnAttribute(OptOutAttr))
     return false;
-  // The clone and its counters are separate symbols. Without a strong
-  // definition they could be resolved to a different copy than the kernel.
-  if (!F.hasExternalLinkage() || F.hasComdat())
+  // The runtime finds the clone and its counters by name.
+  if (F.hasLocalLinkage() || F.hasAvailableExternallyLinkage())
+    return false;
+  // The clone and its counters are separate symbols from the kernel. When the
+  // kernel may be defined in several translation units, they are deduplicated
+  // with a comdat of their own. A weak kernel without a comdat has no such
+  // mechanism. Frontends put every HIP kernel in a comdat.
+  if (F.isWeakForLinker() && !F.hasComdat())
     return false;
   if (!isSupportedSubtarget(TM.getSubtarget<GCNSubtarget>(F)))
     return false;
@@ -95,6 +100,14 @@ static bool createProfilingClones(Module &M, const TargetMachine &TM) {
     Clone->setName(CloneName);
     Clone->addFnAttr(CloneAttr, F->getName());
     F->addFnAttr(OriginalAttr);
+
+    // The clone must not share the comdat of the kernel: the kernel is the key
+    // of that group. Its own group also holds its counters.
+    if (const Comdat *C = F->getComdat()) {
+      Comdat *CloneComdat = M.getOrInsertComdat(CloneName);
+      CloneComdat->setSelectionKind(C->getSelectionKind());
+      Clone->setComdat(CloneComdat);
+    }
 
     // The runtime handle of an enqueued block belongs to the original only.
     Clone->setMetadata(LLVMContext::MD_associated, nullptr);
