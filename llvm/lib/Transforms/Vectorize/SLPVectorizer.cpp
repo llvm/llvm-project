@@ -14820,6 +14820,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   (void)isMaskedLoadCompress(
       E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
       [](Value *) { return true; }, Opts.slp_revec, CompressInfo, Cache);
+  assert(CompressInfo.LoadVecTy && "Expected the compress mask to be built.");
   InstructionCost CompressedCost =
       getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
 
@@ -18247,6 +18248,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
               *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
               CompressInfo, Cache);
+          assert(CompressInfo.LoadVecTy && "Expected the compress mask to be built.");
           It = CompressEntryToData.try_emplace(E, CompressInfo).first;
         }
         VecLdCost = getCompressedLoadCost(*TTI, LI0, It->second, CostKind);
