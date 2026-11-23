@@ -26,7 +26,6 @@
 ---
 name:            reassoicate_some_inputs_in_different_block
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: reassoicate_some_inputs_in_different_block
   ; CHECK: bb.0:
@@ -96,7 +95,6 @@ body:             |
 ---
 name:            reassoicate_candidates_in_different_blocks
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: reassoicate_candidates_in_different_blocks
   ; CHECK: bb.0:
@@ -165,7 +163,6 @@ body:             |
 ---
 name:            reassoicate_candidates_in_different_blocks_no_sink
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: reassoicate_candidates_in_different_blocks_no_sink
   ; CHECK: bb.0:
@@ -236,7 +233,6 @@ body:             |
 ---
 name:            no_reassociate_different_block
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: no_reassociate_different_block
   ; CHECK: bb.0:

@@ -1736,6 +1736,30 @@ let OtherPredicates = [HasBitOp3Insts] in {
 
 } // End OtherPredicates = [HasBitOp3Insts]
 
+class UnscaledDivFmasPat<ValueType vt, Instruction inst> : GCNPat<
+  (unscaled_div_fmas
+    (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+    (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)),
+    (vt (VOP3Mods vt:$src2, i32:$src2_modifiers)), (i1 srcvalue)),
+  (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+        $src2_modifiers, $src2, 0, 0)
+>;
+
+def : UnscaledDivFmasPat<f32, V_FMA_F32_e64>;
+def : UnscaledDivFmasPat<f64, V_FMA_F64_e64>;
+
+// Each VOP3Mods matcher contributes three more complexity points than
+// VOP3NoMods. Prefer FMAC when no modifiers are needed.
+let OtherPredicates = [HasDLInsts], AddedComplexity = 10 in
+def : GCNPat<
+  (unscaled_div_fmas
+    (f32 (VOP3NoMods f32:$src0)),
+    (f32 (VOP3NoMods f32:$src1)),
+    (f32 (VOP3NoMods f32:$src2)), (i1 srcvalue)),
+  (V_FMAC_F32_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
+
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                   (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)),

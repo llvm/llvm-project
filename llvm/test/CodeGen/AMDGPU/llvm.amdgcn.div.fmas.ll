@@ -151,14 +151,12 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(ptr addrspace
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b64 vcc, 0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
-; GCN-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
+; GCN-NEXT:    v_mov_b32_e32 v0, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    v_fma_f32 v0, s0, v0, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false) nounwind readnone

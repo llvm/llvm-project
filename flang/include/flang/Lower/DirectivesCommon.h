@@ -94,12 +94,6 @@ T AsRvalueRef(const T &t) {
 // (if present) is not needed. When it's present, though, it causes generated
 // names to contain "int(..., kind=8)".
 struct PeelConvert {
-  template <Fortran::common::TypeCategory Category>
-  static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category>> &expr) {
-    return Fortran::common::visit(
-        [](auto &&s) { return visit_with_category<Category>(s); }, expr.u);
-  }
   template <Fortran::common::TypeCategory Category, typename T>
   static Fortran::semantics::MaybeExpr visit_with_category(const T &x) {
     using Ty = Fortran::evaluate::Type<Category>;
@@ -116,9 +110,8 @@ struct PeelConvert {
   }
 
   template <Fortran::common::TypeCategory Category>
-  static Fortran::semantics::MaybeExpr
-  visit(const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<Category>>
-            &expr) {
+  static Fortran::semantics::MaybeExpr visit(
+      const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category>> &expr) {
     return Fortran::common::visit(
         [](auto &&s) { return visit_with_category<Category>(s); }, expr.u);
   }

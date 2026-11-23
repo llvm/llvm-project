@@ -14,7 +14,7 @@ typedef __int128 m2 __attribute__((vector_size(32)));
 void lnot(m1 *r, ld1 *v) { *r = !*v; }
 
 // CIR-LABEL: cir.func{{.*}} @_Z4lnotPDv1_nPDv1_e(
-// CIR: cir.vec.cmp(eq, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
+// CIR: cir.vec.fcmp(oeq, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
 
 // LLVM-LABEL: define dso_local void @_Z4lnotPDv1_nPDv1_e(ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}})
 // LLVM: %[[CMP:.+]] = fcmp oeq <1 x x86_fp80> %{{.+}}, zeroinitializer
@@ -24,7 +24,7 @@ void lnot(m1 *r, ld1 *v) { *r = !*v; }
 void lnot2(m2 *r, ld2 *v) { *r = !*v; }
 
 // CIR-LABEL: cir.func{{.*}} @_Z5lnot2PDv2_nPDv2_e(
-// CIR: cir.vec.cmp(eq, %{{.+}}, %{{.+}}) : !cir.vector<2 x !cir.long_double<!cir.f80>>, !cir.vector<2 x !s128i>
+// CIR: cir.vec.fcmp(oeq, %{{.+}}, %{{.+}}) : !cir.vector<2 x !cir.long_double<!cir.f80>>, !cir.vector<2 x !s128i>
 
 // LLVM-LABEL: define dso_local void @_Z5lnot2PDv2_nPDv2_e(ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}})
 // LLVM: %[[CMP:.+]] = fcmp oeq <2 x x86_fp80> %{{.+}}, zeroinitializer
@@ -34,8 +34,8 @@ void lnot2(m2 *r, ld2 *v) { *r = !*v; }
 void land(m1 *r, ld1 *a, ld1 *b) { *r = *a && *b; }
 
 // CIR-LABEL: cir.func{{.*}} @_Z4landPDv1_nPDv1_eS2_(
-// CIR: %[[A:.+]] = cir.vec.cmp(ne, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
-// CIR: %[[B:.+]] = cir.vec.cmp(ne, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
+// CIR: %[[A:.+]] = cir.vec.fcmp(une, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
+// CIR: %[[B:.+]] = cir.vec.fcmp(une, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
 // CIR: cir.and %[[A]], %[[B]] : !cir.vector<1 x !s128i>
 
 // LLVM-LABEL: define dso_local void @_Z4landPDv1_nPDv1_eS2_(ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}})
@@ -51,8 +51,8 @@ void land(m1 *r, ld1 *a, ld1 *b) { *r = *a && *b; }
 void lor(m1 *r, ld1 *a, ld1 *b) { *r = *a || *b; }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3lorPDv1_nPDv1_eS2_(
-// CIR: %[[A:.+]] = cir.vec.cmp(ne, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
-// CIR: %[[B:.+]] = cir.vec.cmp(ne, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
+// CIR: %[[A:.+]] = cir.vec.fcmp(une, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
+// CIR: %[[B:.+]] = cir.vec.fcmp(une, %{{.+}}, %{{.+}}) : !cir.vector<1 x !cir.long_double<!cir.f80>>, !cir.vector<1 x !s128i>
 // CIR: cir.or %[[A]], %[[B]] : !cir.vector<1 x !s128i>
 
 // LLVM-LABEL: define dso_local void @_Z3lorPDv1_nPDv1_eS2_(ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}})

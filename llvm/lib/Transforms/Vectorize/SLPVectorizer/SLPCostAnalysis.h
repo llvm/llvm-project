@@ -20,11 +20,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
 
+#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -229,6 +232,22 @@ bool isFusableFMulOperand(Value *Op, Instruction *I,
 /// budget \p ScheduleBudget are skipped to save compile time.
 bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
                              Type *Ty, const TargetTransformInfo &TTI);
+
+/// Selects the gathers of \p GatheredScalars, which fully reverse the bytes of
+/// a scalar and are emitted as a byte swap of the scalar, if it is not more
+/// expensive than the permutation of the bytes. The permutation of the scalar
+/// extracted from a vector folds the extraction, the byte swap does not, so the
+/// byte swaps of the scalars extracted from the same vector are estimated
+/// together with all these extractions. \p GetVectorizedSource returns the key
+/// and the type of the vector the vectorized scalar is extracted from, and its
+/// lane. \returns the mask of the selected gathers.
+SmallBitVector selectBSwapGathers(
+    ArrayRef<SmallVector<Value *>> GatheredScalars, const DataLayout &DL,
+    const TargetTransformInfo &TTI, bool ReVec,
+    TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<std::optional<
+        std::tuple<const void *, FixedVectorType *, unsigned>>(Value *)>
+        GetVectorizedSource);
 
 } // namespace llvm::slpvectorizer
 

@@ -5,7 +5,6 @@
 
 ---
 name: cbz_undef
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: cbz_undef
   ; CHECK: bb.0:
@@ -33,7 +32,6 @@ body: |
 
 ---
 name: cbz_and_undef_source
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: cbz_and_undef_source
   ; CHECK: bb.0:
@@ -67,7 +65,6 @@ body: |
 # The branch condition is a COPY of an undef register.
 ---
 name: cbz_copy_of_undef
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: cbz_copy_of_undef
   ; CHECK: bb.0:
@@ -100,7 +97,6 @@ body: |
 # chain: the undef guard must not block the ordinary case.
 ---
 name: tbz_and_defined_source
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: tbz_and_defined_source
   ; CHECK: bb.0:

@@ -22,7 +22,7 @@
 // CPU-MACOS-DEFAULT: "-target-cpu" "apple-m1"
 // CPU-APPLE-M4: "-target-cpu" "apple-m4"
 
-// TUNE-MACOS-DEFAULT: "-tune-cpu" "apple-m5"
+// TUNE-MACOS-DEFAULT: "-tune-cpu" "apple-m6"
 // TUNE-APPLE-M5: "-tune-cpu" "apple-m5"
 // TUNE-GENERIC: "-tune-cpu" "generic"
 // NO-TUNE-NOT: "-tune-cpu"

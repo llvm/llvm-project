@@ -13,9 +13,9 @@ define void @vector_pointer_gep_idxty_addrspace(ptr addrspace(1) noalias %a, ptr
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP0]], i16 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP0]], i16 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP0]], i16 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i16 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i16 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i16 24
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr addrspace(1) [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr addrspace(1) [[TMP2]], align 4
@@ -25,9 +25,9 @@ define void @vector_pointer_gep_idxty_addrspace(ptr addrspace(1) noalias %a, ptr
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[WIDE_LOAD2]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD3]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP8]], i16 2
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP8]], i16 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP8]], i16 6
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i16 8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i16 16
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i16 24
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr addrspace(1) [[TMP8]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr addrspace(1) [[TMP9]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(1) [[TMP10]], align 4

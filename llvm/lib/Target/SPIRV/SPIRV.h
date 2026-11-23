@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -162,6 +163,10 @@ class SPIRVPostLegalizerPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  // Register classes are final from here, as there is no RegBankSelect.
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
 };
 
 FunctionPass *createSPIRVPostLegalizerLegacyPass();

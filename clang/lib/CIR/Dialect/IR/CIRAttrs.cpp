@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/Support/MathExtras.h"
 
 //===-----------------------------------------------------------------===//
 // RecordMembers
@@ -170,6 +171,34 @@ LogicalResult PtrSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (abi > preferred)
     return emitError() << "preferred alignment is expected to be at least "
                           "as large as ABI alignment";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitIntSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BitIntSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getBitIntMaxAlign() is a power of two, at least the char
+  // width. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// VectorSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+VectorSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getMaxVectorAlign() is a power of two, at least the char
+  // width, when the target imposes a cap. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
   return success();
 }
 
@@ -617,6 +646,11 @@ void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
     p << ", managed";
   if (getKind() == CUDADeviceVarKind::Surface)
     p << ", surface_type = " << getSurfTexType();
+  else if (getKind() == CUDADeviceVarKind::Texture) {
+    p << ", texture_type = " << getSurfTexType();
+    if (getNormalized())
+      p << ", normalized";
+  }
   p << ">";
 }
 
@@ -652,6 +686,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   bool isConstant = false;
   bool isManaged = false;
   int32_t surfTexType = 0;
+  bool normalized = false;
 
   while (parser.parseOptionalGreater().failed()) {
     if (parser.parseComma())
@@ -667,7 +702,27 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else if (flag == "surface_type") {
+    else if (flag == "normalized") {
+      if (*kind != CUDADeviceVarKind::Texture) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'normalized' is only valid for Texture");
+        return {};
+      }
+      normalized = true;
+    } else if (flag == "surface_type") {
+      if (*kind != CUDADeviceVarKind::Surface) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'surface_type' is only valid for Surface");
+        return {};
+      }
+      if (parser.parseEqual() || parser.parseInteger(surfTexType))
+        return {};
+    } else if (flag == "texture_type") {
+      if (*kind != CUDADeviceVarKind::Texture) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'texture_type' is only valid for Texture");
+        return {};
+      }
       if (parser.parseEqual() || parser.parseInteger(surfTexType))
         return {};
     } else {
@@ -677,7 +732,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   }
 
   return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
-             isManaged, surfTexType);
+             isManaged, surfTexType, normalized);
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,10 +781,10 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 LogicalResult MethodAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                  cir::MethodType type,
                                  std::optional<FlatSymbolRefAttr> symbol,
-                                 std::optional<uint64_t> vtable_offset) {
-  if (symbol.has_value() && vtable_offset.has_value())
+                                 std::optional<uint64_t> vtable_index) {
+  if (symbol.has_value() && vtable_index.has_value())
     return emitError()
-           << "at most one of symbol and vtable_offset can be present "
+           << "at most one of symbol and vtable_index can be present "
               "in #cir.method";
 
   return success();
@@ -761,30 +816,30 @@ Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
     return get(ty, symbol);
   }
 
-  // Parse a uint64 that represents the vtable offset.
-  std::uint64_t vtableOffset = 0;
-  if (parser.parseKeyword("vtable_offset"))
+  // Parse a uint64 that represents the vtable index.
+  std::uint64_t vtableIndex = 0;
+  if (parser.parseKeyword("vtable_index"))
     return {};
   if (parser.parseEqual())
     return {};
-  if (parser.parseInteger(vtableOffset))
+  if (parser.parseInteger(vtableIndex))
     return {};
 
   if (parser.parseGreater())
     return {};
 
-  return get(ty, vtableOffset);
+  return get(ty, vtableIndex);
 }
 
 void MethodAttr::print(AsmPrinter &printer) const {
   auto symbol = getSymbol();
-  auto vtableOffset = getVtableOffset();
+  auto vtableIndex = getVtableIndex();
 
   printer << '<';
   if (symbol.has_value()) {
     printer << *symbol;
-  } else if (vtableOffset.has_value()) {
-    printer << "vtable_offset = " << *vtableOffset;
+  } else if (vtableIndex.has_value()) {
+    printer << "vtable_index = " << *vtableIndex;
   } else {
     printer << "null";
   }
@@ -950,7 +1005,7 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult cir::VTableAttr::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type type,
-    mlir::ArrayAttr data) {
+    mlir::ArrayAttr data, mlir::ArrayAttr addressPoints) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
     return emitError() << "expected !cir.struct or !cir.union type result";
@@ -960,10 +1015,29 @@ LogicalResult cir::VTableAttr::verify(
   if (cir::ConstRecordAttr::verify(emitError, type, data).failed())
     return failure();
 
-  for (const auto &element : data.getAsRange<mlir::Attribute>()) {
+  if (addressPoints.size() != data.size())
+    return emitError() << "expected one address point for each vtable, got "
+                       << addressPoints.size() << " for " << data.size()
+                       << " vtables";
+
+  for (const auto &[idx, element] :
+       llvm::enumerate(data.getAsRange<mlir::Attribute>())) {
     const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(element);
     if (!constArrayAttr)
       return emitError() << "expected constant array subtype";
+
+    auto arrayTy = mlir::cast<cir::ArrayType>(constArrayAttr.getType());
+    auto addressPoint =
+        mlir::dyn_cast<cir::AddressPointAttr>(addressPoints[idx]);
+    if (!addressPoint)
+      return emitError() << "expected an address point for vtable " << idx;
+    if (addressPoint.getIndex() != static_cast<int32_t>(idx))
+      return emitError() << "address point " << idx << " refers to vtable "
+                         << addressPoint.getIndex();
+    if (addressPoint.getOffset() < 0 ||
+        static_cast<uint64_t>(addressPoint.getOffset()) > arrayTy.getSize())
+      return emitError() << "address point offset " << addressPoint.getOffset()
+                         << " is out of range of vtable " << idx;
 
     LogicalResult eltTypeCheck = success();
     auto arrayElts = mlir::cast<ArrayAttr>(constArrayAttr.getElts());
@@ -1070,10 +1144,11 @@ Attribute RecordLayoutAttr::parse(AsmParser &parser, Type odsType) {
   if (failed(recordAlign))
     return {};
 
-  // An omitted unadjusted_align stores the record alignment. Either optional
-  // field may follow record_align, in either order.
+  // An omitted unadjusted_align stores the record alignment. The optional
+  // fields may follow record_align in any order.
   uint64_t unadjustedAlign = *recordAlign;
   bool transparentUnion = false;
+  bool flexibleArrayMember = false;
   while (succeeded(parser.parseOptionalComma())) {
     if (succeeded(parser.parseOptionalKeyword("unadjusted_align"))) {
       if (parser.parseEqual())
@@ -1093,16 +1168,26 @@ Attribute RecordLayoutAttr::parse(AsmParser &parser, Type odsType) {
       transparentUnion = *parsed;
       continue;
     }
+    if (succeeded(parser.parseOptionalKeyword("flexible_array_member"))) {
+      if (parser.parseEqual())
+        return {};
+      FailureOr<bool> parsed = FieldParser<bool>::parse(parser);
+      if (failed(parsed))
+        return {};
+      flexibleArrayMember = *parsed;
+      continue;
+    }
     parser.emitError(parser.getCurrentLocation(),
-                     "expected unadjusted_align or transparent_union");
+                     "expected unadjusted_align, transparent_union or "
+                     "flexible_array_member");
     return {};
   }
 
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<RecordLayoutAttr>(loc, parser.getContext(), *kind,
-                                             *hasTrivialDtor, *recordAlign,
-                                             unadjustedAlign, transparentUnion);
+  return parser.getChecked<RecordLayoutAttr>(
+      loc, parser.getContext(), *kind, *hasTrivialDtor, *recordAlign,
+      unadjustedAlign, transparentUnion, flexibleArrayMember);
 }
 
 void RecordLayoutAttr::print(AsmPrinter &printer) const {
@@ -1120,6 +1205,10 @@ void RecordLayoutAttr::print(AsmPrinter &printer) const {
   if (getTransparentUnion()) {
     printer << ", transparent_union = ";
     printer.printStrippedAttrOrType(getTransparentUnion());
+  }
+  if (getFlexibleArrayMember()) {
+    printer << ", flexible_array_member = ";
+    printer.printStrippedAttrOrType(getFlexibleArrayMember());
   }
   printer << '>';
 }

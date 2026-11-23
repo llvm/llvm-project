@@ -555,7 +555,7 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
-      return nullptr;
+      return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
     if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
       LastFunctionNumber = MF.getFunctionNumber();
       Log->switchContext(getContextName(MF));
@@ -731,12 +731,14 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
           getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
-      // Only evict older cascades or live ranges without a cascade.
-      if (Cascade == IntfCascade)
+      // Only urgent evictions may evict unspillable ranges, as in the default
+      // advisor where their infinite weight fails shouldEvict.
+      if (!Urgent && !Intf->isSpillable())
         return false;
 
-      if (Cascade < IntfCascade) {
-        if (!Urgent)
+      // Only evict older cascades or live ranges without a cascade.
+      if (Cascade <= IntfCascade) {
+        if (!Urgent || Cascade == IntfCascade)
           return false;
         ++NumUrgent;
       }
@@ -1043,7 +1045,7 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
         if (*I == PhysReg)
           break;
   }
-  if (TrainingLog.empty())
+  if (!Log)
     return Ret;
   // TODO(mtrofin): when we support optional rewards, this can go away. In the
   // meantime, we log the "pretend" reward (0) for the previous observation

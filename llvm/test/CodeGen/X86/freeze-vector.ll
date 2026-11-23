@@ -761,7 +761,7 @@ define i32 @freeze_select_scalar_demanded(i1 %c, <2 x i32> %a, <2 x i32> %b, <2 
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jne .LBB27_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm1
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm1 # [2147483648,2147483648,u,u]
 ; X86-NEXT:    jmp .LBB27_3
 ; X86-NEXT:  .LBB27_1:
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1 # [2147483647,2147483647,u,u]
@@ -800,7 +800,7 @@ define <2 x i32> @freeze_vselect_high_demanded(<4 x i32> %csrc, <2 x i32> %a, <2
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm4[0,1,2,3],xmm0[4,5,6,7]
 ; X86-NEXT:    vpcmpgtd %xmm5, %xmm0, %xmm0
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2 # [2147483647,2147483647,u,u]
-; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3 # [2147483648,2147483648,u,u]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],mem[0]
 ; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
@@ -856,7 +856,7 @@ define i32 @freeze_vselect_demanded(<4 x i32> %csrc, <2 x i32> %a, <2 x i32> %b,
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm6[0]
 ; X86-NEXT:    vpcmpgtd %xmm5, %xmm0, %xmm0
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2 # [2147483647,2147483647,u,u]
-; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4, %xmm4
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4, %xmm4 # [2147483648,2147483648,u,u]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm3, %xmm0

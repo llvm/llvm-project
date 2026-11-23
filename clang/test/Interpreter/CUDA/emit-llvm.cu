@@ -9,7 +9,7 @@
 // RUN:   -Xcc -Xclang -Xcc -emit-llvm | FileCheck %s
 
 extern "C" __global__ void kernel(int *p) { *p = 42; }
-// CHECK: target triple = "nvptx64-nvidia-cuda"
+// CHECK: target triple = "nvptx{{(64)?}}-nvidia-cuda"
 // CHECK: define {{.*}}ptx_kernel void @kernel(
 // CHECK: define {{.*}}void @__device_stub__kernel(
 

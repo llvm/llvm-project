@@ -7,7 +7,6 @@
 # when this block is empty and it will just crashed!
 ---
 name:            crashing
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: crashing
   ; CHECK: bb.0:

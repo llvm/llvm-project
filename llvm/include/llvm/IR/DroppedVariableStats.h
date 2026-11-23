@@ -60,8 +60,6 @@ protected:
   /// other passes.
   SmallVector<DenseMap<const Function *, DebugVariables>> DebugVariablesStack;
 
-  /// A DenseSet tracking whether a scope was visited before.
-  DenseSet<const DIScope *> VisitedScope;
   /// Calculate the number of dropped variables in an llvm::Function or
   /// llvm::MachineFunction and print the relevant information to stdout.
   LLVM_ABI void calculateDroppedStatsAndPrint(DebugVariables &DbgVariables,
@@ -72,8 +70,8 @@ protected:
 
   /// Check if a \p Var has been dropped or is a false positive. Also update the
   /// \p DroppedCount if a debug variable is dropped.
-  LLVM_ABI bool updateDroppedCount(DILocation *DbgLoc, const DIScope *Scope,
-                                   VarID Var, unsigned &DroppedCount);
+  LLVM_ABI bool updateDroppedCount(const DILocation *DbgLoc, VarID Var,
+                                   unsigned &DroppedCount);
 
   /// Run code to populate relevant data structures over an llvm::Function or
   /// llvm::MachineFunction.
@@ -97,15 +95,14 @@ private:
   /// DroppedVariablesBefore stack.
   void removeVarFromAllSets(VarID Var, const Function *F);
 
-  /// Return true if \p Scope is the same as \p DbgValScope or a child scope of
-  /// \p DbgValScope, return false otherwise.
-  bool isScopeChildOfOrEqualTo(const DIScope *Scope,
-                               const DIScope *DbgValScope);
+  /// Return true if \p Scope is the same as \p VarScope or a child scope of
+  /// \p VarScope, return false otherwise.
+  static bool isScopeChildOfOrEqualTo(const DIScope *Scope,
+                                      const DIScope *VarScope);
 
-  /// Return true if \p InlinedAt is the same as \p DbgValInlinedAt or part of
-  /// the InlinedAt chain, return false otherwise.
-  bool isInlinedAtChildOfOrEqualTo(const DILocation *InlinedAt,
-                                   const DILocation *DbgValInlinedAt);
+  /// Return true if a debugger stopped at \p Loc can observe \p Var, in the
+  /// frame of \p Loc or in a frame \p Loc was inlined into.
+  static bool isVarInScopeAt(const DILocation *Loc, VarID Var);
 
   bool PassDroppedVariables = false;
 };

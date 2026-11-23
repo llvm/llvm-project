@@ -226,7 +226,6 @@
 ---
 name:            vload_nx1i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -247,7 +246,6 @@ body:             |
 ---
 name:            vload_nx2i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -268,7 +266,6 @@ body:             |
 ---
 name:            vload_nx4i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -289,7 +286,6 @@ body:             |
 ---
 name:            vload_nx8i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -310,7 +306,6 @@ body:             |
 ---
 name:            vload_nx16i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -331,7 +326,6 @@ body:             |
 ---
 name:            vload_nx32i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -352,7 +346,6 @@ body:             |
 ---
 name:            vload_nx64i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -373,7 +366,6 @@ body:             |
 ---
 name:            vload_nx1i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -394,7 +386,6 @@ body:             |
 ---
 name:            vload_nx2i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -415,7 +406,6 @@ body:             |
 ---
 name:            vload_nx4i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -436,7 +426,6 @@ body:             |
 ---
 name:            vload_nx8i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -457,7 +446,6 @@ body:             |
 ---
 name:            vload_nx16i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -478,7 +466,6 @@ body:             |
 ---
 name:            vload_nx32i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -499,7 +486,6 @@ body:             |
 ---
 name:            vload_nx1i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -520,7 +506,6 @@ body:             |
 ---
 name:            vload_nx2i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -541,7 +526,6 @@ body:             |
 ---
 name:            vload_nx4i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -562,7 +546,6 @@ body:             |
 ---
 name:            vload_nx8i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -583,7 +566,6 @@ body:             |
 ---
 name:            vload_nx16i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -604,7 +586,6 @@ body:             |
 ---
 name:            vload_nx1i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -625,7 +606,6 @@ body:             |
 ---
 name:            vload_nx2i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -646,7 +626,6 @@ body:             |
 ---
 name:            vload_nx4i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -667,7 +646,6 @@ body:             |
 ---
 name:            vload_nx8i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -688,7 +666,6 @@ body:             |
 ---
 name:            vload_nx16i8_align1
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -709,7 +686,6 @@ body:             |
 ---
 name:            vload_nx16i8_align2
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -730,7 +706,6 @@ body:             |
 ---
 name:            vload_nx16i8_align16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -751,7 +726,6 @@ body:             |
 ---
 name:            vload_nx16i8_align64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -772,7 +746,6 @@ body:             |
 ---
 name:            vload_nx4i16_align1
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -795,7 +768,6 @@ body:             |
 ---
 name:            vload_nx4i16_align2
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -816,7 +788,6 @@ body:             |
 ---
 name:            vload_nx4i16_align4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -837,7 +808,6 @@ body:             |
 ---
 name:            vload_nx4i16_align8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -858,7 +828,6 @@ body:             |
 ---
 name:            vload_nx4i16_align16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -879,7 +848,6 @@ body:             |
 ---
 name:            vload_nx2i32_align2
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -902,7 +870,6 @@ body:             |
 ---
 name:            vload_nx2i32_align4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -923,7 +890,6 @@ body:             |
 ---
 name:            vload_nx2i32_align8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -944,7 +910,6 @@ body:             |
 ---
 name:            vload_nx2i32_align16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -965,7 +930,6 @@ body:             |
 ---
 name:            vload_nx2i32_align256
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -986,7 +950,6 @@ body:             |
 ---
 name:            vload_nx2i64_align4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -1009,7 +972,6 @@ body:             |
 ---
 name:            vload_nx2i64_align8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -1030,7 +992,6 @@ body:             |
 ---
 name:            vload_nx2i64_align16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -1051,7 +1012,6 @@ body:             |
 ---
 name:            vload_nx2i64_align32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -1072,7 +1032,6 @@ body:             |
 ---
 name:            vload_nx1ptr
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -1093,7 +1052,6 @@ body:             |
 ---
 name:            vload_nx2ptr
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10
@@ -1114,7 +1072,6 @@ body:             |
 ---
 name:            vload_nx8ptr
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x10

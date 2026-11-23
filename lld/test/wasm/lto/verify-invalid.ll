@@ -1,3 +1,5 @@
+; REQUIRES: asserts
+; Without assertions, LLD always disables bitcode verification (see #242663).
 ; RUN: llvm-as %s -o %t.o
 ; RUN: wasm-ld %t.o -o %t2 --lto-debug-pass-manager \
 ; RUN:   2>&1 | FileCheck -check-prefix=DEFAULT-NPM %s

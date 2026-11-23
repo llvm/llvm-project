@@ -8,9 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
-#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -25,19 +23,20 @@ namespace orc {
 Expected<std::unique_ptr<EPCGenericRTDyldMemoryManager>>
 EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
     ExecutorProcessControl &EPC) {
+  auto &BootstrapJD = EPC.getExecutionSession().getBootstrapJITDylib();
   SymbolAddrs SAs;
   if (auto Err = lookupAndApply(
-          EPC.getExecutionSession().getBootstrapJITDylib(),
-          {recordAddr(rt::sps_ci::SimpleNativeMemoryMapInstanceName,
-                      &SAs.MemMgr.Instance),
-           recordProxy<sps::MemMgrReserveProxySpec>(&SAs.MemMgr.Reserve),
-           recordProxy<sps::MemMgrInitializeProxySpec>(&SAs.MemMgr.Initialize),
-           recordProxy<sps::MemMgrReleaseProxySpec>(&SAs.MemMgr.Release),
-           recordAddr(rt::RegisterEHFrameSectionAllocActionName,
-                      &SAs.RegisterEHFrame),
-           recordAddr(rt::DeregisterEHFrameSectionAllocActionName,
-                      &SAs.DeregisterEHFrame)}))
+          BootstrapJD, {recordAddr(rt::RegisterEHFrameSectionAllocActionName,
+                                   &SAs.RegisterEHFrame),
+                        recordAddr(rt::DeregisterEHFrameSectionAllocActionName,
+                                   &SAs.DeregisterEHFrame)}))
     return std::move(Err);
+  // Bind the memory manager last: this may create an executor-side instance,
+  // which would otherwise be left unused if a lookup above failed.
+  if (auto MemMgr = sps::createSimpleMemoryMapBindings(BootstrapJD))
+    SAs.MemMgr = std::move(*MemMgr);
+  else
+    return MemMgr.takeError();
   return std::make_unique<EPCGenericRTDyldMemoryManager>(EPC, std::move(SAs));
 }
 

@@ -24,6 +24,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
@@ -89,6 +90,17 @@ addFunctionTypeMutation(NamedMDNode *NMD,
   NMD->addOperand(MDNode::get(Ctx, MDArgs));
 }
 
+// Drops attributes that are invalid on the i32 placeholders in the type of V.
+template <typename T> static void removeIncompatibleAttrs(T *V) {
+  FunctionType *FTy = V->getFunctionType();
+  AttributeList Attrs = V->getAttributes();
+  V->removeRetAttrs(AttributeFuncs::typeIncompatible(FTy->getReturnType(),
+                                                     Attrs.getRetAttrs()));
+  for (auto [I, Ty] : enumerate(FTy->params()))
+    V->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(Ty, Attrs.getParamAttrs(I)));
+}
+
 // Returns F if aggregate argument/return types are not present or cloned F
 // function with the types replaced by i32 types. The change in types is
 // noted in 'spv.cloned_funcs' metadata for later restoration.
@@ -141,14 +153,17 @@ SPIRVRemoveAggregateTypesImpl::removeAggregateTypesFromSignature(Function *F) {
                     Returns);
   NewF->takeName(F);
   NewF->setComdat(F->getComdat());
+  removeIncompatibleAttrs(NewF);
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
   for (User *U : F->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F) {
       CB->mutateFunctionType(NewF->getFunctionType());
+      removeIncompatibleAttrs(CB);
+    }
   }
   // NewF keeps F's address space, so their pointer types match and
   // RAUW is safe despite the differing signatures.
@@ -254,6 +269,7 @@ bool SPIRVRemoveAggregateTypesImpl::removeAggregateTypesFromCalls(Function *F) {
       TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
           CB, CB->getType());
     CB->mutateFunctionType(NewFTy);
+    removeIncompatibleAttrs(CB);
   }
 
   return true;

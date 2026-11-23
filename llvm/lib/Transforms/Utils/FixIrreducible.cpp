@@ -327,7 +327,11 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
     }
   }
 
-  // Redirect external incoming edges. This includes the edges on the header.
+  // Redirect external edges incident on any entry (including the header).
+  // Ignore external edges to non-entry blocks, which can only come from
+  // unreachable predecessors; redirecting them would make the hub branch to a
+  // non-entry block, effectively turning it into a new entry.
+  SmallPtrSet<BasicBlock *, 8> Entries(from_range, CI.getEntries(C));
   Predecessors.clear();
   for (BasicBlock *E : CI.getEntries(C)) {
     for (BasicBlock *P : predecessors(E)) {
@@ -340,16 +344,16 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
     Instruction *Term = P->getTerminator();
     if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor();
-      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
+      Succ0 = Entries.contains(Succ0) ? Succ0 : nullptr;
       CHub.addBranch(P, Succ0);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Succ0) << '\n');
     } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
-      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
+      Succ0 = Entries.contains(Succ0) ? Succ0 : nullptr;
       BasicBlock *Succ1 = Branch->getSuccessor(1);
-      Succ1 = CI.contains(C, Succ1) ? Succ1 : nullptr;
+      Succ1 = Entries.contains(Succ1) ? Succ1 : nullptr;
       CHub.addBranch(P, Succ0, Succ1);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
@@ -360,7 +364,7 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
       SmallDenseMap<BasicBlock *, BasicBlock *> MultiBrTargets;
       for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
         BasicBlock *Succ = Term->getSuccessor(I);
-        if (!CI.contains(C, Succ))
+        if (!Entries.contains(Succ))
           continue;
         auto It = MultiBrTargets.find(Succ);
         BasicBlock *ExistingTarget =
