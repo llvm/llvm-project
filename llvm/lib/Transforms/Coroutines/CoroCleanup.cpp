@@ -28,6 +28,7 @@ namespace {
 struct Lowerer : coro::LowererBase {
   IRBuilder<> Builder;
   Constant *NoopCoro = nullptr;
+  bool ChangedGlobalInitializer = false;
 
   Lowerer(Module &M) : LowererBase(M), Builder(M) {}
   bool lower(Function &F);
@@ -157,6 +158,7 @@ bool Lowerer::lower(Function &F) {
         auto *NewFuncPtrStruct = ConstantStruct::get(
             Target->getType(), TargetRelativeFunOffset, SourceSize);
         Target->replaceAllUsesWith(NewFuncPtrStruct);
+        ChangedGlobalInitializer = true;
         break;
       }
       DeadInsts.insert(II);
@@ -299,9 +301,14 @@ PreservedAnalyses CoroCleanupPass::run(Module &M,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  // Analyses of the lowered functions were already invalidated.
   PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
+
+  // Analyses of the lowered functions were already invalidated, and changing a
+  // global initializer does not change the CFG of any function.
+  if (L.ChangedGlobalInitializer)
+    PA.preserveSet<CFGAnalyses>();
+  else
+    PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
