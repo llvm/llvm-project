@@ -914,7 +914,9 @@ static void emitBodyAndFallthrough(CodeGenFunction &CGF,
 }
 
 void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
-  auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
+  auto *NullVoidPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
+  auto *NullAllocaPtr = llvm::ConstantPointerNull::get(AllocaInt8PtrTy);
+  auto *NullUnqualPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
   auto &TI = CGM.getContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
 
@@ -926,8 +928,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *RetBB = createBasicBlock("coro.ret");
 
   auto *CoroId = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::coro_id, {Builder.getPtrTy()}),
-      {Builder.getInt32(NewAlign), NullPtr, NullPtr, NullPtr});
+      CGM.getIntrinsic(llvm::Intrinsic::coro_id, {AllocaInt8PtrTy}),
+      {Builder.getInt32(NewAlign), NullAllocaPtr, NullUnqualPtr,
+       NullUnqualPtr});
   createCoroData(*this, CurCoro, CoroId);
 
   GetReturnObjectManager GroManager(*this, S);
@@ -970,7 +973,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   // Pass the result of the allocation to coro.begin.
   auto *Phi = Builder.CreatePHI(VoidPtrTy, 2);
-  Phi->addIncoming(NullPtr, EntryBB);
+  Phi->addIncoming(NullVoidPtr, EntryBB);
   Phi->addIncoming(AllocateCall, AllocOrInvokeContBB);
   auto *CoroBegin = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_begin, {VoidPtrTy}),
@@ -1021,9 +1024,11 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitStmt(S.getPromiseDeclStmt());
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
-    // Update CoroId to refer to the promise. We could not do it earlier because
-    // promise local variable was not emitted yet.
-    CoroId->setArgOperand(1, PromiseAddr.emitRawPointer(*this));
+    // Update CoroId to refer to the promise alloca (stripping any
+    // addrspacecast to the default address space). We could not do it earlier
+    // because the promise local variable was not emitted yet.
+    CoroId->setArgOperand(
+        1, PromiseAddr.emitRawPointer(*this)->stripPointerCasts());
 
     // Now we have the promise, initialize the GRO
     GroManager.EmitGroAlloca();
@@ -1095,9 +1100,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   // Emit coro.end before ret instruction, since resume and destroy parts of the
   // coroutine should return void.
   llvm::Function *CoroEnd =
-      CGM.getIntrinsic(llvm::Intrinsic::coro_end, {Builder.getPtrTy()});
+      CGM.getIntrinsic(llvm::Intrinsic::coro_end, {VoidPtrTy});
   Builder.CreateCall(CoroEnd,
-                     {NullPtr, Builder.getFalse(),
+                     {NullVoidPtr, Builder.getFalse(),
                       llvm::ConstantTokenNone::get(CoroEnd->getContext())});
 
   if (auto *Ret = cast_or_null<ReturnStmt>(S.getReturnStmt())) {
@@ -1138,7 +1143,8 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
 
     CGM.Error(E->getBeginLoc(), "this builtin expect that __builtin_coro_begin "
                                 "has been used earlier in this function");
-    auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
+    auto *NullPtr = llvm::ConstantPointerNull::get(
+        cast<llvm::PointerType>(ConvertType(E->getType())));
     return RValue::get(NullPtr);
   }
   case llvm::Intrinsic::coro_size: {
