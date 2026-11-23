@@ -636,6 +636,101 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The packed dimension is dynamic but the producer only tiles dimension 0.
+// The full dynamic dimension can be packed even when it needs padding.
+
+// CHECK-LABEL: func.func @fuse_pack_consumer_with_untiled_dynamic_dim(
+// CHECK-SAME:    %{{.*}}: tensor<64x?x20xf32>, %{{.*}}: tensor<64x?x20xf32>, %[[PACK_INIT:[^:]+]]: tensor<?x20x64x16xf32>)
+// CHECK:       scf.forall (%[[IV:[^)]*]]) = (0) to (64) step (16) shared_outs({{.*}}%[[PACK_OUT:[^ ]+]] = %[[PACK_INIT]])
+// CHECK:         %[[ELEM:.*]] = linalg.elementwise <exp>
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[SIZE:.*]] = tensor.dim %[[PACK_INIT]], %[[C0]] : tensor<?x20x64x16xf32>
+// CHECK:         %[[DEST:.*]] = tensor.extract_slice %[[PACK_OUT]][0, 0, %[[IV]], 0] [%[[SIZE]], 20, 16, 16] [1, 1, 1, 1]
+// CHECK:         %[[PACK:.*]] = linalg.pack %[[ELEM]] padding_value
+// CHECK-SAME:        outer_dims_perm = [1, 2, 0] inner_dims_pos = [1] inner_tiles = [16] into %[[DEST]]
+// CHECK:         scf.forall.in_parallel {
+// CHECK:           tensor.parallel_insert_slice %[[PACK]] into %[[PACK_OUT]][0, 0, %[[IV]], 0] [%[[SIZE]], 20, 16, 16] [1, 1, 1, 1]
+func.func @fuse_pack_consumer_with_untiled_dynamic_dim(
+    %src: tensor<64x?x20xf32>, %init: tensor<64x?x20xf32>,
+    %pack_init: tensor<?x20x64x16xf32>) -> tensor<?x20x64x16xf32> {
+  %c1 = arith.constant 1 : index
+  %size = tensor.dim %init, %c1 : tensor<64x?x20xf32>
+  %0 = scf.forall (%iv) = (0) to (64) step (16)
+      shared_outs(%out = %init) -> (tensor<64x?x20xf32>) {
+    %input = tensor.extract_slice %src[%iv, 0, 0] [16, %size, 20] [1, 1, 1]
+        : tensor<64x?x20xf32> to tensor<16x?x20xf32>
+    %dest = tensor.extract_slice %out[%iv, 0, 0] [16, %size, 20] [1, 1, 1]
+        : tensor<64x?x20xf32> to tensor<16x?x20xf32>
+    %computed = linalg.elementwise <exp> ins(%input : tensor<16x?x20xf32>)
+        outs(%dest : tensor<16x?x20xf32>) -> tensor<16x?x20xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %computed into %out[%iv, 0, 0]
+          [16, %size, 20] [1, 1, 1] : tensor<16x?x20xf32> into tensor<64x?x20xf32>
+    }
+  }
+  %zero = arith.constant 0.0 : f32
+  %pack = linalg.pack %0 padding_value(%zero : f32) outer_dims_perm = [1, 2, 0]
+      inner_dims_pos = [1] inner_tiles = [16] into %pack_init
+      : tensor<64x?x20xf32> -> tensor<?x20x64x16xf32>
+  return %pack : tensor<?x20x64x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["linalg.pack"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %loop = transform.structured.match ops{["scf.forall"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %fused, %new_loop = transform.test.fuse_consumer %pack into(%loop)
+        : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// A zero offset alone does not make a dynamic slice cover the source.
+
+func.func @nofuse_pack_consumer_with_partial_dynamic_dim(
+    %src: tensor<64x?xf32>, %init: tensor<64x?xf32>,
+    %pack_init: tensor<64x?x16xf32>) -> tensor<64x?x16xf32> {
+  %c1 = arith.constant 1 : index
+  %size = tensor.dim %init, %c1 : tensor<64x?xf32>
+  %half = affine.apply affine_map<(d0) -> (d0 floordiv 2)>(%size)
+  %0 = scf.forall (%iv) = (0) to (64) step (16)
+      shared_outs(%out = %init) -> (tensor<64x?xf32>) {
+    %input = tensor.extract_slice %src[%iv, 0] [16, %half] [1, 1]
+        : tensor<64x?xf32> to tensor<16x?xf32>
+    %dest = tensor.extract_slice %out[%iv, 0] [16, %half] [1, 1]
+        : tensor<64x?xf32> to tensor<16x?xf32>
+    %computed = linalg.elementwise <exp> ins(%input : tensor<16x?xf32>)
+        outs(%dest : tensor<16x?xf32>) -> tensor<16x?xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %computed into %out[%iv, 0] [16, %half] [1, 1]
+          : tensor<16x?xf32> into tensor<64x?xf32>
+    }
+  }
+  %zero = arith.constant 0.0 : f32
+  // expected-error @below {{failed to fuse consumer of slice}}
+  %pack = linalg.pack %0 padding_value(%zero : f32) inner_dims_pos = [1]
+      inner_tiles = [16] into %pack_init : tensor<64x?xf32> -> tensor<64x?x16xf32>
+  return %pack : tensor<64x?x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["linalg.pack"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %loop = transform.structured.match ops{["scf.forall"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %fused, %new_loop = transform.test.fuse_consumer %pack into(%loop)
+        : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
 // It is valid to fuse the pack op with padding semantics if it is a perfect
 // tiling case.
 
@@ -686,7 +781,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[PACK:.*]] = linalg.pack %[[ELEM]]
 // CHECK-SAME:        padding_value(%[[PAD_VAL]] : f32)
 // CHECK-SAME:        inner_dims_pos = [0, 1] inner_tiles = [3, 16]
-// CHECK-SAME:        into %[[TILED_PACK_DEST]]
+// CHECK-SAME:        into %[[PACK_INIT]]
 //      CHECK:      scf.forall.in_parallel {
 //      CHECK:          tensor.parallel_insert_slice %[[ELEM]] into %[[ELEM_OUT]]
 // CHECK-SAME:            [%[[I]], %[[J]]] [%[[SIZE]], 16] [1, 1]

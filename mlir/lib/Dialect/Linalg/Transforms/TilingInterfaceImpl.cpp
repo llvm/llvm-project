@@ -1367,13 +1367,8 @@ struct PackOpTiling
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
-    SmallVector<int64_t> outerShapeWithoutTranspose(
-        packOp.getDestType().getShape().take_front(packOp.getSourceRank()));
-    if (!packOp.getOuterDimsPerm().empty()) {
-      applyPermutationToVector(
-          outerShapeWithoutTranspose,
-          invertPermutationVector(packOp.getOuterDimsPerm()));
-    }
+    SmallVector<int64_t> inverseOuterDimsPerm =
+        invertPermutationVector(packOp.getOuterDimsPerm());
     for (auto dim : llvm::seq<int64_t>(packOp.getSourceRank())) {
       if (dimAndTileMapping.count(dim)) {
         FailureOr<int64_t> cstTileSize =
@@ -1392,31 +1387,31 @@ struct PackOpTiling
                 ? innerTileAlignments[dim]
                 : InnerTileAlignment::Unknown;
 
-        // If a dimension is not tiled, it is always valid to fuse the pack op,
-        // even if the op has padding semantics. Because it always generates a
-        // full slice along the dimension. The tile sizes are for unpacked
-        // domain, i.e., `srcDimSize`, so `tileSize < srcDimSize` means that the
-        // dimension is tiled.
-        // TODO: It could be untiled if the `srcDimSize` is dynamic. It is a
-        // hard check to determine if a dimension is tiled or not.
+        // An untiled dimension covers the full source and can be packed even
+        // when padding is needed. For a dynamic source dimension, prove that
+        // a zero-offset slice has the same size as that dimension.
         // A non-`Unknown` hint also means the caller asserts the dimension is
         // tiled: `cstTileSize` is an upper bound, so a scalable/`min`-shaped
         // tile (whose bound equals `srcDimSize`) would otherwise be mistaken
         // for untiled and bypass the hint below.
         int64_t srcDimSize = packOp.getSourceType().getDimSize(dim);
-        int64_t destDimSize = outerShapeWithoutTranspose[dim];
-        bool isTiled = innerTileAlignment != InnerTileAlignment::Unknown ||
-                       failed(cstTileSize) ||
-                       ShapedType::isDynamic(srcDimSize) ||
-                       cstTileSize.value() < srcDimSize;
-        if (!isTiled) {
-          outerDimOffsets.push_back(offsets[dim]);
-          if (ShapedType::isStatic(destDimSize)) {
-            outerDimSizes.push_back(b.getIndexAttr(destDimSize));
+        bool isUntiled = false;
+        if (innerTileAlignment == InnerTileAlignment::Unknown) {
+          if (ShapedType::isDynamic(srcDimSize)) {
+            isUntiled = isZeroInteger(offsets[dim]) &&
+                        ValueBoundsConstraintSet::compare(
+                            sizes[dim], ValueBoundsConstraintSet::EQ,
+                            {packOp.getSource(), dim});
           } else {
-            outerDimSizes.push_back(
-                b.createOrFold<tensor::DimOp>(loc, packOp.getDest(), dim));
+            isUntiled = succeeded(cstTileSize) && *cstTileSize >= srcDimSize;
           }
+        }
+        if (isUntiled) {
+          outerDimOffsets.push_back(offsets[dim]);
+          int64_t destDim =
+              inverseOuterDimsPerm.empty() ? dim : inverseOuterDimsPerm[dim];
+          outerDimSizes.push_back(
+              createFoldedDimOp(b, loc, packOp.getDest(), destDim));
           continue;
         }
 
