@@ -273,10 +273,12 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
         MemRefType::Builder(memrefType).setShape(newShapeConstants);
     assert(dynamicSizes.size() == newMemRefType.getNumDynamicDims());
 
-    // Create and insert the alloc op for the new memref.
+    // Create and insert the alloc op for the new memref. The new op is the
+    // same allocation, so it keeps the discardable attributes.
     auto newAlloc = AllocLikeOp::create(rewriter, alloc.getLoc(), newMemRefType,
                                         dynamicSizes, alloc.getSymbolOperands(),
                                         alloc.getAlignmentAttr());
+    newAlloc->setDiscardableAttrs(alloc->getDiscardableAttrDictionary());
     // Insert a cast so we have the same type as the old alloc.
     rewriter.replaceOpWithNewOp<CastOp>(alloc, alloc.getType(), newAlloc);
     return success();
