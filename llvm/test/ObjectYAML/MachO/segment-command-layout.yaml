@@ -1,7 +1,12 @@
 # RUN: yaml2obj %s -o %t.linkedit
-# RUN: %python -c "import pathlib, sys; assert pathlib.Path(sys.argv[1]).read_bytes()[128:] == bytes.fromhex('AABBCC')" %t.linkedit
+# RUN: %python -c "import pathlib, sys; print(pathlib.Path(sys.argv[1]).read_bytes()[128:].hex())" %t.linkedit \
+# RUN:   | FileCheck %s --check-prefix=LINKEDIT --match-full-lines
 # RUN: yaml2obj --docnum=2 %s -o %t.data
-# RUN: %python -c "import pathlib, sys; assert len(pathlib.Path(sys.argv[1]).read_bytes()) == 131" %t.data
+# RUN: %python -c "import pathlib, sys; print(pathlib.Path(sys.argv[1]).stat().st_size)" %t.data \
+# RUN:   | FileCheck %s --check-prefix=DATA --match-full-lines
+
+# LINKEDIT: aabbcc
+# DATA: 131
 
 ## Use the layout of the segment load command when emitting deliberately
 ## mismatched Mach-O fixtures.
