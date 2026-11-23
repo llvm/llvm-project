@@ -20,9 +20,10 @@ define void @test_no_attributes(ptr %p) {
 define void @test_inaccessible_memory(ptr %p) {
 ; CHECK-LABEL: define void @test_inaccessible_memory(
 ; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    store i64 0, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @g() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    store i64 0, ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i64 0, ptr %p
@@ -35,9 +36,10 @@ define void @test_inaccessible_memory(ptr %p) {
 define void @test_inaccessible_memory_nounwind(ptr %p) {
 ; CHECK-LABEL: define void @test_inaccessible_memory_nounwind(
 ; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    store i64 0, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @g() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    store i64 0, ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i64 0, ptr %p
@@ -50,9 +52,10 @@ define void @test_inaccessible_memory_nounwind(ptr %p) {
 define void @test_inaccessible_memory_willreturn(ptr %p) {
 ; CHECK-LABEL: define void @test_inaccessible_memory_willreturn(
 ; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    store i64 0, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @g() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    store i64 0, ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i64 0, ptr %p
