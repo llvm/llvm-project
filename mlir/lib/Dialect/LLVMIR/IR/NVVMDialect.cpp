@@ -48,7 +48,6 @@ struct NVVMInlinerInterface final : DialectInlinerInterface {
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
   registerNVVMDialectOperations(this);
-  registerAttributes();
 
   // Support unknown operations because not all NVVM operations are
   // registered.
