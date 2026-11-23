@@ -14,7 +14,6 @@
 
 namespace __rtsan {
 
-/// One context per thread.
 class alignas(SANITIZER_CACHE_LINE_SIZE) Context {
 public:
   Context();
