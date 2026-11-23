@@ -35,6 +35,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### Breaking changes
 
+* `-mllvm=-load=<plugin>` is removed.
+  Pass options to a plugin loaded with `--load-pass-plugin=` using `--pass-plugin-arg=<plugin>,<arg>` instead of `-mllvm`.
+
 ### COFF Improvements
 
 ### MinGW Improvements
