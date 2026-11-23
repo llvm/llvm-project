@@ -919,10 +919,12 @@ protected:
                                       StringRef registrationName,
                                       StringRef partition) const;
 
-  /// Emit the declaration of the hook that registers `defs` with their dialect.
-  /// Only used without partitions.
+  /// Emit the declaration of the hook that registers `defs` with their
+  /// dialect. When generating by partition, also declares the hooks of all
+  /// `partitions`, which the hook of the dialect calls.
   void emitRegistrationHookDecl(raw_ostream &os, ArrayRef<AttrOrTypeDef> defs,
-                                StringRef registrationName);
+                                StringRef registrationName,
+                                ArrayRef<StringRef> partitions);
 
   /// Emit the definitions of the registration hooks of `defs`. See
   /// `emitDefs`.
@@ -1012,36 +1014,27 @@ bool DefGenerator::emitDecls(StringRef selectedDialect,
       llvm::append_range(includes, gen.getRequiredIncludes());
     }
 
-    if (partitions.empty()) {
-      if (hasRegistrationHook(defs))
-        emitRegistrationHookDecl(declOs, defs, registrationName);
-    } else {
-      // When generating by partition, declare the parse and print dispatch
-      // functions and the registration hook of the dialect, as well as those
-      // of all partitions, which they call.
+    if (hasRegistrationHook(defs))
+      emitRegistrationHookDecl(declOs, defs, registrationName, partitions);
+
+    // When generating by partition, declare the parse and print dispatch
+    // functions of the dialect, as well as those of all partitions, which they
+    // call.
+    if (!partitions.empty()) {
       raw_indented_ostream indentedOs(declOs);
       Dialect dialect = defs.front().getDialect();
-      bool hasHook = hasRegistrationHook(defs);
-      static constexpr StringLiteral hookDecl = "void {0}({1} *dialect);\n";
-      auto declareFunctions = [&](StringRef partition) {
+      auto declareDispatch = [&](StringRef partition) {
         auto [parser, printer] = createParsePrintDispatch(
             getDispatchName(dialect, "Parser", partition),
             getDispatchName(dialect, "Printer", partition), Method::None);
         parser.writeDeclTo(indentedOs);
         printer.writeDeclTo(indentedOs);
-        if (hasHook)
-          declOs << llvm::formatv(
-              hookDecl,
-              getRegistrationHookName(dialect, registrationName, partition),
-              dialect.getCppClassName());
       };
-      if (hasHook)
-        declOs << "class " << dialect.getCppClassName() << ";\n";
       // An empty partition name declares the functions of the dialect, which
-      // dispatch to (or register the defs of) every partition.
-      declareFunctions("");
+      // dispatch to every partition.
+      declareDispatch("");
       for (StringRef partition : partitions)
-        declareFunctions(partition);
+        declareDispatch(partition);
     }
   }
   tblgen::emitIncludes(os, includes);
@@ -1431,17 +1424,27 @@ bool DefGenerator::hasRegistrationHook(ArrayRef<AttrOrTypeDef> defs) const {
 
 void DefGenerator::emitRegistrationHookDecl(raw_ostream &os,
                                             ArrayRef<AttrOrTypeDef> defs,
-                                            StringRef registrationName) {
+                                            StringRef registrationName,
+                                            ArrayRef<StringRef> partitions) {
   Dialect dialect = defs.front().getDialect();
   std::string dialectClass = dialect.getCppClassName();
-  os << "class " << dialectClass << ";\n"
-     << llvm::formatv("/// Registers the {0}s defined in this file with "
-                      "`dialect`.\n",
-                      valueType.lower())
-     << llvm::formatv(
-            "void {0}({1} *dialect);\n",
-            getRegistrationHookName(dialect, registrationName, ""),
-            dialectClass);
+  static constexpr StringLiteral hookDecl = "void {0}({1} *dialect);\n";
+  os << "class " << dialectClass << ";\n";
+  if (partitions.empty())
+    os << llvm::formatv(
+        "/// Registers the {0}s defined in this file with `dialect`.\n",
+        valueType.lower());
+  else
+    os << llvm::formatv(
+        "/// Registers the {0}s of all partitions with `dialect`.\n",
+        valueType.lower());
+  os << llvm::formatv(hookDecl,
+                      getRegistrationHookName(dialect, registrationName, ""),
+                      dialectClass);
+  for (StringRef partition : partitions)
+    os << llvm::formatv(
+        hookDecl, getRegistrationHookName(dialect, registrationName, partition),
+        dialectClass);
 }
 
 /// Emit the hooks that register the defs with their dialect. Registering
@@ -1449,8 +1452,7 @@ void DefGenerator::emitRegistrationHookDecl(raw_ostream &os,
 /// alongside the defs. Every set of defs of a dialect must hence use a distinct
 /// `registrationName` (e.g. the defs of dialect extensions). When generating
 /// by partition, the hook of the partition is emitted, and the first partition
-/// by name also emits the hook that calls the hooks of all partitions, all of
-/// which are declared by every partition.
+/// by name also emits the hook that calls the hooks of all partitions.
 void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
                                          StringRef registrationName,
                                          StringRef selectedPartition,

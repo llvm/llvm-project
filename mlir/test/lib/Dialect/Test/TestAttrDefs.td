@@ -361,13 +361,6 @@ def TestExtern1DI64ElementsAttr : Test_Attr<"TestExtern1DI64Elements", [Elements
   let assemblyFormat = "`<` $handle `>`";
 }
 
-// An array of nested attributes.
-let partition = Test_AttrTypeSyntaxPartition in
-def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
-    "array_of_ugly", "TestAttrUglyAttr"> {
-  let assemblyFormat = "`[` (`]`) : ($value^ ` ` `]`)?";
-}
-
 // An array of integers.
 let partition = Test_AttrTypeCorePartition in {
 def TestArrayOfInts : ArrayOfAttr<Test_Dialect, "ArrayOfInts",
@@ -383,11 +376,23 @@ def TestSimpleEnumAttr
     : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum">;
 def TestArrayOfEnums : ArrayOfAttr<Test_Dialect, "ArrayOfEnums",
     "array_of_enums", "SimpleEnumAttr">;
+def Test_IteratorTypeEnum
+    : EnumAttr<Test_Dialect, IteratorType, "iterator_type">;
 } // let partition = Test_AttrTypeCorePartition
 
-let partition = Test_AttrTypeSyntaxPartition in
+let partition = Test_AttrTypeSyntaxPartition in {
+// An array of nested attributes.
+def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
+    "array_of_ugly", "TestAttrUglyAttr"> {
+  let assemblyFormat = "`[` (`]`) : ($value^ ` ` `]`)?";
+}
+
 def TestStructEnumAttr
     : EnumAttr<Test_Dialect, TestStructEnum, "struct_enum_value">;
+
+def TestStructBitEnumAttr
+    : EnumAttr<Test_Dialect, TestStructBitEnum, "struct_bit_enum_value">;
+} // let partition = Test_AttrTypeSyntaxPartition
 
 def TestAttrEnumAttrStruct : Test_SyntaxAttr<"TestAttrEnumAttrStruct"> {
   let parameters = (ins
@@ -400,10 +405,6 @@ def TestAttrEnumAttrStruct : Test_SyntaxAttr<"TestAttrEnumAttrStruct"> {
   let mnemonic = "enum_attr_struct";
   let assemblyFormat = "`<` struct(params) `>`";
 }
-
-let partition = Test_AttrTypeSyntaxPartition in
-def TestStructBitEnumAttr
-    : EnumAttr<Test_Dialect, TestStructBitEnum, "struct_bit_enum_value">;
 
 def TestAttrBitEnumAttrStruct : Test_SyntaxAttr<"TestAttrBitEnumAttrStruct"> {
   let parameters = (ins
@@ -420,10 +421,6 @@ def TestCustomAnchor : Test_SyntaxAttr<"TestCustomAnchor"> {
   let mnemonic = "custom_anchor";
   let assemblyFormat = "`<` $a (`>`) : (`,` custom<TrueFalse>($b)^ `>`)?";
 }
-
-let partition = Test_AttrTypeCorePartition in
-def Test_IteratorTypeEnum
-    : EnumAttr<Test_Dialect, IteratorType, "iterator_type">;
 
 def Test_IteratorTypeArrayAttr
     : TypedArrayAttrBase<Test_IteratorTypeEnum,

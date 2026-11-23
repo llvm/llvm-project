@@ -1297,8 +1297,10 @@ class MyDialect_Attr<string name, string attrMnemonic>
 
 def MyIntAttr : MyDialect_Attr<"MyInt", "int"> { ... }
 
-let partition = MyDialect_LayoutAttrs in
-def MyLayoutAttr : MyDialect_Attr<"MyLayout", "layout"> { ... }
+def MyLayoutAttr : MyDialect_Attr<"MyLayout", "layout"> {
+  let partition = MyDialect_LayoutAttrs;
+  ...
+}
 ```
 
 Passing `-attrdef-partition=<partition>` (or `-typedef-partition=<partition>`)

@@ -41,9 +41,9 @@ def IndexType : TypeDef<Test_Dialect, "Index"> {
 
 // Only the defs of the specified partition are declared. The defs of the other
 // partitions are forward declared, so that declarations can refer to them. The
-// parse and print dispatch functions and the registration hook of the dialect
-// are declared, as well as those of all partitions, which they dispatch to and
-// register the defs of all partitions with.
+// registration hook and the parse and print dispatch functions of the dialect
+// are declared, as well as those of all partitions, which they register the
+// defs of all partitions with and dispatch to.
 // DECLS: namespace mlir {
 // DECLS-NEXT: class AsmParser;
 // DECLS-NEXT: class AsmPrinter;
@@ -56,15 +56,16 @@ def IndexType : TypeDef<Test_Dialect, "Index"> {
 // DECLS: class AddressAttr : public
 // DECLS-NOT: class IntAttr :
 // DECLS: class TestDialect;
+// DECLS-NEXT: /// Registers the attributes of all partitions with `dialect`.
+// DECLS-NEXT: void registerTestDialectAttributes(TestDialect *dialect);
+// DECLS-NEXT: void registerTestDialectAttributesArith(TestDialect *dialect);
+// DECLS-NEXT: void registerTestDialectAttributesMemory(TestDialect *dialect);
 // DECLS-NEXT: ::mlir::OptionalParseResult generatedTestDialectAttributeParser(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type type, ::mlir::Attribute &value);
 // DECLS-NEXT: ::llvm::LogicalResult generatedTestDialectAttributePrinter(::mlir::Attribute def, ::mlir::AsmPrinter &printer);
-// DECLS-NEXT: void registerTestDialectAttributes(TestDialect *dialect);
 // DECLS-NEXT: ::mlir::OptionalParseResult generatedTestDialectAttributeParserArith(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type type, ::mlir::Attribute &value);
 // DECLS-NEXT: ::llvm::LogicalResult generatedTestDialectAttributePrinterArith(::mlir::Attribute def, ::mlir::AsmPrinter &printer);
-// DECLS-NEXT: void registerTestDialectAttributesArith(TestDialect *dialect);
 // DECLS-NEXT: ::mlir::OptionalParseResult generatedTestDialectAttributeParserMemory(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type type, ::mlir::Attribute &value);
 // DECLS-NEXT: ::llvm::LogicalResult generatedTestDialectAttributePrinterMemory(::mlir::Attribute def, ::mlir::AsmPrinter &printer);
-// DECLS-NEXT: void registerTestDialectAttributesMemory(TestDialect *dialect);
 // DECLS-EMPTY:
 // DECLS-NEXT: } // namespace test
 // DECLS-NOT: IntAttr
