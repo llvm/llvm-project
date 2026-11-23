@@ -1526,6 +1526,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Store the value to a temporary stack slot, then LOAD the returned part.
   EVT VecVT = Vec.getValueType();
   EVT PartVT = Part.getValueType();
+  bool IsInsertSubvector = Op.getOpcode() == ISD::INSERT_SUBVECTOR;
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
@@ -1540,11 +1541,14 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Freeze the index so we don't poison the clamping code we're about to emit.
   Idx = DAG.getFreeze(Idx);
 
-  Type *PartTy = PartVT.getTypeForEVT(*DAG.getContext());
+  // INSERT_VECTOR_ELT implicitly truncates an over-width scalar, so use the
+  // vector element type as the actual store type.
+  EVT PartMemVT = IsInsertSubvector ? PartVT : VecVT.getVectorElementType();
+  Type *PartTy = PartMemVT.getTypeForEVT(*DAG.getContext());
   Align PartAlignment = DAG.getDataLayout().getPrefTypeAlign(PartTy);
 
   // Then store the inserted part.
-  if (PartVT.isVector()) {
+  if (IsInsertSubvector) {
     SDValue SubStackPtr =
         TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, PartVT, Idx);
 
@@ -4393,6 +4397,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp1 = Node->getOperand(0 + Offset);
     Tmp2 = Node->getOperand(1 + Offset);
     Tmp3 = Node->getOperand(2 + Offset);
+    EVT OpVT = Tmp1.getValueType();
     bool Legalized =
         TLI.LegalizeSetCCCondCode(DAG, Node->getValueType(0), Tmp1, Tmp2, Tmp3,
                                   NeedInvert, dl, Chain, IsSignaling);
@@ -4412,9 +4417,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       }
 
       // If we expanded the SETCC by inverting the condition code, then wrap
-      // the existing SETCC in a NOT to restore the intended condition.
+      // the existing SETCC in a NOT to restore the intended condition. The
+      // true value comes from the boolean contents of the compared operand
+      // type, which can differ from those of the result type.
       if (NeedInvert) {
-        Tmp1 = DAG.getLogicalNOT(dl, Tmp1, Tmp1->getValueType(0));
+        EVT ResVT = Tmp1.getValueType();
+        Tmp1 = DAG.getNode(ISD::XOR, dl, ResVT, Tmp1,
+                           DAG.getBoolConstant(true, dl, ResVT, OpVT));
       }
 
       Results.push_back(Tmp1);

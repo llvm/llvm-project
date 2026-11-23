@@ -90,7 +90,7 @@ private:
   _Tp* __value_ = nullptr;
 
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __convert_init_ref_val(_Up&& __val) {
+  constexpr void __convert_init_ref_val(_Up&& __val) {
     _Tp& __r(std::forward<_Up>(__val));
     __value_ = std::addressof(__r);
   }
@@ -106,7 +106,7 @@ private:
   }
 
   template <class _UArg>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __construct(_UArg&& __val) {
+  constexpr void __construct(_UArg&& __val) {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in tuple from a "
                   "possible temporary");
@@ -114,7 +114,7 @@ private:
   }
 
   template <class _That>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __construct_from(_That&& __opt) {
+  constexpr void __construct_from(_That&& __opt) {
     if (__opt.has_value())
       __construct(std::forward<_That>(__opt).value());
   }
@@ -199,7 +199,7 @@ public:
 
   constexpr ~optional() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr optional& operator=(nullopt_t) noexcept {
+  constexpr optional& operator=(nullopt_t) noexcept {
     reset();
     return *this;
   }
@@ -217,21 +217,21 @@ public:
   constexpr void swap(optional& __rhs) noexcept { std::swap(this->__value_, __rhs.__value_); }
 
   // [optional.ref.observe]
-  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() const noexcept {
+  constexpr add_pointer_t<_Tp> operator->() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
     return __value_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() const noexcept {
+  [[nodiscard]] constexpr _Tp& operator*() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
     return *__value_;
   }
 
   constexpr explicit operator bool() const noexcept { return has_value(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __value_ != nullptr; }
+  [[nodiscard]] constexpr bool has_value() const noexcept { return __value_ != nullptr; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() const {
+  [[nodiscard]] constexpr _Tp& value() const {
     if (!this->has_value())
       std::__throw_bad_optional_access();
     return *__value_;
@@ -279,12 +279,12 @@ public:
     return std::forward<_Func>(__f)();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void reset() noexcept { __value_ = nullptr; }
+  constexpr void reset() noexcept { __value_ = nullptr; }
 
 #  if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
   // [optional.ref.iterators], iterator support
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto begin() const noexcept
+  [[nodiscard]] auto begin() const noexcept
     requires __has_iterator_
   {
     using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
@@ -299,7 +299,7 @@ public:
 #    endif
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto end() const noexcept
+  [[nodiscard]] auto end() const noexcept
     requires __has_iterator_
   {
     return begin() + (this->has_value() ? 1 : 0);
