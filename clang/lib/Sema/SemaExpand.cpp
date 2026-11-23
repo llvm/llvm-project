@@ -76,14 +76,20 @@ static auto InitListContainsPack(const InitListExpr *ILE) {
                       [](const Expr *E) { return isa<PackExpansionExpr>(E); });
 }
 
+static const InitListExpr *
+GetEnumeratingInitList(const CXXExpansionStmtPattern *Pattern) {
+  assert(Pattern->isEnumerating());
+  // Finishing the expansion variable's initializer can wrap it in an
+  // ExprWithCleanups.
+  const Expr *Init = Pattern->getExpansionVariable()->getInit();
+  return cast<CXXExpansionSelectExpr>(Init->IgnoreImpCasts())->getRangeExpr();
+}
+
 static bool HasDependentSize(const DeclContext *CurContext,
                              const CXXExpansionStmtPattern *Pattern) {
   switch (Pattern->getKind()) {
-  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating: {
-    auto *SelectExpr = cast<CXXExpansionSelectExpr>(
-        Pattern->getExpansionVariable()->getInit());
-    return InitListContainsPack(SelectExpr->getRangeExpr());
-  }
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
+    return InitListContainsPack(GetEnumeratingInitList(Pattern));
 
   case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
     // Even if the size isn't technically dependent, delay expansion until
@@ -603,10 +609,7 @@ ExprResult Sema::BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx) {
 std::optional<uint64_t>
 Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   if (Expansion->isEnumerating())
-    return cast<CXXExpansionSelectExpr>(
-               Expansion->getExpansionVariable()->getInit())
-        ->getRangeExpr()
-        ->getNumInits();
+    return GetEnumeratingInitList(Expansion)->getNumInits();
 
   // [stmt.expand]p5.2 (CWG3131): N is the result of evaluating the expression
   //
