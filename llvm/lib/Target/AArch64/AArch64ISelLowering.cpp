@@ -8086,8 +8086,6 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
 
 /// Lower atomic or volatile 128-bit stores to a single paired store
 /// instruction.
-/// Lower atomic or volatile 128-bit stores to a single paired store
-/// instruction.
 SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                                              SelectionDAG &DAG) const {
   MemSDNode *StoreNode = cast<MemSDNode>(Op);
