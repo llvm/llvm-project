@@ -1981,22 +1981,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value cmpResult;
     switch (builtinID) {
     case Builtin::BI__builtin_isgreater:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::gt, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::ogt, lhs, rhs);
       break;
     case Builtin::BI__builtin_isgreaterequal:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::ge, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::oge, lhs, rhs);
       break;
     case Builtin::BI__builtin_isless:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::lt, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::olt, lhs, rhs);
       break;
     case Builtin::BI__builtin_islessequal:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::le, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::ole, lhs, rhs);
       break;
     case Builtin::BI__builtin_islessgreater:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::one, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::one, lhs, rhs);
       break;
     case Builtin::BI__builtin_isunordered:
-      cmpResult = builder.createCompare(loc, cir::CmpOpKind::uno, lhs, rhs);
+      cmpResult = builder.createFCompare(loc, cir::FCmpOpKind::uno, lhs, rhs);
       break;
     default:
       llvm_unreachable("Unknown ordered comparison");
