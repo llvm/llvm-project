@@ -248,7 +248,7 @@ public:
 
 #  if _LIBCPP_STD_VER >= 29
 
-  [[nodiscard]] constexpr _Tp* get_ptr() const noexcept { return __value_; }
+  [[nodiscard]] constexpr add_pointer_t<_Tp> get_ptr() const noexcept { return __value_; }
 
 #  endif
 
