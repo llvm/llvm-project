@@ -145,16 +145,15 @@ CheckerTimeTraceScope timeTraceScope(const CheckerManager &Mgr,
   return CheckerTimeTraceScope(std::in_place, std::forward<ArgTys>(Args)...);
 }
 
-/// Like timeTraceScope, but names the scope after the checker, and only
-/// builds the name when -ftime-trace is enabled.
+/// Like timeTraceScope, but names the scope after the checker. The name is
+/// only built when -ftime-trace is enabled, because getDebugTag is virtual.
 CheckerTimeTraceScope checkerTimeTraceScope(const ExprEngine &Eng,
                                             StringRef Name,
                                             const CheckerBackend *Checker) {
-  const CheckerManager &Mgr = Eng.getCheckerManager();
-  if (!Mgr.isTimeTraceEnabled())
+  if (!Eng.getCheckerManager().isTimeTraceEnabled())
     return std::nullopt;
   StringRef CheckerTag = Checker ? Checker->getDebugTag() : "<unknown>";
-  return timeTraceScope(Mgr, (Name + ":" + CheckerTag).str());
+  return CheckerTimeTraceScope(std::in_place, (Name + ":" + CheckerTag).str());
 }
 
   struct CheckStmtContext {
