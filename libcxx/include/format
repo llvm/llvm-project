@@ -180,10 +180,10 @@ namespace std {
 
   template<class Context = format_context, class... Args>
     constexpr format-arg-store<Context, Args...>
-      make_format_args(Args&... args);
+      make_format_args(Args&... args);                               // constexpr since C++26
   template<class... Args>
     constexpr format-arg-store<wformat_context, Args...>
-      make_wformat_args(Args&... args);
+      make_wformat_args(Args&... args);                              // constexpr since C++26
 
   // [format.error], class format_error
   class format_error;
