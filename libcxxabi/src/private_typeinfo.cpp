@@ -176,7 +176,6 @@ const void* dyn_cast_to_derived(
       path_kind::unknown,
       path_kind::unknown,
       0,
-      true,
       true // has_unique_dst_type
   };
   // Do the  search
@@ -208,7 +207,6 @@ const void* dyn_cast_to_derived(
         path_kind::unknown,
         path_kind::unknown,
         0,
-        true,
         true // has_unique_dst_type
     };
     res = dst_type->search_above_dst<true>(&info, dynamic_ptr, dynamic_ptr, path_kind::public_path);
@@ -261,12 +259,11 @@ const void* dyn_cast_try_downcast(
       path_kind::unknown,
       path_kind::unknown,
       0,
-      true,
       true // has_unique_dst_type
   };
   result res =
       dynamic_type->search_above_dst<false>(&dynamic_to_dst_info, dynamic_ptr, dynamic_ptr, path_kind::public_path);
-  if (res != result::failure && dynamic_to_dst_info.path_dst_ptr_to_static_ptr != path_kind::unknown) {
+  if (res != result::failure && dynamic_to_dst_info.path_dst_ptr_to_static_ptr == path_kind::public_path) {
     // We have found at least one path from dynamic_ptr to dst_ptr. The
     //   downcast can succeed.
     return dst_ptr_to_static;
@@ -286,7 +283,7 @@ const void* dyn_cast_slow(
 
   // Initialize info struct for this search.
   __dynamic_cast_info info = {
-      dst_type, static_ptr, static_type, 0, path_kind::unknown, path_kind::unknown, path_kind::unknown, 0, true, 0};
+      dst_type, static_ptr, static_type, 0, path_kind::unknown, path_kind::unknown, path_kind::unknown, 0, false};
 
   result res = dynamic_type->search_below_dst<false>(&info, dynamic_ptr, path_kind::public_path);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -308,26 +305,18 @@ const void* dyn_cast_slow(
              dynamic_type->name(),
              dst_type->name());
     // Redo the search comparing type_info's using strcmp
-    info = {dst_type,
-            static_ptr,
-            static_type,
-            0,
-            path_kind::unknown,
-            path_kind::unknown,
-            path_kind::unknown,
-            0,
-            true,
-            0};
+    info = {dst_type, static_ptr, static_type, 0, path_kind::unknown, path_kind::unknown, path_kind::unknown, 0, false};
     res  = dynamic_type->search_below_dst<true>(&info, dynamic_ptr, path_kind::public_path);
   }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   if (res == result::failure)
     return nullptr;
   // Query the search.
-  if (info.path_dst_ptr_to_static_ptr != path_kind::unknown) {
-    if (info.path_dst_ptr_to_static_ptr == path_kind::public_path ||
-        (info.number_to_dst_ptr == 0 && info.path_dynamic_ptr_to_static_ptr == path_kind::public_path &&
-         info.path_dynamic_ptr_to_dst_ptr == path_kind::public_path))
+  if (info.path_dst_ptr_to_static_ptr == path_kind::public_path) {
+    return info.dst_ptr;
+  } else if (info.path_dst_ptr_to_static_ptr == path_kind::not_public_path) {
+    if (info.number_to_dst_ptr == 0 && info.path_dynamic_ptr_to_static_ptr == path_kind::public_path &&
+        info.path_dynamic_ptr_to_dst_ptr == path_kind::public_path)
       return info.dst_ptr;
   } else if (info.number_to_dst_ptr == 1 && info.path_dynamic_ptr_to_static_ptr == path_kind::public_path &&
              info.path_dynamic_ptr_to_dst_ptr == path_kind::public_path) {
@@ -1006,10 +995,7 @@ result __vmi_class_type_info::search_below_dst_impl(
       bool does_dst_type_point_to_our_static_type = false;
       // Only search above here if dst_type derives from static_type, or
       //    if it is unknown if dst_type derives from static_type.
-      if (info->dst_type_might_be_derived_from_static_type) {
-        // Set up flags to record results from all base classes
-        bool is_dst_type_derived_from_static_type = false;
-
+      if (info->path_dst_ptr_to_static_ptr != path_kind::nonexistent) {
         // We've found a dst_type with a potentially public path to here.
         // We have to assume the path is public because it may become
         //   public later (if we get back to here with a public path).
@@ -1039,7 +1025,6 @@ result __vmi_class_type_info::search_below_dst_impl(
             our_static_ptr = false;
             break;
           }
-          is_dst_type_derived_from_static_type = true;
           if (our_static_ptr) {
             does_dst_type_point_to_our_static_type = true;
             // If we found what we're looking for, stop looking above.
@@ -1062,7 +1047,8 @@ result __vmi_class_type_info::search_below_dst_impl(
         //   from static_type, else it does.  Record this result so that
         //   next time we hit a dst_type we will know not to search above
         //   it if it doesn't derive from static_type.
-        info->dst_type_might_be_derived_from_static_type = is_dst_type_derived_from_static_type;
+        if (info->path_dst_ptr_to_static_ptr == path_kind::unknown)
+          info->path_dst_ptr_to_static_ptr = path_kind::nonexistent;
       }
       if (!does_dst_type_point_to_our_static_type) {
         // If there exists another dst with a private path to (static_ptr, static_type), then the cast from
@@ -1085,7 +1071,7 @@ result __vmi_class_type_info::search_below_dst_impl(
     if (result res = p->search_below_dst<use_strcmp>(info, current_ptr, path_below); res != result::unknown)
       return res;
     if (++p < e) {
-      if ((__flags & __diamond_shaped_mask) || info->path_dst_ptr_to_static_ptr != path_kind::unknown) {
+      if ((__flags & __diamond_shaped_mask) || info->path_dst_ptr_to_static_ptr >= path_kind::not_public_path) {
         // If there are multiple paths to a base above from here, or if
         //    a dst_type pointing to (static_ptr, static_type) has been found,
         //    then there is no way to break out of this loop early unless
@@ -1122,7 +1108,7 @@ result __vmi_class_type_info::search_below_dst_impl(
           //    and to check for other dst_types.
           //    If !diamond & !repeat, then there is not a pointer to (static_ptr, static_type)
           //    and not a dst_type under here.
-          if (info->path_dst_ptr_to_static_ptr != path_kind::unknown)
+          if (info->path_dst_ptr_to_static_ptr >= path_kind::not_public_path)
             break;
           if (result res = p->search_below_dst<use_strcmp>(info, current_ptr, path_below); res != result::unknown)
             return res;
@@ -1164,9 +1150,8 @@ result __si_class_type_info::search_below_dst_impl(
     bool does_dst_type_point_to_our_static_type = false;
     // Only search above here if dst_type derives from static_type, or
     //    if it is unknown if dst_type derives from static_type.
-    if (info->dst_type_might_be_derived_from_static_type) {
+    if (info->path_dst_ptr_to_static_ptr != path_kind::nonexistent) {
       // Set up flags to record results from all base classes
-      bool is_dst_type_derived_from_static_type = false;
       switch (__base_type->search_above_dst<use_strcmp>(info, current_ptr, current_ptr, path_kind::public_path)) {
       case result::success:
         return result::success;
@@ -1179,14 +1164,14 @@ result __si_class_type_info::search_below_dst_impl(
         does_dst_type_point_to_our_static_type = true;
         [[fallthrough]];
       case result::any_static_type:
-        is_dst_type_derived_from_static_type = true;
         break;
       }
       // If we found no static_type,s then dst_type doesn't derive
       //   from static_type, else it does.  Record this result so that
       //   next time we hit a dst_type we will know not to search above
       //   it if it doesn't derive from static_type.
-      info->dst_type_might_be_derived_from_static_type = is_dst_type_derived_from_static_type;
+      if (info->path_dst_ptr_to_static_ptr == path_kind::unknown)
+        info->path_dst_ptr_to_static_ptr = path_kind::nonexistent;
     }
     if (!does_dst_type_point_to_our_static_type) {
       // If there exists another dst with a private path to (static_ptr, static_type), then the cast from
@@ -1244,7 +1229,7 @@ result __class_type_info::search_below_dst_impl(
   // count of the number of such dst_types found in the tree.
   info->dst_ptr = current_ptr;
   info->number_to_dst_ptr += 1;
-  info->dst_type_might_be_derived_from_static_type = false;
+  info->path_dst_ptr_to_static_ptr = path_kind::nonexistent;
   return result::unknown;
 }
 
