@@ -977,9 +977,9 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   }
 }
 
-static std::string formatOperandComment(std::string Comment) {
+static std::string formatOperandComment(const std::string &Comment) {
   if (Comment.empty())
-    return Comment;
+    return {};
   return std::string(" /* " + Comment + " */");
 }
 

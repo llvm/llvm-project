@@ -16,6 +16,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 #define LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
 
@@ -52,7 +53,7 @@ struct AsmWriterOperand {
   // To make VS STL happy
   AsmWriterOperand(OpType op = isLiteralTextOperand) : OperandType(op) {}
 
-  AsmWriterOperand(const std::string &LitStr, OpType op = isLiteralTextOperand)
+  AsmWriterOperand(StringRef LitStr, OpType op = isLiteralTextOperand)
       : OperandType(op), Str(LitStr) {}
 
   AsmWriterOperand(const std::string &Printer, unsigned _MIOpNo,
@@ -92,14 +93,14 @@ public:
   unsigned MatchesAllButOneOp(const AsmWriterInst &Other) const;
 
 private:
-  void AddLiteralString(const std::string &Str) {
+  void AddLiteralString(StringRef Str) {
     // If the last operand was already a literal text string, append this to
     // it, otherwise add a new operand.
     if (!Operands.empty() &&
         Operands.back().OperandType == AsmWriterOperand::isLiteralTextOperand)
-      Operands.back().Str.append(Str);
+      Operands.back().Str.append(Str.data(), Str.size());
     else
-      Operands.push_back(AsmWriterOperand(Str));
+      Operands.emplace_back(Str);
   }
 };
 } // namespace llvm

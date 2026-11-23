@@ -19,8 +19,9 @@
 
 #include "llvm/CodeGen/Register.h"
 #include <map>
-#include <vector>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -38,8 +39,9 @@ class VRegRenamer {
     std::string Name;
 
   public:
-    NamedVReg(Register Reg, std::string Name = "") : Reg(Reg), Name(Name) {}
-    NamedVReg(std::string Name = "") : Reg(~0U), Name(Name) {}
+    NamedVReg(Register Reg, std::string Name = "")
+        : Reg(Reg), Name(std::move(Name)) {}
+    NamedVReg(std::string Name = "") : Reg(~0U), Name(std::move(Name)) {}
 
     const std::string &getName() const { return Name; }
 
