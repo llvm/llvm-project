@@ -190,4 +190,15 @@ def TypeConversionCastShapeDynamicDimsOp : Op<Transform_Dialect,
       "(`ignore_dynamic_info` $ignore_dynamic_info^)? attr-dict";
 }
 
+def ApplyDecomposeTensorGatherPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.decompose_gather",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that tensor.gather ops should be decomposed into a chain of
+    tensor.extract_slice and linalg.generic to extract the element from source.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // TENSOR_TRANSFORM_OPS
