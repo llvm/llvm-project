@@ -1804,24 +1804,11 @@ void AMDGPUAsmPrinter::EmitPALMetadata(
           ".ps_extra_lds_size",
           (unsigned)(ExtraLDSSize * ExtraLdsDwGranularity * sizeof(uint32_t)));
 
-      // Set PsInputEna and PsInputAddr .spi_ps_input_ena and .spi_ps_input_addr
-      static StringLiteral const PsInputFields[] = {
-          ".persp_sample_ena",    ".persp_center_ena",
-          ".persp_centroid_ena",  ".persp_pull_model_ena",
-          ".linear_sample_ena",   ".linear_center_ena",
-          ".linear_centroid_ena", ".line_stipple_tex_ena",
-          ".pos_x_float_ena",     ".pos_y_float_ena",
-          ".pos_z_float_ena",     ".pos_w_float_ena",
-          ".front_face_ena",      ".ancillary_ena",
-          ".sample_coverage_ena", ".pos_fixed_pt_ena"};
-      unsigned PSInputEna = MFI->getPSInputEnable();
+      // Set PsInputAddr as .ps_interp_cntl
+      // In order to maintain correctness, we have ignored PSInputEnable here.
+      // And use 0xFFFF to mask low 16 bits of the register value.
       unsigned PSInputAddr = MFI->getPSInputAddr();
-      for (auto [Idx, Field] : enumerate(PsInputFields)) {
-        MD->setGraphicsRegisters(".spi_ps_input_ena", Field,
-                                 (bool)((PSInputEna >> Idx) & 1));
-        MD->setGraphicsRegisters(".spi_ps_input_addr", Field,
-                                 (bool)((PSInputAddr >> Idx) & 1));
-      }
+      MD->setGraphicsRegisters(".ps_interp_cntl", PSInputAddr & 0xFFFF);
     }
   }
 
