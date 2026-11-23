@@ -127,6 +127,23 @@ entry:
   ret void
 }
 
+; Records whose auxiliary data was dropped (a null operand, e.g. a global not
+; imported by ThinLTO) are omitted; other sections of the same node are not.
+define void @dropped_aux() {
+; CHECK-LABEL: dropped_aux:
+; CHECK-NOT:   .section	section_dropped
+; CHECK:       .section	section_aux_42,"awo",@progbits,.{{l?}}text
+; CHECK-NEXT:  [[BASE3:.Lpcsection_base[0-9]+]]:
+; DEFCM-NEXT:  .long	.Lpcsection{{[0-9]+}}-[[BASE3]]
+; LARGE-NEXT:  .quad	.Lpcsection{{[0-9]+}}-[[BASE3]]
+; CHECK-NEXT:  .long	42
+; CHECK-NOT:   .section	section_dropped
+; CHECK:       .{{l?}}text
+entry:
+  store volatile i64 1, ptr @foo, align 8, !pcsections !10
+  ret void
+}
+
 ; A node that requests one section twice emits two records for the PC, each
 ; with its own auxiliary data.
 define void @merged_requests() {
@@ -157,3 +174,5 @@ entry:
 !7 = !{i64 42, i32 624485, i8 255}
 !8 = !{!"section_shared!C", !7}
 !9 = !{!"section_merged", !4, !"section_merged", !5}
+!10 = !{!"section_dropped", !11, !"section_aux_42", !4}
+!11 = !{null}

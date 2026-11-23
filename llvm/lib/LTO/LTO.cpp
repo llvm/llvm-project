@@ -38,6 +38,7 @@
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -1316,10 +1317,40 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
+Error LTO::setupPassPlugins() {
+  // Filenames are cleared on success, so repeated calls are no-ops.
+  if (Conf.PassPluginFilenames.empty())
+    return Error::success();
+
+  // Load plugins from file. Failures leave them all unregistered.
+  SmallVector<std::unique_ptr<PassPlugin>, 0> Loaded;
+  for (const std::string &PluginFN : Conf.PassPluginFilenames) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(PluginFN);
+    if (!Plugin)
+      return Plugin.takeError();
+    Loaded.push_back(std::make_unique<PassPlugin>(std::move(*Plugin)));
+  }
+
+  // Register them ahead of the client loaded ones.
+  SmallVector<PassPlugin *> FromFiles;
+  for (std::unique_ptr<PassPlugin> &Plugin : Loaded) {
+    FromFiles.push_back(Plugin.get());
+    PassPlugins.push_back(std::move(Plugin));
+  }
+  Conf.LoadedPassPlugins.insert(Conf.LoadedPassPlugins.begin(),
+                                FromFiles.begin(), FromFiles.end());
+
+  Conf.PassPluginFilenames.clear();
+  return Error::success();
+}
+
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // Call the base class cleanup() explicitly since run() may be invoked on a
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
+
+  if (Error Err = setupPassPlugins())
+    return Err;
 
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;

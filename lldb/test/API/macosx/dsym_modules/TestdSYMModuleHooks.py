@@ -21,6 +21,10 @@ class TestdSYMModuleHooks(TestBase):
         "failing_hooks_inits",
         "read_header_runs",
         "read_header_magic",
+        "initial_stop_hook_runs",
+        "initial_stop_hook_options",
+        "initial_stop_hook_added",
+        "initial_stop_hook_from_init",
     )
     MH_MAGIC_64 = 0xFEEDFACF
 
@@ -156,6 +160,66 @@ class TestdSYMModuleHooks(TestBase):
         )
         self.assertEqual(getattr(lldb, "read_header_magic", None), self.MH_MAGIC_64)
         self.expect("target stop-hook list", substrs=["No stop hooks."])
+
+    @no_debug_info_test
+    def test_initial_stop_hook_runs_when_script_returns(self):
+        """A stop hook that __lldb_module_added_to_target adds with
+        --at-initial-stop while the process is stopped runs when the script
+        returns, rather than at the next stop."""
+        lldb.initial_stop_hook_options = "--at-initial-stop true"
+        process = self.stop_then_load_script()
+        self.assertEqual(getattr(lldb, "initial_stop_hook_runs", 0), 1)
+
+        # From then on, it runs at every stop.
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        self.assertEqual(lldb.initial_stop_hook_runs, 2)
+
+    @no_debug_info_test
+    def test_stop_hook_added_by_script_waits_for_next_stop(self):
+        """Without --at-initial-stop, a stop hook that
+        __lldb_module_added_to_target adds while the process is stopped first
+        runs at the next stop."""
+        process = self.stop_then_load_script()
+        self.assertEqual(getattr(lldb, "initial_stop_hook_runs", 0), 0)
+
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        self.assertEqual(lldb.initial_stop_hook_runs, 1)
+
+    @no_debug_info_test
+    def test_initial_stop_hook_from_init_module_waits_for_next_stop(self):
+        """Only __lldb_module_added_to_target's stop hooks run when it returns:
+        one that __lldb_init_module adds with --at-initial-stop while the
+        process is stopped first runs at the next stop."""
+        lldb.initial_stop_hook_options = "--at-initial-stop true"
+        lldb.initial_stop_hook_from_init = True
+        process = self.stop_then_load_script()
+        self.assertEqual(getattr(lldb, "initial_stop_hook_runs", 0), 0)
+
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        self.assertEqual(lldb.initial_stop_hook_runs, 1)
+
+    def stop_then_load_script(self):
+        """Stop at the first breakpoint without running the module's script,
+        then run it the way LLDB's warning suggests, and set a second
+        breakpoint to continue to."""
+        self.build_dsym("initial_stop", "initial_stop_hook.py")
+        self.runCmd("settings set target.load-script-from-symbol-file warn")
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self,
+            "Set a breakpoint here",
+            lldb.SBFileSpec("main.c"),
+            exe_name="initial_stop",
+        )
+        self.assertFalse(hasattr(lldb, "initial_stop_hook_added"))
+        target.BreakpointCreateBySourceRegex(
+            "return global_test_var", lldb.SBFileSpec("main.c")
+        )
+        self.runCmd("settings set target.load-script-from-symbol-file true")
+        self.assertTrue(getattr(lldb, "initial_stop_hook_added", False))
+        return process
 
     def enable_script_log(self):
         log = self.getBuildArtifact("script.log")

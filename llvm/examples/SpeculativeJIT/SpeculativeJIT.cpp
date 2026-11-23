@@ -137,7 +137,6 @@ private:
 
   JITDylib &MainJD;
 
-  Triple TT;
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
   IRCompileLayer CompileLayer;
   ImplSymbolMap Imps;

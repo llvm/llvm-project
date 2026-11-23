@@ -352,6 +352,8 @@ Vocabulary::OperandKind Vocabulary::getOperandKind(const Value *Op) {
     return OperandKind::PointerID;
   if (isa<Constant>(Op))
     return OperandKind::ConstantID;
+  if (isa<BasicBlock>(Op))
+    return OperandKind::LabelID;
   return OperandKind::VariableID;
 }
 

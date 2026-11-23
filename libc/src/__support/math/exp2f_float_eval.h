@@ -68,7 +68,7 @@ LIBC_INLINE float exp2f(float x) {
   float kf = fputil::nearest_integer(x);
   int k = static_cast<int>(kf);
 
-  float u = fputil::multiply_add(kf, -1.0f, x);
+  float u = fputil::sub_multiply(x, kf, 1.0f);
   return exp2f_eval(u, k);
 }
 

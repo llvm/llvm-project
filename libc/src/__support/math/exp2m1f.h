@@ -12,9 +12,9 @@
 #include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -154,7 +154,7 @@ LIBC_INLINE float exp2m1f(float x) {
 #endif // LIBC_TARGET_CPU_HAS_NEAREST_INT
 
   // lo = x - (hi + mid) = x - kf * 2^(-5)
-  double lo = fputil::multiply_add(-0x1.0p-5f, kf, x);
+  double lo = fputil::sub_multiply(x, 0x1.0p-5f, kf);
 
   // hi = floor(kf * 2^(-4))
   // exp2_hi = shift hi to the exponent field of double precision.
@@ -181,7 +181,7 @@ LIBC_INLINE float exp2m1f(float x) {
   //         = 2^(hi + mid) * 2^lo - 1
   //         ~ mh * (1 + lo * P(lo)) - 1
   //         = mh * exp2_lo - 1
-  return static_cast<float>(fputil::multiply_add(exp2_lo, mh, -1.0));
+  return static_cast<float>(fputil::multiply_sub(exp2_lo, mh, 1.0));
 }
 
 } // namespace math

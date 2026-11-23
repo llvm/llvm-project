@@ -105,7 +105,7 @@ public:
   /// Returns the weight of \p MI, or an error if it has no samples.
   ErrorOr<uint64_t> getInstWeight(const MachineInstr &MI) {
     const DILocation *DIL = MI.getDebugLoc();
-    if (!DIL)
+    if (!DIL || DIL->getLine() == 0)
       return std::error_code();
     // Find the samples of the inlined instance MI comes from.
     auto [It, Inserted] = InlinedSamplesCache.try_emplace(DIL, nullptr);
@@ -374,6 +374,9 @@ bool BasicBlockMatchingAndInference::doInitialization(Module &M) {
 void BasicBlockMatchingAndInference::supplementWithSampleProfile(
     MachineFunction &MF, WeightInfo &MatchWeight) {
   if (!SampleReader)
+    return;
+  const DISubprogram *Subprogram = MF.getFunction().getSubprogram();
+  if (!Subprogram || Subprogram->getLine() == 0)
     return;
   const FunctionSamples *Samples =
       SampleReader->getSamplesFor(MF.getFunction());
