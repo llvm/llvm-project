@@ -2434,6 +2434,9 @@ void HexagonGlobalSchedulerImpl::removeInstructionFromExistingBundle(
         if (Head->isBundledWithSucc())
           Head->unbundleFromSucc();
       }
+      // Head is no longer bundled, so none of its reads are internal.
+      for (MachineOperand &MO : Head->all_uses())
+        MO.setIsInternalRead(false);
     } else
       llvm_unreachable("Corrupt bundle");
   }

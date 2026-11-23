@@ -304,7 +304,7 @@ __kmp_unnamed_critical_addr:
 #endif /* KMP_GOMP_COMPAT */
 
 
-#if KMP_ARCH_X86 && !KMP_ARCH_PPC64
+#if KMP_ARCH_X86
 
 // -----------------------------------------------------------------------
 // microtasking routines specifically written for IA-32 architecture
@@ -1086,9 +1086,9 @@ KMP_LABEL(invoke_3):
         DEBUG_INFO __kmp_xchg_real64
 
 
-# endif /* !KMP_MIC */
-
 # endif /* !KMP_ASM_INTRINS */
+
+# endif /* !KMP_MIC */
 
 //------------------------------------------------------------------------
 // int
@@ -2529,7 +2529,7 @@ __kmp_invoke_microtask:
 	// The total number of bytes is then max(0, argc - 3)*8 + 8
 
 	lgr	%r10,%r5
-	aghi	%r10,-2
+	aghi	%r10,-3
 	jnm	0f
 	lghi	%r10,0
 0:

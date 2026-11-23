@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCCONTEXT_H
 #define LLVM_MC_MCCONTEXT_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -311,12 +312,11 @@ private:
 
   StringMap<MCSectionMachO *> MachOUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
-  StringMap<MCSectionELF *> ELFUniquingMap;
+  StringMap<MCSectionELF *, BumpPtrAllocator &> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
-  StringMap<bool> RelSecNames;
 
   /// Copies of MCSubtargetInfo created by getSubtargetCopy(). These must live
   /// as long as the context since fragments reference them.
@@ -365,14 +365,15 @@ private:
   // flags. This can occur when a symbol is explicitly assigned to a section,
   // e.g. via __attribute__((section("myname"))). The map key is the tuple
   // (section name, flags, entry size).
-  DenseMap<std::tuple<StringRef, unsigned, unsigned>, unsigned> ELFEntrySizeMap;
+  DenseMap<std::tuple<CachedHashStringRef, unsigned, unsigned>, unsigned>
+      ELFEntrySizeMap;
 
   // This set is used to record the generic mergeable section names seen.
   // These are sections that are created as mergeable e.g. .debug_str. We need
   // to avoid assigning non-mergeable symbols to these sections. It is used
   // to prevent non-mergeable symbols being explicitly assigned  to mergeable
   // sections (e.g. via _attribute_((section("myname")))).
-  DenseSet<StringRef> ELFSeenGenericMergeableSections;
+  DenseSet<CachedHashStringRef> ELFSeenGenericMergeableSections;
 
 public:
   LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo &MAI,
@@ -559,14 +560,14 @@ public:
 
   MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                               unsigned Flags, unsigned EntrySize,
-                              const Twine &Group, bool IsComdat) {
+                              StringRef Group, bool IsComdat) {
     return getELFSection(Section, Type, Flags, EntrySize, Group, IsComdat,
                          MCSection::NonUniqueID, nullptr);
   }
 
   LLVM_ABI MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
-                                       const Twine &Group, bool IsComdat,
+                                       StringRef Group, bool IsComdat,
                                        unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym);
 
@@ -581,7 +582,7 @@ public:
   /// describes the type of the section and \p Flags are used to further
   /// configure this named section.
   LLVM_ABI MCSectionELF *getELFNamedSection(const Twine &Prefix,
-                                            const Twine &Suffix, unsigned Type,
+                                            StringRef Suffix, unsigned Type,
                                             unsigned Flags,
                                             unsigned EntrySize = 0);
 
@@ -640,7 +641,7 @@ public:
   }
 
   LLVM_ABI MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                         unsigned Flags, const Twine &Group,
+                                         unsigned Flags, StringRef Group,
                                          unsigned UniqueID);
 
   LLVM_ABI MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,

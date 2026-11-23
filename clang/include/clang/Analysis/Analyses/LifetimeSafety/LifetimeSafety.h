@@ -133,7 +133,8 @@ public:
   }
 
   using EscapingTarget =
-      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *,
+                         const CXXMethodDecl *>;
 
   // Suggests lifetime bound annotations for function parameters.
   virtual void suggestLifetimeboundToParmVar(WarningScope Scope,
@@ -150,6 +151,11 @@ public:
   // assignment to a global variable
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const VarDecl *EscapeGlobal) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes into the
+  // object of the method, e.g. through a base initializer or
+  // [[clang::lifetime_capture_by_this]].
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const CXXMethodDecl *EscapeMethod) {}
 
   // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
   // through return.

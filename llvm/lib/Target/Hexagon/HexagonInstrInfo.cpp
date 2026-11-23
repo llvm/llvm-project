@@ -1174,12 +1174,12 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       // static relocation which doesn't need to reserve r14, r15 and r28.
 
       auto MIB = BuildMI(MBB, MI, DL, get(Hexagon::J2_call))
-                 .addUse(Hexagon::R0, RegState::Implicit|RegState::InternalRead)
-                 .addDef(Hexagon::R29, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R30, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R14, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R15, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R28, RegState::ImplicitDefine);
+                     .addUse(Hexagon::R0, RegState::Implicit)
+                     .addDef(Hexagon::R29, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R30, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R14, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R15, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R28, RegState::ImplicitDefine);
       const char *cstr = MF.createExternalSymbolName(NameStr);
       MIB.addExternalSymbol(cstr);
       MBB.erase(MI);
