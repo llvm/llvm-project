@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -1174,12 +1175,12 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       // static relocation which doesn't need to reserve r14, r15 and r28.
 
       auto MIB = BuildMI(MBB, MI, DL, get(Hexagon::J2_call))
-                 .addUse(Hexagon::R0, RegState::Implicit|RegState::InternalRead)
-                 .addDef(Hexagon::R29, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R30, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R14, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R15, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R28, RegState::ImplicitDefine);
+                     .addUse(Hexagon::R0, RegState::Implicit)
+                     .addDef(Hexagon::R29, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R30, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R14, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R15, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R28, RegState::ImplicitDefine);
       const char *cstr = MF.createExternalSymbolName(NameStr);
       MIB.addExternalSymbol(cstr);
       MBB.erase(MI);
@@ -2164,6 +2165,86 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
   }
 
   return false;
+}
+
+// This MI might have either incomplete info, or known to be unsafe
+// to deal with (i.e. volatile object).
+static bool isUnsafeMemoryObject(const MachineInstr *MI) {
+  if (!MI || MI->memoperands_empty())
+    return true;
+
+  if ((*MI->memoperands_begin())->isVolatile() || MI->hasUnmodeledSideEffects())
+    return true;
+
+  if (!(*MI->memoperands_begin())->getValue())
+    return true;
+
+  return false;
+}
+
+/// This returns true if the two MIs could be memory dependent.
+bool HexagonInstrInfo::areMemAccessesDependent(AAResults *AA,
+                                               const MachineInstr *MIa,
+                                               const MachineInstr *MIb) const {
+  // Cover a trivial case - no edge is need to itself.
+  if (MIa == MIb)
+    return false;
+
+  if (areMemAccessesTriviallyDisjoint(*MIa, *MIb))
+    return false;
+
+  if (isUnsafeMemoryObject(MIa) || isUnsafeMemoryObject(MIb))
+    return true;
+
+  // If we are dealing with two "normal" loads, we do not need an edge
+  // between them - they could be reordered.
+  if (!MIa->mayStore() && !MIb->mayStore())
+    return false;
+
+  // To this point analysis is generic. From here on we do need AA.
+  if (!AA)
+    return true;
+
+  MachineMemOperand *MMOa = *MIa->memoperands_begin();
+  MachineMemOperand *MMOb = *MIb->memoperands_begin();
+
+  // TODO: Need to handle multiple memory operands.
+  // if either instruction has more than one memory operand, punt.
+  if (!(MIa->hasOneMemOperand() && MIb->hasOneMemOperand()))
+    return true;
+
+  if (!MMOa->getSize().hasValue() || !MMOb->getSize().hasValue())
+    return true;
+
+  assert((MMOa->getOffset() >= 0) && "Negative MachineMemOperand offset");
+  assert((MMOb->getOffset() >= 0) && "Negative MachineMemOperand offset");
+  assert((MMOa->getSize().hasValue() && MMOb->getSize().hasValue()) &&
+         "Size 0 memory access");
+
+  // If the base address of the two memoperands is the same. For instance,
+  // x and x+4, then we can easily reason about them using the offset and size
+  // of access.
+  if (MMOa->getValue() == MMOb->getValue()) {
+    if (MMOa->getOffset() > MMOb->getOffset()) {
+      uint64_t offDiff = MMOa->getOffset() - MMOb->getOffset();
+      return !(MMOb->getSize().getValue() <= offDiff);
+    } else if (MMOa->getOffset() < MMOb->getOffset()) {
+      uint64_t offDiff = MMOb->getOffset() - MMOa->getOffset();
+      return !(MMOa->getSize().getValue() <= offDiff);
+    }
+    // MMOa->getOffset() == MMOb->getOffset()
+    return true;
+  }
+
+  int64_t MinOffset = std::min(MMOa->getOffset(), MMOb->getOffset());
+  int64_t Overlapa = MMOa->getSize().getValue() + MMOa->getOffset() - MinOffset;
+  int64_t Overlapb = MMOb->getSize().getValue() + MMOb->getOffset() - MinOffset;
+
+  AliasResult AAResult =
+      AA->alias(MemoryLocation(MMOa->getValue(), Overlapa, MMOa->getAAInfo()),
+                MemoryLocation(MMOb->getValue(), Overlapb, MMOb->getAAInfo()));
+
+  return (AAResult != AliasResult::NoAlias);
 }
 
 /// If the instruction is an increment of a constant value, return the amount.

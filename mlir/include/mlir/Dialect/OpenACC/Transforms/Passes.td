@@ -522,7 +522,8 @@ def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"
   ];
 }
 
-def ACCComputeLowering : Pass<"acc-compute-lowering", "mlir::func::FuncOp"> {
+def ACCComputeLowering
+    : InterfacePass<"acc-compute-lowering", "mlir::FunctionOpInterface"> {
   let summary = "Lower ACC compute constructs to acc.compute_region";
   let description = [{
     Converts ACC frontend compute constructs (`acc.parallel`, `acc.kernels`,

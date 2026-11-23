@@ -1526,6 +1526,22 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIgetlogin_r: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
+  case Builtin::BIttyname_r:
+  case Builtin::BIptsname_r:
+  case Builtin::BIconfstr: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
   case Builtin::BIpoll:
   case Builtin::BIppoll:
   case Builtin::BIppoll64: {

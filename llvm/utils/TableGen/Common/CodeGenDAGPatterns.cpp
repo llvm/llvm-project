@@ -118,6 +118,16 @@ bool TypeSetByHwMode::isPossible() const {
 
 bool TypeSetByHwMode::insert(const ValueTypeByHwMode &VVT) {
   bool Changed = false;
+  if (hasDefault()) {
+    for (const auto &P : VVT) {
+      unsigned M = P.first;
+      if (M == DefaultMode || hasMode(M))
+        continue;
+      Map.try_emplace(M, Map.begin()->second);
+      Changed = true;
+    }
+  }
+
   bool ContainsDefault = false;
   MVT DT = MVT::Other;
 
