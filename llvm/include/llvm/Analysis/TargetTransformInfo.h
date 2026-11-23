@@ -1255,7 +1255,8 @@ public:
   /// Should the Select Optimization pass treat the given instruction like a
   /// select, potentially converting it to a conditional branch. This can
   /// include select-like instructions like or(zext(c), x) that can be converted
-  /// to selects.
+  /// to selects. CodeGenPrepare also asks this before it turns a select into a
+  /// branch.
   LLVM_ABI bool shouldTreatInstructionLikeSelect(const Instruction *I) const;
 
   /// Enable matching of interleaved access groups.
