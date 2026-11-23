@@ -5476,6 +5476,19 @@ static void buildDependences(const OMPExecutableDirective &S,
   }
 }
 
+/// Add the address of the temporary \p PrivatePtr as an argument for a call to
+/// a task's privates mapping function. The mapping function takes its arguments
+/// as pointers in the default address space, which is not necessarily the one
+/// that allocas are in.
+static void addTaskPrivatesMapArg(CodeGenFunction &CGF, RawAddress PrivatePtr,
+                                  SmallVectorImpl<llvm::Value *> &CallArgs,
+                                  SmallVectorImpl<llvm::Type *> &ParamTypes) {
+  llvm::Value *Arg = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+      PrivatePtr.getPointer(), CGF.DefaultPtrTy);
+  CallArgs.push_back(Arg);
+  ParamTypes.push_back(Arg->getType());
+}
+
 void CodeGenFunction::EmitOMPTaskBasedDirective(
     const OMPExecutableDirective &S, const OpenMPDirectiveKind CapturedRegion,
     const RegionCodeGenTy &BodyGen, const TaskGenTy &TaskGen,
@@ -5672,8 +5685,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         RawAddress PrivatePtr = CGF.CreateMemTempWithoutCast(
             CGF.getContext().getPointerType(E->getType()), ".priv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
-        CallArgs.push_back(PrivatePtr.getPointer());
-        ParamTypes.push_back(PrivatePtr.getType());
+        addTaskPrivatesMapArg(CGF, PrivatePtr, CallArgs, ParamTypes);
       }
       for (const Expr *E : Data.FirstprivateVars) {
         const auto *VD = cast<DeclRefExpr>(E)->getDecl();
@@ -5682,8 +5694,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
             ".firstpriv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
         FirstprivatePtrs.emplace_back(VD, PrivatePtr);
-        CallArgs.push_back(PrivatePtr.getPointer());
-        ParamTypes.push_back(PrivatePtr.getType());
+        addTaskPrivatesMapArg(CGF, PrivatePtr, CallArgs, ParamTypes);
       }
       for (const Expr *E : Data.LastprivateVars) {
         const auto *VD = cast<DeclRefExpr>(E)->getDecl();
@@ -5691,8 +5702,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
             CGF.getContext().getPointerType(E->getType()),
             ".lastpriv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
-        CallArgs.push_back(PrivatePtr.getPointer());
-        ParamTypes.push_back(PrivatePtr.getType());
+        addTaskPrivatesMapArg(CGF, PrivatePtr, CallArgs, ParamTypes);
       }
       for (const VarDecl *VD : Data.PrivateLocals) {
         QualType Ty = VD->getType().getNonReferenceType();
@@ -5708,8 +5718,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         if (Result.second == false)
           *Result.first = std::make_pair(
               VD, std::make_pair(PrivatePtr, Address::invalid()));
-        CallArgs.push_back(PrivatePtr.getPointer());
-        ParamTypes.push_back(PrivatePtr.getType());
+        addTaskPrivatesMapArg(CGF, PrivatePtr, CallArgs, ParamTypes);
       }
       auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
                                                ParamTypes, /*isVarArg=*/false);
@@ -6017,8 +6026,7 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
             CGF.getContext().getPointerType(E->getType()),
             ".firstpriv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
-        CallArgs.push_back(PrivatePtr.getPointer());
-        ParamTypes.push_back(PrivatePtr.getType());
+        addTaskPrivatesMapArg(CGF, PrivatePtr, CallArgs, ParamTypes);
       }
       auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
                                                ParamTypes, /*isVarArg=*/false);
