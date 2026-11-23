@@ -355,10 +355,10 @@
 ; CHECK-NEXT: declare float @expf(float) [[ERRNO_ATTRS]]
 ; CHECK-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; CHECK-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
-; CHECK-NEXT: declare i32 @fegetenv(ptr)
-; CHECK-NEXT: declare i32 @fegetmode(ptr)
-; CHECK-NEXT: declare i32 @fesetenv(ptr)
-; CHECK-NEXT: declare i32 @fesetmode(ptr)
+; CHECK-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; CHECK-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; CHECK-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; CHECK-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -449,6 +449,7 @@
 ; CHECK-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -804,10 +805,10 @@
 ; LINUX-NEXT: declare float @expf(float) [[ERRNO_ATTRS]]
 ; LINUX-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; LINUX-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
-; LINUX-NEXT: declare i32 @fegetenv(ptr)
-; LINUX-NEXT: declare i32 @fegetmode(ptr)
-; LINUX-NEXT: declare i32 @fesetenv(ptr)
-; LINUX-NEXT: declare i32 @fesetmode(ptr)
+; LINUX-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; LINUX-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; LINUX-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; LINUX-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -900,6 +901,7 @@
 ; LINUX-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
