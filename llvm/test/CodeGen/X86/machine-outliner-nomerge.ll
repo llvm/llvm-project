@@ -11,7 +11,8 @@ define void @o1(i1 %c, ptr %p) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %cont
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %trap
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    movl $1, (%rsi)
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   br i1 %c, label %trap, label %cont
 
@@ -32,7 +33,8 @@ define void @o2(i1 %c, ptr %p) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %cont
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_1: # %trap
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    movl $1, (%rsi)
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   br i1 %c, label %trap, label %cont
 
@@ -53,7 +55,8 @@ define void @o3(i1 %c, ptr %p) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %cont
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB2_1: # %trap
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    movl $1, (%rsi)
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   br i1 %c, label %trap, label %cont
 
@@ -74,7 +77,8 @@ define void @o4(i1 %c, ptr %p) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %cont
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_1: # %trap
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    movl $1, (%rsi)
+; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   br i1 %c, label %trap, label %cont
 
