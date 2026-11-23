@@ -1,6 +1,10 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; CHECK-SPIRV-DAG: %[[#Char:]] = OpTypeInt 8 0
+; CHECK-SPIRV-DAG: %[[#GlobalCharPtr:]] = OpTypePointer CrossWorkgroup %[[#Char]]
+; CHECK-SPIRV-DAG: %[[#Int:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: %[[#GlobalIntPtr:]] = OpTypePointer CrossWorkgroup %[[#Int]]
 ; CHECK-SPIRV: OpTypeDeviceEvent
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: OpCreateUserEvent
@@ -32,6 +36,24 @@ entry:
   call spir_func void @_Z13release_event12ocl_clkevent(target("spirv.DeviceEvent") %call)
   ret void
 }
+
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      %[[#IntProf:]] = OpFunctionParameter %[[#GlobalIntPtr]]
+; CHECK-SPIRV:      %[[#CharProf:]] = OpBitcast %[[#GlobalCharPtr]] %[[#IntProf]]
+; CHECK-SPIRV-NEXT: OpCaptureEventProfilingInfo %[[#]] %[[#]] %[[#CharProf]]
+; CHECK-SPIRV-NEXT: OpCaptureEventProfilingInfo %[[#]] %[[#]] %[[#CharProf]]
+; CHECK-SPIRV:      OpFunctionEnd
+
+define spir_kernel void @capture_int_ptr(ptr addrspace(1) %prof) {
+entry:
+  %e = call spir_func target("spirv.DeviceEvent") @_Z17create_user_eventv()
+  store i32 0, ptr addrspace(1) %prof, align 4
+  call spir_func void @_Z28capture_event_profiling_info12ocl_clkeventiPU3AS1v(target("spirv.DeviceEvent") %e, i32 1, ptr addrspace(1) %prof)
+  call spir_func void @__spirv_CaptureEventProfilingInfo(target("spirv.DeviceEvent") %e, i32 1, ptr addrspace(1) %prof)
+  ret void
+}
+
+declare spir_func void @__spirv_CaptureEventProfilingInfo(target("spirv.DeviceEvent"), i32, ptr addrspace(1))
 
 declare spir_func target("spirv.DeviceEvent") @_Z17create_user_eventv() local_unnamed_addr
 

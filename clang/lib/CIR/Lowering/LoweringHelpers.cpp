@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/LoweringHelpers.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/SymbolTable.h"
@@ -179,14 +182,12 @@ convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
 }
 
 template <> mlir::APInt getZeroInitFromType(mlir::Type ty) {
-  if (mlir::isa<cir::BoolType>(ty))
-    return mlir::APInt::getZero(1);
-  const auto intTy = mlir::cast<cir::IntType>(ty);
+  const auto intTy = mlir::cast<mlir::IntegerType>(ty);
   return mlir::APInt::getZero(intTy.getWidth());
 }
 
 template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
-  auto fpTy = mlir::cast<cir::FPTypeInterface>(ty);
+  auto fpTy = mlir::cast<mlir::FloatType>(ty);
   return mlir::APFloat::getZero(fpTy.getFloatSemantics());
 }
 
@@ -195,11 +196,12 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 /// \param currentDims the shpae of tensor we're going to convert to
 /// \param dimIndex the current dimension we're processing
 /// \param currentIndex the current index in the values array
+/// \param convertedElementType the lowered storage type of each element
 template <typename AttrTy, typename StorageTy>
 bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
     const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
-    int64_t currentIndex) {
+    int64_t currentIndex, mlir::Type convertedElementType) {
   if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
     if (auto arrayType = mlir::dyn_cast<cir::ArrayType>(attr.getType())) {
       for (auto element : stringAttr) {
@@ -221,8 +223,10 @@ bool convertToDenseElementsAttrImpl(
   for (auto eltAttr : arrayAttr) {
     if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
       if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(eltAttr)) {
+        unsigned bitWidth =
+            mlir::cast<mlir::IntegerType>(convertedElementType).getWidth();
         values[currentIndex++] =
-            llvm::APInt(1, static_cast<uint64_t>(boolAttr.getValue()));
+            llvm::APInt(bitWidth, static_cast<uint64_t>(boolAttr.getValue()));
         continue;
       }
     }
@@ -233,7 +237,8 @@ bool convertToDenseElementsAttrImpl(
 
     if (auto subArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(eltAttr)) {
       convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values, currentDims,
-                                             dimIndex, currentIndex);
+                                             dimIndex, currentIndex,
+                                             convertedElementType);
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }
@@ -254,18 +259,20 @@ bool convertToDenseElementsAttrImpl(
 }
 
 template <typename AttrTy, typename StorageTy>
-std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
-    cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
-    mlir::Type elementType, mlir::Type convertedElementType) {
+std::optional<mlir::DenseElementsAttr>
+convertToDenseElementsAttr(cir::ConstArrayAttr attr,
+                           const llvm::SmallVectorImpl<int64_t> &dims,
+                           mlir::Type convertedElementType) {
   unsigned vectorSize = 1;
   for (auto dim : dims)
     vectorSize *= dim;
-  auto values = llvm::SmallVector<StorageTy, 8>(
-      vectorSize, getZeroInitFromType<StorageTy>(elementType));
+  llvm::SmallVector<StorageTy> values(
+      vectorSize, getZeroInitFromType<StorageTy>(convertedElementType));
 
   if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
-                                              /*currentDim=*/0,
-                                              /*initialIndex=*/0))
+                                              /*dimIndex=*/0,
+                                              /*currentIndex=*/0,
+                                              convertedElementType))
     return std::nullopt;
 
   return mlir::DenseElementsAttr::get(
@@ -518,16 +525,19 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     if (mlir::cast<cir::IntType>(type).isBitInt())
       return std::nullopt;
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
-        constArr, dims, type, converter->convertType(type));
+        constArr, dims, converter->convertType(type));
   }
 
-  if (mlir::isa<cir::BoolType>(type))
-    return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
-        constArr, dims, type, converter->convertType(type));
+  if (mlir::isa<cir::BoolType>(type)) {
+    mlir::Type storageType =
+        convertTypeForMemory(*converter, mlir::DataLayout(moduleOp), type);
+    return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(constArr, dims,
+                                                                 storageType);
+  }
 
   if (mlir::isa<cir::FPTypeInterface>(type))
     return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
-        constArr, dims, type, converter->convertType(type));
+        constArr, dims, converter->convertType(type));
 
   if (mlir::isa<cir::PointerType>(type)) {
     // FIXME: Pointer arrays with trailing_zeros (null-sentinel tables) fall
@@ -616,9 +626,11 @@ lowerConstRecordMemberAttr(mlir::Attribute attr,
                                   intAttr.getValue());
   }
 
-  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
-    return mlir::IntegerAttr::get(converter->convertType(boolAttr.getType()),
-                                  boolAttr.getValue() ? 1 : 0);
+  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
+    mlir::Type storageType = convertTypeForMemory(
+        *converter, mlir::DataLayout(moduleOp), boolAttr.getType());
+    return mlir::IntegerAttr::get(storageType, boolAttr.getValue() ? 1 : 0);
+  }
 
   if (auto fpAttr = mlir::dyn_cast<cir::FPAttr>(attr))
     return mlir::FloatAttr::get(converter->convertType(fpAttr.getType()),
@@ -674,7 +686,8 @@ static bool shouldPackFAMStruct(const mlir::DataLayout &dataLayout,
 static mlir::Type adjustGlobalStructTypeForInit(
     mlir::LLVM::LLVMStructType structTy, cir::ConstRecordAttr constRecord,
     const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout,
-    llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes) {
+    llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes,
+    mlir::Type *failedType) {
   assert(paddingAddedIndexes.empty() &&
          "Not for accumulation, just single depth");
   llvm::ArrayRef<mlir::Attribute> initMembers =
@@ -692,8 +705,8 @@ static mlir::Type adjustGlobalStructTypeForInit(
   for (auto [idx, member] : llvm::enumerate(initMembers)) {
     if (idx >= origBody.size())
       break;
-    mlir::Type adjusted =
-        adjustGlobalTypeForInit(origBody[idx], member, converter, dataLayout);
+    mlir::Type adjusted = adjustGlobalTypeForInit(
+        origBody[idx], member, converter, dataLayout, failedType);
     if (!adjusted)
       return {};
     unsigned adjustedAlign = dataLayout.getTypeABIAlignment(adjusted);
@@ -745,9 +758,9 @@ static mlir::Type adjustGlobalStructTypeForInit(
     mlir::Type lastInitType =
         mlir::cast<mlir::TypedAttr>(initMembers.back()).getType();
     if (mlir::cast<cir::ArrayType>(lastInitType).getSize() != 0) {
-      newBody.back() =
-          adjustGlobalTypeForInit(converter.convertType(lastInitType),
-                                  initMembers.back(), converter, dataLayout);
+      newBody.back() = adjustGlobalTypeForInit(
+          converter.convertType(lastInitType), initMembers.back(), converter,
+          dataLayout, failedType);
       if (!newBody.back())
         return {};
       packed = packed || shouldPackFAMStruct(dataLayout, newBody);
@@ -786,7 +799,8 @@ static mlir::Type adjustGlobalStructTypeForInit(
 // size, mirroring classic codegen.
 static mlir::Type adjustGlobalUnionTypeForInit(
     mlir::LLVM::LLVMStructType structTy, cir::ConstRecordAttr constRecord,
-    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout) {
+    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout,
+    mlir::Type *failedType) {
 
   auto unionTy = mlir::cast<cir::UnionType>(constRecord.getType());
 
@@ -798,7 +812,8 @@ static mlir::Type adjustGlobalUnionTypeForInit(
 
   // The active member may itself need adjusting (e.g. it is a nested union, or
   // a struct containing one), so recurse before using its type below.
-  memberTy = adjustGlobalTypeForInit(memberTy, member, converter, dataLayout);
+  memberTy = adjustGlobalTypeForInit(memberTy, member, converter, dataLayout,
+                                     failedType);
   if (!memberTy)
     return {};
 
@@ -836,7 +851,8 @@ static mlir::Type adjustGlobalUnionTypeForInit(
 //   <{ [M x T], [N x T] }>
 static mlir::Type adjustGlobalArrayTypeForInit(
     mlir::LLVM::LLVMArrayType arrayTy, cir::ConstArrayAttr arrayInit,
-    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout) {
+    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout,
+    mlir::Type *failedType) {
   auto elts = mlir::dyn_cast<mlir::ArrayAttr>(arrayInit.getElts());
 
   if (!elts)
@@ -848,8 +864,8 @@ static mlir::Type adjustGlobalArrayTypeForInit(
   bool changed = elts.size() > arrayTy.getNumElements();
 
   for (mlir::Attribute elt : elts) {
-    mlir::Type adjusted =
-        adjustGlobalTypeForInit(origEltTy, elt, converter, dataLayout);
+    mlir::Type adjusted = adjustGlobalTypeForInit(origEltTy, elt, converter,
+                                                  dataLayout, failedType);
     if (!adjusted)
       return {};
     changed |= adjusted != origEltTy;
@@ -893,15 +909,20 @@ mlir::Type
 adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                         const mlir::TypeConverter &converter,
                         const mlir::DataLayout &dataLayout,
-                        llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes) {
-  if (!llvmType)
+                        llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes,
+                        mlir::Type *failedType) {
+  if (!llvmType) {
+    if (failedType)
+      if (auto typedInit = mlir::dyn_cast_if_present<mlir::TypedAttr>(init))
+        *failedType = typedInit.getType();
     return {};
+  }
   if (auto arrayInit = mlir::dyn_cast_if_present<cir::ConstArrayAttr>(init)) {
     auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(llvmType);
     if (!arrayTy)
       return llvmType;
     return adjustGlobalArrayTypeForInit(arrayTy, arrayInit, converter,
-                                        dataLayout);
+                                        dataLayout, failedType);
   }
 
   // Conversions for both only happen if we have a record init.
@@ -918,19 +939,21 @@ adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
   // Structs can have a flexible array member, adjust that.
   if (mlir::isa<cir::StructType>(constRecord.getType()))
     return adjustGlobalStructTypeForInit(structTy, constRecord, converter,
-                                         dataLayout, paddingAddedIndexes);
+                                         dataLayout, paddingAddedIndexes,
+                                         failedType);
   if (mlir::isa<cir::UnionType>(constRecord.getType()))
     return adjustGlobalUnionTypeForInit(structTy, constRecord, converter,
-                                        dataLayout);
+                                        dataLayout, failedType);
   return llvmType;
 }
 
 mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                                    const mlir::TypeConverter &converter,
-                                   const mlir::DataLayout &dataLayout) {
+                                   const mlir::DataLayout &dataLayout,
+                                   mlir::Type *failedType) {
   llvm::SmallVector<unsigned> ignoredAddedIndexes;
   return adjustGlobalTypeForInit(llvmType, init, converter, dataLayout,
-                                 ignoredAddedIndexes);
+                                 ignoredAddedIndexes, failedType);
 }
 
 std::optional<mlir::Attribute>

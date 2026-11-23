@@ -291,6 +291,7 @@ void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
     case LoongArch::ORI:
     case LoongArch::LU32I_D: // "rj" is needed due to InstrInfo pattern
     case LoongArch::LU52I_D:
+    case LoongArch::SLLI_D:
       BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
           .addReg(SrcReg, RegState::Kill)
           .addImm(Inst.Imm)

@@ -304,6 +304,7 @@ public:
     PointerID,
     ConstantID,
     VariableID,
+    LabelID,
     MaxOperandKind
   };
 
@@ -470,8 +471,8 @@ private:
                 "CanonicalTypeNames array size must match MaxCanonicalType");
 
   /// String mappings for OperandKind values
-  static constexpr StringLiteral OperandKindNames[] = {"Function", "Pointer",
-                                                       "Constant", "Variable"};
+  static constexpr StringLiteral OperandKindNames[] = {
+      "Function", "Pointer", "Constant", "Variable", "Label"};
   static_assert(std::size(OperandKindNames) ==
                     static_cast<unsigned>(OperandKind::MaxOperandKind),
                 "OperandKindNames array size must match MaxOperandKind");

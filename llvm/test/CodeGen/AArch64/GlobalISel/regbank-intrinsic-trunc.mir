@@ -6,7 +6,6 @@
 name:            test_f32.intrinsic_trunc
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -31,7 +30,6 @@ body:             |
 name:            test_f64.intrinsic_trunc
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -50,3 +48,4 @@ body:             |
     %1:_(f64) = G_INTRINSIC_TRUNC %0
     $d0 = COPY %1(f64)
     RET_ReallyLR implicit $d0
+...

@@ -26,7 +26,11 @@ class RISCVSubtarget;
 class RISCVLegalizerInfo : public LegalizerInfo {
   const RISCVSubtarget &STI;
   const unsigned XLen;
+  // Any-scalar XLen type, used in legality rules where it matches both i and f
+  // types of that size.
   const LLT sXLen;
+  // Integer XLen type, used when building new instructions.
+  const LLT iXLen;
 
 public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);

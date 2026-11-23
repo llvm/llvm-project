@@ -1615,7 +1615,7 @@ static void canonicalizePromotedSymbols(MapOrSet *mapOrSet,
   }
 
   resultOperands.append(remappedSymbols.begin(), remappedSymbols.end());
-  *operands = resultOperands;
+  *operands = std::move(resultOperands);
   *mapOrSet = mapOrSet->replaceDimsAndSymbols(
       dimRemapping, /*symReplacements=*/{}, nextDim, oldNumSyms + nextSym);
 
@@ -1666,7 +1666,7 @@ static void legalizeDemotedDims(MapOrSet &mapOrSet,
 
   append_range(resultOperands, remappedDims);
   append_range(resultOperands, symOperands);
-  operands = resultOperands;
+  operands = std::move(resultOperands);
   mapOrSet = mapOrSet.replaceDimsAndSymbols(
       /*dimReplacements=*/{}, symRemapping, oldNumDims + nextDim, nextSym);
 
@@ -1750,7 +1750,7 @@ static void canonicalizeMapOrSetAndOperands(MapOrSet *mapOrSet,
   }
   *mapOrSet = mapOrSet->replaceDimsAndSymbols(dimRemapping, symRemapping,
                                               nextDim, nextSym);
-  *operands = resultOperands;
+  *operands = std::move(resultOperands);
 }
 
 void mlir::affine::canonicalizeMapAndOperands(

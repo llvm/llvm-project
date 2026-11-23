@@ -548,8 +548,7 @@ static bool expandAtomicBinOpSubword(MachineBasicBlock &BB,
     } else {
       // if min:
       // loopMBB:  move BinOpRes, StoreVal
-      //           beq Scratch4, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch4, 0, loop2MBB
       // loop1MBB: move BinOpRes, Incr
       // loop2MBB: and BinOpRes, BinOpRes, Mask
       //           and StoreVal, OlddVal, Mask2
@@ -559,8 +558,7 @@ static bool expandAtomicBinOpSubword(MachineBasicBlock &BB,
       //
       // if max:
       // loopMBB:  move BinOpRes, Incr
-      //           beq Scratch4, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch4, 0, loop2MBB
       // loop1MBB: move BinOpRes, StoreVal
       // loop2MBB: and BinOpRes, BinOpRes, Mask
       //           and StoreVal, OlddVal, Mask2
@@ -582,11 +580,12 @@ static bool expandAtomicBinOpSubword(MachineBasicBlock &BB,
             .addReg(StoreVal)
             .addReg(Mips::R0);
       }
-      BuildMI(loopMBB, DL, TII->get(BEQ))
+      // loop1MBB is laid out directly after loopMBB, so fall through to it
+      // rather than using an unconditional jump.
+      BuildMI(loopMBB, DL, TII->get(Mips::BNE))
           .addReg(Scratch4)
           .addReg(Mips::R0)
-          .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
+          .addMBB(loop2MBB);
     }
 
     //  and BinOpRes, BinOpRes, Mask
@@ -949,8 +948,7 @@ static bool expandAtomicBinOp(MachineBasicBlock &BB,
     } else {
       // if min:
       // loopMBB:  move Scratch, OldVal
-      //           beq Scratch2_32, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch2_32, 0, loop2MBB
       // loop1MBB: move Scratch, Incr
       // loop2MBB: sc $2, 0($4)
       //           beqz	$2, $BB0_1
@@ -958,8 +956,7 @@ static bool expandAtomicBinOp(MachineBasicBlock &BB,
       //
       // if max:
       // loopMBB:  move Scratch, Incr
-      //           beq Scratch2_32, 0, loop1MBB
-      //           j loop2MBB
+      //           bne Scratch2_32, 0, loop2MBB
       // loop1MBB: move Scratch, OldVal
       // loop2MBB: sc $2, 0($4)
       //           beqz	$2, $BB0_1
@@ -973,11 +970,13 @@ static bool expandAtomicBinOp(MachineBasicBlock &BB,
             .addReg(OldVal)
             .addReg(ZERO);
       }
-      BuildMI(loopMBB, DL, TII->get(BEQ))
+      // Scratch2_32 is always a GPR32, so use the 32-bit BNE even for the
+      // 64-bit atomics. loop1MBB is laid out directly after loopMBB, so fall
+      // through to it rather than using an unconditional jump.
+      BuildMI(loopMBB, DL, TII->get(Mips::BNE))
           .addReg(Scratch2_32)
-          .addReg(ZERO)
-          .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
+          .addReg(Mips::R0)
+          .addMBB(loop2MBB);
     }
 
   } else if (Opcode) {

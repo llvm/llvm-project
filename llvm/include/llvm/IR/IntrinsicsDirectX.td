@@ -243,12 +243,6 @@ let TargetPrefix = "dx" in {
   // Cast between target extension handle types and dxil-style opaque handles
   def int_dx_resource_casthandle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
 
-  def int_dx_all
-      : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
-
-  def int_dx_any
-      : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
-
   def int_dx_asdouble
       : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_double_ty>],
                               [llvm_anyint_ty, LLVMMatchType<0>],
@@ -495,6 +489,12 @@ let TargetPrefix = "dx" in {
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
 
+  def int_dx_wave_multi_prefix_bit_count
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_i1_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem]>;
+
   def int_dx_wave_multi_prefix_product
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
@@ -537,6 +537,10 @@ let TargetPrefix = "dx" in {
       : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
+
+  def int_dx_quad_all
+      : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty],
+                              [IntrConvergent, IntrNoMem]>;
 
   def int_dx_quad_read_across_x
       : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],

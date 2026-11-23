@@ -65,8 +65,11 @@ void HexagonSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
-    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    bool AlwaysInline, bool &IsTailCall, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
+  bool CanTailCall = IsTailCall;
+  IsTailCall = false;
+
   Align Alignment = std::min(DstAlign, SrcAlign);
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (AlwaysInline || Alignment < Align(4) || !ConstantSize)
@@ -105,8 +108,10 @@ SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
           DAG.getTargetExternalSymbol(
               SpecialMemcpyImpl, TLI.getPointerTy(DAG.getDataLayout()), Flags),
           std::move(Args))
-      .setDiscardResult();
+      .setDiscardResult()
+      .setTailCall(CanTailCall);
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
+  IsTailCall = CLI.IsTailCall;
   return CallResult.second;
 }

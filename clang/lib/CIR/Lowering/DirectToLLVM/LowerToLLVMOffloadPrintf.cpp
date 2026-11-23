@@ -35,8 +35,7 @@ mlir::LogicalResult CIRToLLVMOffloadPrintfOpLowering::matchAndRewrite(
     return lowerNVPTXPrintf(op, adaptor.getFormat(), adaptor.getArgs(),
                             rewriter, dataLayout, symbolTables);
 
-  if (triple.isAMDGCN() ||
-      (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD)) {
+  if (isAMDGPUPrintfModule(mod)) {
     bool isBuffered = false;
     if (auto kind = mod->getAttrOfType<mlir::StringAttr>(
             cir::CIRDialect::getAMDGPUPrintfKindAttrName()))

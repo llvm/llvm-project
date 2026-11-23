@@ -1,0 +1,39 @@
+# NOTE: Do not autogenerate. Check selective asyncmark waits rather than unrelated preamble instructions.
+# RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -run-pass=si-insert-async-barrier-arrive-workaround,si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.51-amd-amdhsa -run-pass=si-insert-async-barrier-arrive-workaround,si-insert-waitcnts -o - %s | FileCheck %s
+
+# A replay load participates in the global-to-LDS stage. Waiting on its mark
+# must leave the later async store outstanding, although both use ASYNCcnt.
+# Separate the waits with a nop so the pass does not combine them.
+
+---
+name: replay_load_stage
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  sgprForEXECCopy: '$sgpr105'
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: replay_load_stage
+    ; CHECK: DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay
+    ; CHECK-NEXT: ASYNCMARK .GLOBAL_LOAD_ASYNC_TO_LDS
+    ; CHECK-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B32
+    ; CHECK-NEXT: ASYNCMARK .GLOBAL_STORE_ASYNC_FROM_LDS
+    ; CHECK-NEXT: WAIT_ASYNCMARK 0, .GLOBAL_LOAD_ASYNC_TO_LDS
+    ; CHECK-NEXT: S_WAIT_ASYNCCNT 1
+    ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: WAIT_ASYNCMARK 0, .GLOBAL_STORE_ASYNC_FROM_LDS
+    ; CHECK-NEXT: S_WAIT_ASYNCCNT 0
+
+    DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr2, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
+    ASYNCMARK 2
+    GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    ASYNCMARK 8
+    WAIT_ASYNCMARK 0, 2
+    S_NOP 0
+    WAIT_ASYNCMARK 0, 8
+    S_ENDPGM 0
+...

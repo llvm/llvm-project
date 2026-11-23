@@ -3,7 +3,6 @@
 ---
 name:            combine_unmerge_from_unmerge_of_concat_tree
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
   liveins: $x0, $x1, $x2, $d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7, $x0
@@ -55,7 +54,6 @@ body:             |
 ---
 name:            combine_unmerge_from_unmerge_of_concat_tree_high_bits
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
   liveins: $x0, $x1, $x2, $d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7, $x0
@@ -106,7 +104,6 @@ body:             |
 ---
 name:            combine_unmerge_from_insert_into_low
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
   liveins: $x0, $x1, $x2, $d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7, $x0
@@ -153,7 +150,6 @@ body:             |
 ---
 name:            combine_unmerge_from_insert_into_high
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
   liveins: $x0, $x1, $x2, $d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7, $x0
@@ -200,7 +196,6 @@ body:             |
 ---
 name:            combine_unmerge_from_insert_look_into_container
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
   liveins: $x0, $x1, $x2, $d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7, $x0

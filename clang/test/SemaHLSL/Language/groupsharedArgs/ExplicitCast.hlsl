@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -std=hlsl202x -fnative-half-type -fnative-int16-type -verify -Wconversion %s
 
+using namespace hlsl;
+
 groupshared uint16_t SharedData;
 
 void fn1(groupshared half Sh) {

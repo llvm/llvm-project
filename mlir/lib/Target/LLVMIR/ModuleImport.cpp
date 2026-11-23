@@ -20,7 +20,18 @@
 #include "LoopAnnotationImporter.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDebugIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVarArgOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -573,6 +584,42 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
                           << renderMetadata(current);
   }
   return success();
+}
+
+Attribute ModuleImport::convertTBAAStructMetadata(const llvm::MDNode *node) {
+  // Operands come in conceptual groups of three; anything else is malformed.
+  if (node->getNumOperands() == 0 || node->getNumOperands() % 3 != 0)
+    return {};
+
+  SmallVector<Attribute> fields;
+  fields.reserve(node->getNumOperands() / 3);
+  for (unsigned i = 0, e = node->getNumOperands(); i != e; i += 3) {
+    auto *offset = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i));
+    auto *size = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i + 1));
+    if (!offset || !size)
+      return {};
+    // Offsets and sizes are uint64_t in the attribute. Read them as APInts:
+    // LLVM compares offsets zero-extended, so a narrow constant with its
+    // high bit set (e.g. i32 0x80000000) must keep its unsigned value
+    // rather than sign-extending. Values using more than 64 bits cannot
+    // be represented and are declined.
+    const APInt &offsetAP = offset->getValue();
+    const APInt &sizeAP = size->getValue();
+    if (offsetAP.getActiveBits() > 64 || sizeAP.getActiveBits() > 64)
+      return {};
+    auto *tagNode = dyn_cast_if_present<llvm::MDNode>(node->getOperand(i + 2));
+    if (!tagNode)
+      return {};
+    auto tag = dyn_cast_if_present<TBAATagAttr>(lookupTBAAAttr(tagNode));
+    if (!tag)
+      return {};
+    fields.push_back(builder.getAttr<TBAAStructFieldAttr>(
+        offsetAP.getZExtValue(), sizeAP.getZExtValue(), tag));
+  }
+
+  return builder.getArrayAttr(fields);
 }
 
 LogicalResult
@@ -1170,6 +1217,30 @@ LogicalResult ModuleImport::convertMetadata() {
       if (aliasAnalysisNodes.TBAA)
         if (failed(processTBAAMetadata(aliasAnalysisNodes.TBAA)))
           return failure();
+      // A `!tbaa.struct` node reaches its own tags, and those tags may appear
+      // nowhere else in the module. Without walking them here the struct
+      // conversion below finds nothing and the node is declined.
+      if (aliasAnalysisNodes.TBAAStruct) {
+        const llvm::MDNode *structNode = aliasAnalysisNodes.TBAAStruct;
+        // Operands come in groups of three: check the count before
+        // walking the tags. The verifier rejects malformed nodes
+        // before CLI import, so this guards direct API use.
+        bool wellFormed = structNode->getNumOperands() % 3 == 0;
+        if (wellFormed) {
+          for (unsigned i = 2, e = structNode->getNumOperands(); i < e; i += 3)
+            if (auto *tag = dyn_cast_if_present<llvm::MDNode>(
+                    structNode->getOperand(i)))
+              if (failed(processTBAAMetadata(tag)))
+                return failure();
+        }
+        // Convert the struct node itself once its tags are in the map. A
+        // node that cannot be modeled is recorded with a null value so it
+        // is not converted again for every instruction carrying it, and is
+        // declined at attach time.
+        if (!tbaaStructMapping.contains(structNode))
+          tbaaStructMapping.insert(
+              {structNode, convertTBAAStructMetadata(structNode)});
+      }
       if (aliasAnalysisNodes.Scope)
         if (failed(processAliasScopeMetadata(aliasAnalysisNodes.Scope)))
           return failure();
