@@ -117,6 +117,7 @@ class ExprPool {
   /// \returns The ExprId of the unique, stable instance in the arena,
   ///          or REG_ESPACE on failure.
   ErrorOr<ExprId> intern(Expr e);
+  ErrorOr<ExprId> intern_concat_node(ExprId l, ExprId r);
 
 public:
   /// The maximum number of nodes allowed in the pool to prevent memory

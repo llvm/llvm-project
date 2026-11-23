@@ -376,7 +376,10 @@ bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die,
     return false;
   if (Die.getTag() != dwarf::DW_TAG_variable)
     return false;
-  if (!ParentDie.isSubprogramDIE())
+  // A function without debug info describes its variables at compile unit
+  // scope.
+  if (!ParentDie.isSubprogramDIE() &&
+      ParentDie.getTag() != dwarf::DW_TAG_compile_unit)
     return false;
   if (!Die.hasChildren())
     return false;
@@ -393,7 +396,10 @@ DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
   std::optional<const char *> FunctionName;
   std::optional<uint64_t> CFGHash;
   std::optional<uint64_t> CounterPtr = getLocation(Die);
-  auto FnDie = Die.getParent();
+  DWARFDie FnDie = Die.getParent();
+  // A variable at compile unit scope belongs to a function without debug info.
+  if (!FnDie.isSubprogramDIE())
+    FnDie = DWARFDie();
   auto FunctionPtr = dwarf::toAddress(FnDie.find(dwarf::DW_AT_low_pc));
   std::optional<uint64_t> NumCounters;
   for (const DWARFDie &Child : Die.children()) {
@@ -444,7 +450,8 @@ DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
     }
     return std::nullopt;
   }
-  if (!FunctionPtr && (UnlimitedWarnings || ++NumSuppressedWarnings < 1)) {
+  if (FnDie && !FunctionPtr &&
+      (UnlimitedWarnings || ++NumSuppressedWarnings < 1)) {
     WithColor::warning() << format("Could not find address of function %s\n",
                                    *FunctionName);
     LLVM_DEBUG(Die.dump(dbgs()));

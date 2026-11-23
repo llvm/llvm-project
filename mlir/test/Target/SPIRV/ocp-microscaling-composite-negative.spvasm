@@ -1,0 +1,47 @@
+; REQUIRES: spirv-tools
+; RUN: split-file %s %t
+; RUN: spirv-as --target-env spv1.6 %t/matrix.spvasm -o %t/matrix.spv
+; RUN: not mlir-translate --deserialize-spirv %t/matrix.spv 2>&1 | FileCheck %s --check-prefix=MATRIX
+; RUN: spirv-as --target-env spv1.6 %t/coopmatrix.spvasm -o %t/coopmatrix.spv
+; RUN: not mlir-translate --deserialize-spirv %t/coopmatrix.spv 2>&1 | FileCheck %s --check-prefix=COOP
+; RUN: spirv-as --target-env spv1.6 %t/image.spvasm -o %t/image.spv
+; RUN: not mlir-translate --deserialize-spirv %t/image.spv 2>&1 | FileCheck %s --check-prefix=IMAGE
+
+; Exercise the type verifiers through binary import, without text parsing.
+; MATRIX: error: microscaling types are not supported in matrices
+; COOP: error: microscaling types are not supported in cooperative matrices
+; IMAGE: error: microscaling types are not supported in images
+
+;--- matrix.spvasm
+OpCapability Shader
+OpCapability Float4EXT
+OpExtension "SPV_EXT_float8"
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+%float = OpTypeFloat 4 Float4E2M1EXT
+%vector = OpTypeVector %float 2
+%matrix = OpTypeMatrix %vector 2
+
+;--- coopmatrix.spvasm
+OpCapability Shader
+OpCapability Float6EXT
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_EXT_float8"
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+%float = OpTypeFloat 6 Float6E3M2EXT
+%int = OpTypeInt 32 0
+%two = OpConstant %int 2
+%scope = OpConstant %int 3
+%use = OpConstant %int 0
+%matrix = OpTypeCooperativeMatrixKHR %float %scope %two %two %use
+
+;--- image.spvasm
+OpCapability Shader
+OpCapability Float8UnsignedE8M0EXT
+OpExtension "SPV_EXT_float8"
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+%float = OpTypeFloat 8 Float8UnsignedE8M0EXT
+%image = OpTypeImage %float 2D 0 0 0 1 Unknown
