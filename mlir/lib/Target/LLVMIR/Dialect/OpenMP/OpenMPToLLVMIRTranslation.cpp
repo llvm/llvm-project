@@ -2096,8 +2096,8 @@ createReductionsAndCleanup(Operation &op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation,
                            llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                            ReductionVarsInfo &redInfo, bool isNowait = false,
-               bool isTeamsReduction = false,
-               bool excludeInscan = false) {
+                           bool isTeamsReduction = false,
+                           bool excludeInscan = false) {
   // Process the reductions if required.
   if (redInfo.size() == 0)
     return success();
@@ -5438,8 +5438,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(createReductionsAndCleanup(*wsloopOp, builder, moduleTranslation,
                                         allocaIP, reductionInfo,
                                         wsloopOp.getNowait(),
-                      /*isTeamsReduction=*/false,
-                      /*excludeInscan=*/isInScanRegion)))
+                                        /*isTeamsReduction=*/false,
+                                        /*excludeInscan=*/isInScanRegion)))
     return failure();
   return cleanupPrivateVars(wsloopOp, builder, moduleTranslation,
                             wsloopOp.getLoc(), privateVarsInfo);
