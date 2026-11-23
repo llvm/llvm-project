@@ -1367,9 +1367,9 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   DeadInsts.insert(Ptr);
 }
 
-// SROA cannot promote a dynamically indexed local array of handles. 
-// If all of its handles come from the same binding, store their indices instead and
-// rebuild the handle at each load.
+// SROA cannot promote a dynamically indexed local array of handles.
+// If all of its handles come from the same binding, store their indices instead
+// and rebuild the handle at each load.
 static bool promoteLocalHandleArray(AllocaInst *Alloca) {
   const DataLayout &DL = Alloca->getDataLayout();
 
