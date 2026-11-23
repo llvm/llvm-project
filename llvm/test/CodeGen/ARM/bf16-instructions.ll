@@ -1353,6 +1353,70 @@ define bfloat @test_fabs(bfloat %a) #0 {
   ret bfloat %r
 }
 
+define bfloat @test_fabs_sub(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fabs_sub:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vsub.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    bfc r0, #15, #17
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fabs_sub:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    .pad #4
+; CHECK-NOFP16-NEXT:    sub sp, sp, #4
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vsub.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    vmov r0, s0
+; CHECK-NOFP16-NEXT:    strh r0, [sp]
+; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    and r0, r0, #127
+; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    add sp, sp, #4
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fabs_sub:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    .pad #4
+; CHECK-FP16-NEXT:    sub sp, sp, #4
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vsub.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
+; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-FP16-NEXT:    and r0, r0, #127
+; CHECK-FP16-NEXT:    strb r0, [sp, #1]
+; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
+; CHECK-FP16-NEXT:    add sp, sp, #4
+; CHECK-FP16-NEXT:    bx lr
+  %s = fsub bfloat %a, %b
+  %r = call bfloat @llvm.fabs.bf16(bfloat %s)
+  ret bfloat %r
+}
+
 define bfloat @test_fneg(bfloat %a) #0 {
 ; CHECK-CVT-LABEL: test_fneg:
 ; CHECK-CVT:       @ %bb.0:
@@ -1383,6 +1447,72 @@ define bfloat @test_fneg(bfloat %a) #0 {
 ; CHECK-FP16-NEXT:    add sp, sp, #4
 ; CHECK-FP16-NEXT:    bx lr
   %r = fneg bfloat %a
+  ret bfloat %r
+}
+
+define bfloat @test_fneg_add(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fneg_add:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    movw r1, #32768
+; CHECK-CVT-NEXT:    movt r1, #65535
+; CHECK-CVT-NEXT:    eor r0, r0, r1
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fneg_add:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    .pad #4
+; CHECK-NOFP16-NEXT:    sub sp, sp, #4
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    vmov r0, s0
+; CHECK-NOFP16-NEXT:    strh r0, [sp]
+; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    eor r0, r0, #128
+; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    add sp, sp, #4
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fneg_add:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    .pad #4
+; CHECK-FP16-NEXT:    sub sp, sp, #4
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
+; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-FP16-NEXT:    eor r0, r0, #128
+; CHECK-FP16-NEXT:    strb r0, [sp, #1]
+; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
+; CHECK-FP16-NEXT:    add sp, sp, #4
+; CHECK-FP16-NEXT:    bx lr
+  %s = fadd bfloat %a, %b
+  %r = fneg bfloat %s
   ret bfloat %r
 }
 
