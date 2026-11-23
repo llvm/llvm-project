@@ -276,10 +276,12 @@ ITT_EXTERN_C iJIT_IsProfilingActiveFlags JITAPI iJIT_IsProfilingActive(void)
 static int loadiJIT_Funcs(void)
 {
     static int bDllWasLoaded = 0;
-    char *dllName = (char*)rcsid; /* !! Just to avoid unused code elimination */
+    char *dllName = NULL;
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
     DWORD dNameLength = 0;
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+    (void)rcsid; /* !! Just to avoid unused code elimination */
 
     if(bDllWasLoaded)
     {
