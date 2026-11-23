@@ -109,6 +109,8 @@ private:
   void addStraightLineScalarOptimizationPasses(PassManagerWrapper &PMW);
 };
 
+} // namespace
+
 void NVPTXCodeGenPassBuilder::addEarlyCSEOrGVNPass(PassManagerWrapper &PMW) {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
     // Disable scalar PRE due to Register Pressure increase
@@ -287,8 +289,6 @@ void NVPTXCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void NVPTXCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(NVPTXAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"

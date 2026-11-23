@@ -13,6 +13,7 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
@@ -199,6 +200,11 @@ Language::GetFormatterLanguages(LanguageType language) const {
   if (language == GetLanguageType())
     return {language};
   return {};
+}
+
+std::unique_ptr<OptionGroupLanguageExpression>
+Language::CreateExpressionOptions() {
+  return nullptr;
 }
 
 struct language_name_pair {
