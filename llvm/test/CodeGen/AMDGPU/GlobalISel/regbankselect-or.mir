@@ -262,11 +262,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[COPY2]], [[UV2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[COPY3]], [[UV3]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[OR]](s32), [[OR1]](s32)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $vgpr0_vgpr1
@@ -285,11 +286,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[UV2]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[UV3]](s32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[COPY2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[COPY3]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[OR]](s32), [[OR1]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $sgpr0_sgpr1
@@ -438,11 +440,12 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY2]](s32)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY4]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[COPY4]], [[UV2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[COPY5]], [[UV3]]
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[OR]](s32), [[OR1]](s32)
     ; CHECK-NEXT: S_NOP 0, implicit [[MV1]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
@@ -468,11 +471,12 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY4]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[COPY4]], [[UV2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[COPY5]], [[UV3]]
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[OR]](s32), [[OR1]](s32)
     ; CHECK-NEXT: S_NOP 0, implicit [[MV1]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
@@ -564,17 +568,19 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[COPY3]], [[UV2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[COPY4]], [[UV3]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[OR]](s32), [[OR1]](s32)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY4]](s64)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:sgpr(s32), [[UV5:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[UV4]](s32)
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[UV5]](s32)
     ; CHECK-NEXT: [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; CHECK-NEXT: [[OR2:%[0-9]+]]:vgpr(s32) = G_OR [[UV4]], [[UV6]]
-    ; CHECK-NEXT: [[OR3:%[0-9]+]]:vgpr(s32) = G_OR [[UV5]], [[UV7]]
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:vgpr(s32) = G_OR [[COPY5]], [[UV6]]
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:vgpr(s32) = G_OR [[COPY6]], [[UV7]]
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[OR2]](s32), [[OR3]](s32)
     ; CHECK-NEXT: S_NOP 0, implicit [[MV1]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
@@ -617,11 +623,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s32>) = COPY [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[COPY2]], [[UV2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[COPY3]], [[UV3]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[OR]](s32), [[OR1]](s32)
     ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $sgpr0_sgpr1
@@ -643,11 +650,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s32>) = COPY [[COPY1]](<2 x s32>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[UV2]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[UV3]](s32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(s32) = G_OR [[UV]], [[COPY2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(s32) = G_OR [[UV1]], [[COPY3]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[OR]](s32), [[OR1]](s32)
     ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -710,11 +718,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<4 x s16>) = COPY [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(<2 x s16>), [[UV1:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[UV]](<2 x s16>)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[UV1]](<2 x s16>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY1]](<4 x s16>)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[COPY2]], [[UV2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[COPY3]], [[UV3]]
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[OR]](<2 x s16>), [[OR1]](<2 x s16>)
     %0:_(<4 x s16>) = COPY $sgpr0_sgpr1
     %1:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -733,11 +742,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<4 x s16>) = COPY [[COPY1]](<4 x s16>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:sgpr(<2 x s16>), [[UV3:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY1]](<4 x s16>)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[UV2]](<2 x s16>)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[UV3]](<2 x s16>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[UV]], [[COPY2]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:vgpr(<2 x s16>) = G_OR [[UV1]], [[COPY3]]
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[OR]](<2 x s16>), [[OR1]](<2 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<4 x s16>) = COPY $sgpr0_sgpr1
