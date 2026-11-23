@@ -577,6 +577,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `fwrite_unlocked`, and `fgets_unlocked` when the requested size exceeds the
   corresponding buffer (or is negative for `fgets_unlocked`).
 
+- `-Wfortify-source` now diagnoses when `getlogin_r`, `ttyname_r`, `ptsname_r`,
+  or `confstr` is called with a size argument larger than the destination
+  buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
