@@ -583,6 +583,27 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::bf16, Custom);
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+
+    for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
+                    ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
+                    ISD::FROUNDEVEN, ISD::FTRUNC})
+      setOperationAction(Op, MVT::bf16, Promote);
+
+    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                    ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                    ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                    ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                    ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                    ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                    ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                    ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                    ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                    ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                    ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                    ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                    ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                    ISD::STRICT_FTAN})
+      setOperationAction(Op, MVT::bf16, Promote);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
@@ -17235,6 +17256,57 @@ static SDValue PerformInterleavedStoreCombine(
   return NewStore;
 }
 
+static SDValue performSplitConstantStore(StoreSDNode *St, SelectionDAG &DAG,
+                                         const ARMSubtarget *Subtarget) {
+  SDValue Val = St->getValue();
+  EVT VT = Val.getValueType();
+  if (!Subtarget->isLittle() || !VT.isVector() ||
+      VT.getVectorNumElements() > 4 || VT.getScalarType() != MVT::i32 ||
+      St->isVolatile() || !ISD::isNormalStore(St) || !Val.hasOneUse() ||
+      Val.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  // We are looking for a build vector of constants that will not be lowered to
+  // a splat.
+  unsigned Cost = 0;
+  SmallSet<unsigned, 4> ImmSet;
+  for (unsigned I = 0; I < VT.getVectorNumElements(); I++) {
+    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(I));
+    if (!C)
+      return SDValue();
+    if (!ImmSet.insert(C->getZExtValue()).second)
+      continue;
+    Cost += ConstantMaterializationCost(C->getZExtValue(), Subtarget,
+                                        Subtarget->hasMinSize());
+    if (Cost > 4)
+      return SDValue();
+  }
+  if (ImmSet.size() == 1) // Don't include splats
+    return SDValue();
+
+  // Look for a simple single block loop, we can hoist the vector load out in
+  // that case.
+  const BasicBlock *Block = DAG.getBasicBlock();
+  assert(Block && "Expected a valid block!");
+  if (is_contained(successors(Block), Block))
+    return SDValue();
+
+  SDValue Chain = St->getChain();
+  SDLoc DL(St);
+
+  for (unsigned I = 0; I < VT.getVectorNumElements(); I++) {
+    unsigned Offset = I * VT.getScalarStoreSize();
+    SDValue OffsetPtr = DAG.getObjectPtrOffset(
+        DL, St->getBasePtr(), DAG.getConstant(Offset, DL, MVT::i32));
+    Chain = DAG.getStore(Chain, DL, Val.getOperand(I), OffsetPtr,
+                         St->getPointerInfo().getWithOffset(Offset),
+                         commonAlignment(St->getBaseAlign(), Offset),
+                         St->getMemOperand()->getFlags(), St->getAAInfo());
+  }
+
+  return Chain;
+}
+
 /// PerformSTORECombine - Target-specific dag combine xforms for
 /// ISD::STORE.
 static SDValue PerformSTORECombine(SDNode *N,
@@ -17311,6 +17383,9 @@ static SDValue PerformSTORECombine(SDNode *N,
                         St->getPointerInfo(), St->getAlign(),
                         St->getMemOperand()->getFlags(), St->getAAInfo());
   }
+
+  if (SDValue S = performSplitConstantStore(St, DCI.DAG, Subtarget))
+    return S;
 
   // If this is a legal vector store, try to combine it into a VST1_UPD.
   if (Subtarget->hasNEON() && ISD::isNormalStore(N) && VT.isVector() &&

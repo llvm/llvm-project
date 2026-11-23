@@ -64,3 +64,7 @@ add_subdirectory(signal)
 add_subdirectory(spawn)
 add_subdirectory(threads)
 add_subdirectory(ucontext)
+
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(syslog)
+endif()

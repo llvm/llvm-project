@@ -1033,6 +1033,23 @@ static mlir::Value forwardableIndirectAddr(cir::LoadOp load,
   return slot && slot.getAlignment() >= minAlign ? addr : mlir::Value();
 }
 
+/// Whether a non-byval indirect argument of type \p ty is passed from the
+/// caller's storage rather than from a copy of it.  CIRGen gives each call its
+/// own temporary for a record that cannot be passed in registers, built by
+/// the record's copy or move constructor, so the call passes that temporary.
+/// Every other type is copied to a temporary at the call, since the callee
+/// may write the memory it is passed.  A record with no layout entry can be
+/// passed in registers.
+static bool passesCallerStorage(mlir::ModuleOp module, mlir::Type ty) {
+  auto recTy = mlir::dyn_cast<cir::RecordType>(ty);
+  if (!recTy)
+    return false;
+  cir::RecordLayoutAttr layout =
+      cir::tryGetRecordLayout(module, recTy.getName());
+  return layout &&
+         layout.getArgPassingKind() != cir::ArgPassingKind::CanPassInRegs;
+}
+
 /// True when \p aliasAnalysis shows that nothing between \p load and \p call
 /// can write the storage \p load read, so a byval argument may name that
 /// storage rather than a copy of it.  byval takes the callee's copy at the
@@ -1483,9 +1500,9 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// pointer (the prepended first block argument) and the function returns
 /// void.
 ///
-/// CIRGen emits a local `__retval` alloca and emits `cir.return %loaded`
-/// where `%loaded = cir.load __retval`.  The naive lowering -- store the
-/// loaded SSA value through the sret pointer -- byte-copies the record,
+/// CIRGen emits a local return slot alloca and emits `cir.return %loaded`
+/// where `%loaded = cir.load <slot>`.  The naive lowering, storing the
+/// loaded SSA value through the sret pointer, byte-copies the record,
 /// which is wrong for non-trivially-copyable types: e.g. libstdc++'s SSO
 /// `std::string` has a `_M_p` pointer that aliases the source's internal
 /// `_M_local_buf`, so a byte-copy leaves the destination pointing at the
@@ -1493,14 +1510,14 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// later `free()`s a stack pointer.
 ///
 /// Instead, route construction directly into the sret slot: find the
-/// `__retval` alloca, replace its uses with the sret pointer, and drop the
-/// trailing `cir.load __retval` so the rewritten return has no operand.
-/// The CIRGen-emitted constructor / store-into-`__retval` then targets the
+/// return slot alloca, replace its uses with the sret pointer, and drop the
+/// trailing `cir.load <slot>` so the rewritten return has no operand.
+/// The CIRGen-emitted constructor / store-into-slot then targets the
 /// sret slot uniformly, matching classic CodeGen's "construct directly into
 /// `%agg.result`" pattern.
 ///
-/// CIRGen emits one `%v = cir.load %__retval` / `cir.return %v` pair per
-/// return statement, and every such load reads the single `__retval`
+/// CIRGen emits one `%v = cir.load %slot` / `cir.return %v` pair per
+/// return statement, and every such load reads the single return slot
 /// alloca (CIR does not merge returns into a shared epilogue block).  The
 /// alloca is therefore rewired to the sret pointer once; each cir.return is
 /// then collapsed to a bare return and its now-dead load erased.  This
@@ -1508,7 +1525,7 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// CIRGen, so it is asserted via `cast<>` rather than guarded with a
 /// fallback.
 ///
-/// A `__retval` outside the sret pointer's address space is not replaced
+/// A return slot outside the sret pointer's address space is not replaced
 /// itself. Its address_space casts to the sret pointer's type are.
 void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
                       mlir::OpBuilder &builder) {
@@ -1527,7 +1544,7 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
     cir::LoadOp retLoad =
         mlir::cast<cir::LoadOp>(retOp.getInput()[0].getDefiningOp());
 
-    // Rewire the shared `__retval` alloca to the sret pointer once.
+    // Rewire the shared return slot alloca to the sret pointer once.
     // replaceAllUsesWith updates every load of the alloca (including those
     // feeding the other cir.return ops) to read from sretPtr instead, so
     // all returns are covered by this single rewiring.
@@ -1550,7 +1567,8 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
 
   if (retAlloca) {
     assert(retAlloca->use_empty() &&
-           "__retval used other than by its returns and address_space views");
+           "return slot used other than by its returns and address_space "
+           "views");
     retAlloca->erase();
   }
 }
@@ -1717,10 +1735,12 @@ rewriteIndirectReturnCall(cir::CallOp call, const FunctionClassification &fc,
   }
   if (!sretSlot) {
     cir::PointerType allocaPtrTy = getAllocaPtrTy(origRetTy, dl);
-    sretSlot = cir::AllocaOp::create(
+    auto slot = cir::AllocaOp::create(
         builder, call.getLoc(), allocaPtrTy,
-        /*name=*/builder.getStringAttr("sret"),
+        /*name=*/builder.getStringAttr(""),
         /*alignment=*/builder.getI64IntegerAttr(sretAlign));
+    slot.setReturnSlot(true);
+    sretSlot = slot;
     // The sret pointer can be outside the alloca address space.
     if (allocaPtrTy != ptrTy)
       sretSlot = cir::CastOp::create(builder, call.getLoc(), ptrTy,
@@ -2317,24 +2337,26 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // like byval.
       bool byRef = ac.kind == ArgKind::IndirectAliased;
       bool byCopy = byRef || ac.byVal;
+      bool fromCallerStorage =
+          !byCopy && passesCallerStorage(module, arg.getType());
       cir::PointerType ptrTy = getIndirectPtrTy(arg.getType(), ac);
 
       // A record operand that names storage is passed from that storage
       // rather than from the loaded value: a record value carries only the
       // fields of its type, so a store leaves the type's padding bytes
       // unwritten, and for a union those can be another member's live data.
-      // A byval _BitInt is passed from its value, since the load and the
-      // store below are its conversion between value and in-memory form.
+      // A _BitInt is passed from its value, since the load and the store
+      // below are its conversion between value and in-memory form.
       cir::LoadOp srcLoad;
-      if (!byCopy || mlir::isa<cir::RecordType>(arg.getType()))
+      if (mlir::isa<cir::RecordType>(arg.getType()))
         srcLoad = maybeGetSimpleLoad(arg);
 
-      // A non-byval argument must name the caller's storage, so that the
-      // object the callee operates on is the one the caller destroys.  That
-      // means passing the address the operand was loaded from rather than the
-      // loaded value, so a store to that storage after the load is visible to
-      // the callee.  byval fills a slot below, this cannot.
-      if (!byCopy) {
+      // A record passed from the caller's storage must name that storage, so
+      // that the object the callee operates on is the one the caller
+      // destroys.  That means passing the address the operand was loaded from
+      // rather than the loaded value, so a store to that storage after the
+      // load is visible to the callee.
+      if (fromCallerStorage) {
         mlir::Value fwdAddr = forwardableIndirectAddr(srcLoad, ptrTy, minAlign);
         if (!fwdAddr)
           return call->emitOpError()
@@ -2351,9 +2373,11 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // holds only while nothing writes that storage between the load and the
       // call, since the operand carries the value as of the load.  A volatile
       // load is not forwarded, since the copy byval takes at the call is not
-      // volatile.
+      // volatile.  Any other non-byval argument is copied to a temporary,
+      // since the callee may write the memory it is passed.
       if (mlir::Value fwdAddr =
-              forwardableIndirectAddr(srcLoad, ptrTy, minAlign);
+              byCopy ? forwardableIndirectAddr(srcLoad, ptrTy, minAlign)
+                     : mlir::Value();
           fwdAddr && storageUnwrittenBetween(srcLoad, call.getOperation(),
                                              aliasAnalysis)) {
         newArgs.push_back(fwdAddr);
@@ -2380,9 +2404,11 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       if (srcLoad)
         builder.setInsertionPoint(srcLoad);
 
-      auto slot = cir::AllocaOp::create(
-          builder, call.getLoc(), ptrTy,
-          builder.getStringAttr(byRef ? "byref" : "byval"), slotAlign);
+      llvm::StringRef slotName =
+          byRef ? "byref" : (ac.byVal ? "byval" : "indirect.tmp");
+      auto slot =
+          cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
+                                builder.getStringAttr(slotName), slotAlign);
       if (srcLoad) {
         auto copy = cir::CopyOp::create(builder, call.getLoc(), slot,
                                         srcLoad.getAddr(), slotAlign,
@@ -2778,6 +2804,43 @@ void advanceRegisterCursors(CIRBaseBuilderTy &b, mlir::Location loc,
   }
 }
 
+/// Advances the pointer cursor at \p valist past the argument's slots and
+/// returns the argument's address, which is the old cursor.
+mlir::Value buildSlotAddrAndAdvance(CIRBaseBuilderTy &b, mlir::Location loc,
+                                    mlir::Value valist, mlir::Type resultTy,
+                                    uint64_t slotSize,
+                                    const mlir::DataLayout &dl) {
+  mlir::Value cur = b.createLoad(loc, valist);
+  mlir::Value bytePtr = b.createPtrBitcast(cur, b.getUIntNTy(8));
+  uint64_t stride =
+      llvm::alignTo(dl.getTypeAllocSize(resultTy).getFixedValue(), slotSize);
+  mlir::Value next =
+      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, stride, 32));
+  b.createStore(loc, b.createBitcast(next, cur.getType()), valist);
+  return bytePtr;
+}
+
+/// Replaces \p op's result with the value at \p addr, which is \p align
+/// aligned, and erases \p op.
+mlir::LogicalResult replaceVAArgResult(CIRBaseBuilderTy &b, cir::VAArgOp op,
+                                       mlir::Value addr, uint64_t align,
+                                       const mlir::DataLayout &dl) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type resultTy = op.getType();
+  mlir::Value resultAddr = b.createPtrBitcast(addr, resultTy);
+  if (mlir::isa<cir::RecordType>(resultTy)) {
+    SmallPtrSet<mlir::Operation *, 1> noExceptions;
+    if (failed(rewireRecordUses(b, loc, op.getResult(), resultAddr, align, dl,
+                                noExceptions)))
+      return mlir::failure();
+  } else {
+    op.getResult().replaceAllUsesWith(
+        b.createAlignedLoad(loc, resultAddr, align));
+  }
+  op->erase();
+  return mlir::success();
+}
+
 } // namespace
 
 mlir::LogicalResult
@@ -2786,9 +2849,6 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
                                    mlir::OpBuilder &opBuilder) {
   auto op = mlir::cast<cir::VAArgOp>(vaArgOp);
   CIRBaseBuilderTy builder(opBuilder);
-  mlir::Location loc = op.getLoc();
-  mlir::Type resultTy = op.getType();
-  mlir::Value valist = op.getArgList();
 
   // An ignored type travels in no register and no stack slot, so the fetch
   // reads nothing and must leave the cursor unchanged.  The value holds no
@@ -2796,10 +2856,41 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   if (ac.kind == ArgKind::Ignore) {
     builder.setInsertionPoint(op);
     op.getResult().replaceAllUsesWith(
-        createIgnoredValue(builder, loc, resultTy));
+        createIgnoredValue(builder, op.getLoc(), op.getType()));
     op->erase();
     return mlir::success();
   }
+
+  switch (target) {
+  case cir::CallConvTarget::X86_64:
+    return rewriteVAArgX86_64(op, ac, builder);
+  case cir::CallConvTarget::AMDGPU:
+    return rewriteVAArgAMDGPU(op, ac, builder);
+  case cir::CallConvTarget::None:
+  case cir::CallConvTarget::Test:
+  case cir::CallConvTarget::SPIRV:
+  case cir::CallConvTarget::AArch64:
+    break;
+  }
+  return reportVAArgNYI(op, "a type on this target");
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgAMDGPU(
+    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+  assert(ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
+         "AMDGPU reads every variadic argument in place from its slots");
+  builder.setInsertionPoint(op);
+  uint64_t slotSize = ac.directAlign->value();
+  mlir::Value addr = buildSlotAddrAndAdvance(
+      builder, op.getLoc(), op.getArgList(), op.getType(), slotSize, dl);
+  return replaceVAArgResult(builder, op, addr, slotSize, dl);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgX86_64(
+    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type resultTy = op.getType();
+  mlir::Value valist = op.getArgList();
 
   if (ac.kind == ArgKind::Indirect && !ac.byVal)
     return reportVAArgNYI(op, "a non-trivially-copyable type");
@@ -2912,17 +3003,6 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   }
 
   // Every path above places the result at least this well aligned.
-  mlir::Value resultAddr = builder.createPtrBitcast(addr, resultTy);
-  uint64_t resultAlign = argumentAreaAlign(resultTy, module);
-  if (mlir::isa<cir::RecordType>(resultTy)) {
-    SmallPtrSet<mlir::Operation *, 1> noExceptions;
-    if (failed(rewireRecordUses(builder, loc, op.getResult(), resultAddr,
-                                resultAlign, dl, noExceptions)))
-      return mlir::failure();
-  } else {
-    op.getResult().replaceAllUsesWith(
-        builder.createAlignedLoad(loc, resultAddr, resultAlign));
-  }
-  op->erase();
-  return mlir::success();
+  return replaceVAArgResult(builder, op, addr,
+                            argumentAreaAlign(resultTy, module), dl);
 }

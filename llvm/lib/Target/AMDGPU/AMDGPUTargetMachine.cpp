@@ -163,6 +163,7 @@ public:
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addCodeGenPrepare(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
@@ -221,6 +222,8 @@ public:
   WWMRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
       : RegisterRegAllocBase(N, D, C) {}
 };
+
+} // anonymous namespace
 
 static bool onlyAllocateSGPRs(const TargetRegisterInfo &TRI,
                               const MachineRegisterInfo &MRI,
@@ -425,7 +428,6 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
   return Phase == ThinOrFullLTOPhase::FullLTOPreLink ||
          Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 }
-} // anonymous namespace
 
 static cl::opt<bool, true> EnableObjectLinking(
     "amdgpu-enable-object-linking",
