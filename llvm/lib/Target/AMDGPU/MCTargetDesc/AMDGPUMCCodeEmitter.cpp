@@ -71,6 +71,11 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  /// 24-bit PC-relative byte offset for s_prefetch_inst_pc_rel.
+  void getSMEMOffsetPCRelEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
+
   void getSDWASrcEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
@@ -520,6 +525,23 @@ void AMDGPUMCCodeEmitter::getSMEMOffsetEncoding(
   // VI only supports 20-bit unsigned offsets.
   assert(!AMDGPU::isVI(STI) || isUInt<20>(Offset));
   Op = Offset;
+}
+
+void AMDGPUMCCodeEmitter::getSMEMOffsetPCRelEncoding(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isExpr()) {
+    // Field is Inst[55:32], so the fixup starts at byte 4. PC-relative
+    // evaluation then yields label - (PC + 4); adjustFixupValue subtracts the
+    // remaining 4 bytes to reach the next instruction.
+    addFixup(Fixups, 4, MO.getExpr(), AMDGPU::fixup_si_smem_pcrel, true);
+    Op = APInt::getZero(96);
+    return;
+  }
+
+  getSMEMOffsetEncoding(MI, OpNo, Op, Fixups, STI);
 }
 
 void AMDGPUMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,

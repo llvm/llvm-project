@@ -3144,17 +3144,6 @@ X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
                                        : X86::COND_INVALID;
 }
 
-X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
-  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                         : X86::COND_INVALID;
-}
-
-X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
-  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
-             ? X86::getCondFromMI(MI)
-             : X86::COND_INVALID;
-}
-
 int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   // CCMP/CTEST has two conditional operands:
   // - SCC: source conditonal code (same as CMOV)
@@ -4373,6 +4362,12 @@ X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     // subreg_to_reg is coalesced with ordinary copies, such that the bits that
     // were asserted as 0 are now undef.
     if (MI.getOperand(0).isUndef() && MI.getOperand(0).getSubReg())
+      return std::nullopt;
+
+    // With BWI, KMOVW zeroes the upper mask bits, so it is not a copy.
+    if ((MI.getOpcode() == X86::KMOVWkk ||
+         MI.getOpcode() == X86::KMOVWkk_EVEX) &&
+        Subtarget.hasBWI())
       return std::nullopt;
 
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};

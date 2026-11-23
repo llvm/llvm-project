@@ -314,13 +314,14 @@ if (NOT(CLANG_DEFAULT_CXX_STDLIB STREQUAL "" OR
 endif()
 
 set(CLANG_DEFAULT_RTLIB "" CACHE STRING
-  "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)")
+  "Default runtime library to use (\"none\", \"libgcc\" or \"compiler-rt\", empty for platform default)")
 if (NOT(CLANG_DEFAULT_RTLIB STREQUAL "" OR
+        CLANG_DEFAULT_RTLIB STREQUAL "none" OR
         CLANG_DEFAULT_RTLIB STREQUAL "libgcc" OR
         CLANG_DEFAULT_RTLIB STREQUAL "compiler-rt"))
   message(WARNING "Resetting default rtlib to use platform default")
   set(CLANG_DEFAULT_RTLIB "" CACHE STRING
-    "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
+    "Default runtime library to use (\"none\", \"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
 endif()
 
 set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
