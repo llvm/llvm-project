@@ -53,6 +53,8 @@ extern char **environ;
 #elif defined(__MVS__)
 #include "llvm/Support/AutoConvert.h"
 #include <sys/ps.h>
+#elif defined(__HAIKU__)
+#include <image.h>
 #endif
 
 // Both stdio.h and cstdio are included via different paths and
@@ -286,8 +288,20 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
     return exe_path;
 #endif
 #elif defined(__HAIKU__)
+  image_info info;
+  int32 cookie = 0;
+  while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {
+    if (info.type == B_APP_IMAGE) {
+      char real_path[PATH_MAX];
+      if (realpath(info.name, real_path))
+        return std::string(real_path);
+      if (info.name[0] != '\0')
+        return std::string(info.name);
+      break;
+    }
+  }
+  // Fall back to argv[0].
   char exe_path[PATH_MAX];
-  // argv[0] only
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
 #elif defined(__sun__) && defined(__svr4__)
