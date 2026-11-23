@@ -2,8 +2,14 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -O2 -verify-machineinstrs \
 ; RUN:   -greedy-compact-slot-indexes < %s | FileCheck %s
 
-; The spill slots of %t and %b are both live at the reload of %t, so they must
-; not be merged.
+; %t (two vector registers) and %b (one vector register) are both spilled, and
+; %b is spilled while %t is still waiting for its reload, so they must get
+; separate spill slots. What to look for in the checks:
+;   - %t is stored to and reloaded from sp + 48 (vs2r.v, vl2r.v).
+;   - %b is stored to and reloaded from sp + 2 * vlenb + 48 (vs1r.v, vl1r.v).
+;   - The frame reserves 3 * vlenb for the two slots.
+; If the slots are wrongly merged, %b is stored to sp + 48 as well, right
+; before the reload of %t, and @g receives %b instead of field 0 of %t.
 
 declare void @g(<vscale x 1 x i32>)
 declare target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2), ptr, i32, i32)

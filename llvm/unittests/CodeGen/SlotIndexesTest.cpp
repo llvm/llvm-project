@@ -481,8 +481,9 @@ static LiveInterval &addSpillSlot(LiveStacks &LS, const MachineFunction &MF,
   return LI;
 }
 
-/// A boundary left on an erased entry stops following its neighbours once
-/// compaction unlinks the entry.
+/// Erase the instructions at both ends of a spill slot interval, then
+/// canonicalize and compact. The interval must still cover the slot's store
+/// and reload, even after inserting instructions renumbers the reload.
 TEST_F(SlotIndexesTest, LiveStacksCanonicalizeIndexesFollowsRenumbering) {
   ASSERT_TRUE(parseMIR(SpillSlotMIR));
   MachineFunction &MF = getMF("func");
