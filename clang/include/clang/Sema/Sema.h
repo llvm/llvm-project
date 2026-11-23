@@ -14043,14 +14043,6 @@ public:
                   const MultiLevelTemplateArgumentList &TemplateArgs,
                   SourceLocation Loc, DeclarationName Entity);
 
-  /// A form of SubstType intended specifically for instantiating the
-  /// type of a FunctionDecl.  Its purpose is solely to force the
-  /// instantiation of default-argument expressions and to avoid
-  /// instantiating an exception-specification.
-  TypeSourceInfo *SubstFunctionDeclType(
-      TypeSourceInfo *T, const MultiLevelTemplateArgumentList &TemplateArgs,
-      SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
-      Qualifiers ThisTypeQuals, bool EvaluateConstraints = true);
   void SubstExceptionSpec(FunctionDecl *New, const FunctionProtoType *Proto,
                           const MultiLevelTemplateArgumentList &Args);
   bool SubstExceptionSpec(SourceLocation Loc,
@@ -14070,6 +14062,20 @@ public:
   };
   typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
+  /// A form of SubstType intended specifically for instantiating the
+  /// type of a FunctionDecl.  Its purpose is solely to force the
+  /// instantiation of default-argument expressions and to avoid
+  /// instantiating an exception-specification.
+  ///
+  /// If \p ParamAttrs is not null, the late-parsed attributes of the parameters
+  /// of \p Fn are deferred to it, to be instantiated later.
+  TypeSourceInfo *SubstFunctionDeclType(
+      TypeSourceInfo *T, const MultiLevelTemplateArgumentList &TemplateArgs,
+      SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
+      Qualifiers ThisTypeQuals, bool EvaluateConstraints = true,
+      const FunctionDecl *Fn = nullptr,
+      LateInstantiatedAttrVec *ParamAttrs = nullptr);
+
   /// Substitute into a function parameter. If \p LateAttrs is given, its
   /// late-parsed attributes are deferred there, since they may name a
   /// parameter that is not substituted yet; see \ref InstantiateLateAttrs.
@@ -14086,6 +14092,9 @@ public:
   /// substitute (a null entry of \p Params, as from a typedef'd function
   /// type), its type needs to come from \p OldParamTypes instead, which must
   /// then be passed, and \p OutParams gets null for it.
+  ///
+  /// If \p ParamAttrs is not null, the late-parsed attributes of the parameters
+  /// of \p Fn are deferred to it, as for SubstFunctionDeclType.
   bool SubstParmTypes(SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
                       const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                       const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -14093,7 +14102,9 @@ public:
                       SmallVectorImpl<ParmVarDecl *> *OutParams,
                       ExtParameterInfoBuilder &ParamInfos,
                       const QualType *OldParamTypes = nullptr,
-                      bool EvaluateConstraints = true);
+                      bool EvaluateConstraints = true,
+                      const FunctionDecl *Fn = nullptr,
+                      LateInstantiatedAttrVec *ParamAttrs = nullptr);
 
   /// Substitute the given template arguments into the default argument.
   bool SubstDefaultArgument(SourceLocation Loc, ParmVarDecl *Param,
