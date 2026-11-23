@@ -126,7 +126,7 @@ struct __for_each<__serial_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __inplace_merge<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _BidirectionalIterator, class _Comp>
-  optional<__empty>
+  _LIBCPP_HIDE_FROM_ABI optional<__empty>
   operator()(_Policy&&,
              _BidirectionalIterator __first,
              _BidirectionalIterator __middle,

@@ -32,7 +32,6 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "type_algorithms.h"
-#include "runway_sample.h"
 
 EXECUTION_POLICY_SFINAE_TEST(inplace_merge);
 
@@ -150,7 +149,7 @@ struct TestString {
 };
 
 int main(int, char**) {
-  types::for_each(types::random_access_iterator_list<int*>{}, TestIteratorWithPolicies<TestInt>{});
-  types::for_each(types::random_access_iterator_list<std::string*>{}, TestIteratorWithPolicies<TestString>{});
+  types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<TestInt>{});
+  types::for_each(types::forward_iterator_list<std::string*>{}, TestIteratorWithPolicies<TestString>{});
   return 0;
 }
