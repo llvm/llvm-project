@@ -1044,11 +1044,11 @@ public:
     // First, create the global struct's name that would be associated with
     // this entry point's execution mode. We set it to be:
     //   __spv__{SPIR-V module name}_{function name}_execution_mode_info_{mode}
-    ModuleOp module = op->getParentOfType<ModuleOp>();
+    ModuleOp moduleOp = op->getParentOfType<ModuleOp>();
     spirv::ExecutionModeAttr executionModeAttr = op.getExecutionModeAttr();
     std::string moduleName;
-    if (module.getName().has_value())
-      moduleName = "_" + module.getName()->str();
+    if (moduleOp.getName().has_value())
+      moduleName = "_" + moduleOp.getName()->str();
     else
       moduleName = "";
     std::string executionModeInfoName = llvm::formatv(
@@ -1057,7 +1057,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.setInsertionPointToStart(moduleOp.getBody());
 
     // Create a struct type, corresponding to the C struct below.
     // struct {
@@ -3028,8 +3028,8 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
 //===----------------------------------------------------------------------===//
 
 /// Hook for descriptor set and binding number encoding.
-void mlir::encodeBindAttribute(ModuleOp module) {
-  auto spvModules = module.getOps<spirv::ModuleOp>();
+void mlir::encodeBindAttribute(ModuleOp moduleOp) {
+  auto spvModules = moduleOp.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
     spvModule.walk([&](spirv::GlobalVariableOp op) {
       IntegerAttr descriptorSet = op.getDescriptorSetAttr();
