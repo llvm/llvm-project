@@ -28,7 +28,6 @@ public:
   void verify() const final {
     assert(isa<llvm::Argument>(Val) && "Expected Argument!");
   }
-  hash_code hash() const final { return Value::hashHelper(); }
   void printAsOperand(raw_ostream &OS) const;
   LLVM_ABI void dumpOS(raw_ostream &OS) const final;
 #endif
