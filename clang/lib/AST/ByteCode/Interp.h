@@ -3794,6 +3794,14 @@ inline bool InvalidStore(InterpState &S, CodePtr OpPC, const Type *T) {
   return false;
 }
 
+inline bool InvalidAccessIndexAttr(InterpState &S, CodePtr OpPC,
+                                   const ValueDecl *ECD, const Type *EnumTy) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  S.FFDiag(E, diag::note_constexpr_bpf_preserve_ai_enumerator)
+      << ECD << QualType(EnumTy, 0) << E->getSourceRange();
+  return false;
+}
+
 inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
   if (S.inConstantContext()) {
     const SourceRange &ArgRange = S.Current->getRange(OpPC);

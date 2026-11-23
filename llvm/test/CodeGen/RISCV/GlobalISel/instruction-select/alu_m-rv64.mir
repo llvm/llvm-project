@@ -18,10 +18,10 @@ body:             |
     ; RV64I-NEXT: [[DIVW:%[0-9]+]]:gpr = DIVW [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[DIVW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_DIVW %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_DIVW %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -41,10 +41,10 @@ body:             |
     ; RV64I-NEXT: [[DIVUW:%[0-9]+]]:gpr = DIVUW [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[DIVUW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_DIVUW %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_DIVUW %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -64,10 +64,10 @@ body:             |
     ; RV64I-NEXT: [[REMUW:%[0-9]+]]:gpr = REMUW [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[REMUW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_REMUW %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_REMUW %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -87,10 +87,10 @@ body:             |
     ; RV64I-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[MUL]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_MUL %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_MUL %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -110,10 +110,10 @@ body:             |
     ; RV64I-NEXT: [[DIV:%[0-9]+]]:gpr = DIV [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[DIV]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_SDIV %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_SDIV %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -133,10 +133,10 @@ body:             |
     ; RV64I-NEXT: [[REM:%[0-9]+]]:gpr = REM [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[REM]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_SREM %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_SREM %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -156,10 +156,10 @@ body:             |
     ; RV64I-NEXT: [[MULH:%[0-9]+]]:gpr = MULH [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[MULH]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_SMULH %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_SMULH %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -179,10 +179,10 @@ body:             |
     ; RV64I-NEXT: [[DIVU:%[0-9]+]]:gpr = DIVU [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[DIVU]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_UDIV %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_UDIV %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -202,10 +202,10 @@ body:             |
     ; RV64I-NEXT: [[REMU:%[0-9]+]]:gpr = REMU [[COPY]], [[COPY1]]
     ; RV64I-NEXT: $x10 = COPY [[REMU]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_UREM %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_UREM %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -233,18 +233,18 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[MUL]]
     ; RV64I-NEXT: $x11 = COPY [[ADD1]]
     ; RV64I-NEXT: PseudoRET implicit $x10, implicit $x11
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = COPY $x12
-    %3:gprb(s64) = COPY $x13
-    %4:gprb(s64) = G_MUL %0, %2
-    %5:gprb(s64) = G_MUL %1, %2
-    %6:gprb(s64) = G_MUL %0, %3
-    %7:gprb(s64) = G_UMULH %0, %2
-    %8:gprb(s64) = G_ADD %5, %6
-    %9:gprb(s64) = G_ADD %8, %7
-    $x10 = COPY %4(s64)
-    $x11 = COPY %9(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = COPY $x12
+    %3:gprb(i64) = COPY $x13
+    %4:gprb(i64) = G_MUL %0, %2
+    %5:gprb(i64) = G_MUL %1, %2
+    %6:gprb(i64) = G_MUL %0, %3
+    %7:gprb(i64) = G_UMULH %0, %2
+    %8:gprb(i64) = G_ADD %5, %6
+    %9:gprb(i64) = G_ADD %8, %7
+    $x10 = COPY %4(i64)
+    $x11 = COPY %9(i64)
     PseudoRET implicit $x10, implicit $x11
 
 ...

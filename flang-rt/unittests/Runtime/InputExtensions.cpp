@@ -74,6 +74,35 @@ TEST(InputExtensionTests, SeparatorInField_I) {
   }
 }
 
+TEST(InputExtensionTests, SeparatorInField_BOZ) {
+  static const struct {
+    int get;
+    const char *format, *data;
+    std::int64_t expect[3];
+  } test[] = {
+      {2, "(2Z4)", "1F,2E,", {0x1f, 0x2e}},
+      {2, "(2Z4)", "1F ,2E ,", {0x1f, 0x2e}},
+      {2, "(DC,2Z4)", "1F;2E;", {0x1f, 0x2e}},
+      {2, "(DC,2Z4)", "1F ;2E ;", {0x1f, 0x2e}},
+      {2, "(2O4)", "17,7,", {017, 07}},
+      {2, "(2B4)", "101,11,", {5, 3}},
+  };
+  for (std::size_t j{0}; j < sizeof test / sizeof *test; ++j) {
+    auto cookie{IONAME(BeginInternalFormattedInput)(test[j].data,
+        std::strlen(test[j].data), test[j].format,
+        std::strlen(test[j].format))};
+    for (int k{0}; k < test[j].get; ++k) {
+      std::int64_t got;
+      IONAME(InputInteger)(cookie, got);
+      ASSERT_EQ(got, test[j].expect[k])
+          << "expected " << test[j].expect[k] << ", got " << got;
+    }
+    auto status{IONAME(EndIoStatement)(cookie)};
+    ASSERT_EQ(status, 0) << "error status " << status << " on B/O/Z test case "
+                         << j;
+  }
+}
+
 TEST(InputExtensionTests, SeparatorInField_L) {
   static const struct {
     int get;

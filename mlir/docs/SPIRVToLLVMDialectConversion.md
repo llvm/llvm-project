@@ -355,19 +355,25 @@ SPIR-V Dialect op            | LLVM Dialect op
 
 ### Composite ops
 
-Currently, conversion supports rewrite patterns for `spirv.CompositeExtract` and
-`spirv.CompositeInsert`. We distinguish two cases for these operations: when the
-composite object is a vector, and when the composite object is of a non-vector
-type (*i.e.* struct, array or runtime array).
+Currently, conversion supports rewrite patterns for `spirv.CompositeConstruct`,
+`spirv.CompositeExtract` and `spirv.CompositeInsert`. We distinguish two cases
+for these operations: when the composite object is a vector, and when the
+composite object is of a non-vector type (*i.e.* struct, array or runtime
+array).
 
 Composite type | SPIR-V Dialect op      | LLVM Dialect op
 :------------: | :--------------------: | :-------------------:
+vector         | `spirv.CompositeConstruct` | `llvm.insertelement`
 vector         | `spirv.CompositeExtract` | `llvm.extractelement`
 vector         | `spirv.CompositeInsert`  | `llvm.insertelement`
+non-vector     | `spirv.CompositeConstruct` | `llvm.insertvalue`
 non-vector     | `spirv.CompositeExtract` | `llvm.extractvalue`
 non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 
 `spirv.CopyObject` is replaced with its converted operand.
+
+`spirv.VectorExtractDynamic` and `spirv.VectorInsertDynamic` map to
+`llvm.extractelement` and `llvm.insertelement`.
 
 ### `spirv.EntryPoint` and `spirv.ExecutionMode`
 
@@ -423,6 +429,13 @@ modelled with `xor` operation with a mask with all bits set.
                                   %mask = llvm.mlir.constant(-1 : i1) : i1
 %0 = spirv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : i1
 ```
+
+`spirv.Any` and `spirv.All` reduce a vector of `i1` to a scalar `i1`:
+
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :---------------------------:
+`spirv.Any`       | `llvm.intr.vector.reduce.or`
+`spirv.All`       | `llvm.intr.vector.reduce.and`
 
 The floating-point classification ops are mapped to the `llvm.intr.is.fpclass`
 intrinsic with the corresponding `FPClassTest` mask. The intrinsic operates per
@@ -594,9 +607,7 @@ in a pointer to it, which can be used with `spirv.Load` and `spirv.Store`. It is
 also a function-level variable.
 
 `spirv.Variable` is modelled as `llvm.alloca` op. If initialized, an additional
-store instruction is used. Note that there is no initialization for arrays and
-structs since constants of these types are not supported in LLVM dialect (TODO).
-Also, at the moment initialization is only possible via `spirv.Constant`.
+store instruction is used. Initialization from a spec constant is not supported.
 
 ```mlir
 // Conversion of VariableOp without initialization
@@ -653,8 +664,10 @@ bitwidth. This leads to the following conversions:
 
 ### `spirv.Constant`
 
-At the moment `spirv.Constant` conversion supports scalar and vector constants
-**only**.
+`spirv.Constant` conversion supports scalar, vector, array and struct constants.
+`#spirv.null` is only supported as a constituent. Arrays of scalars map to a
+single `llvm.mlir.constant`, other arrays and structs are built with
+`llvm.insertvalue`.
 
 #### Mapping
 
@@ -692,7 +705,6 @@ There is no support of the following ops:
 
 As well as:
 
-*   spirv.CompositeConstruct
 *   spirv.ControlBarrier
 *   spirv.FMod
 *   spirv.GL.Acos
@@ -703,12 +715,10 @@ As well as:
 *   spirv.GL.SAbs
 *   spirv.GL.Sinh
 *   spirv.GL.SSign
-*   spirv.MemoryBarrier
 *   spirv.mlir.referenceof
 *   spirv.SMod
 *   spirv.SpecConstant
 *   spirv.Unreachable
-*   spirv.VectorExtractDynamic
 
 ## Control flow conversion
 

@@ -132,16 +132,33 @@ class MIRVocabulary {
   // We return a zero vector in such cases.
   Embedding ZeroEmbedding;
 
-  // We have specialized MO_Register handling in the Register operand section,
-  // so we don't include it here. Also, no MO_DbgInstrRef for now.
-  static constexpr StringLiteral CommonOperandNames[] = {
-      "Immediate",       "CImmediate",        "FPImmediate",  "MBB",
-      "FrameIndex",      "ConstantPoolIndex", "TargetIndex",  "JumpTableIndex",
-      "ExternalSymbol",  "GlobalAddress",     "BlockAddress", "RegisterMask",
-      "RegisterLiveOut", "Metadata",          "MCSymbol",     "CFIIndex",
-      "IntrinsicID",     "Predicate",         "ShuffleMask",  "LaneMask"};
-  static_assert(std::size(CommonOperandNames) == MachineOperand::MO_Last - 1 &&
-                "Common operand names size changed, update accordingly");
+  // MO_Register is handled by the register sections. Operand types without an
+  // entry, such as MO_DbgInstrRef, get a zero embedding.
+  struct CommonOperandEntry {
+    MachineOperand::MachineOperandType Type;
+    StringLiteral Name;
+  };
+  static constexpr CommonOperandEntry CommonOperands[] = {
+      {MachineOperand::MO_Immediate, "Immediate"},
+      {MachineOperand::MO_CImmediate, "CImmediate"},
+      {MachineOperand::MO_FPImmediate, "FPImmediate"},
+      {MachineOperand::MO_MachineBasicBlock, "MBB"},
+      {MachineOperand::MO_FrameIndex, "FrameIndex"},
+      {MachineOperand::MO_ConstantPoolIndex, "ConstantPoolIndex"},
+      {MachineOperand::MO_TargetIndex, "TargetIndex"},
+      {MachineOperand::MO_JumpTableIndex, "JumpTableIndex"},
+      {MachineOperand::MO_ExternalSymbol, "ExternalSymbol"},
+      {MachineOperand::MO_GlobalAddress, "GlobalAddress"},
+      {MachineOperand::MO_BlockAddress, "BlockAddress"},
+      {MachineOperand::MO_RegisterMask, "RegisterMask"},
+      {MachineOperand::MO_RegisterLiveOut, "RegisterLiveOut"},
+      {MachineOperand::MO_Metadata, "Metadata"},
+      {MachineOperand::MO_MCSymbol, "MCSymbol"},
+      {MachineOperand::MO_CFIIndex, "CFIIndex"},
+      {MachineOperand::MO_IntrinsicID, "IntrinsicID"},
+      {MachineOperand::MO_Predicate, "Predicate"},
+      {MachineOperand::MO_ShuffleMask, "ShuffleMask"},
+      {MachineOperand::MO_LaneMask, "LaneMask"}};
 
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
@@ -155,8 +172,9 @@ class MIRVocabulary {
   /// Get canonical index for a machine opcode
   LLVM_ABI unsigned getCanonicalOpcodeIndex(unsigned Opcode) const;
 
-  /// Get index for a common (non-register) machine operand
-  LLVM_ABI unsigned
+  /// Get index for a common (non-register) machine operand. Returns
+  /// std::nullopt if OperandType has no vocabulary entry.
+  LLVM_ABI std::optional<unsigned>
   getCommonOperandIndex(MachineOperand::MachineOperandType OperandType) const;
 
   /// Get index for a register machine operand. Returns std::nullopt if Reg
@@ -168,8 +186,10 @@ class MIRVocabulary {
   // Accessors for operand types
   const Embedding &
   operator[](MachineOperand::MachineOperandType OperandType) const {
-    unsigned LocalIndex = getCommonOperandIndex(OperandType);
-    return Storage[static_cast<unsigned>(Section::CommonOperands)][LocalIndex];
+    std::optional<unsigned> LocalIndex = getCommonOperandIndex(OperandType);
+    if (!LocalIndex)
+      return ZeroEmbedding;
+    return Storage[static_cast<unsigned>(Section::CommonOperands)][*LocalIndex];
   }
 
   const Embedding &getRegisterEmbedding(Register Reg,
@@ -201,7 +221,9 @@ class MIRVocabulary {
   /// This is used for triplet generation
   unsigned getEntityIDForCommonOperand(
       MachineOperand::MachineOperandType OperandType) const {
-    return Layout.CommonOperandBase + getCommonOperandIndex(OperandType);
+    std::optional<unsigned> LocalIndex = getCommonOperandIndex(OperandType);
+    assert(LocalIndex && "Operand type has no vocabulary entry");
+    return Layout.CommonOperandBase + *LocalIndex;
   }
 
   /// Get entity ID (flat index) for a register

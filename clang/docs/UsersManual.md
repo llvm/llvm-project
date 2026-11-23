@@ -3731,11 +3731,16 @@ it reads from `pathname/default.profdata`.
 
 :::{option} -fprofile-update[=<method>]
 
-Unless `-fsanitize=thread` is specified, the default is `single`, which
-uses non-atomic increments. The counters can be inaccurate under thread
-contention. `atomic` uses atomic increments which is accurate but has
-overhead. `prefer-atomic` will be transformed to `atomic` when supported
-by the target, or `single` otherwise.
+The default is `single`, which uses non-atomic increments. The counters can
+be inaccurate under thread contention. `atomic` uses atomic increments which
+is accurate but has overhead. `prefer-atomic` will be transformed to `atomic`
+when supported by the target, or `single` otherwise.
+
+When `-fsanitize=thread` is used with `-fprofile-instr-generate`,
+`-fprofile-generate` or `-fcs-profile-generate`, counter updates in
+functions instrumented by ThreadSanitizer default to `atomic`. Explicitly
+specifying `-fprofile-update=single` overrides this, and Clang emits a
+warning as non-atomic counter updates may be reported as data races.
 :::
 
 :::{option} -fprofile-continuous
@@ -5447,7 +5452,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   /showIncludes:user      Like /showIncludes but omit system headers
 >   /showIncludes           Print info about included files to stderr
 >   /source-charset:<value> Set source encoding, supports only UTF-8
->   /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++26preview,c++latest,c11,c17)
+>   /std:<value>            Set language version (c++14,c++17,c++20,c++23,c++23preview,c++26preview,c++latest,c11,c17,clatest)
 >   /TC                     Treat all source files as C
 >   /Tc <file>              Treat <file> as C source file
 >   /TP                     Treat all source files as C++

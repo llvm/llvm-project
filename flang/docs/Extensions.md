@@ -379,6 +379,11 @@ end
   parameters (C1538) and, unless all are assumed-rank, the same rank
   (C1539), so the result doesn't depend on the condition. Flang accepts
   `kind(a + b)` in a constant expression on the same terms.
+  `IS_CONTIGUOUS` of a conditional argument can appear in a constant
+  expression too, when every consequent-arg is known to be contiguous or
+  every one is known not to be, so that the result can't depend on the
+  condition. In all of these cases, a condition can be any logical
+  expression, including a function reference, and it isn't evaluated.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
@@ -548,6 +553,12 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
   fixed-width numeric input field terminates the field rather than
   signaling an invalid character error.
+* The `B`, `O`, and `Z` edit descriptors may be used with `CHARACTER`
+  items in formatted input and output.  The item's storage is edited as
+  an unsigned integer of `LEN` times the character kind bytes in the
+  host's byte order; on a little-endian host, `'AB'` is written by `Z4`
+  as `4241`.  F2023 13.7.2.4 p1 permits these edit descriptors only for
+  integer, real, complex, enum, and enumeration type items.
 * Arguments to the intrinsic functions `MAX` and `MIN` are converted
   when necessary to the type of the result.
   An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after

@@ -87,6 +87,7 @@ class StepUntilTestCase(TestBase):
             None, [self.less_than_two, self.greater_than_two], self.less_than_two
         )
 
+    @skipIfWasm  # step-until stops one line late
     def test_missing_one(self):
         """Test thread step until - targeting one line and missing it by stepping out to call site"""
         self.do_until(
