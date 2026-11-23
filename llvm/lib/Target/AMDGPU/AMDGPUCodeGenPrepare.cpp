@@ -1550,6 +1550,10 @@ bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) const {
   if (!match(Mul, m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
     return false;
 
+    // The condition must zero-test both fmul operands:
+  //   select (A == 0 || B == 0), +0.0, X * Y
+  //   select (A != 0 && B != 0), X * Y, +0.0
+  // X * X only needs one compare, so B = A.
   FCmpInst::Predicate ZeroCmpPred =
       Inverted ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_OEQ;
   Value *A, *B;
