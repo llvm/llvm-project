@@ -665,6 +665,8 @@ bool MipsInstrInfo::HasFPUDelaySlot(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case Mips::MTC1:
   case Mips::MFC1:
+  case Mips::CTC1:
+  case Mips::CFC1:
   case Mips::MTC1_D64:
   case Mips::MFC1_D64:
   case Mips::DMTC1:

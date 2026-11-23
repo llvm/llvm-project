@@ -614,8 +614,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   SmallVector<VPUser *> Defs = {RecipeWithoutMask};
   if (RecipeWithoutMask->getScalarType()->isStructTy())
     Defs = to_vector(RecipeWithoutMask->users());
-  for (VPUser *U : Defs) {
-    auto *Def = cast<VPReplicateRecipe>(U);
+  for (VPReplicateRecipe *Def : map_range(Defs, CastTo<VPReplicateRecipe>)) {
     assert((Def == RecipeWithoutMask ||
             Def->getOpcode() == Instruction::ExtractValue) &&
            "only extracts can use a predicated struct");
@@ -1159,23 +1158,21 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
 
   // Then, optimize exit block users.
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-    for (VPRecipeBase &R : ExitVPBB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&R);
-
+    for (VPIRPhi &ExitIRI : map_range(ExitVPBB->phis(), CastTo<VPIRPhi>)) {
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
         if (PredVPBB == MiddleVPBB) {
-          Escape = optimizeLatchExitInductionUser(
-              Plan, ExitIRI->getOperand(Idx), EndValues, PSE);
+          Escape = optimizeLatchExitInductionUser(Plan, ExitIRI.getOperand(Idx),
+                                                  EndValues, PSE);
           if (!Escape)
             Escape = optimizeLatchExitIVUserViaSCEV(
-                Plan, ExitIRI->getOperand(Idx), PSE, ResumeTC, L);
+                Plan, ExitIRI.getOperand(Idx), PSE, ResumeTC, L);
         } else {
-          Escape = optimizeEarlyExitInductionUser(
-              Plan, ExitIRI->getOperand(Idx), PSE);
+          Escape = optimizeEarlyExitInductionUser(Plan, ExitIRI.getOperand(Idx),
+                                                  PSE);
         }
         if (Escape)
-          ExitIRI->setOperand(Idx, Escape);
+          ExitIRI.setOperand(Idx, Escape);
       }
     }
   }
@@ -1600,8 +1597,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
                     U->getOperand(1) != Cmp && U->getOperand(2) != Cmp);
           })) {
         Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
-        for (VPUser *U : to_vector(Cmp->users())) {
-          auto *R = cast<VPSingleDefRecipe>(U);
+        for (VPSingleDefRecipe *R :
+             to_vector(map_range(Cmp->users(), CastTo<VPSingleDefRecipe>))) {
           if (match(R, m_Select(m_Specific(Cmp), m_VPValue(X), m_VPValue(Y)))) {
             // select (cmp pred), X, Y -> select (cmp inv_pred), Y, X
             R->setOperand(1, Y);
@@ -2981,12 +2978,9 @@ void VPlanTransforms::createInterleaveGroups(
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
            Plan.getVectorLoopRegion()->getEntryBasicBlock())))
-    for (VPRecipeBase &R : make_filter_range(*VPBB, [](VPRecipeBase &R) {
-           return isa<VPWidenMemoryRecipe>(&R);
-         })) {
-      auto *MemR = cast<VPWidenMemoryRecipe>(&R);
+    for (VPWidenMemoryRecipe *MemR :
+         make_isa_range<VPWidenMemoryRecipe>(make_pointer_range(*VPBB)))
       IRMemberToRecipe[&MemR->getIngredient()] = MemR;
-    }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
@@ -3377,8 +3371,9 @@ static bool handleUncountableExitsWithSideEffects(
     if (Exit.EarlyExitingVPBB == LatchVPBB)
       continue;
 
-    for (VPRecipeBase &R : Exit.EarlyExitVPBB->phis())
-      cast<VPIRPhi>(&R)->removeIncomingValueFor(Exit.EarlyExitingVPBB);
+    for (VPIRPhi &ExitIRI :
+         map_range(Exit.EarlyExitVPBB->phis(), CastTo<VPIRPhi>))
+      ExitIRI.removeIncomingValueFor(Exit.EarlyExitingVPBB);
     Exit.EarlyExitingVPBB->getTerminator()->eraseFromParent();
     VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
   }
@@ -3504,14 +3499,19 @@ static bool handleUncountableExitsWithSideEffects(
   // the FirstActiveLane.
   assert(match(MiddleVPBB->getTerminator(), m_BranchOnCond()) &&
          "Expected BranchOnCond terminator for MiddleVPBB");
+  // The trip count may be wider than the IV; compute the exit IV in its type,
+  // as it may be one past the largest IV value.
   VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
   Type *IVScalarTy = IV->getScalarType();
+  Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue *Zero = Plan.getZero(IVScalarTy);
   VPValue *FirstActive = MiddleBuilder.createScalarZExtOrTrunc(
-      MiddleBuilder.createFirstActiveLane(Cond), IVScalarTy, DebugLoc());
+      MiddleBuilder.createFirstActiveLane(Cond), TCTy, DebugLoc());
   VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
                                                  {Zero, IV}, DebugLoc());
-  VPValue *ExitIV = MiddleBuilder.createAdd(ScalarIV, FirstActive);
+  VPValue *ExitIV = MiddleBuilder.createAdd(
+      MiddleBuilder.createScalarZExtOrTrunc(ScalarIV, TCTy, DebugLoc()),
+      FirstActive);
   VPValue *FullTC =
       MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
   MiddleVPBB->getTerminator()->setOperand(0, FullTC);
@@ -3534,7 +3534,8 @@ static bool handleUncountableExitsWithSideEffects(
       match(ContinueIV->getOperand(0),
             m_VPInstruction<VPInstruction::ExitingIVValue>(m_Specific(IV))) &&
       "Continuing from different IV");
-  ContinueIV->setOperand(0, ExitIV);
+  ContinueIV->setOperand(
+      0, MiddleBuilder.createScalarZExtOrTrunc(ExitIV, IVScalarTy, DebugLoc()));
   return true;
 }
 
@@ -3594,9 +3595,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     // only reached when leaving the vector loop via the latch. On early exits,
     // it is computed from the accumulators of the exiting iteration.
     // TODO: Support more reductions used on early exits.
-    for (VPRecipeBase &R : ExitBlock->phis()) {
-      VPValue *ExitV =
-          cast<VPIRPhi>(&R)->getIncomingValueForBlock(EarlyExitingVPBB);
+    for (VPIRPhi &ExitIRI : map_range(ExitBlock->phis(), CastTo<VPIRPhi>)) {
+      VPValue *ExitV = ExitIRI.getIncomingValueForBlock(EarlyExitingVPBB);
       for (VPReductionPHIRecipe &PhiR :
            make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
         if (ExitV != PhiR.getBackedgeValue())
@@ -3772,10 +3772,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     // EarlyExitVPBB and adding a new edge between VectorEarlyExitVPBB and
     // EarlyExitVPBB. The extracts at FirstActiveLane are now the incoming
     // values from VectorEarlyExitVPBB.
-    for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&R);
-      VPValue *IncomingVal =
-          ExitIRI->getIncomingValueForBlock(EarlyExitingVPBB);
+    for (VPIRPhi &ExitIRI : map_range(EarlyExitVPBB->phis(), CastTo<VPIRPhi>)) {
+      VPValue *IncomingVal = ExitIRI.getIncomingValueForBlock(EarlyExitingVPBB);
       VPValue *NewIncoming = IncomingVal;
       if (!isa<VPIRValue>(IncomingVal)) {
         VPBuilder EarlyExitBuilder(VectorEarlyExitVPBB);
@@ -3783,8 +3781,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
             VPInstruction::ExtractLane, {FirstActiveLane, IncomingVal},
             DebugLoc::getUnknown(), "early.exit.value");
       }
-      ExitIRI->removeIncomingValueFor(EarlyExitingVPBB);
-      ExitIRI->addIncoming(NewIncoming);
+      ExitIRI.removeIncomingValueFor(EarlyExitingVPBB);
+      ExitIRI.addIncoming(NewIncoming);
     }
 
     EarlyExitingVPBB->getTerminator()->eraseFromParent();
@@ -4721,15 +4719,13 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
       continue;
     }
 
-    // For now, we only support full interleave groups storing load interleave
-    // groups.
-    if (all_of(enumerate(InterleaveR->getStoredValues()), [](auto Op) {
-          VPRecipeBase *DefR = Op.value()->getDefiningRecipe();
-          if (!DefR)
-            return false;
-          auto *IR = dyn_cast<VPInterleaveRecipe>(DefR);
-          return IR && IR->getInterleaveGroup()->isFull() &&
-                 IR->getVPValue(Op.index()) == Op.value();
+    // For now, we only support full interleave groups storing a single full
+    // load interleave group in order.
+    auto *LoadGroup =
+        dyn_cast_or_null<VPInterleaveRecipe>(Member0->getDefiningRecipe());
+    if (LoadGroup && LoadGroup->getInterleaveGroup()->isFull() &&
+        all_of(enumerate(InterleaveR->getStoredValues()), [LoadGroup](auto Op) {
+          return LoadGroup->getVPValue(Op.index()) == Op.value();
         })) {
       StoreGroups.push_back(InterleaveR);
       continue;
@@ -5397,6 +5393,10 @@ static void transformToPartialReduction(const PartialReductionDescriptor &Link,
                                         VPReductionPHIRecipe *RdxPhi) {
   VPWidenRecipe *WidenRecipe = Link.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
+  assert(is_contained({Instruction::Add, Instruction::Sub, Instruction::FAdd,
+                       Instruction::FSub},
+                      WidenRecipe->getOpcode()) &&
+         "Partial reductions can only be formed from add and sub links");
 
   VPValue *Accumulator = WidenRecipe->getOperand(Link.AccumulatorOpIdx);
   auto *ExtendedOp = cast<VPSingleDefRecipe>(
@@ -5670,8 +5670,16 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   VPValue *ExitValue = RdxResult->getOperand(0);
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
-  SmallVector<PartialReductionDescriptor> Chain;
+  // Each link is lowered to a partial add reduction, so only recurrences made
+  // up of add and sub links can be handled.
   RecurKind RK = RedPhiR->getRecurrenceKind();
+  if (!is_contained({RecurKind::Add, RecurKind::Sub,
+                     RecurKind::AddChainWithSubs, RecurKind::FAdd,
+                     RecurKind::FSub, RecurKind::FAddChainWithSubs},
+                    RK))
+    return std::nullopt;
+
+  SmallVector<PartialReductionDescriptor> Chain;
   Type *PhiType = RedPhiR->getScalarType();
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
 
@@ -5693,7 +5701,7 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
     }
 
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
-    if (!UpdateR || !Instruction::isBinaryOp(UpdateR->getOpcode()))
+    if (!UpdateR)
       return std::nullopt;
 
     VPValue *Op = UpdateR->getOperand(1);

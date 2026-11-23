@@ -60,6 +60,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   const BPFSubtarget *Subtarget = getTM().getSubtargetImpl();
 
@@ -129,8 +131,6 @@ void BPFCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void BPFCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(BPFAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "allow-partial",

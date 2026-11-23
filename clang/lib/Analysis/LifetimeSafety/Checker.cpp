@@ -434,14 +434,13 @@ public:
               SemaHelper->reportInvalidatedGlobal(
                   InvalidatedPVD, GlobalEscape->getGlobal(),
                   Warning.InvalidatedByExpr, ExprChain);
-          } else if (isa<ReturnEscapeFact>(OEF)) {
-            // FIXME: Diagnose invalidated return escapes separately.
-          } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF)) {
-            // A loan still held by the object at the method's exit was
-            // invalidated.
-            llvm::SmallVector<const Expr *> ExprChain = getExprChain(
-                LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
-            UseSite Use = UseSite::at(ThisEscape->getLoc());
+          } else if (isa<ReturnEscapeFact, ThisEscapeFact>(OEF)) {
+            // An invalidated loan is returned, or is still held by the object
+            // at the method's exit.
+            const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF);
+            UseSite Use =
+                RetEscape ? UseSite::fromExpr(*RetEscape->getReturnExpr())
+                          : UseSite::at(cast<ThisEscapeFact>(OEF)->getLoc());
             if (IssueExpr)
               SemaHelper->reportUseAfterInvalidation(
                   IssueExpr, Use, Warning.InvalidatedByExpr, ExprChain);

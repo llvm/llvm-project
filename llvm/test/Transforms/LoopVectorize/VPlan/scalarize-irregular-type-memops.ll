@@ -22,7 +22,7 @@ define void @scalarize_irregular_types(ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:      EMIT-SCALAR ir<%load1> = load ir<%gep1>
 ; CHECK-NEXT:      EMIT ir<%gep2> = getelementptr ir<%p2>, ir<%iv>
 ; CHECK-NEXT:      REPLICATE ir<%load2> = load ir<%gep2>
-; CHECK-NEXT:      EMIT-SCALAR ir<%load2.zext> = zext ir<%load2> to i64
+; CHECK-NEXT:      EMIT ir<%load2.zext> = zext ir<%load2> to i64
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%load1>, ir<%load2.zext>
 ; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep1>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
@@ -44,7 +44,7 @@ define void @scalarize_irregular_types(ptr noalias %p1, ptr noalias %p2) {
 ; ALL-MEMOP-WIDEN-NEXT:      WIDEN ir<%load1> = load vp<[[VP4]]>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep2> = getelementptr ir<%p2>, ir<%iv>
 ; ALL-MEMOP-WIDEN-NEXT:      REPLICATE ir<%load2> = load ir<%gep2>
-; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%load2.zext> = zext ir<%load2> to i64
+; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%load2.zext> = zext ir<%load2> to i64
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%add> = add ir<%load1>, ir<%load2.zext>
 ; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%gep1>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      WIDEN store vp<[[VP5]]>, ir<%add>
