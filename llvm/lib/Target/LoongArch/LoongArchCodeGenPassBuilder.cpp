@@ -108,9 +108,8 @@ void LoongArchCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
 Error LoongArchCodeGenPassBuilder::addRegAssignAndRewriteFast(
     PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None &&
-      EnableLoongArchDeadRegisterElimination) {
-    // TODO(boomanaiden154): Add LoongArchDeadRegisterDefinitionsPass
-  }
+      EnableLoongArchDeadRegisterElimination)
+    addMachineFunctionPass(LoongArchDeadRegisterDefinitionsPass(), PMW);
 
   return Base::addRegAssignAndRewriteFast(PMW);
 }
