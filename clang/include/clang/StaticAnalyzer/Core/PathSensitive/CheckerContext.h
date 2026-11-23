@@ -445,7 +445,7 @@ private:
 
     Frontier.erase(P);
     ExplodedNode *N = Eng.getCoreEngine().makeNode(
-        LocalLoc, State ? State : P->getState(), P, MarkAsSink);
+        LocalLoc, State ? State.get() : P->getState().get(), P, MarkAsSink);
 
     Frontier.insert(N);
     return N;
