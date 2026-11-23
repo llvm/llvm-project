@@ -157,10 +157,8 @@ define <4 x i32> @demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2, i32 %v3, <4 
 ; CHECK-SAME: i32 [[V0:%.*]], i32 [[V1:%.*]], i32 [[V2:%.*]], i32 [[V3:%.*]], <4 x i32> [[MASK:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = insertelement <4 x i32> poison, i32 [[V0]], i64 0
 ; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> [[A]], i32 [[V1]], i64 1
-; CHECK-NEXT:    [[C:%.*]] = insertelement <4 x i32> [[B]], i32 [[V2]], i64 2
-; CHECK-NEXT:    [[D:%.*]] = insertelement <4 x i32> [[C]], i32 [[V3]], i64 3
 ; CHECK-NEXT:    [[SM:%.*]] = and <4 x i32> [[MASK]], splat (i32 1)
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[D]], <4 x i32> [[SM]])
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[B]], <4 x i32> [[SM]])
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %a = insertelement <4 x i32> poison, i32 %v0, i64 0
@@ -176,9 +174,7 @@ define <4 x i32> @demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2, i32 %v3, <4 
 define <4 x i32> @demanded_src_lo_unused(i32 %v0, i32 %v1, i32 %v2, i32 %v3, <4 x i32> %mask) {
 ; CHECK-LABEL: define <4 x i32> @demanded_src_lo_unused(
 ; CHECK-SAME: i32 [[V0:%.*]], i32 [[V1:%.*]], i32 [[V2:%.*]], i32 [[V3:%.*]], <4 x i32> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = insertelement <4 x i32> poison, i32 [[V0]], i64 0
-; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> [[A]], i32 [[V1]], i64 1
-; CHECK-NEXT:    [[C:%.*]] = insertelement <4 x i32> [[B]], i32 [[V2]], i64 2
+; CHECK-NEXT:    [[C:%.*]] = insertelement <4 x i32> poison, i32 [[V2]], i64 2
 ; CHECK-NEXT:    [[D:%.*]] = insertelement <4 x i32> [[C]], i32 [[V3]], i64 3
 ; CHECK-NEXT:    [[SM:%.*]] = or <4 x i32> [[MASK]], splat (i32 2)
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[D]], <4 x i32> [[SM]])
@@ -217,10 +213,7 @@ define i32 @demanded_mask(<4 x i32> %v, i32 %mask0, i32 %mask1, i32 %mask2, i32 
 ; CHECK-LABEL: define i32 @demanded_mask(
 ; CHECK-SAME: <4 x i32> [[V:%.*]], i32 [[MASK0:%.*]], i32 [[MASK1:%.*]], i32 [[MASK2:%.*]], i32 [[MASK3:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = insertelement <4 x i32> poison, i32 [[MASK0]], i64 0
-; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> [[A]], i32 [[MASK1]], i64 1
-; CHECK-NEXT:    [[C:%.*]] = insertelement <4 x i32> [[B]], i32 [[MASK2]], i64 2
-; CHECK-NEXT:    [[D:%.*]] = insertelement <4 x i32> [[C]], i32 [[MASK3]], i64 3
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[V]], <4 x i32> [[D]])
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[V]], <4 x i32> [[A]])
 ; CHECK-NEXT:    [[RES0:%.*]] = extractelement <4 x i32> [[RES]], i64 0
 ; CHECK-NEXT:    ret i32 [[RES0]]
 ;
