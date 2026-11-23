@@ -43,7 +43,6 @@ define void @foo() {
 }
 )IR",
                           "foo");
-  llvm::Function *LLVMF = &*LLVMM->getFunction("foo");
   // A pass that deletes an instruction and returns false.
   class DelInstrRetFalsePass final : public FunctionPass {
   public:
@@ -143,8 +142,6 @@ define void @foo() {
   };
 
   Analyses A;
-  auto &BB = *F->begin();
-  Instruction *AddI = &BB.front();
 
   // Build a region containing the add instruction.
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
