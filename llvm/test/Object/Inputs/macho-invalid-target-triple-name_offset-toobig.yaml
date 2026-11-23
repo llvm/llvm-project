@@ -1,0 +1,17 @@
+## LC_TARGET_TRIPLE whose triple.offset extends past the end of the load
+## command (offset >= cmdsize).
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x00000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      12
+  flags:           0x00000000
+LoadCommands:
+  - cmd:             LC_TARGET_TRIPLE
+    cmdsize:         12
+    triple:          32
+...

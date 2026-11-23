@@ -91,21 +91,21 @@ end module
 !integer(2),kind::k2
 !integer(4),kind::k4
 !integer(8),kind::k8
-!integer(int(int(k1,kind=1),kind=8))::j1
-!integer(int(int(k2,kind=2),kind=8))::j2
-!integer(int(int(k4,kind=4),kind=8))::j4
+!integer(__builtin_int(__builtin_int(k1,kind=1),kind=8))::j1
+!integer(__builtin_int(__builtin_int(k2,kind=2),kind=8))::j2
+!integer(__builtin_int(__builtin_int(k4,kind=4),kind=8))::j4
 !integer(k8)::j8
 !end type
 !type::defaulted(n1,n2,n4,n8)
 !integer(1),kind::n1=1_4
-!integer(2),kind::n2=2_4*int(int(n1,kind=1),kind=4)
-!integer(4),kind::n4=2_4*int(int(n2,kind=2),kind=4)
-!integer(8),kind::n8=12_4-int(n4,kind=4)
-!type(capture(k1=int(n1,kind=1),k2=int(n2,kind=2),k4=int(n4,kind=4),k8=n8))::cap
+!integer(2),kind::n2=2_4*__builtin_int(__builtin_int(n1,kind=1),kind=4)
+!integer(4),kind::n4=2_4*__builtin_int(__builtin_int(n2,kind=2),kind=4)
+!integer(8),kind::n8=12_4-__builtin_int(n4,kind=4)
+!type(capture(k1=__builtin_int(n1,kind=1),k2=__builtin_int(n2,kind=2),k4=__builtin_int(n4,kind=4),k8=n8))::cap
 !end type
 !type,extends(defaulted)::extension(k5)
 !integer(4),kind::k5=4_4
-!integer(int(int(k5,kind=4),kind=8))::j5
+!integer(__builtin_int(__builtin_int(k5,kind=4),kind=8))::j5
 !end type
 !type(capture(k1=1_1,k2=1_2,k4=1_4,k8=1_8))::x1111
 !integer(1)::res01_1

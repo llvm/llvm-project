@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
-# RUN:   -stop-after=prologepilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prolog-epilog \
+# RUN:   -stop-after=prolog-epilog | FileCheck %s
 
 # Check that an unpaired register that is even isn't paired with lr.
 
@@ -25,9 +25,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -46,8 +44,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  4
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []

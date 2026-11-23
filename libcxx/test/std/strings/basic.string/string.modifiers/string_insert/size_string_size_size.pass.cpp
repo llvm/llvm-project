@@ -25,7 +25,6 @@ template <class S>
 TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, S str, typename S::size_type pos2, typename S::size_type n, S expected) {
   const typename S::size_type old_size = s.size();
-  S s0                                 = s;
   if (pos1 <= old_size && pos2 <= str.size()) {
     s.insert(pos1, str, pos2, n);
     LIBCPP_ASSERT(s.__invariants());
@@ -34,6 +33,7 @@ test(S s, typename S::size_type pos1, S str, typename S::size_type pos2, typenam
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.insert(pos1, str, pos2, n);
       assert(false);
@@ -48,7 +48,6 @@ test(S s, typename S::size_type pos1, S str, typename S::size_type pos2, typenam
 template <class S>
 TEST_CONSTEXPR_CXX20 void test_npos(S s, typename S::size_type pos1, S str, typename S::size_type pos2, S expected) {
   const typename S::size_type old_size = s.size();
-  S s0                                 = s;
   if (pos1 <= old_size && pos2 <= str.size()) {
     s.insert(pos1, str, pos2);
     LIBCPP_ASSERT(s.__invariants());
@@ -56,6 +55,7 @@ TEST_CONSTEXPR_CXX20 void test_npos(S s, typename S::size_type pos1, S str, type
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.insert(pos1, str, pos2);
       assert(false);

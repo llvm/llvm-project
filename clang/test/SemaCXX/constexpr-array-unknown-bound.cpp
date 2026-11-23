@@ -26,3 +26,9 @@ void g(int i) {  // expected-note 2{{declared here}}
                      expected-note {{function parameter 'i' with unknown value cannot be used in a constant expression}}
   constexpr int m = ((void)arr2[2], 0); // expected-error {{constant expression}}
 }
+
+namespace GH44212 {
+  int* f() {
+    return *(int(*)[])0;
+  }
+}

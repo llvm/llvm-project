@@ -92,7 +92,7 @@ T test_template(T *arr, N num) {
 template <int LEN>
 int test_warn() {
   int ind2 = 0;
-// expected-warning@+1 {{zero linear step (ind2 should probably be const)}}
+// expected-warning@+1 {{zero linear step ('ind2' should probably be const)}}
 #pragma omp target parallel for linear(ind2 : LEN)
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
     ++k;
 #ifdef OMP52
 #pragma omp target parallel for linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
-#else  
+#else
 #pragma omp target parallel for linear(i)
 #endif
   for (int k = 0; k < argc; ++k)

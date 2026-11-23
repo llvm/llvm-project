@@ -39,10 +39,12 @@ static_library("Common") {
     "ErrorHandler.cpp",
     "Filesystem.cpp",
     "Memory.cpp",
+    "Parallel.cpp",
     "Reproduce.cpp",
     "Strings.cpp",
     "TargetOptionsCommandFlags.cpp",
     "Timer.cpp",
+    "Utils.cpp",
     "Version.cpp",
   ]
 }

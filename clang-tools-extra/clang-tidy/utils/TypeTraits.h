@@ -1,4 +1,4 @@
-//===--- TypeTraits.h - clang-tidy-------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,6 +33,9 @@ bool hasNonTrivialMoveConstructor(QualType Type);
 
 /// Return true if `Type` has a non-trivial move assignment operator.
 bool hasNonTrivialMoveAssignment(QualType Type);
+
+/// Returns `true` if `Type` is a `std::initializer_list<...>` specialization.
+bool isStdInitializerList(QualType Type);
 
 } // namespace clang::tidy::utils::type_traits
 

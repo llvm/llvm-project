@@ -1,0 +1,21 @@
+; The fixture was written as a v105 composite ExtBinary caller with a nested
+; callee, then the caller's LBR block type was changed to 127.
+
+; Verify that skipping the caller's unknown block resumes at its nested
+; callsite records instead of stopping the function decode.
+; RUN: llvm-profdata show --sample --show-composite-info-only \
+; RUN:   %S/Inputs/composite-unknown-nested.profdata \
+; RUN:   | FileCheck %s --check-prefix=BLOCKS
+; RUN: llvm-profdata merge --sample --text \
+; RUN:   %S/Inputs/composite-unknown-nested.profdata -o - \
+; RUN:   | FileCheck %s --check-prefix=PROFILE
+
+; BLOCKS: Function: caller
+; BLOCKS-NEXT:   Profile blocks: 1
+; BLOCKS-NEXT:   Type: 127 (unknown), Payload size: {{[1-9][0-9]*}}
+; BLOCKS: Nested function: callee
+; BLOCKS-NEXT:   Profile blocks: 1
+; BLOCKS-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
+
+; PROFILE: caller:0:0
+; PROFILE-NEXT:  1: callee:11

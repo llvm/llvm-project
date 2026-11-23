@@ -20,10 +20,8 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 
 using namespace clang;
 using namespace ento;
@@ -74,8 +72,10 @@ void DynamicTypeChecker::reportTypeError(QualType DynamicType,
   QualType::print(StaticType.getTypePtr(), Qualifiers(), OS, C.getLangOpts(),
                   llvm::Twine());
   OS << "'";
-  auto R = std::make_unique<PathSensitiveBugReport>(
-      BT, OS.str(), C.generateNonFatalErrorNode());
+  ExplodedNode *N = C.generateNonFatalErrorNode();
+  if (!N)
+    return;
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
   R->markInteresting(Reg);
   R->addVisitor(std::make_unique<DynamicTypeBugVisitor>(Reg));
   R->addRange(ReportedNode->getSourceRange());
@@ -131,8 +131,7 @@ PathDiagnosticPieceRef DynamicTypeChecker::DynamicTypeBugVisitor::VisitNode(
   }
 
   // Generate the extra diagnostic.
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 

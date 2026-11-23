@@ -1,3 +1,5 @@
+// REQUIRES: system-darwin || has-gdb
+//
 // RUN: %clangxx %target_itanium_abi_host_triple -O0 -g %s -c -o %t.o
 // RUN: %test_debuginfo %s %t.o
 // XFAIL: !system-darwin && gdb-clang-incompatibility

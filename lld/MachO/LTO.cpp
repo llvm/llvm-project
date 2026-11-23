@@ -13,7 +13,6 @@
 #include "Symbols.h"
 #include "Target.h"
 
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
@@ -25,7 +24,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/ObjCARC.h"
 
 using namespace lld;
 using namespace lld::macho;
@@ -40,16 +38,18 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 
 static lto::Config createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe;
+  c.LibraryOptions = &config->libraryOptions;
+  c.Options = getTargetOptions(config->libraryOptions);
+  c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe ||
+                          config->icfLevel == ICFLevel::safe_thunks;
   for (StringRef C : config->mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
   for (StringRef pluginFn : config->passPlugins)
-    c.PassPlugins.push_back(std::string(pluginFn));
+    c.PassPluginFilenames.push_back(std::string(pluginFn));
   c.OptPipeline = std::string(config->ltoNewPmPasses);
-  c.CodeModel = getCodeModelFromCMModel();
-  c.CPU = getCPUStr();
-  c.MAttrs = getMAttrs();
+  c.CodeModel = getCodeModelFromCMModel(config->libraryOptions);
+  c.CPU = getCPUStr(config->libraryOptions);
+  c.MAttrs = getMAttrs(config->libraryOptions);
   c.DiagHandler = diagnosticHandler;
 
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
@@ -60,24 +60,52 @@ static lto::Config createConfig() {
   c.CSIRProfile = std::string(config->csProfilePath);
   c.RunCSIRInstr = config->csProfileGenerate;
   c.PGOWarnMismatch = config->pgoWarnMismatch;
+  c.DisableVerify = config->disableVerify;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
+
+  c.PTO.LoopVectorization = c.OptLevel > 1;
+  c.PTO.SLPVectorization = c.OptLevel > 1;
+
   if (config->saveTemps)
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath=*/true));
+
+  if (config->emitLLVM) {
+    llvm::StringRef outputFile = config->outputFile;
+    c.PreCodeGenModuleHook = [outputFile](size_t task, const Module &m) {
+      if (std::unique_ptr<raw_fd_ostream> os = openLTOOutputFile(outputFile))
+        WriteBitcodeToFile(m, *os, false);
+      return false;
+    };
+  }
+
   return c;
 }
 
 // If `originalPath` exists, hardlinks `path` to `originalPath`. If that fails,
-// or `originalPath` is not set, saves `buffer` to `path`.
-static void saveOrHardlinkBuffer(StringRef buffer, const Twine &path,
-                                 std::optional<StringRef> originalPath) {
-  if (originalPath) {
-    auto err = fs::create_hard_link(*originalPath, path);
-    if (!err)
-      return;
-  }
+// or `originalPath` is not set, saves `buffer` to `path`. Returns the
+// modification time of the resulting file.
+static uint32_t saveOrHardlinkBuffer(StringRef buffer, StringRef path,
+                                     std::optional<StringRef> originalPath) {
+  fs::file_status originalStat, pathStat;
+  bool haveOriginal = originalPath && !fs::status(*originalPath, originalStat);
+  bool havePath = !fs::status(path, pathStat, /*follow=*/false);
+  // A previous link already hardlinked `path` to the same cache entry.
+  if (haveOriginal && havePath && fs::equivalent(originalStat, pathStat))
+    return getModTime(originalStat);
+  // Delete the hardlink if it exists. Otherwise, it is possible for the
+  // create_hard_link to fail (as the hardlink exists already), and when
+  // saveBuffer is subsequently called the hardlink'd file may get truncated
+  // and reading from it causes a crash. Even without the cache, `path` may be
+  // a hardlink to a cache entry left by an earlier link, and saveBuffer would
+  // overwrite that entry.
+  if (havePath)
+    fs::remove(path);
+  if (haveOriginal && !fs::create_hard_link(*originalPath, path))
+    return getModTime(path);
   saveBuffer(buffer, path);
+  return getModTime(path);
 }
 
 BitcodeCompiler::BitcodeCompiler() {
@@ -265,7 +293,8 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
   }
 
   if (!config->thinLTOCacheDir.empty())
-    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files);
+    check(
+        pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files));
 
   std::vector<ObjFile *> ret;
   for (unsigned i = 0; i < maxTasks; ++i) {
@@ -288,16 +317,14 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       saveBuffer(objBuf,
                  config->outputFile + ((i == 0) ? "" : Twine(i)) + ".lto.o");
 
-    auto filePath = outputFilePath(i);
+    StringRef filePath = saver().save(outputFilePath(i).str());
     uint32_t modTime = 0;
-    if (!config->ltoObjPath.empty()) {
-      saveOrHardlinkBuffer(objBuf, filePath, cachePath);
-      modTime = getModTime(filePath);
-    }
-    ret.push_back(make<ObjFile>(
-        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime,
-        /*archiveName=*/"", /*lazy=*/false,
-        /*forceHidden=*/false, /*compatArch=*/true, /*builtFromBitcode=*/true));
+    if (!config->ltoObjPath.empty())
+      modTime = saveOrHardlinkBuffer(objBuf, filePath, cachePath);
+    ret.push_back(make<ObjFile>(MemoryBufferRef(objBuf, filePath), modTime,
+                                /*archiveName=*/"", /*lazy=*/false,
+                                /*forceHidden=*/false, /*compatArch=*/true,
+                                /*builtFromBitcode=*/true));
   }
 
   return ret;

@@ -9,7 +9,7 @@ module m
   logical, parameter :: test_param1 = is_contiguous(cst(:,1))
   logical, parameter :: test_param2 = is_contiguous(cst(1,:))
   logical, parameter :: test_param3 = is_contiguous(cst(:,n))
-  logical, parameter :: test_param4 = .not. is_contiguous(cst(n,:))
+  logical, parameter :: test_param4 = is_contiguous(cst(n,:))
   logical, parameter :: test_param5 = is_contiguous(empty_cst(n,-1:n:2))
  contains
   function f()

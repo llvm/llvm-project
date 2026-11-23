@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
+llvm_tablegen(Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ELFOptionsTableGen)
 
 if(LLVM_ENABLE_ZLIB)
@@ -37,6 +37,7 @@ add_lld_library(lldELF
   Arch/X86.cpp
   Arch/X86_64.cpp
   ARMErrataFix.cpp
+  BPSectionOrderer.cpp
   CallGraphSort.cpp
   DWARF.cpp
   Driver.cpp
@@ -67,11 +68,13 @@ add_lld_library(lldELF
   Core
   DebugInfoDWARF
   Demangle
+  DTLTO
   LTO
   MC
   Object
   Option
   Passes
+  ProfileData
   Support
   TargetParser
   TransformUtils

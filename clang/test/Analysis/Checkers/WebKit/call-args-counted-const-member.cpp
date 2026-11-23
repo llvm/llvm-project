@@ -20,7 +20,7 @@ private:
 void Foo::bar() {
   m_obj1->method();
   m_obj2->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  // expected-warning@-1{{Function argument 'this->m_obj2' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
 }
 
 } // namespace call_args_const_refptr_member
@@ -31,6 +31,7 @@ class Foo {
 public:
   Foo();
   void bar();
+  RefCountable& obj1() const { return m_obj1; }
 
 private:
   const Ref<RefCountable> m_obj1;
@@ -40,7 +41,8 @@ private:
 void Foo::bar() {
   m_obj1->method();
   m_obj2->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  // expected-warning@-1{{Function argument 'this->m_obj2' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
+  obj1().method();
 }
 
 } // namespace call_args_const_ref_member
@@ -85,10 +87,10 @@ private:
 void Foo::bar() {
   m_obj1->method();
   m_obj2->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  // expected-warning@-1{{Function argument 'this->m_obj2' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
   ensureObj3().method();
   badEnsureObj4().method();
-  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  // expected-warning@-1{{Function argument 'this->badEnsureObj4()' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
   ensureObj5()->method();
 }
 
@@ -100,6 +102,7 @@ class Foo {
 public:
   Foo();
   void bar();
+  RefCountable& obj1() { return m_obj1; }
 
 private:
   const UniqueRef<RefCountable> m_obj1;
@@ -109,7 +112,8 @@ private:
 void Foo::bar() {
   m_obj1->method();
   m_obj2->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  // expected-warning@-1{{Function argument 'this->m_obj2' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
+  obj1().method();
 }
 
 } // namespace call_args_const_unique_ref

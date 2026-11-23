@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_THREADPLANSTEPOUT_H
 #define LLDB_TARGET_THREADPLANSTEPOUT_H
 
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
@@ -17,10 +18,19 @@ namespace lldb_private {
 
 class ThreadPlanStepOut : public ThreadPlan, public ThreadPlanShouldStopHere {
 public:
+  /// Creates a thread plan to step out from frame_idx, skipping parent frames
+  /// if they are artificial or hidden frames. Also skips frames without debug
+  /// info based on step_out_avoids_code_without_debug_info.
   ThreadPlanStepOut(Thread &thread, SymbolContext *addr_context,
                     bool first_insn, bool stop_others, Vote report_stop_vote,
                     Vote report_run_vote, uint32_t frame_idx,
                     LazyBool step_out_avoids_code_without_debug_info,
+                    bool continue_to_next_branch = false,
+                    bool gather_return_value = true);
+
+  /// Creates a thread plan to step out from frame_idx to frame_idx + 1.
+  ThreadPlanStepOut(Thread &thread, bool stop_others, Vote report_stop_vote,
+                    Vote report_run_vote, uint32_t frame_idx,
                     bool continue_to_next_branch = false,
                     bool gather_return_value = true);
 
@@ -37,9 +47,7 @@ public:
   void DidPush() override;
   bool IsPlanStale() override;
 
-  lldb::ValueObjectSP GetReturnValueObject() override {
-    return m_return_valobj_sp;
-  }
+  ThreadPlanReturnValue GetReturnValue() override { return m_return_value; }
 
 protected:
   void SetFlagsToDefault() override {
@@ -71,8 +79,9 @@ private:
                                                  // to.
   Function *m_immediate_step_from_function;
   std::vector<lldb::StackFrameSP> m_stepped_past_frames;
-  lldb::ValueObjectSP m_return_valobj_sp;
+  ThreadPlanReturnValue m_return_value;
   bool m_calculate_return_value;
+  LanguageRuntime::ThrownErrorLocation m_thrown_error_location;
   StreamString m_constructor_errors;
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(
@@ -82,6 +91,10 @@ private:
       LazyBool step_out_avoids_code_without_debug_info);
 
   void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
+
+  void SetupReturnAddress(lldb::StackFrameSP return_frame_sp,
+                          lldb::StackFrameSP immediate_return_from_sp,
+                          uint32_t frame_idx, bool continue_to_next_branch);
   // Need an appropriate marker for the current stack so we can tell step out
   // from step in.
 

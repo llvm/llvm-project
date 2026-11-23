@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-pc-win32 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-uefi %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: foo{{[^#]*}}#[[ATTRS:[0-9]+]]
 __attribute__((no_caller_saved_registers)) void foo() {}
@@ -23,9 +24,13 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// CHECK: baz{{[^#]*}}#[[ATTRS]]
+// CHECK: baz{{[^#]*}}#[[BAZ_ATTRS:[0-9]+]]
 
 // CHECK: attributes #[[ATTRS]] = {
+// CHECK-SAME: "no_caller_saved_registers"
+// CHECK-SAME: }
+// CHECK: attributes #[[BAZ_ATTRS]] = {
+// CHECK-SAME: likely_module_local
 // CHECK-SAME: "no_caller_saved_registers"
 // CHECK-SAME: }
 // CHECK: attributes #[[ATTRS1]] = { "no_caller_saved_registers" }

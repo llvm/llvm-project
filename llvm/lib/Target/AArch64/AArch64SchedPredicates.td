@@ -37,17 +37,8 @@ foreach I = {0-4, 8} in {
   def CheckShiftBy#I                    : CheckImmOperand<3, I>;
 }
 
-// Check the extension type in the register offset addressing mode.
-let FunctionMapper = "AArch64_AM::getMemExtendType" in {
-  def CheckMemExtUXTW                   : CheckImmOperand_s<3, "AArch64_AM::UXTW">;
-  def CheckMemExtLSL                    : CheckImmOperand_s<3, "AArch64_AM::UXTX">;
-  def CheckMemExtSXTW                   : CheckImmOperand_s<3, "AArch64_AM::SXTW">;
-  def CheckMemExtSXTX                   : CheckImmOperand_s<3, "AArch64_AM::SXTX">;
-}
-
 // Check for scaling in the register offset addressing mode.
-let FunctionMapper = "AArch64_AM::getMemDoShift" in
-def CheckMemScaled                      : CheckImmOperandSimple<4>;
+def CheckMemScaled                      : CheckImmOperand<4, 1>;
 
 // Check the shifting type in arithmetic and logic instructions.
 let FunctionMapper = "AArch64_AM::getShiftType" in {
@@ -61,13 +52,14 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
 // Generic predicates.
 
 // Check for ZR in a register operand.
-foreach I = {1-3} in {
+foreach I = {0-3} in {
   def CheckIsReg#I#Zero : CheckAll<
                             [CheckIsRegOperand<I>,
                              CheckAny<
                                [CheckRegOperand<I, WZR>,
                                 CheckRegOperand<I, XZR>]>]>;
 }
+def IsReg0ZeroPred  : MCSchedPredicate<CheckIsReg0Zero>;
 def IsReg1ZeroPred  : MCSchedPredicate<CheckIsReg1Zero>;
 def IsReg2ZeroPred  : MCSchedPredicate<CheckIsReg2Zero>;
 def IsReg3ZeroPred  : MCSchedPredicate<CheckIsReg3Zero>;
@@ -196,38 +188,41 @@ def IsStoreASIMDPostOp     : CheckOpcode<[ST1Onev8b_POST, ST1Onev4h_POST, ST1One
 def IsLoadStoreASIMDPostOp : CheckOpcode<!listconcat(IsLoadASIMDPostOp.ValidOpcodes,
                                                      IsStoreASIMDPostOp.ValidOpcodes)>;
 
-// Identify whether an instruction is a load
-// using the register offset addressing mode.
-def IsLoadRegOffsetOp      : CheckOpcode<[PRFMroW, PRFMroX,
-                                          LDRBBroW, LDRBBroX,
-                                          LDRSBWroW, LDRSBWroX, LDRSBXroW, LDRSBXroX,
-                                          LDRHHroW, LDRHHroX,
-                                          LDRSHWroW, LDRSHWroX, LDRSHXroW, LDRSHXroX,
-                                          LDRWroW, LDRWroX,
-                                          LDRSWroW, LDRSWroX,
-                                          LDRXroW, LDRXroX,
-                                          LDRBroW, LDRBroX,
-                                          LDRHroW, LDRHroX,
-                                          LDRSroW, LDRSroX,
-                                          LDRDroW, LDRDroX,
-                                          LDRQroW, LDRQroX]>;
+// Identify whether an instruction is a load using the register offset
+// addressing mode.
 
-// Identify whether an instruction is a store
-// using the register offset addressing mode.
-def IsStoreRegOffsetOp     : CheckOpcode<[STRBBroW, STRBBroX,
-                                          STRHHroW, STRHHroX,
-                                          STRWroW, STRWroX,
-                                          STRXroW, STRXroX,
-                                          STRBroW, STRBroX,
-                                          STRHroW, STRHroX,
-                                          STRSroW, STRSroX,
-                                          STRDroW, STRDroX,
-                                          STRQroW, STRQroX]>;
+def IsLoadRegOffsetWOp      : CheckOpcode<[PRFMroW,
+                                           LDRBBroW, LDRSBWroW, LDRSBXroW,
+                                           LDRHHroW, LDRSHWroW, LDRSHXroW,
+                                           LDRWroW, LDRSWroW, LDRXroW,
+                                           LDRBroW, LDRHroW, LDRSroW,
+                                           LDRDroW, LDRQroW]>;
+def IsLoadRegOffsetXOp      : CheckOpcode<[PRFMroX,
+                                           LDRBBroX, LDRSBWroX, LDRSBXroX,
+                                           LDRHHroX, LDRSHWroX, LDRSHXroX,
+                                           LDRWroX, LDRSWroX, LDRXroX,
+                                           LDRBroX, LDRHroX, LDRSroX,
+                                           LDRDroX, LDRQroX]>;
+def IsLoadRegOffsetOp       : CheckOpcode<!listconcat(IsLoadRegOffsetWOp.ValidOpcodes,
+                                                      IsLoadRegOffsetXOp.ValidOpcodes)>;
 
-// Identify whether an instruction is a load or
-// store using the register offset addressing mode.
-def IsLoadStoreRegOffsetOp : CheckOpcode<!listconcat(IsLoadRegOffsetOp.ValidOpcodes,
-                                                     IsStoreRegOffsetOp.ValidOpcodes)>;
+def IsStoreRegOffsetWOp     : CheckOpcode<[STRBBroW, STRHHroW,
+                                           STRWroW, STRXroW,
+                                           STRBroW, STRHroW, STRSroW,
+                                           STRDroW, STRQroW]>;
+def IsStoreRegOffsetXOp     : CheckOpcode<[STRBBroX, STRHHroX,
+                                           STRWroX, STRXroX,
+                                           STRBroX, STRHroX, STRSroX,
+                                           STRDroX, STRQroX]>;
+def IsStoreRegOffsetOp      : CheckOpcode<!listconcat(IsStoreRegOffsetWOp.ValidOpcodes,
+                                                      IsStoreRegOffsetXOp.ValidOpcodes)>;
+
+def IsLoadStoreRegOffsetWOp : CheckOpcode<!listconcat(IsLoadRegOffsetWOp.ValidOpcodes,
+                                                      IsStoreRegOffsetWOp.ValidOpcodes)>;
+def IsLoadStoreRegOffsetXOp : CheckOpcode<!listconcat(IsLoadRegOffsetXOp.ValidOpcodes,
+                                                      IsStoreRegOffsetXOp.ValidOpcodes)>;
+def IsLoadStoreRegOffsetOp  : CheckOpcode<!listconcat(IsLoadStoreRegOffsetWOp.ValidOpcodes,
+                                                      IsLoadStoreRegOffsetXOp.ValidOpcodes)>;
 
 // Target predicates.
 
@@ -240,6 +235,12 @@ def RegExtendedFn     : TIIPredicate<"hasExtendedReg",
                                            CheckNot<CheckZeroOperand<3>>>>],
                                        MCReturnStatement<FalsePred>>>;
 def RegExtendedPred   : MCSchedPredicate<RegExtendedFn>;
+def IsExtWorXPred     : MCSchedPredicate<
+                          CheckAny<
+                            [CheckExtUXTW,
+                             CheckExtSXTW,
+                             CheckExtUXTX,
+                             CheckExtSXTX]>>;
 
 // Identify arithmetic and logic instructions with a shifted register.
 def RegShiftedFn      : TIIPredicate<"hasShiftedReg",
@@ -251,15 +252,17 @@ def RegShiftedFn      : TIIPredicate<"hasShiftedReg",
                                        MCReturnStatement<FalsePred>>>;
 def RegShiftedPred    : MCSchedPredicate<RegShiftedFn>;
 
-// Identify a load or store using the register offset addressing mode
-// with an extended or scaled register.
+// Identify a load or store using the register offset addressing mode where the
+// index requires extension or scaling.  The W forms always extend Wm to 64 bits;
+// the X forms use uxtx/sxtx, which are no-ops, so only the scaling bit matters.
 def ScaledIdxFn       : TIIPredicate<"isScaledAddr",
                                      MCOpcodeSwitchStatement<
                                        [MCOpcodeSwitchCase<
-                                          IsLoadStoreRegOffsetOp.ValidOpcodes,
-                                          MCReturnStatement<
-                                            CheckAny<[CheckNot<CheckMemExtLSL>,
-                                                      CheckMemScaled]>>>],
+                                          IsLoadStoreRegOffsetWOp.ValidOpcodes,
+                                          MCReturnStatement<TruePred>>,
+                                        MCOpcodeSwitchCase<
+                                          IsLoadStoreRegOffsetXOp.ValidOpcodes,
+                                          MCReturnStatement<CheckMemScaled>>],
                                        MCReturnStatement<FalsePred>>>;
 def ScaledIdxPred     : MCSchedPredicate<ScaledIdxFn>;
 
@@ -287,9 +290,7 @@ def IsCopyIdiomFn     : TIIPredicate<"isCopyIdiom",
                                           [ADDWri, ADDXri],
                                           MCReturnStatement<
                                             CheckAll<
-                                              [CheckIsRegOperand<0>,
-                                               CheckIsRegOperand<1>,
-                                               CheckAny<
+                                              [CheckAny<
                                                  [CheckRegOperand<0, WSP>,
                                                   CheckRegOperand<0, SP>,
                                                   CheckRegOperand<1, WSP>,
@@ -343,3 +344,116 @@ def IsZeroFPIdiomPred : MCSchedPredicate<IsZeroFPIdiomFn>;
 def IsRORImmIdiomPred : MCSchedPredicate< // EXTR Rd, Rs, Rs, #Imm
                           CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
                                     CheckSameRegOperand<1, 2>]>>;
+
+// LSL Rd, Rn, #s alias of UBFM Rd, Rn, #(N-s), #(N-s-1)
+class IsUBFMLSLImm<Instruction Opc, int Width> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckAny<!foreach(Shift, !range(1, Width),
+         CheckAll<[CheckImmOperand<2, !sub(Width, Shift)>,
+                   CheckImmOperand<3, !sub(!sub(Width, Shift), 1)>]>)>]>;
+
+// LSR Rd, Rn, #s alias of UBFM Rd, Rn, #s, #(N-1)
+class IsUBFMLSRImm<Instruction Opc, int Width> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckImmOperandRange<2, 0, !sub(Width, 1)>,
+       CheckImmOperand<3, !sub(Width, 1)>]>;
+
+// UXTB Wd, Wn alias of UBFM Wd, Wn, #0, #7
+class IsUBFMUXTBImm<Instruction Opc> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckImmOperand<2, 0>,
+       CheckImmOperand<3, 7>]>;
+
+// ASR Rd, Rn, #s alias of SBFM Rd, Rn, #s, #(N-1)
+class IsSBFMASRImm<Instruction Opc, int Width> : CheckAll<[
+       CheckOpcode<[Opc]>,
+       CheckImmOperandRange<2, 0, !sub(Width, 1)>,
+       CheckImmOperand<3, !sub(Width, 1)>]>;
+
+// Identify UBFM as the alias for LSL/LSR/UXTB (immediate).
+def IsFastUBFMImmPred : MCSchedPredicate<CheckAny<[
+       IsUBFMLSLImm<UBFMWri, 32>,
+       IsUBFMLSLImm<UBFMXri, 64>,
+       IsUBFMLSRImm<UBFMWri, 32>,
+       IsUBFMLSRImm<UBFMXri, 64>,
+       IsUBFMUXTBImm<UBFMWri>,
+       IsUBFMUXTBImm<UBFMXri> ]>>;
+
+// Identify SBFM as the alias for ASR (immediate).
+def IsFastSBFMImmPred : MCSchedPredicate<CheckAny<[
+       IsSBFMASRImm<SBFMWri, 32>,
+       IsSBFMASRImm<SBFMXri, 64> ]>>;
+
+// Identify whether destination operand is a W-form register.
+def CheckIsWRegOp0 : CheckAny<[
+  CheckRegOperand<0, W0>,  CheckRegOperand<0, W1>,  CheckRegOperand<0, W2>,
+  CheckRegOperand<0, W3>,  CheckRegOperand<0, W4>,  CheckRegOperand<0, W5>,
+  CheckRegOperand<0, W6>,  CheckRegOperand<0, W7>,  CheckRegOperand<0, W8>,
+  CheckRegOperand<0, W9>,  CheckRegOperand<0, W10>, CheckRegOperand<0, W11>,
+  CheckRegOperand<0, W12>, CheckRegOperand<0, W13>, CheckRegOperand<0, W14>,
+  CheckRegOperand<0, W15>, CheckRegOperand<0, W16>, CheckRegOperand<0, W17>,
+  CheckRegOperand<0, W18>, CheckRegOperand<0, W19>, CheckRegOperand<0, W20>,
+  CheckRegOperand<0, W21>, CheckRegOperand<0, W22>, CheckRegOperand<0, W23>,
+  CheckRegOperand<0, W24>, CheckRegOperand<0, W25>, CheckRegOperand<0, W26>,
+  CheckRegOperand<0, W27>, CheckRegOperand<0, W28>, CheckRegOperand<0, W29>,
+  CheckRegOperand<0, W30>, CheckRegOperand<0, WZR>, CheckRegOperand<0, WSP>
+]>;
+def IsWFormPred : MCSchedPredicate<CheckIsWRegOp0>;
+
+// Identify whether destination operand is an X-form register.
+def CheckIsXRegOp0 : CheckAny<[
+  CheckRegOperand<0, X0>,  CheckRegOperand<0, X1>,  CheckRegOperand<0, X2>,
+  CheckRegOperand<0, X3>,  CheckRegOperand<0, X4>,  CheckRegOperand<0, X5>,
+  CheckRegOperand<0, X6>,  CheckRegOperand<0, X7>,  CheckRegOperand<0, X8>,
+  CheckRegOperand<0, X9>,  CheckRegOperand<0, X10>, CheckRegOperand<0, X11>,
+  CheckRegOperand<0, X12>, CheckRegOperand<0, X13>, CheckRegOperand<0, X14>,
+  CheckRegOperand<0, X15>, CheckRegOperand<0, X16>, CheckRegOperand<0, X17>,
+  CheckRegOperand<0, X18>, CheckRegOperand<0, X19>, CheckRegOperand<0, X20>,
+  CheckRegOperand<0, X21>, CheckRegOperand<0, X22>, CheckRegOperand<0, X23>,
+  CheckRegOperand<0, X24>, CheckRegOperand<0, X25>, CheckRegOperand<0, X26>,
+  CheckRegOperand<0, X27>, CheckRegOperand<0, X28>, CheckRegOperand<0, FP>,
+  CheckRegOperand<0, LR>, CheckRegOperand<0, XZR>, CheckRegOperand<0, SP>
+]>;
+def IsXFormPred : MCSchedPredicate<CheckIsXRegOp0>;
+
+def IsXOrWDest : MCSchedPredicate<
+  CheckAll<[CheckAny<[CheckIsXRegOp0, CheckIsWRegOp0]>]>
+>;
+
+def CheckIsZRegOp0 : CheckAny<[
+  CheckRegOperand<0, Z0>,  CheckRegOperand<0, Z1>,  CheckRegOperand<0, Z2>,
+  CheckRegOperand<0, Z3>,  CheckRegOperand<0, Z4>,  CheckRegOperand<0, Z5>,
+  CheckRegOperand<0, Z6>,  CheckRegOperand<0, Z7>,  CheckRegOperand<0, Z8>,
+  CheckRegOperand<0, Z9>,  CheckRegOperand<0, Z10>, CheckRegOperand<0, Z11>,
+  CheckRegOperand<0, Z12>, CheckRegOperand<0, Z13>, CheckRegOperand<0, Z14>,
+  CheckRegOperand<0, Z15>, CheckRegOperand<0, Z16>, CheckRegOperand<0, Z17>,
+  CheckRegOperand<0, Z18>, CheckRegOperand<0, Z19>, CheckRegOperand<0, Z20>,
+  CheckRegOperand<0, Z21>, CheckRegOperand<0, Z22>, CheckRegOperand<0, Z23>,
+  CheckRegOperand<0, Z24>, CheckRegOperand<0, Z25>, CheckRegOperand<0, Z26>,
+  CheckRegOperand<0, Z27>, CheckRegOperand<0, Z28>, CheckRegOperand<0, Z29>,
+  CheckRegOperand<0, Z30>, CheckRegOperand<0, Z31>
+]>;
+
+
+// Check if destination and source are the same Z register (Zn == Zm)
+def SameZRegDstSrcPred : MCSchedPredicate<
+  CheckAll<[CheckSameRegOperand<0, 1>, CheckIsZRegOp0]>
+>;
+
+// Identify predicate-dest instructions that reuse the same predicate as a
+// source (e.g. Pd == Pg for PPz* forms).
+def IsPredDestSameAsPgPred : MCSchedPredicate<CheckSameRegOperand<0, 1>>;
+
+// Identify LDR/STR Q-form scaled (and potentially extended) FP instructions
+def FPIsQForm : MCSchedPredicate<
+                       CheckAll<[
+                         CheckAny<[CheckQForm]>,
+                         CheckImmOperand<4, 1>]>>;
+
+// Check whether the subtarget enables SME.
+def SMESchedPred : FeatureSchedPredicate<FeatureSME>;
+def MCStreamingSchedPred : FeatureSchedPredicate<FeatureMCAStreamingSched>;
+
+// Check whether the subtarget enables SME and is in streaming mode.
+def SMEMCStreamingSchedPred : AllOfSchedPreds<[SMESchedPred,
+                                               MCStreamingSchedPred]>;

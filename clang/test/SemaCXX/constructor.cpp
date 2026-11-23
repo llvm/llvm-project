@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 typedef int INT;
 
 class Foo {
@@ -14,7 +14,7 @@ class Foo {
   static Foo(short, short); // expected-error{{constructor cannot be declared 'static'}}
   virtual Foo(double); // expected-error{{constructor cannot be declared 'virtual'}}
   Foo(long) const; // expected-error{{'const' qualifier is not allowed on a constructor}}
-  
+
   int Foo(int, int); // expected-error{{constructor cannot have a return type}}
 
   volatile Foo(float); // expected-error{{constructor cannot have a return type}}
@@ -92,7 +92,7 @@ namespace PR38286 {
   template<typename T> A<T>::A() {} // expected-error {{incomplete type 'A' named in nested name specifier}}
   /*FIXME: needed to recover properly from previous error*/;
   template<typename> struct B;
-  template<typename T> void B<T>::f() {} // expected-error {{out-of-line definition of 'f' from class 'B<type-parameter-0-0>'}}
+  template<typename T> void B<T>::f() {} // expected-error {{out-of-line definition of 'f' from class 'PR38286::B<type-parameter-0-0>'}}
   template<typename> struct C; // expected-note {{non-type declaration found}}
   template<typename T> C<T>::~C() {} // expected-error {{identifier 'C' after '~' in destructor name does not name a type}}
 }

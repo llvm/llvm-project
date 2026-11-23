@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Canonicalization.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -39,28 +38,10 @@ static cl::opt<bool>
                  cl::desc("Run an early inliner pass before Polly"), cl::Hidden,
                  cl::cat(PollyCategory));
 
-void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
-  bool UseMemSSA = true;
-  PM.add(llvm::createPromoteMemoryToRegisterPass());
-  PM.add(llvm::createEarlyCSEPass(UseMemSSA));
-  PM.add(llvm::createInstructionCombiningPass());
-  PM.add(llvm::createCFGSimplificationPass());
-  PM.add(llvm::createTailCallEliminationPass());
-  PM.add(llvm::createCFGSimplificationPass());
-  PM.add(llvm::createReassociatePass());
-  if (PollyInliner) {
-    PM.add(llvm::createPromoteMemoryToRegisterPass());
-    PM.add(llvm::createCFGSimplificationPass());
-    PM.add(llvm::createInstructionCombiningPass());
-    PM.add(createBarrierNoopPass());
-  }
-  PM.add(llvm::createInstructionCombiningPass());
-}
-
 /// Adapted from llvm::PassBuilder::buildInlinerPipeline
 static ModuleInlinerWrapperPass
-buildInlinePasses(llvm::OptimizationLevel Level) {
-  InlineParams IP = getInlineParams(200);
+buildInlinePasses(llvm::LLVMContext &Context, llvm::OptimizationLevel Level) {
+  InlineParams IP = getInlineParams(Context, 200);
   ModuleInlinerWrapperPass MIWP(IP);
 
   // Require the GlobalsAA analysis for the module so we can query it within
@@ -88,7 +69,8 @@ buildInlinePasses(llvm::OptimizationLevel Level) {
 }
 
 FunctionPassManager
-polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
+polly::buildCanonicalicationPassesForNPM(llvm::LLVMContext &Context,
+                                         llvm::ModulePassManager &MPM,
                                          llvm::OptimizationLevel Level) {
   FunctionPassManager FPM;
 
@@ -102,14 +84,13 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
   FPM.addPass(ReassociatePass());
   {
     LoopPassManager LPM;
-    LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
+    LPM.addPass(LoopRotatePass());
     FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
-        std::move(LPM), /*UseMemorySSA=*/false,
-        /*UseBlockFrequencyInfo=*/false));
+        std::move(LPM), /*UseMemorySSA=*/false));
   }
   if (PollyInliner) {
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    MPM.addPass(buildInlinePasses(Level));
+    MPM.addPass(buildInlinePasses(Context, Level));
     FPM = FunctionPassManager();
 
     FPM.addPass(PromotePass());
@@ -121,55 +102,8 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
     LoopPassManager LPM;
     LPM.addPass(IndVarSimplifyPass());
     FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
-        std::move(LPM), /*UseMemorySSA=*/false,
-        /*UseBlockFrequencyInfo=*/true));
+        std::move(LPM), /*UseMemorySSA=*/false));
   }
 
   return FPM;
 }
-
-namespace {
-class PollyCanonicalize final : public ModulePass {
-  PollyCanonicalize(const PollyCanonicalize &) = delete;
-  const PollyCanonicalize &operator=(const PollyCanonicalize &) = delete;
-
-public:
-  static char ID;
-
-  explicit PollyCanonicalize() : ModulePass(ID) {}
-  ~PollyCanonicalize();
-
-  /// @name FunctionPass interface.
-  //@{
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
-  bool runOnModule(Module &M) override;
-  void print(raw_ostream &OS, const Module *) const override;
-  //@}
-};
-} // namespace
-
-PollyCanonicalize::~PollyCanonicalize() {}
-
-void PollyCanonicalize::getAnalysisUsage(AnalysisUsage &AU) const {}
-
-void PollyCanonicalize::releaseMemory() {}
-
-bool PollyCanonicalize::runOnModule(Module &M) {
-  legacy::PassManager PM;
-  registerCanonicalicationPasses(PM);
-  PM.run(M);
-
-  return true;
-}
-
-void PollyCanonicalize::print(raw_ostream &OS, const Module *) const {}
-
-char PollyCanonicalize::ID = 0;
-
-Pass *polly::createPollyCanonicalizePass() { return new PollyCanonicalize(); }
-
-INITIALIZE_PASS_BEGIN(PollyCanonicalize, "polly-canonicalize",
-                      "Polly - Run canonicalization passes", false, false)
-INITIALIZE_PASS_END(PollyCanonicalize, "polly-canonicalize",
-                    "Polly - Run canonicalization passes", false, false)

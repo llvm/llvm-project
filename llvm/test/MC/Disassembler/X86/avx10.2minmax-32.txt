@@ -141,17 +141,9 @@
 # INTEL: vminmaxpd ymm2, ymm3, ymm4, 123
 0x62,0xf3,0xe5,0x28,0x52,0xd4,0x7b
 
-# ATT:   vminmaxpd $123, {sae}, %ymm4, %ymm3, %ymm2
-# INTEL: vminmaxpd ymm2, ymm3, ymm4, {sae}, 123
-0x62,0xf3,0xe1,0x18,0x52,0xd4,0x7b
-
 # ATT:   vminmaxpd $123, %ymm4, %ymm3, %ymm2 {%k7}
 # INTEL: vminmaxpd ymm2 {k7}, ymm3, ymm4, 123
 0x62,0xf3,0xe5,0x2f,0x52,0xd4,0x7b
-
-# ATT:   vminmaxpd $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vminmaxpd ymm2 {k7} {z}, ymm3, ymm4, {sae}, 123
-0x62,0xf3,0xe1,0x9f,0x52,0xd4,0x7b
 
 # ATT:   vminmaxpd  $123, 268435456(%esp,%esi,8), %ymm3, %ymm2
 # INTEL: vminmaxpd ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456], 123
@@ -257,17 +249,9 @@
 # INTEL: vminmaxph ymm2, ymm3, ymm4, 123
 0x62,0xf3,0x64,0x28,0x52,0xd4,0x7b
 
-# ATT:   vminmaxph $123, {sae}, %ymm4, %ymm3, %ymm2
-# INTEL: vminmaxph ymm2, ymm3, ymm4, {sae}, 123
-0x62,0xf3,0x60,0x18,0x52,0xd4,0x7b
-
 # ATT:   vminmaxph $123, %ymm4, %ymm3, %ymm2 {%k7}
 # INTEL: vminmaxph ymm2 {k7}, ymm3, ymm4, 123
 0x62,0xf3,0x64,0x2f,0x52,0xd4,0x7b
-
-# ATT:   vminmaxph $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vminmaxph ymm2 {k7} {z}, ymm3, ymm4, {sae}, 123
-0x62,0xf3,0x60,0x9f,0x52,0xd4,0x7b
 
 # ATT:   vminmaxph  $123, 268435456(%esp,%esi,8), %ymm3, %ymm2
 # INTEL: vminmaxph ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456], 123
@@ -373,17 +357,9 @@
 # INTEL: vminmaxps ymm2, ymm3, ymm4, 123
 0x62,0xf3,0x65,0x28,0x52,0xd4,0x7b
 
-# ATT:   vminmaxps $123, {sae}, %ymm4, %ymm3, %ymm2
-# INTEL: vminmaxps ymm2, ymm3, ymm4, {sae}, 123
-0x62,0xf3,0x61,0x18,0x52,0xd4,0x7b
-
 # ATT:   vminmaxps $123, %ymm4, %ymm3, %ymm2 {%k7}
 # INTEL: vminmaxps ymm2 {k7}, ymm3, ymm4, 123
 0x62,0xf3,0x65,0x2f,0x52,0xd4,0x7b
-
-# ATT:   vminmaxps $123, {sae}, %ymm4, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vminmaxps ymm2 {k7} {z}, ymm3, ymm4, {sae}, 123
-0x62,0xf3,0x61,0x9f,0x52,0xd4,0x7b
 
 # ATT:   vminmaxps  $123, 268435456(%esp,%esi,8), %ymm3, %ymm2
 # INTEL: vminmaxps ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456], 123

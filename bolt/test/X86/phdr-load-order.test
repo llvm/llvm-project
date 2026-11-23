@@ -1,0 +1,69 @@
+## Check that BOLT places new PT_LOAD segments right after existing PT_LOAD
+## segments, maintaining ascending p_vaddr order.
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/yaml -o %t.exe --max-size=0
+# RUN: llvm-bolt %t.exe -o %t.bolt --allow-stripped
+# RUN: llvm-readelf -lW %t.bolt | FileCheck %s
+
+# All PT_LOAD segments must be contiguous and in ascending p_vaddr order.
+# The new BOLT segment must follow the original PT_LOAD segments, not appear
+# at the end of the program header table after non-LOAD segments.
+
+# CHECK:      Program Headers:
+# CHECK-NEXT: Type {{.*}}
+# CHECK-NEXT: LOAD
+# CHECK-NEXT: LOAD
+# CHECK-NEXT: LOAD
+# CHECK-NEXT: LOAD
+# CHECK-NOT:  LOAD
+
+#--- yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_X86_64
+  Entry: 0x400000
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    FirstSec: .text
+    LastSec: .text
+    VAddr: 0x400000
+    Align: 0x1000
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_W ]
+    FirstSec: .data
+    LastSec: .data
+    VAddr: 0x500000
+    Align: 0x1000
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    FirstSec: .rodata
+    LastSec: .rodata
+    VAddr: 0x600000
+    Align: 0x1000
+  - Type: PT_GNU_STACK
+    Flags: [ PF_R, PF_W ]
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: C3
+    AddressAlign: 0x1
+    Address: 0x400000
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Content: '00000000'
+    AddressAlign: 0x1
+    Address: 0x500000
+  - Name: .rodata
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: '00000000'
+    AddressAlign: 0x1
+    Address: 0x600000
+...

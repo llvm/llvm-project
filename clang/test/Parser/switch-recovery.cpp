@@ -104,7 +104,7 @@ void test9(int x) { // expected-note {{'x' declared here}}
               expected-error {{expected expression}}
     8:: x; // expected-error {{expected ';' after expression}} \
               expected-error {{no member named 'x' in the global namespace; did you mean simply 'x'?}} \
-              expected-warning {{expression result unused}}
+              expected-warning 2 {{expression result unused}}
     9:: :y; // expected-error {{expected ';' after expression}} \
                expected-error {{expected unqualified-id}} \
                expected-warning {{expression result unused}}
@@ -228,4 +228,17 @@ void fn1() {
     {  // expected-error{{expected ')'}}
     }
 } // expected-error{{expected statement}}
+}
+
+namespace GH143216 {
+#define FOO 1 case 3:
+
+int f(int x) {
+  switch (x) {
+  case FOO // expected-error {{expected ':' after 'case'}}
+    return 0;
+  default:
+    return 1;
+  }
+}
 }

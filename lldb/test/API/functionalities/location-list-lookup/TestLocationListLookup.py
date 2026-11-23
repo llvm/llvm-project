@@ -16,7 +16,7 @@ class LocationListLookupTestCase(TestBase):
         li = lldb.SBLaunchInfo(["a.out"])
         error = lldb.SBError()
         process = target.Launch(li, error)
-        self.assertTrue(process.IsValid())
+        self.assertSuccess(error)
         self.assertTrue(process.is_stopped)
 
         return process
@@ -37,8 +37,9 @@ class LocationListLookupTestCase(TestBase):
                     process.selected_thread.selected_frame = f
                     self.expect_expr("this", result_type="Foo *")
 
-    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipIf(oslist=["linux"], archs=["arm$"])
     @skipIfDarwin
+    @skipIfWasm  # argv is not readable after the abort() trap
     def test_loclist_frame_var(self):
         self.build()
         self.check_local_vars(self.launch(), check_expr=False)

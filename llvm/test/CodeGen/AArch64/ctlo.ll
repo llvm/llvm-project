@@ -10,8 +10,7 @@ declare i64 @llvm.ctlz.i64(i64, i1)
 define i8 @ctlo_i8(i8 %x) {
 ; CHECK-SD-LABEL: ctlo_i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-SD-NEXT:    eor w8, w8, w0, lsl #24
+; CHECK-SD-NEXT:    mvn w8, w0, lsl #24
 ; CHECK-SD-NEXT:    clz w0, w8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -50,8 +49,7 @@ define i8 @ctlo_i8_undef(i8 %x) {
 define i16 @ctlo_i16(i16 %x) {
 ; CHECK-SD-LABEL: ctlo_i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-SD-NEXT:    eor w8, w8, w0, lsl #16
+; CHECK-SD-NEXT:    mvn w8, w0, lsl #16
 ; CHECK-SD-NEXT:    clz w0, w8
 ; CHECK-SD-NEXT:    ret
 ;

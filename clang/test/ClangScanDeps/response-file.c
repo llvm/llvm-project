@@ -1,10 +1,12 @@
-// Check that the scanner can handle a response file input.
+// Check that the scanner can handle a response file input. Uses -verbatim-args
+// to ensure response files are expanded by the scanner library and not the
+// argumeent adjuster in clang-scan-deps.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
-// RUN: clang-scan-deps -format experimental-full -compilation-database %t/cdb.json > %t/deps.json
+// RUN: clang-scan-deps -verbatim-args -format experimental-full -compilation-database %t/cdb.json > %t/deps.json
 
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 

@@ -24,77 +24,69 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_map<NotConstructible, NotConstructible,
-                                   test_hash<NotConstructible>,
-                                   test_equal_to<NotConstructible>,
-                                   test_allocator<std::pair<const NotConstructible,
-                                                                  NotConstructible> >
-                                   > C;
-        C c(7,
-            test_hash<NotConstructible>(8),
-            test_equal_to<NotConstructible>(9),
-            test_allocator<std::pair<const NotConstructible, NotConstructible> >(10)
-           );
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.hash_function() == test_hash<NotConstructible>(8));
-        assert(c.key_eq() == test_equal_to<NotConstructible>(9));
-        assert(c.get_allocator() ==
-               (test_allocator<std::pair<const NotConstructible, NotConstructible> >(10)));
-        assert(c.size() == 0);
-        assert(c.empty());
-        assert(std::distance(c.begin(), c.end()) == 0);
-        assert(c.load_factor() == 0);
-        assert(c.max_load_factor() == 1);
-    }
+int main(int, char**) {
+  {
+    typedef std::unordered_map<NotConstructible,
+                               NotConstructible,
+                               test_hash<NotConstructible>,
+                               test_equal_to<NotConstructible>,
+                               test_allocator<std::pair<const NotConstructible, NotConstructible> > >
+        C;
+    C c(7,
+        test_hash<NotConstructible>(8),
+        test_equal_to<NotConstructible>(9),
+        test_allocator<std::pair<const NotConstructible, NotConstructible> >(10));
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.hash_function() == test_hash<NotConstructible>(8));
+    assert(c.key_eq() == test_equal_to<NotConstructible>(9));
+    assert(c.get_allocator() == (test_allocator<std::pair<const NotConstructible, NotConstructible> >(10)));
+    assert(c.size() == 0);
+    assert(c.empty());
+    assert(std::distance(c.begin(), c.end()) == 0);
+    assert(c.load_factor() == 0);
+    assert(c.max_load_factor() == 1);
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef std::unordered_map<NotConstructible, NotConstructible,
-                                   test_hash<NotConstructible>,
-                                   test_equal_to<NotConstructible>,
-                                   min_allocator<std::pair<const NotConstructible,
-                                                                 NotConstructible> >
-                                   > C;
-        C c(7,
-            test_hash<NotConstructible>(8),
-            test_equal_to<NotConstructible>(9),
-            min_allocator<std::pair<const NotConstructible, NotConstructible> >()
-           );
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.hash_function() == test_hash<NotConstructible>(8));
-        assert(c.key_eq() == test_equal_to<NotConstructible>(9));
-        assert(c.get_allocator() ==
-               (min_allocator<std::pair<const NotConstructible, NotConstructible> >()));
-        assert(c.size() == 0);
-        assert(c.empty());
-        assert(std::distance(c.begin(), c.end()) == 0);
-        assert(c.load_factor() == 0);
-        assert(c.max_load_factor() == 1);
-    }
-    {
-        typedef explicit_allocator<std::pair<const NotConstructible, NotConstructible> > A;
-        typedef std::unordered_map<NotConstructible, NotConstructible,
-                                   test_hash<NotConstructible>,
-                                   test_equal_to<NotConstructible>,
-                                   A
-                                   > C;
-        C c(7,
-            test_hash<NotConstructible>(8),
-            test_equal_to<NotConstructible>(9),
-            A{}
-           );
-        LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.hash_function() == test_hash<NotConstructible>(8));
-        assert(c.key_eq() == test_equal_to<NotConstructible>(9));
-        assert(c.get_allocator() == A{});
-        assert(c.size() == 0);
-        assert(c.empty());
-        assert(std::distance(c.begin(), c.end()) == 0);
-        assert(c.load_factor() == 0);
-        assert(c.max_load_factor() == 1);
-    }
+  {
+    typedef std::unordered_map<NotConstructible,
+                               NotConstructible,
+                               test_hash<NotConstructible>,
+                               test_equal_to<NotConstructible>,
+                               min_allocator<std::pair<const NotConstructible, NotConstructible> > >
+        C;
+    C c(7,
+        test_hash<NotConstructible>(8),
+        test_equal_to<NotConstructible>(9),
+        min_allocator<std::pair<const NotConstructible, NotConstructible> >());
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.hash_function() == test_hash<NotConstructible>(8));
+    assert(c.key_eq() == test_equal_to<NotConstructible>(9));
+    assert(c.get_allocator() == (min_allocator<std::pair<const NotConstructible, NotConstructible> >()));
+    assert(c.size() == 0);
+    assert(c.empty());
+    assert(std::distance(c.begin(), c.end()) == 0);
+    assert(c.load_factor() == 0);
+    assert(c.max_load_factor() == 1);
+  }
+  {
+    typedef explicit_allocator<std::pair<const NotConstructible, NotConstructible> > A;
+    typedef std::unordered_map<NotConstructible,
+                               NotConstructible,
+                               test_hash<NotConstructible>,
+                               test_equal_to<NotConstructible>,
+                               A >
+        C;
+    C c(7, test_hash<NotConstructible>(8), test_equal_to<NotConstructible>(9), A{});
+    LIBCPP_ASSERT(c.bucket_count() == 7);
+    assert(c.hash_function() == test_hash<NotConstructible>(8));
+    assert(c.key_eq() == test_equal_to<NotConstructible>(9));
+    assert(c.get_allocator() == A{});
+    assert(c.size() == 0);
+    assert(c.empty());
+    assert(std::distance(c.begin(), c.end()) == 0);
+    assert(c.load_factor() == 0);
+    assert(c.max_load_factor() == 1);
+  }
 #endif
 
   return 0;

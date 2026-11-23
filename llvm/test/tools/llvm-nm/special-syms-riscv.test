@@ -2,7 +2,12 @@
 # RUN: yaml2obj %s -o %t
 
 # RUN: llvm-nm %t | count 0
-# RUN: llvm-nm %t --special-syms | FileCheck %s
+# RUN: llvm-nm %t --special-syms | FileCheck %s \
+# RUN:   --implicit-check-not=file_sym --implicit-check-not=.text
+
+## --special-syms should show mapping symbols but not STT_FILE or STT_SECTION.
+# CHECK:      2000 d $d.1
+# CHECK-NEXT: 1000 t $x.1
 
 !ELF
 FileHeader:
@@ -20,10 +25,13 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_WRITE ]
     Address:         0x2000
 Symbols:
+  - Name:     ""
+    Type:     STT_SECTION
+    Section:  .text
+  - Name:     file_sym
+    Type:     STT_FILE
+    Index:    SHN_ABS
   - Name:     $x.1
     Section:  .text
   - Name:     $d.1
     Section:  .data
-
-# CHECK:      2000 d $d.1
-# CHECK-NEXT: 1000 t $x.1

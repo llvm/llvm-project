@@ -46,24 +46,36 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP24]], i8 [[TMP20]], i64 256, i1 false)
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @setjmp(ptr noundef @jbuf)
 ; CHECK-NEXT:    switch i32 [[CALL]], label [[WHILE_BODY:%.*]] [
-; CHECK-NEXT:    i32 1, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP14]], ptr @stackbuf, i32 19)
-; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
-; CHECK-NEXT:    call void @may_jump()
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[WHILE_BODY]] ], [ true, [[SW_BB1]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP15]] to i8
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[BUF]] to i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
 ; CHECK-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP28]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 256, i1 false)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP14]], ptr @stackbuf, i32 19)
+; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
+; CHECK-NEXT:    call void @may_jump()
+; CHECK-NEXT:    [[TMP30:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP32:%.*]] = and i64 [[TMP31]], 72057594037927935
+; CHECK-NEXT:    [[TMP33:%.*]] = lshr i64 [[TMP32]], 4
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP33]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP34]], i8 [[TMP30]], i64 256, i1 false)
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[WHILE_BODY]] ], [ true, [[SW_BB1]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP35:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP37:%.*]] = and i64 [[TMP36]], 72057594037927935
+; CHECK-NEXT:    [[TMP38:%.*]] = lshr i64 [[TMP37]], 4
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP38]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP39]], i8 [[TMP35]], i64 256, i1 false)
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:
@@ -78,13 +90,13 @@ sw.bb1:                                           ; preds = %entry
   br label %return
 
 while.body:                                       ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 4096, ptr nonnull %buf) #10
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf) #10
   store ptr %buf, ptr @stackbuf, align 8
   ; may_jump may call longjmp, going back to the switch (and then the return),
   ; bypassing the lifetime.end. This is why we need to untag on the return,
   ; rather than the lifetime.end.
   call void @may_jump()
-  call void @llvm.lifetime.end.p0(i64 4096, ptr nonnull %buf) #10
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf) #10
   br label %return
 
 return:                                           ; preds = %entry, %while.body, %sw.bb1
@@ -94,5 +106,5 @@ return:                                           ; preds = %entry, %while.body,
 
 declare i32 @setjmp(ptr noundef) returns_twice
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)

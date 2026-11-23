@@ -295,22 +295,22 @@ vpshrdw           $1, (%rax), %ymm17, %ymm19 {k1}{z}
 # CHECK-NEXT:  2      8     0.50           *            vpcompressw	%ymm16, (%rax) {%k1}
 # CHECK-NEXT:  1      4     1.00                        vpcompressw	%ymm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      1     0.50                  U     vpexpandb	%xmm16, %xmm19
-# CHECK-NEXT:  2      8     0.50                  U     vpexpandb	(%rax), %xmm19
+# CHECK-NEXT:  2      8     0.50    *             U     vpexpandb	(%rax), %xmm19
 # CHECK-NEXT:  2      1     0.50                        vpexpandb	%xmm16, %xmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vpexpandb	(%rax), %xmm19 {%k1}
 # CHECK-NEXT:  2      1     0.50                        vpexpandb	%xmm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  1      4     1.00                  U     vpexpandb	%ymm16, %ymm19
-# CHECK-NEXT:  2      8     0.50                  U     vpexpandb	(%rax), %ymm19
+# CHECK-NEXT:  2      8     0.50    *             U     vpexpandb	(%rax), %ymm19
 # CHECK-NEXT:  1      4     1.00                        vpexpandb	%ymm16, %ymm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vpexpandb	(%rax), %ymm19 {%k1}
 # CHECK-NEXT:  1      4     1.00                        vpexpandb	%ymm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      1     0.50                  U     vpexpandw	%xmm16, %xmm19
-# CHECK-NEXT:  2      8     0.50                  U     vpexpandw	(%rax), %xmm19
+# CHECK-NEXT:  2      8     0.50    *             U     vpexpandw	(%rax), %xmm19
 # CHECK-NEXT:  2      1     0.50                        vpexpandw	%xmm16, %xmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vpexpandw	(%rax), %xmm19 {%k1}
 # CHECK-NEXT:  2      1     0.50                        vpexpandw	%xmm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  1      4     1.00                  U     vpexpandw	%ymm16, %ymm19
-# CHECK-NEXT:  2      8     0.50                  U     vpexpandw	(%rax), %ymm19
+# CHECK-NEXT:  2      8     0.50    *             U     vpexpandw	(%rax), %ymm19
 # CHECK-NEXT:  1      4     1.00                        vpexpandw	%ymm16, %ymm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vpexpandw	(%rax), %ymm19 {%k1}
 # CHECK-NEXT:  1      4     1.00                        vpexpandw	%ymm16, %ymm19 {%k1} {z}

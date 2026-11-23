@@ -10,9 +10,6 @@ void uses() {
 #pragma acc parallel wait
   while(1);
 
-#pragma acc serial wait()
-  while(1);
-
 #pragma acc kernels wait(getS(), getI())
   while(1);
 

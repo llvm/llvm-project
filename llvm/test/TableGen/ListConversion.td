@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s
-// XFAIL: vg_leak
 class A;
 class B : A;
 

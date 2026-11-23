@@ -40,6 +40,9 @@
 ;; in the input IR to ensure that the MIB call chain is matched to the longer
 ;; inline sequences from main.
 ;;
+;; Update: the inlined sequence of callsite ids was manually modified to
+;; include some recursion, which reproduced an error before it was fixed.
+;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
 
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
@@ -96,19 +99,19 @@ attributes #7 = { builtin }
 !6 = !{i32 7, !"frame-pointer", i32 2}
 !7 = !{!8, !10}
 !8 = !{!9, !"notcold"}
-!9 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 8632435727821051414}
+!9 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 -5964873800580613432, i64 8632435727821051414}
 !10 = !{!11, !"cold"}
-!11 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 -3421689549917153178}
+!11 = !{i64 9086428284934609951, i64 -5964873800580613432, i64 2732490490862098848, i64 -5964873800580613432, i64 -3421689549917153178}
 !12 = !{i64 9086428284934609951}
 !13 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
-!14 = !{i64 -5964873800580613432, i64 2732490490862098848, i64 8632435727821051414}
-!15 = !{i64 -5964873800580613432, i64 2732490490862098848, i64 -3421689549917153178}
+!14 = !{i64 -5964873800580613432, i64 2732490490862098848, i64 -5964873800580613432, i64 8632435727821051414}
+!15 = !{i64 -5964873800580613432, i64 2732490490862098848, i64 -5964873800580613432, i64 -3421689549917153178}
 
 
 ; DUMP: CCG before cloning:
 ; DUMP: Callsite Context Graph:
 ; DUMP: Node [[BAR:0x[a-z0-9]+]]
-; DUMP: 	  %call = call noalias noundef nonnull dereferenceable(10) ptr @_Znam(i64 noundef 10) #7, !heapallocsite !7	(clone 0)
+; DUMP: 	  %call = call noalias noundef nonnull dereferenceable(10) ptr @_Znam(i64 noundef 10) #7, !heapallocsite !{{[0-9]+}}	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:

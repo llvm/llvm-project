@@ -7,22 +7,16 @@
 ; 0'th element insertion into an SSE register.
 
 define <4 x float> @insert_f32_firstelt(<4 x float> %x, ptr %s.addr) {
-; SSE2-LABEL: insert_f32_firstelt:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: insert_f32_firstelt:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: insert_f32_firstelt:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_f32_firstelt:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    retq
   %s = load float, ptr %s.addr
   %i0 = insertelement <4 x float> %x, float %s, i32 0

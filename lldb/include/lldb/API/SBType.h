@@ -152,6 +152,10 @@ public:
 
   uint64_t GetByteAlign();
 
+  /// Return the distance in bytes between consecutive elements of this type
+  /// when stored in contiguous storage, such as an array. Returns 0 on error.
+  uint64_t GetByteStride();
+
   bool IsPointerType();
 
   bool IsReferenceType();
@@ -220,6 +224,13 @@ public:
   uint32_t GetNumberOfTemplateArguments();
 
   lldb::SBType GetTemplateArgumentType(uint32_t idx);
+
+  /// Returns the value of the non-type template parameter at index \c idx.
+  /// If \c idx is out-of-bounds or the template parameter doesn't have
+  /// a value, returns an empty SBValue.
+  ///
+  /// This function will expand parameter packs.
+  lldb::SBValue GetTemplateArgumentValue(lldb::SBTarget target, uint32_t idx);
 
   /// Return the TemplateArgumentKind of the template argument at index idx.
   /// Variadic argument packs are automatically expanded.

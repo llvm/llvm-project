@@ -247,18 +247,18 @@ public:
                                        lldb::SBStringList &matches,
                                        lldb::SBStringList &descriptions);
 
-  /// Returns whether an interrupt flag was raised either by the SBDebugger - 
+  /// Returns whether an interrupt flag was raised either by the SBDebugger -
   /// when the function is not running on the RunCommandInterpreter thread, or
   /// by SBCommandInterpreter::InterruptCommand if it is.  If your code is doing
-  /// interruptible work, check this API periodically, and interrupt if it 
+  /// interruptible work, check this API periodically, and interrupt if it
   /// returns true.
   bool WasInterrupted() const;
-  
+
   /// Interrupts the command currently executing in the RunCommandInterpreter
   /// thread.
   ///
   /// \return
-  ///   \b true if there was a command in progress to recieve the interrupt.
+  ///   \b true if there was a command in progress to receive the interrupt.
   ///   \b false if there's no command currently in flight.
   bool InterruptCommand();
 
@@ -331,6 +331,8 @@ public:
   /// this list. Otherwise this list is empty.
   SBStructuredData GetTranscript();
 
+  void SetPrintCallback(lldb::SBCommandPrintCallback callback, void *baton);
+
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
 
@@ -351,7 +353,12 @@ private:
 #ifndef SWIG
 class SBCommandPluginInterface {
 public:
-  virtual ~SBCommandPluginInterface() = default;
+  SBCommandPluginInterface();
+
+  // This must be a pure virtual so that it is not the key function of the
+  // class. Clients will emit the type info themselves. liblldb (built without
+  // RTTI) only provides the constructor and destructor bodies.
+  virtual ~SBCommandPluginInterface() = 0;
 
   virtual bool DoExecute(lldb::SBDebugger /*debugger*/, char ** /*command*/,
                          lldb::SBCommandReturnObject & /*result*/) {
@@ -362,6 +369,18 @@ public:
 class SBCommand {
 public:
   SBCommand();
+
+  SBCommand(const lldb::SBCommand &rhs);
+
+  lldb::SBCommand &operator=(const lldb::SBCommand &rhs);
+
+#ifndef SWIG
+  SBCommand(lldb::SBCommand &&rhs);
+
+  lldb::SBCommand &operator=(lldb::SBCommand &&rhs);
+#endif
+
+  ~SBCommand();
 
   explicit operator bool() const;
 

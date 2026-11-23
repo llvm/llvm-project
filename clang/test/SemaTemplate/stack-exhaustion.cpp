@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -verify %s -DTEST=1
 // RUN: %clang_cc1 -verify %s -DTEST=2
 // RUN: %clang_cc1 -verify %s -DTEST=3
+// RUN: %clang_cc1 -verify %s -DTEST=1 -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify %s -DTEST=2 -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify %s -DTEST=3 -fexperimental-new-constant-interpreter
+
 // REQUIRES: thread_support
 
 // FIXME: Detection of, or recovery from, stack exhaustion does not work on

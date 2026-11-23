@@ -162,6 +162,11 @@ public:
 
   void set(SanitizerMask K, double V);
   void clear(SanitizerMask K = SanitizerKind::All);
+
+  // Returns nullopt if all the values are zero.
+  // Otherwise, return value contains a vector of all the scaled values.
+  std::optional<std::vector<unsigned>>
+  getAllScaled(unsigned ScalingFactor) const;
 };
 
 struct SanitizerSet {
@@ -213,8 +218,7 @@ bool parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
 void serializeSanitizerSet(SanitizerSet Set,
                            SmallVectorImpl<StringRef> &Values);
 
-/// Serialize a SanitizerMaskCutoffs into values for -fsanitize= or
-/// -fno-sanitize=.
+/// Serialize a SanitizerMaskCutoffs into command line arguments.
 void serializeSanitizerMaskCutoffs(const SanitizerMaskCutoffs &Cutoffs,
                                    SmallVectorImpl<std::string> &Values);
 

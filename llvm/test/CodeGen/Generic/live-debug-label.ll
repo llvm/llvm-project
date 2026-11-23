@@ -1,4 +1,4 @@
-; RUN: llc < %s -stop-after=virtregrewriter -o - | FileCheck %s
+; RUN: llc < %s -stop-after=virt-reg-rewriter -o - | FileCheck %s
 ;
 ; NVPTX produces a different order of the BBs
 ; XFAIL: target=nvptx{{.*}}
@@ -8,7 +8,7 @@
 ; this by teaching `-stop-after` how to stop at the last instance of a Pass,
 ; but we're just marking XFAIL for these two targets for now.
 ; XFAIL: target=riscv{{.*}}
-; XFAIL: target=amdgcn-{{.*}}
+; XFAIL: target=amdgpu-{{.*}}
 
 ; Generated with "clang++ -g -O1 -S -emit-llvm"
 ;

@@ -28,7 +28,6 @@ public:
   using InstructionT = typename ContextT::InstructionT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleT = typename CycleInfoT::CycleT;
 
   void initialize(raw_ostream *OS,
                   function_ref<void(const Twine &Message)> FailureCB,
@@ -49,7 +48,6 @@ public:
 private:
   raw_ostream *OS;
   std::function<void(const Twine &Message)> FailureCB;
-  DominatorTreeT *DT;
   CycleInfoT CI;
   ContextT Context;
 

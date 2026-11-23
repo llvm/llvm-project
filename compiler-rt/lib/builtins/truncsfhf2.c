@@ -16,7 +16,11 @@ COMPILER_RT_ABI NOINLINE dst_t __truncsfhf2(float a) {
   return __truncXfYf2__(a);
 }
 
-COMPILER_RT_ABI dst_t __gnu_f2h_ieee(float a) { return __truncsfhf2(a); }
+// arm32-gnueabi-only routine that uses integers in the signature. This should
+// be gnueabi-specific, but LLVM currently emits it on more eabi platforms.
+COMPILER_RT_ABI uint16_t __gnu_f2h_ieee(uint32_t a) {
+  return dstToRep(__truncsfhf2(srcFromRep(a)));
+}
 
 #if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)

@@ -81,6 +81,7 @@ class AsmStateImpl;
 
 //===----------------------------------------------------------------------===//
 // Resource Entry
+//===----------------------------------------------------------------------===//
 
 class HeapAsmResourceBlob;
 
@@ -178,7 +179,7 @@ private:
   DeleterFn deleter;
 
   /// Whether the data is mutable.
-  bool dataIsMutable;
+  bool dataIsMutable = false;
 
   friend class HeapAsmResourceBlob;
 };
@@ -330,6 +331,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // Resource Parser/Printer
+//===----------------------------------------------------------------------===//
 
 /// This class represents an instance of a resource parser. This class should be
 /// implemented by non-dialect clients that want to inject additional resources

@@ -25,21 +25,24 @@ class InputSection;
 
 enum class RelocAttrBits {
   _0 = 0,              // invalid
-  PCREL = 1 << 0,      // Value is PC-relative offset
-  ABSOLUTE = 1 << 1,   // Value is an absolute address or fixed offset
+  BYTE1 = 1 << 0,      // 1 byte datum
+  BYTE2 = 1 << 1,      // 2 byte datum
   BYTE4 = 1 << 2,      // 4 byte datum
   BYTE8 = 1 << 3,      // 8 byte datum
-  EXTERN = 1 << 4,     // Can have an external symbol
-  LOCAL = 1 << 5,      // Can have a local symbol
-  ADDEND = 1 << 6,     // *_ADDEND paired prefix reloc
-  SUBTRAHEND = 1 << 7, // *_SUBTRACTOR paired prefix reloc
-  BRANCH = 1 << 8,     // Value is branch target
-  GOT = 1 << 9,        // References a symbol in the Global Offset Table
-  TLV = 1 << 10,       // References a thread-local symbol
-  LOAD = 1 << 11,      // Relaxable indirect load
-  POINTER = 1 << 12,   // Non-relaxable indirect load (pointer is taken)
-  UNSIGNED = 1 << 13,  // *_UNSIGNED relocs
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 14) - 1),
+  PCREL = 1 << 4,      // Value is PC-relative offset
+  ABSOLUTE = 1 << 5,   // Value is an absolute address or fixed offset
+  EXTERN = 1 << 6,     // Can have an external symbol
+  LOCAL = 1 << 7,      // Can have a local symbol
+  ADDEND = 1 << 8,     // *_ADDEND paired prefix reloc
+  SUBTRAHEND = 1 << 9, // *_SUBTRACTOR paired prefix reloc
+  BRANCH = 1 << 10,    // Value is branch target
+  GOT = 1 << 11,       // References a symbol in the Global Offset Table
+  TLV = 1 << 12,       // References a thread-local symbol
+  LOAD = 1 << 13,      // Relaxable indirect load
+  POINTER = 1 << 14,   // Non-relaxable indirect load (pointer is taken)
+  UNSIGNED = 1 << 15,  // *_UNSIGNED relocs
+  AUTH = 1 << 16,      // *_AUTHENTICATED_POINTER relocs
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 17) - 1),
 };
 // Note: SUBTRACTOR always pairs with UNSIGNED (a delta between two symbols).
 
@@ -49,40 +52,94 @@ struct RelocAttrs {
   bool hasAttr(RelocAttrBits b) const { return (bits & b) == b; }
 };
 
-struct Reloc {
+// Matches ptrauth_key in <ptrauth.h>.
+enum PtrAuthKey : uint8_t {
+  PtrAuthKeyIA,
+  PtrAuthKeyIB,
+  PtrAuthKeyDA,
+  PtrAuthKeyDB
+};
+
+// The signing schema of an authenticated pointer.
+struct AuthInfo {
+  uint16_t diversity;
+  PtrAuthKey key;
+  bool addrDiv;
+
+  bool operator==(const AuthInfo &other) const {
+    return diversity == other.diversity && key == other.key &&
+           addrDiv == other.addrDiv;
+  }
+  bool operator!=(const AuthInfo &other) const { return !(*this == other); }
+};
+
+struct AuthReloc {
+  int32_t addend;
+  AuthInfo info;
+};
+static_assert(sizeof(AuthReloc) == sizeof(int64_t),
+              "AuthReloc must match int64_t size");
+
+class Relocation {
+public:
   uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;
   bool pcrel = false;
   uint8_t length = 0;
+  bool hasAuth = false;
   // The offset from the start of the subsection that this relocation belongs
   // to.
   uint32_t offset = 0;
-  // Adding this offset to the address of the referent symbol or subsection
-  // gives the destination that this relocation refers to.
-  int64_t addend = 0;
   llvm::PointerUnion<Symbol *, InputSection *> referent = nullptr;
 
-  Reloc() = default;
+  Relocation() = default;
 
-  Reloc(uint8_t type, bool pcrel, uint8_t length, uint32_t offset,
-        int64_t addend, llvm::PointerUnion<Symbol *, InputSection *> referent)
+  Relocation(uint8_t type, bool pcrel, uint8_t length, uint32_t offset,
+             int64_t addend,
+             llvm::PointerUnion<Symbol *, InputSection *> referent)
       : type(type), pcrel(pcrel), length(length), offset(offset),
-        addend(addend), referent(referent) {}
+        referent(referent), addend(addend) {}
+
+  const AuthInfo *getAuthInfo() const {
+    return hasAuth ? &authData.info : nullptr;
+  }
+  void setAuthInfo(AuthInfo info) {
+    assert(!hasAuth);
+    authData = {static_cast<int32_t>(addend), info};
+    hasAuth = true;
+  }
+  int64_t getAddend() const {
+    return hasAuth ? static_cast<int64_t>(authData.addend) : addend;
+  }
+  void setAddend(int64_t a) {
+    if (hasAuth)
+      authData.addend = static_cast<int32_t>(a);
+    else
+      addend = a;
+  }
 
   InputSection *getReferentInputSection() const;
 
   // Must point to an offset within a CStringInputSection or a
   // ConcatInputSection.
   llvm::StringRef getReferentString() const;
+
+private:
+  // Adding this offset to the address of the referent symbol or subsection
+  // gives the destination that this relocation refers to.
+  union {
+    int64_t addend = 0;
+    AuthReloc authData; // Valid when hasAuth.
+  };
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,
-                              const Reloc &);
+                              const Relocation &);
 
 /*
  * v: The value the relocation is attempting to encode
  * bits: The number of bits actually available to encode this relocation
  */
-void reportRangeError(void *loc, const Reloc &, const llvm::Twine &v,
+void reportRangeError(void *loc, const Relocation &, const llvm::Twine &v,
                       uint8_t bits, int64_t min, uint64_t max);
 
 struct SymbolDiagnostic {

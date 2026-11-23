@@ -1,5 +1,4 @@
 ; RUN: opt -aarch64-stack-tagging -stack-tagging-record-stack-history=instr -S -o - %s | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators  -aarch64-stack-tagging -stack-tagging-record-stack-history=instr -S -o - %s | FileCheck %s
 
 source_filename = "test.ll"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

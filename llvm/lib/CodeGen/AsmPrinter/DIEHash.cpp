@@ -230,7 +230,7 @@ void DIEHash::hashBlockData(const DIE::const_value_range &Values) {
              "Base types referenced from DW_OP_convert should have a name");
       hashNestedType(C, Name);
     } else
-      Hash.update((uint64_t)V.getDIEInteger().getValue());
+      Hash.update(V.getDIEInteger().getValue());
 }
 
 // Hash the contents of a loclistptr class.
@@ -366,6 +366,8 @@ void DIEHash::hashNestedType(const DIE &Die, StringRef Name) {
 // given in section 7.27 of the DWARF4 standard. It is the md5 hash of a
 // flattened description of the DIE.
 void DIEHash::computeHash(const DIE &Die) {
+  assert(!Die.isPlaceholder() && "Cannot hash a placeholder DIE");
+
   // Append the letter 'D', followed by the DWARF tag of the DIE.
   addULEB128('D');
   addULEB128(Die.getTag());

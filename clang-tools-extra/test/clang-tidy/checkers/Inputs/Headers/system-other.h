@@ -11,6 +11,8 @@
 
 // Special system calls.
 
+#if __STDC_VERSION__ < 202311L
 void other_call();
+#endif
 
 #endif // _SYSTEM_OTHER_H_

@@ -15,6 +15,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Type.h"
+#include "llvm/Support/Compiler.h"
 
 #include <cstdint>
 
@@ -25,9 +26,11 @@ class Argument;
 class BBIterator;
 class Constant;
 class Module;
+class Region;
 class Value;
+class Use;
 
-class Context {
+class LLVM_ABI Context {
 public:
   // A EraseInstrCallback receives the instruction about to be erased.
   using EraseInstrCallback = std::function<void(Instruction *)>;
@@ -37,6 +40,8 @@ public:
   // destination BB and an iterator pointing to the insertion position.
   using MoveInstrCallback =
       std::function<void(Instruction *, const BBIterator &)>;
+  // A SetUseCallback receives the Use that is about to get its source set.
+  using SetUseCallback = std::function<void(const Use &, Value *)>;
 
   /// An ID for a registered callback. Used for deregistration. A dedicated type
   /// is employed so as to keep IDs opaque to the end user; only Context should
@@ -46,7 +51,7 @@ public:
     // Uses a 64-bit integer so we don't have to worry about the unlikely case
     // of overflowing a 32-bit counter.
     using ValTy = uint64_t;
-    static constexpr const ValTy InvalidVal = 0;
+    static constexpr ValTy InvalidVal = 0;
 
   private:
     // Default initialization results in an invalid ID.
@@ -57,6 +62,7 @@ public:
 
   public:
     CallbackID() = default;
+    bool operator==(const CallbackID &Other) const { return Val == Other.Val; }
     friend class Context;
     friend struct DenseMapInfo<CallbackID>;
   };
@@ -66,6 +72,7 @@ protected:
   friend class Type;              // For LLVMCtx.
   friend class PointerType;       // For LLVMCtx.
   friend class IntegerType;       // For LLVMCtx.
+  friend class ByteType;          // For LLVMCtx.
   friend class StructType;        // For LLVMCtx.
   friend class Region;            // For LLVMCtx.
   friend class IRSnapshotChecker; // To snapshot LLVMModuleToModuleMap.
@@ -89,15 +96,25 @@ protected:
   /// Type objects.
   DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
 
-  /// Callbacks called when an IR instruction is about to get erased. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, EraseInstrCallback> EraseInstrCallbacks;
-  /// Callbacks called when an IR instruction is about to get created. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, CreateInstrCallback> CreateInstrCallbacks;
-  /// Callbacks called when an IR instruction is about to get moved. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
+  template <typename FnT> struct CallbackEntry {
+    CallbackEntry(CallbackID ID, FnT Fn, StringRef CBName)
+        : ID(ID), Fn(Fn), CBName(CBName) {}
+    CallbackID ID;
+    FnT Fn;
+    std::string CBName;
+  };
+  /// Callbacks called when an IR instruction is about to get erased. CallbackID
+  /// is used as an identifier for deregistration.
+  SmallVector<CallbackEntry<EraseInstrCallback>> EraseInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get created.
+  /// CallbackID is used as an identifier for deregistration.
+  SmallVector<CallbackEntry<CreateInstrCallback>> CreateInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get moved. CallbackID
+  /// is used as an identifier for deregistration.
+  SmallVector<CallbackEntry<MoveInstrCallback>> MoveInstrCallbacks;
+  /// Callbacks called when a Use gets its source set. CallbackID is used as an
+  /// identifier for deregistration.
+  SmallVector<CallbackEntry<SetUseCallback>> SetUseCallbacks;
 
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
@@ -124,11 +141,16 @@ protected:
   }
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
   Constant *getOrCreateConstant(llvm::Constant *LLVMC);
+  friend class ConstantDataSequential; // For getOrCreateConstant().
   friend class Utils; // For getMemoryBase
 
   void runEraseInstrCallbacks(Instruction *I);
   void runCreateInstrCallbacks(Instruction *I);
   void runMoveInstrCallbacks(Instruction *I, const BBIterator &Where);
+  void runSetUseCallbacks(const Use &U, Value *NewSrc);
+
+  friend class User;  // For runSetUseCallbacks().
+  friend class Value; // For runSetUseCallbacks().
 
   // Friends for getOrCreateConstant().
 #define DEF_CONST(ID, CLASS) friend class CLASS;
@@ -138,9 +160,6 @@ protected:
   /// also create all contents of the block.
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
   friend class BasicBlock; // For getOrCreateValue().
-
-  IRBuilder<ConstantFolder> LLVMIRBuilder;
-  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
   VAArgInst *createVAArgInst(llvm::VAArgInst *SI);
   friend VAArgInst; // For createVAArgInst()
@@ -160,8 +179,10 @@ protected:
   friend ExtractValueInst; // For createExtractValueInst()
   InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
-  BranchInst *createBranchInst(llvm::BranchInst *I);
-  friend BranchInst; // For createBranchInst()
+  UncondBrInst *createUncondBrInst(llvm::UncondBrInst *UBI);
+  friend UncondBrInst; // For createUncondBrInst()
+  CondBrInst *createCondBrInst(llvm::CondBrInst *CBI);
+  friend CondBrInst; // For createCondBrInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
   StoreInst *createStoreInst(llvm::StoreInst *SI);
@@ -217,15 +238,22 @@ protected:
 
 public:
   Context(LLVMContext &LLVMCtx);
-  ~Context();
+  Context(const Context &) = delete;
+  Context &operator=(const Context &) = delete;
+  virtual ~Context();
+  /// Clears function-level state.
+  void clear();
 
+  cl::LibraryOptionsContext &getLibraryOptions() const {
+    return LLVMCtx.getLibraryOptions();
+  }
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`
   void save() { IRTracker.save(); }
   /// Convenience function for `getTracker().revert()`
-  void revert() { IRTracker.revert(); }
+  void revert(bool RevertAll = false) { IRTracker.revert(RevertAll); }
   /// Convenience function for `getTracker().accept()`
-  void accept() { IRTracker.accept(); }
+  void accept(bool AcceptAll = false) { IRTracker.accept(AcceptAll); }
 
   sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
@@ -239,7 +267,7 @@ public:
   Type *getType(llvm::Type *LLVMTy) {
     if (LLVMTy == nullptr)
       return nullptr;
-    auto Pair = LLVMTypeToTypeMap.insert({LLVMTy, nullptr});
+    auto Pair = LLVMTypeToTypeMap.try_emplace(LLVMTy);
     auto It = Pair.first;
     if (Pair.second)
       It->second = std::unique_ptr<Type, TypeDeleter>(new Type(LLVMTy, *this));
@@ -259,27 +287,88 @@ public:
   /// \Returns the number of values registered with Context.
   size_t getNumValues() const { return LLVMValueToValueMap.size(); }
 
+private:
+  // An arbitrary limit, to check for accidental misuse. We expect a small
+  // number of callbacks to be registered at a time, but we can increase this
+  // number if we discover we needed more.
+  [[maybe_unused]] static constexpr int MaxRegisteredCallbacks = 16;
+
+  template <typename CBT, typename CBVecT>
+  CallbackID registerCallbackCommon(CBT CB, StringRef CBName,
+                                    bool AllowDuplicateNames, CBVecT &CBVec,
+                                    std::optional<CallbackID> BeforeID) {
+    assert(CBVec.size() <= MaxRegisteredCallbacks &&
+           "EraseInstrCallbacks size limit exceeded");
+    assert((AllowDuplicateNames || none_of(CBVec,
+                                           [CBName](const auto &Entry) {
+                                             return Entry.CBName == CBName;
+                                           })) &&
+           "Callback with CBName already exists!");
+    auto BeforeIt = CBVec.end();
+    if (BeforeID) {
+      BeforeIt = find_if(CBVec, [BeforeID](const auto &Entry) {
+        return Entry.ID == *BeforeID;
+      });
+      assert(BeforeIt != CBVec.end() && "Not found!");
+    }
+    CallbackID ID{NextCallbackID++};
+    CBVec.insert(BeforeIt, CallbackEntry<CBT>(ID, std::move(CB), CBName));
+    return ID;
+  }
+
+public:
   /// Register a callback that gets called when a SandboxIR instruction is about
   /// to be removed from its parent. Note that this will also be called when
   /// reverting the creation of an instruction.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerEraseInstrCallback(EraseInstrCallback CB);
+  /// \p CBName helps prevent multiple registrations with the same name. If this
+  /// is intentional you can set \p AllowDuplicateNames to true.
+  CallbackID
+  registerEraseInstrCallback(EraseInstrCallback CB, StringRef CBName,
+                             bool AllowDuplicateNames = false,
+                             std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterEraseInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called right after a SandboxIR instruction
   /// is created. Note that this will also be called when reverting the removal
   /// of an instruction.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerCreateInstrCallback(CreateInstrCallback CB);
+  /// \p CBName helps prevent multiple registrations with the same name. If this
+  /// is intentional you can set \p AllowDuplicateNames to true.
+  CallbackID registerCreateInstrCallback(
+      CreateInstrCallback CB, StringRef CBName,
+      bool AllowDuplicateNames = false,
+      std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterCreateInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called when a SandboxIR instruction is about
   /// to be moved. Note that this will also be called when reverting a move.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
+  /// \p CBName helps prevent multiple registrations with the same name. If this
+  /// is intentional you can set \p AllowDuplicateNames to true.
+  CallbackID
+  registerMoveInstrCallback(MoveInstrCallback CB, StringRef CBName,
+                            bool AllowDuplicateNames = false,
+                            std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterMoveInstrCallback(CallbackID ID);
 
-  // TODO: Add callbacks for instructions inserted/removed if needed.
+  /// Register a callback that gets called when a Use gets set.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
+  /// \Returns a callback ID for later deregistration.
+  /// \p CBName helps prevent multiple registrations with the same name. If this
+  /// is intentional you can set \p AllowDuplicateNames to true.
+  CallbackID
+  registerSetUseCallback(SetUseCallback CB, StringRef CBName,
+                         bool AllowDuplicateNames = false,
+                         std::optional<CallbackID> BeforeID = std::nullopt);
+  void unregisterSetUseCallback(CallbackID ID);
 };
 
 } // namespace sandboxir
@@ -289,12 +378,6 @@ template <> struct DenseMapInfo<sandboxir::Context::CallbackID> {
   using CallbackID = sandboxir::Context::CallbackID;
   using ReprInfo = DenseMapInfo<CallbackID::ValTy>;
 
-  static CallbackID getEmptyKey() {
-    return CallbackID{ReprInfo::getEmptyKey()};
-  }
-  static CallbackID getTombstoneKey() {
-    return CallbackID{ReprInfo::getTombstoneKey()};
-  }
   static unsigned getHashValue(const CallbackID &ID) {
     return ReprInfo::getHashValue(ID.Val);
   }

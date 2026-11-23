@@ -1,0 +1,40 @@
+posix: posix-2024
+types:
+  uint16_t:
+    in-latest-posix: ''
+  uint32_t:
+    in-latest-posix: ''
+  uint64_t:
+    in-latest-posix: ''
+macros:
+  LITTLE_ENDIAN:
+    in-latest-posix: ''
+  BIG_ENDIAN:
+    in-latest-posix: ''
+  BYTE_ORDER:
+    in-latest-posix: ''
+  be16toh:
+    in-latest-posix: ''
+  be32toh:
+    in-latest-posix: ''
+  be64toh:
+    in-latest-posix: ''
+  htobe16:
+    in-latest-posix: ''
+  htobe32:
+    in-latest-posix: ''
+  htobe64:
+    in-latest-posix: ''
+  htole16:
+    in-latest-posix: ''
+  htole32:
+    in-latest-posix: ''
+  htole64:
+    in-latest-posix: ''
+  le16toh:
+    in-latest-posix: ''
+  le32toh:
+    in-latest-posix: ''
+  le64toh:
+    in-latest-posix: ''
+

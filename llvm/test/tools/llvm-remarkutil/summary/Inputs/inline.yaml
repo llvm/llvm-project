@@ -1,0 +1,50 @@
+--- !Missed
+Pass:            inline
+Name:            TooCostly
+DebugLoc:        { File: 'foo.cpp', Line: 21, Column: 6 }
+Function:        fooCaller
+Args:
+  - Callee:          fooCallee
+    DebugLoc:        { File: 'foo.cpp', Line: 10, Column: 0 }
+  - Caller:          fooCaller
+    DebugLoc:        { File: 'foo.cpp', Line: 20, Column: 0 }
+  - Cost:            '125'
+  - Threshold:       '100'
+...
+--- !Passed
+Pass:            inline
+Name:            Inlined
+DebugLoc:        { File: 'foo.cpp', Line: 21, Column: 6 }
+Function:        fooCaller2
+Args:
+  - Callee:          fooCallee
+    DebugLoc:        { File: 'foo.cpp', Line: 10, Column: 0 }
+  - Caller:          fooCaller
+    DebugLoc:        { File: 'foo.cpp', Line: 20, Column: 0 }
+  - Cost:            '-15'
+  - Threshold:       '100'
+  - Line:            '1'
+  - Column:          '6'
+...
+--- !Passed
+Pass:            inline
+Name:            AlwaysInline
+DebugLoc:        { File: 'bar.cpp', Line: 23, Column: 10 }
+Function:        barCaller
+Args:
+  - Callee:          barCallee
+    DebugLoc:        { File: 'bar.cpp', Line: 5, Column: 0 }
+  - Caller:          barCaller
+    DebugLoc:        { File: 'bar.cpp', Line: 22, Column: 0 }
+  - Reason:          always inline attribute
+  - Line:            '23'
+  - Column:          '10'
+...
+--- !Missed
+Pass:            inline
+Name:            NoDefinition
+Function:        bazCaller
+Args:
+  - Callee:          bazCallee
+  - Caller:          bazCaller
+...

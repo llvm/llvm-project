@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
+using namespace hlsl;
+
 
 /// This test converts V to a 1-element vector and then .xx to a 2-element vector.
 // CHECK-LABEL: ToTwoInts
@@ -28,4 +30,12 @@ export void fn() {
   // This compiling successfully verifies that a vector can be truncated to a
   // smaller vector, then truncated to a float as a constant expression.
   _Static_assert(((float2)float4(6, 5, 4, 3)).x == 6, "Woo!");
+}
+
+int4 test_D3DCOLORtoUBYTE4(float4 p1) {
+  return D3DCOLORtoUBYTE4(p1);
+}
+
+int4 test_constant_inputs() {
+  return D3DCOLORtoUBYTE4(float4(0, 11.11, -50.5, 100));
 }

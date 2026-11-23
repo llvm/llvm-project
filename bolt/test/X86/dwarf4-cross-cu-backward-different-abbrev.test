@@ -18,8 +18,8 @@
 # PRECHECK-SAME: "var"
 
 # POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_AT_abstract_origin [DW_FORM_ref_addr]
 # POSTCHECK-SAME: "inlined"
 # POSTCHECK: DW_AT_abstract_origin [DW_FORM_ref_addr]
 # POSTCHECK-SAME: "var"
-# POSTCHECK: DW_TAG_compile_unit

@@ -1,0 +1,45 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 60 ]
+Parts:
+  - Name:            RTS0
+    Size:            96
+    RootSignature:
+      Version: 1
+      NumRootParameters: 1
+      RootParametersOffset: 24
+      NumStaticSamplers: 0
+      StaticSamplersOffset: 44
+      Parameters:         
+      - ParameterType: CBV
+        ShaderVisibility: Domain
+        Descriptor:
+          ShaderRegister: 31
+          RegisterSpace: 32
+      AllowInputAssemblerInputLayout: true
+      DenyGeometryShaderRootAccess: true
+
+# CHECK: - Name:            RTS0
+# CHECK-NEXT:    Size:            96
+# CHECK-NEXT:    RootSignature:
+# CHECK-NEXT:      Version: 1
+# CHECK-NEXT:      NumRootParameters: 1
+# CHECK-NEXT:      RootParametersOffset: 24
+# CHECK-NEXT:      NumStaticSamplers: 0
+# CHECK-NEXT:      StaticSamplersOffset: 44
+# CHECK-NEXT:      Parameters:         
+# CHECK-NEXT:      - ParameterType: CBV
+# CHECK-NEXT:        ShaderVisibility: Domain
+# CHECK-NEXT:        Descriptor:
+# CHECK-NEXT:          RegisterSpace: 32
+# CHECK-NEXT:          ShaderRegister: 31
+# CHECK-NEXT:      AllowInputAssemblerInputLayout: true
+# CHECK-NEXT:      DenyGeometryShaderRootAccess: true

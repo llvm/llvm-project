@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
-
-#include <stdint.h>
 
 #include "mpfr_inc.h"
 
@@ -24,7 +24,7 @@ extern "C" {
 int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
 float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
 }
-#endif
+#endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -41,7 +41,7 @@ template <typename T> struct ExtraPrecision;
 template <> struct ExtraPrecision<float16> {
   static constexpr unsigned int VALUE = 128;
 };
-#endif
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 template <> struct ExtraPrecision<float> {
   static constexpr unsigned int VALUE = 128;
@@ -64,6 +64,16 @@ template <> struct ExtraPrecision<float128> {
   static constexpr unsigned int VALUE = 512;
 };
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+template <> struct ExtraPrecision<float80> {
+  static constexpr unsigned int VALUE = 256;
+};
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+template <> struct ExtraPrecision<bfloat16> {
+  static constexpr unsigned int VALUE = 64;
+};
 
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
 // result is rounded correctly with respect to the rounding mode by using the
@@ -112,7 +122,7 @@ public:
 #ifdef LIBC_TYPES_HAS_FLOAT16
                                  || cpp::is_same_v<float16, XType>
 #endif
-                             ,
+                                 || cpp::is_same_v<bfloat16, XType>,
                              int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
@@ -135,7 +145,12 @@ public:
   }
 
   template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<long double, XType>
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+                                 || cpp::is_same_v<float80, XType>
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+                             ,
+                             int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
@@ -181,18 +196,22 @@ public:
   MPFRNumber abs() const;
   MPFRNumber acos() const;
   MPFRNumber acosh() const;
+  MPFRNumber acospi() const;
   MPFRNumber add(const MPFRNumber &b) const;
   MPFRNumber asin() const;
   MPFRNumber asinh() const;
+  MPFRNumber asinpi() const;
   MPFRNumber atan() const;
   MPFRNumber atan2(const MPFRNumber &b);
   MPFRNumber atanh() const;
+  MPFRNumber atanpi() const;
   MPFRNumber cbrt() const;
   MPFRNumber ceil() const;
   MPFRNumber cos() const;
   MPFRNumber cosh() const;
   MPFRNumber cospi() const;
   MPFRNumber erf() const;
+  MPFRNumber erfc() const;
   MPFRNumber exp() const;
   MPFRNumber exp2() const;
   MPFRNumber exp2m1() const;
@@ -204,9 +223,12 @@ public:
   MPFRNumber fmod(const MPFRNumber &b);
   MPFRNumber frexp(int &exp);
   MPFRNumber hypot(const MPFRNumber &b);
+  MPFRNumber lgamma() const;
   MPFRNumber log() const;
   MPFRNumber log2() const;
+  MPFRNumber log2p1() const;
   MPFRNumber log10() const;
+  MPFRNumber log10p1() const;
   MPFRNumber log1p() const;
   MPFRNumber pow(const MPFRNumber &b);
   MPFRNumber remquo(const MPFRNumber &divisor, int &quotient);
@@ -215,6 +237,7 @@ public:
   bool round_to_long(long &result) const;
   bool round_to_long(mpfr_rnd_t rnd, long &result) const;
   MPFRNumber rint(mpfr_rnd_t rnd) const;
+  MPFRNumber rsqrt() const;
   MPFRNumber mod_2pi() const;
   MPFRNumber mod_pi_over_2() const;
   MPFRNumber mod_pi_over_4() const;

@@ -99,8 +99,6 @@
 ---
 name:            it_block_store_count_before_start
 alignment:       2
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -111,8 +109,8 @@ frameInfo:
   offsetAdjustment: 0
   maxAlignment:    4
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
@@ -205,8 +203,6 @@ body:             |
 ---
 name:            it_block_store_count_after_start
 alignment:       2
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -216,8 +212,8 @@ frameInfo:
   stackSize:       8
   offsetAdjustment: 0
   maxAlignment:    4
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,

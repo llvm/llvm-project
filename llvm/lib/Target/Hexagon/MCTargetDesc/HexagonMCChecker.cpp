@@ -102,7 +102,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     initReg(MCI, ImpUse, PredReg, isTrue);
 
   const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
-                             HexagonMCInstrInfo::hasHvxTmp(MCII, MCI)) &&
+                             HexagonMCInstrInfo::isTmpWrite(MCII, MCI)) &&
                             STI.hasFeature(Hexagon::ArchV69);
 
   // Get implicit register definitions.
@@ -226,12 +226,14 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkAXOK = checkAXOK();
   bool chkCofMax1 = checkCOFMax1();
   bool chkHWLoop = checkHWLoop();
+  bool chkHMX = checkValidHMX();
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool ChkHVXAccum = checkHVXAccum();
+  bool ChkHLX64BitRegUse = checkHLX64BitRegUse();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
-             chkAXOK && chkCofMax1 && chkHWLoop && chkValidTmpDst &&
-             chkLegalVecRegPair && ChkHVXAccum;
+             chkAXOK && chkCofMax1 && chkHWLoop && chkHMX && chkValidTmpDst &&
+             chkLegalVecRegPair && ChkHVXAccum && ChkHLX64BitRegUse;
 
   return chk;
 }
@@ -385,7 +387,7 @@ bool HexagonMCChecker::checkSlots() {
 bool HexagonMCChecker::checkPredicates() {
   // Check for proper use of new predicate registers.
   for (const auto &I : NewPreds) {
-    unsigned P = I;
+    MCRegister P = I;
 
     if (!Defs.count(P) || LatePreds.count(P) || Defs.count(Hexagon::P3_0)) {
       // Error out if the new predicate register is not defined,
@@ -398,7 +400,7 @@ bool HexagonMCChecker::checkPredicates() {
 
   // Check for proper use of auto-anded of predicate registers.
   for (const auto &I : LatePreds) {
-    unsigned P = I;
+    MCRegister P = I;
 
     if (LatePreds.count(P) > 1 || Defs.count(P)) {
       // Error out if predicate register defined "late" multiple times or
@@ -607,7 +609,7 @@ void HexagonMCChecker::checkRegisterCurDefs() {
 bool HexagonMCChecker::checkRegisters() {
   // Check for proper register definitions.
   for (const auto &I : Defs) {
-    unsigned R = I.first;
+    MCRegister R = I.first;
 
     if (isLoopRegister(R) && Defs.count(R) > 1 &&
         (HexagonMCInstrInfo::isInnerLoop(MCB) ||
@@ -620,8 +622,8 @@ bool HexagonMCChecker::checkRegisters() {
     if (SoftDefs.count(R)) {
       // Error out for explicit changes to registers also weakly defined
       // (e.g., "{ usr = r0; r0 = sfadd(...) }").
-      unsigned UsrR = Hexagon::USR; // Silence warning about mixed types in ?:.
-      unsigned BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
+      MCRegister UsrR = Hexagon::USR;
+      MCRegister BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
       reportErrorRegisters(BadR);
       return false;
     }
@@ -633,8 +635,8 @@ bool HexagonMCChecker::checkRegisters() {
       if (PM.count(Unconditional)) {
         // Error out on an unconditional change when there are any other
         // changes, conditional or not.
-        unsigned UsrR = Hexagon::USR;
-        unsigned BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
+        MCRegister UsrR = Hexagon::USR;
+        MCRegister BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
         reportErrorRegisters(BadR);
         return false;
       }
@@ -664,7 +666,7 @@ bool HexagonMCChecker::checkRegisters() {
 
   // Check for use of temporary definitions.
   for (const auto &I : TmpDefs) {
-    unsigned R = I;
+    MCRegister R = I;
 
     if (!Uses.count(R)) {
       // special case for vhist
@@ -686,6 +688,36 @@ bool HexagonMCChecker::checkRegisters() {
   }
 
   return true;
+}
+
+bool HexagonMCChecker::checkValidHMX() {
+  bool hasWeight = false;
+  bool hasActivation = false;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    hasWeight = hasWeight || (HexagonMCInstrInfo::isHMXWeight(MCII, I));
+    hasActivation =
+        hasActivation || (HexagonMCInstrInfo::isHMXActivation(MCII, I));
+  }
+
+  // To be valid they must both be present or neither:
+  const bool ValidWeightActPairing = hasWeight == hasActivation;
+  if (!ValidWeightActPairing) {
+    const std::string ErrMsg = hasWeight ? "weight without an activation"
+                                         : "activation without a weight";
+    reportError(MCB.getLoc(), Twine("packet has HMX ") + ErrMsg);
+
+    if (HexagonMCInstrInfo::bundleSize(MCB) > 1)
+      for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+        if (HexagonMCInstrInfo::isHMXWeight(MCII, I))
+          reportNote(I.getLoc(), "this is an HMX weight instruction");
+        else if (HexagonMCInstrInfo::isHMXActivation(MCII, I))
+          reportNote(I.getLoc(), "this is an HMX activation instruction");
+        else
+          reportNote(I.getLoc(),
+                     "this is neither an HMX weight nor activation");
+      }
+  }
+  return ValidWeightActPairing;
 }
 
 // Check for legal use of solo insns.
@@ -714,7 +746,8 @@ bool HexagonMCChecker::checkValidTmpDst() {
   }
   auto HasTmp = [&](MCInst const &I) {
     return HexagonMCInstrInfo::hasTmpDst(MCII, I) ||
-           HexagonMCInstrInfo::hasHvxTmp(MCII, I);
+           (HexagonMCInstrInfo::isTmpWrite(MCII, I) &&
+            HexagonMCInstrInfo::isHVX(MCII, I));
   };
   unsigned HasTmpCount =
       llvm::count_if(HexagonMCInstrInfo::bundleInstructions(MCII, MCB), HasTmp);
@@ -765,12 +798,12 @@ void HexagonMCChecker::compoundRegisterMap(unsigned &Register) {
   }
 }
 
-void HexagonMCChecker::reportErrorRegisters(unsigned Register) {
+void HexagonMCChecker::reportErrorRegisters(MCRegister Register) {
   reportError("register `" + Twine(RI.getName(Register)) +
               "' modified more than once");
 }
 
-void HexagonMCChecker::reportErrorNewValue(unsigned Register) {
+void HexagonMCChecker::reportErrorNewValue(MCRegister Register) {
   reportError("register `" + Twine(RI.getName(Register)) +
               "' used with `.new' "
               "but not validly modified in the same packet");
@@ -826,6 +859,41 @@ bool HexagonMCChecker::checkHVXAccum()
                   "' is accumulated in this packet");
       return false;
     }
+  }
+  return true;
+}
+
+bool HexagonMCChecker::checkHLX64BitRegUse() {
+  const MCRegisterClass &DoubleRegs =
+      RI.getRegClass(Hexagon::DoubleRegsRegClassID);
+  const MCRegisterClass &IntRegs = RI.getRegClass(Hexagon::IntRegsRegClassID);
+  const MCInst *DoubleInst = nullptr;
+  unsigned NumScalarArg = 0;
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (!HexagonMCInstrInfo::isHLX(MCII, I))
+      continue;
+    const MCInstrDesc &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    if (Desc.mayLoad() || Desc.mayStore())
+      continue;
+    bool UsesScalarArg = false;
+    for (const auto &Op : I) {
+      if (!DoubleInst && Op.isReg() && DoubleRegs.contains(Op.getReg()))
+        DoubleInst = &I;
+      if (Op.isImm() || Op.isExpr() ||
+          (Op.isReg() &&
+           (IntRegs.contains(Op.getReg()) || DoubleRegs.contains(Op.getReg()))))
+        UsesScalarArg = true;
+    }
+    if (UsesScalarArg)
+      ++NumScalarArg;
+  }
+
+  if (DoubleInst && NumScalarArg > 1) {
+    reportError(DoubleInst->getLoc(),
+                "HLX instruction using a 64-bit scalar register cannot be "
+                "in the same packet with another HLX instruction using a "
+                "scalar register or immediate");
+    return false;
   }
   return true;
 }

@@ -1,0 +1,83 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Bazel port of flang-rt/unittests/CMakeLists.txt. Two test surfaces:
+#   - Runtime/*.cpp: standard gtest suite (one consolidated cc_test).
+#   - Evaluate/{reshape,ISO-Fortran-binding}.cpp: non-gtest standalone
+#     binaries that link against NonGTestTesting and the runtime.
+#
+# Skipped:
+#   - Runtime/CUDA/*: gated on FLANG_RT_INCLUDE_CUF in CMake; CUDA support
+#     isn't ported in this overlay.
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_test(
+    name = "RuntimeTests",
+    size = "medium",
+    srcs = glob(
+        [
+            "Runtime/*.cpp",
+            "Runtime/*.h",
+        ],
+        exclude = ["Runtime/CUDA/*"],
+    ),
+    # CommandTest.cpp references NOT_EXE for testing argv handling; the path
+    # only matters for one test's expected output, so point at /bin/false to
+    # satisfy the compile and skip the test at runtime if needed.
+    defines = ['NOT_EXE=\\"/bin/false\\"'],
+    # Complex.cpp and a few others include "gtest/gtest-matchers.h" directly.
+    # //third-party/unittest:gtest bundles its headers in `srcs` rather than
+    # `hdrs`, so Clang's layering_check flags transitive gtest internals as
+    # private. Disable the check for this gtest-driven test target.
+    features = ["-layering_check"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang-rt:RuntimeHeaders",
+        "//flang-rt/lib/runtime:flang_rt.runtime",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+# Non-gtest standalone tests from flang-rt/unittests/Evaluate/CMakeLists.txt.
+# Use cc_test so `bazel test` exercises them; each is a separate binary with
+# its own main() returning testing::Complete().
+cc_test(
+    name = "reshape.test",
+    size = "small",
+    srcs = ["Evaluate/reshape.cpp"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang:TestingHeaders",
+        "//flang-rt:RuntimeHeaders",
+        "//flang-rt/lib/runtime:flang_rt.runtime",
+        "//flang/lib/Testing:NonGTestTesting",
+    ],
+)
+
+cc_test(
+    name = "ISO-Fortran-binding.test",
+    size = "small",
+    srcs = ["Evaluate/ISO-Fortran-binding.cpp"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang:TestingHeaders",
+        "//flang-rt:RuntimeHeaders",
+        "//flang-rt/lib/runtime:flang_rt.runtime",
+        "//flang/lib/Testing:NonGTestTesting",
+    ],
+)

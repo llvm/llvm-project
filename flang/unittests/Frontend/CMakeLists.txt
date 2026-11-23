@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
-  TargetParser
   Core
+  FrontendOpenACC
+  FrontendOpenMP
+  TargetParser
 )
 
 add_flang_unittest(FlangFrontendTests
@@ -12,14 +14,19 @@ add_flang_unittest(FlangFrontendTests
 
 target_link_libraries(FlangFrontendTests
   PRIVATE
-  clangBasic
   flangFrontend
   flangFrontendTool
   FortranLower
   FortranParser
   FortranSemantics
-  FortranCommon
+  FortranSupport
   FortranEvaluate
+)
+
+clang_target_link_libraries(FlangFrontendTests
+  PRIVATE
+  clangBasic
+  clangOptions
 )
 
 mlir_target_link_libraries(FlangFrontendTests

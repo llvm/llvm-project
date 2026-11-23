@@ -45,7 +45,7 @@ bool XMLDocument::ParseFile(const char *path) {
 #if LLDB_ENABLE_LIBXML2
   Clear();
   xmlSetGenericErrorFunc((void *)this, XMLDocument::ErrorCallback);
-  m_document = xmlParseFile(path);
+  m_document = xmlReadFile(path, nullptr, 0);
   xmlSetGenericErrorFunc(nullptr, nullptr);
 #endif
   return IsValid();

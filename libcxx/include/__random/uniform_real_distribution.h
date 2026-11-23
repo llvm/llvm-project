@@ -25,7 +25,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _RealType = double>
-class _LIBCPP_TEMPLATE_VIS uniform_real_distribution {
+class uniform_real_distribution {
   static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
                 "RealType must be a supported floating-point type");
 
@@ -33,7 +33,7 @@ public:
   // types
   typedef _RealType result_type;
 
-  class _LIBCPP_TEMPLATE_VIS param_type {
+  class param_type {
     result_type __a_;
     result_type __b_;
 
@@ -42,8 +42,8 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __a = 0, result_type __b = 1) : __a_(__a), __b_(__b) {}
 
-    _LIBCPP_HIDE_FROM_ABI result_type a() const { return __a_; }
-    _LIBCPP_HIDE_FROM_ABI result_type b() const { return __b_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type a() const { return __a_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type b() const { return __b_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__a_ == __y.__a_ && __x.__b_ == __y.__b_;
@@ -69,21 +69,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type a() const { return __p_.a(); }
-  _LIBCPP_HIDE_FROM_ABI result_type b() const { return __p_.b(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type a() const { return __p_.a(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type b() const { return __p_.b(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return a(); }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return b(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return a(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return b(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool
   operator==(const uniform_real_distribution& __x, const uniform_real_distribution& __y) {

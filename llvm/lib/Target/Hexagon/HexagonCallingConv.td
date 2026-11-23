@@ -6,10 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-class CCIfArgIsVarArg<CCAction A>
-  : CCIf<"State.isVarArg() && "
-         "ValNo >= static_cast<HexagonCCState&>(State)"
-         ".getNumNamedVarArgParams()", A>;
+// We cannot use the standard CCIfArgVarArg class here since in Hexagon there
+// exists a special case for a musl environment.  In a musl environment VarArgs
+// are treated like non VarArgs.  I.e., in a musl enviroment unnamed arguments
+// can also be passed in registers.  The CCIfArgVarArg class only checks each
+// individual argument, but not whether State.isVarArg() is true.  We also have
+// to check State.isVarArg() which is determined by the TreatAsVarArg argument.
+class CCIfStateVarArgAndArgVarArg<CCAction A>
+  : CCIf<"State.isVarArg() && ArgFlags.isVarArg()", A>;
 
 def CC_HexagonStack: CallingConv<[
   CCIfType<[i32,v2i16,v4i8],
@@ -21,6 +25,8 @@ def CC_HexagonStack: CallingConv<[
 def CC_Hexagon_Legacy: CallingConv<[
   CCIfType<[i1,i8,i16],
     CCPromoteToType<i32>>,
+  CCIfType<[bf16],
+    CCBitConvertToType<i32>>,
   CCIfType<[f32],
     CCBitConvertToType<i32>>,
   CCIfType<[f64],
@@ -28,7 +34,7 @@ def CC_Hexagon_Legacy: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,8>>,
-  CCIfArgIsVarArg<
+  CCIfStateVarArgAndArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.
@@ -48,9 +54,23 @@ def CC_Hexagon_Legacy: CallingConv<[
   CCDelegateTo<CC_HexagonStack>
 ]>;
 
+class CCIfHvx64<CCAction A>
+  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
+         ".useHVX64BOps()", A>;
+
+class CCIfHvx128<CCAction A>
+  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
+         ".useHVX128BOps()", A>;
+
+class CCIfHlx2048<CCAction A>
+  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
+         ".useHLX2048BOps()", A>;
+
 def CC_Hexagon: CallingConv<[
   CCIfType<[i1,i8,i16],
     CCPromoteToType<i32>>,
+  CCIfType<[bf16],
+    CCBitConvertToType<i32>>,
   CCIfType<[f32],
     CCBitConvertToType<i32>>,
   CCIfType<[f64],
@@ -58,13 +78,16 @@ def CC_Hexagon: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,1>>,
-  CCIfArgIsVarArg<
+  CCIfStateVarArgAndArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.
   CCIfType<[i32],
     CCIfSplit<
       CCCustom<"CC_SkipOdd">>>,
+  CCIfType<[v2i1],  CCPromoteToType<v2i32>>,
+  CCIfType<[v4i1],  CCPromoteToType<v4i16>>,
+  CCIfType<[v8i1],  CCPromoteToType<v8i8>>,
 
   CCIfType<[i32,v2i16,v4i8],
     CCAssignToReg<[R0,R1,R2,R3,R4,R5]>>,
@@ -75,12 +98,69 @@ def CC_Hexagon: CallingConv<[
   CCIfType<[i64,v2i32,v4i16,v8i8],
     CCAssignToReg<[D0,D1,D2]>>,
 
+  // HVX 64-byte mode
+
+  CCIfHvx64<
+        CCIfType<[v16i1], CCPromoteToType<v16i32>>>,
+  CCIfHvx64<
+        CCIfType<[v32i1], CCPromoteToType<v32i16>>>,
+  CCIfHvx64<
+        CCIfType<[v64i1], CCPromoteToType<v64i8>>>,
+
+  CCIfHvx64<
+    CCIfType<[v16i32,v32i16,v64i8],
+      CCAssignToReg<[V0,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15]>>>,
+  CCIfHvx64<
+    CCIfType<[v32i32,v64i16,v128i8],
+      CCAssignToReg<[W0,W1,W2,W3,W4,W5,W6,W7]>>>,
+  CCIfHvx64<
+    CCIfType<[v16i32,v32i16,v64i8],
+      CCAssignToStack<64,64>>>,
+  CCIfHvx64<
+    CCIfType<[v32i32,v64i16,v128i8],
+      CCAssignToStack<128,64>>>,
+
+  // HVX 128-byte mode
+
+  CCIfHvx128<
+        CCIfType<[v32i1], CCPromoteToType<v32i32>>>,
+  CCIfHvx128<
+        CCIfType<[v64i1], CCPromoteToType<v64i16>>>,
+  CCIfHvx128<
+        CCIfType<[v128i1], CCPromoteToType<v128i8>>>,
+
+  CCIfHvx128<
+    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16,v64bf16],
+      CCAssignToReg<[V0,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15]>>>,
+  CCIfHvx128<
+    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16,v128bf16],
+      CCAssignToReg<[W0,W1,W2,W3,W4,W5,W6,W7]>>>,
+  CCIfHvx128<
+    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16,v64bf16],
+      CCAssignToStack<128,128>>>,
+  CCIfHvx128<
+    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16,v64bf16],
+      CCAssignToStack<256,128>>>,
+
+  // HLX-2048B
+  CCIfHlx2048<
+    CCIfType<[v512i32,v1024i16,v2048i8],
+      CCAssignToReg<[L0,L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11]>>>,
+  CCIfHlx2048<
+    CCIfType<[v1024i32,v2048i16,v4096i8],
+      CCAssignToReg<[LL0,LL1,LL2,LL3,LL4,LL5]>>>,
+  CCIfHlx2048<
+    CCIfType<[v512i32,v1024i16,v2048i8,v1024i32,v2048i16,v4096i8],
+      CCCustom<"CC_Hexagon_VTCM_Stack">>>,
+
   CCDelegateTo<CC_HexagonStack>
 ]>;
 
 def RetCC_Hexagon: CallingConv<[
   CCIfType<[i1,i8,i16],
     CCPromoteToType<i32>>,
+  CCIfType<[bf16],
+    CCBitConvertToType<i32>>,
   CCIfType<[f32],
     CCBitConvertToType<i32>>,
   CCIfType<[f64],
@@ -97,51 +177,8 @@ def RetCC_Hexagon: CallingConv<[
   CCIfType<[i32,v2i16,v4i8],
     CCAssignToReg<[R0,R1]>>,
   CCIfType<[i64,v2i32,v4i16,v8i8],
-    CCAssignToReg<[D0]>>
-]>;
+    CCAssignToReg<[D0]>>,
 
-
-class CCIfHvx64<CCAction A>
-  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
-         ".useHVX64BOps()", A>;
-
-class CCIfHvx128<CCAction A>
-  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
-         ".useHVX128BOps()", A>;
-
-def CC_Hexagon_HVX: CallingConv<[
-  // HVX 64-byte mode
-  CCIfHvx64<
-    CCIfType<[v16i32,v32i16,v64i8],
-      CCAssignToReg<[V0,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15]>>>,
-  CCIfHvx64<
-    CCIfType<[v32i32,v64i16,v128i8],
-      CCAssignToReg<[W0,W1,W2,W3,W4,W5,W6,W7]>>>,
-  CCIfHvx64<
-    CCIfType<[v16i32,v32i16,v64i8],
-      CCAssignToStack<64,64>>>,
-  CCIfHvx64<
-    CCIfType<[v32i32,v64i16,v128i8],
-      CCAssignToStack<128,64>>>,
-
-  // HVX 128-byte mode
-  CCIfHvx128<
-    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16],
-      CCAssignToReg<[V0,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15]>>>,
-  CCIfHvx128<
-    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16],
-      CCAssignToReg<[W0,W1,W2,W3,W4,W5,W6,W7]>>>,
-  CCIfHvx128<
-    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16],
-      CCAssignToStack<128,128>>>,
-  CCIfHvx128<
-    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16],
-      CCAssignToStack<256,128>>>,
-
-  CCDelegateTo<CC_Hexagon>
-]>;
-
-def RetCC_Hexagon_HVX: CallingConv<[
   // HVX 64-byte mode
   CCIfHvx64<
     CCIfType<[v16i32,v32i16,v64i8],
@@ -152,12 +189,15 @@ def RetCC_Hexagon_HVX: CallingConv<[
 
   // HVX 128-byte mode
   CCIfHvx128<
-    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16],
+    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16,v64bf16],
       CCAssignToReg<[V0]>>>,
   CCIfHvx128<
-    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16],
+    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16,v128bf16],
       CCAssignToReg<[W0]>>>,
 
-  CCDelegateTo<RetCC_Hexagon>
+  // HLX-2048B
+  CCIfHlx2048<
+    CCIfType<[v512i32,v1024i16,v2048i8], CCAssignToReg<[L0]>>>,
+  CCIfHlx2048<
+    CCIfType<[v1024i32,v2048i16,v4096i8], CCAssignToReg<[LL0]>>>,
 ]>;
-

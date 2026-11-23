@@ -260,8 +260,7 @@ void IRPartitionLayer::emitPartition(
     {
       std::vector<const GlobalValue *> HashGVs;
       HashGVs.reserve(GVsToExtract->size());
-      for (const auto *GV : *GVsToExtract)
-        HashGVs.push_back(GV);
+      llvm::append_range(HashGVs, *GVsToExtract);
       llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
         return LHS->getName() < RHS->getName();
       });
@@ -269,7 +268,7 @@ void IRPartitionLayer::emitPartition(
       for (const auto *GV : HashGVs) {
         assert(GV->hasName() && "All GVs to extract should be named by now");
         auto GVName = GV->getName();
-        HC = hash_combine(HC, hash_combine_range(GVName.begin(), GVName.end()));
+        HC = hash_combine(HC, hash_combine_range(GVName));
       }
       raw_string_ostream(SubModuleName)
           << ".submodule."

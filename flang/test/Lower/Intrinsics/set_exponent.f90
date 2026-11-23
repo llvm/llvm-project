@@ -1,47 +1,43 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 ! SET_EXPONENT
-! CHECK-LABEL: set_exponent_test
-subroutine set_exponent_test
+! CHECK-LABEL: set_exponent_test_4
+subroutine set_exponent_test_4(x, i)
+  real(kind = 4) :: x
+  integer :: i
+  x = set_exponent(x, i)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}"_QFset_exponent_test_4Ei"
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}"_QFset_exponent_test_4Ex"
+! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<f32>
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
+! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> i64
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranASetExponent4(%[[VAL_5]], %[[VAL_7]]) fastmath<contract> : (f32, i64) -> f32
+! CHECK:  hlfir.assign %[[VAL_8]] to %[[VAL_4]]#0 : f32, !fir.ref<f32>
+end subroutine
 
-  real(kind = 4) :: x1 = 178.1378e-4
-  real(kind = 8) :: x2 = 178.1378e-4
-  real(kind = 10) :: x3 = 178.1378e-4
-  real(kind = 16) :: x4 = 178.1378e-4
-  integer :: i = 17
-! CHECK: %[[addri:.*]] = fir.address_of(@_QFset_exponent_testEi) : !fir.ref<i32>
-! CHECK: %[[addrx1:.*]] = fir.address_of(@_QFset_exponent_testEx1) : !fir.ref<f32>
-! CHECK: %[[addrx2:.*]] = fir.address_of(@_QFset_exponent_testEx2) : !fir.ref<f64>
-! CHECK: %[[addrx3:.*]] = fir.address_of(@_QFset_exponent_testEx3) : !fir.ref<f80>
-! CHECK: %[[addrx4:.*]] = fir.address_of(@_QFset_exponent_testEx4) : !fir.ref<f128>
 
-  x1 = set_exponent(x1, i)
-! CHECK: %[[x1:.*]] = fir.load %[[addrx1:.*]] : !fir.ref<f32>
-! CHECK: %[[i1:.*]] = fir.load %[[addri:.*]] : !fir.ref<i32>
-! CHECK: %[[i64v1:.*]] = fir.convert %[[i1:.*]] : (i32) -> i64
-! CHECK: %[[result1:.*]] = fir.call @_FortranASetExponent4(%[[x1:.*]], %[[i64v1:.*]]) {{.*}}: (f32, i64) -> f32
-! CHECK: fir.store %[[result1:.*]] to %[[addrx1:.*]] : !fir.ref<f32>
+! CHECK-LABEL: set_exponent_test_8
+subroutine set_exponent_test_8(x, i)
+  real(kind = 8) :: x
+  integer :: i
+  x = set_exponent(x, i)
+! CHECK: fir.call @_FortranASetExponent8(%{{.*}}, %{{.*}}) {{.*}}: (f64, i64) -> f64
+end subroutine
 
-  x2 = set_exponent(x2, i)
-! CHECK: %[[x2:.*]] = fir.load %[[addrx2:.*]] : !fir.ref<f64>
-! CHECK: %[[i2:.*]] = fir.load %[[addri:.*]] : !fir.ref<i32>
-! CHECK: %[[i64v2:.*]] = fir.convert %[[i2:.*]] : (i32) -> i64
-! CHECK: %[[result2:.*]] = fir.call @_FortranASetExponent8(%[[x2:.*]], %[[i64v2:.*]]) {{.*}}: (f64, i64) -> f64
-! CHECK: fir.store %[[result2:.*]] to %[[addrx2:.*]] : !fir.ref<f64>
+! CHECK-KIND10-LABEL: set_exponent_test_10
+subroutine set_exponent_test_10(x, i)
+  integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+  real(kind = kind10) :: x
+  integer :: i
+  x = set_exponent(x, i)
+! CHECK-KIND10: fir.call @_FortranASetExponent10(%{{.*}}, %{{.*}}) {{.*}}: (f80, i64) -> f80
+end subroutine
 
-  x3 = set_exponent(x3, i)
-! CHECK: %[[x3:.*]] = fir.load %[[addrx3:.*]] : !fir.ref<f80>
-! CHECK: %[[i3:.*]] = fir.load %[[addri:.*]] : !fir.ref<i32>
-! CHECK: %[[i64v3:.*]] = fir.convert %[[i3:.*]] : (i32) -> i64
-! CHECK: %[[result3:.*]] = fir.call @_FortranASetExponent10(%[[x3:.*]], %[[i64v3:.*]]) {{.*}}: (f80, i64) -> f80
-! CHECK: fir.store %[[result3:.*]] to %[[addrx3:.*]] : !fir.ref<f80>
-
-  x4 = set_exponent(x4, i)
-! CHECK: %[[x4:.*]] = fir.load %[[addrx4:.*]] : !fir.ref<f128>
-! CHECK: %[[i4:.*]] = fir.load %[[addri:.*]] : !fir.ref<i32>
-! CHECK: %[[i64v4:.*]] = fir.convert %18 : (i32) -> i64
-! CHECK: %[[result4:.*]] = fir.call @_FortranASetExponent16(%[[x4:.*]], %[[i64v4:.*]]) {{.*}}: (f128, i64) -> f128
-! CHECK: fir.store %[[result4:.*]] to %[[addrx4:.*]] : !fir.ref<f128>
-end subroutine set_exponent_test
-
+! CHECK-KIND16-LABEL: set_exponent_test_16
+subroutine set_exponent_test_16(x, i)
+  integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
+  real(kind = kind16) :: x
+  integer :: i
+  x = set_exponent(x, i)
+! CHECK-KIND16: fir.call @_FortranASetExponent16(%{{.*}}, %{{.*}}) {{.*}}: (f128, i64) -> f128
+end subroutine

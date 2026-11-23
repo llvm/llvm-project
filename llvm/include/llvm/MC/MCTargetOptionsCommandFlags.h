@@ -14,62 +14,28 @@
 #ifndef LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 #define LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 
-#include <optional>
-#include <string>
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class MCTargetOptions;
-enum class EmitDwarfUnwindType;
+class StringRef;
+
+namespace cl {
+class LibraryOptions;
+class LibraryOptionsContext;
+}
 
 namespace mc {
 
-bool getRelaxAll();
-std::optional<bool> getExplicitRelaxAll();
+LLVM_ABI StringRef getABIName(const cl::LibraryOptionsContext &C);
 
-bool getIncrementalLinkerCompatible();
+/// The options that a tool reading getMCTargetOptions passes to
+/// cl::parseCommandLineOptions.
+LLVM_ABI ArrayRef<const cl::LibraryOptions *> getToolOptions();
 
-bool getFDPIC();
-
-int getDwarfVersion();
-
-bool getDwarf64();
-
-EmitDwarfUnwindType getEmitDwarfUnwind();
-
-bool getEmitCompactUnwindNonCanonical();
-
-bool getShowMCInst();
-
-bool getFatalWarnings();
-
-bool getNoWarn();
-
-bool getNoDeprecatedWarn();
-
-bool getNoTypeCheck();
-
-bool getSaveTempLabels();
-
-bool getCrel();
-
-bool getImplicitMapSyms();
-
-bool getX86RelaxRelocations();
-
-bool getX86Sse2Avx();
-
-std::string getABIName();
-
-std::string getAsSecureLogFile();
-
-/// Create this object with static storage to register mc-related command
-/// line options.
-struct RegisterMCTargetOptionsFlags {
-  RegisterMCTargetOptionsFlags();
-};
-
-MCTargetOptions InitMCTargetOptionsFromFlags();
+LLVM_ABI MCTargetOptions getMCTargetOptions(const cl::LibraryOptionsContext &C);
 
 } // namespace mc
 

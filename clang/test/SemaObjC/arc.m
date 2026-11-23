@@ -751,9 +751,9 @@ void rdar12569201(id key, id value) {
 typedef __strong NSMutableArray * PSNS;
 
 void test(NSArray *x) {
-  NSMutableArray *y = x; // expected-warning {{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
-  __strong NSMutableArray *y1 = x; // expected-warning {{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
-  PSNS y2 = x; // expected-warning {{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
+  NSMutableArray *y = x; // expected-error {{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
+  __strong NSMutableArray *y1 = x; // expected-error {{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
+  PSNS y2 = x; // expected-error {{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
 }
 
 @class NSString;

@@ -3,6 +3,7 @@
 #
 # CHECK: 00000001 T my_func_export
 # CHECK: 0000002a D my_global_export
+# CHECK: 00000054 W weak_var
 
 --- !WASM
 FileHeader:
@@ -15,6 +16,9 @@ Sections:
     TableSize:       0
     TableAlignment:  0
     Needed:          []
+    ExportInfo:
+      - Name:            weak_var
+        Flags:           [ BINDING_WEAK ]
   - Type:            TYPE
     Signatures:
       - Index:           0
@@ -46,6 +50,12 @@ Sections:
         InitExpr:
           Opcode:          I32_CONST
           Value:           42
+      - Index:           2
+        Mutable:         false
+        Type:            I32
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           84
   - Type:            EXPORT
     Exports:
       - Name:            my_func_export
@@ -54,6 +64,9 @@ Sections:
       - Name:            my_global_export
         Kind:            GLOBAL
         Index:           1
+      - Name:            weak_var
+        Kind:            GLOBAL
+        Index:           2
   - Type:            CODE
     Functions:
       - Index:           1

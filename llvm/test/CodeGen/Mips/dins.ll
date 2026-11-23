@@ -304,3 +304,56 @@ entry:
   store volatile i32 %or, ptr %x.addr, align 4
   ret i32 %and
 }
+
+define i32 @pr125954(i32 %arg, i1 %c) {
+; MIPS64R2-LABEL: pr125954:
+; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    sll $1, $4, 0
+; MIPS64R2-NEXT:    addiu $2, $zero, -1
+; MIPS64R2-NEXT:    move $3, $1
+; MIPS64R2-NEXT:    ins $3, $2, 8, 24
+; MIPS64R2-NEXT:    andi $2, $1, 255
+; MIPS64R2-NEXT:    sll $1, $5, 0
+; MIPS64R2-NEXT:    andi $1, $1, 1
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    movn $2, $3, $1
+;
+; MIPS32R2-LABEL: pr125954:
+; MIPS32R2:       # %bb.0:
+; MIPS32R2-NEXT:    andi $2, $4, 255
+; MIPS32R2-NEXT:    addiu $1, $zero, -256
+; MIPS32R2-NEXT:    or $1, $2, $1
+; MIPS32R2-NEXT:    andi $3, $5, 1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    movn $2, $1, $3
+;
+; MIPS16-LABEL: pr125954:
+; MIPS16:       # %bb.0:
+; MIPS16-NEXT:    li $6, 1
+; MIPS16-NEXT:    and $6, $5
+; MIPS16-NEXT:    li $2, 255
+; MIPS16-NEXT:    and $2, $4
+; MIPS16-NEXT:    move $3, $zero
+; MIPS16-NEXT:    beqz $6, $BB2_2 # 16 bit inst
+; MIPS16-NEXT:  # %bb.1:
+; MIPS16-NEXT:    addiu $3, -256
+; MIPS16-NEXT:    or $2, $3
+; MIPS16-NEXT:  $BB2_2:
+; MIPS16-NEXT:    jrc $ra
+;
+; MIPS64R2N32-LABEL: pr125954:
+; MIPS64R2N32:       # %bb.0:
+; MIPS64R2N32-NEXT:    sll $1, $4, 0
+; MIPS64R2N32-NEXT:    addiu $2, $zero, -1
+; MIPS64R2N32-NEXT:    move $3, $1
+; MIPS64R2N32-NEXT:    ins $3, $2, 8, 24
+; MIPS64R2N32-NEXT:    andi $2, $1, 255
+; MIPS64R2N32-NEXT:    sll $1, $5, 0
+; MIPS64R2N32-NEXT:    andi $1, $1, 1
+; MIPS64R2N32-NEXT:    jr $ra
+; MIPS64R2N32-NEXT:    movn $2, $3, $1
+  %and = and i32 %arg, 255
+  %or = or i32 %and, -256
+  %sel = select i1 %c, i32 %or, i32 %and
+  ret i32 %sel
+}

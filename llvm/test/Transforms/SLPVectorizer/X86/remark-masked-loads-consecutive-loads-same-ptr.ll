@@ -21,9 +21,10 @@ define void @test(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr i32, ptr [[P]], i64 33
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[I]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[I2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP3]], <2 x i32> [[TMP0]], i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[I]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[I2]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], [[TMP1]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    ret void

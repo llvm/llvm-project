@@ -1,0 +1,75 @@
+## Test that perf2bolt correctly detects shared objects using identify_magic
+## and activates build ID filtering for pre-aggregated profiles.
+
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.so -shared -Wl,-q -Wl,--build-id=0xaabb1122 -nostdlib
+# RUN: %clang %cflags %t.o -o %t.exe -fPIC -pie -Wl,-q -Wl,--build-id=0xaabb1122 -nostdlib
+# RUN: link_fdata %s %t.so %t.pa PREAGG
+# RUN: link_fdata %s %t.exe %t.pa-pie PREAGG
+# RUN: link_fdata %s %t.so %t.pa-bid PREAGG-BID
+
+## Test 1: Without buildid prefix, addresses don't match the .so's buildid
+## and are treated as external → 0 functions with profile.
+# RUN: perf2bolt %t.so -o %t.fdata --pa -p %t.pa \
+# RUN:   --profile-format=fdata 2>&1 | FileCheck %s --check-prefix=CHECK-NEG
+
+# CHECK-NEG: PERF2BOLT: filtering pre-aggregated data for buildid aabb1122
+# CHECK-NEG: BOLT-INFO: 0 out of {{[0-9]+}} functions in the binary (0.0%) have non-empty execution profile
+
+## Test 2: With matching buildid prefix, addresses are recognized.
+# RUN: perf2bolt %t.so -o %t.fdata2 --pa -p %t.pa-bid \
+# RUN:   --profile-format=fdata 2>&1 | FileCheck %s --check-prefix=CHECK-POS
+
+# CHECK-POS: PERF2BOLT: filtering pre-aggregated data for buildid aabb1122
+# CHECK-POS: BOLT-INFO: 1 out of {{[0-9]+}} functions in the binary
+# CHECK-POS-NOT: (0.0%)
+
+  .text
+  .globl foo
+  .type foo, @function
+foo:
+  pushq %rbp
+  movq  %rsp, %rbp
+  cmpl  $0, %edi
+Lbr:
+  je    Lfalse
+Ltrue:
+  movl  $1, %eax
+  jmp   Lret
+Lfalse:
+  xorl  %eax, %eax
+Lret:
+  popq  %rbp
+  retq
+  .size foo, .-foo
+
+# PREAGG: T #Lbr# #Lfalse# #Lret# 10
+# PREAGG-BID: T aabb1122:#Lbr# aabb1122:#Lfalse# aabb1122:#Lret# 10
+
+## Test 3: Executable with ".so" in the filename should NOT trigger filtering.
+## The old heuristic (ends_with(".so")) would false-positive here, but
+## identify_magic correctly identifies it as an executable.
+# RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe.so
+# RUN: perf2bolt %t.exe.so -o %t.fdata3 --pa -p %p/Inputs/pre-aggregated.txt \
+# RUN:   --profile-format=fdata 2>&1 | FileCheck %s --check-prefix=CHECK-EXE
+
+# CHECK-EXE-NOT: filtering pre-aggregated data for buildid
+# CHECK-EXE: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+
+## Test 4: Shared library without ".so" in the filename should still trigger
+## filtering. The old heuristic would false-negative here, but identify_magic
+## correctly identifies it as a shared object.
+# RUN: cp %t.so %t.dynlib
+# RUN: perf2bolt %t.dynlib -o %t.fdata4 --pa -p %t.pa-bid \
+# RUN:   --profile-format=fdata 2>&1 | FileCheck %s --check-prefix=CHECK-NOEXT
+
+# CHECK-NOEXT: PERF2BOLT: filtering pre-aggregated data for buildid aabb1122
+# CHECK-NOEXT: BOLT-INFO: 1 out of {{[0-9]+}} functions in the binary
+# CHECK-NOEXT-NOT: (0.0%)
+#
+## Test 5: Check that PIE binaries are not misidentified as shared libraries.
+# RUN: perf2bolt %t.exe -o %t.fdata5 --pa -p %t.pa-pie 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=CHECK-PIE
+# CHECK-PIE: BOLT-INFO: 1 out of {{[0-9]+}} functions in the binary

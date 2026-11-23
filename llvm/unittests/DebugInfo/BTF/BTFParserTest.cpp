@@ -343,17 +343,15 @@ TEST(BTFParserTest, btfContext) {
   BTFParser BTF;
   std::unique_ptr<BTFContext> Ctx = BTFContext::create(Mock.makeObj());
 
-  DILineInfo I1 = Ctx->getLineInfoForAddress({16, 1});
-  EXPECT_EQ(I1.Line, 7u);
-  EXPECT_EQ(I1.Column, 1u);
-  EXPECT_EQ(I1.FileName, "a.c");
-  EXPECT_EQ(I1.LineSource, "first line");
+  std::optional<DILineInfo> I1 = Ctx->getLineInfoForAddress({16, 1});
+  EXPECT_TRUE(I1.has_value());
+  EXPECT_EQ(I1->Line, 7u);
+  EXPECT_EQ(I1->Column, 1u);
+  EXPECT_EQ(I1->FileName, "a.c");
+  EXPECT_EQ(I1->LineSource, "first line");
 
-  DILineInfo I2 = Ctx->getLineInfoForAddress({24, 1});
-  EXPECT_EQ(I2.Line, 0u);
-  EXPECT_EQ(I2.Column, 0u);
-  EXPECT_EQ(I2.FileName, DILineInfo::BadString);
-  EXPECT_EQ(I2.LineSource, std::nullopt);
+  std::optional<DILineInfo> I2 = Ctx->getLineInfoForAddress({24, 1});
+  EXPECT_FALSE(I2.has_value());
 }
 
 static uint32_t mkInfo(uint32_t Kind) { return Kind << 24; }
@@ -580,7 +578,7 @@ TEST(BTFParserTest, allTypeKinds) {
 }
 
 TEST(BTFParserTest, bigStruct) {
-  const uint32_t N = 1000u;
+  const uint32_t N = 70000u;
   MockData2 D;
   uint32_t FStr = D.addString("f");
   D.addType({D.addString("foo"), mkInfo(BTF::BTF_KIND_INT), {4}});

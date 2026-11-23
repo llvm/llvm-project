@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s %}
 
 // CHECK: [[ANNOT:.+]] = private unnamed_addr addrspace(1) constant {{.*}}c"my_annotation\00"
 
@@ -9,7 +10,7 @@ struct HasField {
   int *a;
 };
 
-void foo(int *b) {
+[[clang::sycl_external]] void foo(int *b) {
   struct HasField f;
   // CHECK: %[[A:.+]] = getelementptr inbounds nuw %struct.HasField, ptr addrspace(4) %{{.+}}
   // CHECK: %[[CALL:.+]] = call ptr addrspace(4) @llvm.ptr.annotation.p4.p1(ptr addrspace(4) %[[A]], ptr addrspace(1) [[ANNOT]]

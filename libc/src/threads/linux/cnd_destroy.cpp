@@ -19,7 +19,7 @@ static_assert(sizeof(CndVar) == sizeof(cnd_t));
 
 LLVM_LIBC_FUNCTION(void, cnd_destroy, (cnd_t * cond)) {
   CndVar *cndvar = reinterpret_cast<CndVar *>(cond);
-  CndVar::destroy(cndvar);
+  cndvar->reset();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

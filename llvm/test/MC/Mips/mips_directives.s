@@ -29,7 +29,7 @@ $JTI0_0:
 
     .word 0x77fffffc
 # CHECK: $JTI0_0:
-# CHECK: .gpword ($BB0_2)
+# CHECK: .gpword $BB0_2
 # CHECK:     .4byte    2013265916
     .set  at=$12
     .set macro

@@ -23,6 +23,10 @@ func.func @illegalmemrefelementtype(memref<?xtensor<i8>>) -> () // expected-erro
 
 // -----
 
+func.func @mxi8_memref_element(memref<4xmxi8>) -> () // expected-error {{invalid memref element type}}
+
+// -----
+
 func.func @illegalunrankedmemrefelementtype(memref<*xtensor<i8>>) -> () // expected-error {{invalid memref element type}}
 
 // -----
@@ -32,10 +36,6 @@ func.func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 // -----
 // Test non-existent map in memref type.
 func.func @memrefs(memref<2x4xi8, #map7>) // expected-error {{undefined symbol alias id 'map7'}}
-
-// -----
-// Test unsupported memory space.
-func.func @memrefs(memref<2x4xi8, i8>) // expected-error {{unsupported memory space Attribute}}
 
 // -----
 // Test non-existent map in map composition of memref type.
@@ -115,7 +115,7 @@ func.func @illegaltype(i21312312323120) // expected-error {{invalid integer widt
 // -----
 
 // Test no nested vector.
-// expected-error@+1 {{failed to verify 'elementType': integer or index or floating-point}}
+// expected-error@+1 {{failed to verify 'elementType': VectorElementTypeInterface instance}}
 func.func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
 
 // -----

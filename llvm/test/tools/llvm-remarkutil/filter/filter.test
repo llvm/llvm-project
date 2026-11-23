@@ -1,0 +1,69 @@
+RUN: llvm-remarkutil filter %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
+RUN: llvm-remarkutil filter --rfunction=func %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
+RUN: llvm-remarkutil filter --rremark-name=Remark %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
+RUN: llvm-remarkutil filter --rpass-name=pass %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
+RUN: llvm-remarkutil filter --rfilter-arg-by=argval %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
+
+RUN: llvm-remarkutil filter --rfunction=unc1 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --rremark-name=ark3 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK3
+RUN: llvm-remarkutil filter --rpass-name=s1 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --filter-arg-by=argval2 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK2
+RUN: llvm-remarkutil filter --function=func1 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --pass-name=pass2 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK2
+RUN: llvm-remarkutil filter --remark-name=Remark3 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK3
+RUN: llvm-remarkutil filter --function=func1 --pass-name=pass1 --remark-name=Remark1 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --remark-type=passed %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --remark-type=missed %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK2
+RUN: llvm-remarkutil filter --remark-type=analysis %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK3
+
+RUN: llvm-remarkutil yaml2bitstream -o %t.opt.bitstream %p/Inputs/filter.yaml
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1.yamL
+RUN: cat %t.r1.yamL | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1.yMl
+RUN: cat %t.r1.yMl | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream --serializer=yaml -o %t.r1.fake.opt.bitstream
+RUN: cat %t.r1.fake.opt.bitstream | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1.opt.bitstream
+RUN: llvm-remarkutil bitstream2yaml %t.r1.opt.bitstream | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %t.opt.bitstream -o %t.r1
+RUN: llvm-remarkutil bitstream2yaml %t.r1 | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+RUN: llvm-remarkutil filter --function=func1 %p/Inputs/filter.yaml --serializer=bitstream -o %t.r1.fake.yaml
+RUN: llvm-remarkutil bitstream2yaml %t.r1.fake.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
+
+RUN: llvm-remarkutil filter --function=func %p/Inputs/filter.yaml | FileCheck %s --allow-empty --strict-whitespace --check-prefix=EMPTY
+
+; REMARK1: --- !Passed
+; REMARK1-NEXT: Pass:            pass1
+; REMARK1-NEXT: Name:            Remark1
+; REMARK1-NEXT: DebugLoc:        { File: 'path/to/func1.c', Line: 1, Column: 2 }
+; REMARK1-NEXT: Function:        func1
+; REMARK1-NEXT: Args:
+; REMARK1-NEXT:   - String:          ' text'
+; REMARK1-NEXT:   - arg1:            argval1
+; REMARK1-NEXT: ...
+; REMARK1-NOT: {{.}}
+; REMARK2: --- !Missed
+; REMARK2-NEXT: Pass:            pass2
+; REMARK2-NEXT: Name:            Remark2
+; REMARK2-NEXT: DebugLoc:        { File: 'path/to/func2.c', Line: 1, Column: 2 }
+; REMARK2-NEXT: Function:        func2
+; REMARK2-NEXT: Args:
+; REMARK2-NEXT:   - String:          ' text'
+; REMARK2-NEXT:   - arg2:            argval2
+; REMARK2-NEXT: ...
+; REMARK2-NOT: {{.}}
+; REMARK3: --- !Analysis
+; REMARK3-NEXT: Pass:            pass3
+; REMARK3-NEXT: Name:            Remark3
+; REMARK3-NEXT: DebugLoc:        { File: 'path/to/func3.c', Line: 1, Column: 2 }
+; REMARK3-NEXT: Function:        func3
+; REMARK3-NEXT: Args:
+; REMARK3-NEXT:   - String:          ' text'
+; REMARK3-NEXT:   - arg3:            argval3
+; REMARK3-NEXT:     DebugLoc:        { File: 'path/to/func3.c', Line: 2, Column: 2 }
+; REMARK3-NEXT: ...
+; REMARK3-NOT: {{.}}
+
+; EMPTY-NOT: {{.}}

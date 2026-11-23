@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64--linux-gnu -mcpu=generic -pass-remarks=slp-vectorizer -o /dev/null < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64--linux-gnu -mcpu=generic -pass-remarks=slp-vectorizer -disable-output < %s 2>&1 | FileCheck %s
 
 define void @f(ptr %r, ptr %w) {
   %r1 = getelementptr inbounds double, ptr %r, i64 1
@@ -7,7 +7,7 @@ define void @f(ptr %r, ptr %w) {
   %add0 = fadd double %f0, %f0
   %add1 = fadd double %f1, %f1
   %w1 = getelementptr inbounds double, ptr %w, i64 1
-; CHECK: remark: /tmp/s.c:5:10: Stores SLP vectorized with cost -3 and with tree size 3
+; CHECK: remark: /tmp/s.c:5:10: Stores SLP vectorized with cost -3 and with tree size 4
   store double %add0, ptr %w, !dbg !9
   store double %add1, ptr %w1
   ret void

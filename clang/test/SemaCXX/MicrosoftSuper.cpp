@@ -21,6 +21,13 @@ struct Base1 {
   typedef int XXX;
 };
 
+struct InvalidGlobalQualifier : Base1 {
+  // A parser that drops the global qualifier is left with the valid
+  // declaration `__super::XXX x;` and accepts this line silently; expecting
+  // a diagnostic here catches that even in builds without assertions.
+  ::__super::XXX x; // expected-error {{expected unqualified-id}}
+};
+
 struct Derived : Base1 {
   __super::XXX x;
   typedef __super::XXX Type;
@@ -108,8 +115,8 @@ struct DerivedFromDependentBase : BaseTemplate<T> {
   typename __super::XXX a;
   typedef typename __super::XXX b;
 
-  __super::XXX c;         // expected-warning {{implicit 'typename' is a C++20 extension}}
-  typedef __super::XXX d; // expected-warning {{implicit 'typename' is a C++20 extension}}
+  __super::XXX c;         // expected-warning {{missing 'typename'}}
+  typedef __super::XXX d; // expected-warning {{missing 'typename'}}
 
   void foo() {
     typename __super::XXX e;
@@ -127,8 +134,8 @@ struct DerivedFromTemplateParameter : T {
   typename __super::XXX a;
   typedef typename __super::XXX b;
 
-  __super::XXX c;         // expected-warning {{implicit 'typename' is a C++20 extension}}
-  typedef __super::XXX d; // expected-warning {{implicit 'typename' is a C++20 extension}}
+  __super::XXX c;         // expected-warning {{missing 'typename'}}
+  typedef __super::XXX d; // expected-warning {{missing 'typename'}}
 
   void foo() {
     typename __super::XXX e;

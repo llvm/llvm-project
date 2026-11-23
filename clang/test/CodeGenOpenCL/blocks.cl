@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck -check-prefixes=COMMON,SPIR %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -triple amdgpu-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -debug-info-kind=limited -triple spir-unknown-unknown | FileCheck -check-prefixes=CHECK-DEBUG %s
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgpu-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
 // RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck -check-prefixes=COMMON,SPIR %s
-// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  -emit-llvm -o - -O0 -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
+// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  -emit-llvm -o - -O0 -triple amdgpu-amd-amdhsa | FileCheck -check-prefixes=COMMON,AMDGCN %s
 // RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  -emit-llvm -o - -O0 -debug-info-kind=limited -triple spir-unknown-unknown | FileCheck -check-prefixes=CHECK-DEBUG %s
-// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgcn-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
+// RUN: %clang_cc1 %s -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -debug-info-kind=limited -triple amdgpu-amd-amdhsa | FileCheck -check-prefixes=CHECK-DEBUG %s
 
 // SPIR: @__block_literal_global = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 12, i32 4, ptr addrspace(4) addrspacecast (ptr @block_A_block_invoke to ptr addrspace(4)) }
 // AMDGCN: @__block_literal_global = internal addrspace(1) constant { i32, i32, ptr } { i32 16, i32 8, ptr @block_A_block_invoke }
@@ -44,10 +44,10 @@ void foo(){
   // AMDGCN: %[[block_invoke:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr %[[block:.*]], i32 0, i32 2
   // AMDGCN: store ptr @__foo_block_invoke, ptr %[[block_invoke]]
   // AMDGCN: %[[block_captured:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr %[[block]], i32 0, i32 3
-  // AMDGCN: %[[i_value:.*]] = load i32, ptr %i
+  // AMDGCN: %[[i_value:.*]] = load i32, ptr addrspace(5) %i
   // AMDGCN: store i32 %[[i_value]], ptr %[[block_captured]],
-  // AMDGCN: store ptr %[[block]], ptr %[[block_B:.*]],
-  // AMDGCN: %[[block_literal:.*]] = load ptr, ptr %[[block_B]]
+  // AMDGCN: store ptr %[[block]], ptr addrspace(5) %[[block_B:.*]],
+  // AMDGCN: %[[block_literal:.*]] = load ptr, ptr addrspace(5) %[[block_B]]
   // AMDGCN: call {{.*}}i32 @__foo_block_invoke(ptr noundef %[[block_literal]])
 
   int (^ block_B)(void) = ^{

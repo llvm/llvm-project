@@ -48,3 +48,13 @@ CHECK5: MajorOperatingSystemVersion: 1
 CHECK5: MinorOperatingSystemVersion: 2
 CHECK5: MajorSubsystemVersion: 3
 CHECK5: MinorSubsystemVersion: 4
+
+# RUN: lld-link /entry:main /out:%t.exe /subsystem:xbox,8.9 \
+# RUN:   %p/Inputs/ret42.obj
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECK6 %s
+
+CHECK6: MajorOperatingSystemVersion: 8
+CHECK6: MinorOperatingSystemVersion: 9
+CHECK6: MajorSubsystemVersion: 8
+CHECK6: MinorSubsystemVersion: 9
+CHECK6: Subsystem: IMAGE_SUBSYSTEM_XBOX

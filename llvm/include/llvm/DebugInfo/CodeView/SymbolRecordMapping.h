@@ -11,13 +11,14 @@
 
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BinaryStreamReader;
 class BinaryStreamWriter;
 
 namespace codeview {
-class SymbolRecordMapping : public SymbolVisitorCallbacks {
+class LLVM_ABI SymbolRecordMapping : public SymbolVisitorCallbacks {
 public:
   explicit SymbolRecordMapping(BinaryStreamReader &Reader,
                                CodeViewContainer Container)
@@ -35,8 +36,6 @@ public:
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
-  std::optional<SymbolKind> Kind;
-
   CodeViewRecordIO IO;
   CodeViewContainer Container;
 };

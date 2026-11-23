@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
@@ -38,7 +39,7 @@ template <class Derived> struct StructVisitor {
 
   template <class... Ts>
   void visitStructFields(QualType QT, CharUnits CurStructOffset, Ts... Args) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const auto *RD = QT->castAsRecordDecl();
 
     // Iterate over the fields of the struct.
     for (const FieldDecl *FD : RD->fields()) {
@@ -264,6 +265,18 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
         this->Ctx.toBits(CurStructOffset) + this->getFieldOffsetInBits(FD);
     this->appendStr("_tv" + llvm::to_string(OffsetInBits) + "w" +
                     llvm::to_string(getFieldSize(FD, FT, this->Ctx)));
+  }
+
+  void visitPtrAuth(QualType FT, const FieldDecl *FD,
+                    CharUnits CurStructOffset) {
+    this->appendStr("_pa");
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth().withoutKeyNone();
+    this->appendStr(llvm::to_string(PtrAuth.getKey()) + "_");
+    this->appendStr(llvm::to_string(PtrAuth.getExtraDiscriminator()) + "_");
+    if (PtrAuth.authenticatesNullValues())
+      this->appendStr("anv_");
+    CharUnits FieldOffset = CurStructOffset + this->getFieldOffset(FD);
+    this->appendStr(llvm::to_string(FieldOffset.getQuantity()));
   }
 };
 
@@ -503,7 +516,7 @@ template <class Derived> struct GenFuncBase {
   CodeGenFunction *CGF = nullptr;
 };
 
-template <class Derived, bool IsMove>
+template <class Derived, bool IsMove, bool IsCtor>
 struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
                        GenFuncBase<Derived> {
   GenBinaryFunc(ASTContext &Ctx) : CopyStructVisitor<Derived, IsMove>(Ctx) {}
@@ -547,15 +560,19 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
       if (FD->isZeroLengthBitField())
         return;
 
-      QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
+      CanQualType RT =
+          this->CGF->getContext().getCanonicalTagType(FD->getParent());
       llvm::Type *Ty = this->CGF->ConvertType(RT);
+      // FT is volatile-qualified, so propagate that onto the base lvalue's
+      // type.
+      QualType QT = QualType(RT).withVolatile();
       Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);
       LValue DstBase =
-          this->CGF->MakeAddrLValue(DstAddr.withElementType(Ty), FT);
+          this->CGF->MakeAddrLValue(DstAddr.withElementType(Ty), QT);
       DstLV = this->CGF->EmitLValueForField(DstBase, FD);
       Address SrcAddr = this->getAddrWithOffset(Addrs[SrcIdx], Offset);
       LValue SrcBase =
-          this->CGF->MakeAddrLValue(SrcAddr.withElementType(Ty), FT);
+          this->CGF->MakeAddrLValue(SrcAddr.withElementType(Ty), QT);
       SrcLV = this->CGF->EmitLValueForField(SrcBase, FD);
     } else {
       llvm::Type *Ty = this->CGF->ConvertTypeForMem(FT);
@@ -564,8 +581,32 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
       DstLV = this->CGF->MakeAddrLValue(DstAddr, FT);
       SrcLV = this->CGF->MakeAddrLValue(SrcAddr, FT);
     }
-    RValue SrcVal = this->CGF->EmitLoadOfLValue(SrcLV, SourceLocation());
-    this->CGF->EmitStoreThroughLValue(SrcVal, DstLV);
+    // Load the value from the source. For the aggregate case, load directly
+    // into DstLV's own storage via an AggValueSlot.
+    AggValueSlot Slot = AggValueSlot::forLValue(
+        DstLV, AggValueSlot::IsDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        IsCtor ? AggValueSlot::IsNotAliased : AggValueSlot::IsAliased,
+        AggValueSlot::DoesNotOverlap);
+    RValue SrcVal =
+        this->CGF->EmitLoadOfAnyValue(SrcLV, Slot, SourceLocation());
+    switch (CodeGenFunction::getEvaluationKind(FT)) {
+    case TEK_Aggregate:
+      break; // Already copied into DstLV via Slot above.
+    case TEK_Complex:
+      this->CGF->EmitStoreOfComplex(SrcVal.getComplexVal(), DstLV,
+                                    /*isInit=*/IsCtor);
+      break;
+    case TEK_Scalar:
+      this->CGF->EmitStoreThroughLValue(SrcVal, DstLV, /*isInit=*/IsCtor);
+      break;
+    }
+  }
+  void visitPtrAuth(QualType FT, const FieldDecl *FD, CharUnits CurStackOffset,
+                    std::array<Address, 2> Addrs) {
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth().withoutKeyNone();
+    Addrs[DstIdx] = this->getAddrWithOffset(Addrs[DstIdx], CurStackOffset, FD);
+    Addrs[SrcIdx] = this->getAddrWithOffset(Addrs[SrcIdx], CurStackOffset, FD);
+    this->CGF->EmitPointerAuthCopy(PtrAuth, FT, Addrs[DstIdx], Addrs[SrcIdx]);
   }
 };
 
@@ -651,7 +692,8 @@ struct GenDefaultInitialize
     CharUnits Size = Ctx.getTypeSizeInChars(QualType(AT, 0));
     QualType EltTy = Ctx.getBaseElementType(QualType(AT, 0));
 
-    if (Size < CharUnits::fromQuantity(16) || EltTy->getAs<RecordType>()) {
+    if (Size < CharUnits::fromQuantity(16) ||
+        EltTy->getAsCanonical<RecordType>()) {
       GenFuncBaseTy::visitArray(FK, AT, IsVolatile, FD, CurStructOffset, Addrs);
       return;
     }
@@ -670,9 +712,9 @@ struct GenDefaultInitialize
   }
 };
 
-struct GenCopyConstructor : GenBinaryFunc<GenCopyConstructor, false> {
+struct GenCopyConstructor : GenBinaryFunc<GenCopyConstructor, false, true> {
   GenCopyConstructor(ASTContext &Ctx)
-      : GenBinaryFunc<GenCopyConstructor, false>(Ctx) {}
+      : GenBinaryFunc<GenCopyConstructor, false, true>(Ctx) {}
 
   void visitARCStrong(QualType QT, const FieldDecl *FD,
                       CharUnits CurStructOffset, std::array<Address, 2> Addrs) {
@@ -700,9 +742,9 @@ struct GenCopyConstructor : GenBinaryFunc<GenCopyConstructor, false> {
   }
 };
 
-struct GenMoveConstructor : GenBinaryFunc<GenMoveConstructor, true> {
+struct GenMoveConstructor : GenBinaryFunc<GenMoveConstructor, true, true> {
   GenMoveConstructor(ASTContext &Ctx)
-      : GenBinaryFunc<GenMoveConstructor, true>(Ctx) {}
+      : GenBinaryFunc<GenMoveConstructor, true, true>(Ctx) {}
 
   void visitARCStrong(QualType QT, const FieldDecl *FD,
                       CharUnits CurStructOffset, std::array<Address, 2> Addrs) {
@@ -732,9 +774,9 @@ struct GenMoveConstructor : GenBinaryFunc<GenMoveConstructor, true> {
   }
 };
 
-struct GenCopyAssignment : GenBinaryFunc<GenCopyAssignment, false> {
+struct GenCopyAssignment : GenBinaryFunc<GenCopyAssignment, false, false> {
   GenCopyAssignment(ASTContext &Ctx)
-      : GenBinaryFunc<GenCopyAssignment, false>(Ctx) {}
+      : GenBinaryFunc<GenCopyAssignment, false, false>(Ctx) {}
 
   void visitARCStrong(QualType QT, const FieldDecl *FD,
                       CharUnits CurStructOffset, std::array<Address, 2> Addrs) {
@@ -763,9 +805,9 @@ struct GenCopyAssignment : GenBinaryFunc<GenCopyAssignment, false> {
   }
 };
 
-struct GenMoveAssignment : GenBinaryFunc<GenMoveAssignment, true> {
+struct GenMoveAssignment : GenBinaryFunc<GenMoveAssignment, true, false> {
   GenMoveAssignment(ASTContext &Ctx)
-      : GenBinaryFunc<GenMoveAssignment, true>(Ctx) {}
+      : GenBinaryFunc<GenMoveAssignment, true, false>(Ctx) {}
 
   void visitARCStrong(QualType QT, const FieldDecl *FD,
                       CharUnits CurStructOffset, std::array<Address, 2> Addrs) {

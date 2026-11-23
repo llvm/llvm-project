@@ -25,4 +25,5 @@ void test() {
   std::unordered_set<operator_hijacker> so;
   std::unordered_set<operator_hijacker> s;
   s = so;
+  (void)s;
 }

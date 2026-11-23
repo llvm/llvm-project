@@ -159,41 +159,89 @@ TypeSize EVT::getExtendedSizeInBits() const {
 }
 
 /// getEVTString - This function returns value type as a string, e.g. "i32".
-std::string EVT::getEVTString() const {
+void EVT::print(raw_ostream &OS) const {
   switch (V.SimpleTy) {
   default:
     if (isRISCVVectorTuple()) {
       unsigned Sz = getSizeInBits().getKnownMinValue();
       unsigned NF = getRISCVVectorTupleNumFields();
       unsigned MinNumElts = Sz / (NF * 8);
-      return "riscv_nxv" + utostr(MinNumElts) + "i8x" + utostr(NF);
+      OS << "riscv_nxv" << MinNumElts << "i8x" << NF;
+      return;
     }
-    if (isVector())
-      return (isScalableVector() ? "nxv" : "v") +
-             utostr(getVectorElementCount().getKnownMinValue()) +
-             getVectorElementType().getEVTString();
-    if (isInteger())
-      return "i" + utostr(getSizeInBits());
-    if (isFloatingPoint())
-      return "f" + utostr(getSizeInBits());
+    if (isVector()) {
+      OS << (isScalableVector() ? "nxv" : "v")
+         << getVectorElementCount().getKnownMinValue()
+         << getVectorElementType();
+      return;
+    }
+    if (isInteger()) {
+      OS << "i" << getSizeInBits();
+      return;
+    }
+    if (isFloatingPoint()) {
+      OS << "f" << getSizeInBits();
+      return;
+    }
+    if (isCheriCapability()) {
+      OS << "c" << getSizeInBits();
+      return;
+    }
     llvm_unreachable("Invalid EVT!");
-  case MVT::bf16:      return "bf16";
-  case MVT::ppcf128:   return "ppcf128";
-  case MVT::isVoid:    return "isVoid";
-  case MVT::Other:     return "ch";
-  case MVT::Glue:      return "glue";
-  case MVT::x86mmx:    return "x86mmx";
-  case MVT::x86amx:    return "x86amx";
-  case MVT::i64x8:     return "i64x8";
-  case MVT::Metadata:  return "Metadata";
-  case MVT::Untyped:   return "Untyped";
-  case MVT::funcref:   return "funcref";
-  case MVT::exnref:    return "exnref";
-  case MVT::externref: return "externref";
+  case MVT::bf16:
+    OS << "bf16";
+    return;
+  case MVT::ppcf128:
+    OS << "ppcf128";
+    return;
+  case MVT::isVoid:
+    OS << "isVoid";
+    return;
+  case MVT::Other:
+    OS << "ch";
+    return;
+  case MVT::Glue:
+    OS << "glue";
+    return;
+  case MVT::x86mmx:
+    OS << "x86mmx";
+    return;
+  case MVT::x86amx:
+    OS << "x86amx";
+    return;
+  case MVT::i64x8:
+    OS << "i64x8";
+    return;
+  case MVT::Metadata:
+    OS << "Metadata";
+    return;
+  case MVT::Untyped:
+    OS << "Untyped";
+    return;
+  case MVT::funcref:
+    OS << "funcref";
+    return;
+  case MVT::exnref:
+    OS << "exnref";
+    return;
+  case MVT::externref:
+    OS << "externref";
+    return;
   case MVT::aarch64svcount:
-    return "aarch64svcount";
+    OS << "aarch64svcount";
+    return;
   case MVT::spirvbuiltin:
-    return "spirvbuiltin";
+    OS << "spirvbuiltin";
+    return;
+  case MVT::amdgpuBufferFatPointer:
+    OS << "amdgpuBufferFatPointer";
+    return;
+  case MVT::amdgpuBufferStridedPointer:
+    OS << "amdgpuBufferStridedPointer";
+    return;
+  case MVT::aarch64mfp8:
+    OS << "aarch64mfp8";
+    return;
   }
 }
 
@@ -217,8 +265,12 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::x86mmx:  return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case MVT::aarch64svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
+  case MVT::aarch64mfp8:
+    return FixedVectorType::get(IntegerType::get(Context, 8), 1);
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
   case MVT::i64x8:   return IntegerType::get(Context, 512);
+  case MVT::amdgpuBufferFatPointer:  return IntegerType::get(Context, 160);
+  case MVT::amdgpuBufferStridedPointer:  return IntegerType::get(Context, 192);
   case MVT::externref: return Type::getWasm_ExternrefTy(Context);
   case MVT::funcref: return Type::getWasm_FuncrefTy(Context);
   case MVT::Metadata: return Type::getMetadataTy(Context);
@@ -242,6 +294,8 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
     llvm_unreachable("Unknown type!");
   case Type::VoidTyID:
     return MVT::isVoid;
+  case Type::ByteTyID:
+    return getIntegerVT(cast<ByteType>(Ty)->getBitWidth());
   case Type::IntegerTyID:
     return getIntegerVT(cast<IntegerType>(Ty)->getBitWidth());
   case Type::HalfTyID:      return MVT(MVT::f16);
@@ -254,6 +308,10 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
     TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
     if (TargetExtTy->getName() == "aarch64.svcount")
       return MVT(MVT::aarch64svcount);
+    else if (TargetExtTy->getName() == "wasm.externref")
+      return MVT(MVT::externref);
+    else if (TargetExtTy->getName() == "wasm.funcref")
+      return MVT(MVT::funcref);
     else if (TargetExtTy->getName().starts_with("spirv."))
       return MVT(MVT::spirvbuiltin);
     if (TargetExtTy->getName() == "riscv.vector.tuple") {
@@ -292,6 +350,8 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
     return MVT::getVT(Ty, HandleUnknown);
   case Type::TokenTyID:
     return MVT::Untyped;
+  case Type::ByteTyID:
+    return getIntegerVT(Ty->getContext(), cast<ByteType>(Ty)->getBitWidth());
   case Type::IntegerTyID:
     return getIntegerVT(Ty->getContext(), cast<IntegerType>(Ty)->getBitWidth());
   case Type::FixedVectorTyID:
@@ -332,5 +392,5 @@ void MVT::print(raw_ostream &OS) const {
   if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
     OS << "invalid";
   else
-    OS << EVT(*this).getEVTString();
+    OS << EVT(*this);
 }

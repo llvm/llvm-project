@@ -10,9 +10,9 @@
 #define MLIR_ANALYSIS_FLATLINEARVALUECONSTRAINTS_H
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include <optional>
 
 namespace mlir {
@@ -20,7 +20,6 @@ namespace mlir {
 class AffineMap;
 class IntegerSet;
 class MLIRContext;
-class Value;
 class MemRefType;
 struct MutableAffineMap;
 
@@ -118,6 +117,31 @@ public:
   /// we explicitly introduce them here.
   using IntegerPolyhedron::addBound;
 
+  /// Returns a non-negative constant bound on the extent (upper bound - lower
+  /// bound) of the specified variable if it is found to be a constant; returns
+  /// std::nullopt if it's not a constant. This method treats symbolic
+  /// variables specially, i.e., it looks for constant differences between
+  /// affine expressions involving only the symbolic variables. 'lb', if
+  /// provided, is set to the lower bound map associated with the constant
+  /// difference, and similarly, `ub` to the upper bound. Note that 'lb', 'ub'
+  /// are purely symbolic and will correspond to the symbolic variables of the
+  /// constaint set.
+  //  Egs: 0 <= i <= 15, return 16.
+  //       s0 + 2 <= i <= s0 + 17, returns 16. (s0 has to be a symbol)
+  //       s0 + s1 + 16 <= d0 <= s0 + s1 + 31, returns 16.
+  //       s0 - 7 <= 8*j <= s0 returns 1 with lb = s0, lbDivisor = 8 (since lb =
+  //       ceil(s0 - 7 / 8) = floor(s0 / 8)).
+  /// The difference between this method and
+  /// IntegerRelation::getConstantBoundOnDimSize is that unlike the latter, this
+  /// makes use of affine expressions and maps in its inference and provides
+  /// output with affine maps; it thus handles local variables by detecting them
+  /// as affine functions of the symbols when possible.
+  std::optional<int64_t>
+  getConstantBoundOnDimSize(MLIRContext *context, unsigned pos,
+                            AffineMap *lb = nullptr, AffineMap *ub = nullptr,
+                            unsigned *minLbPos = nullptr,
+                            unsigned *minUbPos = nullptr) const;
+
   /// Returns the constraint system as an integer set. Returns a null integer
   /// set if the system has no constraints, or if an integer set couldn't be
   /// constructed as a result of a local variable's explicit representation not
@@ -133,10 +157,15 @@ public:
   ///
   /// By default the returned lower bounds are closed and upper bounds are open.
   /// If `closedUb` is true, the upper bound is closed.
+  ///
+  /// An upper bound built from more than one inequality is the min of them.
+  /// Only a caller that can consume such a bound should ask for it, via
+  /// `allowMultiResultUb`; the rest are given the constant upper bound
+  /// instead, which is weaker but always a single result.
   void getSliceBounds(unsigned offset, unsigned num, MLIRContext *context,
                       SmallVectorImpl<AffineMap> *lbMaps,
-                      SmallVectorImpl<AffineMap> *ubMaps,
-                      bool closedUB = false);
+                      SmallVectorImpl<AffineMap> *ubMaps, bool closedUB = false,
+                      bool allowMultiResultUB = false);
 
   /// Composes an affine map whose dimensions and symbols match one to one with
   /// the dimensions and symbols of this FlatLinearConstraints. The results of
@@ -193,6 +222,13 @@ public:
   unsigned appendLocalVar(unsigned num = 1) {
     return appendVar(VarKind::Local, num);
   }
+
+  /// A more human-readable version of dump().
+  void dumpPretty() const;
+  /// An easier to read dump of a `row` of the same width as the number of
+  /// columns. `fixedColWidth` ensure that even with a zero coefficient, we
+  /// print spaces so that variables are aligned.
+  void dumpRow(ArrayRef<int64_t> row, bool fixedColWidth = true) const;
 
 protected:
   using VarKind = presburger::VarKind;
@@ -302,8 +338,10 @@ public:
         setValue(i, *valArgs[i]);
   }
 
-  /// Creates an affine constraint system from an IntegerSet.
-  explicit FlatLinearValueConstraints(IntegerSet set, ValueRange operands = {});
+  /// Creates an affine constraint system from an IntegerSet. Returns failure
+  /// if `set` is semi-affine, as flattening is not implemented for those.
+  static FailureOr<FlatLinearValueConstraints>
+  create(IntegerSet set, ValueRange operands = {});
 
   /// Return the kind of this object.
   Kind getKind() const override { return Kind::FlatLinearValueConstraints; }
@@ -485,6 +523,12 @@ public:
   ///    output = {0 <= d0 <= 6, 1 <= d1 <= 15}
   LogicalResult unionBoundingBox(const FlatLinearValueConstraints &other);
   using IntegerPolyhedron::unionBoundingBox;
+
+protected:
+  /// Creates an affine constraint system from an IntegerSet. `error` is set to
+  /// true if `set` could not be flattened, in which case the constraint system
+  /// is left without the constraints of `set`. Use `create` instead.
+  FlatLinearValueConstraints(IntegerSet set, ValueRange operands, bool *error);
 };
 
 /// Flattens 'expr' into 'flattenedExpr', which contains the coefficients of the

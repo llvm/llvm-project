@@ -16,8 +16,8 @@ define dso_local zeroext i32 @test(i32 signext %l) nounwind {
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    rldic r3, r3, 2, 30
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    lwax r3, r3, r4
-; CHECK-NEXT:    add r3, r3, r4
+; CHECK-NEXT:    lwax r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:  .LBB0_2: # %sw.bb

@@ -8,7 +8,9 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/fixed_point/fx_bits.h"
+#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/integer_literals.h"
 #include "test/UnitTest/Test.h"
 
@@ -27,7 +29,7 @@ public:
     EXPECT_EQ(LIBC_NAMESPACE::fixed_point::bit_or(T(0.75), T(0.375)), T(0.875));
     using StorageType = typename FXRep<T>::StorageType;
     StorageType a = LIBC_NAMESPACE::cpp::bit_cast<StorageType>(T(0.75));
-    a = ~a;
+    a = static_cast<StorageType>(~a);
     EXPECT_EQ(LIBC_NAMESPACE::fixed_point::bit_not(T(0.75)),
               FXBits<T>(a).get_val());
   }

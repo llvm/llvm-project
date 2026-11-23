@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_LEB128_H
 #define LLVM_SUPPORT_LEB128_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -28,8 +29,7 @@ inline unsigned encodeSLEB128(int64_t Value, raw_ostream &OS,
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.
@@ -57,8 +57,7 @@ inline unsigned encodeSLEB128(int64_t Value, uint8_t *p, unsigned PadTo = 0) {
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.
@@ -124,13 +123,31 @@ inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
   return (unsigned)(p - orig_p);
 }
 
-/// Utility function to decode a ULEB128 value.
+/// Identifies why ULEB128 decoding failed.
+enum class ULEB128DecodeError {
+  /// No decoding error has been reported.
+  None,
+  /// The encoding requires bytes beyond the supplied buffer.
+  UnexpectedEnd,
+  /// The encoded value does not fit in uint64_t.
+  TooBig,
+};
+
+/// Utility function to decode a ULEB128 value and report a typed error.
 ///
-/// If \p error is non-null, it will point to a static error message,
-/// if an error occured. It will not be modified on success.
-inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
-                              const uint8_t *end = nullptr,
-                              const char **error = nullptr) {
+/// \p p is the first byte of the encoding.
+/// If \p n is non-null, it receives the number of bytes consumed.
+/// If \p end is non-null, decoding will not read at or beyond that address.
+/// If \p error is non-null, it will point to a static error message if an error
+/// occurred. It will not be modified on success.
+/// If \p errorCode is non-null, it will identify the decoding outcome. It is
+/// set to \c None on entry and only changed when decoding fails.
+inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n, const uint8_t *end,
+                              const char **error,
+                              ULEB128DecodeError *errorCode) {
+  if (errorCode)
+    *errorCode = ULEB128DecodeError::None;
+
   const uint8_t *orig_p = p;
   uint64_t Value = 0;
   unsigned Shift = 0;
@@ -138,6 +155,8 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
     if (LLVM_UNLIKELY(p == end)) {
       if (error)
         *error = "malformed uleb128, extends past end";
+      if (errorCode)
+        *errorCode = ULEB128DecodeError::UnexpectedEnd;
       Value = 0;
       break;
     }
@@ -147,10 +166,17 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
          (Shift > 63 && Slice != 0))) {
       if (error)
         *error = "uleb128 too big for uint64";
+      if (errorCode)
+        *errorCode = ULEB128DecodeError::TooBig;
       Value = 0;
       break;
     }
-    Value += Slice << Shift;
+    // Once Shift reaches 64 the remaining bytes have already been validated
+    // above to be pure zero-extension, so they contribute nothing. Performing
+    // "Slice << Shift" with Shift >= 64 would be undefined behavior, so skip
+    // it.
+    if (LLVM_LIKELY(Shift < 64))
+      Value += Slice << Shift;
     Shift += 7;
   } while (*p++ >= 128);
   if (n)
@@ -158,10 +184,22 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
   return Value;
 }
 
+/// Utility function to decode a ULEB128 value.
+///
+/// If \p n is non-null, it receives the number of bytes consumed on success.
+/// If \p end is non-null, decoding will not read at or beyond that address.
+/// If \p error is non-null, it will point to a static error message if an error
+/// occurred. It will not be modified on success.
+inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
+                              const uint8_t *end = nullptr,
+                              const char **error = nullptr) {
+  return decodeULEB128(p, n, end, error, nullptr);
+}
+
 /// Utility function to decode a SLEB128 value.
 ///
 /// If \p error is non-null, it will point to a static error message,
-/// if an error occured. It will not be modified on success.
+/// if an error occurred. It will not be modified on success.
 inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
                              const uint8_t *end = nullptr,
                              const char **error = nullptr) {
@@ -188,7 +226,12 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
         *n = (unsigned)(p - orig_p);
       return 0;
     }
-    Value |= Slice << Shift;
+    // Once Shift reaches 64 the remaining bytes have already been validated
+    // above to be pure sign-extension, so they contribute nothing. Performing
+    // "Slice << Shift" with Shift >= 64 would be undefined behavior, so skip
+    // it.
+    if (LLVM_LIKELY(Shift < 64))
+      Value |= Slice << Shift;
     Shift += 7;
     ++p;
   } while (Byte >= 128);
@@ -220,11 +263,38 @@ inline uint64_t decodeULEB128AndIncUnsafe(const uint8_t *&p) {
   return decodeULEB128AndInc(p, nullptr);
 }
 
+/// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
+}
+
+enum class LEB128Sign { Unsigned, Signed };
+
+template <LEB128Sign Sign, typename T, typename U = char,
+          unsigned MaxLEB128SizeBytes = 16>
+inline void appendLEB128(SmallVectorImpl<U> &Buffer, T Value) {
+  static_assert(sizeof(U) == 1, "Expected buffer of bytes");
+  unsigned LEB128ValueSize;
+  U TmpBuffer[MaxLEB128SizeBytes];
+  if constexpr (Sign == LEB128Sign::Signed)
+    LEB128ValueSize =
+        encodeSLEB128(Value, reinterpret_cast<uint8_t *>(TmpBuffer));
+  else
+    LEB128ValueSize =
+        encodeULEB128(Value, reinterpret_cast<uint8_t *>(TmpBuffer));
+  Buffer.append(TmpBuffer, TmpBuffer + LEB128ValueSize);
+}
+
 /// Utility function to get the size of the ULEB128-encoded value.
-extern unsigned getULEB128Size(uint64_t Value);
+LLVM_ABI extern unsigned getULEB128Size(uint64_t Value);
 
 /// Utility function to get the size of the SLEB128-encoded value.
-extern unsigned getSLEB128Size(int64_t Value);
+LLVM_ABI extern unsigned getSLEB128Size(int64_t Value);
 
 } // namespace llvm
 

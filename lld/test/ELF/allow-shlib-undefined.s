@@ -9,40 +9,40 @@
 # RUN: cp a.so b.so
 # RUN: llvm-mc -filetype=obj -triple=x86_64 empty.s -o empty.o && ld.lld -shared empty.o -o empty.so
 
-# RUN: ld.lld --allow-shlib-undefined main.o a.so -o /dev/null
-# RUN: not ld.lld --no-allow-shlib-undefined main.o a.so -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --allow-shlib-undefined main.o a.so
+# RUN: not ld.lld --no-allow-shlib-undefined main.o a.so 2>&1 | FileCheck %s
 ## Executable linking defaults to --no-allow-shlib-undefined.
-# RUN: not ld.lld main.o a.so -o /dev/null 2>&1 | FileCheck %s
-# RUN: ld.lld main.o a.so --noinhibit-exec -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
-# RUN: ld.lld main.o a.so --warn-unresolved-symbols -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: not ld.lld main.o a.so 2>&1 | FileCheck %s
+# RUN: ld.lld main.o a.so --noinhibit-exec 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: ld.lld main.o a.so --warn-unresolved-symbols 2>&1 | FileCheck %s --check-prefix=WARN
 ## -shared linking defaults to --allow-shlib-undefined.
-# RUN: ld.lld -shared main.o a.so -o /dev/null
+# RUN: ld.lld -shared main.o a.so
 
 ## DSO with undefines should link with or without any of these options.
-# RUN: ld.lld -shared --allow-shlib-undefined a.o -o /dev/null
-# RUN: ld.lld -shared --no-allow-shlib-undefined a.o -o /dev/null
+# RUN: ld.lld -shared --allow-shlib-undefined a.o
+# RUN: ld.lld -shared --no-allow-shlib-undefined a.o
 
 ## Perform checking even if an unresolved symbol is first seen in a regular object file.
-# RUN: not ld.lld --gc-sections main.o ref.o a.so -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld --gc-sections main.o ref.o a.so 2>&1 | FileCheck %s
 
 ## Check that the error is reported for each shared library where the symbol
 ## is referenced.
-# RUN: not ld.lld main.o a.so empty.so b.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK2
+# RUN: not ld.lld main.o a.so empty.so b.so 2>&1 | FileCheck %s --check-prefix=CHECK2
 
 ## Test some cases when a relocatable object file provides a non-exported definition.
-# RUN: not ld.lld main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
-# RUN: not ld.lld main.o def-hidden.o a.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
-# RUN: not ld.lld main.o a.so def-hidden.o -shared --no-allow-shlib-undefined -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
-# RUN: ld.lld main.o a.so def-hidden.o --allow-shlib-undefined --fatal-warnings -o /dev/null
+# RUN: not ld.lld main.o a.so def-hidden.o 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o def-hidden.o a.so 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o a.so def-hidden.o -shared --no-allow-shlib-undefined 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: ld.lld main.o a.so def-hidden.o --allow-shlib-undefined --fatal-warnings
 ## Test a relocatable object file definition that is converted to STB_LOCAL.
-# RUN: not ld.lld main.o a.so def-hidden.o --version-script=local.ver -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
-# RUN: not ld.lld main.o def-hidden.o a.so --version-script=local.ver -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o a.so def-hidden.o --version-script=local.ver 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o def-hidden.o a.so --version-script=local.ver 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 
 ## The section containing the definition is discarded, and we report an error.
-# RUN: not ld.lld --gc-sections main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld --gc-sections main.o a.so def-hidden.o 2>&1 | FileCheck %s
 ## The definition def.so is ignored.
 # RUN: ld.lld -shared def.o -o def.so
-# RUN: ld.lld --gc-sections main.o a.so def.so def-hidden.o --fatal-warnings -o /dev/null
+# RUN: ld.lld --gc-sections main.o a.so def.so def-hidden.o --fatal-warnings
 
 # CHECK-NOT:   error:
 # CHECK:       error: undefined reference: x1{{$}}

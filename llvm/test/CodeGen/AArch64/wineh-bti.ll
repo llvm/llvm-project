@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 | FileCheck %s
 
-define dso_local i32 @func(i32 %in) "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "branch-target-enforcement" {
+define dso_local i32 @func(i32 %in) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 entry:
   call void asm sideeffect "", "~{x19}"()
   switch i32 %in, label %def [
@@ -29,7 +29,7 @@ lbl4:
 
 ; CHECK-LABEL: func:
 ; CHECK-NEXT: .seh_proc func
-; CHECK-NEXT: // %bb.0:
+; CHECK:     // %bb.0: // %entry
 ; CHECK-NEXT: hint #34
 ; CHECK-NEXT: .seh_nop
 ; CHECK-NEXT: str x19, [sp, #-16]!

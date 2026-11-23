@@ -19,7 +19,7 @@ define i1 @test_i1_return() nounwind gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(return_i1)
+; CHECK-NEXT:    bl return_i1
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -35,7 +35,7 @@ define i32 @test_i32_return() nounwind gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(return_i32)
+; CHECK-NEXT:    bl return_i32
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -51,7 +51,7 @@ define ptr @test_i32ptr_return() nounwind gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(return_i32ptr)
+; CHECK-NEXT:    bl return_i32ptr
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -67,7 +67,7 @@ define float @test_float_return() nounwind gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(return_float)
+; CHECK-NEXT:    bl return_float
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -83,7 +83,7 @@ define %struct @test_struct_return() nounwind gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(return_struct)
+; CHECK-NEXT:    bl return_struct
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -100,7 +100,7 @@ define i1 @test_relocate(ptr addrspace(1) %a) nounwind gc "statepoint-example" {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $a0, $sp, 0
-; CHECK-NEXT:    bl %plt(return_i1)
+; CHECK-NEXT:    bl return_i1
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -119,7 +119,7 @@ define void @test_void_vararg() nounwind gc "statepoint-example" {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    ori $a0, $zero, 42
 ; CHECK-NEXT:    ori $a1, $zero, 43
-; CHECK-NEXT:    bl %plt(varargf)
+; CHECK-NEXT:    bl varargf
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -158,14 +158,15 @@ define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) nounwind gc "st
 ; CHECK-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; CHECK-NEXT:    andi $fp, $a1, 1
 ; CHECK-NEXT:    st.d $a0, $sp, 8
-; CHECK-NEXT:    bl %plt(return_i1)
+; CHECK-NEXT:    bl return_i1
 ; CHECK-NEXT:  .Ltmp8:
 ; CHECK-NEXT:    beqz $fp, .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %left
 ; CHECK-NEXT:    ld.d $a1, $sp, 8
 ; CHECK-NEXT:    move $fp, $a0
 ; CHECK-NEXT:    move $a0, $a1
-; CHECK-NEXT:    bl %plt(consume)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(consume)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    b .LBB8_3
 ; CHECK-NEXT:  .LBB8_2: # %right
@@ -206,7 +207,7 @@ define void @test_attributes(ptr byval(%struct2) %s) nounwind gc "statepoint-exa
 ; CHECK-NEXT:    ori $a2, $zero, 17
 ; CHECK-NEXT:    addi.d $a3, $sp, 0
 ; CHECK-NEXT:    move $a1, $zero
-; CHECK-NEXT:    bl %plt(consume_attributes)
+; CHECK-NEXT:    bl consume_attributes
 ; CHECK-NEXT:  .Ltmp9:
 ; CHECK-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 32
@@ -216,6 +217,329 @@ entry:
   %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (i32, ptr, i32, ptr)) @consume_attributes, i32 4, i32 0, i32 42, ptr nest null, i32 17, ptr byval(%struct2) %s, i32 0, i32 0)
   ret void
 }
+
+; CHECK-LABEL: .section .llvm_stackmaps
+; CHECK:       __LLVM_StackMaps:
+; CHECK-NEXT:    .byte 3
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 10
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .word 10
+; CHECK-NEXT:    .dword test_i1_return
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_i32_return
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_i32ptr_return
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_float_return
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_struct_return
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_relocate
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_void_vararg
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_i1_return_patchable
+; CHECK-NEXT:    .dword 16
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_cross_bb
+; CHECK-NEXT:    .dword 32
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword test_attributes
+; CHECK-NEXT:    .dword 32
+; CHECK-NEXT:    .dword 1
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp0-test_i1_return
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp1-test_i32_return
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp2-test_i32ptr_return
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp3-test_float_return
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp4-test_struct_return
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp5-test_relocate
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 5
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 3
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 3
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp6-test_void_vararg
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp7-test_i1_return_patchable
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp8-test_cross_bb
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 5
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 3
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 8
+; CHECK-NEXT:    .byte 3
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 8
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .dword 0
+; CHECK-NEXT:    .word .Ltmp9-test_attributes
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 3
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .byte 4
+; CHECK-NEXT:    .byte 0
+; CHECK-NEXT:    .half 8
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .word 0
+; CHECK-NEXT:    .p2align 3, 0x0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .half 0
+; CHECK-NEXT:    .p2align 3, 0x0
 
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 declare i1 @llvm.experimental.gc.result.i1(token)

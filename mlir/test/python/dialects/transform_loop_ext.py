@@ -65,7 +65,7 @@ def loopPeel_peel_front():
         )
         transform.YieldOp()
     # CHECK-LABEL: TEST: loopPeel_peel_front
-    # CHECK: = transform.loop.peel %[[ARG0:.*]] {peel_front = true}
+    # CHECK: = transform.loop.peel %[[ARG0:.*]] peel_front = true
 
 
 @run

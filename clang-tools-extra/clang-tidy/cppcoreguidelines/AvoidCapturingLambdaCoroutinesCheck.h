@@ -1,4 +1,4 @@
-//===--- AvoidCapturingLambdaCoroutinesCheck.h - clang-tidy -----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,11 +21,15 @@ namespace clang::tidy::cppcoreguidelines {
 /// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines.html
 class AvoidCapturingLambdaCoroutinesCheck : public ClangTidyCheck {
 public:
-  AvoidCapturingLambdaCoroutinesCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  AvoidCapturingLambdaCoroutinesCheck(StringRef Name,
+                                      ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
+
+private:
+  const bool AllowExplicitObjectParameters;
 };
 
 } // namespace clang::tidy::cppcoreguidelines

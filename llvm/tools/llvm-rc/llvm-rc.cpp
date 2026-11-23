@@ -23,10 +23,10 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -57,27 +57,13 @@ enum ID {
 };
 
 namespace rc_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
 } // namespace rc_opt
 
-class RcOptTable : public opt::GenericOptTable {
+class RcOptTable : public opt::OptTable {
 public:
-  RcOptTable()
-      : GenericOptTable(rc_opt::OptionStrTable, rc_opt::OptionPrefixesTable,
-                        rc_opt::InfoTable,
-                        /* IgnoreCase = */ true) {}
+  RcOptTable() : OptTable(rc_opt::optionTables(), /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -88,29 +74,14 @@ enum Windres_ID {
 };
 
 namespace windres_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "WindresOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "WindresOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(WINDRES_, __VA_ARGS__),
-#include "WindresOpts.inc"
-#undef OPTION
-};
 } // namespace windres_opt
 
-class WindresOptTable : public opt::GenericOptTable {
+class WindresOptTable : public opt::OptTable {
 public:
   WindresOptTable()
-      : GenericOptTable(windres_opt::OptionStrTable,
-                        windres_opt::OptionPrefixesTable,
-                        windres_opt::InfoTable,
-                        /* IgnoreCase = */ false) {}
+      : OptTable(windres_opt::optionTables(), /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;
@@ -201,7 +172,7 @@ std::string getMingwTriple() {
   Triple T(sys::getDefaultTargetTriple());
   if (!isUsableArch(T.getArch()))
     T.setArch(getDefaultFallbackArch());
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return T.str();
   // Write out the literal form of the vendor/env here, instead of
   // constructing them with enum values (which end up with them in
@@ -266,8 +237,13 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
       }
     }
   }
-  for (const auto &S : Opts.PreprocessArgs)
-    Args.push_back(S);
+  llvm::append_range(Args, Opts.PreprocessArgs);
+  if (Opts.Params.ShowIncludes) {
+    Args.push_back("-Xclang");
+    Args.push_back("--show-includes");
+    Args.push_back("-Xclang");
+    Args.push_back("-sys-header-deps");
+  }
   Args.push_back(Src);
   Args.push_back("-o");
   Args.push_back(Dst);
@@ -372,7 +348,7 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> FileArgs = InputArgs.getAllArgValues(WINDRES_INPUT);
-  FileArgs.insert(FileArgs.end(), InputArgsArray.begin(), InputArgsArray.end());
+  llvm::append_range(FileArgs, InputArgsArray);
 
   if (InputArgs.hasArg(WINDRES_input)) {
     Opts.InputFile = InputArgs.getLastArgValue(WINDRES_input).str();
@@ -520,8 +496,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> InArgsInfo = InputArgs.getAllArgValues(OPT_INPUT);
-  InArgsInfo.insert(InArgsInfo.end(), InputArgsArray.begin(),
-                    InputArgsArray.end());
+  llvm::append_range(InArgsInfo, InputArgsArray);
   if (InArgsInfo.size() != 1) {
     fatalError("Exactly one input file should be provided.");
   }
@@ -549,6 +524,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
   Opts.Preprocess = !InputArgs.hasArg(OPT_no_preprocess);
   Opts.Params.Include = InputArgs.getAllArgValues(OPT_includepath);
   Opts.Params.NoInclude = InputArgs.hasArg(OPT_noinclude);
+  Opts.Params.ShowIncludes = InputArgs.hasArg(OPT_show_includes);
   if (Opts.Params.NoInclude) {
     // Clear the INLCUDE variable for the external preprocessor
 #ifdef _WIN32
@@ -621,7 +597,8 @@ void doRc(std::string Src, std::string Dest, RcOptions &Opts,
   StringRef Contents = FileContents->getBuffer();
 
   std::string FilteredContents = filterCppOutput(Contents);
-  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(FilteredContents));
+  std::vector<RCToken> Tokens =
+      ExitOnErr(tokenizeRC(FilteredContents, Opts.IsWindres));
 
   if (Opts.BeVerbose) {
     const Twine TokenNames[] = {
@@ -722,6 +699,9 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
       MachineType = COFF::IMAGE_FILE_MACHINE_ARM64EC;
     else
       MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
+    break;
+  case Triple::mipsel:
+    MachineType = COFF::IMAGE_FILE_MACHINE_R4000;
     break;
   default:
     fatalError("Unsupported architecture in target '" + Twine(TargetTriple) +

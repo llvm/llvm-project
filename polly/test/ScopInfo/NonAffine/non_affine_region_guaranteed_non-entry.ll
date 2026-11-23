@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops -polly-detect '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-loops -plugin-arg=Polly,-polly-detect '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving
 ; the loop). The current implementation of deriving their domain derives

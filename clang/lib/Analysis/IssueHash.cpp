@@ -11,16 +11,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/Path.h"
 
-#include <functional>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -86,39 +82,13 @@ static std::string GetSignature(const FunctionDecl *Target) {
   return Signature;
 }
 
-static std::string GetEnclosingDeclContextSignature(const Decl *D) {
-  if (!D)
-    return "";
-
-  if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-    std::string DeclName;
-
-    switch (ND->getKind()) {
-    case Decl::Namespace:
-    case Decl::Record:
-    case Decl::CXXRecord:
-    case Decl::Enum:
-      DeclName = ND->getQualifiedNameAsString();
-      break;
-    case Decl::CXXConstructor:
-    case Decl::CXXDestructor:
-    case Decl::CXXConversion:
-    case Decl::CXXMethod:
-    case Decl::Function:
-      DeclName = GetSignature(dyn_cast_or_null<FunctionDecl>(ND));
-      break;
-    case Decl::ObjCMethod:
-      // ObjC Methods can not be overloaded, qualified name uniquely identifies
-      // the method.
-      DeclName = ND->getQualifiedNameAsString();
-      break;
-    default:
-      break;
-    }
-
-    return DeclName;
+static std::string GetEnclosingDeclContextSignature(const Decl *EnclosingDecl) {
+  if (const auto *ND = dyn_cast_or_null<NamedDecl>(EnclosingDecl)) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+      // To distinguish overloads we need to use the signature.
+      return GetSignature(FD);
+    return ND->getQualifiedNameAsString();
   }
-
   return "";
 }
 

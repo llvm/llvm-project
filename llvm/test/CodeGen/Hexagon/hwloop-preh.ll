@@ -37,8 +37,9 @@ return:                                           ; preds = %return.loopexit, %f
   ret i32 %retval.0
 }
 
-!0 = !{!"int", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"int", !1}
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx" }

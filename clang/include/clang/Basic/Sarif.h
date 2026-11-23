@@ -261,6 +261,7 @@ class SarifRule {
   std::string Id;
   std::string Description;
   std::string HelpURI;
+  std::vector<std::string> DeprecatedIds;
   SarifReportingConfiguration DefaultConfiguration;
 
   SarifRule() : DefaultConfiguration(SarifReportingConfiguration::create()) {}
@@ -285,6 +286,12 @@ public:
 
   SarifRule setHelpURI(llvm::StringRef RuleHelpURI) {
     HelpURI = RuleHelpURI.str();
+    return *this;
+  }
+
+  SarifRule
+  setDeprecatedIds(llvm::ArrayRef<llvm::StringRef> RuleDeprecatedIds) {
+    DeprecatedIds.assign(RuleDeprecatedIds.begin(), RuleDeprecatedIds.end());
     return *this;
   }
 
@@ -322,9 +329,13 @@ class SarifResult {
   uint32_t RuleIdx;
   std::string RuleId;
   std::string DiagnosticMessage;
+  std::string HostedViewerURI;
+  llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
+  llvm::SmallVector<std::pair<CharSourceRange, std::string>> RelatedLocations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
+  llvm::StringMap<std::string> Properties;
 
   SarifResult() = delete;
   explicit SarifResult(uint32_t RuleIdx) : RuleIdx(RuleIdx) {}
@@ -347,16 +358,36 @@ public:
     return *this;
   }
 
-  SarifResult setLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
+  SarifResult setHostedViewerURI(llvm::StringRef URI) {
+    HostedViewerURI = URI.str();
+    return *this;
+  }
+
+  SarifResult addLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
 #ifndef NDEBUG
     for (const auto &Loc : DiagLocs) {
       assert(Loc.isCharRange() &&
              "SARIF Results require character granular source ranges!");
     }
 #endif
-    Locations.assign(DiagLocs.begin(), DiagLocs.end());
+    Locations.append(DiagLocs.begin(), DiagLocs.end());
     return *this;
   }
+
+  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs,
+                                  llvm::StringRef Message = "") {
+#ifndef NDEBUG
+    for (const auto &Loc : DiagLocs) {
+      assert(
+          Loc.isCharRange() &&
+          "SARIF RelatedLocations require character granular source ranges!");
+    }
+#endif
+    for (const CharSourceRange &Loc : DiagLocs)
+      RelatedLocations.emplace_back(Loc, Message.str());
+    return *this;
+  }
+
   SarifResult setThreadFlows(llvm::ArrayRef<ThreadFlow> ThreadFlowResults) {
     ThreadFlows.assign(ThreadFlowResults.begin(), ThreadFlowResults.end());
     return *this;
@@ -364,6 +395,17 @@ public:
 
   SarifResult setDiagnosticLevel(const SarifResultLevel &TheLevel) {
     LevelOverride = TheLevel;
+    return *this;
+  }
+
+  SarifResult addProperty(llvm::StringRef Key, llvm::StringRef Value) {
+    Properties[Key] = Value.str();
+    return *this;
+  }
+
+  SarifResult addPartialFingerprint(llvm::StringRef key,
+                                    llvm::StringRef value) {
+    PartialFingerprints[key] = value;
     return *this;
   }
 };
@@ -387,12 +429,6 @@ private:
   /// \internal
   /// Return a pointer to the current tool. Asserts that a run exists.
   llvm::json::Object &getCurrentTool();
-
-  /// \internal
-  /// Checks if there is a run associated with this document.
-  ///
-  /// \return true on success
-  bool hasRun() const;
 
   /// \internal
   /// Reset portions of the internal state so that the document is ready to
@@ -419,8 +455,10 @@ private:
   createThreadFlows(const llvm::ArrayRef<ThreadFlow> ThreadFlows);
 
   /// Add the given \ref CharSourceRange to the SARIF document as a physical
-  /// location, with its corresponding artifact.
-  llvm::json::Object createPhysicalLocation(const CharSourceRange &R);
+  /// location, with its corresponding artifact. Returns std::nullopt if \p R
+  /// is invalid or does not map to a file.
+  std::optional<llvm::json::Object>
+  createPhysicalLocation(const CharSourceRange &R);
 
 public:
   SarifDocumentWriter() = delete;
@@ -435,7 +473,9 @@ public:
   /// Each run requires specifying the tool that is generating reporting items.
   void createRun(const llvm::StringRef ShortToolName,
                  const llvm::StringRef LongToolName,
-                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING);
+                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING,
+                 const llvm::StringRef InformationUri =
+                     "https://clang.llvm.org/docs/UsersManual.html");
 
   /// If there is a current run, end it.
   ///
@@ -474,6 +514,8 @@ public:
   /// Calling this will trigger a copy of the internal state including all
   /// reported diagnostics, resulting in an expensive call.
   llvm::json::Object createDocument();
+
+  static std::string fileNameToURI(llvm::StringRef Filename);
 
 private:
   /// Source Manager to use for the current SARIF document.

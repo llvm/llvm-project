@@ -3,6 +3,7 @@
 // RUN: fir-opt %s --fir-to-llvm-ir="target=x86_64-pc-windows-msvc" | FileCheck %s --check-prefixes="CHECK-COMDAT"
 // RUN: fir-opt %s --fir-to-llvm-ir="target=aarch64-apple-darwin" | FileCheck %s --check-prefixes="CHECK-NOCOMDAT"
 // RUN: fir-opt %s --fir-to-llvm-ir="target=powerpc64-ibm-aix" | FileCheck %s --check-prefixes="CHECK-NOCOMDAT"
+// RUN: fir-opt %s --fir-to-llvm-ir="target=powerpc-ibm-aix" | FileCheck %s --check-prefixes="CHECK-NOCOMDAT"
 
 // CHECK-COMDAT: llvm.func linkonce @fun_linkonce(%arg0: i32) -> i32 comdat(@__llvm_comdat::@fun_linkonce)
 // CHECK-NOCOMDAT: llvm.func linkonce @fun_linkonce(%arg0: i32) -> i32 {

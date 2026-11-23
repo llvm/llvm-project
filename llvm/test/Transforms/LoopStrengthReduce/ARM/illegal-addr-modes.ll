@@ -19,7 +19,7 @@ target triple = "thumbv6m-arm-none-eabi"
 ; Test case 01: -1*reg is not free for the Thumb1 target.
 define ptr @negativeOneCase(ptr returned %a, ptr nocapture readonly %b, i32 %n) nounwind {
 ; CHECK-LABEL: define ptr @negativeOneCase(
-; CHECK-SAME: ptr returned [[A:%.*]], ptr nocapture readonly [[B:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr returned [[A:%.*]], ptr readonly captures(none) [[B:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 -1
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]

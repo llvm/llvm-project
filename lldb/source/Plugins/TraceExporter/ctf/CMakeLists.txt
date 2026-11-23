@@ -6,13 +6,13 @@ add_lldb_library(lldbPluginTraceExporterCTF PLUGIN
 CommandObjectThreadTraceExportCTF.cpp
   TraceExporterCTF.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbSymbol
     lldbTarget
     lldbPluginTraceExporterCommon
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(lldbPluginTraceExporterCTF TraceExporterCTFOptionsGen)

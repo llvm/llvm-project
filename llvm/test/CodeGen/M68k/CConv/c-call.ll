@@ -34,7 +34,7 @@ define i16 @test2() nounwind {
 ; CHECK-NEXT:    move.l #2, (4,%sp)
 ; CHECK-NEXT:    move.l #1, (%sp)
 ; CHECK-NEXT:    jsr (test2_callee@PLT,%pc)
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -54,7 +54,7 @@ define i8 @test3() nounwind {
 ; CHECK-NEXT:    move.l #2, (4,%sp)
 ; CHECK-NEXT:    move.l #1, (%sp)
 ; CHECK-NEXT:    jsr (test3_callee@PLT,%pc)
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
 entry:

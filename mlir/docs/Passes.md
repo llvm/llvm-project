@@ -56,6 +56,22 @@ This document describes the available MLIR passes and their contracts.
 
 [include "GPUPasses.md"]
 
+### NVVM-specific 'gpu' Dialect Passes
+
+[include "GPUNVVMPasses.md"]
+
+### ROCDL-specific 'gpu' Dialect Passes
+
+[include "GPUROCDLPasses.md"]
+
+### SPIR-V-specific 'gpu' Dialect Passes
+
+[include "GPUSPIRVPasses.md"]
+
+### XeVM-specific 'gpu' Dialect Passes
+
+[include "GPUXeVMPasses.md"]
+
 ## 'linalg' Dialect Passes
 
 [include "LinalgPasses.md"]
@@ -63,6 +79,10 @@ This document describes the available MLIR passes and their contracts.
 ## 'llvm' Dialect Passes
 
 [include "LLVMPasses.md"]
+
+## 'llvm' Target Passes
+
+[include "TargetLLVMIRTransforms.md"]
 
 ## 'math' Dialect Passes
 
@@ -72,9 +92,13 @@ This document describes the available MLIR passes and their contracts.
 
 [include "MemRefPasses.md"]
 
-## 'mesh' Dialect Passes
+## 'omp' Dialect Passes
 
-[include "MeshPasses.md"]
+[include "OpenMPPasses.md"]
+
+## 'shard' Dialect Passes
+
+[include "ShardPasses.md"]
 
 ## 'ml\_program' Dialect Passes
 
@@ -83,6 +107,14 @@ This document describes the available MLIR passes and their contracts.
 ## 'nvgpu' Dialect Passes
 
 [include "NVGPUPasses.md"]
+
+## 'nvvm' Dialect Passes
+
+[include "NVVMPasses.md"]
+
+## 'quant' Dialect Passes
+
+[include "QuantPasses.md"]
 
 ## Reducer Passes
 

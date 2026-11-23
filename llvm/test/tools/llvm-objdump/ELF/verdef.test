@@ -1,12 +1,14 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump -p %t | FileCheck --strict-whitespace %s
+# RUN: llvm-objdump -p %t | FileCheck --match-full-lines --strict-whitespace %s
 
-# CHECK:      Dynamic Section:
-# CHECK-EMPTY:
-# CHECK-NEXT: Version definitions:
-# CHECK-NEXT: 1 0x01 0x075bcd15 foo
-# CHECK-NEXT: 2 0x02 0x3ade68b1 VERSION_1
-# CHECK-NEXT: 	                VERSION_2 
+#      CHECK:Dynamic Section:
+#CHECK-EMPTY:
+# CHECK-NEXT:Version definitions:
+# CHECK-NEXT:2 0x01 0x075bcd15 foo
+# CHECK-NEXT:3 0x02 0x3ade68b1 VERSION_1
+# CHECK-NEXT:	VERSION_2
+# CHECK-NEXT:4 0x00 0x0000007b VERSION_3
+# CHECK-NEXT:	VERSION_4 VERSION_5
 
 --- !ELF
 FileHeader:
@@ -24,17 +26,25 @@ Sections:
     Entries:
       - Version:         1
         Flags:           1
-        VersionNdx:      1
+        VersionNdx:      2
         Hash:            123456789
         Names:
           - foo
       - Version:         1
         Flags:           2
-        VersionNdx:      2
+        VersionNdx:      3
         Hash:            987654321
         Names:
           - VERSION_1
           - VERSION_2
+      - Version:         1
+        Flags:           0
+        VersionNdx:      4
+        Hash:            123
+        Names:
+          - VERSION_3
+          - VERSION_4
+          - VERSION_5
 DynamicSymbols:
   - Name:    bar
     Binding: STB_GLOBAL

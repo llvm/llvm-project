@@ -43,7 +43,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include <array>
 #include <cstdint>
 #include <cstring>
 
@@ -187,6 +186,10 @@ MD5::MD5() = default;
 
 /// Incrementally add the bytes in \p Data to the hash.
 void MD5::update(ArrayRef<uint8_t> Data) {
+  // An empty ArrayRef may have a null data(), which must not reach memcpy.
+  if (Data.empty())
+    return;
+
   MD5_u32plus saved_lo;
   unsigned long used, free;
   const uint8_t *Ptr = Data.data();
@@ -296,3 +299,11 @@ MD5::MD5Result MD5::hash(ArrayRef<uint8_t> Data) {
 
   return Res;
 }
+
+#undef F
+#undef G
+#undef H
+#undef I
+#undef STEP
+#undef SET
+#undef GET

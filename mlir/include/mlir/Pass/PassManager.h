@@ -18,7 +18,6 @@
 
 #include <functional>
 #include <optional>
-#include <vector>
 
 namespace mlir {
 class AnalysisManager;
@@ -141,13 +140,17 @@ public:
   detail::OpPassManagerImpl &getImpl();
 
   /// Prints out the passes of the pass manager as the textual representation
-  /// of pipelines.
+  /// of pipelines. When `pretty` is true, the printed pipeline is formatted
+  /// for readability.
+  ///
   /// Note: The quality of the string representation depends entirely on the
   /// the correctness of per-pass overrides of Pass::printAsTextualPipeline.
-  void printAsTextualPipeline(raw_ostream &os) const;
+  void printAsTextualPipeline(raw_ostream &os, bool pretty = false) const;
 
   /// Raw dump of the pass manager to llvm::errs().
-  void dump();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump();
+#endif
 
   /// Merge the pass statistics of this class into 'other'.
   void mergeStatisticsInto(OpPassManager &other);
@@ -486,10 +489,9 @@ private:
   std::unique_ptr<detail::PassCrashReproducerGenerator> crashReproGenerator;
 
   /// Hash keys used to detect when reinitialization is necessary.
-  llvm::hash_code initializationKey =
-      DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+  llvm::hash_code initializationKey = llvm::hash_code(static_cast<size_t>(-1));
   llvm::hash_code pipelineInitializationKey =
-      DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+      llvm::hash_code(static_cast<size_t>(-1));
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;

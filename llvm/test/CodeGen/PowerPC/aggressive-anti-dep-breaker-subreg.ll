@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs %s -mtriple=powerpc64-unknown-linux-gnu -O2 -o - -optimize-regalloc=false -regalloc=fast | FileCheck %s
+; RUN: llc -verify-machineinstrs %s -mtriple=powerpc64-unknown-linux-gnu -O2 -o - -regalloc=fast | FileCheck %s
 
 declare void @func(ptr, i64, i64)
 
@@ -9,7 +9,7 @@ entry:
 
 lnext:
   %elementArray = load ptr, ptr %elementArrayPtr, align 8
-; CHECK: lwz [[LDREG:[0-9]+]], 140(1)                   # 4-byte Folded Reload
+; CHECK: ld [[LDREG:[0-9]+]], 120(1)                   # 8-byte Folded Reload
 ; CHECK: # implicit-def: $x[[TEMPREG:[0-9]+]]
   %element = load i32, ptr %elementArray, align 4
 ; CHECK: mr [[TEMPREG]], [[LDREG]]

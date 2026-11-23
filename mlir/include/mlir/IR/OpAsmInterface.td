@@ -27,6 +27,7 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
     classes.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/OpImplementation.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -119,6 +120,7 @@ def OpAsmTypeInterface : TypeInterface<"OpAsmTypeInterface"> {
     classes.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -126,6 +128,36 @@ def OpAsmTypeInterface : TypeInterface<"OpAsmTypeInterface"> {
       }],
       "void", "getAsmName",
       (ins "::mlir::OpAsmSetNameFn":$setNameFn), "", ";"
+    >,
+    InterfaceMethod<[{
+        Get a name to use when generating an alias for this type.
+      }],
+      "::mlir::OpAsmAliasResult", "getAlias",
+      (ins "::llvm::raw_ostream&":$os), "",
+      "return ::mlir::OpAsmAliasResult::NoAlias;"
+    >,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// OpAsmAttrInterface
+//===----------------------------------------------------------------------===//
+
+def OpAsmAttrInterface : AttrInterface<"OpAsmAttrInterface"> {
+  let description = [{
+    This interface provides hooks to interact with the AsmPrinter and AsmParser
+    classes.
+  }];
+  let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
+
+  let methods = [
+    InterfaceMethod<[{
+        Get a name to use when generating an alias for this attribute.
+      }],
+      "::mlir::OpAsmAliasResult", "getAlias",
+      (ins "::llvm::raw_ostream&":$os), "",
+      "return ::mlir::OpAsmAliasResult::NoAlias;"
     >,
   ];
 }

@@ -107,7 +107,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #  define _LIBCPP_HAS_NO_LANGUAGE_SIZED_DEALLOCATION
 #endif
 
-#if !defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_STD_VER < 14 && defined(_LIBCPP_HAS_NO_LANGUAGE_SIZED_DEALLOCATION)
+#if !defined(_LIBCPP_BUILDING_LIBRARY) && defined(_LIBCPP_HAS_NO_LANGUAGE_SIZED_DEALLOCATION)
 #  define _LIBCPP_HAS_NO_LIBRARY_SIZED_DEALLOCATION
 #endif
 
@@ -177,29 +177,11 @@ _LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_array_new_length(
 }
 
 #if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) && !defined(_LIBCPP_ABI_VCRUNTIME)
-#  ifndef _LIBCPP_CXX03_LANG
-enum class align_val_t : size_t {};
-#  else
 enum align_val_t { __zero = 0, __max = (size_t)-1 };
-#  endif
 #endif
-
-#if _LIBCPP_STD_VER >= 20
-// Enable the declaration even if the compiler doesn't support the language
-// feature.
-struct destroying_delete_t {
-  explicit destroying_delete_t() = default;
-};
-inline constexpr destroying_delete_t destroying_delete{};
-#endif // _LIBCPP_STD_VER >= 20
-
 } // namespace std
 
-#if defined(_LIBCPP_CXX03_LANG)
-#  define _THROW_BAD_ALLOC throw(std::bad_alloc)
-#else
-#  define _THROW_BAD_ALLOC
-#endif
+#define _THROW_BAD_ALLOC throw(std::bad_alloc)
 
 #if !defined(_LIBCPP_ABI_VCRUNTIME)
 
@@ -251,7 +233,7 @@ inline _LIBCPP_HIDE_FROM_ABI void operator delete[](void*, void*) _NOEXCEPT {}
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_CONSTEXPR inline _LIBCPP_HIDE_FROM_ABI bool __is_overaligned_for_new(size_t __align) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI bool __is_overaligned_for_new(size_t __align) _NOEXCEPT {
 #ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
   return __align > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
 #else
@@ -328,33 +310,15 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_deallocate_unsized(void* __ptr, size_
 }
 
 template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT {
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _Tp* __launder(_Tp* __p) _NOEXCEPT {
   static_assert(!(is_function<_Tp>::value), "can't launder functions");
   static_assert(!(is_same<void, __remove_cv_t<_Tp> >::value), "can't launder cv-void");
   return __builtin_launder(__p);
 }
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp* launder(_Tp* __p) noexcept {
-  return std::__launder(__p);
-}
-#endif
-
-#if _LIBCPP_STD_VER >= 17
-
-#  if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
-
-inline constexpr size_t hardware_destructive_interference_size  = __GCC_DESTRUCTIVE_SIZE;
-inline constexpr size_t hardware_constructive_interference_size = __GCC_CONSTRUCTIVE_SIZE;
-
-#  endif // defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
-
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/type_traits>
 #endif

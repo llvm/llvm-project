@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! Check for semantic errors in form team statements
+! Check for parsing errors in form team statements
 ! This subtest contains syntactic tests that prevent the main tests from being emitted.
 
 subroutine test

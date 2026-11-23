@@ -54,11 +54,11 @@ entry:
 
 ; CHECK-LABEL: f128_spill_large:
 ; CHECK:       sethi 4, %g1
-; CHECK:       std %f{{.+}}, [%fp+-16]
-; CHECK-NEXT:  std %f{{.+}}, [%fp+-8]
-; CHECK:       ldd [%fp+-16], %f{{.+}}
-; CHECK-NEXT:  ldd [%fp+-8], %f{{.+}}
 
+; CHECK:       std %f{{.+}}, [%[[S0:.+]]]
+; CHECK:       std %f{{.+}}, [%[[S1:.+]]]
+; CHECK-DAG:   ldd [%[[S0]]], %f{{.+}}
+; CHECK-DAG:   ldd [%[[S1]]], %f{{.+}}
 define void @f128_spill_large(ptr noalias sret(<251 x fp128>) %scalar.result, ptr byval(<251 x fp128>) %a) {
 entry:
   %0 = load <251 x fp128>, ptr %a, align 8
@@ -100,12 +100,46 @@ entry:
   ret i32 1
 }
 
+; CHECK-LABEL: f128_compare_one:
+; HARD:        fcmpq
+; HARD:        fblg
+; SOFT:        call _Q_cmp
+; SOFT:        add %o0, 1, [[R:%[gilo][0-7]]]
+; SOFT-NEXT:   andcc [[R]], 2, %g0
+; SOFT-NEXT:   bne
+
+define i32 @f128_compare_one(ptr byval(fp128) %f0, ptr byval(fp128) %f1, i32 %a, i32 %b) nounwind {
+entry:
+  %0 = load fp128, ptr %f0, align 8
+  %1 = load fp128, ptr %f1, align 8
+  %cond = fcmp one fp128 %0, %1
+  %ret = select i1 %cond, i32 %a, i32 %b
+  ret i32 %ret
+}
+
+; CHECK-LABEL: f128_compare_ueq:
+; HARD:        fcmpq
+; HARD:        fbue
+; SOFT:        call _Q_cmp
+; SOFT:        add %o0, 1, [[R:%[gilo][0-7]]]
+; SOFT-NEXT:   andcc [[R]], 2, %g0
+; SOFT-NEXT:   be
+
+define i32 @f128_compare_ueq(ptr byval(fp128) %f0, ptr byval(fp128) %f1, i32 %a, i32 %b) nounwind {
+entry:
+  %0 = load fp128, ptr %f0, align 8
+  %1 = load fp128, ptr %f1, align 8
+  %cond = fcmp ueq fp128 %0, %1
+  %ret = select i1 %cond, i32 %a, i32 %b
+  ret i32 %ret
+}
+
 
 ; CHECK-LABEL: f128_abs:
-; CHECK:       ldd [%o0], %f0
-; CHECK:       ldd [%o0+8], %f2
-; BE:          fabss %f0, %f0
-; EL:          fabss %f3, %f3
+; CHECK-DAG:       ldd [%o0], [[REG:%f[0-9]+]]
+; CHECK-DAG:       ldd [%o0+8], %f{{[0-9]+}}
+; BE:          fabss [[REG]], [[REG]]
+; EL:          fabss %f1, %f1
 
 define void @f128_abs(ptr noalias sret(fp128) %scalar.result, ptr byval(fp128) %a) {
 entry:
@@ -229,10 +263,10 @@ entry:
 }
 
 ; CHECK-LABEL: f128_neg:
-; CHECK:       ldd [%o0], %f0
-; CHECK:       ldd [%o0+8], %f2
-; BE:          fnegs %f0, %f0
-; EL:          fnegs %f3, %f3
+; CHECK-DAG:       ldd [%o0], [[REG:%f[0-9]+]]
+; CHECK-DAG:       ldd [%o0+8], %f{{[0-9]+}}
+; BE:          fnegs [[REG]], [[REG]]
+; LE:          fnegs [[REG]], [[REG]]
 
 define void @f128_neg(ptr noalias sret(fp128) %scalar.result, ptr byval(fp128) %a) {
 entry:

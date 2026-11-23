@@ -159,7 +159,7 @@ LONG test_InterlockedAnd(LONG volatile *value, LONG mask) {
 LONG test_InterlockedCompareExchange(LONG volatile *Destination, LONG Exchange, LONG Comperand) {
   return _InterlockedCompareExchange(Destination, Exchange, Comperand);
 }
-// CHECK: define{{.*}}i32 @test_InterlockedCompareExchange(ptr{{[a-z_ ]*}}%Destination, i32{{[a-z_ ]*}}%Exchange, i32{{[a-z_ ]*}}%Comperand){{.*}}{
+// CHECK: define{{.*}}i32 @test_InterlockedCompareExchange(ptr{{[^%]*}}%Destination, i32{{[a-z_ ]*}}%Exchange, i32{{[a-z_ ]*}}%Comperand){{.*}}{
 // CHECK: [[TMP:%[0-9]+]] = cmpxchg volatile ptr %Destination, i32 %Comperand, i32 %Exchange seq_cst seq_cst, align 4
 // CHECK: [[RESULT:%[0-9]+]] = extractvalue { i32, i1 } [[TMP]], 0
 // CHECK: ret i32 [[RESULT]]
@@ -178,7 +178,7 @@ LONG test_InterlockedDecrement(LONG volatile *Addend) {
   return _InterlockedDecrement(Addend);
 }
 // CHECK: define{{.*}}i32 @test_InterlockedDecrement(ptr{{.*}}%Addend){{.*}}{
-// CHECK: [[TMP:%[0-9]+]] = atomicrmw sub ptr %Addend, i32 1 seq_cst, align 4
+// CHECK: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 -1 seq_cst, align 4
 // CHECK: [[RESULT:%[0-9]+]] = add i32 [[TMP]], -1
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
@@ -427,7 +427,7 @@ LONG test_InterlockedDecrement_acq(LONG volatile *Addend) {
   return _InterlockedDecrement_acq(Addend);
 }
 // CHECK-ARM: define{{.*}}i32 @test_InterlockedDecrement_acq(ptr{{.*}}%Addend){{.*}}{
-// CHECK-ARM: [[TMP:%[0-9]+]] = atomicrmw sub ptr %Addend, i32 1 acquire, align 4
+// CHECK-ARM: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 -1 acquire, align 4
 // CHECK-ARM: [[RESULT:%[0-9]+]] = add i32 [[TMP]], -1
 // CHECK-ARM: ret i32 [[RESULT]]
 // CHECK-ARM: }
@@ -436,7 +436,7 @@ LONG test_InterlockedDecrement_rel(LONG volatile *Addend) {
   return _InterlockedDecrement_rel(Addend);
 }
 // CHECK-ARM: define{{.*}}i32 @test_InterlockedDecrement_rel(ptr{{.*}}%Addend){{.*}}{
-// CHECK-ARM: [[TMP:%[0-9]+]] = atomicrmw sub ptr %Addend, i32 1 release, align 4
+// CHECK-ARM: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 -1 release, align 4
 // CHECK-ARM: [[RESULT:%[0-9]+]] = add i32 [[TMP]], -1
 // CHECK-ARM: ret i32 [[RESULT]]
 // CHECK-ARM: }
@@ -445,7 +445,7 @@ LONG test_InterlockedDecrement_nf(LONG volatile *Addend) {
   return _InterlockedDecrement_nf(Addend);
 }
 // CHECK-ARM: define{{.*}}i32 @test_InterlockedDecrement_nf(ptr{{.*}}%Addend){{.*}}{
-// CHECK-ARM: [[TMP:%[0-9]+]] = atomicrmw sub ptr %Addend, i32 1 monotonic, align 4
+// CHECK-ARM: [[TMP:%[0-9]+]] = atomicrmw add ptr %Addend, i32 -1 monotonic, align 4
 // CHECK-ARM: [[RESULT:%[0-9]+]] = add i32 [[TMP]], -1
 // CHECK-ARM: ret i32 [[RESULT]]
 // CHECK-ARM: }

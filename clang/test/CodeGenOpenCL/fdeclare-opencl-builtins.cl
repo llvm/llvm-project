@@ -48,6 +48,15 @@ void test_generic_optionality(float a, float *b) {
   float res = fract(a, b);
 }
 
+// Test that the correct builtin is called depending on the generic address
+// space feature availability. If not available, the __private version is called
+// CHECK-LABEL: @test_wait_group_events
+// CHECK-GAS: call spir_func void @_Z17wait_group_eventsiPU3AS49ocl_event
+// CHECK-NOGAS: call spir_func void @_Z17wait_group_eventsiP9ocl_event
+void test_wait_group_events(int i, event_t *e) {
+  wait_group_events(i, e);
+}
+
 // CHECK: attributes [[ATTR_CONST]] =
 // CHECK-SAME: memory(none)
 // CHECK: attributes [[ATTR_PURE]] =

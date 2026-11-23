@@ -133,9 +133,9 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(ptr, ptr) #3
   
-  attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable }
-  attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
   attributes #3 = { nounwind }
   
   !llvm.dbg.cu = !{!0, !3}
@@ -178,7 +178,6 @@
 ---
 name:            _Z3bari
 alignment:       16
-tracksRegLiveness: true
 frameInfo:       
   stackSize:       8
   offsetAdjustment: -4
@@ -213,7 +212,6 @@ body:             |
 ---
 name:            _Z3baz1A
 alignment:       16
-tracksRegLiveness: true
 frameInfo:       
   stackSize:       28
   offsetAdjustment: -24

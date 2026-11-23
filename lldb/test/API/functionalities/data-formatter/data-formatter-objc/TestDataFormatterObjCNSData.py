@@ -13,11 +13,13 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSData(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nsdata_with_run_command(self):
         """Test formatters for  NSData."""
         self.appkit_tester_impl(self.nsdata_data_formatter_commands, True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_nsdata_with_run_command_no_const(self):
         """Test formatters for  NSData."""
         self.appkit_tester_impl(self.nsdata_data_formatter_commands, False)

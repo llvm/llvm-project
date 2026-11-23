@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericLoopInfo.h"
 #include <optional>
 #include <utility>
@@ -32,11 +33,11 @@ class ScalarEvolution;
 class raw_ostream;
 
 // Implementation in Support/GenericLoopInfoImpl.h
-extern template class LoopBase<BasicBlock, Loop>;
+extern template class LLVM_TEMPLATE_ABI LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
-class LLVM_ABI Loop : public LoopBase<BasicBlock, Loop> {
+class Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// A range representing the start and end location of a loop.
   class LocRange {
@@ -58,11 +59,11 @@ public:
   };
 
   /// Return true if the specified value is loop invariant.
-  bool isLoopInvariant(const Value *V) const;
+  LLVM_ABI bool isLoopInvariant(const Value *V) const;
 
   /// Return true if all the operands of the specified instruction are loop
   /// invariant.
-  bool hasLoopInvariantOperands(const Instruction *I) const;
+  LLVM_ABI bool hasLoopInvariantOperands(const Instruction *I) const;
 
   /// If the given value is an instruction inside of the loop and it can be
   /// hoisted, do so to make it trivially loop-invariant.
@@ -74,10 +75,10 @@ public:
   /// If InsertPt is specified, it is the point to hoist instructions to.
   /// If null, the terminator of the loop preheader is used.
   ///
-  bool makeLoopInvariant(Value *V, bool &Changed,
-                         Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr,
-                         ScalarEvolution *SE = nullptr) const;
+  LLVM_ABI bool makeLoopInvariant(Value *V, bool &Changed,
+                                  Instruction *InsertPt = nullptr,
+                                  MemorySSAUpdater *MSSAU = nullptr,
+                                  ScalarEvolution *SE = nullptr) const;
 
   /// If the given instruction is inside of the loop and it can be hoisted, do
   /// so to make it trivially loop-invariant.
@@ -89,10 +90,10 @@ public:
   /// If InsertPt is specified, it is the point to hoist instructions to.
   /// If null, the terminator of the loop preheader is used.
   ///
-  bool makeLoopInvariant(Instruction *I, bool &Changed,
-                         Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr,
-                         ScalarEvolution *SE = nullptr) const;
+  LLVM_ABI bool makeLoopInvariant(Instruction *I, bool &Changed,
+                                  Instruction *InsertPt = nullptr,
+                                  MemorySSAUpdater *MSSAU = nullptr,
+                                  ScalarEvolution *SE = nullptr) const;
 
   /// Check to see if the loop has a canonical induction variable: an integer
   /// recurrence that starts at 0 and increments by one each time through the
@@ -101,15 +102,15 @@ public:
   /// The IndVarSimplify pass transforms loops to have a canonical induction
   /// variable.
   ///
-  PHINode *getCanonicalInductionVariable() const;
+  LLVM_ABI PHINode *getCanonicalInductionVariable() const;
 
   /// Get the latch condition instruction.
-  ICmpInst *getLatchCmpInst() const;
+  LLVM_ABI ICmpInst *getLatchCmpInst() const;
 
   /// Obtain the unique incoming and back edge. Return false if they are
   /// non-unique or the loop is dead; otherwise, return true.
-  bool getIncomingAndBackEdge(BasicBlock *&Incoming,
-                              BasicBlock *&Backedge) const;
+  LLVM_ABI bool getIncomingAndBackEdge(BasicBlock *&Incoming,
+                                       BasicBlock *&Backedge) const;
 
   /// Below are some utilities to get the loop guard, loop bounds and induction
   /// variable, and to check if a given phinode is an auxiliary induction
@@ -157,7 +158,7 @@ public:
     /// - the final value of the induction variable can be found
     ///
     /// Else std::nullopt.
-    static std::optional<Loop::LoopBounds>
+    LLVM_ABI static std::optional<Loop::LoopBounds>
     getBounds(const Loop &L, PHINode &IndVar, ScalarEvolution &SE);
 
     /// Get the initial value of the loop induction variable.
@@ -206,7 +207,7 @@ public:
     /// The predicate would be sgt if both (1) and (2) are satisfied.
     /// getCanonicalPredicate() returns sgt for this example.
     /// Note: The IR is not changed.
-    ICmpInst::Predicate getCanonicalPredicate() const;
+    LLVM_ABI ICmpInst::Predicate getCanonicalPredicate() const;
 
     /// An enum for the direction of the loop
     /// - for (int i = 0; i < ub; ++i)  --> Increasing
@@ -215,7 +216,7 @@ public:
     enum class Direction { Increasing, Decreasing, Unknown };
 
     /// Get the direction of the loop.
-    Direction getDirection() const;
+    LLVM_ABI Direction getDirection() const;
 
   private:
     LoopBounds(const Loop &Loop, Value &I, Instruction &SI, Value *SV, Value &F,
@@ -243,7 +244,7 @@ public:
 
   /// Return the struct LoopBounds collected if all struct members are found,
   /// else std::nullopt.
-  std::optional<LoopBounds> getBounds(ScalarEvolution &SE) const;
+  LLVM_ABI std::optional<LoopBounds> getBounds(ScalarEvolution &SE) const;
 
   /// Return the loop induction variable if found, else return nullptr.
   /// An instruction is considered as the loop induction variable if
@@ -252,12 +253,12 @@ public:
   ///
   /// Note: the induction variable doesn't need to be canonical, i.e. starts at
   /// zero and increments by one each time through the loop (but it can be).
-  PHINode *getInductionVariable(ScalarEvolution &SE) const;
+  LLVM_ABI PHINode *getInductionVariable(ScalarEvolution &SE) const;
 
   /// Get the loop induction descriptor for the loop induction variable. Return
   /// true if the loop induction variable is found.
-  bool getInductionDescriptor(ScalarEvolution &SE,
-                              InductionDescriptor &IndDesc) const;
+  LLVM_ABI bool getInductionDescriptor(ScalarEvolution &SE,
+                                       InductionDescriptor &IndDesc) const;
 
   /// Return true if the given PHINode \p AuxIndVar is
   /// - in the loop header
@@ -266,8 +267,8 @@ public:
   /// - step instruction opcode should be add or sub
   /// Note: auxiliary induction variable is not required to be used in the
   ///       conditional branch in the loop latch. (but it can be)
-  bool isAuxiliaryInductionVariable(PHINode &AuxIndVar,
-                                    ScalarEvolution &SE) const;
+  LLVM_ABI bool isAuxiliaryInductionVariable(PHINode &AuxIndVar,
+                                             ScalarEvolution &SE) const;
 
   /// Return the loop guard branch, if it exists.
   ///
@@ -287,7 +288,7 @@ public:
   ///   br ExitSucc
   /// ExitSucc:
   /// \endcode
-  BranchInst *getLoopGuardBranch() const;
+  LLVM_ABI CondBrInst *getLoopGuardBranch() const;
 
   /// Return true iff the loop is
   /// - in simplify rotated form, and
@@ -307,24 +308,34 @@ public:
 
   /// Return true if the loop induction variable starts at zero and increments
   /// by one each time through the loop.
-  bool isCanonical(ScalarEvolution &SE) const;
+  LLVM_ABI bool isCanonical(ScalarEvolution &SE) const;
 
   /// Return true if the Loop is in LCSSA form. If \p IgnoreTokens is set to
-  /// true, token values defined inside loop are allowed to violate LCSSA form.
-  bool isLCSSAForm(const DominatorTree &DT, bool IgnoreTokens = true) const;
+  /// true, token-like values defined inside loop are allowed to violate LCSSA
+  /// form.
+  LLVM_ABI bool isLCSSAForm(const DominatorTree &DT,
+                            bool IgnoreTokens = true) const;
 
   /// Return true if this Loop and all inner subloops are in LCSSA form. If \p
-  /// IgnoreTokens is set to true, token values defined inside loop are allowed
-  /// to violate LCSSA form.
-  bool isRecursivelyLCSSAForm(const DominatorTree &DT, const LoopInfo &LI,
-                              bool IgnoreTokens = true) const;
+  /// IgnoreTokens is set to true, token-like values defined inside loop are
+  /// allowed to violate LCSSA form.
+  LLVM_ABI bool isRecursivelyLCSSAForm(const DominatorTree &DT,
+                                       const LoopInfo &LI,
+                                       bool IgnoreTokens = true) const;
 
   /// Return true if the Loop is in the form that the LoopSimplify form
   /// transforms loops to, which is sometimes called normal form.
-  bool isLoopSimplifyForm() const;
+  LLVM_ABI bool isLoopSimplifyForm() const;
 
   /// Return true if the loop body is safe to clone in practice.
-  bool isSafeToClone() const;
+  LLVM_ABI bool isSafeToClone() const;
+
+  /// Like `isSafeToClone`, but for transformations where the cloned loop
+  /// bodies may run conditionally. This additionally checks that we may form
+  /// phis for all values that are live-out from the loop (in particular that
+  /// no token-like values are live-out) and that there are no convergent calls
+  /// (which must not gain new control dependencies).
+  LLVM_ABI bool isSafeToCloneConditionally(const DominatorTree &DT) const;
 
   /// Returns true if the loop is annotated parallel.
   ///
@@ -338,7 +349,7 @@ public:
   /// iterations is not guaranteed, thus, the end result might or might not
   /// implement actual concurrent execution of instructions across multiple
   /// iterations.
-  bool isAnnotatedParallel() const;
+  LLVM_ABI bool isAnnotatedParallel() const;
 
   /// Return the llvm.loop loop id metadata node for this loop if it is present.
   ///
@@ -346,7 +357,7 @@ public:
   /// header then the node is returned. If any latch instruction does not
   /// contain llvm.loop or if multiple latches contain different nodes then
   /// 0 is returned.
-  MDNode *getLoopID() const;
+  LLVM_ABI MDNode *getLoopID() const;
   /// Set the llvm.loop loop id metadata for this loop.
   ///
   /// The LoopID metadata node will be added to each terminator instruction in
@@ -354,7 +365,7 @@ public:
   ///
   /// The LoopID metadata node should have one or more operands and the first
   /// operand should be the node itself.
-  void setLoopID(MDNode *LoopID) const;
+  LLVM_ABI void setLoopID(MDNode *LoopID) const;
 
   /// Add llvm.loop.unroll.disable to this loop's loop id metadata.
   ///
@@ -362,28 +373,48 @@ public:
   /// indicate the loop has already been unrolled.  This prevents a loop
   /// from being unrolled more than is directed by a pragma if the loop
   /// unrolling pass is run more than once (which it generally is).
-  void setLoopAlreadyUnrolled();
+  LLVM_ABI void setLoopAlreadyUnrolled();
 
   /// Add llvm.loop.mustprogress to this loop's loop id metadata.
-  void setLoopMustProgress();
+  LLVM_ABI void setLoopMustProgress();
 
-  void dump() const;
-  void dumpVerbose() const;
+  /// Add a string-only metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode containing just \p Name (no value operand) and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  LLVM_ABI void
+  addStringLoopAttribute(StringRef Name,
+                         ArrayRef<StringRef> RemovePrefixes = {}) const;
+
+  /// Add an integer metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode of the form { Name, ConstantInt(Value) } and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  LLVM_ABI void
+  addIntLoopAttribute(StringRef Name, unsigned Value,
+                      ArrayRef<StringRef> RemovePrefixes = {}) const;
+
+  LLVM_ABI void dump() const;
+  LLVM_ABI void dumpVerbose() const;
 
   /// Return the debug location of the start of this loop.
   /// This looks for a BB terminating instruction with a known debug
   /// location by looking at the preheader and header blocks. If it
   /// cannot find a terminating instruction with location information,
   /// it returns an unknown location.
-  DebugLoc getStartLoc() const;
+  LLVM_ABI DebugLoc getStartLoc() const;
 
   /// Return the source code span of the loop.
-  LocRange getLocRange() const;
+  LLVM_ABI LocRange getLocRange() const;
 
   /// Return a string containing the debug location of the loop (file name +
   /// line number if present, otherwise module name). Meant to be used for debug
   /// printing within LLVM_DEBUG.
-  std::string getLocStr() const;
+  LLVM_ABI std::string getLocStr() const;
 
   StringRef getName() const {
     if (BasicBlock *Header = getHeader())
@@ -397,12 +428,11 @@ private:
 
   friend class LoopInfoBase<BasicBlock, Loop>;
   friend class LoopBase<BasicBlock, Loop>;
-  explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
 };
 
 // Implementation in Support/GenericLoopInfoImpl.h
-extern template class LoopInfoBase<BasicBlock, Loop>;
+extern template class LLVM_TEMPLATE_ABI LoopInfoBase<BasicBlock, Loop>;
 
 class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
   typedef LoopInfoBase<BasicBlock, Loop> BaseT;
@@ -414,7 +444,8 @@ class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
 
 public:
   LoopInfo() = default;
-  explicit LoopInfo(const DominatorTreeBase<BasicBlock, false> &DomTree);
+  LLVM_ABI explicit LoopInfo(
+      const DominatorTreeBase<BasicBlock, false> &DomTree);
 
   LoopInfo(LoopInfo &&Arg) : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
   LoopInfo &operator=(LoopInfo &&RHS) {
@@ -423,8 +454,8 @@ public:
   }
 
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 
   // Most of the public interface is provided via LoopInfoBase.
 
@@ -432,7 +463,7 @@ public:
   /// the loop forest and parent loops for each block so that \c L is no longer
   /// referenced, but does not actually delete \c L immediately. The pointer
   /// will remain valid until this LoopInfo's memory is released.
-  void erase(Loop *L);
+  LLVM_ABI void erase(Loop *L);
 
   /// Returns true if replacing From with To everywhere is guaranteed to
   /// preserve LCSSA form.
@@ -529,11 +560,12 @@ public:
   }
 
   // Return true if a new use of V added in ExitBB would require an LCSSA PHI
-  // to be inserted at the begining of the block.  Note that V is assumed to
+  // to be inserted at the beginning of the block.  Note that V is assumed to
   // dominate ExitBB, and ExitBB must be the exit block of some loop.  The
   // IR is assumed to be in LCSSA form before the planned insertion.
-  bool wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
-                                         const BasicBlock *ExitBB) const;
+  LLVM_ABI bool
+  wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
+                                    const BasicBlock *ExitBB) const;
 };
 
 /// Enable verification of loop info.
@@ -541,7 +573,7 @@ public:
 /// The flag enables checks which are expensive and are disabled by default
 /// unless the `EXPENSIVE_CHECKS` macro is defined.  The `-verify-loop-info`
 /// flag allows the checks to be enabled selectively without re-compilation.
-extern bool VerifyLoopInfo;
+LLVM_ABI extern bool VerifyLoopInfo;
 
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop *> {
@@ -565,32 +597,30 @@ template <> struct GraphTraits<Loop *> {
 /// Analysis pass that exposes the \c LoopInfo for a function.
 class LoopAnalysis : public AnalysisInfoMixin<LoopAnalysis> {
   friend AnalysisInfoMixin<LoopAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   typedef LoopInfo Result;
 
-  LoopInfo run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI LoopInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
+class LoopPrinterPass : public RequiredPassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
-struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+struct LoopVerifierPass : public RequiredPassInfoMixin<LoopVerifierPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.
-class LoopInfoWrapperPass : public FunctionPass {
+class LLVM_ABI LoopInfoWrapperPass : public FunctionPass {
   LoopInfo LI;
 
 public:
@@ -614,56 +644,68 @@ public:
 };
 
 /// Function to print a loop's contents as LLVM's text IR assembly.
-void printLoop(Loop &L, raw_ostream &OS, const std::string &Banner = "");
+LLVM_ABI void printLoop(const Loop &L, raw_ostream &OS,
+                        const std::string &Banner = "");
 
 /// Find and return the loop attribute node for the attribute @p Name in
 /// @p LoopID. Return nullptr if there is no such attribute.
-MDNode *findOptionMDForLoopID(MDNode *LoopID, StringRef Name);
+LLVM_ABI MDNode *findOptionMDForLoopID(MDNode *LoopID, StringRef Name);
 
 /// Find string metadata for a loop.
 ///
 /// Returns the MDNode where the first operand is the metadata's name. The
 /// following operands are the metadata's values. If no metadata with @p Name is
 /// found, return nullptr.
-MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
+LLVM_ABI MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
 
-std::optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
-                                                 StringRef Name);
+LLVM_ABI std::optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                                          StringRef Name);
 
 /// Returns true if Name is applied to TheLoop and enabled.
-bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
+LLVM_ABI bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 
 /// Find named metadata for a loop with an integer value.
-std::optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                               StringRef Name);
+LLVM_ABI std::optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
+                                                        StringRef Name);
 
 /// Find named metadata for a loop with an integer value. Return \p Default if
 /// not set.
-int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
+LLVM_ABI int getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
+                                 int Default = 0);
 
 /// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
 /// Optional's not-a-value.
-std::optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
-                                                           StringRef Name);
+LLVM_ABI std::optional<const MDOperand *>
+findStringMetadataForLoop(const Loop *TheLoop, StringRef Name);
 
 /// Find the convergence heart of the loop.
-CallBase *getLoopConvergenceHeart(const Loop *TheLoop);
+LLVM_ABI CallBase *getLoopConvergenceHeart(const Loop *TheLoop);
 
 /// Look for the loop attribute that requires progress within the loop.
 /// Note: Most consumers probably want "isMustProgress" which checks
 /// the containing function attribute too.
-bool hasMustProgress(const Loop *L);
+LLVM_ABI bool hasMustProgress(const Loop *L);
 
 /// Return true if this loop can be assumed to make progress.  (i.e. can't
 /// be infinite without side effects without also being undefined)
-bool isMustProgress(const Loop *L);
+LLVM_ABI bool isMustProgress(const Loop *L);
 
 /// Return true if this loop can be assumed to run for a finite number of
 /// iterations.
-bool isFinite(const Loop *L);
+LLVM_ABI bool isFinite(const Loop *L);
+
+/// Return true if every cycle in the loop nest rooted at \p L is finite.
+/// This holds if \p L is finite by assumption, or if the nest has no
+/// irreducible cycles and every loop is either finite by assumption or
+/// has a computable constant max backedge-taken count.
+///
+/// This does not guarantee termination, as a call within the nest may
+/// never return.
+LLVM_ABI bool isLoopNestFinite(Loop *L, ScalarEvolution &SE,
+                               const LoopInfo &LI);
 
 /// Return whether an MDNode might represent an access group.
 ///
@@ -672,7 +714,7 @@ bool isFinite(const Loop *L);
 /// MDNodes are designed immutable -- would require creating a new MDNode). Note
 /// that this is not a sufficient condition: not every distinct and empty NDNode
 /// is representing an access group.
-bool isValidAsAccessGroup(MDNode *AccGroup);
+LLVM_ABI bool isValidAsAccessGroup(MDNode *AccGroup);
 
 /// Create a new LoopID after the loop has been transformed.
 ///
@@ -689,7 +731,7 @@ bool isValidAsAccessGroup(MDNode *AccGroup);
 /// @param AddAttrs       Add these loop attributes to the new LoopID.
 ///
 /// @return A new LoopID that can be applied using Loop::setLoopID().
-llvm::MDNode *
+LLVM_ABI llvm::MDNode *
 makePostTransformationMetadata(llvm::LLVMContext &Context, MDNode *OrigLoopID,
                                llvm::ArrayRef<llvm::StringRef> RemovePrefixes,
                                llvm::ArrayRef<llvm::MDNode *> AddAttrs);

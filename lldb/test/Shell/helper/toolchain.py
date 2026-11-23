@@ -11,10 +11,40 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+import lldbflakes
+
 import posixpath
 
 def _get_lldb_init_path(config):
     return os.path.join(config.test_exec_root, "lit-lldb-init-quiet")
+
+
+def _write_if_changed(path, content):
+    try:
+        with open(path) as f:
+            if f.read() == content:
+                return
+    except OSError:
+        pass
+    with open(path, "w") as f:
+        f.write(content)
+
+
+def _write_lldb_init_files(config):
+    """Write the init files that %lldb sources into the test execution root."""
+    with open(os.path.join(config.test_source_root, "lit-lldb-init.in")) as f:
+        init = f.read()
+    # The site config appends "lldb-shell" to LLDB_TEST_MODULE_CACHE_LLDB, but
+    # the init file uses the directory itself.
+    init = init.replace(
+        "@LLDB_TEST_MODULE_CACHE_LLDB@", os.path.dirname(config.lldb_module_cache)
+    )
+    os.makedirs(config.test_exec_root, exist_ok=True)
+    _write_if_changed(os.path.join(config.test_exec_root, "lit-lldb-init"), init)
+    _write_if_changed(
+        _get_lldb_init_path(config),
+        "command source -C --silent-run true lit-lldb-init\n",
+    )
 
 
 def _disallow(config, execName):
@@ -49,10 +79,10 @@ def get_lldb_args(config, suffix=""):
 
 
 class ShTestLldb(ShTest):
-    def __init__(
-        self, execute_external=False, extra_substitutions=[], preamble_commands=[]
-    ):
-        super().__init__(execute_external, extra_substitutions, preamble_commands)
+    def __init__(self, extra_substitutions=[], preamble_commands=[]):
+        super().__init__(
+            extra_substitutions=extra_substitutions, preamble_commands=preamble_commands
+        )
 
     def execute(self, test, litConfig):
         # Run each Shell test in a separate directory (on remote).
@@ -84,7 +114,9 @@ class ShTestLldb(ShTest):
                         cmd.replace(args_def, args_unique),
                     )
                 break
-        return super().execute(test, litConfig)
+        return lldbflakes.execute_with_reruns(
+            test, lambda: ShTest.execute(self, test, litConfig)
+        )
 
 
 def use_lldb_substitutions(config):
@@ -117,25 +149,30 @@ def use_lldb_substitutions(config):
     if config.cmake_sysroot:
         build_script_args.append("--sysroot={0}".format(config.cmake_sysroot))
 
+    _write_lldb_init_files(config)
     lldb_init = _get_lldb_init_path(config)
+    launcher = getattr(config, "lldb_launcher", None)
 
     primary_tools = [
         ToolSubst(
             "%lldb",
             command=FindTool("lldb"),
             extra_args=get_lldb_args(config),
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
             "%lldb-init",
             command=FindTool("lldb"),
             extra_args=["-S", lldb_init],
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
             "%lldb-noinit",
             command=FindTool("lldb"),
             extra_args=["--no-lldbinit"],
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
@@ -158,6 +195,7 @@ def use_lldb_substitutions(config):
         ),
         "lldb-test",
         "lldb-dap",
+        "lldb-mcp",
         ToolSubst(
             "%build", command="'" + sys.executable + "'", extra_args=build_script_args
         ),
@@ -216,7 +254,7 @@ def use_support_substitutions(config):
         except OSError:
             res = -1
         if res == 0 and out:
-            sdk_path = lit.util.to_string(out)
+            sdk_path = out.decode("utf-8")
             llvm_config.lit_config.note("using SDKROOT: %r" % sdk_path)
             host_flags += ["-isysroot", sdk_path]
     elif sys.platform != "win32":
@@ -232,6 +270,11 @@ def use_support_substitutions(config):
     # The clang module cache is used for building inferiors.
     host_flags += ["-fmodules-cache-path={}".format(config.clang_module_cache)]
 
+    # Our files use x86 AT&T assembly throughout.
+    # Enable it explicitly so any local Clang preference for Intel syntax gets overriden.
+    if "x86-registered-target" in config.available_features:
+        host_flags += ["-mllvm", "-x86-asm-syntax=att"]
+
     if config.cmake_sysroot:
         host_flags += ["--sysroot={}".format(config.cmake_sysroot)]
 
@@ -240,6 +283,15 @@ def use_support_substitutions(config):
             "-L{}".format(config.libcxx_libs_dir),
             "-lc++",
         ]
+    # By default, macOS doesn't allow injecting the ASAN runtime into system processes.
+    if platform.system() in ["Darwin"] and config.llvm_use_sanitizer:
+        system_clang = (
+            subprocess.check_output(["xcrun", "-find", "clang"]).strip().decode("utf-8")
+        )
+        system_liblto = os.path.join(
+            os.path.dirname(os.path.dirname(system_clang)), "lib", "libLTO.dylib"
+        )
+        host_flags += ["-Wl,-lto_library", "-Wl," + system_liblto]
 
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))
@@ -258,6 +310,9 @@ def use_support_substitutions(config):
         required=True,
         use_installed=True,
     )
+    if llvm_config.clang_has_bounds_safety():
+        llvm_config.lit_config.note("clang has -fbounds-safety support")
+        config.available_features.add("clang-bounds-safety")
 
     if sys.platform == "win32":
         _use_msvc_substitutions(config)

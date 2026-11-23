@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// REQUIRES: has-unix-headers
-// XFAIL: availability-verbose_abort-missing
 
 // constexpr explicit repeat_view(W&& value, Bound bound = Bound());
 // constexpr explicit repeat_view(const W& value, Bound bound = Bound());

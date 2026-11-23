@@ -15,7 +15,9 @@
 #define LLVM_IRREADER_IRREADER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -32,16 +34,16 @@ class LLVMContext;
 /// Module. The ShouldLazyLoadMetadata flag is passed down to the bitcode
 /// reader to optionally enable lazy metadata loading. This takes ownership
 /// of \p Buffer.
-std::unique_ptr<Module> getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer,
-                                        SMDiagnostic &Err, LLVMContext &Context,
-                                        bool ShouldLazyLoadMetadata = false);
+LLVM_ABI std::unique_ptr<Module>
+getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer, SMDiagnostic &Err,
+                LLVMContext &Context, bool ShouldLazyLoadMetadata = false);
 
 /// If the given file holds a bitcode image, return a Module
 /// for it which does lazy deserialization of function bodies.  Otherwise,
 /// attempt to parse it as LLVM Assembly and return a fully populated
 /// Module. The ShouldLazyLoadMetadata flag is passed down to the bitcode
 /// reader to optionally enable lazy metadata loading.
-std::unique_ptr<Module>
+LLVM_ABI std::unique_ptr<Module>
 getLazyIRFileModule(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
                     bool ShouldLazyLoadMetadata = false);
 
@@ -49,17 +51,19 @@ getLazyIRFileModule(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 /// for it.  Otherwise, attempt to parse it as LLVM Assembly and return
 /// a Module for it.
 /// \param DataLayoutCallback Override datalayout in the llvm assembly.
-std::unique_ptr<Module> parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
-                                LLVMContext &Context,
-                                ParserCallbacks Callbacks = {});
+LLVM_ABI std::unique_ptr<Module>
+parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err, LLVMContext &Context,
+        ParserCallbacks Callbacks = {},
+        AsmParserContext *ParserContext = nullptr);
 
 /// If the given file holds a bitcode image, return a Module for it.
 /// Otherwise, attempt to parse it as LLVM Assembly and return a Module
 /// for it.
 /// \param DataLayoutCallback Override datalayout in the llvm assembly.
-std::unique_ptr<Module> parseIRFile(StringRef Filename, SMDiagnostic &Err,
-                                    LLVMContext &Context,
-                                    ParserCallbacks Callbacks = {});
+LLVM_ABI std::unique_ptr<Module>
+parseIRFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
+            ParserCallbacks Callbacks = {},
+            AsmParserContext *ParserContext = nullptr);
 }
 
 #endif

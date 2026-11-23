@@ -37,6 +37,15 @@
 namespace clang {
 namespace extractapi {
 
+inline std::string getTypeConstraintSpelling(const TypeConstraint *TC,
+                                             const ASTContext &Context) {
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  TC->getNamedConcept().print(OS, Context.getPrintingPolicy(),
+                              TemplateName::Qualified::None);
+  return Name;
+}
+
 class Template {
   struct TemplateParameter {
     // "class", "typename", or concept name
@@ -71,7 +80,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -89,7 +99,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -107,7 +118,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -618,17 +630,17 @@ struct TagRecord : APIRecord, RecordContext {
   static bool classofKind(RecordKind K) {
     switch (K) {
     case RK_Enum:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Struct:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Union:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_CXXClass:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplate:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplateSpecialization:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplatePartialSpecialization:
       return true;
     default:
@@ -704,15 +716,15 @@ struct RecordRecord : TagRecord {
   static bool classofKind(RecordKind K) {
     switch (K) {
     case RK_Struct:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Union:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_CXXClass:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplate:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplateSpecialization:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplatePartialSpecialization:
       return true;
     default:
@@ -1380,11 +1392,12 @@ private:
 /// This holds information associated with macro definitions.
 struct MacroDefinitionRecord : APIRecord {
   MacroDefinitionRecord(StringRef USR, StringRef Name, SymbolReference Parent,
-                        PresumedLoc Loc, DeclarationFragments Declaration,
+                        PresumedLoc Loc, const DocComment &Comment,
+                        DeclarationFragments Declaration,
                         DeclarationFragments SubHeading,
                         bool IsFromSystemHeader)
       : APIRecord(RK_MacroDefinition, USR, Name, Parent, Loc,
-                  AvailabilityInfo(), LinkageInfo(), {}, Declaration,
+                  AvailabilityInfo(), LinkageInfo(), Comment, Declaration,
                   SubHeading, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
@@ -1499,7 +1512,7 @@ APISet::createRecord(StringRef USR, StringRef Name,
                      CtorArgsContTy &&...CtorArgs) {
   // Ensure USR refers to a String stored in the allocator.
   auto USRString = copyString(USR);
-  auto Result = USRBasedLookupTable.insert({USRString, nullptr});
+  auto Result = USRBasedLookupTable.try_emplace(USRString);
   RecordTy *Record;
 
   // Create the record if it does not already exist

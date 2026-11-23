@@ -1,4 +1,4 @@
-# RUN: not --crash llc -o - -run-pass=instruction-select -pass-remarks-missed=gisel %s 2>&1 | FileCheck %s
+# RUN: not llc -o - -run-pass=instruction-select -pass-remarks-missed=gisel %s 2>&1 | FileCheck %s
 --- |
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64--linux-gnu"
@@ -12,10 +12,6 @@ name:            test_check_type
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi

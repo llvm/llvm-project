@@ -16,14 +16,17 @@
 
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang {
 
 class CodeInjector;
+class Preprocessor;
 
 namespace ento {
   class CheckerManager;
@@ -42,16 +45,17 @@ class AnalysisManager : public BugReporterData {
   ConstraintManagerCreator CreateConstraintMgr;
 
   CheckerManager *CheckerMgr;
+  SmallVector<StringRef> UnityBuildFileExtensions;
 
 public:
   AnalyzerOptions &options;
 
   AnalysisManager(ASTContext &ctx, Preprocessor &PP,
-                  const PathDiagnosticConsumers &Consumers,
+                  PathDiagnosticConsumers Consumers,
                   StoreManagerCreator storemgr,
                   ConstraintManagerCreator constraintmgr,
                   CheckerManager *checkerMgr, AnalyzerOptions &Options,
-                  CodeInjector *injector = nullptr);
+                  std::unique_ptr<CodeInjector> injector = nullptr);
 
   ~AnalysisManager() override;
 
@@ -91,7 +95,8 @@ public:
     return LangOpts;
   }
 
-  ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() override {
+  ArrayRef<std::unique_ptr<PathDiagnosticConsumer>>
+  getPathDiagnosticConsumers() override {
     return PathConsumers;
   }
 
@@ -122,9 +127,17 @@ public:
     return AnaCtxMgr.getContext(D);
   }
 
-  static bool isInCodeFile(SourceLocation SL, const SourceManager &SM) {
+  bool isInCodeFile(SourceLocation SL) const {
+    const SourceManager &SM = Ctx.getSourceManager();
     if (SM.isInMainFile(SL))
       return true;
+
+    // Treat configured included source files #include "foo.cpp" same as the
+    // main file.
+    StringRef FileName = SM.getFilename(SL);
+    for (StringRef Extension : UnityBuildFileExtensions)
+      if (FileName.ends_with(Extension))
+        return true;
 
     // Support the "unified sources" compilation method (eg. WebKit) that
     // involves producing non-header files that include other non-header files.
@@ -139,17 +152,12 @@ public:
       // It might be great to reuse FrontendOptions::getInputKindForExtension()
       // but for now it doesn't discriminate between code and header files.
       return llvm::StringSwitch<bool>(SM.getFilename(SL).rsplit('.').second)
-          .Cases("c", "m", "mm", "C", "cc", "cp", true)
-          .Cases("cpp", "CPP", "c++", "cxx", "cppm", true)
+          .Cases({"c", "m", "mm", "C", "cc", "cp"}, true)
+          .Cases({"cpp", "CPP", "c++", "cxx", "cppm"}, true)
           .Default(false);
     }
 
     return false;
-  }
-
-  bool isInCodeFile(SourceLocation SL) {
-    const SourceManager &SM = getASTContext().getSourceManager();
-    return isInCodeFile(SL, SM);
   }
 };
 

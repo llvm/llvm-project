@@ -249,7 +249,7 @@ while_end:
   ret void
 }
 
-declare ptr @llvm.strip.invariant.group.p0(ptr)
+declare ptr @llvm.launder.invariant.group.p0(ptr)
 
 define void @test_invariant_group(i32 %arg, i1 %c) {
 ; CHECK-LABEL: test_invariant_group:
@@ -287,7 +287,7 @@ bb5:                                              ; preds = %bb4, %bb2, %bb1, %b
   ret void
 
 bb6:                                              ; preds = %bb
-  %i7 = call ptr @llvm.strip.invariant.group.p0(ptr nonnull undef)
+  %i7 = call ptr @llvm.launder.invariant.group.p0(ptr nonnull undef)
   %i8 = icmp eq i32 %arg, 0
   br i1 %i8, label %bb2, label %bb1
 }

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -Wno-int-conversion %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin -Wno-int-conversion %s -emit-llvm -o - | FileCheck %s %}
 
 int* foo(int** a, int* b, int* c) {
 return __sync_val_compare_and_swap (a, b, c);
@@ -34,7 +35,7 @@ int* foo5(int** a, int* b) {
 
 
 int* foo6(int** a, int*** b) {
-  return __sync_lock_test_and_set (a, b);
+  return __sync_lock_test_and_set (a, (int*)b);
 }
 // CHECK-LABEL: define{{.*}} ptr @foo6
 // CHECK: atomicrmw xchg {{.*}}, align 8

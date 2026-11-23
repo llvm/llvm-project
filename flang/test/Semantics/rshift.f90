@@ -12,7 +12,7 @@ end
 subroutine test_integer1()
   integer(1) :: i, j, k
   k = rshift(i, j)
-!CHECK: k=shifta(i,int(j,kind=4))
+!CHECK: k=shifta(i,__builtin_int(j,kind=4))
   print *, rshift(8_1, 2)
 !CHECK: PRINT *, 2_1
 end
@@ -20,7 +20,7 @@ end
 subroutine test_integer2()
   integer(2) :: i, j, k
   k = rshift(i, j)
-!CHECK: k=shifta(i,int(j,kind=4))
+!CHECK: k=shifta(i,__builtin_int(j,kind=4))
   print *, rshift(8_2, 2)
 !CHECK: PRINT *, 2_2
 end
@@ -36,7 +36,7 @@ end
 subroutine test_integer8()
   integer(8) :: i, j, k
   k = rshift(i, j)
-!CHECK: k=shifta(i,int(j,kind=4))
+!CHECK: k=shifta(i,__builtin_int(j,kind=4))
   print *, rshift(-16_8, 2)
 !CHECK: PRINT *, -4_8
 end
@@ -44,7 +44,7 @@ end
 subroutine test_integer16()
   integer(16) :: i, j, k
   k = rshift(i, j)
-!CHECK: k=shifta(i,int(j,kind=4))
+!CHECK: k=shifta(i,__builtin_int(j,kind=4))
   print *, rshift(8_16, 2)
 !CHECK: PRINT *, 2_16
 end

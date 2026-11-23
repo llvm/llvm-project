@@ -1,10 +1,27 @@
+lldb_tablegen(SymbolFilePDBProperties.inc -gen-lldb-property-defs
+  SOURCE SymbolFilePDBProperties.td
+  TARGET LLDBPluginSymbolFilePDBPropertiesGen)
+
+lldb_tablegen(SymbolFilePDBPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE SymbolFilePDBProperties.td
+  TARGET LLDBPluginSymbolFilePDBPropertiesEnumGen)
+
+lldb_tablegen(SymbolFilePDBProperties.json -dump-json
+  SOURCE SymbolFilePDBProperties.td
+  TARGET LLDBPluginSymbolFilePDBPropertiesJsonGen)
+
 add_lldb_library(lldbPluginSymbolFilePDB PLUGIN
   PDBASTParser.cpp
   PDBLocationToDWARFExpression.cpp
   SymbolFilePDB.cpp
 
+  LINK_COMPONENTS
+    DebugInfoPDB
+    Support
   LINK_LIBS
     lldbCore
+    lldbPluginObjectFilePDB
+    lldbPluginObjectFilePECOFF
     lldbPluginSymbolFileNativePDB
     lldbSymbol
     lldbUtility
@@ -12,7 +29,8 @@ add_lldb_library(lldbPluginSymbolFilePDB PLUGIN
   CLANG_LIBS
     clangAST
     clangLex
-  LINK_COMPONENTS
-    DebugInfoPDB
-    Support
   )
+
+add_dependencies(lldbPluginSymbolFilePDB
+  LLDBPluginSymbolFilePDBPropertiesGen
+  LLDBPluginSymbolFilePDBPropertiesEnumGen)

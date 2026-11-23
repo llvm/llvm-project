@@ -10,4 +10,4 @@
 
 #include "src/math/f16fmal.h"
 
-LIST_NARROWING_FMA_TESTS(float16, long double, LIBC_NAMESPACE::f16fmal)
+LIST_NARROWING_FMA_TESTS(F16fmal, float16, long double, LIBC_NAMESPACE::f16fmal)

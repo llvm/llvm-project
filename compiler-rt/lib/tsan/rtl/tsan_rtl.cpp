@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_defs.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
@@ -38,6 +39,13 @@ extern "C" void __tsan_resume() {
 #if SANITIZER_APPLE
 SANITIZER_WEAK_DEFAULT_IMPL
 void __tsan_test_only_on_fork() {}
+#endif
+
+#if SANITIZER_APPLE && !SANITIZER_GO
+// Override weak symbol from sanitizer_common
+extern void __tsan_set_in_internal_write_call(bool value) {
+  __tsan::cur_thread_init()->in_internal_write_call = value;
+}
 #endif
 
 namespace __tsan {
@@ -382,7 +390,6 @@ void SlotUnlock(ThreadState* thr) {
 
 Context::Context()
     : initialized(),
-      report_mtx(MutexTypeReport),
       nreported(),
       thread_registry([](Tid tid) -> ThreadContextBase* {
         return new (Alloc(sizeof(ThreadContext))) ThreadContext(tid);
@@ -507,8 +514,7 @@ static void *BackgroundThread(void *arg) {
       u64 last = atomic_load(&ctx->last_symbolize_time_ns,
                              memory_order_relaxed);
       if (last != 0 && last + flags()->flush_symbolizer_ms * kMs2Ns < now) {
-        Lock l(&ctx->report_mtx);
-        ScopedErrorReportLock l2;
+        ScopedErrorReportLock l;
         SymbolizeFlush();
         atomic_store(&ctx->last_symbolize_time_ns, 0, memory_order_relaxed);
       }
@@ -566,17 +572,32 @@ static bool IsValidMmapRange(uptr addr, uptr size) {
   return false;
 }
 
-void UnmapShadow(ThreadState *thr, uptr addr, uptr size) {
+void UnmapShadow(ThreadState* thr, uptr addr, uptr size) {
   if (size == 0 || !IsValidMmapRange(addr, size))
     return;
-  DontNeedShadowFor(addr, size);
+  // unmap shadow is related to semantic of mmap/munmap, so we
+  // should clear the whole shadow range, including the tail shadow
+  // while addr + size % kShadowCell != 0.
+  uptr rounded_size_shadow = RoundUp(addr + size, kShadowCell) - addr;
+  DontNeedShadowFor(addr, rounded_size_shadow);
   ScopedGlobalProcessor sgp;
   SlotLocker locker(thr, true);
-  ctx->metamap.ResetRange(thr->proc(), addr, size, true);
+  uptr rounded_size_meta = RoundUp(addr + size, kMetaShadowCell) - addr;
+  ctx->metamap.ResetRange(thr->proc(), addr, rounded_size_meta, true);
 }
 #endif
 
 void MapShadow(uptr addr, uptr size) {
+  // Although named MapShadow, this function's semantic is unrelated to
+  // UnmapShadow. This function currently only used for Go's lazy allocation
+  // of shadow, whose targets are program section (e.g., bss, data, etc.).
+  // Therefore, we can guarantee that the addr and size align to kShadowCell
+  // and kMetaShadowCell by the following assertions.
+  DCHECK_EQ(addr % kShadowCell, 0);
+  DCHECK_EQ(size % kShadowCell, 0);
+  DCHECK_EQ(addr % kMetaShadowCell, 0);
+  DCHECK_EQ(size % kMetaShadowCell, 0);
+
   // Ensure thead registry lock held, so as to synchronize
   // with DoReset, which also access the mapped_shadow_* ctxt fields.
   ThreadRegistryLock lock0(&ctx->thread_registry);
@@ -624,6 +645,7 @@ void MapShadow(uptr addr, uptr size) {
   static uptr mapped_meta_end = 0;
   uptr meta_begin = (uptr)MemToMeta(addr);
   uptr meta_end = (uptr)MemToMeta(addr + size);
+  // Windows wants 64K alignment.
   meta_begin = RoundDownTo(meta_begin, 64 << 10);
   meta_end = RoundUpTo(meta_end, 64 << 10);
   if (!data_mapped) {
@@ -634,9 +656,6 @@ void MapShadow(uptr addr, uptr size) {
       Die();
   } else {
     // Mapping continuous heap.
-    // Windows wants 64K alignment.
-    meta_begin = RoundDownTo(meta_begin, 64 << 10);
-    meta_end = RoundUpTo(meta_end, 64 << 10);
     CHECK_GT(meta_end, mapped_meta_end);
     if (meta_begin < mapped_meta_end)
       meta_begin = mapped_meta_end;
@@ -678,6 +697,12 @@ void CheckUnwind() {
 }
 
 bool is_initialized;
+
+// Symbolization indirectly calls dl_iterate_phdr. If a CHECK() fails early on
+// (prior to the dl_iterate_phdr interceptor setup), resulting in an attempted
+// symbolization, it will segfault.
+// dl_iterate_phdr is not intercepted for Android.
+bool ready_to_symbolize = SANITIZER_ANDROID;
 
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
@@ -749,6 +774,10 @@ void Initialize(ThreadState *thr) {
     while (__tsan_resumed == 0) {}
   }
 
+#if !SANITIZER_GO
+  AdaptiveDelay::Init();
+#endif
+
   OnInitialize();
 }
 
@@ -788,12 +817,12 @@ int Finalize(ThreadState *thr) {
 
   ThreadFinalize(thr);
 
-  if (ctx->nreported) {
+  if (u32 nreported = atomic_load_relaxed(&ctx->nreported)) {
     failed = true;
 #if !SANITIZER_GO
-    Printf("ThreadSanitizer: reported %d warnings\n", ctx->nreported);
+    Printf("ThreadSanitizer: reported %u warnings\n", nreported);
 #else
-    Printf("Found %d data race(s)\n", ctx->nreported);
+    Printf("Found %u data race(s)\n", nreported);
 #endif
   }
 
@@ -812,13 +841,13 @@ void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   // Detaching from the slot makes OnUserFree skip writing to the shadow.
   // The slot will be locked so any attempts to use it will deadlock anyway.
   SlotDetach(thr);
+  ScopedErrorReportLock::Lock();
   for (auto& slot : ctx->slots) slot.mtx.Lock();
   ctx->thread_registry.Lock();
   ctx->slot_mtx.Lock();
-  ScopedErrorReportLock::Lock();
   AllocatorLockBeforeFork();
   // Suppress all reports in the pthread_atfork callbacks.
-  // Reports will deadlock on the report_mtx.
+  // Reports may deadlock.
   // We could ignore sync operations as well,
   // but so far it's unclear if it will do more good or harm.
   // Unnecessarily ignoring things can lead to false positives later.
@@ -842,10 +871,10 @@ static void ForkAfter(ThreadState* thr,
   thr->ignore_interceptors--;
   thr->ignore_reads_and_writes--;
   AllocatorUnlockAfterFork(child);
-  ScopedErrorReportLock::Unlock();
   ctx->slot_mtx.Unlock();
   ctx->thread_registry.Unlock();
   for (auto& slot : ctx->slots) slot.mtx.Unlock();
+  ScopedErrorReportLock::Unlock();
   SlotAttachAndLock(thr);
   SlotUnlock(thr);
   GlobalProcessorUnlock();
@@ -874,6 +903,13 @@ void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
     ThreadIgnoreBegin(thr, pc);
     ThreadIgnoreSyncBegin(thr, pc);
   }
+
+#  if SANITIZER_APPLE && !SANITIZER_GO
+  // This flag can have inheritance disabled - we are the child so act
+  // accordingly
+  if (flags()->lock_during_write == kNoLockDuringWritesCurrentProcess)
+    flags()->lock_during_write = kLockDuringAllWrites;
+#  endif
 }
 #endif
 
@@ -1104,11 +1140,8 @@ namespace __sanitizer {
 using namespace __tsan;
 MutexMeta mutex_meta[] = {
     {MutexInvalid, "Invalid", {}},
-    {MutexThreadRegistry,
-     "ThreadRegistry",
-     {MutexTypeSlots, MutexTypeTrace, MutexTypeReport}},
-    {MutexTypeReport, "Report", {MutexTypeTrace}},
-    {MutexTypeSyncVar, "SyncVar", {MutexTypeReport, MutexTypeTrace}},
+    {MutexThreadRegistry, "ThreadRegistry", {MutexTypeSlots, MutexTypeTrace}},
+    {MutexTypeSyncVar, "SyncVar", {MutexTypeTrace}},
     {MutexTypeAnnotations, "Annotations", {}},
     {MutexTypeAtExit, "AtExit", {}},
     {MutexTypeFired, "Fired", {MutexLeaf}},
@@ -1120,7 +1153,7 @@ MutexMeta mutex_meta[] = {
      "Slot",
      {MutexMulti, MutexTypeTrace, MutexTypeSyncVar, MutexThreadRegistry,
       MutexTypeSlots}},
-    {MutexTypeSlots, "Slots", {MutexTypeTrace, MutexTypeReport}},
+    {MutexTypeSlots, "Slots", {MutexTypeTrace}},
     {},
 };
 

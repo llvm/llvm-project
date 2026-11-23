@@ -21,3 +21,9 @@ define void @foo2() {
   call void asm sideeffect "ldd r24, X+2", ""()
   ret void
 }
+
+define void @foo3() {
+  ; AVR6: error: value out of range for constraint 'I'
+  call void asm sideeffect "out $0, r20", "I"(i16 64)
+  ret void
+}

@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfStringPool.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 
@@ -24,7 +24,7 @@ DwarfStringPool::DwarfStringPool(BumpPtrAllocator &A, AsmPrinter &Asm,
 
 StringMapEntry<DwarfStringPool::EntryTy> &
 DwarfStringPool::getEntryImpl(AsmPrinter &Asm, StringRef Str) {
-  auto I = Pool.insert(std::make_pair(Str, EntryTy()));
+  auto I = Pool.try_emplace(Str);
   auto &Entry = I.first->second;
   if (I.second) {
     Entry.Index = EntryTy::NotIndexed;
@@ -81,17 +81,15 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
   Asm.OutStreamer->switchSection(StrSection);
 
   // Get all of the string pool entries and sort them by their offset.
-  SmallVector<const StringMapEntry<EntryTy> *, 64> Entries;
-  Entries.reserve(Pool.size());
-
-  for (const auto &E : Pool)
-    Entries.push_back(&E);
+  SmallVector<const StringMapEntry<EntryTy> *, 64> Entries(
+      llvm::make_pointer_range(Pool));
 
   llvm::sort(Entries, [](const StringMapEntry<EntryTy> *A,
                          const StringMapEntry<EntryTy> *B) {
     return A->getValue().Offset < B->getValue().Offset;
   });
 
+  SmallString<128> Comment;
   for (const auto &Entry : Entries) {
     assert(ShouldCreateSymbols == static_cast<bool>(Entry->getValue().Symbol) &&
            "Mismatch between setting and entry");
@@ -100,9 +98,20 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
     if (ShouldCreateSymbols)
       Asm.OutStreamer->emitLabel(Entry->getValue().Symbol);
 
+    // Emit a comment with the string offset and the string itself. The string
+    // is escaped: it can contain arbitrary bytes (e.g. non-ASCII identifiers),
+    // and some assemblers, like ptxas, reject those even inside comments.
+    if (Asm.isVerbose()) {
+      Comment.clear();
+      raw_svector_ostream CommentOS(Comment);
+      CommentOS << "string offset=" << Entry->getValue().Offset << " ; ";
+      CommentOS.write_escaped(
+          StringRef(Entry->getKeyData(), Entry->getKeyLength()),
+          /*UseHexEscapes=*/true);
+      Asm.OutStreamer->AddComment(Comment);
+    }
+
     // Emit the string itself with a terminating null byte.
-    Asm.OutStreamer->AddComment("string offset=" +
-                                Twine(Entry->getValue().Offset));
     Asm.OutStreamer->emitBytes(
         StringRef(Entry->getKeyData(), Entry->getKeyLength() + 1));
   }

@@ -1,8 +1,6 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
-; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
 ; Command to generate enum-co.ll
 ; $ clang++ enum-co.cpp -S -emit-llvm -g -gcodeview -o enum-co.ll
@@ -127,7 +125,7 @@ entry:
   ret void, !dbg !46
 }
 
-attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
 
 !llvm.dbg.cu = !{!0}
@@ -136,7 +134,7 @@ attributes #1 = { nounwind readnone speculatable }
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
 !1 = !DIFile(filename: "enum-co.cpp", directory: "D:\5Cupstream\5Cllvm\5Ctest\5CDebugInfo\5CCOFF", checksumkind: CSK_MD5, checksum: "2e53b90441669acca735bad28ed3a1ab")
-!2 = !{!3, !8, !13, !18}
+!2 = !{!3, !8, !18}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum", file: !1, line: 4, baseType: !4, size: 32, elements: !5, identifier: ".?AW4Enum@@")
 !4 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !5 = !{!6, !7}
@@ -148,7 +146,7 @@ attributes #1 = { nounwind readnone speculatable }
 !11 = !DIEnumerator(name: "BLUE", value: 1)
 !12 = !DIEnumerator(name: "NOTCARE", value: 2)
 !13 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "ScopedEnum", scope: !14, file: !1, line: 11, baseType: !4, size: 32, elements: !5, identifier: ".?AW4ScopedEnum@?1??Func@@YAXXZ@")
-!14 = distinct !DISubprogram(name: "Func", linkageName: "?Func@@YAXXZ", scope: !1, file: !1, line: 10, type: !15, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !17)
+!14 = distinct !DISubprogram(name: "Func", linkageName: "?Func@@YAXXZ", scope: !1, file: !1, line: 10, type: !15, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !47)
 !15 = !DISubroutineType(types: !16)
 !16 = !{null}
 !17 = !{}
@@ -181,3 +179,4 @@ attributes #1 = { nounwind readnone speculatable }
 !44 = !DILocalVariable(name: "S", scope: !14, file: !1, line: 20, type: !20)
 !45 = !DILocation(line: 20, scope: !14)
 !46 = !DILocation(line: 21, scope: !14, isImplicitCode: true)
+!47 = !{!13}

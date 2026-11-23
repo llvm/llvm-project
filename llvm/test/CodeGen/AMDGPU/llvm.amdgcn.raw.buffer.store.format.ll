@@ -1,5 +1,5 @@
-;RUN: llc < %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=VERDE %s
-;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck -check-prefix=VERDE %s
+;RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck %s
 
 ;CHECK-LABEL: {{^}}buffer_store:
 ;CHECK-NOT: s_waitcnt
@@ -55,6 +55,15 @@ main_body:
 define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data, i32 %offset) {
 main_body:
   call void @llvm.amdgcn.raw.buffer.store.format.f32(float %data, <4 x i32> %rsrc, i32 %offset, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}buffer_store_x1_i32:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_format_x v0, v1, s[0:3], 0 offen
+define amdgpu_ps void @buffer_store_x1_i32(<4 x i32> inreg %rsrc, i32 %data, i32 %offset) {
+main_body:
+  call void @llvm.amdgcn.raw.buffer.store.format.i32(i32 %data, <4 x i32> %rsrc, i32 %offset, i32 0, i32 0)
   ret void
 }
 

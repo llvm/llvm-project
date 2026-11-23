@@ -9,8 +9,6 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // This test verifies that <stdatomic.h> redirects to <atomic>.
 
 // Before C++23, <stdatomic.h> can be included after <atomic>, but including it

@@ -34,7 +34,7 @@ dependent).
 .. code-block:: c++
 
     // AFTER
-    enum Color : std:int8_t {
+    enum Color : std::int8_t {
         RED = -1,
         GREEN = 0,
         BLUE = 1

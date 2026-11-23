@@ -1,0 +1,49 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc __support/threads functionality.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "futex_utils_test",
+    srcs = ["futex_utils_test.cpp"],
+    deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/threads:futex_utils",
+    ],
+)
+
+libc_test(
+    name = "raw_mutex_test",
+    srcs = ["linux/raw_mutex_test.cpp"],
+    deps = [
+        "//libc/hdr:signal_macros",
+        "//libc/hdr:sys_mman_macros",
+        "//libc/include:llvm_libc_macros_time_macros",
+        "//libc/src/__support/CPP:atomic",
+        "//libc/src/__support/OSUtil:exit",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/threads:raw_mutex",
+        "//libc/src/__support/threads:sleep",
+        "//libc/src/__support/time:clock_gettime",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
+    ],
+)
+
+libc_test(
+    name = "raw_rwlock_test",
+    srcs = ["linux/raw_rwlock_test.cpp"],
+    deps = [
+        "//libc/hdr:time_macros",
+        "//libc/src/__support/threads:raw_rwlock",
+        "//libc/src/__support/time:clock_gettime",
+    ],
+)

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_sha1_ostream.h"
 #include "gtest/gtest.h"
@@ -13,20 +14,6 @@
 #include <string>
 
 using namespace llvm;
-
-static std::string toHex(ArrayRef<uint8_t> Input) {
-  static const char *const LUT = "0123456789ABCDEF";
-  size_t Length = Input.size();
-
-  std::string Output;
-  Output.reserve(2 * Length);
-  for (size_t i = 0; i < Length; ++i) {
-    const unsigned char c = Input[i];
-    Output.push_back(LUT[c >> 4]);
-    Output.push_back(LUT[c & 15]);
-  }
-  return Output;
-}
 
 TEST(raw_sha1_ostreamTest, Basic) {
   llvm::raw_sha1_ostream Sha1Stream;
@@ -58,6 +45,18 @@ TEST(sha1_hash_test, Update) {
   std::string Hash = toHex(sha1.final());
   ASSERT_EQ("3E4A614101AD84985AB0FE54DC12A6D71551E5AE", Hash);
 }
+
+#if defined(EXPENSIVE_CHECKS)
+TEST(sha1_hash_test, LargeInput) {
+  SHA1 sha1;
+  std::string Input(1 << 20, '\0');
+  for (int I = 0; I < 4096; ++I)
+    sha1.update(Input);
+
+  std::string Hash = toHex(sha1.final());
+  ASSERT_EQ("1BF99EE9F374E58E201E4DDA4F474E570EB77229", Hash);
+}
+#endif
 
 // Check that getting the intermediate hash in the middle of the stream does
 // not invalidate the final result.
