@@ -61,6 +61,7 @@ void SyntheticTypeNameBuilder::addArrayDimension(
 }
 
 static dwarf::Attribute TypeAttr[] = {dwarf::DW_AT_type};
+static dwarf::Attribute ContainingTypeAttr[] = {dwarf::DW_AT_containing_type};
 Error SyntheticTypeNameBuilder::addSignature(UnitEntryPairTy InputUnitEntryPair,
                                              bool addTemplateParameters) {
   // Add entry type.
@@ -388,6 +389,13 @@ Error SyntheticTypeNameBuilder::addTypeName(UnitEntryPairTy InputUnitEntryPair,
   } break;
   case dwarf::DW_TAG_subrange_type: {
     addValueName(InputUnitEntryPair, dwarf::DW_AT_count);
+  } break;
+  case dwarf::DW_TAG_ptr_to_member_type: {
+    // A pointer to member is a different type for each containing class.
+    if (Error Err = addReferencedODRDies(InputUnitEntryPair, AddParentNames,
+                                         ContainingTypeAttr))
+      return Err;
+    SyntheticName += "::";
   } break;
   case dwarf::DW_TAG_template_value_parameter: {
     if (!HasTemplatesInShortName) {
