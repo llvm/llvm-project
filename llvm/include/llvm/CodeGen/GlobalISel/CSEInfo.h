@@ -76,7 +76,6 @@ class LLVM_ABI GISelCSEInfo : public GISelChangeObserver {
   BumpPtrAllocator UniqueInstrAllocator;
   FoldingSet<UniqueMachineInstr> CSEMap;
   MachineRegisterInfo *MRI = nullptr;
-  MachineFunction *MF = nullptr;
   std::unique_ptr<CSEConfigBase> CSEOpt;
   /// Keep a cache of UniqueInstrs for each MachineInstr. In GISel,
   /// often instructions are mutated (while their ID has completely changed).
