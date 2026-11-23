@@ -192,11 +192,8 @@ checkTempObjectsInNoPool(const Decl *D, AnalysisManager &AM, BugReporter &BR,
 }
 
 void RunLoopAutoreleaseLeakChecker::checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
-                        BugReporter &BR) const {
-  // The matchers below can only match Objective-C code.
-  if (!AM.getLangOpts().ObjC)
-    return;
+                                                     AnalysisManager &AM,
+                                                     BugReporter &BR) const {
   checkTempObjectsInSamePool(D, AM, BR, this);
   checkTempObjectsInNoPool(D, AM, BR, this);
 }
@@ -206,5 +203,5 @@ void ento::registerRunLoopAutoreleaseLeakChecker(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(const CheckerManager &mgr) {
-  return true;
+  return mgr.getLangOpts().ObjC;
 }
