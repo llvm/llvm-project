@@ -2,7 +2,7 @@
 
 ; Ensure that a pointer return type is required when capturing through the return value.
 
-; CHECK-NOT: ptr @valid_ptr
+; CHECK-NOT: ptr @valid_ret_ty
 declare ptr @valid_ret_ty(ptr captures(ret: address, provenance))
 
 ; CHECK: Attribute 'captures(ret: ...)' requires a pointer return type
