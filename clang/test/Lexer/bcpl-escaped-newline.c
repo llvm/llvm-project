@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -Eonly -ftrigraphs %s
-// RUN: %clang_cc1 -Eonly -verify %s
+// RUN: %clang_cc1 -Eonly -fno-trigraphs -verify %s
 
 //\
 #error bar

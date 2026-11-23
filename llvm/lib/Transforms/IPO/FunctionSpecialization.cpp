@@ -632,8 +632,8 @@ bool FunctionSpecializer::run() {
     // to be larger than -funcspec-min-function-size, to prevent excessive
     // specialization.
     const bool RequireMinSize =
-        !Opts.funcspec_force && (Opts.funcspec_for_literal_constant ||
-                                 !F.hasFnAttribute(Attribute::NoInline));
+        !Opts.funcspec_force &&
+        (Opts.funcspec_for_literal_constant || !F.isNoInline());
 
     // If the code metrics reveal that we shouldn't duplicate the function,
     // or if the code size implies that this function is easy to get inlined,
@@ -933,8 +933,9 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << (CodeSizeSavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum codesize savings.
-        if (CodeSizeSavings <
-            Opts.funcspec_min_codesize_savings * FuncSize / 100)
+        if (static_cast<uint64_t>(CodeSizeSavings) * 100 <
+            static_cast<uint64_t>(Opts.funcspec_min_codesize_savings) *
+                FuncSize)
           return false;
 
         // Lazily compute the Latency, to avoid unnecessarily computing BFI.
@@ -947,7 +948,8 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << (LatencySavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum latency savings.
-        if (LatencySavings < Opts.funcspec_min_latency_savings * FuncSize / 100)
+        if (static_cast<uint64_t>(LatencySavings) * 100 <
+            static_cast<uint64_t>(Opts.funcspec_min_latency_savings) * FuncSize)
           return false;
         // Maximum codesize growth.
         if ((FunctionGrowth[F] + SpecSize) / FuncSize >

@@ -282,7 +282,12 @@ class DAGOperand {
 /// RegClassByHwMode. This permits using RegClassByHwMode in
 /// RegisterOperand contexts without creating an artificial
 /// RegisterClass.
-class RegisterClassLike : DAGOperand;
+class RegisterClassLike : DAGOperand {
+  // Method on the target's MCParsedAsmOperand class used to add MCInst
+  // operands for this register class. If not set, this defaults to
+  // "addRegOperands".
+  string RenderMethod = ?;
+}
 
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
@@ -389,6 +394,15 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // the assembly matcher will provide a function to map from diagnostic types
   // to message strings.
   string DiagnosticString = "";
+
+  // When registers in this class share assembly names with registers in another
+  // class returned by MatchRegisterName / parseRegister (for example, narrower
+  // or wider FP or vector group register classes), setting CoerceFromRegClass
+  // allows the assembly matcher to accept registers from both this class and
+  // from CoerceFromRegClass, and will convert those from CoerceFromRegClass
+  // to the corresponding register in this class using the matching names
+  // instead of requiring hand-written logic in the AsmParser.
+  RegisterClass CoerceFromRegClass = ?;
 
   // Target-specific flags. This becomes the TSFlags field in TargetRegisterClass.
   bits<8> TSFlags = 0;
@@ -941,7 +955,12 @@ class AsmOperandClass {
   /// default to "isFoo", where Foo is the AsmOperandClass name. The method
   /// signature should be:
   ///   bool isFoo() const;
+  /// or, when PredicateUsesSubtarget is set:
+  ///   bool isFoo(const MCSubtargetInfo &STI) const;
   string PredicateMethod = ?;
+
+  /// Set to true if PredicateMethod takes `const MCSubtargetInfo &STI`.
+  bit PredicateUsesSubtarget = false;
 
   /// The name of the method on the target specific operand to call to add the
   /// target specific operand to an MCInst. If not set, this will default to
@@ -1294,6 +1313,14 @@ def INIT_UNDEF : StandardPseudoInstruction {
   let AsmString = "";
   let hasSideEffects = false;
   let Size = 0;
+}
+def FREEZE : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Size = 0;
+  let isMeta = true;
 }
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
@@ -1731,11 +1758,10 @@ class AsmParser {
   bit ShouldEmitMatchRegisterAltNameWithIndex = false;
 
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
-  // should be generated even if there are duplicate register names. The
-  // target is responsible for coercing aliased registers as necessary
-  // (e.g. in validateTargetOperandClass), and there are no guarantees about
-  // which numeric register identifier will be returned in the case of
-  // multiple matches.
+  // should be generated even if there are duplicate register names. For
+  // duplicate names, these functions return the first matching register in
+  // enum order. The target is responsible for coercing aliased registers as
+  // necessary (e.g. via CoerceFromRegClass or in validateTargetOperandClass).
   bit AllowDuplicateRegisterNames = false;
 
   // HasMnemonicFirst - Set to false if target instructions don't always

@@ -3,7 +3,6 @@
 
 ---
 name: all_knownbits_const_idx
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @all_knownbits_const_idx
@@ -22,9 +21,9 @@ body: |
 ...
 ---
 name: all_knownbits_unknown_lane
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x0
   ; CHECK-LABEL: name: @all_knownbits_unknown_lane
   ; CHECK-NEXT: %idx:_ KnownBits:???????????????????????????????????????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
@@ -41,7 +40,6 @@ body: |
 ...
 ---
 name: all_knownbits_const_idx_demand_0
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @all_knownbits_const_idx_demand_0
@@ -62,7 +60,6 @@ body: |
 ...
 ---
 name: all_knownbits_const_idx_demand_1
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @all_knownbits_const_idx_demand_1
@@ -85,7 +82,6 @@ body: |
 ...
 ---
 name: all_knownbits_const_idx_outofrange
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @all_knownbits_const_idx_outofrange
@@ -106,7 +102,6 @@ body: |
 # computeNumSignBits: known index splits demand between the vector and the
 # inserted value; the result is the minimum of the two.
 name: signbits_const_idx
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -132,7 +127,6 @@ body: |
 ---
 # computeNumSignBits: the vector can be the limiting operand.
 name: signbits_const_idx_vec_limits
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -158,7 +152,6 @@ body: |
 ---
 # computeNumSignBits: unknown index demands the value and every lane.
 name: signbits_unknown_idx
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1, $x2
@@ -184,7 +177,6 @@ body: |
 ---
 # computeNumSignBits: an out-of-bounds constant index is treated as unknown.
 name: signbits_out_of_bounds_idx
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -211,7 +203,6 @@ body: |
 # computeNumSignBits: only the demanded lanes count. Extracting lane 1 does not
 # see the value inserted into lane 0; extracting lane 0 sees only the value.
 name: signbits_demanded_lanes
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -243,7 +234,6 @@ body: |
 # computeNumSignBits: scalable vectors have no per-lane demand, so the result is
 # the minimum over the whole vector and the inserted value.
 name: signbits_scalable
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1, $z0
@@ -275,7 +265,6 @@ body: |
 # computeNumSignBits: an inserted value wider than the element is implicitly
 # truncated. Not handled yet, so only the known-bits fallback applies.
 name: signbits_implicit_trunc
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -305,7 +294,6 @@ body: |
 # inserted lane has a single sign bit, so the result cannot come from the
 # vector alone, and an extract of that lane must not report more either.
 name: signbits_implicit_trunc_unknown_val
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1

@@ -536,7 +536,6 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                                     const ModuleMetadataInfo &MMDI,
                                     const ModuleSignatureInfo &SignatureInfo) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(M);
   SmallVector<MDNode *> EntryFnMDNodes;
 
   emitValidatorVersionMD(M, MMDI);

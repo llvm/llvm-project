@@ -257,6 +257,7 @@ public:
     OPC_CheckChild6TypeByHwMode0,
     OPC_CheckChild7TypeByHwMode0,
 
+    OPC_SwitchChildInteger,
     OPC_CheckInteger,
     OPC_CheckChild0Integer,
     OPC_CheckChild1Integer,

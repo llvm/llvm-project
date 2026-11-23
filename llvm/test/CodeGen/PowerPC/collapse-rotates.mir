@@ -22,10 +22,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:       
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:       

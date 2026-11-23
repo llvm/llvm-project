@@ -5,7 +5,7 @@
 ; BranchProbabilityInfo, but if we vectorize it then we will unconditionally
 ; execute it. Avoid this unprofitable vectorization by taking the nested
 ; probability into account in the cost model.
-define void @nested(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %c2) {
+define void @nested(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %c2) vscale_range(1,16) {
 ; CHECK-LABEL: define void @nested(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -66,18 +66,15 @@ exit:
 ; This is the same CFG as @nested above, but we have provided branch weights
 ; which tell BranchProbabilityInfo that then.1 will always be taken. In this
 ; case, we should vectorize because it is profitable.
-define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %c2) {
+define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %c2) vscale_range(1,16) {
 ; CHECK-LABEL: define void @always_taken(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 2
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1024, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP1]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1024, [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C1]], i64 0
@@ -90,7 +87,7 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P0]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[TMP5]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> poison)
@@ -102,34 +99,11 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.masked.udiv.nxv2i64(<vscale x 2 x i64> [[WIDE_MASKED_LOAD5]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD7]], <vscale x 2 x i1> [[TMP4]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP10]], ptr align 8 [[TMP8]], <vscale x 2 x i1> [[TMP4]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP11]], ptr align 8 [[TMP9]], <vscale x 2 x i1> [[TMP4]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1024, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C0]], label %[[THEN_0:.*]], label %[[LATCH]], !prof [[PROF3:![0-9]+]]
-; CHECK:       [[THEN_0]]:
-; CHECK-NEXT:    br i1 [[C1]], label %[[THEN_1:.*]], label %[[LATCH]], !prof [[PROF3]]
-; CHECK:       [[THEN_1]]:
-; CHECK-NEXT:    br i1 [[C2]], label %[[THEN_2:.*]], label %[[LATCH]], !prof [[PROF3]]
-; CHECK:       [[THEN_2]]:
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i64, ptr [[P0]], i32 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[GEP0]], align 8
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[P1]], i32 [[IV]]
-; CHECK-NEXT:    [[Y:%.*]] = load i64, ptr [[GEP1]], align 8
-; CHECK-NEXT:    [[Z:%.*]] = udiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    store i64 [[Z]], ptr [[GEP1]], align 8
-; CHECK-NEXT:    br label %[[LATCH]]
-; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

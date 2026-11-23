@@ -44,7 +44,7 @@ bit_prefix_list = [
                 "func_name",
                 bit_prefix + bit_suffix,
             ),
-        ] + ["//libc:__support_cpp_limits"],
+        ] + ["//libc/src/__support/CPP:limits"],
     )
     for bit_prefix in bit_prefix_list
     for bit_suffix in bit_suffix_list

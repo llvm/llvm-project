@@ -332,20 +332,6 @@ std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
   return std::nullopt;
 }
 
-bool CompilerType::IsPointerToScalarType() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() && GetPointeeType().IsScalarType();
-}
-
-bool CompilerType::IsArrayOfScalarType() const {
-  CompilerType element_type;
-  if (IsArrayType(&element_type))
-    return element_type.IsScalarType();
-  return false;
-}
-
 bool CompilerType::IsBeingDefined() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -793,6 +779,13 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   if (!bit_size_or_err)
     return bit_size_or_err.takeError();
   return (*bit_size_or_err + 7) / 8;
+}
+
+std::optional<uint64_t> CompilerType::GetByteStride() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetByteStride(m_type);
+  return {};
 }
 
 std::optional<size_t>

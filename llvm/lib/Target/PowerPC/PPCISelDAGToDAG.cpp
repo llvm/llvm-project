@@ -4585,9 +4585,9 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
     if (CC == ISD::SETNE) {
       // Only optimize for integer types (avoid FP completely)
       if (VecVT.getVectorElementType().isInteger()) {
-        if (ISD::isBuildVectorAllZeros(RHS.getNode()))
+        if (ISD::isBuildVectorAllZeros(RHS))
           CC = ISD::SETUGT;
-        else if (ISD::isBuildVectorAllZeros(LHS.getNode()))
+        else if (ISD::isBuildVectorAllZeros(LHS))
           CC = ISD::SETULT;
       }
     }

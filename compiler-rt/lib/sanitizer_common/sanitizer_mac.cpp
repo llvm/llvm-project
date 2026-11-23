@@ -585,7 +585,7 @@ uptr TlsBaseAddr() {
   asm("movl %%gs:0,%0" : "=r"(segbase));
 #elif defined(__aarch64__)
   asm("mrs %x0, tpidrro_el0" : "=r"(segbase));
-  segbase &= 0x07ul;  // clearing lower bits, cpu id stored there
+  segbase &= ~0x07ul;  // macOS < 12 keeps the cpu id in the low 3 bits
 #endif
   return segbase;
 }
@@ -593,12 +593,17 @@ uptr TlsBaseAddr() {
 // The size of the tls on darwin does not appear to be well documented,
 // however the vm memory map suggests that it is 1024 uptrs in size,
 // with a size of 0x2000 bytes on x86_64 and 0x1000 bytes on i386.
+// On arm64 it is the size of the TSD array, from libpthread headers.
 uptr TlsSize() {
-#if defined(__x86_64__) || defined(__i386__)
+#  if defined(__x86_64__) || defined(__i386__)
   return 1024 * sizeof(uptr);
-#else
+#  elif defined(__aarch64__) && SANITIZER_IOSDEVICE
+  return 512 * sizeof(uptr);
+#  elif defined(__aarch64__)
+  return 768 * sizeof(uptr);
+#  else
   return 0;
-#endif
+#  endif
 }
 
 void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,

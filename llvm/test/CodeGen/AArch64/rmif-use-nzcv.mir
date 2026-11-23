@@ -12,5 +12,4 @@ body:             |
 
     RMIF renamable $x0, 0, 0, implicit $nzcv
     RET undef $lr, implicit killed $w0
-
-
+...

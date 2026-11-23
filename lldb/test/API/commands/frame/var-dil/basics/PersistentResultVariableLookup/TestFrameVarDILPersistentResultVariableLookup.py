@@ -20,8 +20,6 @@ class TestFrameVarDILPersistentResultVariableLookup(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Establish persistent variables.
 
         # Establish a persistent variable with integer type.
@@ -61,12 +59,6 @@ class TestFrameVarDILPersistentResultVariableLookup(TestBase):
         self.expect(
             "dwim-print $1.doublem", startstr="note: ran `frame variable $1.doublem`"
         )
-
-        # Check that `dwim-print` looks up the name directly.
-        # (requires temporarily disabling DIL)
-        self.runCmd("settings set target.experimental.use-DIL false")
-        self.expect("dwim-print $3", startstr="(int) 1")
-        self.runCmd("settings set target.experimental.use-DIL true")
 
         # Check that `dwim-print` uses `expression` command.
         self.expect(

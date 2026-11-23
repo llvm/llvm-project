@@ -168,6 +168,37 @@ TEST_F(GreedyDeadnessTest, MoveEffectBetweenRegions) {
   EXPECT_EQ(&target->getRegion(0).front().front(), write);
 }
 
+TEST_F(GreedyDeadnessTest, InPlaceUpdateOfNestedIR) {
+  // `updateOpInPlace` is also used to change IR nested in the updated op. The
+  // first query caches `inner` as dead (its write was disabled) while the
+  // sibling write keeps `outer` live. The pattern then makes the nested op
+  // write again inside `modifyOpInPlace(outer)` and erases the sibling write.
+  // Invalidating only `outer` and its ancestors leaves `inner` cached as
+  // dead, so `outer` (which now contains a write) would be wrongly erased.
+  std::string disabled = effect.str();
+  disabled.replace(disabled.find("[{"),
+                   disabled.find("}]") - disabled.find("[{") + 2, "[]");
+  auto moduleOp = parseSourceString<ModuleOp>(
+      region(region(disabled) + effect.str()), &context);
+  ASSERT_TRUE(moduleOp);
+  Operation *outer = &moduleOp->getBody()->front();
+  Operation *inner = &outer->getRegion(0).front().front();
+  Operation *nested = &inner->getRegion(0).front().front();
+  Operation *write = inner->getNextNode();
+  run(*moduleOp, [&](PatternRewriter &rewriter) {
+    rewriter.eraseOp(write);
+    rewriter.modifyOpInPlace(outer, [&] {
+      nested->setAttr("effects",
+                      rewriter.getArrayAttr(
+                          {rewriter.getDictionaryAttr(rewriter.getNamedAttr(
+                              "effect", rewriter.getStringAttr("write")))}));
+    });
+  });
+  // The nested write is live, so nothing may be deleted.
+  ASSERT_FALSE(moduleOp->getBody()->empty());
+  EXPECT_EQ(&moduleOp->getBody()->front(), outer);
+}
+
 TEST_F(GreedyDeadnessTest, MoveBlocksBetweenRegions) {
   // Moving whole blocks must update the effects of both enclosing operations,
   // just as moving a write does. Keep the new owner of the live block and

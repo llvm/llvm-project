@@ -1256,6 +1256,16 @@ defm GLOBAL_LOAD_ASYNC_TO_LDS_B64      :  FLAT_Global_Load_LDS_Pseudo<"global_lo
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B128     :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b128",  1>;
 } // End SubtargetPredicate = HasAsyncLoadToLDSInsts, WaveSizePredicate = isWave32
 
+// Expand in MC emission into an EXEC save, EXEC-zero load, and EXEC restore.
+// Keep the load's flags and named operands for wait counts and VGPR encoding.
+def GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay :
+    FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b8", 0, 1> {
+  let SubtargetPredicate = HasAsyncLoadToLDSInsts;
+  let WaveSizePredicate = isWave32;
+  let hasSideEffects = 1;
+  let isConvergent = 1;
+}
+
 let SubtargetPredicate = HasAsyncStoreFromLDSInsts in {
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B8    :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b8">;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B32   :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b32">;

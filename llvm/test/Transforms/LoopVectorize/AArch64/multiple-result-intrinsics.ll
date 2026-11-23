@@ -21,7 +21,7 @@
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 
-define void @sincos_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+define void @sincos_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @sincos_f32(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK:  [[ENTRY:.*:]]
@@ -51,13 +51,6 @@ define void @sincos_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP9]], ptr [[TMP13:%.*]], align 4
 ; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP10]], ptr [[TMP14:%.*]], align 4
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY:.*:]]
-; CHECK-ARMPL:    [[CALL:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[IN_VAL:%.*]])
-; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK-ARMPL:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK-ARMPL:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
@@ -94,7 +87,7 @@ exit:
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincos.f64(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 
-define void @sincos_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+define void @sincos_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @sincos_f64(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK:  [[ENTRY:.*:]]
@@ -124,13 +117,6 @@ define void @sincos_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP9]], ptr [[TMP13:%.*]], align 8
 ; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP14:%.*]], align 8
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY:.*:]]
-; CHECK-ARMPL:    [[CALL:%.*]] = tail call { double, double } @llvm.sincos.f64(double [[IN_VAL:%.*]])
-; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
-; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
-; CHECK-ARMPL:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 8
-; CHECK-ARMPL:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 8
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
@@ -171,7 +157,7 @@ exit:
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 
-define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @predicated_sincos(
 ; CHECK-SAME: float [[X:%.*]], ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK:  [[ENTRY:.*:]]
@@ -190,11 +176,11 @@ define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly 
 ; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 0
-; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 1
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP6]], ptr align 4 [[TMP8:%.*]], <vscale x 4 x i1> [[TMP4:%.*]])
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP7]], ptr align 4 [[TMP9:%.*]], <vscale x 4 x i1> [[TMP4]])
+; CHECK-ARMPL:    [[TMP4:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP4]], 0
+; CHECK-ARMPL:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP4]], 1
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP5]], ptr align 4 [[TMP7:%.*]], <vscale x 4 x i1> [[TMP3:%.*]])
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP6]], ptr align 4 [[TMP8:%.*]], <vscale x 4 x i1> [[TMP3]])
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK-ARMPL:  [[FOR_END:.*:]]
 ;
@@ -243,7 +229,7 @@ for.end:
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.modf.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 12 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
 
-define void @modf_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+define void @modf_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @modf_f32(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK:  [[ENTRY:.*:]]
@@ -273,13 +259,6 @@ define void @modf_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP9]], ptr [[TMP13:%.*]], align 4
 ; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP10]], ptr [[TMP14:%.*]], align 4
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY:.*:]]
-; CHECK-ARMPL:    [[CALL:%.*]] = tail call { float, float } @llvm.modf.f32(float [[IN_VAL:%.*]])
-; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK-ARMPL:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK-ARMPL:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
@@ -316,7 +295,7 @@ exit:
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.modf.f64(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 12 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
 
-define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @modf_f64(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK:  [[ENTRY:.*:]]
@@ -346,13 +325,6 @@ define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP9]], ptr [[TMP13:%.*]], align 8
 ; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP14:%.*]], align 8
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY:.*:]]
-; CHECK-ARMPL:    [[CALL:%.*]] = tail call { double, double } @llvm.modf.f64(double [[IN_VAL:%.*]])
-; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
-; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
-; CHECK-ARMPL:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 8
-; CHECK-ARMPL:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 8
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
@@ -393,7 +365,7 @@ exit:
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincospi.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
 
-define void @sincospi_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+define void @sincospi_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @sincospi_f32(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK:  [[ENTRY:.*:]]
@@ -423,13 +395,6 @@ define void @sincospi_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP9]], ptr [[TMP13:%.*]], align 4
 ; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP10]], ptr [[TMP14:%.*]], align 4
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY:.*:]]
-; CHECK-ARMPL:    [[CALL:%.*]] = tail call { float, float } @llvm.sincospi.f32(float [[IN_VAL:%.*]])
-; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK-ARMPL:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK-ARMPL:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
@@ -466,7 +431,7 @@ exit:
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincospi.f64(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
 
-define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @sincospi_f64(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
 ; CHECK:  [[ENTRY:.*:]]
@@ -496,13 +461,6 @@ define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP9]], ptr [[TMP13:%.*]], align 8
 ; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP14:%.*]], align 8
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY:.*:]]
-; CHECK-ARMPL:    [[CALL:%.*]] = tail call { double, double } @llvm.sincospi.f64(double [[IN_VAL:%.*]])
-; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
-; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
-; CHECK-ARMPL:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 8
-; CHECK-ARMPL:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 8
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
@@ -547,17 +505,17 @@ exit:
 ; CHECK-COST-ARMPL: Cost of 6 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST-ARMPL: Cost of 6 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 
-define void @sadd_with_overflow_i32(ptr noalias %in_a, ptr noalias %in_b, ptr noalias writeonly %out_result, ptr noalias writeonly %out_overflow) {
+define void @sadd_with_overflow_i32(ptr noalias %in_a, ptr noalias %in_b, ptr noalias writeonly %out_result, ptr noalias writeonly %out_overflow) vscale_range(1,16) {
 ; CHECK-LABEL: define void @sadd_with_overflow_i32(
 ; CHECK-SAME: ptr noalias [[IN_A:%.*]], ptr noalias [[IN_B:%.*]], ptr noalias writeonly [[OUT_RESULT:%.*]], ptr noalias writeonly [[OUT_OVERFLOW:%.*]]) #[[ATTR0]] {
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP4:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]])
+; CHECK:    [[TMP4:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_LOAD1:%.*]])
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 0
 ; CHECK:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 1
-; CHECK:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP5]], ptr align 4 [[TMP8:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; CHECK:    call void @llvm.masked.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP7:%.*]], ptr align 1 [[TMP9:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK:    store <vscale x 4 x i32> [[TMP5]], ptr [[TMP8:%.*]], align 4
+; CHECK:    store <vscale x 4 x i8> [[TMP7:%.*]], ptr [[TMP9:%.*]], align 1
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -566,11 +524,11 @@ define void @sadd_with_overflow_i32(ptr noalias %in_a, ptr noalias %in_b, ptr no
 ; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:    [[TMP4:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP4:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_LOAD1:%.*]])
 ; CHECK-ARMPL:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 0
 ; CHECK-ARMPL:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 1
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP5]], ptr align 4 [[TMP8:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP7:%.*]], ptr align 1 [[TMP9:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-ARMPL:    store <vscale x 4 x i32> [[TMP5]], ptr [[TMP8:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x i8> [[TMP7:%.*]], ptr [[TMP9:%.*]], align 1
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;

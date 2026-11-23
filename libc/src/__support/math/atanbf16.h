@@ -11,10 +11,10 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
 
@@ -69,7 +69,7 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
     if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
       // Keep the small correction normal even for the smallest bfloat16 input.
       double xd = xf;
-      return fputil::cast<bfloat16>(fputil::multiply_add(xd, -0x1p-9, xd));
+      return fputil::cast<bfloat16>(fputil::sub_multiply(xd, xd, 0x1p-9));
     }
 
     float x_sq = xf * xf;
