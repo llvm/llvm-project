@@ -717,8 +717,7 @@ static bool shouldIgnoreLabel(const InputSection *isec, StringRef name) {
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
-                                    uint64_t size, bool forceHidden,
-                                    macho::Symbol *known = nullptr) {
+                                    uint64_t size, bool forceHidden) {
   // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
   // N_EXT: Global symbols. These go in the symbol table during the link,
   //        and also in the export table of the output so that the dynamic
@@ -783,7 +782,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
     return symtab->addDefined(
         name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
         isPrivateExtern, sym.n_desc & REFERENCED_DYNAMICALLY,
-        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden, isCold, known);
+        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden, isCold);
   }
   bool includeInSymtab = !isPrivateLabel(name) && !isEhFrameSection(isec);
   auto *defined = make<Defined>(
@@ -928,8 +927,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                 " at misaligned offset");
           continue;
         }
-        symbols[symIndex] = createDefined(sym, name, isec, 0, isec->getSize(),
-                                          forceHidden, symbols[symIndex]);
+        symbols[symIndex] =
+            createDefined(sym, name, isec, 0, isec->getSize(), forceHidden);
       }
       continue;
     }
@@ -992,9 +991,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       if (!subsectionsViaSymbols || symbolOffset == 0 || isInteriorAltEntry ||
           !isa<ConcatInputSection>(isec)) {
         isec->hasAltEntry = symbolOffset != 0;
-        symbols[symIndex] =
-            createDefined(sym, name, isec, symbolOffset, symbolSize,
-                          forceHidden, symbols[symIndex]);
+        symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
+                                          symbolSize, forceHidden);
         continue;
       }
       auto *concatIsec = cast<ConcatInputSection>(isec);
@@ -1012,9 +1010,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
       // By construction, the symbol will be at offset zero in the new
       // subsection.
-      symbols[symIndex] =
-          createDefined(sym, name, nextIsec, /*value=*/0, symbolSize,
-                        forceHidden, symbols[symIndex]);
+      symbols[symIndex] = createDefined(sym, name, nextIsec, /*value=*/0,
+                                        symbolSize, forceHidden);
       // TODO: ld64 appears to preserve the original alignment as well as each
       // subsection's offset from the last aligned address. We should consider
       // emulating that behavior.
@@ -1062,11 +1059,13 @@ void ObjFile::parseLinkerOptions(SmallVectorImpl<StringRef> &LCLinkerOptions) {
 SmallVector<StringRef> macho::unprocessedLCLinkerOptions;
 ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
                  bool lazy, bool forceHidden, bool compatArch,
-                 bool builtFromBitcode)
+                 bool builtFromBitcode, bool deferParse)
     : InputFile(ObjKind, mb, lazy), modTime(modTime), forceHidden(forceHidden),
       builtFromBitcode(builtFromBitcode) {
   this->archiveName = std::string(archiveName);
   this->compatArch = compatArch;
+  if (deferParse)
+    return;
   if (lazy) {
     if (target->wordSize == 8)
       parseLazy<LP64>();
@@ -1156,17 +1155,28 @@ template <class LP> void ObjFile::parse() {
 }
 
 template <class LP> void ObjFile::parseLazy() {
+  scanLazy<LP>();
+  registerLazy();
+}
+
+// Collect the external symbols this file defines and references without
+// touching global state, so it can run for many files at once.
+template <class LP> void ObjFile::scanLazy() {
   using Header = typename LP::mach_header;
   using NList = typename LP::nlist;
 
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
-  compatArch =
-      compatArch && (archiveName.empty() ? compatWithTargetArch(this, hdr)
-                                         : hasCompatArch(hdr));
-  if (!compatArch)
+  if (lazy) {
+    compatArch =
+        compatArch && (archiveName.empty() ? compatWithTargetArch(this, hdr)
+                                           : hasCompatArch(hdr));
+    if (!compatArch)
+      return;
+  } else if (!compatArch || !hasCompatArch(hdr)) {
     return;
+  }
 
   const load_command *cmd = findCommand(hdr, LC_SYMTAB);
   if (!cmd)
@@ -1177,12 +1187,25 @@ template <class LP> void ObjFile::parseLazy() {
   const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
   symbols.resize(nList.size());
   for (const auto &[i, sym] : llvm::enumerate(nList)) {
+    if (sym.n_type & N_STAB)
+      continue;
     if ((sym.n_type & N_EXT) && !isUndef(sym)) {
       // TODO: Bound checking
-      StringRef name = strtab + sym.n_strx;
-      symbols[i] = symtab->addLazyObject(name, *this);
+      lazyDefineds.push_back(
+          {CachedHashStringRef(strtab + sym.n_strx), static_cast<uint32_t>(i)});
+      if ((sym.n_type & N_TYPE) == N_INDR)
+        lazyUndefineds.push_back(CachedHashStringRef(strtab + sym.n_value));
+    } else if (isUndef(sym)) {
+      lazyUndefineds.push_back(CachedHashStringRef(strtab + sym.n_strx));
     }
   }
+}
+
+void ObjFile::registerLazy() {
+  for (const PendingSymbol &p : lazyDefineds)
+    symbols[p.symIndex] = symtab->addLazyObject(p.name.val(), *this);
+  lazyDefineds = {};
+  lazyUndefineds = {};
 }
 
 void ObjFile::parseDebugInfo() {
@@ -1945,6 +1968,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     error("No LC_DYLD_INFO_ONLY or LC_DYLD_EXPORTS_TRIE found in " +
           toString(this));
   }
+  parseLater(*this);
 }
 
 void DylibFile::parseExportedSymbols(uint32_t offset, uint32_t size) {
@@ -1972,9 +1996,28 @@ void DylibFile::parseExportedSymbols(uint32_t offset, uint32_t size) {
     bool isWeakDef = entry.flags & EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
     bool isTlv = entry.flags & EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
 
-    symbols.push_back(
-        symtab->addDylib(entry.name, exportingFile, isWeakDef, isTlv));
+    recordExport(CachedHashStringRef(entry.name), exportingFile, /*owner=*/this,
+                 isWeakDef, isTlv);
   }
+}
+
+void DylibFile::recordExport(CachedHashStringRef name, DylibFile *file,
+                             DylibFile *owner, bool isWeakDef, bool isTlv) {
+  uint32_t ownerIndex = owner->symbols.size();
+  owner->symbols.push_back(nullptr);
+  pendingExports.push_back({name, file, owner, ownerIndex, isWeakDef, isTlv});
+}
+
+void DylibFile::replayExport(size_t i) {
+  const PendingExport &e = pendingExports[i];
+  e.owner->symbols[e.ownerIndex] =
+      symtab->addDylib(e.name.val(), e.file, e.isWeakDef, e.isTlv);
+}
+
+void DylibFile::registerExports() {
+  for (size_t i = 0, n = pendingExports.size(); i < n; ++i)
+    replayExport(i);
+  pendingExports = {};
 }
 
 void DylibFile::parseLoadCommands(MemoryBufferRef mb) {
@@ -2102,13 +2145,12 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   auto addSymbol = [&](const llvm::MachO::Symbol &symbol,
                        const Twine &name) -> void {
-    StringRef savedName = saver().save(name);
-    if (exportingFile->hiddenSymbols.contains(CachedHashStringRef(savedName)))
+    CachedHashStringRef savedName(saver().save(name));
+    if (exportingFile->hiddenSymbols.contains(savedName))
       return;
 
-    symbols.push_back(symtab->addDylib(savedName, exportingFile,
-                                       symbol.isWeakDefined(),
-                                       symbol.isThreadLocalValue()));
+    recordExport(savedName, exportingFile, /*owner=*/this,
+                 symbol.isWeakDefined(), symbol.isThreadLocalValue());
   };
 
   std::vector<const llvm::MachO::Symbol *> normalSymbols;
@@ -2151,6 +2193,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       break;
     }
   }
+  parseLater(*this);
 }
 
 DylibFile::DylibFile(DylibFile *umbrella)
@@ -2293,8 +2336,8 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
     //    ]
     // Since the symbols are sorted, adding them to the symtab in the given
     // order means the $ld$previous version of _zzz will prevail, as desired.
-    dylib->symbols.push_back(symtab->addDylib(
-        saver().save(symbolName), dylib, /*isWeakDef=*/false, /*isTlv=*/false));
+    recordExport(CachedHashStringRef(saver().save(symbolName)), dylib,
+                 /*owner=*/dylib, /*isWeakDef=*/false, /*isTlv=*/false);
     return;
   }
 
@@ -2390,12 +2433,13 @@ void ArchiveFile::addLazySymbols() {
       continue;
     if (!seenLazy.insert(c.getChildOffset()).second)
       continue;
-    auto childFile = childToObjectFile(c, /*lazy=*/true);
+    auto childFile = childToObjectFile(c, /*lazy=*/true, /*deferParse=*/true);
     if (!childFile) {
       llvm::consumeError(childFile.takeError());
       unopenable.insert(c.getChildOffset());
       continue;
     }
+    parseLater(**childFile);
     inputFiles.insert(*childFile);
   }
   if (e)
@@ -2423,17 +2467,17 @@ void ArchiveFile::addLazySymbols() {
 static Expected<InputFile *>
 loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
                   uint64_t offsetInArchive, bool forceHidden, bool compatArch,
-                  bool lazy) {
+                  bool lazy, bool deferParse) {
   if (config->zeroModTime)
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
     return make<ObjFile>(mb, modTime, archiveName, lazy, forceHidden,
-                         compatArch);
+                         compatArch, /*builtFromBitcode=*/false, deferParse);
   case file_magic::bitcode:
     return make<BitcodeFile>(mb, archiveName, offsetInArchive, lazy,
-                             forceHidden, compatArch);
+                             forceHidden, compatArch, deferParse);
   default:
     return createStringError(inconvertibleErrorCode(),
                              mb.getBufferIdentifier() +
@@ -2441,19 +2485,22 @@ loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
   }
 }
 
-Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
+Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason,
+                         bool deferParse) {
   if (!seen.insert(c.getChildOffset()).second)
     return Error::success();
-  auto childFile = childToObjectFile(c, /*lazy=*/false);
+  auto childFile = childToObjectFile(c, /*lazy=*/false, deferParse);
   if (!childFile)
     return childFile.takeError();
 
+  if (deferParse)
+    parseLater(**childFile);
   inputFiles.insert(*childFile);
   printArchiveMemberLoad(reason, *childFile);
   return Error::success();
 }
 
-void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
+void ArchiveFile::fetch(const object::Archive::Symbol &sym, bool deferParse) {
   object::Archive::Child c =
       CHECK(sym.getMember(), toString(this) +
                                  ": could not get the member defining symbol " +
@@ -2466,14 +2513,14 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
 
   // ld64 doesn't demangle sym here even with -demangle.
   // Match that: intentionally don't call toMachOString().
-  if (Error e = fetch(c, symCopy.getName()))
+  if (Error e = fetch(c, symCopy.getName(), deferParse))
     error(toString(this) + ": could not get the member defining symbol " +
           toMachOString(symCopy) + ": " + toString(std::move(e)));
 }
 
 Expected<InputFile *>
-ArchiveFile::childToObjectFile(const llvm::object::Archive::Child &c,
-                               bool lazy) {
+ArchiveFile::childToObjectFile(const llvm::object::Archive::Child &c, bool lazy,
+                               bool deferParse) {
   Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
   if (!mb)
     return mb.takeError();
@@ -2483,7 +2530,8 @@ ArchiveFile::childToObjectFile(const llvm::object::Archive::Child &c,
     return modTime.takeError();
 
   return loadArchiveMember(*mb, toTimeT(*modTime), getName(),
-                           c.getChildOffset(), forceHidden, compatArch, lazy);
+                           c.getChildOffset(), forceHidden, compatArch, lazy,
+                           deferParse);
 }
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
@@ -2522,7 +2570,7 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy, bool forceHidden,
-                         bool compatArch)
+                         bool compatArch, bool deferParse)
     : InputFile(BitcodeKind, mb, lazy), forceHidden(forceHidden) {
   this->archiveName = std::string(archiveName);
   this->compatArch = compatArch;
@@ -2548,6 +2596,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                                                sys::path::filename(path) + ")" +
                                                utostr(offsetInArchive)));
   obj = check(lto::InputFile::create(mbref));
+  if (deferParse)
+    return;
   if (lazy)
     parseLazy();
   else
@@ -2588,7 +2638,253 @@ std::string macho::replaceThinLTOSuffix(StringRef path) {
   return std::string(path);
 }
 
+static std::vector<InputFile *> pendingObjects;
+
 static std::vector<ObjFile *> pendingExtracts;
+
+// Parses a batch of files using mold-style command-line-order resolution:
+// 1. If any archive members are lazy, scan ObjFile symtabs in parallel and
+//    build a 64-shard command-line-priority owner map to determine which
+//    archive members are reachable (markLiveObjects).
+// 2. Parse live files and register remaining lazy members in CLI order
+//    (initially-live, then newly-extracted, then still-lazy).
+static void parseBatch(ArrayRef<InputFile *> files) {
+  if (files.empty())
+    return;
+
+  bool hasLazy = llvm::any_of(files, [](InputFile *f) { return f->lazy; });
+
+  // Track which files were initially non-lazy so direct command-line objects
+  // take precedence over extracted archive members for weak definitions (e.g.,
+  // weak-definition-in-main-file.s), while extracted archive members are still
+  // finalized in strict command-line order.
+  SmallVector<bool> wasInitiallyLazy(files.size(), false);
+  for (size_t i = 0; i < files.size(); ++i)
+    wasInitiallyLazy[i] = files[i]->lazy;
+
+  std::vector<InputFile *> extractedFromPriorBatch;
+  if (hasLazy) {
+    {
+      TimeTraceScope timeScope("Scan input symtabs");
+      parallelForEach(files, [](InputFile *f) {
+        auto *obj = dyn_cast<ObjFile>(f);
+        if (!obj)
+          return;
+        if (target->wordSize == 8)
+          obj->scanLazy<LP64>();
+        else
+          obj->scanLazy<ILP32>();
+      });
+    }
+
+    TimeTraceScope timeScope("Mark live archive members");
+    // Precedence for deciding which file satisfies a reference during
+    // markLiveObjects():
+    //   3: live ObjFile / BitcodeFile defined or common symbol
+    //   2: strong DylibFile export OR lazy ObjFile / BitcodeFile (ties broken
+    //      by command-line order — earlier file wins)
+    //   1: weak DylibFile export (always overridden by a lazy archive member)
+    struct Owner {
+      InputFile *lazyFile;
+      uint8_t rank;
+      bool fromPriorBatch;
+    };
+    constexpr unsigned shardBits = 6;
+    constexpr size_t numShards = 1 << shardBits;
+    auto shardIndex = [](CachedHashStringRef name) -> size_t {
+      return name.hash() >> (32 - shardBits);
+    };
+    const size_t numChunks = std::min<size_t>(files.size(), numShards);
+    struct OwnerEntry {
+      CachedHashStringRef name;
+      Owner owner;
+    };
+    std::vector<std::array<std::vector<OwnerEntry>, numShards>> chunkEntries(
+        numChunks);
+
+    parallelFor(0, numChunks, [&](size_t c) {
+      size_t begin = c * files.size() / numChunks;
+      size_t end = (c + 1) * files.size() / numChunks;
+      auto &buckets = chunkEntries[c];
+      auto emit = [&](CachedHashStringRef name, Owner o) {
+        buckets[shardIndex(name)].push_back({name, o});
+      };
+      for (size_t fi = begin; fi < end; ++fi) {
+        InputFile *f = files[fi];
+        if (auto *obj = dyn_cast<ObjFile>(f)) {
+          Owner o = obj->lazy ? Owner{obj, 2, false} : Owner{nullptr, 3, false};
+          for (const auto &p : obj->getLazyDefineds())
+            emit(p.name, o);
+        } else if (auto *dylib = dyn_cast<DylibFile>(f)) {
+          for (size_t i = 0, n = dylib->numExports(); i < n; ++i)
+            emit(dylib->exportName(i),
+                 {nullptr,
+                  static_cast<uint8_t>(dylib->exportIsWeakDef(i) ? 1 : 2),
+                  false});
+        } else if (auto *bc = dyn_cast<BitcodeFile>(f)) {
+          if (bc->obj) {
+            Owner o = bc->lazy ? Owner{bc, 2, false} : Owner{nullptr, 3, false};
+            for (const lto::InputFile::Symbol &objSym : bc->obj->symbols())
+              if (!objSym.isUndefined())
+                emit(CachedHashStringRef(objSym.getName()), o);
+          }
+        }
+      }
+    });
+
+    std::array<std::vector<OwnerEntry>, numShards> priorEntries;
+    for (macho::Symbol *s : symtab->getSymbols()) {
+      CachedHashStringRef name(s->getName());
+      size_t sh = shardIndex(name);
+      if (isa<Defined>(s) || isa<CommonSymbol>(s))
+        priorEntries[sh].push_back({name, {nullptr, 3, true}});
+      else if (auto *dysym = dyn_cast<DylibSymbol>(s))
+        priorEntries[sh].push_back(
+            {name,
+             {nullptr, static_cast<uint8_t>(dysym->isWeakDef() ? 1 : 2), true}});
+      else if (isa<LazyObject>(s))
+        priorEntries[sh].push_back({name, {s->getFile(), 2, true}});
+    }
+
+    std::array<DenseMap<CachedHashStringRef, Owner>, numShards> owners;
+    parallelFor(0, numShards, [&](size_t sh) {
+      auto &map = owners[sh];
+      size_t total = priorEntries[sh].size();
+      for (size_t c = 0; c < numChunks; ++c)
+        total += chunkEntries[c][sh].size();
+      map.reserve(total);
+      auto recordOwner = [&](const OwnerEntry &e) {
+        auto [it, inserted] = map.try_emplace(e.name, e.owner);
+        if (!inserted && e.owner.rank > it->second.rank)
+          it->second = e.owner;
+      };
+      for (const OwnerEntry &e : priorEntries[sh])
+        recordOwner(e);
+      for (size_t c = 0; c < numChunks; ++c) {
+        for (const OwnerEntry &e : chunkEntries[c][sh])
+          recordOwner(e);
+        chunkEntries[c][sh] = {};
+      }
+    });
+
+    struct RefHit {
+      InputFile *target;
+      StringRef reason;
+      bool fromPriorBatch;
+    };
+    std::vector<std::vector<RefHit>> chunkHits(numChunks);
+    parallelFor(0, numChunks, [&](size_t c) {
+      size_t begin = c * files.size() / numChunks;
+      size_t end = (c + 1) * files.size() / numChunks;
+      auto &hits = chunkHits[c];
+      auto checkRef = [&](CachedHashStringRef name) {
+        const auto &map = owners[shardIndex(name)];
+        auto it = map.find(name);
+        if (it != map.end() && it->second.lazyFile)
+          hits.push_back(
+              {it->second.lazyFile, name.val(), it->second.fromPriorBatch});
+      };
+      for (size_t fi = begin; fi < end; ++fi) {
+        InputFile *f = files[fi];
+        if (auto *obj = dyn_cast<ObjFile>(f)) {
+          if (!obj->lazy) {
+            for (CachedHashStringRef name : obj->getLazyUndefineds())
+              checkRef(name);
+          }
+        } else if (auto *bc = dyn_cast<BitcodeFile>(f)) {
+          if (!bc->lazy && bc->obj) {
+            for (const lto::InputFile::Symbol &objSym : bc->obj->symbols())
+              if (objSym.isUndefined())
+                checkRef(CachedHashStringRef(objSym.getName()));
+          }
+        }
+      }
+    });
+
+    std::vector<InputFile *> newlyLive;
+    auto activate = [&](InputFile *target, StringRef reason,
+                        bool fromPriorBatch) {
+      if (!target || !target->lazy)
+        return;
+      target->lazy = false;
+      printArchiveMemberLoad(reason, target);
+      newlyLive.push_back(target);
+      if (fromPriorBatch)
+        extractedFromPriorBatch.push_back(target);
+    };
+    auto markRef = [&](CachedHashStringRef name) {
+      const auto &map = owners[shardIndex(name)];
+      auto it = map.find(name);
+      if (it != map.end() && it->second.lazyFile)
+        activate(it->second.lazyFile, name.val(), it->second.fromPriorBatch);
+    };
+
+    for (macho::Symbol *s : symtab->getSymbols())
+      if (isa<Undefined>(s))
+        markRef(CachedHashStringRef(s->getName()));
+
+    for (size_t c = 0; c < numChunks; ++c)
+      for (const RefHit &h : chunkHits[c])
+        activate(h.target, h.reason, h.fromPriorBatch);
+
+    for (size_t i = 0; i < newlyLive.size(); ++i) {
+      if (auto *obj = dyn_cast<ObjFile>(newlyLive[i])) {
+        for (CachedHashStringRef name : obj->getLazyUndefineds())
+          markRef(name);
+      } else if (auto *bc = dyn_cast<BitcodeFile>(newlyLive[i])) {
+        if (bc->obj)
+          for (const lto::InputFile::Symbol &objSym : bc->obj->symbols())
+            if (objSym.isUndefined())
+              markRef(CachedHashStringRef(objSym.getName()));
+      }
+    }
+  }
+
+  // Finalize into symtab in strict command-line order:
+  // 1. Initially-live files (direct .o, dylibs, -all_load/-force_load/-ObjC).
+  // 2. Newly-extracted archive members (in command-line order).
+  // 3. Remaining still-lazy archive members (for post-createFiles() lookups).
+  TimeTraceScope finalizeScope("Add symbols");
+  auto finalizeFile = [](InputFile *f) {
+    if (auto *obj = dyn_cast<ObjFile>(f)) {
+      if (obj->lazy) {
+        obj->registerLazy();
+      } else {
+        obj->clearLazyScan();
+        if (target->wordSize == 8)
+          obj->parse<LP64>();
+        else
+          obj->parse<ILP32>();
+      }
+    } else if (auto *dylib = dyn_cast<DylibFile>(f)) {
+      dylib->registerExports();
+    } else {
+      auto *bitcode = cast<BitcodeFile>(f);
+      if (bitcode->lazy)
+        bitcode->parseLazy();
+      else
+        bitcode->parse();
+    }
+  };
+  for (size_t i = 0; i < files.size(); ++i)
+    if (!wasInitiallyLazy[i])
+      finalizeFile(files[i]);
+  for (size_t i = 0; i < files.size(); ++i)
+    if (wasInitiallyLazy[i] && !files[i]->lazy)
+      finalizeFile(files[i]);
+  for (InputFile *f : extractedFromPriorBatch)
+    finalizeFile(f);
+  for (size_t i = 0; i < files.size(); ++i)
+    if (files[i]->lazy)
+      finalizeFile(files[i]);
+}
+
+void macho::parseLater(InputFile &file) { pendingObjects.push_back(&file); }
+
+void macho::parsePendingObjects() {
+  parseBatch(pendingObjects);
+  pendingObjects.clear();
+}
 
 void macho::extract(InputFile &file, StringRef reason) {
   if (!file.lazy)
@@ -2606,25 +2902,19 @@ void macho::extract(InputFile &file, StringRef reason) {
     return;
   }
 
-  for (Symbol *sym : file.symbols)
-    if (sym)
-      sym->hasPendingDefinition = true;
   pendingExtracts.push_back(&cast<ObjFile>(file));
 }
 
 void macho::parsePendingExtracts() {
-  // Parsing appends to pendingExtracts, so index rather than iterate.
-  for (size_t i = 0; i < pendingExtracts.size(); ++i) {
-    ObjFile &f = *pendingExtracts[i];
-    if (target->wordSize == 8)
-      f.parse<LP64>();
-    else
-      f.parse<ILP32>();
+  parsePendingObjects();
+
+  for (size_t done = 0; done < pendingExtracts.size();) {
+    size_t end = pendingExtracts.size();
+    std::vector<InputFile *> round(pendingExtracts.begin() + done,
+                                   pendingExtracts.begin() + end);
+    parseBatch(round);
+    done = end;
   }
-  for (ObjFile *f : pendingExtracts)
-    for (Symbol *sym : f->symbols)
-      if (sym)
-        sym->hasPendingDefinition = false;
   pendingExtracts.clear();
 }
 
