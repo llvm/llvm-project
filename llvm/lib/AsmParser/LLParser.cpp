@@ -5855,6 +5855,10 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
+bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
+  return tokError("!MDFunctionLocalContext parsing not yet implemented");
+}
+
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
 ///   isImplicitCode: true, atomGroup: 1, atomRank: 1)
@@ -10050,6 +10054,9 @@ bool LLParser::parseWpdRes(WholeProgramDevirtResolution &WPDRes) {
     break;
   case lltok::kw_branchFunnel:
     WPDRes.TheKind = WholeProgramDevirtResolution::BranchFunnel;
+    break;
+  case lltok::kw_speculative:
+    WPDRes.TheKind = WholeProgramDevirtResolution::Speculative;
     break;
   default:
     return error(Lex.getLoc(), "unexpected WholeProgramDevirtResolution kind");

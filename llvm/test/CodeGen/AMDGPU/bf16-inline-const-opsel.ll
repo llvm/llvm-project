@@ -9,7 +9,7 @@ define bfloat @scalar_add_inline_const(bfloat %x) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_add_bf16 v0, v0, 1.0
+; GFX1250-SDAG-NEXT:    v_pk_add_bf16 v0, v0, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: scalar_add_inline_const:
@@ -37,7 +37,7 @@ define bfloat @scalar_mul_inline_const(bfloat %x) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_mul_bf16 v0, v0, 0.5
+; GFX1250-SDAG-NEXT:    v_pk_mul_bf16 v0, v0, 0.5 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: scalar_mul_inline_const:
@@ -65,7 +65,7 @@ define bfloat @scalar_sub_inline_const(bfloat %x) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_add_bf16 v0, v0, -1.0
+; GFX1250-SDAG-NEXT:    v_pk_add_bf16 v0, v0, -1.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: scalar_sub_inline_const:
@@ -93,7 +93,7 @@ define bfloat @scalar_rsub_inline_const(bfloat %x) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_add_bf16 v0, 1.0, v0 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_add_bf16 v0, 1.0, v0 op_sel:[1,0] op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: scalar_rsub_inline_const:
@@ -121,7 +121,7 @@ define bfloat @scalar_fma_inline_const(bfloat %x, bfloat %y) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_fma_bf16 v0, v0, v1, 2.0
+; GFX1250-SDAG-NEXT:    v_pk_fma_bf16 v0, v0, v1, 2.0 op_sel:[0,0,1] op_sel_hi:[1,1,0]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: scalar_fma_inline_const:
@@ -152,7 +152,7 @@ define bfloat @scalar_max_inline_const(bfloat %x) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_bf16 v0, v0, 4.0
+; GFX1250-SDAG-NEXT:    v_pk_max_num_bf16 v0, v0, 4.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: scalar_max_inline_const:
@@ -180,7 +180,7 @@ define bfloat @scalar_min_inline_const(bfloat %x) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_min_num_bf16 v0, v0, -4.0
+; GFX1250-SDAG-NEXT:    v_pk_min_num_bf16 v0, v0, -4.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: scalar_min_inline_const:
@@ -414,19 +414,12 @@ define <2 x bfloat> @packed_add_inline_const(<2 x bfloat> %x) {
 }
 
 define <2 x bfloat> @packed_add_non_splat_0(<2 x bfloat> %x) {
-; GFX1250-SDAG-LABEL: packed_add_non_splat_0:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_add_bf16 v0, v0, 1.0
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: packed_add_non_splat_0:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_add_bf16 v0, v0, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: packed_add_non_splat_0:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = fadd <2 x bfloat> %x, <bfloat 1.0, bfloat 0.0>
   ret <2 x bfloat> %r
 }
@@ -455,19 +448,12 @@ define <2 x bfloat> @packed_add_non_splat_2(<2 x bfloat> %x) {
 }
 
 define <2 x bfloat> @packed_mul_non_splat_0(<2 x bfloat> %x) {
-; GFX1250-SDAG-LABEL: packed_mul_non_splat_0:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_mul_bf16 v0, v0, 4.0
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: packed_mul_non_splat_0:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_mul_bf16 v0, v0, 4.0 op_sel:[0,1] op_sel_hi:[1,0]
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: packed_mul_non_splat_0:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, v0, 4.0 op_sel:[0,1] op_sel_hi:[1,0]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = fmul <2 x bfloat> %x, <bfloat 4.0, bfloat 0.0>
   ret <2 x bfloat> %r
 }
@@ -533,5 +519,6 @@ define <2 x bfloat> @packed_max_int_inline_const_zero(<2 x bfloat> %x) {
   ret <2 x bfloat> %r
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX1250-GISEL: {{.*}}
 ; GFX1250-SDAG-FAKE16: {{.*}}
 ; GFX1250-SDAG-REAL16: {{.*}}

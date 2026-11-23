@@ -397,6 +397,9 @@ class VectorType;
 
     bool useLoadStackGuardNode(const Module &M) const override;
 
+    Value *getIRStackGuard(IRBuilderBase &IRB,
+                           const LibcallLoweringInfo &Libcalls) const override;
+
     void
     insertSSPDeclarations(Module &M,
                           const LibcallLoweringInfo &Libcalls) const override;

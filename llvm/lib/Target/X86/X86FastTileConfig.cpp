@@ -41,7 +41,6 @@ public:
 
 private:
   // context
-  MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -180,7 +179,6 @@ bool X86FastTileConfigImpl::runOnMachineFunction(MachineFunction &MFunc) {
   if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
     return false;
 
-  MF = &MFunc;
   MRI = &MFunc.getRegInfo();
   const TargetSubtargetInfo *ST = &MFunc.getSubtarget<X86Subtarget>();
   TRI = ST->getRegisterInfo();

@@ -5925,6 +5925,32 @@ TEST_F(MDNodeTest, MergedProfMetadata_CallInst) {
   EXPECT_EQ(W->getZExtValue(), 20u);
 }
 
+TEST_F(MDNodeTest, MergedPCSectionsMetadata) {
+  auto *I32 = Type::getInt32Ty(Context);
+  Metadata *S = MDString::get(Context, "s"), *T = MDString::get(Context, "t");
+  Metadata *X =
+      MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(I32, 1)));
+  Metadata *Y =
+      MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(I32, 2)));
+  MDNode *A = MDNode::get(Context, {S, X});
+  MDNode *B = MDNode::get(Context, {S, Y});
+  MDNode *C = MDNode::get(Context, {T, Y, S, X});
+
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(nullptr, nullptr), nullptr);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, nullptr), A);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(nullptr, B), B);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, A), A);
+  // Requests of A, then those of B that A lacks.
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, B),
+            MDNode::get(Context, {S, X, S, Y}));
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(B, A),
+            MDNode::get(Context, {S, Y, S, X}));
+  // A request both make is not duplicated.
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(C, A), C);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, C),
+            MDNode::get(Context, {S, X, T, Y}));
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
 typedef MetadataTest MDTupleAllocationDeathTest;
 TEST_F(MDTupleAllocationDeathTest, ResizeRejected) {

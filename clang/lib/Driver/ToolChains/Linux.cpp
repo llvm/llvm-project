@@ -978,6 +978,8 @@ bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
   // and libgcc since 9.3.1
   assert(getTriple().isAArch64() && "expected AArch64 target!");
   ToolChain::RuntimeLibType RtLib = GetRuntimeLibType(Args);
+  if (RtLib == ToolChain::RLT_None)
+    return false;
   if (RtLib == ToolChain::RLT_CompilerRT)
     return true;
   assert(RtLib == ToolChain::RLT_Libgcc && "unexpected runtime library type!");
