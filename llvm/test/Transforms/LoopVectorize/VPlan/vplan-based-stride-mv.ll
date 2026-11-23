@@ -3805,17 +3805,16 @@ define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, pt
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %stride_plus_y = add i64 %stride, %y
 ; CHECK-NEXT:    IR   %udiv = udiv i64 %n, %stride_plus_y
-; FIXME: Can trigger UB, must be guarded.
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (%n /u (1 + %y))
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + %y)
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  strides.check:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = add ir<%y>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = udiv ir<%n>, vp<[[VP5]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -3826,7 +3825,7 @@ define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, pt
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.src>
-; CHECK-NEXT:      EMIT ir<%gep.dst.base> = getelementptr ir<%dst>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT ir<%gep.dst.base> = getelementptr ir<%dst>, vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%gep.dst.base>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.dst>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>

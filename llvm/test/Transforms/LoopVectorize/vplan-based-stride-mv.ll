@@ -4813,14 +4813,13 @@ define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, pt
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-NO-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
 ; COMPARE-NO-MV-NEXT:    [[UDIV:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
-; COMPARE-NO-MV-NEXT:    [[TMP5:%.*]] = add i64 [[Y]], 1
-; FIXME: Can trigger UB, must be guarded.
-; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP5]]
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
 ; COMPARE-NO-MV-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
+; COMPARE-NO-MV-NEXT:    [[TMP5:%.*]] = add i64 [[Y]], 1
+; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP5]]
 ; COMPARE-NO-MV-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP1]]
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_BODY]]:
@@ -4855,14 +4854,13 @@ define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, pt
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
 ; COMPARE-LAA-MV-NEXT:    [[UDIV:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
-; COMPARE-LAA-MV-NEXT:    [[TMP4:%.*]] = add i64 [[Y]], 1
-; FIXME: Can trigger UB, must be guarded.
-; COMPARE-LAA-MV-NEXT:    [[TMP5:%.*]] = udiv i64 [[N]], [[TMP4]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
 ; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
+; COMPARE-LAA-MV-NEXT:    [[TMP4:%.*]] = add i64 [[Y]], 1
+; COMPARE-LAA-MV-NEXT:    [[TMP5:%.*]] = udiv i64 [[N]], [[TMP4]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP5]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
@@ -4924,28 +4922,28 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
 ; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
-; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[STRIDES_CHECK:.*]]
+; COMPARE-NO-MV:       [[STRIDES_CHECK]]:
+; COMPARE-NO-MV-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-NO-MV-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[STRIDE]], 1
-; COMPARE-NO-MV-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
-; COMPARE-NO-MV:       [[VECTOR_PH1]]:
-; COMPARE-NO-MV-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 3
-; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP3]]
+; COMPARE-NO-MV-NEXT:    [[TMP4:%.*]] = and i64 [[TMP2]], 3
+; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP4]]
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_BODY]]:
-; COMPARE-NO-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COMPARE-NO-MV-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
-; COMPARE-NO-MV-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <4 x i32>, ptr [[TMP7]], align 4
-; COMPARE-NO-MV-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
-; COMPARE-NO-MV-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP5]], align 4
+; COMPARE-NO-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; COMPARE-NO-MV-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
+; COMPARE-NO-MV-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP6]], align 4
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; COMPARE-NO-MV-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; COMPARE-NO-MV-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP79:![0-9]+]]
+; COMPARE-NO-MV-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COMPARE-NO-MV-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP79:![0-9]+]]
 ; COMPARE-NO-MV:       [[MIDDLE_BLOCK]]:
 ; COMPARE-NO-MV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; COMPARE-NO-MV-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; COMPARE-NO-MV:       [[SCALAR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_PH]] ]
+; COMPARE-NO-MV-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[STRIDES_CHECK]] ]
 ; COMPARE-NO-MV-NEXT:    br label %[[LOOP:.*]]
 ; COMPARE-NO-MV:       [[LOOP]]:
 ; COMPARE-NO-MV-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

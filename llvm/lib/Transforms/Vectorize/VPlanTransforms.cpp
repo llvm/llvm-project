@@ -6159,6 +6159,17 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     ArrayRef<VPInstruction *> MemOps) {
   ScalarEvolution *SE = CostCtx.PSE.getSE();
   SCEVUnionPredicate StridePredicates({}, *SE);
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPBasicBlock *VectorPreheader = Plan.getVectorPreheader();
+  DebugLoc DL = cast<VPIRBasicBlock>(Entry)
+                    ->getIRBasicBlock()
+                    ->getTerminator()
+                    ->getDebugLoc();
+
+  // Rewritten live-ins must be expanded in the vector preheader to remain under
+  // stide check guard to avoid introducing UB.
+  VPBuilder LiveInExpanderBuilder(VectorPreheader->getFirstNonPhi());
+  VPSCEVExpander LiveInExpander(LiveInExpanderBuilder, *SE, DL);
 
   for (VPInstruction *VPI : MemOps) {
     bool IsLoad = VPI->getOpcode() == Instruction::Load;
@@ -6284,11 +6295,10 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
       if (RewrittenS == S || isa<SCEVCouldNotCompute>(RewrittenS))
         continue;
 
-      VPValue *RewrittenLiveIn =
-          vputils::getOrCreateVPValueForSCEVExpr(Plan, RewrittenS);
+      VPValue *RewrittenLiveIn = LiveInExpander.expand(RewrittenS);
       LiveIn->replaceUsesWithIf(RewrittenLiveIn, [&](VPUser *U) {
         auto *R = cast<VPRecipeBase>(U);
-        return R->getRegion() || R->getParent() == Plan.getVectorPreheader();
+        return R->getRegion() || R->getParent() == VectorPreheader;
       });
     }
   }
@@ -6300,14 +6310,9 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   // We will replace the condition once we expand the predicate.
   attachVPCheckBlock(Plan, Plan.getTrue(), StridesCheckVPBB,
                      /*AddBranchWeights=*/false);
-  VPBasicBlock *Entry = Plan.getEntry();
-  VPBuilder Builder(&StridesCheckVPBB->back());
-  DebugLoc DL = cast<VPIRBasicBlock>(Entry)
-                    ->getIRBasicBlock()
-                    ->getTerminator()
-                    ->getDebugLoc();
-  VPSCEVExpander Expander(Builder, *SE, DL);
-  VPValue *Pred = Expander.expandPredicate(&StridePredicates);
+  VPBuilder StridesCheckExpanderBuilder(&StridesCheckVPBB->back());
+  VPSCEVExpander StridesCheckExpander(StridesCheckExpanderBuilder, *SE, DL);
+  VPValue *Pred = StridesCheckExpander.expandPredicate(&StridePredicates);
   assert(Pred && "Must be expandable!");
   StridesCheckVPBB->getTerminator()->setOperand(0, Pred);
 
@@ -6317,6 +6322,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   // "incorrectly" reach stride speculation check and jump to scalar loop from
   // there. These recipes aren't passed to scalar loop if vector loop isn't
   // entered. This rewrite is necessary to mimic current LAA's behavior.
+  VPBuilder Builder(Entry->begin());
   for (auto &R : make_early_inc_range(*Entry)) {
     auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandSCEV)
