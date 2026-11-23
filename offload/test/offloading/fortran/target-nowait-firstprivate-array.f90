@@ -21,9 +21,25 @@ contains
     do i = 1, n
       values(i, k) = local(i)
     end do
-    ! The target task must use its copy after this array is overwritten and
-    ! the subroutine returns.
+    ! The copy must remain valid if the task is deferred past this overwrite
+    ! and the return from this subroutine.
     local = -1
+  end subroutine
+
+  subroutine launch_loop()
+    integer :: local(n), i, k
+
+    do k = 1, launches
+      do i = 1, n
+        local(i) = 100 * k + i
+      end do
+      !$omp target teams distribute parallel do nowait firstprivate(local, k) &
+      !$omp& map(present, alloc: values)
+      do i = 1, n
+        values(i, k) = local(i)
+      end do
+      local = -1
+    end do
   end subroutine
 
   subroutine launch_depend(k)
@@ -97,5 +113,18 @@ program test
   if (any(done /= 1)) stop 3
   print *, "PASS: firstprivate arrays with nowait and depend"
   ! CHECK: PASS: firstprivate arrays with nowait and depend
+
+  values = 0
+  !$omp target update to(values)
+  !$omp parallel num_threads(2)
+  !$omp single
+    call launch_loop()
+    !$omp taskwait
+  !$omp end single
+  !$omp end parallel
+  !$omp target update from(values)
+  call check_values()
+  print *, "PASS: firstprivate arrays with nowait in a loop"
+  ! CHECK: PASS: firstprivate arrays with nowait in a loop
   !$omp target exit data map(delete: values)
 end program
