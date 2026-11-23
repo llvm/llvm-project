@@ -86,12 +86,11 @@ Task bar() {
 // CHECK-NEXT:    ]
 
 // CHECK:       [[CASE1]]:
-// CHECK:         br i1 %{{.+}}, label %[[CASE1_AWAIT_READY:.+]], label %[[CASE1_AWAIT_SUSPEND:.+]]
-// CHECK:       [[CASE1_AWAIT_SUSPEND]]:
-// CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
-// CHECK-NEXT:    call void @llvm.coro.await.suspend.handle
-// CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
-// CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
+// CHECK:         br i1 %{{.+}}, label %[[CASE1_AWAIT_READY:.+]], label
+// %[[CASE1_AWAIT_SUSPEND:.+]] CHECK:       [[CASE1_AWAIT_SUSPEND]]: CHECK-NEXT:
+// %{{.+}} = call token @llvm.coro.save.p0(ptr null) CHECK-NEXT:    call void
+// @llvm.coro.await.suspend.handle.p0.p0 CHECK-NEXT:    %{{.+}} = call i8
+// @llvm.coro.suspend CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
 // CHECK-NEXT:      i8 0, label %[[CASE1_AWAIT_READY]]
 // CHECK-NEXT:      i8 1, label %[[CASE1_AWAIT_CLEANUP:.+]]
 // CHECK-NEXT:    ]
@@ -100,12 +99,11 @@ Task bar() {
 // CHECK:         call void @{{.+Awaiter.+}}
 
 // CHECK:       [[CASE2]]:
-// CHECK:         br i1 %{{.+}}, label %[[CASE2_AWAIT_READY:.+]], label %[[CASE2_AWAIT_SUSPEND:.+]]
-// CHECK:       [[CASE2_AWAIT_SUSPEND]]:
-// CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
-// CHECK-NEXT:    call void @llvm.coro.await.suspend.handle
-// CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
-// CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
+// CHECK:         br i1 %{{.+}}, label %[[CASE2_AWAIT_READY:.+]], label
+// %[[CASE2_AWAIT_SUSPEND:.+]] CHECK:       [[CASE2_AWAIT_SUSPEND]]: CHECK-NEXT:
+// %{{.+}} = call token @llvm.coro.save.p0(ptr null) CHECK-NEXT:    call void
+// @llvm.coro.await.suspend.handle.p0.p0 CHECK-NEXT:    %{{.+}} = call i8
+// @llvm.coro.suspend CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
 // CHECK-NEXT:      i8 0, label %[[CASE2_AWAIT_READY]]
 // CHECK-NEXT:      i8 1, label %[[CASE2_AWAIT_CLEANUP:.+]]
 // CHECK-NEXT:    ]

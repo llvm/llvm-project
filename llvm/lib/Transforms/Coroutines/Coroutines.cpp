@@ -52,8 +52,8 @@ coro::LowererBase::LowererBase(Module &M)
 CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
                                            Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
-  auto *Fn =
-      Intrinsic::getOrInsertDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
+  auto *Fn = Intrinsic::getOrInsertDeclaration(
+      &TheModule, Intrinsic::coro_subfn_addr, {Arg->getType()});
 
   assert(Index >= CoroSubFnInst::IndexFirst &&
          Index < CoroSubFnInst::IndexLast &&
@@ -177,7 +177,8 @@ void coro::suppressCoroAllocs(LLVMContext &Context,
 static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
                                     CoroSuspendInst *SuspendInst) {
   Module *M = SuspendInst->getModule();
-  auto *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::coro_save);
+  auto *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::coro_save,
+                                               {CoroBegin->getType()});
   auto *SaveInst = cast<CoroSaveInst>(
       CallInst::Create(Fn, CoroBegin, "", SuspendInst->getIterator()));
   assert(!SuspendInst->getCoroSave());

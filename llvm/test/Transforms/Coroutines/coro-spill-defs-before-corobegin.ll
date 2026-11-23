@@ -9,12 +9,12 @@ define ptr @f(i1 %n) presplitcoroutine personality i32 0 {
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: i1 [[N:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 32)
 ; CHECK-NEXT:    [[FLAG:%.*]] = call i1 @check(ptr [[ALLOC]])
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[FLAG]], i32 0, i32 1
 ; CHECK-NEXT:    [[VALUE_INVOKE:%.*]] = call i32 @calc()
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8

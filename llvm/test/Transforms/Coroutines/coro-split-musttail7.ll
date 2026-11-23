@@ -47,7 +47,7 @@ exit:
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
 ; CHECK:         %[[FRAME:[0-9]+]] = call ptr @await_suspend_function(ptr null, ptr null)
-; CHECK:         %[[RESUMEADDR:[0-9]+]] = call ptr @llvm.coro.subfn.addr(ptr %[[FRAME]], i8 0)
+; CHECK:         %[[RESUMEADDR:[0-9]+]] = call ptr @llvm.coro.subfn.addr.p0(ptr %[[FRAME]], i8 0)
 ; CHECK:         musttail call void %[[RESUMEADDR]](ptr %[[FRAME]])
 ; CHECK-NEXT:    ret void
 
@@ -97,7 +97,7 @@ exit:
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
 ; CHECK:         %[[FRAME:[0-9]+]] = call ptr @await_suspend_function(ptr null, ptr null)
-; CHECK:         %[[RESUMEADDR:[0-9]+]] = call ptr @llvm.coro.subfn.addr(ptr %[[FRAME]], i8 0)
+; CHECK:         %[[RESUMEADDR:[0-9]+]] = call ptr @llvm.coro.subfn.addr.p0(ptr %[[FRAME]], i8 0)
 ; CHECK:         musttail call void %[[RESUMEADDR]](ptr %[[FRAME]])
 ; CHECK-NEXT:    ret void
 

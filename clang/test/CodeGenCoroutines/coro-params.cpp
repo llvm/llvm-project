@@ -78,14 +78,16 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
   // CHECK: %[[TrivialCopy:.+]] = alloca %struct.TrivialABI,
   // CHECK: store i32 %val, ptr %[[ValAddr:.+]]
 
-  // CHECK: call ptr @llvm.coro.begin(
-  // CHECK: call void @_ZN8MoveOnlyC1EOS_(ptr {{[^,]*}} %[[MoCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[MoParam]])
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(ptr {{[^,]*}} %[[McCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[McParam]]) #
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: call void @_ZN10TrivialABIC1EOS_(ptr {{[^,]*}} %[[TrivialCopy]], ptr {{[^,]*}} %[[TrivialAlloca]])
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: invoke void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeC1Ev(
+  // CHECK: call ptr @llvm.coro.begin.p0(
+  // CHECK: call void @_ZN8MoveOnlyC1EOS_(ptr {{[^,]*}} %[[MoCopy]], ptr noundef
+  // nonnull align 4 dereferenceable(4) %[[MoParam]]) CHECK-NEXT: call void
+  // @llvm.lifetime.start.p0( CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(ptr
+  // {{[^,]*}} %[[McCopy]], ptr noundef nonnull align 4 dereferenceable(4)
+  // %[[McParam]]) # CHECK-NEXT: call void @llvm.lifetime.start.p0( CHECK-NEXT:
+  // call void @_ZN10TrivialABIC1EOS_(ptr {{[^,]*}} %[[TrivialCopy]], ptr
+  // {{[^,]*}} %[[TrivialAlloca]]) CHECK-NEXT: call void
+  // @llvm.lifetime.start.p0( CHECK-NEXT: invoke void
+  // @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeC1Ev(
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
   // CHECK: %[[IntParam:.+]] = load i32, ptr %{{.*}}
@@ -105,8 +107,9 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
 
   // Destroy promise, then parameter copies:
-  // CHECK: call void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeD1Ev(ptr {{[^,]*}} %__promise)
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(
+  // CHECK: call void
+  // @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeD1Ev(ptr
+  // {{[^,]*}} %__promise) CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @_ZN10TrivialABID1Ev(ptr {{[^,]*}} %[[TrivialCopy]])
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @_ZN11MoveAndCopyD1Ev(ptr {{[^,]*}} %[[McCopy]])
@@ -114,11 +117,11 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
   // CHECK-NEXT: call void @_ZN8MoveOnlyD1Ev(ptr {{[^,]*}} %[[MoCopy]]
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(
-  // CHECK-NEXT: call ptr @llvm.coro.free(
+  // CHECK-NEXT: call ptr @llvm.coro.free.p0(
 
-  // The original trivial_abi parameter is destroyed when returning from the ramp.
-  // CHECK: call void @llvm.coro.end
-  // CHECK: call void @_ZN10TrivialABID1Ev(ptr {{[^,]*}} %[[TrivialAlloca]])
+  // The original trivial_abi parameter is destroyed when returning from the
+  // ramp. CHECK: call void @llvm.coro.end.p0 CHECK: call void
+  // @_ZN10TrivialABID1Ev(ptr {{[^,]*}} %[[TrivialAlloca]])
 }
 
 // CHECK-LABEL: void @_Z16dependent_paramsI1A1BEvT_T0_S3_(ptr nofreeobj noundef align 4 dereferenceable(512) %x, ptr nofreeobj noundef align 4 dereferenceable(512) %0, ptr nofreeobj noundef align 4 dereferenceable(512) %y)
@@ -128,15 +131,17 @@ void dependent_params(T x, U, U y) {
   // CHECK-NEXT: %[[unnamed_copy:.+]] = alloca %struct.B
   // CHECK-NEXT: %[[y_copy:.+]] = alloca %struct.B
 
-  // CHECK: call ptr @llvm.coro.begin
+  // CHECK: call ptr @llvm.coro.begin.p0
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: call void @_ZN1AC1EOS_(ptr {{[^,]*}} %[[x_copy]], ptr noundef nonnull align 4 dereferenceable(512) %x)
+  // CHECK-NEXT: call void @_ZN1AC1EOS_(ptr {{[^,]*}} %[[x_copy]], ptr noundef
+  // nonnull align 4 dereferenceable(512) %x) CHECK-NEXT: call void
+  // @llvm.lifetime.start.p0( CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}}
+  // %[[unnamed_copy]], ptr noundef nonnull align 4 dereferenceable(512) %0)
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}} %[[unnamed_copy]], ptr noundef nonnull align 4 dereferenceable(512) %0)
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}} %[[y_copy]], ptr noundef nonnull align 4 dereferenceable(512) %y)
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: invoke void @_ZNSt16coroutine_traitsIJv1A1BS1_EE12promise_typeC1Ev(
+  // CHECK-NEXT: call void @_ZN1BC1EOS_(ptr {{[^,]*}} %[[y_copy]], ptr noundef
+  // nonnull align 4 dereferenceable(512) %y) CHECK-NEXT: call void
+  // @llvm.lifetime.start.p0( CHECK-NEXT: invoke void
+  // @_ZNSt16coroutine_traitsIJv1A1BS1_EE12promise_typeC1Ev(
 
   co_return;
 }

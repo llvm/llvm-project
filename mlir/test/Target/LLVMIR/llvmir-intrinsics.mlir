@@ -922,7 +922,7 @@ llvm.func @coro_id() {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %c = llvm.mlir.constant(16 : i64) : i64
   %a = llvm.alloca %c x i8 : (i64) -> !llvm.ptr
-  // CHECK: call token @llvm.coro.id
+  // CHECK: call token @llvm.coro.id.p0
   %null = llvm.mlir.zero : !llvm.ptr
   llvm.intr.coro.id %zero, %a, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   llvm.return
@@ -933,7 +933,7 @@ llvm.func @coro_begin(%arg0: !llvm.ptr) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
-  // CHECK: call ptr @llvm.coro.begin
+  // CHECK: call ptr @llvm.coro.begin.p0
   llvm.intr.coro.begin %token, %arg0 : (token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
@@ -942,7 +942,7 @@ llvm.func @coro_begin(%arg0: !llvm.ptr) {
 llvm.func @coro_alloc() {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
-  // CHECK: %[[ID:.*]] = call token @llvm.coro.id
+  // CHECK: %[[ID:.*]] = call token @llvm.coro.id.p0
   %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   // CHECK: call i1 @llvm.coro.alloc(token %[[ID]])
   %0 = llvm.intr.coro.alloc %token : (token) -> i1
@@ -969,7 +969,7 @@ llvm.func @coro_align() {
 
 // CHECK-LABEL: @coro_save
 llvm.func @coro_save(%arg0: !llvm.ptr) {
-  // CHECK: call token @llvm.coro.save
+  // CHECK: call token @llvm.coro.save.p0
   %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr) -> token
   llvm.return
 }
@@ -987,7 +987,7 @@ llvm.func @coro_suspend(%arg0 : i1) {
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr) {
   %none = llvm.mlir.none : token
-  // CHECK: call void @llvm.coro.end
+  // CHECK: call void @llvm.coro.end.p0
   %zero = llvm.mlir.constant(0 : i1) : i1
   llvm.intr.coro.end %arg0, %zero, %none : (!llvm.ptr, i1, token) -> !llvm.void
   llvm.return
@@ -998,49 +998,49 @@ llvm.func @coro_free(%arg0 : !llvm.ptr) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
-  // CHECK: call ptr @llvm.coro.free
+  // CHECK: call ptr @llvm.coro.free.p0
   %0 = llvm.intr.coro.free %token, %arg0 : (token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_resume
 llvm.func @coro_resume(%arg0: !llvm.ptr) {
-  // CHECK: call void @llvm.coro.resume
+  // CHECK: call void @llvm.coro.resume.p0
   llvm.intr.coro.resume %arg0 : !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_promise
 llvm.func @coro_promise(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : i1) {
-  // CHECK: call ptr @llvm.coro.promise
+  // CHECK: call ptr @llvm.coro.promise.p0
   %0 = llvm.intr.coro.promise %arg0, %arg1, %arg2 : (!llvm.ptr, i32, i1) -> !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_frame
 llvm.func @coro_frame() {
-  // CHECK: call ptr @llvm.coro.frame
+  // CHECK: call ptr @llvm.coro.frame.p0
   %0 = llvm.intr.coro.frame : !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_noop
 llvm.func @coro_noop() {
-  // CHECK: call ptr @llvm.coro.noop
+  // CHECK: call ptr @llvm.coro.noop.p0
   %0 = llvm.intr.coro.noop : !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_destroy
 llvm.func @coro_destroy(%arg0: !llvm.ptr) {
-  // CHECK: call void @llvm.coro.destroy
+  // CHECK: call void @llvm.coro.destroy.p0
   llvm.intr.coro.destroy %arg0 : !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_done
 llvm.func @coro_done(%arg0: !llvm.ptr) {
-  // CHECK: call i1 @llvm.coro.done
+  // CHECK: call i1 @llvm.coro.done.p0
   %0 = llvm.intr.coro.done %arg0 : (!llvm.ptr) -> i1
   llvm.return
 }
@@ -1054,7 +1054,7 @@ llvm.func @coro_is_in_ramp() {
 
 // CHECK-LABEL: @coro_dead
 llvm.func @coro_dead(%arg0: !llvm.ptr) {
-  // CHECK: call void @llvm.coro.dead
+  // CHECK: call void @llvm.coro.dead.p0
   llvm.intr.coro.dead %arg0 : !llvm.ptr
   llvm.return
 }
@@ -1065,7 +1065,7 @@ llvm.func @coro_dead(%arg0: !llvm.ptr) {
 // CHECK-SAME:  ptr %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
 llvm.func @coro_await_suspend_void(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
                                    %arg2: !llvm.ptr) {
-  // CHECK: call void @llvm.coro.await.suspend.void(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
+  // CHECK: call void @llvm.coro.await.suspend.void.p0.p0(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
   llvm.intr.coro.await.suspend.void %arg0, %arg1, %arg2
     : !llvm.ptr, !llvm.ptr, !llvm.ptr
   llvm.return
@@ -1077,7 +1077,7 @@ llvm.func @coro_await_suspend_void(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
 // CHECK-SAME:  ptr %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
 llvm.func @coro_await_suspend_bool(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
                                    %arg2: !llvm.ptr) {
-  // CHECK: call i1 @llvm.coro.await.suspend.bool(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
+  // CHECK: call i1 @llvm.coro.await.suspend.bool.p0.p0(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
   %0 = llvm.intr.coro.await.suspend.bool %arg0, %arg1, %arg2
     : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i1
   llvm.return
@@ -1089,7 +1089,7 @@ llvm.func @coro_await_suspend_bool(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
 // CHECK-SAME:  ptr %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
 llvm.func @coro_await_suspend_handle(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
                                      %arg2: !llvm.ptr) {
-  // CHECK: call void @llvm.coro.await.suspend.handle(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
+  // CHECK: call void @llvm.coro.await.suspend.handle.p0.p0(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
   llvm.intr.coro.await.suspend.handle %arg0, %arg1, %arg2
     : !llvm.ptr, !llvm.ptr, !llvm.ptr
   llvm.return
@@ -2156,26 +2156,26 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare i32 @llvm.expect.i32(i32, i32)
 // CHECK-DAG: declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
 // CHECK-DAG: declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
-// CHECK-DAG: declare token @llvm.coro.id(i32, ptr readnone, ptr readonly captures(none), ptr)
-// CHECK-DAG: declare ptr @llvm.coro.begin(token, ptr writeonly)
+// CHECK-DAG: declare token @llvm.coro.id.p0(i32, ptr readnone, ptr readonly captures(none), ptr)
+// CHECK-DAG: declare ptr @llvm.coro.begin.p0(token, ptr writeonly)
 // CHECK-DAG: declare i1 @llvm.coro.alloc(token)
 // CHECK-DAG: declare i64 @llvm.coro.size.i64()
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
-// CHECK-DAG: declare token @llvm.coro.save(ptr)
+// CHECK-DAG: declare token @llvm.coro.save.p0(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare void @llvm.coro.end(ptr, i1 immarg, token)
-// CHECK-DAG: declare ptr @llvm.coro.free(token, ptr readonly captures(none))
-// CHECK-DAG: declare void @llvm.coro.resume(ptr)
-// CHECK-DAG: declare ptr @llvm.coro.promise(ptr captures(none), i32, i1)
-// CHECK-DAG: declare ptr @llvm.coro.frame()
-// CHECK-DAG: declare ptr @llvm.coro.noop()
-// CHECK-DAG: declare void @llvm.coro.destroy(ptr)
-// CHECK-DAG: declare i1 @llvm.coro.done(ptr readonly captures(none))
+// CHECK-DAG: declare void @llvm.coro.end.p0(ptr, i1 immarg, token)
+// CHECK-DAG: declare ptr @llvm.coro.free.p0(token, ptr readonly captures(none))
+// CHECK-DAG: declare void @llvm.coro.resume.p0(ptr)
+// CHECK-DAG: declare ptr @llvm.coro.promise.p0(ptr captures(none), i32, i1)
+// CHECK-DAG: declare ptr @llvm.coro.frame.p0()
+// CHECK-DAG: declare ptr @llvm.coro.noop.p0()
+// CHECK-DAG: declare void @llvm.coro.destroy.p0(ptr)
+// CHECK-DAG: declare i1 @llvm.coro.done.p0(ptr readonly captures(none))
 // CHECK-DAG: declare i1 @llvm.coro.is_in_ramp()
-// CHECK-DAG: declare void @llvm.coro.dead(ptr)
-// CHECK-DAG: declare void @llvm.coro.await.suspend.void(ptr, ptr, ptr)
-// CHECK-DAG: declare i1 @llvm.coro.await.suspend.bool(ptr, ptr, ptr)
-// CHECK-DAG: declare void @llvm.coro.await.suspend.handle(ptr, ptr, ptr)
+// CHECK-DAG: declare void @llvm.coro.dead.p0(ptr)
+// CHECK-DAG: declare void @llvm.coro.await.suspend.void.p0.p0(ptr, ptr, ptr)
+// CHECK-DAG: declare i1 @llvm.coro.await.suspend.bool.p0.p0(ptr, ptr, ptr)
+// CHECK-DAG: declare void @llvm.coro.await.suspend.handle.p0.p0(ptr, ptr, ptr)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.sdiv.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.udiv.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.srem.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)

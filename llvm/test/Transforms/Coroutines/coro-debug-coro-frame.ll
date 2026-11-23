@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: define void @f(
 ; CHECK:       coro.init:
-; CHECK:        %[[begin:.*]] = call noalias nonnull ptr @llvm.coro.begin(
+; CHECK:        %[[begin:.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(
 ; CHECK:        #dbg_declare(ptr %[[begin]], ![[CORO_FRAME:[0-9]+]], !DIExpression(),
 ;
 ; CHECK:       define internal void @f.resume(

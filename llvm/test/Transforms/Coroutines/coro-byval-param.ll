@@ -17,7 +17,7 @@ define ptr @foo(ptr nocapture readonly byval(%struct.A) align 8 %a1) #0 !prof !0
 ; CHECK-LABEL: define ptr @foo(
 ; CHECK-SAME: ptr readonly byval([[STRUCT_A:%.*]]) align 8 [[A1:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.id(i32 16, ptr nonnull null, ptr @foo, ptr @foo.resumers)
+; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.id.p0(i32 16, ptr nonnull null, ptr @foo, ptr @foo.resumers)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.coro.alloc(token [[TMP0]])
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[CORO_ALLOC:.*]], label %[[CORO_INIT:.*]]
 ; CHECK:       [[CORO_ALLOC]]:
@@ -25,7 +25,7 @@ define ptr @foo(ptr nocapture readonly byval(%struct.A) align 8 %a1) #0 !prof !0
 ; CHECK-NEXT:    br label %[[CORO_INIT]]
 ; CHECK:       [[CORO_INIT]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[CALL]], %[[CORO_ALLOC]] ], [ null, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[TMP0]], ptr [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[TMP0]], ptr [[TMP2]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], ptr @foo.destroy, ptr @foo.cleanup, !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 8
@@ -158,16 +158,16 @@ attributes #10 = { noduplicate }
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { mustprogress noinline ssp uwtable "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind memory(none) }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nobuiltin nofree allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR6:[0-9]+]] = { mustprogress noinline nounwind ssp willreturn uwtable "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
-; CHECK: attributes #[[ATTR7:[0-9]+]] = { nomerge nounwind }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nobuiltin nofree allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind ssp willreturn uwtable "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
 ; CHECK: attributes #[[ATTR8]] = { nounwind }
-; CHECK: attributes #[[ATTR9:[0-9]+]] = { nobuiltin nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
-; CHECK: attributes #[[ATTR10:[0-9]+]] = { nounwind memory(argmem: read) }
+; CHECK: attributes #[[ATTR6:[0-9]+]] = { nobuiltin nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
+; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #[[ATTR9:[0-9]+]] = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR10:[0-9]+]] = { nomerge nounwind }
+; CHECK: attributes #[[ATTR12:[0-9]+]] = { nounwind memory(argmem: read) }
 ; CHECK: attributes #[[ATTR11]] = { allocsize(0) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}

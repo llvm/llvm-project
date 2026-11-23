@@ -111,9 +111,9 @@ declare void @free(ptr)
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ) personality i32 0 !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 24)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
@@ -161,7 +161,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[TMP3:%.*]] = invoke ptr @await_suspend_wrapper_handle(ptr [[AWAITER_RELOAD_ADDR]], ptr [[HDL]])
 ; CHECK-NEXT:            to label %[[STEP2_CONTINUE:.*]] unwind label %[[PAD]]
 ; CHECK:       [[STEP2_CONTINUE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.coro.subfn.addr(ptr [[TMP3]], i8 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.coro.subfn.addr.p0(ptr [[TMP3]], i8 0)
 ; CHECK-NEXT:    musttail call void [[TMP4]](ptr [[TMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[PAD]]:
@@ -172,7 +172,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    call void @__cxa_end_catch()
 ; CHECK-NEXT:    br label %[[CLEANUP]]
 ; CHECK:       [[CLEANUP]]:
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    br label %[[COROEND]]
 ; CHECK:       [[COROEND]]:
@@ -185,7 +185,7 @@ declare void @free(ptr)
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) personality i32 0 !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
@@ -198,12 +198,12 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind memory(argmem: read) }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nomerge nounwind }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nomerge nounwind }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nounwind memory(argmem: read) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { nounwind memory(argmem: readwrite) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"function_entry_count", i64 1463}

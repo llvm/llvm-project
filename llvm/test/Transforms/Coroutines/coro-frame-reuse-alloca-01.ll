@@ -16,8 +16,8 @@ define void @a(i1 zeroext %cond) presplitcoroutine {
 ; CHECK-LABEL: define void @a(
 ; CHECK-SAME: i1 zeroext [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.id(i32 16, ptr nonnull null, ptr @a, ptr @a.resumers)
-; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[TMP0]], ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.id.p0(i32 16, ptr nonnull null, ptr @a, ptr @a.resumers)
+; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[TMP0]], ptr null)
 ; CHECK-NEXT:    store ptr @a.resume, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    store ptr @a.destroy, ptr [[DESTROY_ADDR]], align 8

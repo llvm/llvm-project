@@ -36,7 +36,7 @@ suspend:
 
 ; CHECK-LABEL: hidden{{.*}}@f(
 ; CHECK: call ptr @malloc
-; CHECK: @llvm.coro.begin(token %id, ptr %phi)
+; CHECK: @llvm.coro.begin.p0(token %id, ptr %phi)
 ; CHECK: store ptr @f.resume, ptr %hdl
 ; CHECK: %[[SEL:.+]] = select i1 %need.alloc, ptr @f.destroy, ptr @f.cleanup
 ; CHECK: store ptr %[[SEL]], ptr %destroy.addr

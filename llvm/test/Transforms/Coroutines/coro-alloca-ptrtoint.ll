@@ -10,9 +10,9 @@ define ptr @ptrtoint() presplitcoroutine {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[BUF:%.*]] = alloca [16 x i8], align 16
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 4
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @ptrtoint, ptr @ptrtoint.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @ptrtoint, ptr @ptrtoint.resumers)
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @malloc(i64 48)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[MEM]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[MEM]])
 ; CHECK-NEXT:    store ptr @ptrtoint.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @ptrtoint.destroy, ptr [[DESTROY_ADDR]], align 8
@@ -54,9 +54,9 @@ define ptr @ptrtoaddr() presplitcoroutine {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[BUF:%.*]] = alloca [16 x i8], align 16
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 4
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @ptrtoaddr, ptr @ptrtoaddr.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @ptrtoaddr, ptr @ptrtoaddr.resumers)
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @malloc(i64 48)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[MEM]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[MEM]])
 ; CHECK-NEXT:    store ptr @ptrtoaddr.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @ptrtoaddr.destroy, ptr [[DESTROY_ADDR]], align 8

@@ -27,10 +27,10 @@ public:
         // CHECK-NOT: llvm.fake.use
 
         // CHECK:      coro.ret:
-        // CHECK-NEXT: call void @llvm.coro.end(
+        // CHECK-NEXT: call void @llvm.coro.end.p0(
         // CHECK-NEXT: %[[THIS_FAKE_USE:.+]] = load ptr, ptr %[[THIS_ADDR]]
-        // CHECK-NEXT: notail call void (...) @llvm.fake.use(ptr %[[THIS_FAKE_USE]])
-        // CHECK-NEXT: ret void
+        // CHECK-NEXT: notail call void (...) @llvm.fake.use(ptr
+        // %[[THIS_FAKE_USE]]) CHECK-NEXT: ret void
         if (b) {
             co_await std::suspend_always{};
         }

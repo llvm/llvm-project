@@ -42,7 +42,7 @@ entry:
 ; CHECK-LABEL: define ptr @f()
 ; CHECK-SAME: !prof [[PROF1:![0-9]+]] !func_sanitize !{{[0-9]+}} {
 ; CHECK: call ptr @malloc
-; CHECK: @llvm.coro.begin(token %id, ptr %phi)
+; CHECK: @llvm.coro.begin.p0(token %id, ptr %phi)
 ; CHECK: store ptr @f.resume, ptr %hdl
 ; CHECK: %[[SEL:.+]] = select i1 %need.alloc, ptr @f.destroy, ptr @f.cleanup, !prof [[PROF2:![0-9]+]]
 ; CHECK: store ptr %[[SEL]], ptr %destroy.addr

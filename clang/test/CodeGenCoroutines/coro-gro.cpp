@@ -82,13 +82,13 @@ int f() {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %[[CoroGro]])
   // CHECK-NEXT: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeD1Ev(
   // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %[[Promise]])
-  // CHECK-NEXT: %[[Mem:.+]] = call ptr @llvm.coro.free(
+  // CHECK-NEXT: %[[Mem:.+]] = call ptr @llvm.coro.free.p0(
 
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK-NEXT: call void @_ZdlPvm(ptr allocptr noundef %[[Mem]], i64 noundef %[[SIZE]])
 
   // CHECK: [[CoroRet]]:
-  // CHECK-NEXT: call void @llvm.coro.end(
+  // CHECK-NEXT: call void @llvm.coro.end.p0(
   // CHECK-NEXT: %[[LoadRet:.+]] = load i32, ptr %[[RetVal]]
   // CHECK-NEXT: ret i32 %[[LoadRet]]
 }
@@ -122,7 +122,7 @@ invoker g() {
 
   // CHECK: store ptr %[[AggRes]], ptr %[[ResultPtr]]
   // CHECK: coro.init:
-  // CHECK: = call ptr @llvm.coro.begin
+  // CHECK: = call ptr @llvm.coro.begin.p0
 
   // CHECK: store i1 false, ptr %[[RESULT_ACTIVE]]
   // CHECK-NEXT: call void @_ZN7invoker15invoker_promise17get_return_objectEv({{.*}} %[[AggRes]]
@@ -132,7 +132,7 @@ invoker g() {
 
   throw 0;
   // Test that GRO is destructed in EHCleanup
-  // CHECK: call void @llvm.coro.end(ptr null, i1 true, token none)
+  // CHECK: call void @llvm.coro.end.p0(ptr null, i1 true, token none)
   // CHECK-NEXT: call i1 @llvm.coro.is_in_ramp()
   // CHECK-NEXT: br i1 {{.*}}, label %[[CLEANUP_CONT:.+]], label %eh.resume
 

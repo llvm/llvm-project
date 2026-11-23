@@ -120,11 +120,11 @@ entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
 
-; CHECK: call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+; CHECK: call ptr @llvm.coro.subfn.addr.p0(ptr %hdl, i8 0)
   %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
   call fastcc void %0(ptr %hdl)
 
-; CHECK: call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+; CHECK: call ptr @llvm.coro.subfn.addr.p0(ptr %hdl, i8 1)
   %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
   call fastcc void %1(ptr %hdl)
 
@@ -137,11 +137,11 @@ entry:
 define void @no_devirt_no_begin(ptr %hdl) {
 entry:
 
-; CHECK: call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+; CHECK: call ptr @llvm.coro.subfn.addr.p0(ptr %hdl, i8 0)
   %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
   call fastcc void %0(ptr %hdl)
 
-; CHECK: call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+; CHECK: call ptr @llvm.coro.subfn.addr.p0(ptr %hdl, i8 1)
   %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
   call fastcc void %1(ptr %hdl)
 
