@@ -199,6 +199,17 @@ cir.global external @vec_a = #cir.zero : !cir.vector<0 x !s32i>
 
 // -----
 
+!s24i_bitint = !cir.int<s, 24, bitint>
+
+module  {
+
+// expected-error @below {{a _BitInt vector element type must have a power-of-2 width, got '!cir.int<s, 24, bitint>'}}
+cir.global external @vec_bitint = #cir.zero : !cir.vector<4 x !s24i_bitint>
+
+}
+
+// -----
+
 !s32i = !cir.int<s, 32>
 
 module {
