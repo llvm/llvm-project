@@ -8,6 +8,8 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Support/Error.h"
@@ -659,4 +661,39 @@ TEST(CPlusPlusLanguage, FormatterLanguages) {
   EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC).empty());
   EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC_plus_plus)
                   .empty());
+}
+
+TEST(CPlusPlusLanguage, IsCategoryApplicable) {
+  CPlusPlusLanguage language;
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC89, lldb::eLanguageTypeC, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC_plus_plus})
+    EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                              c_or_cplusplus));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                             lldb::eLanguageTypeObjC));
+
+  // A category for a specific version of C++ only applies to its own values.
+  EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                            lldb::eLanguageTypeC_plus_plus_11));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                             lldb::eLanguageTypeC_plus_plus));
+}
+
+TEST(CPlusPlusLanguage, ExpressionOptions) {
+  std::unique_ptr<OptionGroupLanguageExpression> options =
+      CPlusPlusLanguage().CreateExpressionOptions();
+  ASSERT_TRUE(options);
+  llvm::ArrayRef<OptionDefinition> definitions = options->GetDefinitions();
+  ASSERT_EQ(definitions.size(), 1u);
+  EXPECT_STREQ(definitions[0].long_option, "c++-ignore-context-qualifiers");
+
+  EvaluateExpressionOptions expression_options;
+  options->OptionParsingStarting(nullptr);
+  options->Apply(expression_options);
+  EXPECT_FALSE(expression_options.GetCppIgnoreContextQualifiers());
+
+  ASSERT_TRUE(options->SetOptionValue(0, "", nullptr).Success());
+  options->Apply(expression_options);
+  EXPECT_TRUE(expression_options.GetCppIgnoreContextQualifiers());
 }

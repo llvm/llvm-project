@@ -11212,6 +11212,7 @@ def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 def note_lifetime_safety_escapes_to_param_here: Note<"escapes to this parameter">;
+def note_lifetime_safety_escapes_to_object_here: Note<"escapes to the object">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<

@@ -957,6 +957,14 @@ public:
     return cir::CmpOp::create(*this, loc, kind, lhs, rhs, fenv);
   }
 
+  cir::FCmpOp createFCompare(mlir::Location loc, cir::FCmpOpKind kind,
+                             mlir::Value lhs, mlir::Value rhs,
+                             bool signaling = false) {
+    cir::FenvAttr fenv;
+    fenv = getConstrainedFPAttr();
+    return cir::FCmpOp::create(*this, loc, kind, lhs, rhs, signaling, fenv);
+  }
+
   /// Compares \p lhs and \p rhs element-wise.  Each result element is a
   /// signed integer of the operand element's bit width.
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
@@ -1020,7 +1028,7 @@ public:
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
-    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
+    return createFCompare(loc, cir::FCmpOpKind::uno, operand, operand);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

@@ -193,7 +193,7 @@ std::optional<int> RegisterContextFreeBSDKernelCore_arm64::GetOsreldate() {
   Target &target = process_sp->GetTarget();
 
   SymbolContextList sc_list;
-  target.GetImages().FindSymbolsWithNameAndType(ConstString("osreldate"),
+  target.GetImages().FindSymbolsWithNameAndType("osreldate",
                                                 lldb::eSymbolTypeData, sc_list);
   if (sc_list.GetSize() == 0)
     return std::nullopt;

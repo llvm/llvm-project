@@ -1734,7 +1734,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     newOp = ForallOp::create(rewriter, loc, newMixedLowerBounds,
                              newMixedUpperBounds, newMixedSteps,
                              op.getOutputs(), std::nullopt, nullptr);
-    newOp.getBodyRegion().getBlocks().clear();
+    rewriter.eraseBlock(newOp.getBody());
     newOp.setMappingAttr(op.getMappingAttr());
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),

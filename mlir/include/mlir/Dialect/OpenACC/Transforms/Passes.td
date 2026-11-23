@@ -37,7 +37,8 @@ def AccTheDeviceTypesOption : ListOption<"theDeviceTypes", "the-device-types",
 // Pass definitions
 //===----------------------------------------------------------------------===//
 
-def LegalizeDataValuesInRegion : Pass<"openacc-legalize-data-values", "mlir::func::FuncOp"> {
+def LegalizeDataValuesInRegion
+    : InterfacePass<"openacc-legalize-data-values", "mlir::FunctionOpInterface"> {
   let summary = "Legalizes SSA values in compute regions with results from data clause operations";
   let description = [{
     This pass replace uses of the `varPtr` in compute regions (kernels,
@@ -521,7 +522,8 @@ def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"
   ];
 }
 
-def ACCComputeLowering : Pass<"acc-compute-lowering", "mlir::func::FuncOp"> {
+def ACCComputeLowering
+    : InterfacePass<"acc-compute-lowering", "mlir::FunctionOpInterface"> {
   let summary = "Lower ACC compute constructs to acc.compute_region";
   let description = [{
     Converts ACC frontend compute constructs (`acc.parallel`, `acc.kernels`,
