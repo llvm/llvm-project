@@ -105,3 +105,17 @@ define <2 x i64> @f8(<2 x i64> %val1, <2 x i64> %val2, <2 x i64> %val3) {
   %ret = or <2 x i64> %and1, %and2
   ret <2 x i64> %ret
 }
+
+; Test the inverted form: ~((X & Z) | (Y & ~Z)).
+define <16 x i8> @f9(<16 x i8> %val1, <16 x i8> %val2, <16 x i8> %val3) {
+; CHECK-LABEL: f9:
+; CHECK: vsel [[REG:%v[0-9]+]], %v24, %v26, %v28
+; CHECK: vno %v24, [[REG]], [[REG]]
+; CHECK: br %r14
+  %not = xor <16 x i8> %val3, splat (i8 -1)
+  %and1 = and <16 x i8> %val1, %val3
+  %and2 = and <16 x i8> %val2, %not
+  %or = or <16 x i8> %and1, %and2
+  %ret = xor <16 x i8> %or, splat (i8 -1)
+  ret <16 x i8> %ret
+}

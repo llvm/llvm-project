@@ -1098,6 +1098,10 @@ multiclass BitwiseVectorOps<ValueType type, SDPatternOperator not_op> {
     def : Pat<(type (or (and VR128:$x, VR128:$z),
                         (and VR128:$y, (not_op VR128:$z)))),
               (VSEL VR128:$x, VR128:$y, VR128:$z)>;
+    def : Pat<(type (not_op (or (and VR128:$x, VR128:$z),
+                                (and VR128:$y, (not_op VR128:$z))))),
+              (VNO (VSEL VR128:$x, VR128:$y, VR128:$z),
+                   (VSEL VR128:$x, VR128:$y, VR128:$z))>;
     def : Pat<(type (not_op (or VR128:$x, VR128:$y))),
               (VNO VR128:$x, VR128:$y)>;
     def : Pat<(type (not_op VR128:$x)), (VNO VR128:$x, VR128:$x)>;
@@ -1167,34 +1171,12 @@ multiclass BitwiseVectorOps<ValueType type, SDPatternOperator not_op> {
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 46)>;
     def : Pat<(type (or VR128:$x, (and VR128:$y, (not_op VR128:$z)))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 47)>;
-    def : Pat<(type (xor (and VR128:$x, VR128:$y), (and VR128:$x, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 6)>;
-    def : Pat<(type (xor VR128:$y, (and VR128:$x, (xor VR128:$y, VR128:$z)))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 53)>;
-    def : Pat<(type (xor (and (not_op VR128:$x), VR128:$y), (and VR128:$x, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 53)>;
-    def : Pat<(type (or (and (not_op VR128:$x), VR128:$y), (and VR128:$x, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 53)>;
     def : Pat<(type (or (xor VR128:$x, VR128:$y), (and VR128:$x, VR128:$z))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 61)>;
-    def : Pat<(type (xor VR128:$z, (and VR128:$x, (xor VR128:$y, VR128:$z)))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 83)>;
-    def : Pat<(type (xor (and VR128:$x, VR128:$y), (and (not_op VR128:$x), VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 83)>;
-    def : Pat<(type (xor (or VR128:$x, VR128:$y), (or VR128:$x, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 96)>;
-    def : Pat<(type (and (not_op VR128:$x), (xor VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 96)>;
-    def : Pat<(type (and (not_op VR128:$x), (or VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 112)>;
-    def : Pat<(type (and (not_op VR128:$x), (and VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 16)>;
-    def : Pat<(type (xor VR128:$x, (or VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 120)>;
-    def : Pat<(type (xor (not_op VR128:$x), (or VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 135)>;
     def : Pat<(type (or (xor VR128:$x, VR128:$y), (and VR128:$x, (not_op VR128:$z)))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 62)>;
+    def : Pat<(type (xor (or VR128:$x, VR128:$y), (or VR128:$x, VR128:$z))),
+              (VEVAL VR128:$x, VR128:$y, VR128:$z, 96)>;
     def : Pat<(type (xor (or VR128:$x, VR128:$y), (or VR128:$z, (and VR128:$x, VR128:$y)))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 104)>;
     def : Pat<(type (xor VR128:$x, (xor VR128:$y, VR128:$z))),
@@ -1255,12 +1237,9 @@ multiclass BitwiseVectorOps<ValueType type, SDPatternOperator not_op> {
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 171)>;
     def : Pat<(type (and (not_op (and VR128:$x, VR128:$y)), (or VR128:$x, (not_op VR128:$z)))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 172)>;
-    def : Pat<(type (not_op (xor VR128:$z, (and VR128:$x, (xor VR128:$y, VR128:$z))))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 172)>;
-    def : Pat<(type (not_op (xor (and VR128:$x, VR128:$y), (and (not_op VR128:$x), VR128:$z)))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 172)>;
-    def : Pat<(type (xor (not_op VR128:$x), (and VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 225)>;
+    def : Pat<(type (not_op (or (and VR128:$x, VR128:$z),
+                                (and VR128:$y, (not_op VR128:$z))))),
+              (VEVAL VR128:$z, VR128:$x, VR128:$y, 172)>;
     def : Pat<(type (not_op (and (xor VR128:$x, VR128:$z), (or VR128:$y, VR128:$z)))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 173)>;
     def : Pat<(type (or (not_op VR128:$z), (and VR128:$x, (not_op VR128:$y)))),
@@ -1277,14 +1256,6 @@ multiclass BitwiseVectorOps<ValueType type, SDPatternOperator not_op> {
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 232)>;
     def : Pat<(type (not_op (or (and VR128:$x, VR128:$y), (and VR128:$z, (xor VR128:$x, VR128:$y))))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 232)>;
-    def : Pat<(type (not_op (or (and VR128:$x, VR128:$y), (or (and VR128:$x, VR128:$z), (and VR128:$y, VR128:$z))))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 232)>;
-    def : Pat<(type (or (not_op VR128:$x), (and VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 241)>;
-    def : Pat<(type (or (not_op VR128:$x), (xor VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 246)>;
-    def : Pat<(type (or (not_op VR128:$x), (or VR128:$y, VR128:$z))),
-              (VEVAL VR128:$x, VR128:$y, VR128:$z, 247)>;
     def : Pat<(type (xor (not_op (and VR128:$x, VR128:$y)), (and VR128:$z, (or VR128:$x, VR128:$y)))),
               (VEVAL VR128:$x, VR128:$y, VR128:$z, 233)>;
     def : Pat<(type (not_op (and VR128:$z, (or VR128:$x, VR128:$y)))),
