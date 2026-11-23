@@ -6329,26 +6329,23 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
             (UserR->getParent() == Middle && AllowMiddle));
   };
 
-  for (auto &R : make_early_inc_range(*Entry)) {
-    auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpandSCEV)
+  for (VPExpandSCEVRecipe &ExpandSCEV :
+       make_early_inc_range(make_isa_range<VPExpandSCEVRecipe>(*Entry))) {
+    if (!any_of(ExpandSCEV.users(), IsGuardedUser))
       continue;
 
-    if (!any_of(ExpandSCEV->users(), IsGuardedUser))
-      continue;
-
-    const SCEV *S = ExpandSCEV->getSCEV();
+    const SCEV *S = ExpandSCEV.getSCEV();
     const SCEV *NewS =
         SE->rewriteUsingPredicate(S, CostCtx.L, StridePredicates);
     if (NewS == S)
       continue;
 
     VPValue *NewV = VecPreHeaderExpander.expand(NewS);
-    ExpandSCEV->replaceUsesWithIf(NewV, IsGuardedUser);
+    ExpandSCEV.replaceUsesWithIf(NewV, IsGuardedUser);
 
     // Keep the original recipe if it has remaining uses.
-    if (ExpandSCEV != Plan.getTripCount() && ExpandSCEV->user_empty())
-      ExpandSCEV->eraseFromParent();
+    if (&ExpandSCEV != Plan.getTripCount() && ExpandSCEV.user_empty())
+      ExpandSCEV.eraseFromParent();
   }
 }
 
