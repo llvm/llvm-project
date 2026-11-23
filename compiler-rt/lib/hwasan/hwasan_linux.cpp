@@ -164,7 +164,7 @@ static bool CanUseTaggingAbi() {
 #  else
   // Check for ARM TBI support.
   return !internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0));
-#  endif // __x86_64__
+#  endif  // __x86_64__
 }
 
 static bool EnableTaggingAbi() {
