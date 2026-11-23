@@ -104,20 +104,10 @@ Defined *SymbolTable::addDefined(CachedHashStringRef hashedName,
                                  uint64_t value, uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
-                                 bool isWeakDefCanBeHidden, bool isCold,
-                                 Symbol *known) {
+                                 bool isWeakDefCanBeHidden, bool isCold) {
   StringRef name = hashedName.val();
-  Symbol *s;
-  bool wasInserted;
-  if (known) {
-    s = known;
-    s->isUsedInRegularObj |= !file || isa<ObjFile>(file);
-    wasInserted = false;
-  } else {
-    std::tie(s, wasInserted) = insert(hashedName, file);
-  }
-  bool overridesWeakDef =
-      !wasInserted && !isWeakDef && s->pendingOverridesWeakDef;
+  bool overridesWeakDef = false;
+  auto [s, wasInserted] = insert(hashedName, file);
 
   assert(!file || !isa<BitcodeFile>(file) || !isec);
 
@@ -167,7 +157,7 @@ Defined *SymbolTable::addDefined(CachedHashStringRef hashedName,
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
-      overridesWeakDef |= !isWeakDef && dysym->isWeakDef();
+      overridesWeakDef = !isWeakDef && dysym->isWeakDef();
       dysym->unreference();
     } else if (auto *undef = dyn_cast<Undefined>(s)) {
       if (undef->wasBitcodeSymbol) {
@@ -248,16 +238,11 @@ Symbol *SymbolTable::addUndefined(CachedHashStringRef name, InputFile *file,
   if (wasInserted)
     replaceSymbol<Undefined>(s, name.val(), file, refState,
                              /*wasBitcodeSymbol=*/false);
-  else if (auto *lazy = dyn_cast<LazyArchive>(s)) {
-    if (!s->hasPendingDefinition)
-      lazy->fetchArchiveMember();
-  } else if (isa<LazyObject>(s)) {
-    if (!s->hasPendingDefinition) {
-      if (isa<ObjFile>(s->getFile()))
-        s->hasPendingDefinition = true;
-      extract(*s->getFile(), s->getName());
-    }
-  } else if (auto *dynsym = dyn_cast<DylibSymbol>(s))
+  else if (auto *lazy = dyn_cast<LazyArchive>(s))
+    lazy->fetchArchiveMember();
+  else if (isa<LazyObject>(s))
+    extract(*s->getFile(), s->getName());
+  else if (auto *dynsym = dyn_cast<DylibSymbol>(s))
     dynsym->reference(refState);
   else if (auto *undefined = dyn_cast<Undefined>(s))
     undefined->refState = std::max(undefined->refState, refState);
@@ -275,8 +260,6 @@ Symbol *SymbolTable::addCommon(CachedHashStringRef name, InputFile *file,
         return s;
     } else if (isa<Defined>(s)) {
       return s;
-    } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
-      dysym->unreference();
     }
     // Common symbols take priority over all non-Defined symbols, so in case of
     // a name conflict, we fall through to the replaceSymbol() call below.
@@ -290,16 +273,6 @@ Symbol *SymbolTable::addCommon(CachedHashStringRef name, InputFile *file,
 Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
                               bool isTlv) {
   auto [s, wasInserted] = insert(name, file);
-
-  if (!wasInserted && s->hasPendingDefinition) {
-    if (isWeakDef) {
-      if (auto *defined = dyn_cast<Defined>(s))
-        if (!defined->isWeakDef())
-          defined->overridesWeakDef = true;
-      s->pendingOverridesWeakDef = true;
-    }
-    return s;
-  }
 
   RefState refState = RefState::Unreferenced;
   if (!wasInserted) {
@@ -336,16 +309,14 @@ Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
 
   if (wasInserted) {
     replaceSymbol<LazyArchive>(s, file, sym);
-  } else if (!s->hasPendingDefinition) {
-    if (isa<Undefined>(s)) {
-      file->fetch(sym);
-    } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
-      if (dysym->isWeakDef()) {
-        if (dysym->getRefState() != RefState::Unreferenced)
-          file->fetch(sym);
-        else
-          replaceSymbol<LazyArchive>(s, file, sym);
-      }
+  } else if (isa<Undefined>(s)) {
+    file->fetch(sym);
+  } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+    if (dysym->isWeakDef()) {
+      if (dysym->getRefState() != RefState::Unreferenced)
+        file->fetch(sym);
+      else
+        replaceSymbol<LazyArchive>(s, file, sym);
     }
   }
   return s;
@@ -356,25 +327,16 @@ Symbol *SymbolTable::addLazyObject(CachedHashStringRef name, InputFile &file) {
 
   if (wasInserted) {
     replaceSymbol<LazyObject>(s, file, name.val());
-  } else if (!s->hasPendingDefinition) {
-    if (isa<Undefined>(s)) {
-      if (isa<ObjFile>(file))
-        s->hasPendingDefinition = true;
-      extract(file, name.val());
-    } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
-      if (dysym->isWeakDef()) {
-        if (dysym->getRefState() != RefState::Unreferenced) {
-          if (isa<ObjFile>(file))
-            s->hasPendingDefinition = true;
-          extract(file, name.val());
-        } else {
-          replaceSymbol<LazyObject>(s, file, name.val());
-        }
-      }
+  } else if (isa<Undefined>(s)) {
+    extract(file, name.val());
+  } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+    if (dysym->isWeakDef()) {
+      if (dysym->getRefState() != RefState::Unreferenced)
+        extract(file, name.val());
+      else
+        replaceSymbol<LazyObject>(s, file, name.val());
     }
   }
-  if (!file.lazy && isa<ObjFile>(file))
-    s->hasPendingDefinition = true;
   return s;
 }
 

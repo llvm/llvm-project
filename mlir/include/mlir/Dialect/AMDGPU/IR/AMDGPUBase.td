@@ -114,12 +114,8 @@ def AMDGPU_Dialect : Dialect {
     "arith::ArithDialect",
     "gpu::GPUDialect"
   ];
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
-  let extraClassDeclaration = [{
-    void registerAttributes();
-    void registerTypes();
-  }];
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUBASE_TD

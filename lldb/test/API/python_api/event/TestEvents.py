@@ -55,6 +55,7 @@ class EventAPITestCase(TestBase):
             False,  # Stop at entry
             error,
         )  # error
+        self.assertSuccess(error)
 
         self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
@@ -222,6 +223,7 @@ class EventAPITestCase(TestBase):
             False,  # Stop at entry
             error,
         )  # error
+        self.assertSuccess(error)
 
         # Create an empty event object.
         event = lldb.SBEvent()

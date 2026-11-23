@@ -17,6 +17,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -102,6 +103,10 @@ public:
 
 } // end anonymous namespace
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new MCTargetStreamer(S);
+}
+
 static MCInstrAnalysis *createBPFInstrAnalysis(const MCInstrInfo *Info) {
   return new BPFMCInstrAnalysis(Info);
 }
@@ -124,6 +129,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTargetMC() {
 
     // Register the object streamer
     TargetRegistry::RegisterELFStreamer(*T, createBPFMCStreamer);
+
+    TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createBPFMCInstPrinter);

@@ -116,12 +116,6 @@
 ---
 name:            add
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: vr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
   - { reg: '$v9', virtual-reg: '%1' }
@@ -154,13 +148,6 @@ body:             |
 ---
 name:            load_add
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$v8', virtual-reg: '%1' }
@@ -195,12 +182,6 @@ body:             |
 ---
 name:            load_zext
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gprnox0 }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -232,10 +213,6 @@ body:             |
 ---
 name:            vmv_x_s
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: gpr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
 frameInfo:
@@ -262,13 +239,6 @@ body:             |
 ---
 name:            add_v2i64
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -302,14 +272,6 @@ body:             |
 ---
 name:            vreduce_add_v2i64
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
-  - { id: 5, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 frameInfo:
@@ -344,13 +306,6 @@ body:             |
 ---
 name:            vsetvli_add
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: gprnox0 }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$v8', virtual-reg: '%0' }
   - { reg: '$v9', virtual-reg: '%1' }
@@ -384,13 +339,6 @@ body:             |
 ---
 name:            load_add_inlineasm
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vr }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: vr }
-  - { id: 4, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$v8', virtual-reg: '%1' }
@@ -427,7 +375,6 @@ body:             |
 ...
 ---
 name:            vmv_v_i_different_lmuls
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $v8, $x11
@@ -448,7 +395,6 @@ body:             |
 # make sure we don't try to perform PRE when one of the blocks is sew/lmul ratio
 # only
 name: pre_same_sewlmul_ratio
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: pre_same_sewlmul_ratio
   ; CHECK: bb.0:
@@ -499,7 +445,6 @@ body:             |
 ...
 ---
 name:            postpass_modify_vl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x1
@@ -521,7 +466,6 @@ body:             |
 ...
 ---
 name: coalesce_dead_avl_addi
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: coalesce_dead_avl_addi
@@ -538,7 +482,6 @@ body:             |
 ...
 ---
 name: coalesce_dead_avl_nonvolatile_load
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x1
@@ -561,7 +504,6 @@ body:             |
 ...
 ---
 name: coalesce_dead_avl_volatile_load
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x1
@@ -584,7 +526,6 @@ body:             |
 ...
 ---
 name: coalesce_shrink_removed_vsetvlis_uses
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x10, $v8
@@ -606,7 +547,6 @@ body: |
 ...
 ---
 name: coalesce_vl_avl_same_reg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x8, $v8
@@ -626,7 +566,6 @@ body: |
 # Because of the %y:gprnox0 = COPY %x, we can't extend the live range of %x from
 # the second vsetvli to the first vsetvli when coalescing.
 name: coalesce_vl_clobber
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x8, $v8
@@ -646,7 +585,6 @@ body: |
 ...
 ---
 name:            vsetvli_vleff
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: vsetvli_vleff
   ; CHECK: bb.0:
@@ -686,7 +624,6 @@ body:             |
 # The two vsetvlis will be coalesced so the ADDI will be made dead and removed.
 # Make sure we shrink the live interval of %0.
 name: non_li_addi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x10
@@ -704,7 +641,6 @@ body: |
 ...
 ---
 name: inlineasm_clobber_vl
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $v8, $v9, $x10
@@ -726,3 +662,4 @@ body: |
     %3:vr = PseudoVADD_VV_M1 undef $noreg, %1, %2, %0, 6, 0
     $v8 = COPY %3
     PseudoRET implicit $v8
+...

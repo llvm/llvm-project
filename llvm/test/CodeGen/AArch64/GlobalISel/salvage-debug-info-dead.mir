@@ -41,7 +41,6 @@
 # Check that we salvage debug information for instructions
 # deleted as dead in Combiner pass
 name: main
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: main
   ; CHECK: bb.0:

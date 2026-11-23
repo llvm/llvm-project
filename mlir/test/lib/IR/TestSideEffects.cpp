@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestOps.h"
+#include "TestDialect.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;

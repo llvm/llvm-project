@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/NativeDylibManager.h"
-#include "orc-rt-internal/bedrock/sys/DynamicLibrary.h"
+#include "orc-rt-internal/bedrock/host/DynamicLibrary.h"
 #include "orc-rt/bedrock/Session.h"
 
 namespace orc_rt {
@@ -42,24 +42,24 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
   // Empty path -> global handle; no shutdown callback (RTLD_DEFAULT
   // mustn't be dlclose'd).
   if (Path.empty())
-    return OnComplete(sys::globalLookupHandle());
+    return OnComplete(host::globalLookupHandle());
 
-  auto H = sys::loadLibrary(Path);
+  auto H = host::loadLibrary(Path);
   if (!H)
     return OnComplete(H.takeError());
 
   // Capture S by reference, rather than this, so that the callback remains
   // valid even if the NativeDylibManager is destroyed prior to shutdown.
   S.addOnShutdown([&S = this->S, Handle = *H]() noexcept {
-    if (auto Err = sys::unloadLibrary(Handle))
+    if (auto Err = host::unloadLibrary(Handle))
       S.reportError(std::move(Err));
   });
   OnComplete(std::move(H));
 }
 
 void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
-                                void *Handle, SymbolLookupSet Symbols) {
-  auto Addrs = sys::lookupLibrarySymbols(Handle, Symbols);
+                                void *Handle, RemoteSymbolLookupSet Symbols) {
+  auto Addrs = host::lookupLibrarySymbols(Handle, Symbols);
 
   // Convert weak-missing entries (empty optional from lookupLibrarySymbols)
   // to a present zero address. This matches the resolve semantics of

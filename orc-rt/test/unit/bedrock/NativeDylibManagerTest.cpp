@@ -41,9 +41,8 @@ constexpr auto Weak = SymbolLookupFlags::WeaklyReferencedSymbol;
 #define MANGLED(name) name
 #endif
 
-#ifndef NDM_TEST_LIB_PATH
-#error                                                                         \
-    "NDM_TEST_LIB_PATH must be defined to the path of the test shared library"
+#ifndef ORC_RT_TEST_DYLIB_PATH
+#error "ORC_RT_TEST_DYLIB_PATH must be defined to the path of the test dylib"
 #endif
 
 // Helper: synchronously run load and return result.
@@ -54,8 +53,9 @@ static Expected<void *> syncLoad(NativeDylibManager &NDM, std::string Path) {
 }
 
 // Helper: synchronously run lookup and return results.
-static Expected<SymbolLookupResult>
-syncLookup(NativeDylibManager &NDM, void *Handle, SymbolLookupSet Symbols) {
+static Expected<SymbolLookupResult> syncLookup(NativeDylibManager &NDM,
+                                               void *Handle,
+                                               RemoteSymbolLookupSet Symbols) {
   std::optional<Expected<SymbolLookupResult>> Result;
   NDM.lookup([&](Expected<SymbolLookupResult> R) { Result = std::move(R); },
              Handle, std::move(Symbols));
@@ -74,7 +74,7 @@ TEST(NativeDylibManagerTest, Load) {
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_THAT_EXPECTED(NDM, Succeeded());
 
-  EXPECT_THAT_EXPECTED(syncLoad(**NDM, NDM_TEST_LIB_PATH),
+  EXPECT_THAT_EXPECTED(syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH),
                        HasValue(Ne(nullptr)));
 }
 
@@ -112,11 +112,11 @@ TEST(NativeDylibManagerTest, LookupSingleSymbol) {
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_THAT_EXPECTED(NDM, Succeeded());
 
-  auto Handle = syncLoad(**NDM, NDM_TEST_LIB_PATH);
+  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
   auto Result = syncLookup(**NDM, *Handle,
-                           {{MANGLED("NativeDylibManagerTestFunc"), Req}});
+                           {{MANGLED("orc_rt_test_dylib_return42"), Req}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value());
@@ -133,12 +133,12 @@ TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_THAT_EXPECTED(NDM, Succeeded());
 
-  auto Handle = syncLoad(**NDM, NDM_TEST_LIB_PATH);
+  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
   auto Result = syncLookup(**NDM, *Handle,
-                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
-                            {MANGLED("NativeDylibManagerTestFunc2"), Req}});
+                           {{MANGLED("orc_rt_test_dylib_return42"), Req},
+                            {MANGLED("orc_rt_test_dylib_return7"), Req}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 2U);
   ASSERT_TRUE((*Result)[0].has_value());
@@ -158,7 +158,7 @@ TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_THAT_EXPECTED(NDM, Succeeded());
 
-  auto Handle = syncLoad(**NDM, NDM_TEST_LIB_PATH);
+  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
   auto Result = syncLookup(**NDM, *Handle, {{MANGLED("no_such_symbol"), Weak}});
@@ -175,7 +175,7 @@ TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_THAT_EXPECTED(NDM, Succeeded());
 
-  auto Handle = syncLoad(**NDM, NDM_TEST_LIB_PATH);
+  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
   auto Result = syncLookup(**NDM, *Handle, {{MANGLED("no_such_symbol"), Req}});
@@ -191,11 +191,11 @@ TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_THAT_EXPECTED(NDM, Succeeded());
 
-  auto Handle = syncLoad(**NDM, NDM_TEST_LIB_PATH);
+  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
   auto Result = syncLookup(**NDM, *Handle,
-                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                           {{MANGLED("orc_rt_test_dylib_return42"), Req},
                             {MANGLED("no_such_symbol"), Weak}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 2U);

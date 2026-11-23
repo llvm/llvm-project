@@ -2307,40 +2307,9 @@ HeaderSearch::ModuleMapResult
 HeaderSearch::parseAndLoadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                         bool ImplicitlyDiscovered,
                                         bool IsFramework) {
-  auto InsertRes = DirectoryModuleMap.insert(std::pair{
-      Dir, ModuleMapDirectoryState{{}, {}, ModuleMapDirectoryState::Invalid}});
-  ModuleMapDirectoryState &MMState = InsertRes.first->second;
-  if (!InsertRes.second) {
-    switch (MMState.Status) {
-    case ModuleMapDirectoryState::Parsed:
-      break;
-    case ModuleMapDirectoryState::Loaded:
-      return MMR_AlreadyProcessed;
-    case ModuleMapDirectoryState::Invalid:
-      return MMR_InvalidModuleMap;
-    };
-  }
-
-  if (!MMState.ModuleMapFile) {
-    MMState.ModuleMapFile = lookupModuleMapFile(Dir, IsFramework);
-    if (MMState.ModuleMapFile)
-      MMState.PrivateModuleMapFile =
-          getPrivateModuleMap(*MMState.ModuleMapFile, FileMgr, Diags);
-  }
-
-  if (MMState.ModuleMapFile) {
-    ModuleMapResult Result = parseAndLoadModuleMapFileImpl(
-        *MMState.ModuleMapFile, IsSystem, ImplicitlyDiscovered, Dir);
-    // Add Dir explicitly in case ModuleMapFile is in a subdirectory.
-    // E.g. Foo.framework/Modules/module.modulemap
-    //      ^Dir                  ^ModuleMapFile
-    if (Result == MMR_NewlyProcessed)
-      MMState.Status = ModuleMapDirectoryState::Loaded;
-    else if (Result == MMR_InvalidModuleMap)
-      MMState.Status = ModuleMapDirectoryState::Invalid;
-    return Result;
-  }
-  return MMR_InvalidModuleMap;
+  return parseModuleMapFileImpl(Dir, IsSystem, ImplicitlyDiscovered,
+                                IsFramework,
+                                /*Load=*/true);
 }
 
 HeaderSearch::ModuleMapResult
@@ -2356,16 +2325,24 @@ HeaderSearch::parseModuleMapFile(StringRef DirName, bool IsSystem,
 HeaderSearch::ModuleMapResult
 HeaderSearch::parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                  bool ImplicitlyDiscovered, bool IsFramework) {
-  if (!HSOpts.LazyLoadModuleMaps)
-    return parseAndLoadModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
-                                     IsFramework);
+  return parseModuleMapFileImpl(Dir, IsSystem, ImplicitlyDiscovered,
+                                IsFramework,
+                                /*Load=*/!HSOpts.LazyLoadModuleMaps);
+}
 
+HeaderSearch::ModuleMapResult
+HeaderSearch::parseModuleMapFileImpl(DirectoryEntryRef Dir, bool IsSystem,
+                                     bool ImplicitlyDiscovered,
+                                     bool IsFramework, bool Load) {
   auto InsertRes = DirectoryModuleMap.insert(std::pair{
       Dir, ModuleMapDirectoryState{{}, {}, ModuleMapDirectoryState::Invalid}});
   ModuleMapDirectoryState &MMState = InsertRes.first->second;
   if (!InsertRes.second) {
     switch (MMState.Status) {
     case ModuleMapDirectoryState::Parsed:
+      if (Load)
+        break;
+      [[fallthrough]];
     case ModuleMapDirectoryState::Loaded:
       return MMR_AlreadyProcessed;
     case ModuleMapDirectoryState::Invalid:
@@ -2381,13 +2358,17 @@ HeaderSearch::parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
   }
 
   if (MMState.ModuleMapFile) {
-    ModuleMapResult Result = parseModuleMapFileImpl(
-        *MMState.ModuleMapFile, IsSystem, ImplicitlyDiscovered, Dir);
+    ModuleMapResult Result =
+        Load ? parseAndLoadModuleMapFileImpl(*MMState.ModuleMapFile, IsSystem,
+                                             ImplicitlyDiscovered, Dir)
+             : parseModuleMapFileImpl(*MMState.ModuleMapFile, IsSystem,
+                                      ImplicitlyDiscovered, Dir);
     // Add Dir explicitly in case ModuleMapFile is in a subdirectory.
     // E.g. Foo.framework/Modules/module.modulemap
     //      ^Dir                  ^ModuleMapFile
     if (Result == MMR_NewlyProcessed)
-      MMState.Status = ModuleMapDirectoryState::Parsed;
+      MMState.Status = Load ? ModuleMapDirectoryState::Loaded
+                            : ModuleMapDirectoryState::Parsed;
     else if (Result == MMR_InvalidModuleMap)
       MMState.Status = ModuleMapDirectoryState::Invalid;
     return Result;

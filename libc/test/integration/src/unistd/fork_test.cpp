@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/gettid.h"
 #include "src/pthread/pthread_atfork.h"
 #include "src/signal/raise.h"
 #include "src/stdlib/exit.h"
@@ -20,7 +20,6 @@
 #include "test/IntegrationTest/test.h"
 
 #include <signal.h>
-#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -179,8 +178,7 @@ void fork_with_atfork_callbacks() {
 void gettid_test() {
   // fork and verify tid is consistent with the syscall result.
   int pid = LIBC_NAMESPACE::fork();
-  ASSERT_EQ(LIBC_NAMESPACE::gettid(),
-            LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid));
+  ASSERT_EQ(LIBC_NAMESPACE::gettid(), LIBC_NAMESPACE::linux_syscalls::gettid());
   if (pid == 0)
     LIBC_NAMESPACE::exit(0);
   // make sure child process exits normally

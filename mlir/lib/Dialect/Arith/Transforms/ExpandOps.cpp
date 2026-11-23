@@ -66,6 +66,15 @@ static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
   return cloneTo;
 }
 
+/// Returns only the nnan flag from fastmath, or a null attribute if it is absent.
+static arith::FastMathFlagsAttr getNNaNOnly(MLIRContext *ctx,
+                                            arith::FastMathFlagsAttr fastmath) {
+  if (fastmath && arith::bitEnumContainsAll(fastmath.getValue(),
+                                            arith::FastMathFlags::nnan))
+    return arith::FastMathFlagsAttr::get(ctx, arith::FastMathFlags::nnan);
+  return {};
+}
+
 namespace {
 
 template <typename OpTy, arith::CmpIPredicate pred>
@@ -363,6 +372,14 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value exti = arith::ExtUIOp::create(b, i32Ty, bitcast);
     Value f32Bits = arith::ShLIOp::create(b, exti, cF32MantissaWidth);
 
+    // F8E8M0 has no zero representation.
+    // All zeros encoding represents 2^-127 which is an f32 subnormal.
+    Value cF8Min = createConst(op.getLoc(), i8Ty, 0, rewriter);
+    Value cF32Min = createConst(op.getLoc(), i32Ty, 0x00400000, rewriter);
+    Value isMin =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8Min);
+    f32Bits = arith::SelectOp::create(b, isMin, cF32Min, f32Bits);
+
     // If FastMathFlag allows no NaN checks, skip it
     auto fastMath = op.getFastmathAttr();
     bool NoNaN = fastMath
@@ -371,10 +388,10 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
                      : false;
     if (!NoNaN) {
       Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
-      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
+      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0x7fc00000, rewriter);
       Value isNan =
           arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
-      // select for NaNs
+      // select for NaNs: the quiet NaN, as the constant folder gives
       f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
     }
 
@@ -544,7 +561,10 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     if (operandETy.getIntOrFloatBitWidth() < 32) {
-      operand = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
+      // Propagating contract would let ExtFOp::fold cancel an earlier contract
+      // truncf, skipping its rounding before we extract the exponent bits.
+      operand = arith::ExtFOp::create(
+          b, f32Ty, operand, getNNaNOnly(b.getContext(), op.getFastmathAttr()));
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
       operand = arith::TruncFOp::create(
           b, f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());

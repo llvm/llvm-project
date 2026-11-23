@@ -40,6 +40,10 @@
 #    error "__cpp_lib_erase_if should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
 #  endif
@@ -68,6 +72,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_incomplete_container_elements
@@ -101,6 +109,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_incomplete_container_elements
@@ -146,6 +158,10 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_incomplete_container_elements
@@ -194,6 +210,10 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_incomplete_container_elements
@@ -253,6 +273,19 @@
 #    error "__cpp_lib_erase_if should have the value 202002L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_vector != 202502L
+#      error "__cpp_lib_hardened_vector should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should be defined in c++26"
 #  endif
@@ -308,6 +341,19 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_vector != 202502L
+#      error "__cpp_lib_hardened_vector should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_incomplete_container_elements

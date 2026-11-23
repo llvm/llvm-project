@@ -1,3 +1,8 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS SelectionDAGOptions.td)
+llvm_tablegen(SelectionDAGOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(SelectionDAGOptionsTableGen)
+
 add_llvm_component_library(LLVMSelectionDAG
   DAGCombiner.cpp
   FastISel.cpp
@@ -21,6 +26,7 @@ add_llvm_component_library(LLVMSelectionDAG
   SelectionDAGAddressAnalysis.cpp
   SelectionDAGDumper.cpp
   SelectionDAGISel.cpp
+  SelectionDAGOptions.cpp
   SelectionDAGPrinter.cpp
   SelectionDAGTargetInfo.cpp
   StatepointLowering.cpp
@@ -35,6 +41,7 @@ add_llvm_component_library(LLVMSelectionDAG
   CodeGenTypes
   Core
   MC
+  Option
   Support
   Target
   TargetParser

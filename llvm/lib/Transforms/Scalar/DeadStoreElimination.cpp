@@ -621,6 +621,15 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
       return false;
   }
 
+  Value *OrigDest = DeadIntrinsic->getRawDest();
+  const DataLayout &DL = DeadI->getDataLayout();
+  Type *IndexTy = DL.getIndexType(OrigDest->getType());
+
+  // The GEP index for the new begin must fit as signed.
+  if (!IsOverwriteEnd &&
+      !isUIntN(IndexTy->getIntegerBitWidth() - 1, ToRemoveSize))
+    return false;
+
   LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW "
                     << (IsOverwriteEnd ? "END" : "BEGIN") << ": " << *DeadI
                     << "\n  KILLER [" << ToRemoveStart << ", "
@@ -629,10 +638,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   DeadIntrinsic->setLength(NewSize);
   DeadIntrinsic->setDestAlignment(PrefAlign);
 
-  Value *OrigDest = DeadIntrinsic->getRawDest();
   if (!IsOverwriteEnd) {
-    Value *Indices[1] = {
-        ConstantInt::get(DeadIntrinsic->getLength()->getType(), ToRemoveSize)};
+    Value *Indices[1] = {ConstantInt::get(IndexTy, ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
         Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
         DeadI->getIterator());
@@ -2370,7 +2377,11 @@ bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
     return false;
 
   if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
-    if (LoadI->getPointerOperand() == Store->getOperand(1)) {
+    bool AccessesSameLoc =
+        LoadI->getPointerOperand() == Store->getPointerOperand() ||
+        BatchAA.isMustAlias(MemoryLocation::get(LoadI),
+                            MemoryLocation::get(Store));
+    if (AccessesSameLoc) {
       // Get the defining access for the load.
       auto *LoadAccess = MSSA.getMemoryAccess(LoadI)->getDefiningAccess();
       // Fast path: the defining accesses are the same.

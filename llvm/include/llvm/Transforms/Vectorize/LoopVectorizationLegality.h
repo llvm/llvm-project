@@ -26,9 +26,11 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONLEGALITY_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONLEGALITY_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -58,6 +60,14 @@ struct VectorizeOptions;
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
+public:
+  enum ForceKind {
+    FK_Undefined = -1, ///< Not selected.
+    FK_Disabled = 0,   ///< Forcing disabled.
+    FK_Enabled = 1,    ///< Forcing enabled.
+  };
+
+private:
   enum HintKind { HK_WIDTH, HK_INTERLEAVE, HK_ISVECTORIZED };
 
   /// Hint - associates name and validation with the hint value.
@@ -94,6 +104,12 @@ class LoopVectorizeHints {
   /// a plain value because the enable/disable pair has no operand to validate.
   unsigned Scalable;
 
+  /// Unsafe FP hint from llvm.loop.vectorize.fp_unsafe.{enable,disable}.
+  ///   FK_Undefined : not specified
+  ///   FK_Disabled  : result-changing FP vectorization suppressed
+  ///   FK_Enabled   : result-changing FP vectorization allowed
+  ForceKind FPUnsafe;
+
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
 
@@ -101,12 +117,6 @@ class LoopVectorizeHints {
   bool PotentiallyUnsafe = false;
 
 public:
-  enum ForceKind {
-    FK_Undefined = -1, ///< Not selected.
-    FK_Disabled = 0,   ///< Forcing disabled.
-    FK_Enabled = 1,    ///< Forcing enabled.
-  };
-
   enum ScalableForceKind {
     /// Not selected.
     SK_Unspecified = -1,
@@ -183,6 +193,12 @@ public:
     // IEEE 754 FP ops properly, or bad single-to-double promotions.
     // Otherwise, a sequence of vectorized loops, even without reduction,
     // could lead to different end results on the destination vectors.
+    //
+    // An explicit fp_unsafe hint takes precedence over the vectorize.enable
+    // default.
+    if (FPUnsafe != FK_Undefined)
+      return FPUnsafe != FK_Enabled && PotentiallyUnsafe;
+
     return getForce() != LoopVectorizeHints::FK_Enabled && PotentiallyUnsafe;
   }
 
@@ -276,9 +292,7 @@ enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 /// * Scalars checks - The code in canVectorizeInstrs and canVectorizeMemory
 /// checks for a number of different conditions, such as the availability of a
 /// single induction variable, that all types are supported and vectorize-able,
-/// etc. This code reflects the capabilities of InnerLoopVectorizer.
-/// This class is also used by InnerLoopVectorizer for identifying
-/// induction variable and the different reduction variables.
+/// etc. It also identifies the induction and reduction variables of the loop.
 class LoopVectorizationLegality {
 public:
   LoopVectorizationLegality(const VectorizeOptions &Opts, Loop *L,
@@ -349,6 +363,11 @@ public:
 
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
+
+  /// Returns the conditional inductions found in the loop.
+  const ConditionalInductionList &getConditionalInductions() const {
+    return ConditionalInductions;
+  }
 
   bool hasConditionalInductions() const {
     return !ConditionalInductions.empty();
@@ -490,6 +509,22 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
+
+  /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
+  /// a conditional induction PHI, otherwise std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(Value *Ptr) const {
+    auto It = CompressedPtrs.find(Ptr);
+    if (It != CompressedPtrs.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  /// Returns true for \p I if it corresponds to a compressed load or store
+  /// (which can map to an llvm.masked.expandload or llvm.masked.compressstore).
+  bool isCompressedLoadOrStore(Instruction *I) {
+    return isa<LoadInst, StoreInst>(I) &&
+           getCompressedPtrInfo(getLoadStorePointerOperand(I)).has_value();
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -654,15 +689,24 @@ private:
   /// for it.
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
+  struct SafeAccessInfo {
+    uint64_t MaxSizeInBytes = 0;
+    Align MaxAlign = Align(1);
+  };
+
+  /// Maps a pointer to its maximum fixed access size and safe alignment.
+  using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
-  /// \p SafePtrs is a list of addresses that are known to be legal and we know
-  /// that we can read from them without segfault.
+  /// \p SafeAccesses records pointers that can be accessed unconditionally,
+  /// together with the fixed access sizes and alignments justified for each
+  /// pointer.
   /// \p MaskedOp is a list of instructions that have to be transformed into
   /// calls to the appropriate masked intrinsic when the loop is vectorized
   /// or dropped if the instruction is a conditional assume intrinsic.
   bool
-  blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+  blockCanBePredicated(BasicBlock *BB, SafeAccessesTy &SafeAccesses,
                        SmallPtrSetImpl<const Instruction *> &MaskedOp) const;
 
   /// Updates the vectorization state by adding \p Phi to the inductions list.

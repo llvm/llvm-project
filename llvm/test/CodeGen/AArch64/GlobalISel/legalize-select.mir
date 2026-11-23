@@ -4,7 +4,6 @@
 ---
 name:            v2s64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -38,7 +37,6 @@ body:             |
 ---
 name:            v2s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -72,7 +70,6 @@ body:             |
 ---
 name:            v16s8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -105,7 +102,6 @@ body:             |
 ---
 name:            scalar_mask
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$q0' }
@@ -152,7 +148,6 @@ body:             |
 ...
 ---
 name:            s88
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $x0
@@ -183,7 +178,6 @@ body:             |
 ---
 name:            scalar_mask_already_promoted_select_s32_v4s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $w0
@@ -233,7 +227,6 @@ body:             |
 ---
 name:            scalar_mask_select_s32_v4s64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $w0
@@ -281,7 +274,6 @@ body:             |
 ---
 name:            select_v4s1_s1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $q2, $w0

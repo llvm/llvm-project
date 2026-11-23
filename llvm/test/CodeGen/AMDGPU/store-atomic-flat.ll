@@ -146,7 +146,6 @@ define amdgpu_cs void @atomic_store_i16x4_monotonic_agent_offset_min(<4 x i16> %
 ; GFX11-SDAG-LABEL: atomic_store_i16x4_monotonic_agent_offset_min:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v2, vcc_lo, 0xfffff000, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX11-SDAG-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -154,7 +153,6 @@ define amdgpu_cs void @atomic_store_i16x4_monotonic_agent_offset_min(<4 x i16> %
 ; GFX11-GISEL-LABEL: atomic_store_i16x4_monotonic_agent_offset_min:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 0xfffff000
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm
