@@ -108,7 +108,7 @@ public:
     return Ctx.getRValueReferenceType(Visit(T->getPointeeType()));
   }
 
-  // Pointer-to-array 
+  // Pointer-to-array
   QualType VisitConstantArrayType(const ConstantArrayType *T) {
     return Ctx.getConstantArrayType(Visit(T->getElementType()), T->getSize(),
                                     T->getSizeExpr(), T->getSizeModifier(),
@@ -318,7 +318,7 @@ scanTypeForWCharTInTemplateArgs(QualType T, bool WithinTemplateArgs = false) {
         return Result;
     }
   }
-  
+
   if (const auto *PT = T->getAs<PointerType>())
     return scanTypeForWCharTInTemplateArgs(PT->getPointeeType(),
                                            WithinTemplateArgs);

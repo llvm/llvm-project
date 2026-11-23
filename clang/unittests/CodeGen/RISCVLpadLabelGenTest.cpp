@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements unit tests for the RISC-V cf-protection=branch func-sig label scheme
+// This file implements unit tests for the RISC-V cf-protection=branch func-sig
+// label scheme
 //
 //===----------------------------------------------------------------------===//
 

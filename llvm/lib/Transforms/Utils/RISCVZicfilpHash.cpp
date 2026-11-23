@@ -34,8 +34,9 @@ uint32_t reduceZicfilpFuncSigLabel(const llvm::MD5::MD5Result &Digest) {
 
   uint32_t Label = 0;
   for (unsigned Shift = 0; Shift < 128 && !Label; Shift += 20)
-    // extractBitsAsZExtValue doesn't pad the selected bit range, it pads the returned uint64_t.
-    // ordinary extractBits would return an APInt which needs to be unwrapped with .getZExtValue before casting to uint32_t.
+    // extractBitsAsZExtValue doesn't pad the selected bit range, it pads the
+    // returned uint64_t. ordinary extractBits would return an APInt which needs
+    // to be unwrapped with .getZExtValue before casting to uint32_t.
     Label = static_cast<uint32_t>(Hash.extractBitsAsZExtValue(20, Shift));
   if (!Label)
     Label = ZicfilpFuncSigFallbackLabel;
