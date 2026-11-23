@@ -4327,8 +4327,8 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMFCmpOpLowering::matchAndRewrite(
     cir::FCmpOp fCmpOp, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type type = fCmpOp.getLhs().getType();
-  assert(mlir::isa<cir::FPTypeInterface>(type) && "unexpected fcmp type");
+  assert(mlir::isa<cir::FPTypeInterface>(fCmpOp.getLhs().getType()) &&
+         "unexpected fcmp type");
 
   mlir::Type llvmResTy = getTypeConverter()->convertType(fCmpOp.getType());
   if (cir::FenvAttr fenv = fCmpOp.getFenvAttr()) {
