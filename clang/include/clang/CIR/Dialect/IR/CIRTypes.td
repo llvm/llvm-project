@@ -499,6 +499,13 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
+// This corresponds to the llvm::abi::VectorKind enum.
+def CIR_VectorAbiKind : CIR_I32Enum<"VectorAbiKind", "vector ABI kind", [
+    I32EnumCase<"Generic", 0, "generic">,
+    I32EnumCase<"SVEData", 1, "sve_data">,
+    I32EnumCase<"SVEPredicate", 2, "sve_predicate">
+]>;
+
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
         ["areCompatible", "verifyEntries"]>,
@@ -507,16 +514,17 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let summary = "CIR vector type";
   let description = [{
     The `!cir.vector` type represents a one-dimensional vector.
-    It takes two parameters: the element type and an element count, which
+    It takes three parameters: the element type, an element count, which
     records both the known minimum number of elements and whether the vector is
-    scalable.
+    scalable, and a vector kind.
 
     Syntax:
 
     ```
-    vector-type ::= !cir.vector<size x element-type>
+    vector-type ::= !cir.vector<size x element-type (`,` kind)?>
     size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | bool-type
+    kind ::= `sve_data` | `sve_predicate`
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized vectors are not
@@ -540,22 +548,43 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Scalable vectors are indicated by enclosing size in square brackets.
 
-    Example:
+    The kind is omitted from the syntax for a generic vector, which is any
+    vector the target does not give a vector kind of its own. The SVE kinds
+    mark the AArch64 SVE types, both the sizeless ones and those given a fixed
+    length by `arm_sve_vector_bits`:
+
+    - An `sve_data` vector has 8-, 16-, 32-, or 64-bit integer elements or
+      `!cir.f16`, `!cir.bf16`, `!cir.float`, or `!cir.double` elements.
+    - A scalable `sve_predicate` vector has `!cir.int<u, 1>` elements. A
+      fixed-length `sve_predicate` vector holds the predicate one bit per lane
+      in `!cir.int<u, 8>` elements.
+
+    A scalable vector must have a kind other than generic. The language
+    alignment of an `sve_data` vector is 16 bytes and that of an
+    `sve_predicate` vector is 2 bytes, whatever their size.
+
+    Examples:
     ```
-    !cir.vector<[4] x !cir.int<u, 8>>
+    !cir.vector<[4] x !cir.int<s, 32>, sve_data>
+    !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>
+    !cir.vector<16 x !cir.int<s, 32>, sve_data>
+    !cir.vector<8 x !cir.int<u, 8>, sve_predicate>
     ```
   }];
 
   let parameters = (ins
     CIR_VectorElementType:$element_type,
-    "llvm::ElementCount":$size
+    "llvm::ElementCount":$size,
+    DefaultValuedParameter<"cir::VectorAbiKind",
+                           "cir::VectorAbiKind::Generic">:$kind
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "llvm::ElementCount":$size
+      "mlir::Type":$element_type, "llvm::ElementCount":$size,
+      CArg<"cir::VectorAbiKind", "cir::VectorAbiKind::Generic">:$kind
     ), [{
-        return $_get(element_type.getContext(), element_type, size);
+        return $_get(element_type.getContext(), element_type, size, kind);
     }]>,
   ];
 
@@ -566,14 +595,24 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     /// Return whether this vector is scalable.
     bool isScalable() const { return getSize().isScalable(); }
 
-    /// Return a fixed-width vector with the given element type and size.
-    static VectorType getFixed(mlir::Type elementType, uint64_t size) {
-      return get(elementType, llvm::ElementCount::getFixed(size));
+    /// Return whether this vector is an AArch64 SVE data or predicate vector.
+    bool isSVE() const {
+      return getKind() == VectorAbiKind::SVEData ||
+             getKind() == VectorAbiKind::SVEPredicate;
     }
 
-    /// Return a scalable vector with the given element type and minimum size.
-    static VectorType getScalable(mlir::Type elementType, uint64_t size) {
-      return get(elementType, llvm::ElementCount::getScalable(size));
+    /// Return a fixed-width vector with the given element type, size, and
+    /// kind.
+    static VectorType getFixed(mlir::Type elementType, uint64_t size,
+                               VectorAbiKind kind = VectorAbiKind::Generic) {
+      return get(elementType, llvm::ElementCount::getFixed(size), kind);
+    }
+
+    /// Return a scalable vector with the given element type, minimum size,
+    /// and kind.
+    static VectorType getScalable(mlir::Type elementType, uint64_t size,
+                                  VectorAbiKind kind) {
+      return get(elementType, llvm::ElementCount::getScalable(size), kind);
     }
 
     /// The width of the integer a vector of `!cir.bool` is stored as: one bit
