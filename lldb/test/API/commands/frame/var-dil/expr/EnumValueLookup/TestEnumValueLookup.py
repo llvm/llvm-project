@@ -17,8 +17,6 @@ class TestEnumValueLookup(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         self.expect_var_path("enum_one", value="kOne", type="UnscopedEnum")
         self.expect_var_path("UnscopedEnum::kOne", value="kOne", type="UnscopedEnum")
         self.expect_var_path(

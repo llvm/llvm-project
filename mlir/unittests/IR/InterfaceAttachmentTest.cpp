@@ -18,8 +18,7 @@
 #include "gtest/gtest.h"
 
 #include "TestAttributes.h"
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsPatterns.h"
 #include "TestTypes.h"
 #include "mlir/IR/OwningOpRef.h"
 

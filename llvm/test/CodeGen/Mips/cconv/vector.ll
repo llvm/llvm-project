@@ -4075,10 +4075,10 @@ define void @calli16_8() {
 ; MIPS32R5EB-NEXT:    .cfi_def_cfa_offset 40
 ; MIPS32R5EB-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
 ; MIPS32R5EB-NEXT:    .cfi_offset 31, -4
-; MIPS32R5EB-NEXT:    lui $1, 6
-; MIPS32R5EB-NEXT:    ori $1, $1, 7
-; MIPS32R5EB-NEXT:    lui $2, 9
-; MIPS32R5EB-NEXT:    ori $2, $2, 10
+; MIPS32R5EB-NEXT:    lui $1, 9
+; MIPS32R5EB-NEXT:    ori $1, $1, 10
+; MIPS32R5EB-NEXT:    lui $2, 6
+; MIPS32R5EB-NEXT:    ori $2, $2, 7
 ; MIPS32R5EB-NEXT:    fill.w $w0, $2
 ; MIPS32R5EB-NEXT:    insert.w $w0[1], $1
 ; MIPS32R5EB-NEXT:    splati.d $w0, $w0[0]

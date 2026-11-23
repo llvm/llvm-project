@@ -1,6 +1,8 @@
 ; REQUIRES: webassembly-registered-target
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=wasm64-unknown-emscripten < %s | FileCheck %s
 
-; CHECK: declare i32 @__small_fprintf(ptr, ptr, ...)
-; CHECK: declare i32 @__small_printf(ptr, ...)
-; CHECK: declare i32 @__small_sprintf(ptr, ptr, ...)
+; CHECK: declare noundef i32 @__small_fprintf(ptr noundef captures(none), ptr noundef readonly captures(none), ...) [[PRINTF_ATTRS:#[0-9]+]]
+; CHECK: declare noundef i32 @__small_printf(ptr noundef readonly captures(none), ...) [[PRINTF_ATTRS]]
+; CHECK: declare noundef i32 @__small_sprintf(ptr noalias noundef writeonly captures(none), ptr noundef readonly captures(none), ...) [[PRINTF_ATTRS]]
+
+; CHECK: attributes [[PRINTF_ATTRS]] = { nofree nounwind }

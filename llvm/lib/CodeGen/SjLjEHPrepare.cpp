@@ -134,6 +134,7 @@ bool SjLjEHPrepareImpl::doInitialization(Module &M) {
 /// function context
 void SjLjEHPrepareImpl::insertCallSiteStore(Instruction *I, int Number) {
   IRBuilder<> Builder(I);
+  Builder.disableGEPCanonicalization();
 
   // Get a reference to the call_site field.
   Type *Int32Ty = Type::getInt32Ty(I->getContext());
@@ -211,6 +212,7 @@ SjLjEHPrepareImpl::setupFunctionContext(Function &F,
   // Fill in the function context structure.
   for (LandingPadInst *LPI : LPads) {
     IRBuilder<> Builder(LPI->getParent()->getFirstInsertionPt());
+    Builder.disableGEPCanonicalization();
 
     // Reference the __data field.
     Value *FCData =
@@ -235,6 +237,7 @@ SjLjEHPrepareImpl::setupFunctionContext(Function &F,
 
   // Personality function
   IRBuilder<> Builder(EntryBB->getTerminator());
+  Builder.disableGEPCanonicalization();
   Value *PersonalityFn = F.getPersonalityFn();
   Value *PersonalityFieldPtr = Builder.CreateConstGEP2_32(
       FunctionContextTy, FuncCtx, 0, 3, "pers_fn_gep");
@@ -412,6 +415,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
       setupFunctionContext(F, ArrayRef(LPads.begin(), LPads.end()));
   BasicBlock *EntryBB = &F.front();
   IRBuilder<> Builder(EntryBB->getTerminator());
+  Builder.disableGEPCanonicalization();
 
   // Get a reference to the jump buffer.
   Value *JBufPtr =

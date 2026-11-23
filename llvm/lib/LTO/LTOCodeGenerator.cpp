@@ -397,7 +397,7 @@ bool LTOCodeGenerator::determineTarget() {
 
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
-  if (!codegen::getExplicitDataSections())
+  if (!codegen::getExplicitDataSections(Context.getLibraryOptions()))
     Config.Options.DataSections = true;
 
   TargetMach = createTargetMachine();
@@ -683,7 +683,8 @@ void LTOCodeGenerator::parseCodeGenDebugOptions() {
     std::vector<const char *> CodegenArgv(1, "libLLVMLTO");
     for (std::string &Arg : CodegenOptions)
       CodegenArgv.push_back(Arg.c_str());
-    cl::parseCommandLineOptions(Context.getLibraryOptions(), CodegenArgv);
+    cl::parseCommandLineOptions(Context.getLibraryOptions(),
+                                codegen::getToolOptions(), CodegenArgv);
   }
 }
 

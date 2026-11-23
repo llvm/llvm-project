@@ -63,10 +63,8 @@ body:             |
     frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit $lr, implicit $sp
     $w8 = ADDWrs $w0, $w1, 0
     $w0 = MADDWrrr $w8, $w2, $wzr
+    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp
     RET undef $lr, implicit $w0
-
-# PAUTH_EPILOGUE instruction is omitted for simplicity as it is technically possible
-# to move it, so it may end up at a less obvious position in a basic block.
 
 # CHECK-LABEL: name: f_pac_pseudo
 # CHECK:       body:             |
@@ -76,6 +74,7 @@ body:             |
 # CHECK:           frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit {{.*}}$lr, implicit $sp
 # CHECK-NEXT:      $w8 = ADDWrs {{.*}}$w0, {{.*}}$w1, 0
 # CHECK-NEXT:      $w0 = MADDWrrr {{.*}}$w8, {{.*}}$w2, $wzr
+# CHECK-NEXT:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit {{.*}}$lr, implicit $sp
 # CHECK-NEXT:      RET undef $lr, implicit {{.*}}$w0
 
 ...
@@ -91,7 +90,7 @@ body:             |
     $w0 = MADDWrrr $w8, $w2, $wzr
     RET undef $lr, implicit $w0
 
-# AUTIASP is omitted, see above.
+# AUTIASP is omitted because it can move within a scheduling region.
 
 # CHECK-LABEL: name: f_pac
 # CHECK:       body:             |

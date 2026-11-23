@@ -809,6 +809,12 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
+  if (auto untypedPtrType = dyn_cast<spirv::UntypedPointerType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeUntypedPointerKHR;
+    operands.push_back(static_cast<uint32_t>(untypedPtrType.getStorageClass()));
+    return success();
+  }
+
   if (auto sampledImageType = dyn_cast<spirv::SampledImageType>(type)) {
     typeEnum = spirv::Opcode::OpTypeSampledImage;
     uint32_t imageTypeID = 0;
@@ -1049,6 +1055,10 @@ uint32_t Serializer::prepareConstant(Location loc, Type constType,
                                             /*dim=*/0, index);
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
     resultID = prepareArrayConstant(loc, constType, arrayAttr);
+  } else if (isa<spirv::NullAttr>(valueAttr)) {
+    resultID = getNextID();
+    encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                          {typeID, resultID});
   }
 
   if (resultID == 0) {

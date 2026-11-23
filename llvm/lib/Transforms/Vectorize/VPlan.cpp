@@ -54,10 +54,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
-
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -336,15 +332,15 @@ void VPTransformState::fixupHeaderPhis() {
     auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
     BasicBlock *VectorLatchBB = CFG.VPBB2IRBB[LatchVPBB];
 
-    for (VPRecipeBase &R : Header->phis()) {
-      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+    for (VPSingleDefRecipe &PhiR :
+         map_range(Header->phis(), CastTo<VPSingleDefRecipe>)) {
       bool NeedsSingleScalar =
           isa<VPPhi, VPConditionalInductionPHIRecipe>(PhiR) ||
           (isa<VPReductionPHIRecipe>(PhiR) &&
-           cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+           cast<VPReductionPHIRecipe>(PhiR).isInLoop());
 
-      Value *Phi = get(PhiR, NeedsSingleScalar);
-      Value *Val = get(PhiR->getOperand(1), NeedsSingleScalar);
+      Value *Phi = get(&PhiR, NeedsSingleScalar);
+      Value *Val = get(PhiR.getOperand(1), NeedsSingleScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
@@ -981,37 +977,35 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
-  if (hasEarlyExit()) {
-    // Fix up LoopInfo for extra dispatch blocks when vectorizing loops with
-    // early exits. For dispatch blocks, we need to find the smallest common
-    // loop of all successors that are in a loop. Note: we only need to update
-    // loop info for blocks after the middle block, but there is no easy way to
-    // get those at this point.
-    for (VPBlockBase *VPB : reverse(RPOT)) {
-      auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-      if (!VPBB || isa<VPIRBasicBlock>(VPBB))
+  // Fix up LoopInfo for extra dispatch blocks when vectorizing loops with early
+  // exits. For dispatch blocks, we need to find the smallest common loop of all
+  // successors that are in a loop. Note: we only need to update loop info for
+  // blocks after the middle block, but there is no easy way to get those at
+  // this point.
+  for (VPBlockBase *VPB : reverse(RPOT)) {
+    auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+    if (!VPBB || isa<VPIRBasicBlock>(VPBB))
+      continue;
+    BasicBlock *BB = State->CFG.VPBB2IRBB[VPBB];
+    Loop *L = State->LI->getLoopFor(BB);
+    if (!L || any_of(successors(BB),
+                     [L](BasicBlock *Succ) { return L->contains(Succ); }))
+      continue;
+    // Find the innermost loop containing all successors that are in a loop.
+    // Successors not in any loop don't constrain the target loop.
+    Loop *Target = nullptr;
+    for (BasicBlock *Succ : successors(BB)) {
+      Loop *SuccLoop = State->LI->getLoopFor(Succ);
+      if (!SuccLoop)
         continue;
-      BasicBlock *BB = State->CFG.VPBB2IRBB[VPBB];
-      Loop *L = State->LI->getLoopFor(BB);
-      if (!L || any_of(successors(BB),
-                       [L](BasicBlock *Succ) { return L->contains(Succ); }))
-        continue;
-      // Find the innermost loop containing all successors that are in a loop.
-      // Successors not in any loop don't constrain the target loop.
-      Loop *Target = nullptr;
-      for (BasicBlock *Succ : successors(BB)) {
-        Loop *SuccLoop = State->LI->getLoopFor(Succ);
-        if (!SuccLoop)
-          continue;
-        if (!Target)
-          Target = SuccLoop;
-        else
-          Target = State->LI->getSmallestCommonLoop(Target, SuccLoop);
-      }
-      State->LI->removeBlock(BB);
-      if (Target)
-        Target->addBasicBlockToLoop(BB, *State->LI);
+      if (!Target)
+        Target = SuccLoop;
+      else
+        Target = State->LI->getSmallestCommonLoop(Target, SuccLoop);
     }
+    State->LI->removeBlock(BB);
+    if (Target)
+      Target->addBasicBlockToLoop(BB, *State->LI);
   }
 
   // If the original loop is unreachable, delete it and all its blocks.
@@ -1788,7 +1782,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       return;
     auto &SE = *PSE.getSE();
     AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
-    if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
+    if (!AverageVectorTripCount)
       return;
     if (ScalarPH)
       RemainderAverageTripCount =

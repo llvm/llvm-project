@@ -136,11 +136,13 @@ body:             |
 
 ---
 name:            test_one_use_copy_multi_use_load
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_one_use_copy_multi_use_load
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i16))
     ; CHECK-NEXT: G_STORE [[LOAD]](i32), [[COPY1]](p0) :: (store (i16))
@@ -158,11 +160,13 @@ body:             |
 
 ---
 name:            test_multi_use_load
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_load
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK-NEXT: G_STORE [[SEXTLOAD]](i32), [[COPY1]](p0) :: (store (i8))
@@ -177,11 +181,13 @@ body:             |
 
 ---
 name:            test_multi_use_load_large_memsize
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_load_large_memsize
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i16))
     ; CHECK-NEXT: G_STORE [[LOAD]](i32), [[COPY1]](p0) :: (store (i16))
