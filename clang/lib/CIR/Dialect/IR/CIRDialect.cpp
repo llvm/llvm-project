@@ -2322,11 +2322,9 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
     return failure();
 
-  // The merged block takes the source's place in the region. If the
-  // destination ends in a region exit, such as cir.yield or cir.condition,
-  // merge only when the source directly precedes it, so the exit keeps its
-  // position. Several CFG flattening patterns and the cir.await verifier
-  // expect the exit in the region's last block.
+  // The merged block takes the source's place in the region. Keep a region
+  // exit (cir.yield, cir.condition) where it is, in the last block, which CFG
+  // flattening and the cir.await verifier expect.
   if (isa<RegionBranchTerminatorOpInterface>(dst->getTerminator()) &&
       src->getNextNode() != dst)
     return failure();
