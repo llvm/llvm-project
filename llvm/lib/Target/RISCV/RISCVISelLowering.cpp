@@ -13058,28 +13058,28 @@ static unsigned getRVPMulAccHalvesOpcode(unsigned IntNo) {
     llvm_unreachable("Unexpected RISC-V multiply-parts accumulate intrinsic");
   case Intrinsic::riscv_pmacc_00:
   case Intrinsic::riscv_macc_00:
-    return RISCVISD::PMACC_HALVES_00;
+    return RISCVISD::MACC_HALVES_00;
   case Intrinsic::riscv_pmacc_01:
   case Intrinsic::riscv_macc_01:
-    return RISCVISD::PMACC_HALVES_01;
+    return RISCVISD::MACC_HALVES_01;
   case Intrinsic::riscv_pmacc_11:
   case Intrinsic::riscv_macc_11:
-    return RISCVISD::PMACC_HALVES_11;
+    return RISCVISD::MACC_HALVES_11;
   case Intrinsic::riscv_pmaccu_00:
   case Intrinsic::riscv_maccu_00:
-    return RISCVISD::PMACCU_HALVES_00;
+    return RISCVISD::MACCU_HALVES_00;
   case Intrinsic::riscv_pmaccu_01:
   case Intrinsic::riscv_maccu_01:
-    return RISCVISD::PMACCU_HALVES_01;
+    return RISCVISD::MACCU_HALVES_01;
   case Intrinsic::riscv_pmaccu_11:
   case Intrinsic::riscv_maccu_11:
-    return RISCVISD::PMACCU_HALVES_11;
+    return RISCVISD::MACCU_HALVES_11;
   case Intrinsic::riscv_pmaccsu_00:
   case Intrinsic::riscv_maccsu_00:
-    return RISCVISD::PMACCSU_HALVES_00;
+    return RISCVISD::MACCSU_HALVES_00;
   case Intrinsic::riscv_pmaccsu_11:
   case Intrinsic::riscv_maccsu_11:
-    return RISCVISD::PMACCSU_HALVES_11;
+    return RISCVISD::MACCSU_HALVES_11;
   }
 }
 
@@ -13916,12 +13916,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         SDValue Zero = DAG.getConstant(0, DL, MVT::v4i16);
         Rs1 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Zero);
         Rs2 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs2, Zero);
-        return DAG.getNode(RISCVISD::PMACCSU_HALVES_00, DL, VT, Acc, Rs1, Rs2);
+        return DAG.getNode(RISCVISD::MACCSU_HALVES_00, DL, VT, Acc, Rs1, Rs2);
       }
       SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Rs2);
       unsigned Opc = IntNo == Intrinsic::riscv_pwmaccu_u32x2
-                         ? RISCVISD::PMACCU_HALVES_01
-                         : RISCVISD::PMACC_HALVES_01;
+                         ? RISCVISD::MACCU_HALVES_01
+                         : RISCVISD::MACC_HALVES_01;
       return DAG.getNode(Opc, DL, VT, Acc, Zip, Zip);
     }
 
