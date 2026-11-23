@@ -102,10 +102,6 @@ noPhis:          true
 isSSA:           false
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: b32 }
-  - { id: 1, class: b32 }
-  - { id: 2, class: b1 }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

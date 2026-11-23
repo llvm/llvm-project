@@ -29,9 +29,6 @@ private:
   ///
   bool Is64Bit;
 
-  /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
-  bool IsTarget64BitLP64;
-
   /// IsWin64 - Is the target on of win64 flavours
   ///
   bool IsWin64;

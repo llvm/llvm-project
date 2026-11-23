@@ -106,29 +106,15 @@ static bool memberIsEmptyRecord(mlir::Type ty) {
   return recTy && recTy.isEmptyForABI();
 }
 
-/// A record's declared alignment, which the ABI uses for the byval and sret
-/// alignment of an indirect argument.  DataLayout derives alignment from the
-/// members, so it cannot see `__attribute__((aligned(N)))`.  The declared value
-/// comes from the module's record-layout metadata instead.  CIRGen emits an
-/// entry for every record it names, so the computed fallback only serves
-/// hand-written CIR.
-static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
-                                       const DataLayout &dl) {
-  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
-  if (!layout)
-    return llvm::Align(dl.getTypeABIAlignment(recTy));
-  return llvm::Align(layout.getRecordAlign());
-}
-
 /// A record's unadjusted alignment, the alignment its members give it before
-/// an alignment attribute on the record raises it.  Like the declared
-/// alignment, it comes from the module's record-layout metadata, and the
-/// computed fallback only serves hand-written CIR.
+/// an alignment attribute on the record raises it.  It comes from the module's
+/// record-layout metadata, and the computed fallback only serves hand-written
+/// CIR.
 static llvm::Align recordUnadjustedAlign(ModuleOp modOp, cir::RecordType recTy,
-                                         const DataLayout &dl) {
+                                         const cir::CIRDataLayout &cirDL) {
   auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
-    return llvm::Align(dl.getTypeABIAlignment(recTy));
+    return llvm::Align(cirDL.getTypeLanguageAlignment(recTy));
   return llvm::Align(layout.getUnadjustedAlign());
 }
 
@@ -336,13 +322,15 @@ static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
 /// reach this function.
 static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                          mlir::abi::ABITypeMapper &typeMapper,
-                                         const DataLayout &dl, ModuleOp modOp) {
+                                         const DataLayout &dl,
+                                         const cir::CIRDataLayout &cirDL,
+                                         ModuleOp modOp) {
   llvm::abi::TypeBuilder &tb = typeMapper.getTypeBuilder();
   return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
       .Case([&](cir::IntType intTy) {
-        return tb.getIntegerType(intTy.getWidth(),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
-                                 intTy.isSigned(), intTy.getIsBitInt());
+        return tb.getIntegerType(
+            intTy.getWidth(), llvm::Align(cirDL.getTypeLanguageAlignment(type)),
+            intTy.isSigned(), intTy.getIsBitInt());
       })
       .Case([&](cir::PointerType ptrTy) {
         unsigned addrSpace = 0;
@@ -352,45 +340,50 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           addrSpace = targetAsAttr.getValue();
         // Any address-space attribute is a qualifier.
         bool hasAddressSpaceQualifier = ptrTy.getAddrSpace() != nullptr;
-        return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
-                                 addrSpace, hasAddressSpaceQualifier);
+        return tb.getPointerType(
+            dl.getTypeSizeInBits(type),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)), addrSpace,
+            hasAddressSpaceQualifier);
       })
       .Case([&](cir::VPtrType) {
         // cir::VPtrType carries no address-space parameter yet, so this
         // always maps into the default one until that gap closes.
         assert(!cir::MissingFeatures::addressSpace());
-        return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)));
+        return tb.getPointerType(
+            dl.getTypeSizeInBits(type),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::BoolType) {
         // A bool is a one-bit integer to the classifier, as QualTypeMapper
         // maps it, so a bool vector is sized one bit per element.
-        return tb.getIntegerType(1, llvm::Align(dl.getTypeABIAlignment(type)),
-                                 /*Signed=*/false);
+        return tb.getIntegerType(
+            1, llvm::Align(cirDL.getTypeLanguageAlignment(type)),
+            /*Signed=*/false);
       })
       .Case([&](cir::VoidType) { return tb.getVoidType(); })
       .Case([&](cir::FPTypeInterface fpTy) {
         // LongDoubleType reports its underlying format's semantics, so the
         // classifier sees x87 or IEEE quad rather than the wrapper.
-        return tb.getFloatType(fpTy.getFloatSemantics(),
-                               llvm::Align(dl.getTypeABIAlignment(type)));
+        return tb.getFloatType(
+            fpTy.getFloatSemantics(),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::ComplexType complexTy) {
         return tb.getComplexType(
-            mapCIRType(complexTy.getElementType(), typeMapper, dl, modOp),
-            llvm::Align(dl.getTypeABIAlignment(type)));
+            mapCIRType(complexTy.getElementType(), typeMapper, dl, cirDL,
+                       modOp),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::VectorType vecTy) {
         // isSupportedType rejects a scalable vector, so the element count is
         // always fixed here.
         return tb.getVectorType(
-            mapCIRType(vecTy.getElementType(), typeMapper, dl, modOp),
-            vecTy.getSize(), llvm::Align(dl.getTypeABIAlignment(type)));
+            mapCIRType(vecTy.getElementType(), typeMapper, dl, cirDL, modOp),
+            vecTy.getSize(), llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
-            mapCIRType(arrTy.getElementType(), typeMapper, dl, modOp);
+            mapCIRType(arrTy.getElementType(), typeMapper, dl, cirDL, modOp);
         return tb.getArrayType(elemAbi, arrTy.getSize(),
                                dl.getTypeSizeInBits(type).getFixedValue());
       })
@@ -404,8 +397,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           flags = flags | llvm::abi::RecordFlags::HasFlexibleArrayMember;
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
-        llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
-        llvm::Align unadjustedAlign = recordUnadjustedAlign(modOp, recTy, dl);
+        llvm::Align align(cirDL.getTypeLanguageAlignment(recTy));
+        llvm::Align unadjustedAlign =
+            recordUnadjustedAlign(modOp, recTy, cirDL);
 
         // Mapped with no fields, an empty record reaches Ignore on its own.
         // The size still matters, since a target may pass a large empty
@@ -449,14 +443,15 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
             const bool holdsUnit = idx == 0 && unitTy;
             if (holdsUnit)
               fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(unitTy, typeMapper, dl, modOp), offsetBits,
+                  mapCIRType(unitTy, typeMapper, dl, cirDL, modOp), offsetBits,
                   /*IsBitField=*/true, decl.getWidth(),
                   /*IsUnnamedBitField=*/decl.getIsUnnamed()));
             mlir::Type declaredTy = decl.getDeclaredType();
             if (!holdsUnit ||
                 dl.getTypeSizeInBits(declaredTy).getFixedValue() > unitBits)
               fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(declaredTy, typeMapper, dl, modOp), offsetBits,
+                  mapCIRType(declaredTy, typeMapper, dl, cirDL, modOp),
+                  offsetBits,
                   /*IsBitField=*/true, holdsUnit ? 0 : decl.getWidth(),
                   /*IsUnnamedBitField=*/holdsUnit || decl.getIsUnnamed()));
           }
@@ -487,7 +482,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                 memberIsEmptyRecord(variantTy))
               continue;
             fields.push_back(llvm::abi::FieldInfo(
-                mapCIRType(variantTy, typeMapper, dl, modOp)));
+                mapCIRType(variantTy, typeMapper, dl, cirDL, modOp)));
           }
           return tb.getUnionType(fields, sizeBits, align, unadjustedAlign,
                                  llvm::abi::StructPacking::Default, flags);
@@ -517,7 +512,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
           fields.push_back(llvm::abi::FieldInfo(
-              mapCIRType(fieldTy, typeMapper, dl, modOp),
+              mapCIRType(fieldTy, typeMapper, dl, cirDL, modOp),
               recTy.getElementOffset(dl, idx) * 8,
               /*IsBitField=*/isUnnamed, isUnnamed ? widthBits : 0,
               /*IsUnnamedBitField=*/isUnnamed));
@@ -561,6 +556,8 @@ static bool coerceKeepsScalarValue(mlir::Type origTy,
 /// means the value is passed unchanged in its own type.  Otherwise the
 /// rewriter converts the value to coercedType, and when that is a struct and
 /// canFlatten is set, passes each field of the struct as a separate argument.
+/// When the classifier names no coerce type, a struct or _Complex that can be
+/// flattened is coerced to a struct of its own fields.
 static mlir::FailureOr<ArgClassification>
 convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                      mlir::Type origTy) {
@@ -580,11 +577,23 @@ convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
 
   const llvm::abi::Type *coercedAbiTy = info.getCoerceToType();
   if (!coercedAbiTy) {
-    // A struct the classifier allows to be flattened is coerced to its own
-    // type, so that its fields are passed as separate arguments.
+    // A record the classifier allows to be flattened is coerced to its own
+    // type, so that its fields are passed as separate arguments.  A union is
+    // flattened as its LLVM type, the storage member and the tail padding.
     auto recTy = dyn_cast<cir::RecordType>(origTy);
-    if (recTy && recTy.isStruct() && info.getCanBeFlattened())
+    if (recTy && (recTy.isStruct() || recTy.isUnion()) &&
+        info.getCanBeFlattened())
       return passCoerced(recTy, /*offset=*/0);
+    // A _Complex is flattened the same way, as its {real, imag} pair.
+    if (auto complexTy = dyn_cast<cir::ComplexType>(origTy);
+        complexTy && info.getCanBeFlattened()) {
+      SmallVector<mlir::Type, 2> parts(2, complexTy.getElementType());
+      return passCoerced(
+          cir::StructType::get(ctx, parts, /*packed=*/false,
+                               /*is_class=*/false,
+                               cir::RecordType::getAllDataKinds(parts)),
+          /*offset=*/0);
+    }
     return passUnchanged();
   }
 
@@ -667,12 +676,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   if (info.isExtend()) {
     assert(origTy && "an extended value must have a type");
     if (isa<cir::BoolType>(origTy))
-      return ArgClassification::getExtend(nullptr, info.isSignExt());
+      return ArgClassification::getExtend(nullptr, info.isSignExt(),
+                                          info.isConservative());
     assert((isa<cir::IntType, cir::RecordType>(origTy)) &&
            "Extend is only expected for integers, bool, and transparent "
            "unions");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
-    return ArgClassification::getExtend(extendedTy, info.isSignExt());
+    return ArgClassification::getExtend(extendedTy, info.isSignExt(),
+                                        info.isConservative());
   }
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
@@ -731,10 +742,10 @@ CIRABIClassifierCommon::classifySignature(
 
   const llvm::abi::Type *retAbi =
       voidRet ? typeMapper.getTypeBuilder().getVoidType()
-              : mapCIRType(retCIR, typeMapper, dl, modOp);
+              : mapCIRType(retCIR, typeMapper, dl, cirDataLayout, modOp);
   SmallVector<const llvm::abi::Type *> argAbi;
   for (mlir::Type a : inputs)
-    argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
+    argAbi.push_back(mapCIRType(a, typeMapper, dl, cirDataLayout, modOp));
 
   std::unique_ptr<llvm::abi::FunctionInfo> fi =
       llvm::abi::FunctionInfo::create(callConv, retAbi, argAbi, required);
@@ -768,9 +779,11 @@ CIRABIClassifierCommon::classifySignature(
       return mlir::failure();
     }
     // The classifier passes a transparent union as its first member, and
-    // names no coerce type when it passes that member as its own type.
+    // names no coerce type when it passes that member as its own type.  The
+    // union is then left unchanged or coerced to itself above.
     auto recTy = dyn_cast<cir::RecordType>(origArg);
-    if (ac->kind == ArgKind::Direct && !ac->coercedType && recTy &&
+    if (ac->kind == ArgKind::Direct && recTy &&
+        (!ac->coercedType || ac->coercedType == recTy) &&
         recordIsTransparentUnion(modOp, recTy))
       ac->coercedType = recTy.getMembers().front();
     ac->neededIntRegs = argInfo.getNeededIntRegs();
@@ -780,11 +793,12 @@ CIRABIClassifierCommon::classifySignature(
   return fc;
 }
 
-/// FIXME: Only the AMDGPU kernel convention is mapped. Every other convention
-/// is classified as C.
+/// FIXME: Implement proper support for other calling conventions.
 llvm::CallingConv::ID cir::convertCallingConv(cir::CallingConv cc) {
   if (cc == cir::CallingConv::AMDGPUKernel)
     return llvm::CallingConv::AMDGPU_KERNEL;
+  if (cc == cir::CallingConv::SpirKernel)
+    return llvm::CallingConv::SPIR_KERNEL;
   return llvm::CallingConv::C;
 }
 

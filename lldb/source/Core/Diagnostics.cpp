@@ -68,6 +68,12 @@ bool DiagnosticsProperties::SetCollectBinaries(bool collect) {
   return SetPropertyAtIndex(ePropertyCollectBinaries, collect);
 }
 
+bool DiagnosticsProperties::GetSuggestBugReport() const {
+  const uint32_t idx = ePropertySuggestBugReport;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_diagnostics_properties[idx].default_uint_value != 0);
+}
+
 DiagnosticsProperties &Diagnostics::GetGlobalProperties() {
   static DiagnosticsProperties g_settings;
   return g_settings;

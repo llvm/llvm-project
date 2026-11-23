@@ -1,12 +1,5 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
+cmake_minimum_required(VERSION 3.31.0)
 
 include(CMakeDependentOption)
 
@@ -631,6 +624,8 @@ if (MINGW)
 endif()
 option(LLVM_WINDOWS_PREFER_FORWARD_SLASH "Prefer path names with forward slashes on Windows." ${WINDOWS_PREFER_FORWARD_SLASH_DEFAULT})
 
+option(LLVM_WINDOWS_RESTRICTED_APIS "Use only APIs available in restricted Windows environments, such as binaries whose imports are checked by ApiValidator. Currently this avoids shell32." OFF)
+
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
 set(FFI_LIBRARY_DIR "" CACHE PATH "Additional directory, where CMake should search for libffi.so")
 set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for ffi.h or ffi/ffi.h")
@@ -646,14 +641,7 @@ set(LLVM_ENABLE_LIBEDIT "ON" CACHE STRING "Use libedit if available. Can be ON, 
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
-# On z/OS, threads cannot be used because TLS is not supported.
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
-  set(LLVM_ENABLE_THREADS_DEFAULT OFF)
-else()
-  set(LLVM_ENABLE_THREADS_DEFAULT ON)
-endif()
-
-option(LLVM_ENABLE_THREADS "Use threads if available." LLVM_ENABLE_THREADS_DEFAULT)
+option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 

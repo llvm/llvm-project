@@ -76,7 +76,7 @@ define <2 x i8> @ushl_0_vec(<2 x i8> %y) {
 define <2 x i8> @sshl_0_vec_poison_elt(<2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @sshl_0_vec_poison_elt(
 ; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 0>
 ;
   %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 0>, <2 x i8> %y)
   ret <2 x i8> %r
@@ -88,6 +88,69 @@ define <vscale x 2 x i8> @sshl_0_scalable(<vscale x 2 x i8> %y) {
 ; CHECK-NEXT:    ret <vscale x 2 x i8> zeroinitializer
 ;
   %r = call <vscale x 2 x i8> @llvm.sshl.sat.nxv2i8(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x i8> %y)
+  ret <vscale x 2 x i8> %r
+}
+
+define i8 @ushl_umax(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_umax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i8 -1
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 -1, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smax(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i8 127
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 127, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smin(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smin(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i8 -128
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -128, i8 %y)
+  ret i8 %r
+}
+
+define <2 x i8> @ushl_umax_vec_poison_elt(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i8> @ushl_umax_vec_poison_elt(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 poison>
+;
+  %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> <i8 -1, i8 poison>, <2 x i8> %y)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @sshl_smax_vec_poison_elt(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i8> @sshl_smax_vec_poison_elt(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i8> <i8 127, i8 poison>
+;
+  %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 127, i8 poison>, <2 x i8> %y)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @sshl_smin_vec_poison_elt(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i8> @sshl_smin_vec_poison_elt(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 -128>
+;
+  %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 -128>, <2 x i8> %y)
+  ret <2 x i8> %r
+}
+
+define <vscale x 2 x i8> @sshl_smax_scalable(<vscale x 2 x i8> %y) {
+; CHECK-LABEL: define <vscale x 2 x i8> @sshl_smax_scalable(
+; CHECK-SAME: <vscale x 2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 2 x i8> splat (i8 127)
+;
+  %r = call <vscale x 2 x i8> @llvm.sshl.sat.nxv2i8(<vscale x 2 x i8> splat (i8 127), <vscale x 2 x i8> %y)
   ret <vscale x 2 x i8> %r
 }
 
@@ -186,6 +249,66 @@ define i8 @sshl_1(i8 %y) {
   ret i8 %r
 }
 
+define i8 @ushl_umax_minus_1(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_umax_minus_1(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 -2, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 -2, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smax_minus_1(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smax_minus_1(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 126, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 126, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smin_plus_1(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smin_plus_1(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -127, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -127, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_umax(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_umax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -1, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -1, i8 %y)
+  ret i8 %r
+}
+
+define i8 @ushl_smax(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_smax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 127, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 127, i8 %y)
+  ret i8 %r
+}
+
+define i8 @ushl_smin(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_smin(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 -128, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 -128, i8 %y)
+  ret i8 %r
+}
+
 define <2 x i8> @sshl_partial_poison_rhs(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @sshl_partial_poison_rhs(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
@@ -204,4 +327,92 @@ define <2 x i8> @ushl_partial_oob_rhs(<2 x i8> %x) {
 ;
   %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 8, i8 1>)
   ret <2 x i8> %r
+}
+
+define i1 @ushl_icmp_op0_known(i8 %y) {
+; CHECK-LABEL: define i1 @ushl_icmp_op0_known(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 3, i8 %y)
+  %c = icmp uge i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @ushl_icmp_op0_unknown(i8 %y) {
+; CHECK-LABEL: define i1 @ushl_icmp_op0_unknown(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 3, i8 [[Y]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[R]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 3, i8 %y)
+  %c = icmp ugt i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_pos_known(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_pos_known(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 3, i8 %y)
+  %c = icmp sge i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_pos_unknown(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_pos_unknown(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 3, i8 [[Y]])
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[R]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 3, i8 %y)
+  %c = icmp sgt i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_neg_known(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_neg_known(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -3, i8 %y)
+  %c = icmp sle i8 %r, -3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_neg_unknown(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_neg_unknown(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -3, i8 [[Y]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[R]], -3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -3, i8 %y)
+  %c = icmp slt i8 %r, -3
+  ret i1 %c
+}
+
+define <2 x i1> @ushl_icmp_op0_splat_known(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @ushl_icmp_op0_splat_known(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> splat (i8 3), <2 x i8> %y)
+  %c = icmp uge <2 x i8> %r, splat (i8 3)
+  ret <2 x i1> %c
+}
+
+define i1 @ushl_icmp_op1_unknown(i8 %x) {
+; CHECK-LABEL: define i1 @ushl_icmp_op1_unknown(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 3)
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[R]], 1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 %x, i8 3)
+  %c = icmp uge i8 %r, 1
+  ret i1 %c
 }

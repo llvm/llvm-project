@@ -1089,7 +1089,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         KINDInt},
     {"__builtin_compiler_options", {}, DefaultChar},
     {"__builtin_compiler_version", {}, DefaultChar},
-    {"__builtin_fma", {{"f1", SameReal}, {"f2", SameReal}, {"f3", SameReal}},
+    {"__builtin_fma", {{"a", SameReal}, {"b", SameReal}, {"c", SameReal}},
         SameReal},
     {"__builtin_ieee_int",
         {{"a", AnyFloating}, {"round", IeeeRoundType}, DefaultingKIND},

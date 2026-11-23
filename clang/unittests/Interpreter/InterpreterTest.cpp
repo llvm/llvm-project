@@ -688,4 +688,15 @@ TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
       Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
 }
 
+TEST_F(InterpreterTest, BadLLVMArgs) {
+  auto CB = clang::IncrementalCompilerBuilder();
+  CB.SetCompilerArgs({"-mllvm", "-clang-repl-unknown-option"});
+  auto Interp = Interpreter::create(cantFail(CB.CreateCpp()));
+  ASSERT_FALSE(!!Interp);
+  EXPECT_THAT(
+      llvm::toString(Interp.takeError()),
+      testing::HasSubstr(
+          "Unknown command line argument '-clang-repl-unknown-option'"));
+}
+
 } // end anonymous namespace

@@ -52,8 +52,7 @@ struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Function>
   _LIBCPP_HIDE_FROM_ABI optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Function __func) const noexcept {
-    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+    if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy>) {
       return __statpart::__for_each(
           std::move(__first), std::move(__last), [&](auto __partition_first, auto __partition_last) {
             using _ForEachUnseq =

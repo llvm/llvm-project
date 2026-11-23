@@ -378,8 +378,8 @@ mlir::Value CIRGenFunction::makeBinaryAtomicValue(cir::AtomicFetchKind kind,
 
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
-      ordering, cir::SyncScopeKind::System, false, /* is volatile */
-      true);                                       /* fetch first */
+      ordering, cir::SyncScopeKind::System, /*alignment=*/nullptr,
+      /*is_volatile=*/false, /*fetch_first=*/true);
   return rmwi->getResult(0);
 }
 
@@ -439,7 +439,8 @@ static RValue emitAtomicXchg(CIRGenFunction &cgf, const CallExpr *e,
 
   auto xchg = cir::AtomicXchgOp::create(
       builder, cgf.getLoc(e->getSourceRange()), destValue, val, ordering,
-      cir::SyncScopeKind::System, /*is_volatile=*/false);
+      cir::SyncScopeKind::System, /*alignment=*/nullptr,
+      /*is_volatile=*/false);
   return RValue::get(xchg.getResult());
 }
 
@@ -632,7 +633,8 @@ static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Type ty = cgf.convertType(e.getType());
 
   auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2,
-                         cgf.getBuilder().getConstrainedFPAttr());
+                         cgf.getBuilder().getConstrainedFPAttr(),
+                         cgf.getBuilder().getFastMathFlagsAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -1177,6 +1179,13 @@ decodeFixedType(CIRGenFunction &cgf,
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
     return cir::VectorType::getFixed(elementType, numElements);
   }
+  case IITDescriptor::Struct: {
+    SmallVector<mlir::Type, 8> members;
+    for (unsigned i = 0; i < descriptor.StructNumElements; ++i)
+      members.push_back(decodeFixedType(cgf, infos, overloadTys, context));
+    return cgf.getBuilder().getAnonRecordTy(
+        members, /*packed=*/false, cir::RecordType::getAllDataKinds(members));
+  }
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);
     auto addrSpace = cir::TargetAddressSpaceAttr::get(
@@ -1553,6 +1562,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                           cir::AssumeBundleKind::Dereferenceable,
                           mlir::ValueRange{ptrValue, sizeValue});
     return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_annotation: {
+    mlir::Value value = emitScalarExpr(e->getArg(0));
+    StringRef str =
+        cast<StringLiteral>(e->getArg(1)->IgnoreParenCasts())->getString();
+    auto annotation = cir::AnnotationAttr::get(
+        &getMLIRContext(), builder.getStringAttr(str), /*args=*/{});
+    return RValue::get(cir::AnnotationOp::create(
+        builder, getLoc(e->getExprLoc()), value, annotation));
   }
 
   case Builtin::BI__assume:
@@ -2823,7 +2842,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__warn_memset_zero_len:
   case Builtin::BI__annotation:
-  case Builtin::BI__builtin_annotation:
     return errorBuiltinNYI(*this, e, builtinID);
 
   case Builtin::BI__builtin_addcb:
@@ -3375,10 +3393,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (std::optional<mlir::Value> rst =
           emitTargetBuiltinExpr(builtinID, e, returnValue)) {
     mlir::Value v = rst.value();
-    // CIR dialect operations may have no results, no values will be returned
-    // even if it executes successfully.
+    // A null value means either a void builtin or an already diagnosed NYI.
+    // In the case of a void builtin, getUndefRValue returns
+    // `RValue::get(nullptr)`.
     if (!v)
-      return RValue::get(nullptr);
+      return getUndefRValue(e->getType());
 
     switch (evalKind) {
     case cir::TEK_Scalar:
@@ -3464,7 +3483,9 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::spirv64:
     if (cgf->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
       return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
-    return std::nullopt;
+    [[fallthrough]];
+  case llvm::Triple::spirv:
+    return cgf->emitSPIRVBuiltinExpr(builtinID, e);
   default:
     return std::nullopt;
   }

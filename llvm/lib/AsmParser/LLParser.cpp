@@ -550,6 +550,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeCFIFunctionsMetadata(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
+  UpgradeInstructionMetadata(*M);
   copyModuleAttrToFunctions(*M);
 
   if (!Slots)
@@ -10049,6 +10050,9 @@ bool LLParser::parseWpdRes(WholeProgramDevirtResolution &WPDRes) {
     break;
   case lltok::kw_branchFunnel:
     WPDRes.TheKind = WholeProgramDevirtResolution::BranchFunnel;
+    break;
+  case lltok::kw_speculative:
+    WPDRes.TheKind = WholeProgramDevirtResolution::Speculative;
     break;
   default:
     return error(Lex.getLoc(), "unexpected WholeProgramDevirtResolution kind");

@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-uniform-intrinsic-combine -S < %s | FileCheck %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -O3 -S < %s | FileCheck %s --check-prefix=O3
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-enable-uniform-intrinsic-combine=0 -O3 -S < %s | FileCheck %s --check-prefix=COMBINE-OFF
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-uniform-intrinsic-combine -S < %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu12.50-amd-amdhsa -O3 -S < %s | FileCheck %s --check-prefix=O3
+; RUN: opt -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-enable-uniform-intrinsic-combine=0 -O3 -S < %s | FileCheck %s --check-prefix=COMBINE-OFF
 
 declare i32 @llvm.amdgcn.readfirstlane.i32(i32)
 declare i32 @llvm.amdgcn.workitem.id.x()

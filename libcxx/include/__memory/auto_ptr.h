@@ -33,48 +33,48 @@ private:
 public:
   typedef _Tp element_type;
 
-  _LIBCPP_HIDE_FROM_ABI explicit auto_ptr(_Tp* __p = 0) _NOEXCEPT : __ptr_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI auto_ptr(auto_ptr& __p) _NOEXCEPT : __ptr_(__p.release()) {}
+  explicit auto_ptr(_Tp* __p = 0) _NOEXCEPT : __ptr_(__p) {}
+  auto_ptr(auto_ptr& __p) _NOEXCEPT : __ptr_(__p.release()) {}
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI auto_ptr(auto_ptr<_Up>& __p) _NOEXCEPT : __ptr_(__p.release()) {}
-  _LIBCPP_HIDE_FROM_ABI auto_ptr& operator=(auto_ptr& __p) _NOEXCEPT {
+  auto_ptr(auto_ptr<_Up>& __p) _NOEXCEPT : __ptr_(__p.release()) {}
+  auto_ptr& operator=(auto_ptr& __p) _NOEXCEPT {
     reset(__p.release());
     return *this;
   }
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI auto_ptr& operator=(auto_ptr<_Up>& __p) _NOEXCEPT {
+  auto_ptr& operator=(auto_ptr<_Up>& __p) _NOEXCEPT {
     reset(__p.release());
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI auto_ptr& operator=(auto_ptr_ref<_Tp> __p) _NOEXCEPT {
+  auto_ptr& operator=(auto_ptr_ref<_Tp> __p) _NOEXCEPT {
     reset(__p.__ptr_);
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI ~auto_ptr() _NOEXCEPT { delete __ptr_; }
+  ~auto_ptr() _NOEXCEPT { delete __ptr_; }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp& operator*() const _NOEXCEPT { return *__ptr_; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator->() const _NOEXCEPT { return __ptr_; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* get() const _NOEXCEPT { return __ptr_; }
-  _LIBCPP_HIDE_FROM_ABI _Tp* release() _NOEXCEPT {
+  _Tp& operator*() const _NOEXCEPT { return *__ptr_; }
+  _Tp* operator->() const _NOEXCEPT { return __ptr_; }
+  _Tp* get() const _NOEXCEPT { return __ptr_; }
+  _Tp* release() _NOEXCEPT {
     _Tp* __t = __ptr_;
     __ptr_   = nullptr;
     return __t;
   }
-  _LIBCPP_HIDE_FROM_ABI void reset(_Tp* __p = 0) _NOEXCEPT {
+  void reset(_Tp* __p = 0) _NOEXCEPT {
     if (__ptr_ != __p)
       delete __ptr_;
     __ptr_ = __p;
   }
 
-  _LIBCPP_HIDE_FROM_ABI auto_ptr(auto_ptr_ref<_Tp> __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
+  auto_ptr(auto_ptr_ref<_Tp> __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI operator auto_ptr_ref<_Up>() _NOEXCEPT {
+  operator auto_ptr_ref<_Up>() _NOEXCEPT {
     auto_ptr_ref<_Up> __t;
     __t.__ptr_ = release();
     return __t;
   }
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI operator auto_ptr<_Up>() _NOEXCEPT {
+  operator auto_ptr<_Up>() _NOEXCEPT {
     return auto_ptr<_Up>(release());
   }
 };

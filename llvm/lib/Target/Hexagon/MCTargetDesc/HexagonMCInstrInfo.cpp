@@ -1049,6 +1049,18 @@ unsigned HexagonMCInstrInfo::SubregisterBit(MCRegister Consumer,
   return 0;
 }
 
+bool HexagonMCInstrInfo::isHMXWeight(MCInstrInfo const &MCII,
+                                     MCInst const &MCI) {
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlag(MID, HexagonII::isHMXWeightPos);
+}
+
+bool HexagonMCInstrInfo::isHMXActivation(MCInstrInfo const &MCII,
+                                         MCInst const &MCI) {
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlag(MID, HexagonII::isHMXActivatePos);
+}
+
 bool HexagonMCInstrInfo::LoopNeedsPadding(MCInst const &MCB) {
   return (
       (HexagonMCInstrInfo::isInnerLoop(MCB) &&

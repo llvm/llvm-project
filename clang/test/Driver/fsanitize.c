@@ -32,6 +32,9 @@
 // RUN: %clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-AMDGPU
 // CHECK-SANC-AMDGPU: "-fsanitize=concurrency"
 
+// RUN: %clang --target=spirv64-amd-amdhsa -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-AMDGCNSPIRV
+// CHECK-SANC-AMDGCNSPIRV: "-fsanitize=concurrency"
+
 // RUN: not %clang --target=amdgcn-amd-amdhsa -mcpu=gfx900:xnack+ -nogpulib -fsanitize=concurrency,address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-SANA
 // CHECK-SANC-SANA: '-fsanitize=concurrency' not allowed with '-fsanitize=address'
 
@@ -81,8 +84,6 @@
 // CHECK-SANC-PAL: unsupported option '-fsanitize=concurrency' for target 'amdgpu-amd-amdpal'
 // RUN: not %clang --target=amdgpu-mesa-mesa3d -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-MESA
 // CHECK-SANC-MESA: unsupported option '-fsanitize=concurrency' for target 'amdgpu-mesa-mesa3d'
-// RUN: not %clang --target=spirv64-amd-amdhsa -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-SPIRV
-// CHECK-SANC-SPIRV: unsupported option '-fsanitize=concurrency' for target 'spirv64-amd-amdhsa'
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=leak,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-SANM
 // CHECK-SANL-SANM: '-fsanitize=leak' not allowed with '-fsanitize=memory'
@@ -584,6 +585,17 @@
 // RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nodefaultlibs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
 // RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
 // CHECK-TYSAN-NOLIB-PS5-NOT: SceTypeSanitizer_nosubmission_stub_weak
+
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-PS5
+// Make sure there are no *.{o,bc} or -l passed before the RtSan library.
+// CHECK-RTSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceRealtimeSanitizer_nosubmission_stub_weak}}
+// CHECK-RTSAN-PS5: --dependent-lib=libSceRealtimeSanitizer_nosubmission_stub_weak.a
+// CHECK-RTSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceRealtimeSanitizer_nosubmission_stub_weak}}
+// CHECK-RTSAN-PS5: -lSceRealtimeSanitizer_nosubmission_stub_weak
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nostdlib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nodefaultlibs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// CHECK-RTSAN-NOLIB-PS5-NOT: SceRealtimeSanitizer_nosubmission_stub_weak
 
 // RUN: %clang --target=aarch64 -fsanitize=shadow-call-stack -ffixed-x18 %s -### 2>&1 | FileCheck %s --check-prefix=AARCH64-SCS
 // RUN: %clang --target=aarch64_be -fsanitize=shadow-call-stack -ffixed-x18 %s -### 2>&1 | FileCheck %s --check-prefix=AARCH64-SCS

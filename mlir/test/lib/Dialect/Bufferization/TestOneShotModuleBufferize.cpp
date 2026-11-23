@@ -15,8 +15,7 @@
 #include "mlir/Pass/Pass.h"
 
 #include "TestAttributes.h" // TestTensorEncodingAttr, TestMemRefLayoutAttr
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsInterfaces.h"
 
 #include "llvm/ADT/TypeSwitch.h"
 

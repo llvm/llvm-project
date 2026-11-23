@@ -226,12 +226,13 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkAXOK = checkAXOK();
   bool chkCofMax1 = checkCOFMax1();
   bool chkHWLoop = checkHWLoop();
+  bool chkHMX = checkValidHMX();
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool ChkHVXAccum = checkHVXAccum();
   bool ChkHLX64BitRegUse = checkHLX64BitRegUse();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
-             chkAXOK && chkCofMax1 && chkHWLoop && chkValidTmpDst &&
+             chkAXOK && chkCofMax1 && chkHWLoop && chkHMX && chkValidTmpDst &&
              chkLegalVecRegPair && ChkHVXAccum && ChkHLX64BitRegUse;
 
   return chk;
@@ -687,6 +688,36 @@ bool HexagonMCChecker::checkRegisters() {
   }
 
   return true;
+}
+
+bool HexagonMCChecker::checkValidHMX() {
+  bool hasWeight = false;
+  bool hasActivation = false;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    hasWeight = hasWeight || (HexagonMCInstrInfo::isHMXWeight(MCII, I));
+    hasActivation =
+        hasActivation || (HexagonMCInstrInfo::isHMXActivation(MCII, I));
+  }
+
+  // To be valid they must both be present or neither:
+  const bool ValidWeightActPairing = hasWeight == hasActivation;
+  if (!ValidWeightActPairing) {
+    const std::string ErrMsg = hasWeight ? "weight without an activation"
+                                         : "activation without a weight";
+    reportError(MCB.getLoc(), Twine("packet has HMX ") + ErrMsg);
+
+    if (HexagonMCInstrInfo::bundleSize(MCB) > 1)
+      for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+        if (HexagonMCInstrInfo::isHMXWeight(MCII, I))
+          reportNote(I.getLoc(), "this is an HMX weight instruction");
+        else if (HexagonMCInstrInfo::isHMXActivation(MCII, I))
+          reportNote(I.getLoc(), "this is an HMX activation instruction");
+        else
+          reportNote(I.getLoc(),
+                     "this is neither an HMX weight nor activation");
+      }
+  }
+  return ValidWeightActPairing;
 }
 
 // Check for legal use of solo insns.

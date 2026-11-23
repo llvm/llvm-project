@@ -103,8 +103,8 @@ static void printBoltRevision(llvm::raw_ostream &OS) {
 void perf2boltMode(int argc, char **argv) {
   cl::HideUnrelatedOptions(ArrayRef(opts::Perf2BoltCategories));
   cl::AddExtraVersionPrinter(printBoltRevision);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::parseCommandLineOptions(
+      opts::LibraryOptionsCtx, ArrayRef(argv, argc),
       "perf2bolt - BOLT data aggregator\n"
       "\nEXAMPLE: perf2bolt -p=perf.data executable -o data.fdata\n");
   if (!opts::InputDataFilename.empty()) {
@@ -122,8 +122,8 @@ void perf2boltMode(int argc, char **argv) {
 void boltDiffMode(int argc, char **argv) {
   cl::HideUnrelatedOptions(ArrayRef(opts::BoltDiffCategories));
   cl::AddExtraVersionPrinter(printBoltRevision);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::parseCommandLineOptions(
+      opts::LibraryOptionsCtx, ArrayRef(argv, argc),
       "llvm-boltdiff - BOLT binary diff tool\n"
       "\nEXAMPLE: llvm-boltdiff -data=a.fdata -data2=b.fdata exec1 exec2\n");
   if (opts::InputDataFilename2.empty()) {
@@ -151,7 +151,7 @@ void boltMode(int argc, char **argv) {
   cl::AddExtraVersionPrinter(printBoltRevision);
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::parseCommandLineOptions(opts::LibraryOptionsCtx, ArrayRef(argv, argc),
                               "BOLT - Binary Optimization and Layout Tool\n");
 
   if (opts::OutputFilename.empty()) {

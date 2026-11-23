@@ -200,27 +200,27 @@ END_COMPILERRT_FUNCTION(__riscv_save_1)
 
 DEFINE_COMPILERRT_FUNCTION(__riscv_save_2)
   addi    sp, sp, -24
-  sw      s1, 0(sp)
-  sw      s0, 8(sp)
-  sw      ra, 16(sp)
+  sd      s1, 0(sp)
+  sd      s0, 8(sp)
+  sd      ra, 16(sp)
   jr      t0
-END_COMPILERRT_FUNCTION(__riscv_save_3)
+END_COMPILERRT_FUNCTION(__riscv_save_2)
 
 DEFINE_COMPILERRT_FUNCTION(__riscv_save_1)
   addi    sp, sp, -16
-  sw      s0, 0(sp)
-  sw      ra, 8(sp)
+  sd      s0, 0(sp)
+  sd      ra, 8(sp)
   jr      t0
-END_COMPILERRT_FUNCTION(__riscv_save_3)
+END_COMPILERRT_FUNCTION(__riscv_save_1)
 
 DEFINE_COMPILERRT_FUNCTION(__riscv_save_0)
   addi    sp, sp, -8
-  sw      ra,  0(sp)
+  sd      ra,  0(sp)
   jr      t0
-END_COMPILERRT_FUNCTION(__riscv_save_3)
+END_COMPILERRT_FUNCTION(__riscv_save_0)
 
 #endif
 
 #else
-# error "xlen must be 32 or 64 for save-restore implementation
+# error "xlen must be 32 or 64 for save-restore implementation"
 #endif

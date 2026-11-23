@@ -24,6 +24,7 @@
 #include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -398,24 +399,30 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
   if (priorities.empty())
     return sectionPriorities;
 
-  auto addSym = [&](const Defined *sym) {
-    std::optional<int> symbolPriority = getSymbolPriority(sym);
-    if (!symbolPriority)
-      return;
-    auto *isec = sym->isec();
-    int &priority = sectionPriorities[isec];
-    priority = std::min(priority, *symbolPriority);
-    // Order file takes precedence over cold partitioning.
-    isec->isCold = false;
-  };
+  // getSymbolPriority() is expensive, and there are many object files and
+  // symbols, so parallelize getSymbolPriority() over object files.
+  using Matches = std::vector<std::pair<InputSection *, int>>;
+  std::vector<std::pair<const ObjFile *, Matches>> fileMatches;
+  for (const InputFile *file : inputFiles)
+    if (auto *obj = dyn_cast<ObjFile>(file))
+      fileMatches.emplace_back(obj, Matches());
+
+  parallelForEach(fileMatches, [&](auto &pair) {
+    auto &[file, matches] = pair;
+    for (Symbol *sym : file->symbols)
+      if (auto *d = dyn_cast_or_null<Defined>(sym))
+        if (std::optional<int> priority = getSymbolPriority(d))
+          matches.emplace_back(d->isec(), *priority);
+  });
 
   // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast_or_null<Defined>(sym))
-          addSym(d);
-  }
+  for (const auto &[_, matches] : fileMatches)
+    for (auto [isec, symbolPriority] : matches) {
+      int &priority = sectionPriorities[isec];
+      priority = std::min(priority, symbolPriority);
+      // Order file takes precedence over cold partitioning.
+      isec->isCold = false;
+    }
 
   return sectionPriorities;
 }

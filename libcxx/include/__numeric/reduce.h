@@ -29,7 +29,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Tp, class _BinaryOp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
+[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
 reduce(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOp __b) {
 #  ifndef __OPTIMIZE_SIZE__
   if constexpr (__has_random_access_iterator_category<_InputIterator>::value && //
@@ -49,13 +49,12 @@ reduce(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOp __b)
 }
 
 template <class _InputIterator, class _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
-reduce(_InputIterator __first, _InputIterator __last, _Tp __init) {
+[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last, _Tp __init) {
   return std::reduce(__first, __last, __init, std::plus<>());
 }
 
 template <class _InputIterator>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename iterator_traits<_InputIterator>::value_type
+[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX20 typename iterator_traits<_InputIterator>::value_type
 reduce(_InputIterator __first, _InputIterator __last) {
   return std::reduce(__first, __last, typename iterator_traits<_InputIterator>::value_type{});
 }

@@ -1,0 +1,199 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_function(
+    name = "fetestexcept",
+    srcs = ["fetestexcept.cpp"],
+    hdrs = ["fetestexcept.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fetestexceptflag",
+    srcs = ["fetestexceptflag.cpp"],
+    hdrs = ["fetestexceptflag.h"],
+    deps = [
+        "//libc/hdr/types:fexcept_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "feclearexcept",
+    srcs = ["feclearexcept.cpp"],
+    hdrs = ["feclearexcept.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "feraiseexcept",
+    srcs = ["feraiseexcept.cpp"],
+    hdrs = ["feraiseexcept.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fegetround",
+    srcs = ["fegetround.cpp"],
+    hdrs = ["fegetround.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fesetround",
+    srcs = ["fesetround.cpp"],
+    hdrs = ["fesetround.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fedisableexcept",
+    srcs = ["fedisableexcept.cpp"],
+    hdrs = ["fedisableexcept.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "feenableexcept",
+    srcs = ["feenableexcept.cpp"],
+    hdrs = ["feenableexcept.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fegetexcept",
+    srcs = ["fegetexcept.cpp"],
+    hdrs = ["fegetexcept.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fegetenv",
+    srcs = ["fegetenv.cpp"],
+    hdrs = ["fegetenv.h"],
+    deps = [
+        "//libc/hdr/types:fenv_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fesetenv",
+    srcs = ["fesetenv.cpp"],
+    hdrs = ["fesetenv.h"],
+    deps = [
+        "//libc/hdr/types:fenv_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "feupdateenv",
+    srcs = ["feupdateenv.cpp"],
+    hdrs = ["feupdateenv.h"],
+    deps = [
+        "//libc/hdr/types:fenv_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fesetexcept",
+    srcs = ["fesetexcept.cpp"],
+    hdrs = ["fesetexcept.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fegetexceptflag",
+    srcs = ["fegetexceptflag.cpp"],
+    hdrs = ["fegetexceptflag.h"],
+    deps = [
+        "//libc/hdr/types:fexcept_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "fesetexceptflag",
+    srcs = ["fesetexceptflag.cpp"],
+    hdrs = ["fesetexceptflag.h"],
+    deps = [
+        "//libc/hdr/types:fexcept_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "feholdexcept",
+    srcs = ["feholdexcept.cpp"],
+    hdrs = ["feholdexcept.h"],
+    deps = [
+        "//libc/hdr/types:fenv_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/macros:config",
+    ],
+)
