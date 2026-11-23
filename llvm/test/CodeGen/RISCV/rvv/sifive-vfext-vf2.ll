@@ -18,7 +18,7 @@ define <vscale x 2 x i8> @intrinsic_vfext_vf2_nxv2i8_nxv1i8(<vscale x 1 x i8> %0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vfext.vf2.nxv2i8.nxv1i8(
-    <vscale x 2 x i8> undef,
+    <vscale x 2 x i8> poison,
     <vscale x 1 x i8> %0,
     iXLen %1)
 
@@ -39,7 +39,7 @@ define <vscale x 4 x i8> @intrinsic_vfext_vf2_nxv4i8_nxv2i8(<vscale x 2 x i8> %0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vfext.vf2.nxv4i8.nxv2i8(
-    <vscale x 4 x i8> undef,
+    <vscale x 4 x i8> poison,
     <vscale x 2 x i8> %0,
     iXLen %1)
 
@@ -60,7 +60,7 @@ define <vscale x 8 x i8> @intrinsic_vfext_vf2_nxv8i8_nxv4i8(<vscale x 4 x i8> %0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vfext.vf2.nxv8i8.nxv4i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 4 x i8> %0,
     iXLen %1)
 
@@ -82,7 +82,7 @@ define <vscale x 16 x i8> @intrinsic_vfext_vf2_nxv16i8_nxv8i8(<vscale x 8 x i8> 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vfext.vf2.nxv16i8.nxv8i8(
-    <vscale x 16 x i8> undef,
+    <vscale x 16 x i8> poison,
     <vscale x 8 x i8> %0,
     iXLen %1)
 
@@ -104,7 +104,7 @@ define <vscale x 32 x i8> @intrinsic_vfext_vf2_nxv32i8_nxv16i8(<vscale x 16 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vfext.vf2.nxv32i8.nxv16i8(
-    <vscale x 32 x i8> undef,
+    <vscale x 32 x i8> poison,
     <vscale x 16 x i8> %0,
     iXLen %1)
 
@@ -126,7 +126,7 @@ define <vscale x 64 x i8> @intrinsic_vfext_vf2_nxv64i8_nxv32i8(<vscale x 32 x i8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vfext.vf2.nxv64i8.nxv32i8(
-    <vscale x 64 x i8> undef,
+    <vscale x 64 x i8> poison,
     <vscale x 32 x i8> %0,
     iXLen %1)
 
