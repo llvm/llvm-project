@@ -86,14 +86,13 @@ getWidenedStridedCastCost(const TargetTransformInfo &TTI, Type *SrcTy,
                           TargetTransformInfo::CastContextHint CCH,
                           TargetTransformInfo::TargetCostKind CostKind);
 
-/// Returns the cost of casting the vector of a demoted entry to \p VecTy.
-/// \p MinBW is the minimum bit width and signedness of the entry.
+/// Returns the cost of casting a vector of the demoted type to \p VecTy.
+/// \p MinBW is the bit width and signedness of the demoted type.
 InstructionCost
-getDemotedEntryCastCost(const TargetTransformInfo &TTI, FixedVectorType *VecTy,
-                        const std::pair<uint64_t, bool> &MinBW,
-                        const DataLayout &DL,
-                        TargetTransformInfo::CastContextHint CCH,
-                        TargetTransformInfo::TargetCostKind CostKind);
+getDemotedTypeCastCost(const TargetTransformInfo &TTI, VectorType *VecTy,
+                       const std::pair<uint64_t, bool> &MinBW,
+                       TargetTransformInfo::CastContextHint CCH,
+                       TargetTransformInfo::TargetCostKind CostKind);
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is

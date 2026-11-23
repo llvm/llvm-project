@@ -20925,8 +20925,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                 VectorCasts
                     .insert(std::make_pair(ScalarTE, FTy->getElementType()))
                     .second) {
-              InstructionCost C = getDemotedEntryCastCost(
-                  *TTI, FTy, It->second, *DL, getCastContextHint(*ScalarTE),
+              InstructionCost C = getDemotedTypeCastCost(
+                  *TTI, FTy, It->second, getCastContextHint(*ScalarTE),
                   CostKind);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                                 << " for extending externally used vector with "
