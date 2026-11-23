@@ -234,19 +234,11 @@ static bool isCompatibleDylib(uint32_t cpuType, uint32_t cpuSubtype) {
   // arm64 processes use the arm64e system libraries.
   if (config->arch() != AK_arm64e)
     return true;
-  if (!CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype) ||
-      CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpuSubtype))
-    return false;
-  unsigned version = CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype);
-  switch (cpuSubtype & ~CPU_SUBTYPE_MASK) {
-  case CPU_SUBTYPE_ARM64E:
-    // macOS executables, which can be bundle loaders, are marked version 1.
-    return version <= 1;
-  case CPU_SUBTYPE_ARM64E_X1:
-    return version == 0;
-  default:
-    return false;
-  }
+  // macOS executables, which can be bundle loaders, are marked version 1.
+  return cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false) ||
+         cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, false) ||
+         cpuSubtype == (CPU_SUBTYPE_ARM64E_X1 |
+                        CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK);
 }
 
 static void reportIncompatibleArch(const InputFile *file, uint32_t cpuType,

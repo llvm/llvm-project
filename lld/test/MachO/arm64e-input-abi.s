@@ -60,6 +60,9 @@
 # RUN: yaml2obj -DSUBTYPE=0x2 %t/dylib.yaml -o %t/libold.dylib
 # RUN: yaml2obj -DSUBTYPE=0xC0000002 %t/dylib.yaml -o %t/libkernel.dylib
 # RUN: yaml2obj -DSUBTYPE=0x82000002 %t/dylib.yaml -o %t/libv2.dylib
+# RUN: yaml2obj -DSUBTYPE=0x90000002 %t/dylib.yaml -o %t/libv0-extra-bit.dylib
+# RUN: yaml2obj -DSUBTYPE=0x91000002 %t/dylib.yaml -o %t/libv1-extra-bit.dylib
+# RUN: yaml2obj -DSUBTYPE=0x9000000C %t/dylib.yaml -o %t/libx1-extra-bit.dylib
 # RUN: yaml2obj -DSUBTYPE=0x0 %t/dylib.yaml -o %t/libarm64.dylib
 # RUN: llvm-lipo -create %t/libarm64.dylib %t/libkernel.dylib -output %t/libfat.dylib
 # RUN: %{lld} %t/libv0.dylib
@@ -71,6 +74,9 @@
 # RUN: not %{lld} %t/libold.dylib 2>&1 | FileCheck %s --check-prefix=OLD
 # RUN: not %{lld} %t/libkernel.dylib 2>&1 | FileCheck %s --check-prefix=KERNEL
 # RUN: not %{lld} %t/libv2.dylib 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/libv0-extra-bit.dylib 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/libv1-extra-bit.dylib 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/libx1-extra-bit.dylib 2>&1 | FileCheck %s --check-prefix=X1-EXTRA
 # RUN: not %{lld} %t/libfat.dylib 2>&1 | FileCheck %s --check-prefix=FAT
 # RUN: %no-fatal-warnings-lld -arch arm64 -arch_errors_fatal %t/main-arm64.o \
 # RUN:   %t/libkernel.dylib -o %t/out
@@ -86,6 +92,7 @@
 # UNKNOWN:   error: {{.*}}.{{o|dylib}} has architecture unknown which is incompatible with target architecture arm64e
 # WARN:      warning: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # V1-ARM64:  error: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64
+# X1-EXTRA:  error: {{.*}}libx1-extra-bit.dylib has architecture
 # FAT:       error: {{.*}}libfat.dylib has architecture arm64e.kernel which is incompatible with target architecture arm64e
 # WARN-DYLIB: warning: {{.*}}libkernel.dylib has architecture arm64e.kernel which is incompatible with target architecture arm64e
 # LOAD:      @rpath/libhelper.dylib
