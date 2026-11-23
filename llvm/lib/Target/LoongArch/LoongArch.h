@@ -15,6 +15,12 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCH_H
 
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -35,12 +41,47 @@ bool lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
 
 FunctionPass *createLoongArchDeadRegisterDefinitionsPass();
 FunctionPass *createLoongArchExpandAtomicPseudoPass();
-FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM,
-                                     CodeGenOptLevel OptLevel);
+
+class LoongArchISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  LoongArchISelDAGToDAGPass(LoongArchTargetMachine &TM,
+                            CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createLoongArchISelDagLegacyPass(LoongArchTargetMachine &TM,
+                                               CodeGenOptLevel OptLevel);
 FunctionPass *createLoongArchMemoryBarrierOptPass();
-FunctionPass *createLoongArchMergeBaseOffsetOptPass();
-FunctionPass *createLoongArchOptWInstrsPass();
-FunctionPass *createLoongArchPreRAExpandPseudoPass();
+
+class LoongArchMergeBaseOffsetPass
+    : public OptionalPassInfoMixin<LoongArchMergeBaseOffsetPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
+
+FunctionPass *createLoongArchMergeBaseOffsetLegacyPass();
+
+class LoongArchOptWInstrsPass
+    : public OptionalPassInfoMixin<LoongArchOptWInstrsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createLoongArchOptWInstrsLegacyPass();
+
+class LoongArchPreRAExpandPseudoPass
+    : public RequiredPassInfoMixin<LoongArchPreRAExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createLoongArchPreRAExpandPseudoLegacyPass();
 FunctionPass *createLoongArchExpandPseudoPass();
 FunctionPass *createLoongArchLateBranchOptPass();
 void initializeLoongArchAsmPrinterPass(PassRegistry &);
@@ -48,9 +89,9 @@ void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
 void initializeLoongArchMemoryBarrierOptPass(PassRegistry &);
-void initializeLoongArchMergeBaseOffsetOptPass(PassRegistry &);
-void initializeLoongArchOptWInstrsPass(PassRegistry &);
-void initializeLoongArchPreRAExpandPseudoPass(PassRegistry &);
+void initializeLoongArchMergeBaseOffsetLegacyPass(PassRegistry &);
+void initializeLoongArchOptWInstrsLegacyPass(PassRegistry &);
+void initializeLoongArchPreRAExpandPseudoLegacyPass(PassRegistry &);
 void initializeLoongArchExpandPseudoPass(PassRegistry &);
 void initializeLoongArchLateBranchOptPass(PassRegistry &);
 } // end namespace llvm
