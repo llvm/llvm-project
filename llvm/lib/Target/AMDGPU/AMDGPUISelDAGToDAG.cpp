@@ -3097,41 +3097,68 @@ void AMDGPUDAGToDAGISel::SelectFP_EXTEND(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
-  // The address is assumed to be uniform, so if it ends up in a VGPR, it will
-  // be copied to an SGPR with readfirstlane.
-  unsigned Opc = IntrID == Intrinsic::amdgcn_ds_append ?
-    AMDGPU::DS_APPEND : AMDGPU::DS_CONSUME;
-
-  SDValue Chain = N->getOperand(0);
+  SDLoc DL(N);
   SDValue Ptr = N->getOperand(2);
   MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
   MachineMemOperand *MMO = M->getMemOperand();
   bool IsGDS = M->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
+  const Function &Fn = CurDAG->getMachineFunction().getFunction();
 
-  SDValue Offset;
-  if (CurDAG->isBaseWithConstantOffset(Ptr)) {
-    SDValue PtrBase = Ptr.getOperand(0);
-    SDValue PtrOffset = Ptr.getOperand(1);
+  if (IsGDS && !Subtarget->hasGDS()) {
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "GDS is not supported on this subtarget", DL.getDebugLoc()));
+    IsGDS = false;
+  }
 
-    const APInt &OffsetVal = PtrOffset->getAsAPIntVal();
-    if (isDSOffsetLegal(PtrBase, OffsetVal.getZExtValue())) {
-      N = glueCopyToM0(N, PtrBase);
-      Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i32);
+  uint64_t ImmOffset = 0;
+  auto *ConstAddr = dyn_cast<ConstantSDNode>(Ptr);
+  if (IsGDS) {
+    // GDS takes the whole address from M0.base and requires a zero offset.
+    unsigned GDSSize = CurDAG->getMachineFunction()
+                           .getInfo<SIMachineFunctionInfo>()
+                           ->getGDSSize();
+
+    SDValue M0Val;
+    if (ConstAddr) {
+      M0Val = CurDAG->getTargetConstant(
+          uint32_t(ConstAddr->getZExtValue() << 16) | GDSSize, DL, MVT::i32);
+    } else {
+      // The GDS address is assumed to be uniform.
+      SDValue Base(CurDAG->getMachineNode(AMDGPU::V_READFIRSTLANE_B32, DL,
+                                          MVT::i32, Ptr),
+                   0);
+      Base = SDValue(
+          CurDAG->getMachineNode(AMDGPU::S_LSHL_B32, DL, MVT::i32, Base,
+                                 CurDAG->getTargetConstant(16, DL, MVT::i32)),
+          0);
+      M0Val = SDValue(CurDAG->getMachineNode(
+                          AMDGPU::S_OR_B32, DL, MVT::i32, Base,
+                          CurDAG->getTargetConstant(GDSSize, DL, MVT::i32)),
+                      0);
     }
+    N = glueCopyToM0(N, M0Val);
+  } else {
+    // LDS ignores M0, so the whole address must fit in the offset field.
+    if (ConstAddr && isDSOffsetLegal(SDValue(), ConstAddr->getZExtValue()) &&
+        isAligned(Align(4), ConstAddr->getZExtValue()))
+      ImmOffset = ConstAddr->getZExtValue();
+    else
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn,
+          "ds_append/ds_consume requires a constant, dword aligned LDS address "
+          "that fits in the 16 bit offset field",
+          DL.getDebugLoc()));
+    N = glueCopyToM0LDSInit(N);
   }
 
-  if (!Offset) {
-    N = glueCopyToM0(N, Ptr);
-    Offset = CurDAG->getTargetConstant(0, SDLoc(), MVT::i32);
-  }
+  SmallVector<SDValue, 4> Ops = {
+      CurDAG->getTargetConstant(ImmOffset, DL, MVT::i32),
+      CurDAG->getTargetConstant(IsGDS, DL, MVT::i32), N->getOperand(0)};
+  if (N->getGluedNode())
+    Ops.push_back(N->getOperand(N->getNumOperands() - 1));
 
-  SDValue Ops[] = {
-    Offset,
-    CurDAG->getTargetConstant(IsGDS, SDLoc(), MVT::i32),
-    Chain,
-    N->getOperand(N->getNumOperands() - 1) // New glue
-  };
-
+  unsigned Opc = IntrID == Intrinsic::amdgcn_ds_append ? AMDGPU::DS_APPEND
+                                                       : AMDGPU::DS_CONSUME;
   SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
