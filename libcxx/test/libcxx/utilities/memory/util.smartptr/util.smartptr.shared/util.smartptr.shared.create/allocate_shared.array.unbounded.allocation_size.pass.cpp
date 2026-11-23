@@ -28,45 +28,8 @@
 #include <memory>
 #include <type_traits>
 
+#include "test_allocator.h"
 #include "test_macros.h"
-
-struct AllocationStats {
-  std::size_t allocations = 0;
-  std::size_t bytes       = 0;
-};
-
-template <class T>
-class ByteCountingAllocator {
-  AllocationStats* stats_ = nullptr;
-
-  template <class U>
-  friend class ByteCountingAllocator;
-
-public:
-  using value_type = T;
-
-  explicit ByteCountingAllocator(AllocationStats* stats) : stats_(stats) {}
-
-  template <class U>
-  ByteCountingAllocator(const ByteCountingAllocator<U>& other) noexcept : stats_(other.stats_) {}
-
-  T* allocate(std::size_t n) {
-    ++stats_->allocations;
-    stats_->bytes += n * sizeof(T);
-    return std::allocator<T>().allocate(n);
-  }
-
-  void deallocate(T* p, std::size_t n) noexcept {
-    --stats_->allocations;
-    stats_->bytes -= n * sizeof(T);
-    std::allocator<T>().deallocate(p, n);
-  }
-
-  template <class U>
-  friend bool operator==(const ByteCountingAllocator& a, const ByteCountingAllocator<U>& b) noexcept {
-    return a.stats_ == b.stats_;
-  }
-};
 
 template <class Array>
 void test(std::size_t n) {
@@ -75,37 +38,37 @@ void test(std::size_t n) {
   const std::size_t min_bytes      = n * sizeof(Element);
   const std::size_t max_bytes      = min_bytes + max_header;
 
-  AllocationStats stats;
+  test_allocator_statistics stats;
   {
-    std::shared_ptr<Array> ptr = std::allocate_shared<Array>(ByteCountingAllocator<Array>(&stats), n);
+    std::shared_ptr<Array> ptr = std::allocate_shared<Array>(test_allocator<void>(&stats), n);
     DoNotOptimize(ptr.get());
-    assert(stats.allocations == 1);
-    assert(stats.bytes >= min_bytes);
-    assert(stats.bytes <= max_bytes);
+    assert(stats.alloc_count == 1);
+    assert(stats.allocated_bytes >= min_bytes);
+    assert(stats.allocated_bytes <= max_bytes);
   }
-  assert(stats.allocations == 0);
-  assert(stats.bytes == 0);
+  assert(stats.alloc_count == 0);
+  assert(stats.allocated_bytes == 0);
 
   {
     Element init{};
-    std::shared_ptr<Array> ptr = std::allocate_shared<Array>(ByteCountingAllocator<Array>(&stats), n, init);
+    std::shared_ptr<Array> ptr = std::allocate_shared<Array>(test_allocator<void>(&stats), n, init);
     DoNotOptimize(ptr.get());
-    assert(stats.allocations == 1);
-    assert(stats.bytes >= min_bytes);
-    assert(stats.bytes <= max_bytes);
+    assert(stats.alloc_count == 1);
+    assert(stats.allocated_bytes >= min_bytes);
+    assert(stats.allocated_bytes <= max_bytes);
   }
-  assert(stats.allocations == 0);
-  assert(stats.bytes == 0);
+  assert(stats.alloc_count == 0);
+  assert(stats.allocated_bytes == 0);
 
   {
-    std::shared_ptr<Array> ptr = std::allocate_shared_for_overwrite<Array>(ByteCountingAllocator<Array>(&stats), n);
+    std::shared_ptr<Array> ptr = std::allocate_shared_for_overwrite<Array>(test_allocator<void>(&stats), n);
     DoNotOptimize(ptr.get());
-    assert(stats.allocations == 1);
-    assert(stats.bytes >= min_bytes);
-    assert(stats.bytes <= max_bytes);
+    assert(stats.alloc_count == 1);
+    assert(stats.allocated_bytes >= min_bytes);
+    assert(stats.allocated_bytes <= max_bytes);
   }
-  assert(stats.allocations == 0);
-  assert(stats.bytes == 0);
+  assert(stats.alloc_count == 0);
+  assert(stats.allocated_bytes == 0);
 }
 
 int main(int, char**) {

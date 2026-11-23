@@ -34,39 +34,9 @@
 
 #include "min_allocator.h"
 #include "operator_hijacker.h"
+#include "test_allocator.h"
 #include "test_macros.h"
 #include "types.h"
-
-template <class T>
-class ByteCountingAllocator {
-  std::size_t* bytes_ = nullptr;
-
-  template <class U>
-  friend class ByteCountingAllocator;
-
-public:
-  using value_type = T;
-
-  explicit ByteCountingAllocator(std::size_t* bytes) : bytes_(bytes) {}
-
-  template <class U>
-  ByteCountingAllocator(const ByteCountingAllocator<U>& other) noexcept : bytes_(other.bytes_) {}
-
-  T* allocate(std::size_t n) {
-    *bytes_ += n * sizeof(T);
-    return std::allocator<T>().allocate(n);
-  }
-
-  void deallocate(T* p, std::size_t n) noexcept {
-    *bytes_ -= n * sizeof(T);
-    std::allocator<T>().deallocate(p, n);
-  }
-
-  template <class U>
-  friend bool operator==(const ByteCountingAllocator& a, const ByteCountingAllocator<U>& b) noexcept {
-    return a.bytes_ == b.bytes_;
-  }
-};
 
 template <class T, class ...Args>
 concept CanAllocateShared = requires(Args&& ...args) {
@@ -538,11 +508,11 @@ int main(int, char**) {
       char data[1024 * 1024];
     };
     constexpr std::size_t n = 2;
-    std::size_t bytes       = 0;
+    test_allocator_statistics stats;
     {
-      std::shared_ptr<Large[]> ptr = std::allocate_shared<Large[]>(ByteCountingAllocator<Large[]>(&bytes), n);
+      std::shared_ptr<Large[]> ptr = std::allocate_shared<Large[]>(test_allocator<void>(&stats), n);
       assert(ptr != nullptr);
-      assert(bytes >= n * sizeof(Large));
+      assert(stats.allocated_bytes >= n * sizeof(Large));
       for (std::size_t i = 0; i < n; ++i) {
         assert(ptr[i].data[0] == 0);
         assert(ptr[i].data[sizeof(Large) - 1] == 0);
@@ -552,20 +522,20 @@ int main(int, char**) {
         assert(ptr[i].data[sizeof(Large) - 1] == 2);
       }
     }
-    assert(bytes == 0);
+    assert(stats.allocated_bytes == 0);
     {
       auto init                     = std::make_unique<Large>();
       init->data[0]                 = 3;
       init->data[sizeof(Large) - 1] = 4;
-      std::shared_ptr<Large[]> ptr  = std::allocate_shared<Large[]>(ByteCountingAllocator<Large[]>(&bytes), n, *init);
+      std::shared_ptr<Large[]> ptr  = std::allocate_shared<Large[]>(test_allocator<void>(&stats), n, *init);
       assert(ptr != nullptr);
-      assert(bytes >= n * sizeof(Large));
+      assert(stats.allocated_bytes >= n * sizeof(Large));
       for (std::size_t i = 0; i < n; ++i) {
         assert(ptr[i].data[0] == 3);
         assert(ptr[i].data[sizeof(Large) - 1] == 4);
       }
     }
-    assert(bytes == 0);
+    assert(stats.allocated_bytes == 0);
   }
 
   return 0;
