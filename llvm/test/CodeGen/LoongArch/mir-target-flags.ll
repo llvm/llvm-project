@@ -1,15 +1,15 @@
-; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --stop-after loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --stop-after loongarch-pre-ra-expand-pseudo \
 ; RUN:     --relocation-model=pic --code-model=small %s -o %t.mir
-; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --run-pass loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --run-pass loongarch-pre-ra-expand-pseudo \
 ; RUN:     %t.mir -o - | FileCheck %s
-; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --stop-after loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --stop-after loongarch-pre-ra-expand-pseudo \
 ; RUN:     --relocation-model=pic --enable-tlsdesc --code-model=small %s -o %t.desc.mir
-; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --run-pass loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --run-pass loongarch-pre-ra-expand-pseudo \
 ; RUN:     %t.desc.mir -o - | FileCheck %s --check-prefix=DESC
 
-; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --stop-after loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --stop-after loongarch-pre-ra-expand-pseudo \
 ; RUN:     --relocation-model=pic --code-model=medium %s -o %t.med.mir
-; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --run-pass loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --run-pass loongarch-pre-ra-expand-pseudo \
 ; RUN:     --code-model=medium %t.med.mir -o - | FileCheck %s
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,-relax --run-pass loongarch-expand-pseudo \
 ; RUN:     --code-model=medium %t.med.mir -o - | FileCheck %s --check-prefixes=CALL36

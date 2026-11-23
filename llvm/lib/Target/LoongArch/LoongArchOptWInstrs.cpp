@@ -34,8 +34,11 @@
 #include "LoongArchSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
@@ -57,22 +60,13 @@ static cl::opt<bool>
 
 namespace {
 
-class LoongArchOptWInstrs : public MachineFunctionPass {
+class LoongArchOptWInstrsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  LoongArchOptWInstrs() : MachineFunctionPass(ID) {}
+  LoongArchOptWInstrsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool removeSExtWInstrs(MachineFunction &MF, const LoongArchInstrInfo &TII,
-                         const LoongArchSubtarget &ST,
-                         MachineRegisterInfo &MRI);
-  bool convertToDSuffixes(MachineFunction &MF, const LoongArchInstrInfo &TII,
-                          const LoongArchSubtarget &ST,
-                          MachineRegisterInfo &MRI);
-  bool convertToWSuffixes(MachineFunction &MF, const LoongArchInstrInfo &TII,
-                          const LoongArchSubtarget &ST,
-                          MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -84,12 +78,12 @@ public:
 
 } // end anonymous namespace
 
-char LoongArchOptWInstrs::ID = 0;
-INITIALIZE_PASS(LoongArchOptWInstrs, DEBUG_TYPE, LOONGARCH_OPT_W_INSTRS_NAME,
-                false, false)
+char LoongArchOptWInstrsLegacy::ID = 0;
+INITIALIZE_PASS(LoongArchOptWInstrsLegacy, DEBUG_TYPE,
+                LOONGARCH_OPT_W_INSTRS_NAME, false, false)
 
-FunctionPass *llvm::createLoongArchOptWInstrsPass() {
-  return new LoongArchOptWInstrs();
+FunctionPass *llvm::createLoongArchOptWInstrsLegacyPass() {
+  return new LoongArchOptWInstrsLegacy();
 }
 
 // Checks if all users only demand the lower \p OrigBits of the original
@@ -711,10 +705,10 @@ static unsigned getWOp(unsigned Opcode) {
   }
 }
 
-bool LoongArchOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
-                                            const LoongArchInstrInfo &TII,
-                                            const LoongArchSubtarget &ST,
-                                            MachineRegisterInfo &MRI) {
+static bool removeSExtWInstrs(MachineFunction &MF,
+                              const LoongArchInstrInfo &TII,
+                              const LoongArchSubtarget &ST,
+                              MachineRegisterInfo &MRI) {
   if (DisableSExtWRemoval)
     return false;
 
@@ -763,10 +757,10 @@ bool LoongArchOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
   return MadeChange;
 }
 
-bool LoongArchOptWInstrs::convertToDSuffixes(MachineFunction &MF,
-                                             const LoongArchInstrInfo &TII,
-                                             const LoongArchSubtarget &ST,
-                                             MachineRegisterInfo &MRI) {
+static bool convertToDSuffixes(MachineFunction &MF,
+                               const LoongArchInstrInfo &TII,
+                               const LoongArchSubtarget &ST,
+                               MachineRegisterInfo &MRI) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -789,10 +783,10 @@ bool LoongArchOptWInstrs::convertToDSuffixes(MachineFunction &MF,
   return MadeChange;
 }
 
-bool LoongArchOptWInstrs::convertToWSuffixes(MachineFunction &MF,
-                                             const LoongArchInstrInfo &TII,
-                                             const LoongArchSubtarget &ST,
-                                             MachineRegisterInfo &MRI) {
+static bool convertToWSuffixes(MachineFunction &MF,
+                               const LoongArchInstrInfo &TII,
+                               const LoongArchSubtarget &ST,
+                               MachineRegisterInfo &MRI) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -841,10 +835,7 @@ bool LoongArchOptWInstrs::convertToWSuffixes(MachineFunction &MF,
   return MadeChange;
 }
 
-bool LoongArchOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+static bool optWInstrsInMF(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const LoongArchSubtarget &ST = MF.getSubtarget<LoongArchSubtarget>();
   const LoongArchInstrInfo &TII = *ST.getInstrInfo();
@@ -862,4 +853,18 @@ bool LoongArchOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
     MadeChange |= convertToWSuffixes(MF, TII, ST, MRI);
 
   return MadeChange;
+}
+
+bool LoongArchOptWInstrsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return optWInstrsInMF(MF);
+}
+
+PreservedAnalyses
+LoongArchOptWInstrsPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  return optWInstrsInMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                  .preserveSet<CFGAnalyses>()
+                            : PreservedAnalyses::all();
 }
