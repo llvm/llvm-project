@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
-#include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "VectorizeOptions.h"
 #include "llvm/Analysis/LoopInfo.h"
