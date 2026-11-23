@@ -3,96 +3,90 @@
 ; RUN: opt -passes='function(loop-deletion,print<loops>)' -disable-output < %s 2>&1 | FileCheck --check-prefix=LOOPINFO %s
 
 ; Regression test for llvm/llvm-project#244616.
-; derived from this C
-;
-;   int a = 0, b = 0;
-;   void *c(void *p) {
-;     static void *f[] = {&&g, &&e};
-;
-;     unsigned d = a;
-;     while (1) {
-;       if (__builtin_expect(d ^ 0x100, 1))
-;         break;
-;     e:
-;       b++;
-;       if (__builtin_expect(a, 0))
-;         continue;
-;       goto *p;
-;     g:
-;       d--;
-;     }
-;
-;     return f[d];
-;   }
-;
+
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 @a = global i32 0
 @b = global i32 0
-@labels = internal global [2 x ptr] [ptr blockaddress(@c, %exit_target), ptr blockaddress(@c, %header)]
+@labels = constant [2 x ptr] [ptr blockaddress(@c, %exit_target), ptr blockaddress(@c, %header)]
 
 define ptr @c(ptr %p) {
 ; CHECK-LABEL: define ptr @c(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INITIAL_D:%.*]] = load i32, ptr @a, align 4
-; CHECK-NEXT:    [[CONDITION:%.*]] = xor i32 [[INITIAL_D]], 256
-; CHECK-NEXT:    [[BREAK:%.*]] = icmp ne i32 [[CONDITION]], 0
-; CHECK-NEXT:    br i1 [[BREAK]], label %[[RETURN_BLOCK:.*]], label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[INITIAL_A:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[TOBOOL_NOT15:%.*]] = icmp eq i32 [[INITIAL_A]], 256
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT15]], label %[[OUTER_HEADER_PREHEADER:.*]], label %[[RETURN_BLOCK:.*]]
 ; CHECK:       [[OUTER_HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[INITIAL_B:%.*]] = load i32, ptr @b, align 4
+; CHECK-NEXT:    br label %[[OUTER_HEADER_BACKEDGE:.*]]
+; CHECK:       [[OUTER_HEADER_BACKEDGE]]:
+; CHECK-NEXT:    br label %[[HEADER_PREHEADER:.*]]
+; CHECK:       [[HEADER_EXIT:.*]]:
+; CHECK-NEXT:    store i32 [[B_NEXT:%.*]], ptr @b, align 4
+; CHECK-NEXT:    br i1 true, label %[[HEADER_PREHEADER]], label %[[HEADER_EXIT_RETURN:.*]]
+; CHECK:       [[HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[B_VALUE:%.*]] = phi i32 [ [[INITIAL_B]], %[[OUTER_HEADER_BACKEDGE]] ], [ [[B_NEXT]], %[[HEADER_EXIT]] ]
+; CHECK-NEXT:    [[B_NEXT]] = add i32 [[B_VALUE]], 1
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    br i1 false, label %[[INDIRECT_LATCH:.*]], label %[[LATCH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[INDIRECT_LATCH:.*]], label %[[HEADER_EXIT]]
 ; CHECK:       [[INDIRECT_LATCH]]:
 ; CHECK-NEXT:    indirectbr ptr [[P]], [label %[[EXIT_TARGET:.*]], label %[[HEADER]]]
-; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[B_VALUE:%.*]] = phi i32 [ [[INITIAL_B]], %[[HEADER]] ]
-; CHECK-NEXT:    [[B_NEXT:%.*]] = add nsw i32 [[B_VALUE]], 1
-; CHECK-NEXT:    store i32 [[B_NEXT]], ptr @b, align 4
-; CHECK-NEXT:    br label %[[HEADER]]
 ; CHECK:       [[EXIT_TARGET]]:
-; CHECK-NEXT:    br label %[[RETURN_BLOCK_LOOPEXIT:.*]]
-; CHECK:       [[RETURN_BLOCK_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT_TARGET_RETURN:.*]]
+; CHECK:       [[HEADER_EXIT_RETURN]]:
+; CHECK-NEXT:    br label %[[RETURN_BLOCK]]
+; CHECK:       [[EXIT_TARGET_RETURN]]:
 ; CHECK-NEXT:    br label %[[RETURN_BLOCK]]
 ; CHECK:       [[RETURN_BLOCK]]:
-; CHECK-NEXT:    [[D:%.*]] = phi i32 [ [[INITIAL_D]], %[[ENTRY]] ], [ 255, %[[RETURN_BLOCK_LOOPEXIT]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = zext i32 [[D]] to i64
-; CHECK-NEXT:    [[SLOT:%.*]] = getelementptr inbounds [2 x ptr], ptr @labels, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[INDEX:%.*]] = zext i32 [[INITIAL_A]] to i64
+; CHECK-NEXT:    [[SLOT:%.*]] = getelementptr [8 x i8], ptr @labels, i64 [[INDEX]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = load ptr, ptr [[SLOT]], align 8
 ; CHECK-NEXT:    ret ptr [[RESULT]]
 ;
 entry:
-  %initial.d = load i32, ptr @a
-  %condition = xor i32 %initial.d, 256
-  %break = icmp ne i32 %condition, 0
-  br i1 %break, label %return_block, label %outer_header
+  %initial_a = load i32, ptr @a
+  %tobool.not15 = icmp eq i32 %initial_a, 256
+  br i1 %tobool.not15, label %outer_header_preheader, label %return_block
 
-outer_header:
-  %initial.b = load i32, ptr @b
+outer_header_preheader:
+  %initial_b = load i32, ptr @b
+  br label %outer_header_backedge
+
+outer_header_backedge:
+  br label %header_preheader
+
+header_exit:
+  store i32 %b_next, ptr @b
+  br i1 true, label %header_preheader, label %header_exit_return
+
+header_preheader:
+  %b_value = phi i32 [ %initial_b, %outer_header_backedge ], [ %b_next, %header_exit ]
+  %b_next = add i32 %b_value, 1
   br label %header
 
 header:
-  br i1 false, label %indirect_latch, label %latch
+  br i1 false, label %indirect_latch, label %header_exit
 
 indirect_latch:
   indirectbr ptr %p, [label %exit_target, label %header]
 
-latch:
-  %b.value = phi i32 [ %initial.b, %header ]
-  %b.next = add nsw i32 %b.value, 1
-  store i32 %b.next, ptr @b
-  br label %header
-
 exit_target:
-  br i1 false, label %outer_header, label %return_block
+  br i1 false, label %outer_header_backedge, label %exit_target_return
+
+header_exit_return:
+  br label %return_block
+
+exit_target_return:
+  br label %return_block
 
 return_block:
-  %d = phi i32 [ %initial.d, %entry ], [ 255, %exit_target ]
-  %index = zext i32 %d to i64
-  %slot = getelementptr inbounds [2 x ptr], ptr @labels, i64 0, i64 %index
+  %index = zext i32 %initial_a to i64
+  %slot = getelementptr [8 x i8], ptr @labels, i64 %index
   %result = load ptr, ptr %slot
   ret ptr %result
 }
-; LOOPINFO: Loop at depth 1 containing: %header<header>,%latch<latch>,%indirect_latch<latch><exiting>
+; LOOPINFO: Loop at depth 1 containing: %header_preheader<header>,%header,%indirect_latch<exiting>,%header_exit<latch><exiting>
+; LOOPINFO-NEXT: Loop at depth 2 containing: %header<header><exiting>,%indirect_latch<latch><exiting>
