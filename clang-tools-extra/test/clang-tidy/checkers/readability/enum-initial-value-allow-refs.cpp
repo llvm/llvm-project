@@ -14,7 +14,7 @@ enum class ERef {
 enum class ERefFirst {
   ERefFirst_a = 1,
   ERefFirst_b,
-  ERefFirst_alias = ERefFirst_a,
+  ERefFirst_alias = ((ERefFirst_a)),
 };
 
 // OK: all + self-ref.

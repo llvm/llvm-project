@@ -28,12 +28,7 @@ static bool isSelfReference(const EnumConstantDecl *ECD) {
   if (!Init)
     return false;
 
-  if (const auto *CE = dyn_cast<ConstantExpr>(Init))
-    Init = CE->getSubExpr();
-
-  Init = Init->IgnoreImpCasts();
-
-  const auto *DRE = dyn_cast<DeclRefExpr>(Init);
+  const auto *DRE = dyn_cast<DeclRefExpr>(Init->IgnoreParenImpCasts());
   const auto *RefECD =
       dyn_cast_if_present<EnumConstantDecl>(DRE ? DRE->getDecl() : nullptr);
   return RefECD && RefECD->getDeclContext() == ECD->getDeclContext();
