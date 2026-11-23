@@ -35,7 +35,7 @@ FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x00000003
-  filetype:        0x00000002 # MH_EXECUTE
+  filetype:        MH_EXECUTE
   ncmds:           3
   sizeofcmds:      248
   flags:           0x00000000
@@ -225,7 +225,7 @@ FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x00000003
-  filetype:        0x00000001 # MH_OBJECT
+  filetype:        MH_OBJECT
   ncmds:           1
   sizeofcmds:      152
   flags:           0x00002000
