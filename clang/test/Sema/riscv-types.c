@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v \
 // RUN: -target-feature +zvfh -target-feature +zvfbfmin \
-// RUN: -target-feature +experimental-zvfofp8min -ast-print %s | FileCheck %s
+// RUN: -target-feature +experimental-zvfofp8min \
+// RUN: -target-feature +xsfvfofp4min -ast-print %s | FileCheck %s
 
 void bar(void) {
   // CHECK: __rvv_int64m1_t x0;
@@ -197,6 +198,27 @@ void bar(void) {
 
   // CHECK: __rvv_float8e5m2m8_t x64;
   __rvv_float8e5m2m8_t x64;
+
+  // CHECK: __rvv_float4e2m1mf8_t x65;
+  __rvv_float4e2m1mf8_t x65;
+
+  // CHECK: __rvv_float4e2m1mf4_t x66;
+  __rvv_float4e2m1mf4_t x66;
+
+  // CHECK: __rvv_float4e2m1mf2_t x67;
+  __rvv_float4e2m1mf2_t x67;
+
+  // CHECK: __rvv_float4e2m1m1_t x68;
+  __rvv_float4e2m1m1_t x68;
+
+  // CHECK: __rvv_float4e2m1m2_t x69;
+  __rvv_float4e2m1m2_t x69;
+
+  // CHECK: __rvv_float4e2m1m4_t x70;
+  __rvv_float4e2m1m4_t x70;
+
+  // CHECK: __rvv_float4e2m1m8_t x71;
+  __rvv_float4e2m1m8_t x71;
 
 }
 

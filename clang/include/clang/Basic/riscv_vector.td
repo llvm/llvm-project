@@ -1817,6 +1817,10 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       def vreinterpret_u_f8e5m2 : RVVBuiltin<"vUv", "Uvv", "b", "Uv">;
       def vreinterpret_f8e5m2_u : RVVBuiltin<"Uvv", "vUv", "b", "v">;
     }
+    let RequiredFeatures = ["xsfvfofp4min"] in {
+      def vreinterpret_u_f4e2m1 : RVVBuiltin<"vUv", "Uvv", "g", "Uv">;
+      def vreinterpret_f4e2m1_u : RVVBuiltin<"Uvv", "vUv", "g", "v">;
+    }
 
     // Reinterpret between different SEW under the same LMUL
     foreach dst_sew = ["(FixedSEW:8)", "(FixedSEW:16)", "(FixedSEW:32)",

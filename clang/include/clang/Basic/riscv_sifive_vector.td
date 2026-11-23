@@ -398,3 +398,10 @@ let RequiredFeatures = ["xsfmm32a8f"] in
 
 let RequiredFeatures = ["xsfmm64a64f"] in
   defm : RVVSFMatMulFloatBuiltinSet<"sf_mm_f_f", "0Kzvvzzz", "v", ["d"], 1>;
+
+let Log2LMUL = [-2, -1, 0, 1, 2, 3],
+    RequiredFeatures = ["xsfvfofp4min"],
+    UnMaskedPolicyScheme = HasPassthruOperand in {
+  let OverloadedName = "vfext_vf2" in
+    defm : RVVConvBuiltinSet<"vfext_vf2", "a", [["v", "vn"]]>;
+}

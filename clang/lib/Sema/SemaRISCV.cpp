@@ -169,6 +169,23 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
       QT = Context.getPointerType(QT);
     return QT;
   }
+  case ScalarTypeKind::FloatE2M1: {
+    // TODO: This is a workaround code to only support OFP4 RVV types without
+    // supporting scalar OFP4 types. We need to refactor after scalar types are
+    // supported.
+    assert(Type->isVector() && "Only support vector of OFP4 types.");
+    unsigned Scale = *Type->getScale();
+#define RVV_VECTOR_TYPE_OFP4(Name, Id, SingletonId, NumEls)                    \
+  if (Scale == NumEls)                                                         \
+    QT = Context.SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
+    assert(!QT.isNull() && "Unsupported OFP4 vector type");
+    if (Type->isConstant())
+      QT = Context.getConstType(QT);
+    if (Type->isPointer())
+      QT = Context.getPointerType(QT);
+    return QT;
+  }
   case ScalarTypeKind::BFloat:
     QT = Context.BFloat16Ty;
     break;
@@ -1581,6 +1598,17 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
     }
   };
 
+  auto IsOFP4Type = [](const BuiltinType *BT) {
+    switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_OFP4(Name, Id, SingletonId, NumEls)                   \
+  case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+      return true;
+    default:
+      return false;
+    }
+  };
+
   if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
       !FeatureMap.lookup("zve64d"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve64d";
@@ -1616,8 +1644,12 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!FeatureMap.lookup("zve32x"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32x";
-  else if (IsOFP8Type(BT) && !FeatureMap.lookup("experimental-zvfofp8min"))
-    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfofp8min";
+  else if (IsOFP8Type(BT) && !FeatureMap.lookup("experimental-zvfofp8min") &&
+           !FeatureMap.lookup("xsfvfofp4min"))
+    Diag(Loc, diag::err_riscv_type_requires_extension)
+        << Ty << "zvfofp8min or xsfvfofp4min";
+  else if (IsOFP4Type(BT) && !FeatureMap.lookup("xsfvfofp4min"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "xsfvfofp4min";
 }
 
 /// Are the two types RVV-bitcast-compatible types? I.e. is bitcasting from the

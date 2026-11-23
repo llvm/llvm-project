@@ -153,6 +153,8 @@ static BasicType ParseBasicType(char c) {
     return BasicType::F8E4M3;
   case 'b':
     return BasicType::F8E5M2;
+  case 'g':
+    return BasicType::F4E2M1;
   default:
     return BasicType::Unknown;
   }
@@ -511,7 +513,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   }
 
   // TODO: Support tuple types for ofp8?
-  for (BasicType BT : {BasicType::F8E4M3, BasicType::F8E5M2}) {
+  for (BasicType BT :
+       {BasicType::F8E4M3, BasicType::F8E5M2, BasicType::F4E2M1}) {
     for (int Log2LMUL : Log2LMULs) {
       auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
       if (T)
