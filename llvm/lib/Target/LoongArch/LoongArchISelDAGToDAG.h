@@ -68,6 +68,8 @@ public:
   bool selectVSplatUimmInvPow2(SDValue N, SDValue &SplatImm) const;
   template <unsigned EltSize = 0>
   bool selectVSplatUimmPow2(SDValue N, SDValue &SplatImm) const;
+  bool selectVSat(SDValue N, SDValue &Src, SDValue &SatImm) const;
+  bool selectVSatU(SDValue N, SDValue &Src, SDValue &SatImm) const;
 
   // Return the LoongArch branch opcode that matches the given DAG integer
   // condition code. The CondCode must be one of those supported by the

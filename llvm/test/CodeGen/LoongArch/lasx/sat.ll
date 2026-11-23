@@ -7,8 +7,7 @@
 define <32 x i8> @xvsat_b(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: xvsat_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxi.b $xr0, $xr0, -8
-; CHECK-NEXT:    xvmini.b $xr0, $xr0, 7
+; CHECK-NEXT:    xvsat.b $xr0, $xr0, 3
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i8> @llvm.smax.v32i8(<32 x i8> %a, <32 x i8> splat (i8 -8))
@@ -19,8 +18,7 @@ entry:
 define <32 x i8> @xvsat_b_commute(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: xvsat_b_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmini.b $xr0, $xr0, 7
-; CHECK-NEXT:    xvmaxi.b $xr0, $xr0, -8
+; CHECK-NEXT:    xvsat.b $xr0, $xr0, 3
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i8> @llvm.smin.v32i8(<32 x i8> %a, <32 x i8> splat (i8 7))
@@ -31,10 +29,7 @@ entry:
 define <16 x i16> @xvsat_h(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, -128
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.h $xr1, 127
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %a, <16 x i16> splat (i16 -128))
@@ -45,10 +40,7 @@ entry:
 define <16 x i16> @xvsat_h_commute(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_h_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, 127
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.h $xr1, -128
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %a, <16 x i16> splat (i16 127))
@@ -59,11 +51,7 @@ entry:
 define <8 x i32> @xvsat_w(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: xvsat_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, -8
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvldi $xr1, -2433
-; CHECK-NEXT:    xvmin.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.w $xr0, $xr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %a, <8 x i32> splat (i32 -32768))
@@ -74,11 +62,7 @@ entry:
 define <8 x i32> @xvsat_w_commute(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: xvsat_w_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvldi $xr1, -2433
-; CHECK-NEXT:    xvmin.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    lu12i.w $a0, -8
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.w $xr0, $xr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %a, <8 x i32> splat (i32 32767))
@@ -99,13 +83,7 @@ define <4 x i64> @xvsat_d(<4 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: xvsat_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    lu12i.w $a0, -524288
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a0
-; LA64-NEXT:    xvmax.d $xr0, $xr0, $xr1
-; LA64-NEXT:    lu12i.w $a0, 524287
-; LA64-NEXT:    ori $a0, $a0, 4095
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a0
-; LA64-NEXT:    xvmin.d $xr0, $xr0, $xr1
+; LA64-NEXT:    xvsat.d $xr0, $xr0, 31
 ; LA64-NEXT:    ret
 entry:
   %0 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> splat (i64 -2147483648))
@@ -126,13 +104,7 @@ define <4 x i64> @xvsat_d_commute(<4 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: xvsat_d_commute:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    lu12i.w $a0, 524287
-; LA64-NEXT:    ori $a0, $a0, 4095
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a0
-; LA64-NEXT:    xvmin.d $xr0, $xr0, $xr1
-; LA64-NEXT:    lu12i.w $a0, -524288
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a0
-; LA64-NEXT:    xvmax.d $xr0, $xr0, $xr1
+; LA64-NEXT:    xvsat.d $xr0, $xr0, 31
 ; LA64-NEXT:    ret
 entry:
   %0 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %a, <4 x i64> splat (i64 2147483647))
@@ -143,8 +115,7 @@ entry:
 define <32 x i8> @xvsat_b_imm_0(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: xvsat_b_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxi.b $xr0, $xr0, -1
-; CHECK-NEXT:    xvmini.b $xr0, $xr0, 0
+; CHECK-NEXT:    xvsat.b $xr0, $xr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i8> @llvm.smax.v32i8(<32 x i8> %a, <32 x i8> splat (i8 -1))
@@ -155,10 +126,7 @@ entry:
 define <32 x i8> @xvsat_b_imm_6(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: xvsat_b_imm_6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr1, -64
-; CHECK-NEXT:    xvmax.b $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.b $xr1, 63
-; CHECK-NEXT:    xvmin.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.b $xr0, $xr0, 6
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i8> @llvm.smax.v32i8(<32 x i8> %a, <32 x i8> splat (i8 -64))
@@ -169,8 +137,7 @@ entry:
 define <16 x i16> @xvsat_h_imm_0(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_h_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxi.h $xr0, $xr0, -1
-; CHECK-NEXT:    xvmini.h $xr0, $xr0, 0
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %a, <16 x i16> splat (i16 -1))
@@ -181,12 +148,7 @@ entry:
 define <16 x i16> @xvsat_h_imm_14(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_h_imm_14:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvldi $xr1, -2624
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    lu12i.w $a0, 3
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a0
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 14
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %a, <16 x i16> splat (i16 -16384))
@@ -197,8 +159,7 @@ entry:
 define <8 x i32> @xvsat_w_imm_0(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: xvsat_w_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxi.w $xr0, $xr0, -1
-; CHECK-NEXT:    xvmini.w $xr0, $xr0, 0
+; CHECK-NEXT:    xvsat.w $xr0, $xr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %a, <8 x i32> splat (i32 -1))
@@ -209,12 +170,7 @@ entry:
 define <8 x i32> @xvsat_w_imm_30(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: xvsat_w_imm_30:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvldi $xr1, -3136
-; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    lu12i.w $a0, 262143
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvmin.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.w $xr0, $xr0, 30
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %a, <8 x i32> splat (i32 -1073741824))
@@ -225,8 +181,7 @@ entry:
 define <4 x i64> @xvsat_d_imm_0(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: xvsat_d_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxi.d $xr0, $xr0, -1
-; CHECK-NEXT:    xvmini.d $xr0, $xr0, 0
+; CHECK-NEXT:    xvsat.d $xr0, $xr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> splat (i64 -1))
@@ -246,12 +201,7 @@ define <4 x i64> @xvsat_d_imm_62(<4 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: xvsat_d_imm_62:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvldi $xr1, -896
-; LA64-NEXT:    xvmax.d $xr0, $xr0, $xr1
-; LA64-NEXT:    addi.w $a0, $zero, -1
-; LA64-NEXT:    lu52i.d $a0, $a0, 1023
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a0
-; LA64-NEXT:    xvmin.d $xr0, $xr0, $xr1
+; LA64-NEXT:    xvsat.d $xr0, $xr0, 62
 ; LA64-NEXT:    ret
 entry:
   %0 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> splat (i64 -4611686018427387904))
@@ -272,8 +222,7 @@ entry:
 define <16 x i16> @xvsat_hu(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_hu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, 255
-; CHECK-NEXT:    xvmin.hu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.hu $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %a, <16 x i16> splat (i16 255))
@@ -283,8 +232,7 @@ entry:
 define <8 x i32> @xvsat_wu(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: xvsat_wu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvldi $xr1, -2305
-; CHECK-NEXT:    xvmin.wu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.wu $xr0, $xr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %a, <8 x i32> splat (i32 65535))
@@ -294,8 +242,7 @@ entry:
 define <4 x i64> @xvsat_du(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: xvsat_du:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvldi $xr1, -1777
-; CHECK-NEXT:    xvmin.du $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.du $xr0, $xr0, 31
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> splat (i64 4294967295))
@@ -325,8 +272,7 @@ entry:
 define <32 x i8> @xvsat_bu_imm_5(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: xvsat_bu_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr1, 63
-; CHECK-NEXT:    xvmin.bu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.bu $xr0, $xr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i8> @llvm.umin.v32i8(<32 x i8> %a, <32 x i8> splat (i8 63))
@@ -336,8 +282,7 @@ entry:
 define <32 x i8> @xvsat_bu_imm_6(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: xvsat_bu_imm_6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr1, 127
-; CHECK-NEXT:    xvmin.bu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.bu $xr0, $xr0, 6
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <32 x i8> @llvm.umin.v32i8(<32 x i8> %a, <32 x i8> splat (i8 127))
@@ -367,8 +312,7 @@ entry:
 define <16 x i16> @xvsat_hu_imm_5(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_hu_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, 63
-; CHECK-NEXT:    xvmin.hu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.hu $xr0, $xr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %a, <16 x i16> splat (i16 63))
@@ -378,10 +322,7 @@ entry:
 define <16 x i16> @xvsat_hu_imm_14(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_hu_imm_14:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, 7
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a0
-; CHECK-NEXT:    xvmin.hu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.hu $xr0, $xr0, 14
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %a, <16 x i16> splat (i16 32767))
@@ -411,8 +352,7 @@ entry:
 define <8 x i32> @xvsat_wu_imm_5(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: xvsat_wu_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.w $xr1, 63
-; CHECK-NEXT:    xvmin.wu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.wu $xr0, $xr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %a, <8 x i32> splat (i32 63))
@@ -422,10 +362,7 @@ entry:
 define <8 x i32> @xvsat_wu_imm_30(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: xvsat_wu_imm_30:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, 524287
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvmin.wu $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.wu $xr0, $xr0, 30
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %a, <8 x i32> splat (i32 2147483647))
@@ -455,8 +392,7 @@ entry:
 define <4 x i64> @xvsat_du_imm_5(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: xvsat_du_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.d $xr1, 63
-; CHECK-NEXT:    xvmin.du $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.du $xr0, $xr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> splat (i64 63))
@@ -473,10 +409,7 @@ define <4 x i64> @xvsat_du_imm_62(<4 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: xvsat_du_imm_62:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.w $a0, $zero, -1
-; LA64-NEXT:    lu52i.d $a0, $a0, 2047
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a0
-; LA64-NEXT:    xvmin.du $xr0, $xr0, $xr1
+; LA64-NEXT:    xvsat.du $xr0, $xr0, 62
 ; LA64-NEXT:    ret
 entry:
   %0 = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> splat (i64 9223372036854775807))
@@ -487,10 +420,7 @@ entry:
 define <4 x i64> @xvsat_h_bitcast(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: xvsat_h_bitcast:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, -128
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.h $xr1, 127
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x i64> %a to <16 x i16>
@@ -503,10 +433,7 @@ entry:
 define <16 x i16> @xvsat_h_poison_elts(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_h_poison_elts:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, -128
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.h $xr1, 127
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %a, <16 x i16> <i16 -128, i16 poison, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>)
@@ -517,10 +444,7 @@ entry:
 define <16 x i16> @xvsat_h_icmp_select(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: xvsat_h_icmp_select:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr1, 127
-; CHECK-NEXT:    xvmin.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.h $xr1, -128
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt <16 x i16> %a, splat (i16 127)
@@ -535,8 +459,7 @@ define <16 x i16> @xvsat_h_multi_use(<16 x i16> %a, ptr %p) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvrepli.h $xr1, -128
 ; CHECK-NEXT:    xvmax.h $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.h $xr0, 127
-; CHECK-NEXT:    xvmin.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvsat.h $xr0, $xr0, 7
 ; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
