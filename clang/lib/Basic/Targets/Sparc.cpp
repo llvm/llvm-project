@@ -177,7 +177,7 @@ void SparcTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__REGISTER_PREFIX__", "");
 
   if (SoftFloat)
-    Builder.defineMacro("SOFT_FLOAT", "1");
+    Builder.defineMacro("_SOFT_FLOAT");
 }
 
 void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
