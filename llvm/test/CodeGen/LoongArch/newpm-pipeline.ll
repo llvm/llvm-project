@@ -50,6 +50,7 @@
 ; O0-NEXT:     live-debug-values
 ; O0-NEXT:     machine-sanmd
 ; O0-NEXT:     stack-frame-layout
+; O0-NEXT:     loongarch-expand-pseudo
 ; O0-NEXT:     loongarch-expand-atomic-pseudo
 ; O0-NEXT:     verify
 ; O0-NEXT:   free-machine-function
@@ -145,6 +146,7 @@
 ; O2-NEXT:     live-debug-values
 ; O2-NEXT:     machine-sanmd
 ; O2-NEXT:     stack-frame-layout
+; O2-NEXT:     loongarch-expand-pseudo
 ; O2-NEXT:     loongarch-expand-atomic-pseudo
 ; O2-NEXT:     verify
 ; O2-NEXT:   free-machine-function

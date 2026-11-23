@@ -41,7 +41,7 @@ LLVMInitializeLoongArchTarget() {
   initializeLoongArchMergeBaseOffsetLegacyPass(*PR);
   initializeLoongArchOptWInstrsLegacyPass(*PR);
   initializeLoongArchPreRAExpandPseudoLegacyPass(*PR);
-  initializeLoongArchExpandPseudoPass(*PR);
+  initializeLoongArchExpandPseudoLegacyPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
   initializeLoongArchExpandAtomicPseudoLegacyPass(*PR);
   initializeLoongArchLateBranchOptPass(*PR);
@@ -205,7 +205,7 @@ LoongArchTargetMachine::getTargetTransformInfo(const Function &F) const {
 void LoongArchPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
 
 void LoongArchPassConfig::addPreEmitPass2() {
-  addPass(createLoongArchExpandPseudoPass());
+  addPass(createLoongArchExpandPseudoLegacyPass());
   // Schedule the expansion of AtomicPseudos at the last possible moment,
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.

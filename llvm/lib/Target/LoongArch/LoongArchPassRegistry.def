@@ -20,6 +20,7 @@ MACHINE_FUNCTION_PASS("loongarch-dead-register-definitions",
                       LoongArchDeadRegisterDefinitionsPass())
 MACHINE_FUNCTION_PASS("loongarch-expand-atomic-pseudo",
                       LoongArchExpandAtomicPseudoPass())
+MACHINE_FUNCTION_PASS("loongarch-expand-pseudo", LoongArchExpandPseudoPass())
 MACHINE_FUNCTION_PASS("loongarch-isel",
                       LoongArchISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("loongarch-merge-base-offset",

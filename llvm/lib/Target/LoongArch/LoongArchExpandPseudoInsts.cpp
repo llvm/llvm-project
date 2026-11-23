@@ -555,10 +555,11 @@ static bool expandLoadAddressTLSDesc(MachineBasicBlock &MBB,
   return true;
 }
 
-static bool expandFunctionCALL(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI,
-                               MachineBasicBlock::iterator &NextMBBI,
-                               bool IsTailCall, const LoongArchInstrInfo *TII) {
+static bool expandFunctionCALLPreRA(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    MachineBasicBlock::iterator &NextMBBI,
+                                    bool IsTailCall,
+                                    const LoongArchInstrInfo *TII) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
 
@@ -695,10 +696,12 @@ static bool expandMIPreRA(MachineBasicBlock &MBB,
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, TII, /*Large=*/true);
   case LoongArch::PseudoCALL_SMALL:
   case LoongArch::PseudoCALL_LARGE:
-    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false, TII);
+    return expandFunctionCALLPreRA(MBB, MBBI, NextMBBI, /*IsTailCall=*/false,
+                                   TII);
   case LoongArch::PseudoTAIL_SMALL:
   case LoongArch::PseudoTAIL_LARGE:
-    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true, TII);
+    return expandFunctionCALLPreRA(MBB, MBBI, NextMBBI, /*IsTailCall=*/true,
+                                   TII);
   case LoongArch::PseudoMOVCF2GRViaFR:
     return expandMOVCF2GRViaFR(MBB, MBBI, NextMBBI, TII);
   case LoongArch::PseudoBRIND:
@@ -739,79 +742,27 @@ bool LoongArchPreRAExpandPseudoLegacy::runOnMachineFunction(
   return expandPseudosPreRAInMF(MF);
 }
 
-class LoongArchExpandPseudo : public MachineFunctionPass {
+class LoongArchExpandPseudoLegacy : public MachineFunctionPass {
 public:
-  const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchExpandPseudo() : MachineFunctionPass(ID) {}
+  LoongArchExpandPseudoLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
     return LOONGARCH_EXPAND_PSEUDO_NAME;
   }
-
-private:
-  bool expandMBB(MachineBasicBlock &MBB);
-  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
-  bool expandCopyCFR(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     MachineBasicBlock::iterator &NextMBBI);
-  bool expandFunctionCALL(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI,
-                          MachineBasicBlock::iterator &NextMBBI,
-                          bool IsTailCall);
-  bool expandAddUpperImm(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI);
 };
 
-char LoongArchExpandPseudo::ID = 0;
+} // end namespace
 
-bool LoongArchExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  TII =
-      static_cast<const LoongArchInstrInfo *>(MF.getSubtarget().getInstrInfo());
+char LoongArchExpandPseudoLegacy::ID = 0;
 
-  bool Modified = false;
-  for (auto &MBB : MF)
-    Modified |= expandMBB(MBB);
-
-  return Modified;
-}
-
-bool LoongArchExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
-
-bool LoongArchExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI,
-                                     MachineBasicBlock::iterator &NextMBBI) {
-  switch (MBBI->getOpcode()) {
-  case LoongArch::PseudoCopyCFR:
-    return expandCopyCFR(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoCALL_MEDIUM:
-    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
-  case LoongArch::PseudoTAIL_MEDIUM:
-    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
-  case LoongArch::PseudoAddUpperImm:
-    return expandAddUpperImm(MBB, MBBI);
-  }
-
-  return false;
-}
-
-bool LoongArchExpandPseudo::expandCopyCFR(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
+static bool expandCopyCFR(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI,
+                          const LoongArchInstrInfo *TII) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
@@ -862,9 +813,10 @@ bool LoongArchExpandPseudo::expandCopyCFR(
   return true;
 }
 
-bool LoongArchExpandPseudo::expandFunctionCALL(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall) {
+static bool expandFunctionCALL(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI,
+                               MachineBasicBlock::iterator &NextMBBI,
+                               bool IsTailCall, const LoongArchInstrInfo *TII) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
@@ -914,8 +866,9 @@ bool LoongArchExpandPseudo::expandFunctionCALL(
   llvm_unreachable("Unexpected code model");
 }
 
-bool LoongArchExpandPseudo::expandAddUpperImm(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+static bool expandAddUpperImm(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              const LoongArchInstrInfo *TII) {
   DebugLoc DL = MBBI->getDebugLoc();
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
@@ -941,7 +894,57 @@ bool LoongArchExpandPseudo::expandAddUpperImm(
   return true;
 }
 
-} // end namespace
+static bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NextMBBI,
+                     const LoongArchInstrInfo *TII) {
+  switch (MBBI->getOpcode()) {
+  case LoongArch::PseudoCopyCFR:
+    return expandCopyCFR(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoCALL_MEDIUM:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false, TII);
+  case LoongArch::PseudoTAIL_MEDIUM:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true, TII);
+  case LoongArch::PseudoAddUpperImm:
+    return expandAddUpperImm(MBB, MBBI, TII);
+  }
+
+  return false;
+}
+
+static bool expandMBB(MachineBasicBlock &MBB, const LoongArchInstrInfo *TII) {
+  bool Modified = false;
+
+  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+  while (MBBI != E) {
+    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
+    Modified |= expandMI(MBB, MBBI, NMBBI, TII);
+    MBBI = NMBBI;
+  }
+
+  return Modified;
+}
+
+static bool expandPseudo(MachineFunction &MF) {
+  const LoongArchInstrInfo *TII =
+      static_cast<const LoongArchInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  bool Modified = false;
+  for (auto &MBB : MF)
+    Modified |= expandMBB(MBB, TII);
+
+  return Modified;
+}
+
+bool LoongArchExpandPseudoLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return expandPseudo(MF);
+}
+
+PreservedAnalyses
+LoongArchExpandPseudoPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  return expandPseudo(MF) ? getMachineFunctionPassPreservedAnalyses()
+                          : PreservedAnalyses::all();
+}
 
 PreservedAnalyses
 LoongArchPreRAExpandPseudoPass::run(MachineFunction &MF,
@@ -955,7 +958,7 @@ INITIALIZE_PASS(LoongArchPreRAExpandPseudoLegacy,
                 "loongarch-pre-ra-expand-pseudo",
                 LOONGARCH_PRERA_EXPAND_PSEUDO_NAME, false, false)
 
-INITIALIZE_PASS(LoongArchExpandPseudo, "loongarch-expand-pseudo",
+INITIALIZE_PASS(LoongArchExpandPseudoLegacy, "loongarch-expand-pseudo",
                 LOONGARCH_EXPAND_PSEUDO_NAME, false, false)
 
 namespace llvm {
@@ -963,8 +966,8 @@ namespace llvm {
 FunctionPass *createLoongArchPreRAExpandPseudoLegacyPass() {
   return new LoongArchPreRAExpandPseudoLegacy();
 }
-FunctionPass *createLoongArchExpandPseudoPass() {
-  return new LoongArchExpandPseudo();
+FunctionPass *createLoongArchExpandPseudoLegacyPass() {
+  return new LoongArchExpandPseudoLegacy();
 }
 
 } // end namespace llvm

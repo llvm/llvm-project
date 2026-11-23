@@ -128,7 +128,7 @@ void LoongArchCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 }
 
 void LoongArchCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add LoongArchExpandPseudosPass
+  addMachineFunctionPass(LoongArchExpandPseudoPass(), PMW);
   // Schedule the expansion of AtomicPseudos at the last possible moment,
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
