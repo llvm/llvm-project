@@ -119,11 +119,12 @@ FLIndex<CompleteDebugLocation> DebugLocationStorage::intern(Function *Fn,
     Scope = DL.getScope(FLCtx);
   }
   bool IsDistinct = DL.isInlinedCall() && !DL.asInlinedCall(FLCtx).Uniquable;
-  DISubprogram *InlineeSP =
-      DL.isInlinedCall()
-          ? cast<DISubprogram>(
-                DL.asInlinedCall(FLCtx).InlineeContext->getScope(0).get())
-          : nullptr;
+  DISubprogram *InlineeSP = nullptr;
+  if (DL.isInlinedCall()) {
+    auto *InlineeCtx = DL.asInlinedCall(FLCtx).InlineeContext;
+    InlineeSP = cast<DISubprogram>(InlineeCtx->getScope(0).get());
+    SPContexts.insert({InlineeSP, InlineeCtx});
+  }
   CompleteDebugLocation CDL = {
       Fn,        Line,       Column,       Scope,
       InlinedAt, false,      DL.AtomGroup, (uint8_t)DL.AtomRank,
@@ -181,7 +182,7 @@ void DebugLocationStorage::convertImpl(FLIndex<CompleteDebugLocation> CDLIdx,
 
   // Create the SrcLoc associated with this DebugLocation, which should exist
   // in the SPContext for its non-inlined subprogram scope (unless it has no
-  // scope, in whihc case it is a nodebug inlined call).
+  // scope, in which case it is a nodebug inlined call).
   // Now we can perform the actual creation itself.
   FLIndex<FLSrcLoc> SrcLocIdx;
   if (CDL.Scope) {
@@ -392,8 +393,8 @@ void DebugLocConversionBase<From, To>::replaceLoopNodes() {
   assert(Storage && "Trying to replace loop nodes pre-conversion.");
   for (auto [I, LoopMD] : LoopInstrs) {
     Function *Fn = I->getFunction();
-    if (auto ExistingIt = RemappedLoopNodes.find({Fn, LoopMD});
-        ExistingIt != RemappedLoopNodes.end()) {
+    auto ExistingIt = RemappedLoopNodes.try_emplace({Fn, LoopMD}, nullptr).first;
+    if (ExistingIt->second) {
       I->setMetadata(LLVMContext::MD_loop, ExistingIt->second);
       continue;
     }
@@ -406,8 +407,7 @@ void DebugLocConversionBase<From, To>::replaceLoopNodes() {
       }
       return M;
     });
-    RemappedLoopNodes.insert(
-        {{Fn, LoopMD}, I->getMetadata(LLVMContext::MD_loop)});
+    ExistingIt->second = I->getMetadata(LLVMContext::MD_loop);
   }
 }
 template <typename From, typename To>
