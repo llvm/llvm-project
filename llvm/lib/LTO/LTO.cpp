@@ -1324,10 +1324,6 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::setupPassPlugins() {
-  // Filenames are cleared on success, so repeated calls are no-ops.
-  if (Conf.PassPluginFilenames.empty())
-    return Error::success();
-
   // Load plugins from file. Failures leave them all unregistered.
   SmallVector<std::unique_ptr<PassPlugin>, 0> Loaded;
   for (const std::string &PluginFN : Conf.PassPluginFilenames) {
@@ -1347,10 +1343,7 @@ Error LTO::setupPassPlugins() {
                                 FromFiles.begin(), FromFiles.end());
 
   Conf.PassPluginFilenames.clear();
-  return Error::success();
-}
 
-static Error passPluginArgs(const Config &Conf) {
   if (Conf.PassPluginArgs.empty())
     return Error::success();
   SmallVector<PassPluginLibraryInfo, 0> Infos;
@@ -1367,8 +1360,6 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
 
   if (Error Err = setupPassPlugins())
-    return Err;
-  if (Error Err = passPluginArgs(Conf))
     return Err;
 
   // Compute "dead" symbols, we don't want to import/export these!
