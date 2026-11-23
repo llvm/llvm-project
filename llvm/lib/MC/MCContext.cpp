@@ -682,9 +682,10 @@ MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group,
 void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
+  CachedHashStringRef Key(SectionName);
   bool IsMergeable = Flags & ELF::SHF_MERGE;
   if (UniqueID == MCSection::NonUniqueID) {
-    ELFSeenGenericMergeableSections.insert(SectionName);
+    ELFSeenGenericMergeableSections.insert(Key);
     // Minor performance optimization: avoid hash map lookup in
     // isELFGenericMergeableSection, which will return true for SectionName.
     IsMergeable = true;
@@ -694,9 +695,10 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
   // section name we enter their Unique ID into the ELFEntrySizeMap so that
   // compatible globals can be assigned to the same section.
 
-  if (IsMergeable || isELFGenericMergeableSection(SectionName)) {
-    ELFEntrySizeMap.insert(std::make_pair(
-        std::make_tuple(SectionName, Flags, EntrySize), UniqueID));
+  if (IsMergeable || isELFImplicitMergeableSectionNamePrefix(SectionName) ||
+      ELFSeenGenericMergeableSections.contains(Key)) {
+    ELFEntrySizeMap.insert(
+        std::make_pair(std::make_tuple(Key, Flags, EntrySize), UniqueID));
   }
 }
 
@@ -707,13 +709,15 @@ bool MCContext::isELFImplicitMergeableSectionNamePrefix(StringRef SectionName) {
 
 bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
   return isELFImplicitMergeableSectionNamePrefix(SectionName) ||
-         ELFSeenGenericMergeableSections.count(SectionName);
+         ELFSeenGenericMergeableSections.contains(
+             CachedHashStringRef(SectionName));
 }
 
 std::optional<unsigned>
 MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                     unsigned EntrySize) {
-  auto I = ELFEntrySizeMap.find(std::make_tuple(SectionName, Flags, EntrySize));
+  auto I = ELFEntrySizeMap.find(
+      std::make_tuple(CachedHashStringRef(SectionName), Flags, EntrySize));
   return (I != ELFEntrySizeMap.end()) ? std::optional<unsigned>(I->second)
                                       : std::nullopt;
 }
