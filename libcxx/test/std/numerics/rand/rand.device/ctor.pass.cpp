@@ -11,7 +11,6 @@
 // XFAIL: target={{.+}}-apple-{{.+}} && using-built-library-before-llvm-14
 
 // UNSUPPORTED: no-random-device
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <random>
 

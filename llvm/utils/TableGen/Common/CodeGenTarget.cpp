@@ -90,12 +90,14 @@ CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
            std::tuple(getMacroFusionName(RHS), RHS->getID());
   });
 
-  for (auto [Prev, Fusion] : zip(MacroFusions, drop_begin(MacroFusions))) {
-    StringRef Name = getMacroFusionName(Fusion);
-    if (Name == getMacroFusionName(Prev)) {
-      PrintError(Fusion, "duplicate macro fusion for '" + Name + "'");
-      PrintFatalNote(Prev, "previous definition here");
-    }
+  auto Dup = adjacent_find(MacroFusions, [](const Record *A, const Record *B) {
+    return getMacroFusionName(A) == getMacroFusionName(B);
+  });
+  if (Dup != MacroFusions.end()) {
+    const Record *Fusion = *std::next(Dup);
+    PrintError(Fusion, "duplicate macro fusion for '" +
+                           getMacroFusionName(Fusion) + "'");
+    PrintFatalNote(*Dup, "previous definition here");
   }
 }
 

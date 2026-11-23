@@ -25,7 +25,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -33,11 +32,6 @@ using namespace llvm;
 
 #define GET_CALLING_CONV_IMPL
 #include "AMDGPUGenCallingConv.inc"
-
-static cl::opt<bool> AMDGPUBypassSlowDiv(
-  "amdgpu-bypass-slow-div",
-  cl::desc("Skip 64-bit divide for dynamic 32-bit values"),
-  cl::init(true));
 
 // Find a larger type to do a load / store of a vector with.
 EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
@@ -202,6 +196,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v5f32, MVT::v5f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v6f32, MVT::v6f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v7f32, MVT::v7f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Expand);
@@ -328,7 +325,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v3f32, MVT::v3f16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
+  setTruncStoreAction(MVT::v5f32, MVT::v5f16, Expand);
   setTruncStoreAction(MVT::v6f32, MVT::v6f16, Expand);
+  setTruncStoreAction(MVT::v7f32, MVT::v7f16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
   setTruncStoreAction(MVT::v16f32, MVT::v16bf16, Expand);
@@ -609,7 +608,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset  = 0xffffffff;
 
   // The expansion for 64-bit division is enormous.
-  if (AMDGPUBypassSlowDiv)
+  if (static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts().bypass_slow_div)
     addBypassSlowDiv(64, 32);
 
   setTargetDAGCombine({ISD::BITCAST,    ISD::SHL,
@@ -2035,7 +2034,7 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   //   [-0x400000,0x3FFFFF] for Sign
   //   [ 0x000000,0x3FFFFF] for !Sign
   // This matches what is done in expandDivRemToFloatImpl.
-  if (DivBits > (Sign ? 23 : 22))
+  if (DivBits > (Sign ? 23u : 22u))
     return SDValue();
 
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
@@ -6076,11 +6075,17 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   }
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MUL_I24: {
-    KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
 
     // TODO: SelfMultiply can be poison, but not undef.
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
+
+    // For a self-multiply both operands are the same value, so RHSKnown also
+    // describes the LHS; avoid the duplicated query.
+    KnownBits LHSKnown =
+        SelfMultiply ? RHSKnown
+                     : DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+
     if (SelfMultiply)
       SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
           Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,

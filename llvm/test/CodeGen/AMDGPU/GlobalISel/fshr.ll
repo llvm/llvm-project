@@ -208,8 +208,7 @@ define i7 @v_fshr_i7(i7 %lhs, i7 %rhs, i7 %amt) {
 ; GFX6-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX6-NEXT:    s_add_i32 s4, s4, s5
 ; GFX6-NEXT:    v_mul_hi_u32 v3, v2, s4
-; GFX6-NEXT:    v_mul_lo_u32 v3, v3, -7
-; GFX6-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
+; GFX6-NEXT:    v_mad_i32_i24 v2, v3, -7, v2
 ; GFX6-NEXT:    v_add_i32_e32 v3, vcc, -7, v2
 ; GFX6-NEXT:    v_cmp_le_u32_e32 vcc, 7, v2
 ; GFX6-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
@@ -238,8 +237,7 @@ define i7 @v_fshr_i7(i7 %lhs, i7 %rhs, i7 %amt) {
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX8-NEXT:    s_add_i32 s4, s4, s5
 ; GFX8-NEXT:    v_mul_hi_u32 v3, v2, s4
-; GFX8-NEXT:    v_mul_lo_u32 v3, v3, -7
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v2, v3
+; GFX8-NEXT:    v_mad_i32_i24 v2, v3, -7, v2
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, -7, v2
 ; GFX8-NEXT:    v_cmp_le_u32_e32 vcc, 7, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
@@ -270,13 +268,13 @@ define i7 @v_fshr_i7(i7 %lhs, i7 %rhs, i7 %amt) {
 ; GFX11-NEXT:    s_mul_hi_u32 s1, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
-; GFX11-NEXT:    v_mul_hi_u32 v5, v2, s0
+; GFX11-NEXT:    v_mul_hi_u32 v3, v2, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[3:4], null, v5, -7, v[2:3]
-; GFX11-NEXT:    v_add_nc_u32_e32 v2, -7, v3
-; GFX11-NEXT:    v_cmp_le_u32_e32 vcc_lo, 7, v3
+; GFX11-NEXT:    v_mad_i32_i24 v2, v3, -7, v2
+; GFX11-NEXT:    v_add_nc_u32_e32 v3, -7, v2
+; GFX11-NEXT:    v_cmp_le_u32_e32 vcc_lo, 7, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc_lo
 ; GFX11-NEXT:    v_add_nc_u32_e32 v3, -7, v2
 ; GFX11-NEXT:    v_cmp_le_u32_e32 vcc_lo, 7, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -7622,10 +7620,9 @@ define <2 x i128> @v_fshr_v2i128(<2 x i128> %lhs, <2 x i128> %rhs, <2 x i128> %a
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 0, v27
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v1, v18, vcc_lo
 ; GFX11-NEXT:    v_or_b32_e32 v6, v6, v10
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_and_b32_e32 v22, 0x7f, v17
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v8, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v9, s0
 ; GFX11-NEXT:    v_lshlrev_b64 v[10:11], v17, v[4:5]
 ; GFX11-NEXT:    v_cndmask_b32_e32 v27, 0, v3, vcc_lo

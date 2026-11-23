@@ -27,6 +27,7 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
     classes.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/OpImplementation.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -119,6 +120,7 @@ def OpAsmTypeInterface : TypeInterface<"OpAsmTypeInterface"> {
     classes.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -147,6 +149,7 @@ def OpAsmAttrInterface : AttrInterface<"OpAsmAttrInterface"> {
     classes.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{

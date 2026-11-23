@@ -21,7 +21,6 @@
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -605,10 +604,6 @@ mlir::AffineMap TestMemRefLayoutAttr::getAffineMap() const {
 //===----------------------------------------------------------------------===//
 
 void TestDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "TestAttrDefs.cpp.inc"
-      >();
   registerDynamicAttr(getDynamicSingletonAttr(this));
   registerDynamicAttr(getDynamicPairAttr(this));
   registerDynamicAttr(getDynamicCustomAssemblyFormatAttr(this));

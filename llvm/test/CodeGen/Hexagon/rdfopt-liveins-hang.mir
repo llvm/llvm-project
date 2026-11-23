@@ -295,7 +295,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          true
 isSSA:           false
@@ -310,7 +309,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

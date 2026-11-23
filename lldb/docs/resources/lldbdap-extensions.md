@@ -279,7 +279,7 @@ interface StackFrame {
    * @format uint32
    * @since LLDB 24
    */
-  compileUnitId?: number;
+  $__lldb_compileUnitId?: number;
 
   /**
    * Language specific data about the frame, as returned by
@@ -288,5 +288,11 @@ interface StackFrame {
    * keys they do not know. Omitted if the runtime reports nothing.
    */
   $__lldb_languageSpecificData?: any;
+
+  /**
+   * True if the stack frame is optimized.
+   * @since LLDB 24
+   */
+  $__lldb_isOptimized?: boolean;
 }
 ```

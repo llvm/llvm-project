@@ -384,12 +384,10 @@ public:
 // Represents a symbol that is defined in the current output file.
 class Defined : public Symbol {
 public:
-  Defined(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
-          uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
-          SectionBase *section)
+  Defined(InputFile *file, StringRef name, uint8_t binding, uint8_t stOther,
+          uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
-        size(size), section(section) {
-  }
+        size(size), section(section) {}
   void overwrite(Symbol &sym) const;
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
@@ -422,11 +420,10 @@ public:
 // section. (Therefore, the later passes don't see any CommonSymbols.)
 class CommonSymbol : public Symbol {
 public:
-  CommonSymbol(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
+  CommonSymbol(InputFile *file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
-        alignment(alignment), size(size) {
-  }
+        alignment(alignment), size(size) {}
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);
     auto &s = static_cast<CommonSymbol &>(sym);

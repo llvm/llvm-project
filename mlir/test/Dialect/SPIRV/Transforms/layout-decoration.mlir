@@ -101,7 +101,7 @@ spirv.module Logical GLSL450 {
 // -----
 
 spirv.module Physical64 GLSL450 {
-  // expected-error @+2 {{failed to decorate (unsuported pointee type: '!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>')}}
+  // expected-error @+2 {{failed to decorate (unsupported pointee type: '!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>')}}
   // expected-error @+1 {{failed to legalize operation 'spirv.GlobalVariable'}}
   spirv.GlobalVariable @recursive:
     !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>

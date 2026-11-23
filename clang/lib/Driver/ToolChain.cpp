@@ -179,6 +179,8 @@ bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
                           std::string(FilePath));
     ++FileInsertPos;
     if (RuntimeDir) {
+      // The builtin runtime directories include the multilib path, as the
+      // compiler-rt library files come from a runtimes build.
       SmallString<128> LibPath(*RuntimeDir);
       llvm::sys::path::append(LibPath, M.gccSuffix());
       getLibraryPaths().insert(getLibraryPaths().begin() + LibInsertPos,
@@ -877,6 +879,8 @@ StringRef ToolChain::getOSLibName() const {
 std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
   if (isBareMetal()) {
+    // The builtin compiler-rt directories include the multilib path, as the
+    // compiler-rt library files come from a runtimes build.
     llvm::sys::path::append(Path, "lib", getOSLibName());
     if (!SelectedMultilibs.empty()) {
       Path += SelectedMultilibs.back().gccSuffix();
@@ -1590,7 +1594,9 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
   StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_RTLIB;
 
   // Only use "platform" in tests to override CLANG_DEFAULT_RTLIB!
-  if (LibName == "compiler-rt")
+  if (LibName == "none")
+    runtimeLibType = ToolChain::RLT_None;
+  else if (LibName == "compiler-rt")
     runtimeLibType = ToolChain::RLT_CompilerRT;
   else if (LibName == "libgcc")
     runtimeLibType = ToolChain::RLT_Libgcc;
@@ -1619,7 +1625,9 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
     unwindLibType = ToolChain::UNW_None;
   else if (LibName == "platform" || LibName == "") {
     ToolChain::RuntimeLibType RtLibType = GetRuntimeLibType(Args);
-    if (RtLibType == ToolChain::RLT_CompilerRT) {
+    if (RtLibType == ToolChain::RLT_None)
+      unwindLibType = ToolChain::UNW_None;
+    else if (RtLibType == ToolChain::RLT_CompilerRT) {
       if (getTriple().isAndroid() || getTriple().isOSAIX() ||
           getTriple().isOSSerenity())
         unwindLibType = ToolChain::UNW_CompilerRT;

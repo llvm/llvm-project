@@ -3,6 +3,7 @@ add_subdirectory(TargetLowering)
 add_clang_library(MLIRCIRTransforms
   CallConvLoweringPass.cpp
   CIRCanonicalize.cpp
+  CIRFoldEmptyBranches.cpp
   CIRSimplify.cpp
   CIRTransformUtils.cpp
   CXXABILowering.cpp
@@ -16,7 +17,9 @@ add_clang_library(MLIRCIRTransforms
   LibOpt.cpp
   RecordTypeConverter.cpp
   CIRABIClassifier.cpp
+  CIRABIClassifierAArch64.cpp
   CIRABIClassifierAMDGPU.cpp
+  CIRABIClassifierSPIRV.cpp
   CIRABIClassifierX86_64.cpp
 
   DEPENDS
@@ -25,6 +28,7 @@ add_clang_library(MLIRCIRTransforms
 
   LINK_COMPONENTS
   ABI
+  TargetParser
 
   LINK_LIBS PUBLIC
   clangBasic

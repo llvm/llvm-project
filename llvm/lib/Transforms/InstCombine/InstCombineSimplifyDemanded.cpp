@@ -2370,6 +2370,15 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   FastMathFlags FMF, FPClassTest DemandedMask,
                                   KnownFPClass &Known, const SimplifyQuery &SQ,
                                   unsigned Depth) {
+  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const Function *Fn = I.getFunction();
+  DenormalMode DstMode =
+      Fn ? Fn->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      Fn ? Fn->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
   FPClassTest SrcDemandedMask = DemandedMask;
   if (DemandedMask & fcNan)
@@ -2387,25 +2396,39 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
   if (DemandedMask & fcPosSubnormal)
     SrcDemandedMask |= fcPosNormal;
 
+  const bool SubnormalNeverProducesNormal =
+      DstTy.minExponent > SrcTy.minExponent;
+
+  // A subnormal input may round to a normal value in the destination type.
+  // For example: bf16 = fptrunc(f32) and f80 = fptrunc(f128).
+  if (!SubnormalNeverProducesNormal) {
+    // TODO: Refine based on the rounding mode.
+    if (DemandedMask & fcNegNormal)
+      SrcDemandedMask |= fcNegSubnormal;
+    if (DemandedMask & fcPosNormal)
+      SrcDemandedMask |= fcPosSubnormal;
+  }
+
   if (DemandedMask & fcPosInf)
     SrcDemandedMask |= fcPosNormal;
   if (DemandedMask & fcNegInf)
     SrcDemandedMask |= fcNegNormal;
 
+  // TODO: This is a conservative approach for determining the actual input and
+  // output denormal mode used by fptrunc.
+  if (DstMode != DenormalMode::getIEEE() ||
+      SrcMode != DenormalMode::getIEEE()) {
+    // Input subnormals may flush to zero, and output subnormals may also flush
+    // to zero. The result can be subnormal (and flushed to zero) even if the
+    // input is normal.
+    if ((DemandedMask & fcZero) != fcNone)
+      SrcDemandedMask |= fcSubnormal | fcNormal;
+  }
+
   KnownFPClass KnownSrc;
   if (IC.SimplifyDemandedFPClass(&I, 0, SrcDemandedMask, KnownSrc, SQ,
                                  Depth + 1))
     return &I;
-
-  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
-  const fltSemantics &SrcTy =
-      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
-
-  const Function *Fn = I.getFunction();
-  DenormalMode DstMode =
-      Fn ? Fn->getDenormalMode(DstTy) : DenormalMode::getDynamic();
-  DenormalMode SrcMode =
-      Fn ? Fn->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
   Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
   Known.knownNot(~DemandedMask);
@@ -2521,7 +2544,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      Known = KnownFPClass::fadd_self(KnownLHS, Mode);
+      Known = KnownFPClass::fadd_self(KnownLHS, RoundingMode::NearestTiesToEven,
+                                      Mode);
       KnownRHS = KnownLHS;
     } else {
       FPClassTest SrcDemandedMask = fcFinite;
@@ -2543,8 +2567,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
       Known = I->getOpcode() == Instruction::FAdd
-                  ? KnownFPClass::fadd(KnownLHS, KnownRHS, Mode)
-                  : KnownFPClass::fsub(KnownLHS, KnownRHS, Mode);
+                  ? KnownFPClass::fadd(KnownLHS, KnownRHS,
+                                       RoundingMode::NearestTiesToEven, Mode)
+                  : KnownFPClass::fsub(KnownLHS, KnownRHS,
+                                       RoundingMode::NearestTiesToEven, Mode);
     }
 
     Known.knownNot(~DemandedMask);
@@ -2895,6 +2921,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return simplifyDemandedUseFPClassFPTrunc(*this, *I, FMF, DemandedMask,
                                              Known, SQ, Depth);
   case Instruction::FPExt: {
+    const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
+    const fltSemantics &SrcTy =
+        I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+    const DenormalMode DstMode = F.getDenormalMode(DstTy);
+    const DenormalMode SrcMode = F.getDenormalMode(SrcTy);
+
     FPClassTest SrcDemandedMask = DemandedMask;
     if (DemandedMask & fcNan)
       SrcDemandedMask |= fcNan;
@@ -2905,6 +2938,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if ((DemandedMask & fcPosNormal) != fcNone)
       SrcDemandedMask |= fcPosSubnormal;
 
+    // TODO: This is a conservative approach for determining the actual input
+    // and output denormal mode used by fpext.
+    if (DstMode != DenormalMode::getIEEE() ||
+        SrcMode != DenormalMode::getIEEE()) {
+      // We are assuming that normal values will never produce subnormal results
+      // for fpext. This assumption is incorrect for ppcf128 = fpext(f80).
+      if ((DemandedMask & fcZero) != fcNone)
+        SrcDemandedMask |= fcSubnormal;
+    }
+
     // TODO: Properly handle ppcf128 = fpext(f80) (since f80 has a larger
     // exponent range than ppcf128).
 
@@ -2912,13 +2955,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, SQ, Depth + 1))
       return I;
 
-    const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
-    const fltSemantics &SrcTy =
-        I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
-
-    Known =
-        KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, F.getDenormalMode(DstTy),
-                            F.getDenormalMode(SrcTy));
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
     Known.knownNot(~DemandedMask);
 
     return simplifyDemandedFPClassResult(I, FMF, DemandedMask, Known,
@@ -2952,13 +2989,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      if ((DemandedMask & fcNegative) == DemandedMask) {
+      if ((DemandedMask & fcNegative) == DemandedMask &&
+          CI->getArgOperand(1) != ConstantFP::get(VTy, -1.0)) {
         // Roundabout way of replacing with fneg(fabs)
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
-      if ((DemandedMask & fcPositive) == DemandedMask) {
+      if ((DemandedMask & fcPositive) == DemandedMask &&
+          CI->getArgOperand(1) != ConstantFP::getZero(VTy)) {
         // Roundabout way of replacing with fabs
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
@@ -2980,13 +3019,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.getSignBit() == false) {
+      if (KnownSign.getSignBit() == false &&
+          CI->getArgOperand(1) != ConstantFP::getZero(VTy)) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      if (KnownSign.getSignBit() == true) {
+      if (KnownSign.getSignBit() == true &&
+          CI->getArgOperand(1) != ConstantFP::get(VTy, -1.0)) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
@@ -3166,8 +3207,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      // exp(+/-0) = 1
-      if (KnownSrc.isKnownAlways(fcZero))
+      // exp(+/-0 | subnormal) = 1
+      if (KnownSrc.isKnownAlways(fcZero | fcSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
       // Only perform nan propagation.
@@ -3175,12 +3216,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (KnownSrc.isKnownAlways(fcNan))
         return CI->getArgOperand(0);
 
-      // exp(0 | nan) => x == 0.0 ? 1.0 : x
-      if (KnownSrc.isKnownAlways(fcZero | fcNan)) {
+      // exp(0 | subnormal | +inf | nan) => x + 1.0
+      if (KnownSrc.isKnownAlways(fcZero | fcSubnormal | fcPosInf | fcNan)) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);
 
         // fadd +/-0, 1.0 => 1.0
+        // fadd subnormal, 1.0 => 1.0
+        // fadd +inf, 1.0 => +inf
         // fadd nan, 1.0 => nan
         return Builder.CreateFAddFMF(CI->getArgOperand(0),
                                      ConstantFP::get(VTy, 1.0), FMF);
@@ -3424,19 +3467,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           IID == Intrinsic::nearbyint || IID == Intrinsic::rint ||
           IID == Intrinsic::trunc;
 
-      // Ignore denormals-as-zero, as canonicalization is not mandated.
       if ((IID == Intrinsic::floor || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
         return ConstantFP::getZero(VTy);
 
       if ((IID == Intrinsic::ceil || IsRoundNearestOrTrunc) &&
-          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal))
+          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal) &&
+          !Mode.inputsMayBePositiveZero())
         return ConstantFP::getZero(VTy, true);
 
-      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal))
+      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal) &&
+          !Mode.inputsMayBeZero())
         return ConstantFP::get(VTy, -1.0);
 
-      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
+      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal) &&
+          !Mode.inputsMayBeZero())
         return ConstantFP::get(VTy, 1.0);
 
       switch (IID) {
@@ -3463,7 +3508,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return SingleVal;
 
       if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
-          KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+          KnownSrc.isKnownAlways(fcZero | fcSubnormal) &&
+          (!Mode.inputsMayBePositiveZero() ||
+           KnownSrc.isKnownNever(fcNegSubnormal))) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);
 
@@ -3490,7 +3537,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Type *EltTy = VTy->getScalarType();
 
       if (EltTy->isIEEELikeFPTy()) {
-        DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+        const fltSemantics &Flt = EltTy->getFltSemantics();
+        DenormalMode Mode = F.getDenormalMode(Flt);
 
         FPClassTest SrcDemandedMask = DemandedMask;
 
@@ -3529,7 +3577,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           return I;
 
         // Perform the canonicalization to see if this folded to a constant.
-        Known = KnownFPClass::canonicalize(KnownSrc, Mode);
+        Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
         Known.knownNot(~DemandedMask);
 
         if (Constant *SingleVal =
@@ -3941,6 +3989,10 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
 
   if (!NewVal)
     return false;
+  // Recursion through a PHI may have already replaced this use. If the
+  // recursive simplification only changed V in place, do not restore it.
+  if (NewVal == V && U.get() != V)
+    return true;
   if (Instruction *OpInst = dyn_cast<Instruction>(U))
     salvageDebugInfo(*OpInst);
 

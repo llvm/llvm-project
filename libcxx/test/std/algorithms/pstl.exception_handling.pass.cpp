@@ -121,6 +121,15 @@ int main(int, char**) {
       {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
+        // copy_if(first, last, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::copy_if(policy, std::move(first1), std::move(last1), std::move(dest), pred);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
+
         // count(first, last, val)
         assert_non_throwing([=, &policy] { (void)std::count(policy, std::move(first1), std::move(last1), val); });
 
@@ -265,6 +274,16 @@ int main(int, char**) {
         auto unary  = maybe_throw(tokens[5], [](int x) -> int { return x * 2; });
         auto binary = maybe_throw(tokens[5], [](int x, int y) -> int { return x * y; });
 
+        // exclusive_scan(first, last, result, init)
+        assert_non_throwing([=, &policy] {
+          (void)std::exclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), val);
+        });
+
+        // exclusive_scan(first, last, result, init, binary)
+        assert_non_throwing([=, &policy] {
+          (void)std::exclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), val, binary);
+        });
+
         // inclusive_scan(first, last, result)
         assert_non_throwing([=, &policy] {
           (void)std::inclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest));
@@ -278,6 +297,12 @@ int main(int, char**) {
         // inclusive_scan(first, last, result, binary, init)
         assert_non_throwing([=, &policy] {
           (void)std::inclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), binary, val);
+        });
+
+        // transform_exclusive_scan(first, last, result, init, binary, unary)
+        assert_non_throwing([=, &policy] {
+          (void)std::transform_exclusive_scan(
+              policy, std::move(first1), std::move(last1), std::move(dest), val, binary, unary);
         });
 
         // transform_inclusive_scan(first, last, result, binary, unary)
@@ -317,6 +342,20 @@ int main(int, char**) {
         // is_partitioned(first, last, pred)
         assert_non_throwing([=, &policy] {
           (void)std::is_partitioned(policy, std::move(first1), std::move(last1), pred);
+        });
+
+        // partition(first, last, pred)
+        assert_non_throwing([=, &policy] { (void)std::partition(policy, std::move(first1), std::move(last1), pred); });
+
+        // stable_partition(first, last, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::stable_partition(policy, std::move(first1), std::move(last1), pred);
+        });
+
+        // partition_copy(first, last, dest1, dest2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::partition_copy(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(dest), pred);
         });
       }
 
@@ -417,6 +456,20 @@ int main(int, char**) {
       {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
+        // remove_copy(first, last, dest, val)
+        assert_non_throwing([=, &policy] {
+          (void)std::remove_copy(policy, std::move(first1), std::move(last1), std::move(dest), val);
+        });
+
+        // remove_copy_if(first, last, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::remove_copy_if(policy, std::move(first1), std::move(last1), std::move(dest), pred);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
+
         // replace_if(first, last, pred, val)
         assert_non_throwing([=, &policy] {
           (void)std::replace_if(policy, std::move(first1), std::move(last1), pred, val);
@@ -435,6 +488,15 @@ int main(int, char**) {
         // replace_copy(first, last, dest, val1, val2)
         assert_non_throwing([=, &policy] {
           (void)std::replace_copy(policy, std::move(first1), std::move(last1), std::move(dest), val, val);
+        });
+      }
+
+      {
+        auto mid1 = util::throw_on_move_iterator(std::begin(a) + 2, tokens[5].active() ? 1 : -1);
+
+        // rotate(first, mid, last)
+        assert_non_throwing([=, &policy] {
+          (void)std::rotate(policy, std::move(first1), std::move(mid1), std::move(last1));
         });
       }
 

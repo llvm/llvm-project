@@ -95,7 +95,7 @@ define amdgpu_ps void @global_load_monitor_b128_vaddr_seq_cst_workgroup(ptr addr
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    global_load_monitor_b128 v[4:7], v[0:1], off offset:32
+; GFX1250-NEXT:    global_load_monitor_b128 v[4:7], v[0:1], off offset:32 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[2:3], v[4:7], off
 ; GFX1250-NEXT:    s_endpgm
@@ -114,7 +114,7 @@ define amdgpu_ps void @global_load_monitor_b128_saddr_seq_cst_workgroup(ptr addr
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_monitor_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1250-NEXT:    global_load_monitor_b128 v[2:5], v2, s[0:1] offset:32 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-NEXT:    s_endpgm
@@ -213,7 +213,7 @@ define amdgpu_ps void @global_load_monitor_b64_saddr_scale_offset_acquire_workgr
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v2, s[0:1] scale_offset
+; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v2, s[0:1] scale_offset scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1250-NEXT:    s_endpgm

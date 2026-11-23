@@ -24,15 +24,13 @@ namespace cl {
 class LibraryOptions;
 
 // The library options of one compilation context, such as an LLVMContext.
-// Libraries declared with perContext read their options here.
 class LLVM_ABI LibraryOptionsContext {
 public:
   // Replaces the library options with Other's by replaying its arguments.
-  // Indexing libraries registered since the last parse is not thread-safe.
   void assign(const LibraryOptionsContext &Other);
 
   // Parses the option of L that Args[0] spells, keeping the other values.
-  Error parse(LibraryOptions &L, ArrayRef<const char *> Args,
+  Error parse(const LibraryOptions &L, ArrayRef<const char *> Args,
               unsigned &Consumed);
 
   // The arguments assigned so far.
@@ -45,14 +43,15 @@ public:
                               : *static_cast<const T *>(It->second);
   }
 
-  // C's values of T, or T::Global if C is null.
+  // C's values of T, or T::Default if C is null.
   template <typename T> static const T &get(const LibraryOptionsContext *C) {
-    return C ? C->get<T>() : T::Global;
+    return C ? C->get<T>() : T::Default;
   }
 
 private:
   DenseMap<const void *, void *> Values;
   SmallVector<const char *, 0> SavedArgs;
+  SmallVector<const LibraryOptions *, 0> SavedLibraries;
   BumpPtrAllocator Alloc;
 };
 

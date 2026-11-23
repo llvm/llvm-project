@@ -64,7 +64,8 @@ spirv::Deserializer::Deserializer(ArrayRef<uint32_t> binary,
                                   MLIRContext *context,
                                   const spirv::DeserializationOptions &options)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
-      module(createModuleOp()), opBuilder(module->getRegion()), options(options)
+      moduleOp(createModuleOp()), opBuilder(moduleOp->getRegion()),
+      options(options)
 #ifndef NDEBUG
       ,
       logger(llvm::dbgs())
@@ -120,7 +121,7 @@ LogicalResult spirv::Deserializer::deserialize() {
 }
 
 OwningOpRef<spirv::ModuleOp> spirv::Deserializer::collect() {
-  return std::move(module);
+  return std::move(moduleOp);
 }
 
 //===----------------------------------------------------------------------===//
@@ -225,7 +226,7 @@ spirv::Deserializer::processExtInstImport(ArrayRef<uint32_t> words) {
 }
 
 void spirv::Deserializer::attachVCETriple() {
-  module->setVceTripleAttr(spirv::VerCapExtAttr::get(
+  moduleOp->setVceTripleAttr(spirv::VerCapExtAttr::get(
       version, capabilities.getArrayRef(), extensions.getArrayRef(), context));
 }
 
@@ -234,10 +235,10 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
-  module->setAddressingModel(
+  moduleOp->setAddressingModel(
       static_cast<spirv::AddressingModel>(operands.front()));
 
-  module->setMemoryModel(static_cast<spirv::MemoryModel>(operands.back()));
+  moduleOp->setMemoryModel(static_cast<spirv::MemoryModel>(operands.back()));
 
   return success();
 }
@@ -744,6 +745,7 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
     return failure();
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curFunction = std::nullopt;
 
@@ -937,6 +939,7 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unexpected operands for OpGraphEndARM");
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curGraph = std::nullopt;
   graphOutputs.clear();
@@ -1253,6 +1256,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processSamplerType(operands);
   case spirv::Opcode::OpTypeNamedBarrier:
     return processNamedBarrierType(operands);
+  case spirv::Opcode::OpTypeUntypedPointerKHR:
+    return processUntypedPointerType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1756,6 +1761,17 @@ spirv::Deserializer::processNamedBarrierType(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+spirv::Deserializer::processUntypedPointerType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 2)
+    return emitError(unknownLoc,
+                     "OpTypeUntypedPointerKHR must have one parameter");
+
+  typeMap[operands[0]] = spirv::UntypedPointerType::get(
+      context, static_cast<spirv::StorageClass>(operands[1]));
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Constant
 //===----------------------------------------------------------------------===//
@@ -1912,24 +1928,35 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc,
                      "OpConstantComposite must have type <id> and result <id>");
   }
-  if (operands.size() < 3) {
-    return emitError(unknownLoc,
-                     "OpConstantComposite must have at least 1 parameter");
-  }
-
   Type resultType = getType(operands[0]);
   if (!resultType) {
     return emitError(unknownLoc, "undefined result type from <id> ")
            << operands[0];
   }
 
+  // Unused constants are not materialized as ops, so their verifier cannot
+  // diagnose missing constituents. Only empty structs may have none.
+  auto structType = dyn_cast<spirv::StructType>(resultType);
+  if (operands.size() < 3 &&
+      (!structType || structType.getNumElements() != 0)) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have at least 1 parameter");
+  }
+
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
-  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
-    auto elementInfo = getConstant(operands[i]);
+  for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
+    std::optional<std::pair<Attribute, Type>> elementInfo = getConstant(id);
     if (!elementInfo) {
-      return emitError(unknownLoc, "OpConstantComposite component <id> ")
-             << operands[i] << " must come from a normal constant";
+      // spirv.Constant cannot represent undefined constituents.
+      if (getUndefType(id)) {
+        return emitError(unknownLoc, "OpConstantComposite component #")
+               << index << " <id> " << id
+               << " is an OpUndef, which cannot be represented in "
+                  "spirv.Constant";
+      }
+      return emitError(unknownLoc, "OpConstantComposite component #")
+             << index << " <id> " << id << " must come from a normal constant";
     }
     elements.push_back(elementInfo->first);
   }
@@ -2033,9 +2060,16 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
 
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
-  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
-    auto elementInfo = getSpecConstant(operands[i]);
-    elements.push_back(SymbolRefAttr::get(elementInfo));
+  for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
+    Operation *elementOp = getSpecConstant(id);
+    if (!elementOp)
+      elementOp = getSpecConstantComposite(id);
+    if (!elementOp) {
+      return emitError(unknownLoc, "OpSpecConstantComposite component #")
+             << index << " <id> " << id
+             << " cannot be represented in spirv.SpecConstantComposite";
+    }
+    elements.push_back(SymbolRefAttr::get(elementOp));
   }
 
   auto op = spirv::SpecConstantCompositeOp::create(
@@ -2072,6 +2106,13 @@ LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   spirv::SpecConstantOp constituentSpecConstantOp =
       getSpecConstant(operands[2]);
+  if (!constituentSpecConstantOp) {
+    return emitError(unknownLoc, "OpSpecConstantCompositeReplicateEXT operand "
+                                 "<id> ")
+           << operands[2]
+           << " cannot be represented in "
+              "spirv.EXT.SpecConstantCompositeReplicate";
+  }
   auto op = spirv::EXTSpecConstantCompositeReplicateOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
       SymbolRefAttr::get(constituentSpecConstantOp),
@@ -2186,6 +2227,9 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
     if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
       attr = DenseElementsAttr::get(tensorType, element);
+  } else if (isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(
+                 resultType)) {
+    attr = spirv::NullAttr::get(resultType);
   }
 
   if (attr) {

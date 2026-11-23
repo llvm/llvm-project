@@ -805,8 +805,9 @@ private:
   void addLoopExit(const Stmt *LoopStmt);
   void addAutomaticObjHandling(LocalScope::const_iterator B,
                                LocalScope::const_iterator E, Stmt *S);
-  void addAutomaticObjDestruction(LocalScope::const_iterator B,
-                                  LocalScope::const_iterator E, Stmt *S);
+  void
+  addAutomaticObjDestruction(llvm::iterator_range<LocalScope::const_iterator> R,
+                             Stmt *S);
   void addScopeExitHandling(LocalScope::const_iterator B,
                             LocalScope::const_iterator E, Stmt *S);
   void addImplicitDtorsForDestructor(const CXXDestructorDecl *DD);
@@ -1955,7 +1956,7 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
 
   // Not leaving the scope, only need to handle destruction and lifetime
   if (B.inSameLocalScope(E)) {
-    addAutomaticObjDestruction(B, E, S);
+    addAutomaticObjDestruction(llvm::iterator_range(B, E), S);
     return;
   }
 
@@ -1976,31 +1977,25 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
   for (auto [E, B] : Pairwise) {
     if (!B.inSameLocalScope(E))
       addScopeExitHandling(B, E, S);
-    addAutomaticObjDestruction(B, E, S);
+    addAutomaticObjDestruction(llvm::iterator_range(B, E), S);
   }
 }
 
 /// Add CFG elements corresponding to call destructor and end of lifetime
-/// of all automatic variables with non-trivial destructor in range [B, E).
-/// This include AutomaticObjectDtor and LifetimeEnds elements.
-void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
-                                            LocalScope::const_iterator E,
-                                            Stmt *S) {
+/// of all automatic variables with trivial and non-trivial destructors in
+/// range [B, E). This includes AutomaticObjectDtor and LifetimeEnds elements.
+void CFGBuilder::addAutomaticObjDestruction(
+    llvm::iterator_range<LocalScope::const_iterator> R, Stmt *S) {
   if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime)
     return;
 
-  if (B == E)
-    return;
+  SmallVector<VarDecl *, 10> LocalVarDecls;
+  LocalVarDecls.reserve(R.begin().distance(R.end()));
+  for (VarDecl *VD : R)
+    LocalVarDecls.push_back(VD);
 
-  SmallVector<VarDecl *, 10> DeclsNeedDestruction;
-  DeclsNeedDestruction.reserve(B.distance(E));
-
-  for (VarDecl* D : llvm::make_range(B, E))
-    if (needsAutomaticDestruction(D))
-      DeclsNeedDestruction.push_back(D);
-
-  for (VarDecl *VD : llvm::reverse(DeclsNeedDestruction)) {
-    if (BuildOpts.AddImplicitDtors) {
+  for (VarDecl *VD : llvm::reverse(LocalVarDecls)) {
+    if (BuildOpts.AddImplicitDtors && needsAutomaticDestruction(VD)) {
       // If this destructor is marked as a no-return destructor, we need to
       // create a new block for the destructor which does not have as a
       // successor anything built thus far: control won't flow out of this
@@ -2017,9 +2012,9 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
 
     autoCreateBlock();
 
-    // Add LifetimeEnd after automatic obj with non-trivial destructors,
-    // as they end their lifetime when the destructor returns. For trivial
-    // objects, we end lifetime with scope end.
+    // LifetimeEnds is emitted for every variable leaving the scope in
+    // reverse order of declaration, covering automatic objects with
+    // non-trivial destructors and trivial objects.
     if (BuildOpts.AddLifetime)
       appendLifetimeEnds(Block, VD, S);
     if (BuildOpts.AddImplicitDtors && !hasTrivialDestructor(VD))
@@ -2029,42 +2024,15 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
   }
 }
 
-/// Add CFG elements corresponding to leaving a scope.
+/// Add ScopeEnd CFG elements for the local scope that is being left.
 /// Assumes that range [B, E) corresponds to single scope.
-/// This add following elements:
-///   * LifetimeEnds for all variables with non-trivial destructor
-///   * ScopeEnd for each scope left
 void CFGBuilder::addScopeExitHandling(LocalScope::const_iterator B,
                                       LocalScope::const_iterator E, Stmt *S) {
   assert(!B.inSameLocalScope(E));
-  if (!BuildOpts.AddLifetime && !BuildOpts.AddScopes)
-    return;
-
   if (BuildOpts.AddScopes) {
     autoCreateBlock();
     appendScopeEnd(Block, B.getFirstVarInScope(), S);
   }
-
-  if (!BuildOpts.AddLifetime)
-    return;
-
-  // We need to perform the scope leaving in reverse order
-  SmallVector<VarDecl *, 10> DeclsTrivial;
-  DeclsTrivial.reserve(B.distance(E));
-
-  // Objects with trivial destructor ends their lifetime when their storage
-  // is destroyed, for automatic variables, this happens when the end of the
-  // scope is added.
-  for (VarDecl* D : llvm::make_range(B, E))
-    if (!needsAutomaticDestruction(D))
-      DeclsTrivial.push_back(D);
-
-  if (DeclsTrivial.empty())
-    return;
-
-  autoCreateBlock();
-  for (VarDecl *VD : llvm::reverse(DeclsTrivial))
-    appendLifetimeEnds(Block, VD, S);
 }
 
 /// addScopeChangesHandling - appends information about destruction, lifetime
@@ -2411,7 +2379,7 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
       // FIXME: The expression inside a CXXDefaultArgExpr is owned by the
       // called function's declaration, not by the caller. If we simply add
       // this expression to the CFG, we could end up with the same Expr
-      // appearing multiple times (PR13385).
+      // appearing multiple times (GH13757).
       //
       // It's likewise possible for multiple CXXDefaultInitExprs for the same
       // expression to be used in the same function (through aggregate

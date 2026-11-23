@@ -1,0 +1,203 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_function(
+    name = "isalnum",
+    srcs = ["isalnum.cpp"],
+    hdrs = ["isalnum.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isalpha",
+    srcs = ["isalpha.cpp"],
+    hdrs = ["isalpha.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isascii",
+    srcs = ["isascii.cpp"],
+    hdrs = ["isascii.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isblank",
+    srcs = ["isblank.cpp"],
+    hdrs = ["isblank.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "iscntrl",
+    srcs = ["iscntrl.cpp"],
+    hdrs = ["iscntrl.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isdigit",
+    srcs = ["isdigit.cpp"],
+    hdrs = ["isdigit.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isgraph",
+    srcs = ["isgraph.cpp"],
+    hdrs = ["isgraph.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "islower",
+    srcs = ["islower.cpp"],
+    hdrs = ["islower.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isprint",
+    srcs = ["isprint.cpp"],
+    hdrs = ["isprint.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "ispunct",
+    srcs = ["ispunct.cpp"],
+    hdrs = ["ispunct.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isspace",
+    srcs = ["isspace.cpp"],
+    hdrs = ["isspace.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isupper",
+    srcs = ["isupper.cpp"],
+    hdrs = ["isupper.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "isxdigit",
+    srcs = ["isxdigit.cpp"],
+    hdrs = ["isxdigit.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "toascii",
+    srcs = ["toascii.cpp"],
+    hdrs = ["toascii.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "tolower",
+    srcs = ["tolower.cpp"],
+    hdrs = ["tolower.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "toupper",
+    srcs = ["toupper.cpp"],
+    hdrs = ["toupper.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:config",
+    ],
+)

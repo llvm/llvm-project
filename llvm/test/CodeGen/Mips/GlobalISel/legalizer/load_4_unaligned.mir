@@ -64,7 +64,6 @@
 ---
 name:            load_float_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align1
@@ -86,7 +85,6 @@ body:             |
 ---
 name:            load_float_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align2
@@ -108,7 +106,6 @@ body:             |
 ---
 name:            load_float_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align4
@@ -130,7 +127,6 @@ body:             |
 ---
 name:            load_float_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align8
@@ -152,7 +148,6 @@ body:             |
 ---
 name:            load_i32_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align1
@@ -174,7 +169,6 @@ body:             |
 ---
 name:            load_i32_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align2
@@ -196,7 +190,6 @@ body:             |
 ---
 name:            load_i32_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align4
@@ -218,7 +211,6 @@ body:             |
 ---
 name:            load_i32_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align8

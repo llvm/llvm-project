@@ -540,8 +540,8 @@ class TestWasm(GDBRemoteTestBase):
         # Wasm frames need distinct, ordered call frame addresses for StackID to
         # tell an inner frame from an outer one. Without them every frame shares
         # one address and stepping mistakes a step in for a step out.
-        self.assertLess(frame0.GetCFA(), frame1.GetCFA())
-        self.assertLess(frame1.GetCFA(), frame2.GetCFA())
+        self.assertGreater(frame0.GetCFA(), frame1.GetCFA())
+        self.assertGreater(frame1.GetCFA(), frame2.GetCFA())
 
         # Check that we can resolve local variables.
         a = frame0.FindVariable("a")

@@ -19,17 +19,26 @@
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
 
+#include <optional>
 #include <tuple>
 #include <utility>
 
 namespace llvm {
 class APInt;
+class BasicBlock;
+class CallInst;
 class DataLayout;
 class FastMathFlags;
 class FixedVectorType;
+class Function;
 class Instruction;
 class TargetLibraryInfo;
 class Type;
@@ -177,6 +186,68 @@ getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
                    FixedVectorType *VectorTy, Type *ScalarTy,
                    TargetTransformInfo::CastContextHint Ctx,
                    TargetTransformInfo::TargetCostKind CostKind);
+
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                           const Intrinsic::ID ID,
+                                           const unsigned VF, unsigned MinBW,
+                                           const TargetTransformInfo &TTI);
+
+/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
+/// function (if possible) calls. Returns invalid cost for the corresponding
+/// calls, if they cannot be vectorized/will be scalarized.
+std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
+                   const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
+                   const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
+struct PoorThroughputOpCache {
+  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
+  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
+  // Keyed on the callee alone: a Function's signature is fixed, so its type
+  // never varies between calls.
+  SmallDenseSet<const Function *> CheapCallees;
+};
+
+/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
+/// per lane (e.g. fdiv, frem, fsqrt). If \p MaxVecRegSize is non-zero, the
+/// widest vector fitting into it is checked too.
+bool isPoorThroughputOp(bool ReVec, Instruction *I,
+                        const TargetTransformInfo &TTI,
+                        const TargetLibraryInfo &TLI,
+                        PoorThroughputOpCache &Cache,
+                        const TargetTransformInfo::TargetCostKind CostKind,
+                        unsigned MaxVecRegSize = 0);
+
+/// \returns true if \p Op is a contractable single-use fmul, which the backend
+/// fuses with its fadd/fsub user \p I: \p Op is in the block of \p I or the
+/// target sinks it there.
+bool isFusableFMulOperand(Value *Op, Instruction *I,
+                          const TargetTransformInfo &TTI);
+
+/// \returns true if more values with the scalar type \p Ty than registers are
+/// live at some point of the block \p BB. The blocks larger than the scheduling
+/// budget \p ScheduleBudget are skipped to save compile time.
+bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
+                             Type *Ty, const TargetTransformInfo &TTI);
+
+/// Selects the gathers of \p GatheredScalars, which fully reverse the bytes of
+/// a scalar and are emitted as a byte swap of the scalar, if it is not more
+/// expensive than the permutation of the bytes. The permutation of the scalar
+/// extracted from a vector folds the extraction, the byte swap does not, so the
+/// byte swaps of the scalars extracted from the same vector are estimated
+/// together with all these extractions. \p GetVectorizedSource returns the key
+/// and the type of the vector the vectorized scalar is extracted from, and its
+/// lane. \returns the mask of the selected gathers.
+SmallBitVector selectBSwapGathers(
+    ArrayRef<SmallVector<Value *>> GatheredScalars, const DataLayout &DL,
+    const TargetTransformInfo &TTI, bool ReVec,
+    TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<std::optional<
+        std::tuple<const void *, FixedVectorType *, unsigned>>(Value *)>
+        GetVectorizedSource);
 
 } // namespace llvm::slpvectorizer
 

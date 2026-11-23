@@ -18,6 +18,7 @@
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -197,13 +198,10 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   const MemberExpr *ME = cast<MemberExpr>(callee);
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(ME->getMemberDecl());
 
-  if (MD->isStatic()) {
-    // The method is static, emit it as we would a regular call.
-    CGCallee callee =
-        CGCallee::forDirect(CGM.GetAddrOfFunction(MD), GlobalDecl(MD));
-    return EmitCall(getContext().getPointerType(MD->getType()), callee, CE,
-                    ReturnValue, /*Chain=*/nullptr, CallOrInvoke);
-  }
+  // Sema represents calls to static member functions as ordinary CallExpr
+  // nodes rather than CXXMemberCallExpr.
+  assert(!MD->isStatic() &&
+         "static member call is unexpected in EmitCXXMemberCallExpr");
 
   bool HasQualifier = ME->hasQualifier();
   NestedNameSpecifier Qualifier = ME->getQualifier();
@@ -1393,12 +1391,46 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   ///
   /// We model such elidable calls with the 'builtin' attribute.
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
-  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn) {
-    if (Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
+  UnsignedOrNone AlignArg = std::nullopt;
+  if (CalleeDecl->isReplaceableGlobalAllocationFunction(&AlignArg)) {
+    auto &Ctx = CallOrInvoke->getContext();
+    llvm::AllocFnKind AK = llvm::AllocFnKind::Unknown;
+    OverloadedOperatorKind Op = CalleeDecl->getOverloadedOperator();
+    bool IsDeleter = Op == OO_Array_Delete || Op == OO_Delete;
+    if (IsDeleter) {
+      AK = AK | llvm::AllocFnKind::Free;
+    } else {
+      if (AlignArg)
+        AK = llvm::AllocFnKind::Aligned;
+      AK = AK | llvm::AllocFnKind::Alloc | llvm::AllocFnKind::Uninitialized;
+    }
+
+    bool IsArray = Op == OO_Array_New || Op == OO_Array_Delete;
+    StringRef Family;
+    if (CGF.CGM.getTarget().getCXXABI().isMicrosoft()) {
+      if (IsArray)
+        Family =
+            AlignArg ? "??_U@YAPAXIW4align_val_t@std@@@Z" : "??_U@YAPAXI@Z";
+      else
+        Family = AlignArg ? "??2@YAPAXIW4align_val_t@std@@@Z" : "??2@YAPAXI@Z";
+    } else {
+      assert(CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
+             "unknown C++ ABI when resolving alloc-family for operator "
+             "new/delete");
+      if (IsArray)
+        Family = AlignArg ? "_ZnamSt11align_val_t" : "_Znam";
+      else
+        Family = AlignArg ? "_ZnwmSt11align_val_t" : "_Znwm";
+    }
+
+    CallOrInvoke->addFnAttr(llvm::Attribute::get(Ctx, "alloc-family", Family));
+    if (Fn && Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
       CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+    CallOrInvoke->addFnAttr(llvm::Attribute::get(
+        Ctx, llvm::Attribute::AllocKind, static_cast<uint64_t>(AK)));
 
     // A sane operator new does not read or write accessible memory.
-    if (CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
+    if (Fn && CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
         CalleeDecl->getDeclName().isAnyOperatorNew()) {
       // FIXME: inaccessiblemem could cause issues if LTO makes the
       // previously inaccessible memory accessible after linking.

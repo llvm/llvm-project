@@ -80,45 +80,10 @@ public:
       }
     }
   }
-  Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character>> &x, FoldingContext &) {
-    const int kind{x.kind()};
-    if (offset < 0 || offset + bytes > data_.size()) {
-      return OutOfRange;
-    } else {
-      auto optElements{TotalElementCount(x.shape())};
-      if (!optElements) {
-        return TooManyElems;
-      }
-      auto elements{*optElements};
-      auto elementBytes{bytes > 0 ? bytes / elements : 0};
-      if (elements * elementBytes != bytes) {
-        return SizeMismatch;
-      } else if (bytes == 0) {
-        return OkNoChange;
-      } else {
-        Result result{OkNoChange};
-        for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
-          value::CharacterValue scalar{x.At(at)};
-          auto scalarBytes{scalar.size() * kind};
-          if (scalarBytes != elementBytes) {
-            result = LengthMismatch;
-          }
-          // TODO endianness
-          auto *to{&data_.at(offset)};
-          bool changed{false};
-          scalar.StoreRawBytes(to, elementBytes, &changed);
-          if (changed && result == OkNoChange) {
-            result = Ok;
-          }
-          offset += elementBytes;
-        }
-        return result;
-      }
-    }
-  }
-  Result Add(ConstantSubscript, std::size_t, const Constant<SomeDerived> &,
-      FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Character>> &, FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Derived>> &, FoldingContext &);
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
       FoldingContext &c) {

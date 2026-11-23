@@ -64,7 +64,6 @@
 ---
 name:            store_float_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -90,7 +89,6 @@ body:             |
 ---
 name:            store_float_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -116,7 +114,6 @@ body:             |
 ---
 name:            store_float_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -142,7 +139,6 @@ body:             |
 ---
 name:            store_float_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -168,7 +164,6 @@ body:             |
 ---
 name:            store_i32_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -194,7 +189,6 @@ body:             |
 ---
 name:            store_i32_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -220,7 +214,6 @@ body:             |
 ---
 name:            store_i32_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -246,7 +239,6 @@ body:             |
 ---
 name:            store_i32_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

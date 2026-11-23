@@ -64,12 +64,12 @@ template <
 #  endif
     class _Tp,
     enable_if_t<is_constructible_v<decay_t<_Tp>, _Tp>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<decay_t<_Tp>> make_optional(_Tp&& __v) {
+[[nodiscard]] constexpr optional<decay_t<_Tp>> make_optional(_Tp&& __v) {
   return optional<decay_t<_Tp>>(std::forward<_Tp>(__v));
 }
 
 template <class _Tp, class... _Args, enable_if_t<__is_constructible_for_optional_v<_Tp, _Args...>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<_Tp> make_optional(_Args&&... __args) {
+[[nodiscard]] constexpr optional<_Tp> make_optional(_Args&&... __args) {
   return optional<_Tp>(in_place, std::forward<_Args>(__args)...);
 }
 
@@ -77,8 +77,7 @@ template <class _Tp,
           class _Up,
           class... _Args,
           enable_if_t<__is_constructible_for_optional_initializer_list_v<_Tp, _Up, _Args...>, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<_Tp>
-make_optional(initializer_list<_Up> __il, _Args&&... __args) {
+[[nodiscard]] constexpr optional<_Tp> make_optional(initializer_list<_Up> __il, _Args&&... __args) {
   return optional<_Tp>(in_place, __il, std::forward<_Args>(__args)...);
 }
 

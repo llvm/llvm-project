@@ -1,7 +1,14 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mattr=+reference-types -mattr=+exception-handling -o %t/main.o %t/main.s
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mattr=+reference-types -mattr=+exception-handling -o %t/other.o %t/other.s
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mattr=+reference-types -mattr=+exception-handling -o %t/def.o %t/def.s
 # RUN: not wasm-ld --export call_foo --allow-undefined -o %t.wasm %t/main.o %t/other.o 2>&1 | FileCheck %s
+
+## If the symbols are defined in another object file, import attribute
+## mismatches on the undefined references should not cause an error, regardless
+## of the order of input files.
+# RUN: wasm-ld --export call_foo -o %t.wasm %t/def.o %t/main.o %t/other.o
+# RUN: wasm-ld --export call_foo -o %t.wasm %t/main.o %t/other.o %t/def.o
 
 #--- main.s
 
@@ -40,6 +47,25 @@ call_foo:
 .import_module mytable, mod2
 .import_module myglobal, mod3
 .import_module mytag, mod4
+
+#--- def.s
+
+.globl foo
+foo:
+  .functype foo () -> ()
+  end_function
+
+.globl mytable
+mytable:
+  .tabletype mytable, funcref
+
+.globl myglobal
+myglobal:
+  .globaltype myglobal, i32
+
+.globl mytag
+mytag:
+  .tagtype mytag i32
 
 # CHECK: wasm-ld: error: import module mismatch for symbol: foo
 # CHECK-NEXT: >>> defined as env in {{.*}}main.o

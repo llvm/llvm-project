@@ -10,8 +10,6 @@
 #define MLIR_DIALECT_SMT_IR_SMTDIALECT_H
 
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/Support/LLVM.h"
 
 // Pull in the dialect definition.
 #include "mlir/Dialect/SMT/IR/SMTDialect.h.inc"

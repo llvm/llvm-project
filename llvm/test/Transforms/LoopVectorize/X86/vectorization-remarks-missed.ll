@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize,transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize,transform-warning -o /dev/null -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -disable-output -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; C/C++ code for tests
