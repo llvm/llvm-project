@@ -29,6 +29,7 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### ELF Improvements
 
+* Added `--pass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass plugin named `<plugin>`.
 * `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
   They now mean what they say again; the default behavior is unchanged.
 
@@ -40,6 +41,7 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### MachO Improvements
 
+* Added `--pass-plugin-arg=<plugin>,<arg>`, as in ELF.
 * `__objc_stubs` entries are now ordered by the priority of the sections that
   call them, so that stubs reached from prioritized code are laid out together.
   This applies whenever section priorities exist, such as with `-order_file`.

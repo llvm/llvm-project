@@ -25,7 +25,7 @@ define void @f1() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  bb2:
 ; CHECK-NEXT:    EMIT-SCALAR ir<%c.1.0> = phi [ ir<0>, vector.ph ], [ ir<%_tmp9>, bb2 ]
-; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp6> = sext ir<%c.1.0> to i64
+; CHECK-NEXT:    EMIT ir<%_tmp6> = sext ir<%c.1.0> to i64
 ; CHECK-NEXT:    EMIT ir<%_tmp7> = getelementptr ir<@b>, ir<0>, ir<%_tmp6>
 ; CHECK-NEXT:    EMIT store ir<@a>, ir<%_tmp7>
 ; CHECK-NEXT:    EMIT ir<%_tmp9> = add nsw ir<%c.1.0>, ir<1>

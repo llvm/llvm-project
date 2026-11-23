@@ -3144,17 +3144,6 @@ X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
                                        : X86::COND_INVALID;
 }
 
-X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
-  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                         : X86::COND_INVALID;
-}
-
-X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
-  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
-             ? X86::getCondFromMI(MI)
-             : X86::COND_INVALID;
-}
-
 int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   // CCMP/CTEST has two conditional operands:
   // - SCC: source conditonal code (same as CMOV)
