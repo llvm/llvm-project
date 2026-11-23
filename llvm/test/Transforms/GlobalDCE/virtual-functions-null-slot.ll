@@ -9,9 +9,6 @@ declare { ptr, i1 } @llvm.type.checked.load(ptr, i32, metadata)
 ; But actually, NULL is not a valid function pointer, so a NULL slot really means that
 ; the vtable is never used to make a virtual call to the function stored in the slot,
 ; which is extremely valuable information for VFE.
-;
-; The [8 x i8] case mimics a Rust vtable, which uses an array to store a destructor,
-; and the slot may be all zeroes if the type does not require a destructor.
 
 ; CHECK:      @vtableA = internal unnamed_addr constant <{ [8 x i8], ptr }> <{
 ; CHECK-SAME:   [8 x i8] zeroinitializer,
@@ -40,6 +37,16 @@ declare { ptr, i1 } @llvm.type.checked.load(ptr, i32, metadata)
 ]}, align 8, !type !{i64 0, !"vfunc1.type"}, !type !{i64 8, !"vfunc2.type"}, !vcall_visibility !{i64 2}
 
 
+; CHECK:      @vtableRust = internal unnamed_addr constant <{ [24 x i8], ptr }> <{
+; CHECK-SAME:   [24 x i8] c"\00\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00",
+; CHECK-SAME:   ptr null
+; CHECK-SAME: }>, align 8
+@vtableRust = internal unnamed_addr constant <{ [24 x i8], ptr }> <{
+  [24 x i8] c"\00\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00",
+  ptr @vfunc2Rust
+}>, align 8, !type !{i64 0, !"vfunc1.type"}, !type !{i64 24, !"vfunc2.type"}, !vcall_visibility !{i64 2}
+
+
 ; There is a checked load for vfunc1.type, so this function must be kept.
 ; CHECK: define internal void @vfunc1B(
 define internal void @vfunc1B() {
@@ -62,11 +69,17 @@ define internal void @vfunc2C() {
   ret void
 }
 
+; CHECK-NOT: define internal void @vfunc2Rust(
+define internal void @vfunc2Rust() {
+  ret void
+}
+
 define void @main() {
   %1 = ptrtoint ptr @vtableA to i64 ; to keep @vtableA alive
   %2 = ptrtoint ptr @vtableB to i64 ; to keep @vtableB alive
   %3 = ptrtoint ptr @vtableC to i64 ; to keep @vtableC alive
-  %4 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 0, metadata !"vfunc1.type")
+  %4 = ptrtoint ptr @vtableRust to i64 ; to keep @vtableRust alive
+  %5 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 0, metadata !"vfunc1.type")
   ret void
 }
 
