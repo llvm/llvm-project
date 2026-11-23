@@ -17,19 +17,22 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "loongarch-dead-defs"
+#define DEBUG_TYPE "loongarch-dead-register-definitions"
 #define LoongArch_DEAD_REG_DEF_NAME "LoongArch Dead register definitions"
 
 STATISTIC(NumDeadDefsReplaced, "Number of dead definitions replaced");
 
 namespace {
-class LoongArchDeadRegisterDefinitions : public MachineFunctionPass {
+class LoongArchDeadRegisterDefinitionsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  LoongArchDeadRegisterDefinitions() : MachineFunctionPass(ID) {}
+  LoongArchDeadRegisterDefinitionsLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -45,21 +48,17 @@ public:
 };
 } // end anonymous namespace
 
-char LoongArchDeadRegisterDefinitions::ID = 0;
-INITIALIZE_PASS(LoongArchDeadRegisterDefinitions, DEBUG_TYPE,
+char LoongArchDeadRegisterDefinitionsLegacy::ID = 0;
+INITIALIZE_PASS(LoongArchDeadRegisterDefinitionsLegacy, DEBUG_TYPE,
                 LoongArch_DEAD_REG_DEF_NAME, false, false)
 
-FunctionPass *llvm::createLoongArchDeadRegisterDefinitionsPass() {
-  return new LoongArchDeadRegisterDefinitions();
+FunctionPass *llvm::createLoongArchDeadRegisterDefinitionsLegacyPass() {
+  return new LoongArchDeadRegisterDefinitionsLegacy();
 }
 
-bool LoongArchDeadRegisterDefinitions::runOnMachineFunction(
-    MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+static bool runDeadRegisterDefinitions(MachineFunction &MF,
+                                       LiveIntervals &LIS) {
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LLVM_DEBUG(dbgs() << "***** LoongArchDeadRegisterDefinitions *****\n");
 
   bool MadeChange = false;
@@ -101,4 +100,26 @@ bool LoongArchDeadRegisterDefinitions::runOnMachineFunction(
   }
 
   return MadeChange;
+}
+
+bool LoongArchDeadRegisterDefinitionsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runDeadRegisterDefinitions(
+      MF, getAnalysis<LiveIntervalsWrapperPass>().getLIS());
+}
+
+PreservedAnalyses LoongArchDeadRegisterDefinitionsPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  bool Changed =
+      runDeadRegisterDefinitions(MF, MFAM.getResult<LiveIntervalsAnalysis>(MF));
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveDebugVariablesAnalysis>()
+      .preserve<LiveStacksAnalysis>();
 }
