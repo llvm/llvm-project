@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefixes=CHECK-DXIL,DXIL32 %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-pixel -x hlsl -emit-llvm -finclude-default-header -fnative-half-type -fnative-int16-type -disable-llvm-passes -DINT16 -o - %s | FileCheck --check-prefixes=CHECK-DXIL,DXIL16 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefixes=CHECK-DXIL,CHECK-DXIL32 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-pixel -x hlsl -emit-llvm -finclude-default-header -fnative-half-type -fnative-int16-type -disable-llvm-passes -DINT16 -o - %s | FileCheck --check-prefixes=CHECK-DXIL,CHECK-DXIL16 %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SPIRV %s
-// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -fnative-half-type -fnative-int16-type -disable-llvm-passes -DINT16 -o - %s | FileCheck --check-prefix=SPIRV16 %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -fnative-half-type -fnative-int16-type -disable-llvm-passes -DINT16 -o - %s | FileCheck --check-prefix=CHECK-SPIRV16 %s
 
 #ifdef INT16
 #define TYPE int16_t
@@ -24,13 +24,13 @@ Output main(float4 p : SV_Position) {
 // The stencil reference is an output element that does not consume a render
 // target row.
 // CHECK-DXIL-LABEL: define void @main()
-// DXIL32: call void @llvm.dx.store.output.i32(i32 0, i32 0, i8 0, i32 %{{.*}})
-// DXIL16: call void @llvm.dx.store.output.i16(i32 0, i32 0, i8 0, i16 %{{.*}})
+// CHECK-DXIL32: call void @llvm.dx.store.output.i32(i32 0, i32 0, i8 0, i32 %{{.*}})
+// CHECK-DXIL16: call void @llvm.dx.store.output.i16(i32 0, i32 0, i8 0, i16 %{{.*}})
 // CHECK-DXIL: call void @llvm.dx.store.output.v4f32(i32 1, i32 0, i8 0, <4 x float> %{{.*}})
 
 // Signed declarations use an unsigned DXIL component type.
-// DXIL32-DAG: !{i32 0, !"SV_StencilRef", i32 5, i32 20, ![[#ZERO:]], i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
-// DXIL16-DAG: !{i32 0, !"SV_StencilRef", i32 3, i32 20, ![[#ZERO:]], i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK-DXIL32-DAG: !{i32 0, !"SV_StencilRef", i32 5, i32 20, ![[#ZERO:]], i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK-DXIL16-DAG: !{i32 0, !"SV_StencilRef", i32 3, i32 20, ![[#ZERO:]], i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 // CHECK-DXIL-DAG: !{i32 1, !"SV_Target", i32 9, i32 16, ![[#ZERO]], i32 0, i32 1, i8 4, i32 0, i8 0, i8 0, i8 0, i32 0}
 // CHECK-DXIL-DAG: ![[#ZERO]] = !{i32 0}
 
@@ -48,7 +48,7 @@ Output main(float4 p : SV_Position) {
 
 // The SPIR-V built-in is a 32-bit integer, so a signed 16-bit declaration is
 // sign extended.
-// SPIRV16: @SV_StencilRef = {{.*}} addrspace(8) global i32,
-// SPIRV16-LABEL: define void @main()
-// SPIRV16: %[[S32:.*]] = sext i16 %{{.*}} to i32
-// SPIRV16: store i32 %[[S32]], ptr addrspace(8) @SV_StencilRef
+// CHECK-SPIRV16: @SV_StencilRef = {{.*}} addrspace(8) global i32,
+// CHECK-SPIRV16-LABEL: define void @main()
+// CHECK-SPIRV16: %[[S32:.*]] = sext i16 %{{.*}} to i32
+// CHECK-SPIRV16: store i32 %[[S32]], ptr addrspace(8) @SV_StencilRef
