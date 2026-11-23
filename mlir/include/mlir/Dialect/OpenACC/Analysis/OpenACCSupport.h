@@ -183,8 +183,9 @@ struct OpenACCSupportTraits {
                         OpenACCSupport &>;
 
   template <typename ImplT, typename... Args>
-  using isAddressNotCapturedByCalls_t = decltype(
-      std::declval<ImplT>().isAddressNotCapturedByCalls(std::declval<Args>()...));
+  using isAddressNotCapturedByCalls_t =
+      decltype(std::declval<ImplT>().isAddressNotCapturedByCalls(
+          std::declval<Args>()...));
 
   template <typename ImplT>
   using has_isAddressNotCapturedByCalls =
