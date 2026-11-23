@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -verify %s
 
+using namespace hlsl;
+
 // Valid: row_major and column_major on matrix types.
 row_major float3x3 rm_mat;
 column_major float4x4 cm_mat;

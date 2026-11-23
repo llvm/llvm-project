@@ -97,6 +97,8 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case AMDGPU::fixup_si_prefetch_offset:
     // The offset field is 24 bits at bit offset 32 (bytes 4-6 of 8-byte inst).
     return 3;
+  case AMDGPU::fixup_si_smem_pcrel:
+    return 3;
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
@@ -135,6 +137,19 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     // The value is the byte offset. It's a 24-bit signed field.
     // Clamp to valid range.
     return SignedValue & 0xFFFFFF;
+  case AMDGPU::fixup_si_smem_pcrel: {
+    // SignedValue is label - (PC + 4): the fixup sits at byte 4 of the
+    // instruction. s_prefetch_inst_pc_rel is 8 bytes and the field is a signed
+    // byte offset from the next instruction, so subtract the remaining 4.
+    int64_t OffImm = SignedValue - 4;
+
+    if (Ctx && !isInt<24>(OffImm)) {
+      Ctx->reportError(Fixup.getLoc(),
+                       "prefetch offset exceeds 24-bit signed range");
+    }
+
+    return OffImm;
+  }
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -193,6 +208,7 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
       // name                   offset bits  flags
       {"fixup_si_sopp_br", 0, 16, 0},
+      {"fixup_si_smem_pcrel", 0, 24, 0},
       // Prefetch sdata is a 5-bit field at bits 10-6 in the 64-bit SMEM
       // instruction encoding (GFX12+).
       {"fixup_si_prefetch_sdata", 6, 5, 0},

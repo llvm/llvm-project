@@ -79,3 +79,4 @@ body:             |
     %ext:_(i64) = G_ANYEXT %fcmp(i32)
     $x0 = COPY %ext(i64)
     RET_ReallyLR implicit $x0
+...

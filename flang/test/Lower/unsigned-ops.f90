@@ -49,3 +49,24 @@ end
 !CHECK: fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<ui32>
 !CHECK: %[[VAL_14:.*]] = fir.load %[[VAL_2]] : !fir.ref<ui32>
 !CHECK: return %[[VAL_14]] : ui32
+
+subroutine su128(u)
+  unsigned(16), intent(in) :: u
+  select case (u)
+  case (1180591620717411303424u_16)
+    continue
+  case (170141183460469231731687303715884105728u_16)
+    continue
+  case (170141183460469231731687303715884105729u_16:340282366920938463463374607431768211454u_16)
+    continue
+  case (340282366920938463463374607431768211455u_16:)
+    continue
+  end select
+end
+
+!CHECK-LABEL: func.func @_QPsu128(
+!CHECK: fir.select_case {{.*}} : ui128
+!CHECK-SAME: #fir.point, %c1180591620717411303424_i128{{[_0-9]*}},
+!CHECK-SAME: #fir.point, %c-170141183460469231731687303715884105728_i128{{[_0-9]*}},
+!CHECK-SAME: #fir.interval, %c-170141183460469231731687303715884105727_i128{{[_0-9]*}}, %c-2_i128{{[_0-9]*}},
+!CHECK-SAME: #fir.lower, %c-1_i128{{[_0-9]*}},

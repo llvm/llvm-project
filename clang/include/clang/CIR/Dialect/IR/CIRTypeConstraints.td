@@ -441,6 +441,12 @@ def CIR_AnyIntOrVecOrMatrixOfIntType
     let cppFunctionName = "isIntOrVectorOrMatrixOfIntType";
 }
 
+def CIR_AnyVectorOrMatrixType
+    : AnyTypeOf<[CIR_AnyVectorType, CIR_AnyMatrixType],
+        "vector or matrix type"> {
+    let cppFunctionName = "isVectorOrMatrixType";
+}
+
 def CIR_AnyFloatOrVecOrMatrixOfFloatType
     : AnyTypeOf<[CIR_AnyFloatType, CIR_VectorOfFloatType,
                  CIR_MatrixOfFloatType],

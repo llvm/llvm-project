@@ -245,14 +245,3 @@ Location FusedLoc::get(ArrayRef<Location> locs, Attribute metadata,
 
   return Base::get(context, locs, metadata);
 }
-
-//===----------------------------------------------------------------------===//
-// BuiltinDialect
-//===----------------------------------------------------------------------===//
-
-void BuiltinDialect::registerLocationAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/IR/BuiltinLocationAttributes.cpp.inc"
-      >();
-}

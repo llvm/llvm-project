@@ -106,10 +106,10 @@ define void @hoisted_stride_check_and_trip_count_expand_same_scev(ptr %dst, ptr 
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    CLONE ir<%idx> = add ir<%row>, vp<%index>
-; CHECK-NEXT:    CLONE ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
+; CHECK-NEXT:    CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, ir<%idx>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.src>, align 1 (!alias.scope !11)
 ; CHECK-NEXT:    WIDEN-CAST ir<%ext> = zext ir<%l> to i32
-; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr ir<%dst>, ir<%idx>
+; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, ir<%idx>
 ; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%ext>, align 4 (!alias.scope !12, !noalias !11)
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
@@ -128,10 +128,10 @@ outer.header:
 inner:
   %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
   %idx = add i64 %row, %inner.iv
-  %gep.src = getelementptr i8, ptr %src, i64 %idx
+  %gep.src = getelementptr inbounds i8, ptr %src, i64 %idx
   %l = load i8, ptr %gep.src
   %ext = zext i8 %l to i32
-  %gep.dst = getelementptr i32, ptr %dst, i64 %idx
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %idx
   store i32 %ext, ptr %gep.dst
   %inner.iv.next = add i64 %inner.iv, 1
   %inner.ec = icmp eq i64 %inner.iv.next, %n

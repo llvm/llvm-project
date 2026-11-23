@@ -183,7 +183,7 @@ int getArray() { return leadArr[1].x; }
 
 // CIR:  cir.func{{.*}} @_Z8getArrayv()
 // CIR:    %[[A:.*]] = cir.get_global @leadArr : !cir.ptr<!cir.array<!rec_Leading x 2>>
-// CIR:    %[[E:.*]] = cir.get_element %[[A]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!rec_Leading x 2>> -> !cir.ptr<!rec_Leading>
+// CIR:    %[[E:.*]] = cir.get_element inbounds %[[A]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!rec_Leading x 2>> -> !cir.ptr<!rec_Leading>
 // CIR:    %{{.*}} = cir.get_member %[[E]][1] {name = "x"} : !cir.ptr<!rec_Leading> -> !cir.ptr<!s32i>
 // LLVM: define dso_local noundef i32 @_Z8getArrayv()
 // LLVM:   load i32, ptr getelementptr inbounds nuw (i8, ptr @leadArr, i64 12), align 4

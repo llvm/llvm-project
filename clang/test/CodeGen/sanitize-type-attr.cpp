@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=type | FileCheck -check-prefix=TYSAN %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=type | FileCheck -check-prefix=TYSAN %s
 // RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=type -fsanitize-blacklist=%t | FileCheck -check-prefix=BL %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=type -fsanitize-blacklist=%t | FileCheck -check-prefix=BL %s
 
 // The sanitize_type attribute should be attached to functions
 // when TypeSanitizer is enabled, unless no_sanitize("type") attribute

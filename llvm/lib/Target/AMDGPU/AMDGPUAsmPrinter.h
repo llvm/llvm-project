@@ -162,6 +162,9 @@ public:
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &O) override;
 
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
+                             const char *ExtraCode, raw_ostream &O) override;
+
   /// Get the symbol for the function end, used for ICache prefetch MCExprs.
   MCSymbol *getPrefetchEndSym() const { return PrefetchEndSym; }
 

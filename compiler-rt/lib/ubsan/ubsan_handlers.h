@@ -49,6 +49,17 @@ struct AlignmentAssumptionData {
 RECOVERABLE(alignment_assumption, AlignmentAssumptionData *Data,
             ValueHandle Pointer, ValueHandle Alignment, ValueHandle Offset)
 
+struct ReturnAlignmentAssumptionData {
+  SourceLocation AssumptionLoc;
+  const TypeDescriptor &Type;
+};
+
+/// \brief Handle a runtime alignment assumption check failure on a returned
+/// pointer, caused by a misaligned pointer.
+RECOVERABLE(return_alignment_assumption, ReturnAlignmentAssumptionData *Data,
+            SourceLocation *LocPtr, ValueHandle Pointer, ValueHandle Alignment,
+            ValueHandle Offset)
+
 struct OverflowData {
   SourceLocation Loc;
   const TypeDescriptor &Type;

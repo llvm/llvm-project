@@ -347,7 +347,6 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 
----
 # Note: CSET (CSINCWr $wzr, $wzr, cc) is covered structurally by the
 # select_head_select_true_csinc test below, which exercises the same
 # findCondCodeUseOperandIdxForBranchOrSelect opcode dispatch path.

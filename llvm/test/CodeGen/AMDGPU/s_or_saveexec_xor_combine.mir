@@ -125,3 +125,4 @@ body: |
     liveins: $sgpr0, $sgpr1
     renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
     renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+...

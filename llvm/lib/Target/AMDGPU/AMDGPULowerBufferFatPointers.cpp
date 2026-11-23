@@ -63,7 +63,7 @@
 // of resources and vectors of offsets are concatentated before being stored to
 // memory) are handled through implementing `inttoptr` and `ptrtoint` only.
 //
-// Atomics operations on `ptr addrspace(7)` values are not suppported, as the
+// Atomics operations on `ptr addrspace(7)` values are not supported, as the
 // hardware does not include a 160-bit atomic.
 //
 // In order to save on O(N) work and to ensure that the contents type
