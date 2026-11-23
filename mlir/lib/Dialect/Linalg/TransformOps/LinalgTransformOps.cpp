@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -1301,9 +1302,24 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
 
-  // Helper function to find the next producer that should be fused. Take any
-  // producer that has a use inside the containing op.
-  SetVector<Operation *> remainingProducers(llvm::from_range, producerOps);
+  // Top-level operations do not share an ancestor region with other producers
+  // and cannot be fused into a containing operation.
+  if (llvm::any_of(producerOps, [](Operation *op) {
+        return op->getParentRegion() == nullptr;
+      })) {
+    auto diag = mlir::emitSilenceableFailure(getLoc())
+                << "cannot fuse a top-level operation";
+    diag.attachNote(containingOp->getLoc()) << "containing op";
+    return diag;
+  }
+
+  // Fuse consumers before their producers so that all uses introduced by
+  // fusing a selected consumer are exposed before its producer is processed.
+  SetVector<Operation *> sortedProducers =
+      topologicalSort(SetVector<Operation *>(llvm::from_range, producerOps));
+  SetVector<Operation *> remainingProducers(llvm::from_range,
+                                            llvm::reverse(sortedProducers));
+  // Find the next producer that has a use inside the containing op.
   auto getNextProducer = [&]() -> FailureOr<Operation *> {
     for (const auto &it : enumerate(remainingProducers)) {
       Operation *producerOp = it.value();
@@ -1312,9 +1328,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
           llvm::count_if(producerOp->getUsers(), [&](Operation *op) {
             return containingOp->isAncestor(op);
           });
-      // TODO: When resolving the TODO below (no duplicate ops), take an op
-      // that has no use among the remaining producers. This is a topological
-      // sorting.
       if (numUsesInContainingOp > 0) {
         if (numUsesInContainingOp == 1)
           remainingProducers.erase(remainingProducers.begin() + it.index());
@@ -1342,8 +1355,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
     // TODO: If there are multiple uses of the producer in the containing op,
     // we currently tile/clone the op multiple times (once per use). In some
     // cases, we can tile/clone once and reuse the value for each use.
-    // Futhermore, producers should then be traversed according to a
-    // topological sorting.
     auto [tiledOps, newContainingOp] = tileAndFuseFirstExtractUse(
         rewriter, diag, producerOp, containingOp, innerTileAlignments);
     if (!tiledOps.empty()) {

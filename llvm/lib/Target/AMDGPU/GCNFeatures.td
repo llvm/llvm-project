@@ -270,6 +270,12 @@ def FeaturePreciseMemory
     : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
                        "true", "Enable precise memory mode">;
 
+defm AsyncBarrierArriveReplayBug : AMDGPUSubtargetFeature<
+  "async-barrier-arrive-replay-bug",
+  "Enable the async barrier arrival workaround",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/0, [], InlineIgnore
+>;
+
 defm SGPRInitBug : AMDGPUSubtargetFeature<"sgpr-init-bug",
   "VI SGPR initialization bug requiring a fixed SGPR allocation size",
   /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
@@ -1328,6 +1334,12 @@ defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
 defm VOPD3F64OPYSrcHazard : AMDGPUSubtargetFeature<"vopd3-f64-opy-src-hazard",
   "Hazard when an OPY VGPR source of a VOPD3 with a 64-bit OPX names the last "
   "VGPR allocated to the wave",
+  /*GenPredicate=*/0
+>;
+
+defm TransF16ToPartialVGPRWriteHazard : AMDGPUSubtargetFeature<"trans-f16-to-partial-vgpr-write-hazard",
+  "A 16-bit write by TRANS VALU needs 4 VALU instructions or va_vdst(0) wait "
+  "before the other half of the same register can be overwritten",
   /*GenPredicate=*/0
 >;
 
@@ -2503,6 +2515,7 @@ def FeatureISAVersion12 : FeatureSet<
 
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
+   FeatureAsyncBarrierArriveReplayBug,
    FeatureGFX1250Insts,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
@@ -2631,6 +2644,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2671,6 +2685,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2711,6 +2726,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2737,6 +2753,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureUnusableSAddPCI64,
    FeatureMcastFullMaskBug,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<

@@ -733,12 +733,12 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
     If the member function is a non-virtual function, the `symbol` parameter
     gives the global symbol for the non-virtual member function.
 
-    If the member function is a virtual function, the `vtable_offset` parameter
-    gives the offset of the vtable entry corresponding to the virtual member
-    function.
+    If the member function is a virtual function, the `vtable_index` parameter
+    gives the index of the vtable entry corresponding to the virtual member
+    function, counted from the address point.
 
-    `symbol` and `vtable_offset` cannot be present at the same time. If both of
-    `symbol` and `vtable_offset` are not present, the attribute represents a
+    `symbol` and `vtable_index` cannot be present at the same time. If both of
+    `symbol` and `vtable_index` are not present, the attribute represents a
     null pointer constant.
 
     Examples:
@@ -748,7 +748,7 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
              !cir.method<!cir.func<(!s32i)> in !rec_S>
 
     // Virtual method
-    %1 = cir.const #cir.method<vtable_offset = 8> :
+    %1 = cir.const #cir.method<vtable_index = 1> :
              !cir.method<!cir.func<(!s32i)> in !rec_S>
 
     // Null method pointer
@@ -762,7 +762,7 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
                         OptionalParameter<
                             "std::optional<mlir::FlatSymbolRefAttr>">:$symbol,
                         OptionalParameter<
-                            "std::optional<uint64_t>">:$vtable_offset);
+                            "std::optional<uint64_t>">:$vtable_index);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "cir::MethodType":$type), [{
@@ -773,8 +773,8 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
       return $_get(type.getContext(), type, symbol, std::nullopt);
     }]>,
     AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
-                                        "uint64_t":$vtable_offset), [{
-      return $_get(type.getContext(), type, std::nullopt, vtable_offset);
+                                        "uint64_t":$vtable_index), [{
+      return $_get(type.getContext(), type, std::nullopt, vtable_index);
     }]>,
   ];
 
@@ -787,11 +787,11 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
 
   let extraClassDeclaration = [{
     bool isNull() const {
-      return !getSymbol().has_value() && !getVtableOffset().has_value();
+      return !getSymbol().has_value() && !getVtableIndex().has_value();
     }
 
     bool isVirtual() const {
-      return getVtableOffset().has_value();
+      return getVtableIndex().has_value();
     }
   }];
 }
@@ -1327,6 +1327,10 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
     in the case of multiple inheritence, the anonymous structure may contain
     multiple arrays, each of which is a vtable.
 
+    The `address_points` parameter holds the `#cir.address_point` object for
+    each entry in the vtable array. The address point is the 'split' location
+    between the offset/RTTI components and the virtual table elements.
+
     Example 1 (single vtable):
     ```
     cir.global linkonce_odr @_ZTV6Mother =
@@ -1337,7 +1341,7 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
           #cir.global_view<@_ZN6Mother9MotherFooEv> : !cir.ptr<!u8i>,
           #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
         ]> : !cir.array<!cir.ptr<!u8i> x 4>
-      }> : !rec_anon_struct1
+      }, address_points = [<index = 0, offset = 2>]> : !rec_anon_struct1
     ```
 
     Example 2 (multiple vtables):
@@ -1355,7 +1359,7 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
           #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
           #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>
         ]> : !cir.array<!cir.ptr<!u8i> x 3>
-      }> : !rec_anon_struct2
+      }, address_points = [<index = 0, offset = 2>, <index = 1, offset = 2>]> : !rec_anon_struct2
     ```
   }];
 
@@ -1363,19 +1367,22 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
   // vtable information.
   let parameters = (ins
     AttributeSelfTypeParameter<"">:$type,
-    "mlir::ArrayAttr":$data
+    "mlir::ArrayAttr":$data,
+    "mlir::ArrayAttr":$address_points
   );
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
-                                        "mlir::ArrayAttr":$data), [{
-      return $_get(type.getContext(), type, data);
+                                        "mlir::ArrayAttr":$data,
+                                        "mlir::ArrayAttr":$address_points), [{
+      return $_get(type.getContext(), type, data, address_points);
     }]>
   ];
 
   let genVerifyDecl = 1;
   let assemblyFormat = [{
-    `<` custom<RecordMembers>($data) `>`
+    `<` custom<RecordMembers>($data) `,` `address_points` `=`
+    $address_points `>`
   }];
 }
 
@@ -1566,9 +1573,11 @@ def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
 def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
   let summary = "!cir.int _BitInt data layout spec";
   let description = [{
-    Upper bound, in bits, on the ABI alignment of a `_BitInt`. This is
-    `TargetInfo::getBitIntMaxAlign()`. `_BitInt(N)` is aligned to
-    `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte.
+    Upper bound, in bits, on the language alignment of a `_BitInt`. This is
+    `TargetInfo::getBitIntMaxAlign()`. The language alignment of `_BitInt(N)`
+    is `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte. The cap
+    does not apply to the `_BitInt`'s ABI alignment, which is the alignment
+    of the integer that holds it, or 1 when it is held as bytes.
 
     Used as the value of the `!cir.int<u, 1, bitint>`-keyed data-layout
     entry. The key names the `_BitInt` class. Its width is not a layout
@@ -1577,6 +1586,36 @@ def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
     ```mlir
     #dlti.dl_spec<!cir.int<u, 1, bitint> =
         #cir.bitint_spec<max_align = 64>>
+    ```
+  }];
+  let parameters = (ins "uint32_t":$max_align);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// VectorSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_VectorSpecAttr : CIR_Attr<"VectorSpec", "vector_spec"> {
+  let summary = "!cir.vector data layout spec";
+  let description = [{
+    Upper bound, in bits, on the language alignment of a vector. This is
+    `TargetInfo::getMaxVectorAlign()`. The language alignment of a vector is
+    its size in bytes rounded up to a power of two, and then at most
+    `max_align` bits. The cap does not apply to the vector's ABI alignment,
+    which is the alignment of the LLVM vector type it lowers to. A target
+    that leaves the maximum at 0 records no entry, and the vector's
+    language alignment equals its ABI alignment.
+
+    Used as the value of the `!cir.vector<1 x !cir.int<u, 8>>`-keyed
+    data-layout entry. The key names the vector class. Its element type
+    and element count are not layout inputs.
+
+    ```mlir
+    #dlti.dl_spec<!cir.vector<1 x !cir.int<u, 8>> =
+        #cir.vector_spec<max_align = 128>>
     ```
   }];
   let parameters = (ins "uint32_t":$max_align);

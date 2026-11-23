@@ -24,6 +24,14 @@ entry:
   ret i32 %result
 }
 
+define void @branch() {
+entry:
+  br label %exit
+
+exit:
+  ret void
+}
+
 ; TRIPLETS: MAX_RELATION=3
 ; TRIPLETS-NEXT: 13 77  0
 ; TRIPLETS-NEXT: 13 87  2
@@ -63,3 +71,7 @@ entry:
 ; TRIPLETS-NEXT: 13 0   1
 ; TRIPLETS-NEXT: 0  72  0
 ; TRIPLETS-NEXT: 0  87  2
+; TRIPLETS-NEXT: 1  72  0
+; TRIPLETS-NEXT: 1  88  2
+; TRIPLETS-NEXT: 1  0   1
+; TRIPLETS-NEXT: 0  72  0

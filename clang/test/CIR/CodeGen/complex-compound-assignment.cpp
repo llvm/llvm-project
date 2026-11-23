@@ -195,12 +195,10 @@ void foo3() {
 // LLVM: %[[ADD_IMAG:.*]] = fadd float %[[B_IMAG]], %[[A_IMAG]]
 // LLVM: %[[TMP_RESULT:.*]] = insertvalue { float, float } poison, float %[[ADD_REAL]], 0
 // LLVM: %[[RESULT:.*]] = insertvalue { float, float } %[[TMP_RESULT]], float %[[ADD_IMAG]], 1
-// LLVM: %[[RESULT_REAL:.*]] = extractvalue { float, float } %[[RESULT]], 0
-// LLVM: %[[RESULT_IMAG:.*]] = extractvalue { float, float } %[[RESULT]], 1
-// LLVM: %[[RESULT_REAL_F16:.*]] = fptrunc float %[[RESULT_REAL]] to half
-// LLVM: %[[RESULT_IMAG_F16:.*]] = fptrunc float %[[RESULT_IMAG]] to half
+// LLVM: %[[RESULT_REAL_F16:.*]] = fptrunc float %[[ADD_REAL]] to half
+// LLVM: %[[RESULT_IMAG_F16:.*]] = fptrunc float %[[ADD_IMAG]] to half
 // LLVM: %[[TMP_RESULT_F16:.*]] = insertvalue { half, half } undef, half %[[RESULT_REAL_F16]], 0
-// LLVM: %[[RESULT_F16:.*]] = insertvalue { half, half } %29, half %[[RESULT_IMAG_F16]], 1
+// LLVM: %[[RESULT_F16:.*]] = insertvalue { half, half } %[[TMP_RESULT_F16]], half %[[RESULT_IMAG_F16]], 1
 // LLVM: store { half, half } %[[RESULT_F16]], ptr %[[B_ADDR]], align 2
 
 // OGCG: %[[A_ADDR:.*]] = alloca { half, half }, align 2

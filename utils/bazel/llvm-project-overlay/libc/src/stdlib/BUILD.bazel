@@ -518,6 +518,22 @@ libc_function(
 )
 
 libc_function(
+    name = "strtof128",
+    srcs = ["strtof128.cpp"],
+    hdrs = ["strtof128.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support:str_to_float",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
     name = "strtod",
     srcs = ["strtod.cpp"],
     hdrs = ["strtod.h"],

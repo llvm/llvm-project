@@ -387,8 +387,8 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
                                             const SPIRVInstrInfo &TII,
                                             bool ZeroAsNull) {
   unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
-  LLT LLTy = LLT::scalar(BitWidth);
-  Register Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
+  Register Res =
+      CurMF->getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
 
@@ -539,8 +539,7 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   if (Res.isValid())
     return Res;
 
-  LLT LLTy = LLT::scalar(getScalarOrVectorBitWidth(SpvType));
-  Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
+  Res = MF.getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   MF.getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, MF);
 
@@ -2223,11 +2222,19 @@ inline unsigned getAS(SPIRVTypeInst SpvType) {
           SpvType->getOperand(1).getImm()));
 }
 
+static LLT getFloatRegType(SPIRVTypeInst FloatType) {
+  if (FloatType->getNumOperands() == 3 &&
+      FloatType->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR)
+    return LLT::bfloat16();
+  return LLT::floatIEEE(FloatType->getOperand(1).getImm());
+}
+
 LLT SPIRVGlobalRegistry::getRegType(SPIRVTypeInst SpvType) const {
   unsigned Opcode = SpvType ? SpvType->getOpcode() : 0;
   switch (Opcode) {
-  case SPIRV::OpTypeInt:
   case SPIRV::OpTypeFloat:
+    return getFloatRegType(SpvType);
+  case SPIRV::OpTypeInt:
   case SPIRV::OpTypeBool:
     return LLT::scalar(getScalarOrVectorBitWidth(SpvType));
   case SPIRV::OpTypePointer:
@@ -2242,8 +2249,10 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVTypeInst SpvType) const {
     case SPIRV::OpTypeUntypedPointerKHR:
       ET = LLT::pointer(getAS(ElemType), getPointerSize());
       break;
-    case SPIRV::OpTypeInt:
     case SPIRV::OpTypeFloat:
+      ET = getFloatRegType(ElemType);
+      break;
+    case SPIRV::OpTypeInt:
     case SPIRV::OpTypeBool:
       ET = LLT::scalar(getScalarOrVectorBitWidth(ElemType));
       break;

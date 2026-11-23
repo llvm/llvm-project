@@ -61,7 +61,7 @@ int f(int i) {
       // CIR:  %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
       // CIR:  %[[ARR:.*]] = cir.get_member %[[A]][2] {name = "arr"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 3>>
       // CIR:  cir.get_element inbounds %[[ARR]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
-      // LLVM: getelementptr inbounds [3 x i32], ptr getelementptr inbounds nuw (i8, ptr @[[F_A]], i64 12), i32 0, i64 %{{.*}}
+      // LLVM: getelementptr inbounds [3 x i32], ptr getelementptr inbounds nuw (i8, ptr @[[F_A]], i64 12), i64 0, i64 %{{.*}}
       // OGCG: getelementptr inbounds [3 x i32], ptr getelementptr inbounds nuw (i8, ptr @__const._Z1fi.a, i64 12), i64 0, i64 %{{.*}}
       ? a.arr[n]
       // CIR:  cir.ternary
@@ -87,7 +87,7 @@ int f(int i) {
         // CIR: %[[SUB_64:.*]] = cir.cast integral %[[SUB]] : !s32i -> !s64i
         // CIR: cir.get_element inbounds %[[Y]][%[[SUB_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 
-        // LLVM: getelementptr inbounds [2 x i32], ptr getelementptr inbounds nuw (i8, ptr @[[F_A]], i64 4), i32 0, i64 %{{.*}}
+        // LLVM: getelementptr inbounds [2 x i32], ptr getelementptr inbounds nuw (i8, ptr @[[F_A]], i64 4), i64 0, i64 %{{.*}}
         // LLVM: load i32
 
         // OGCG: getelementptr inbounds [2 x i32], ptr getelementptr inbounds nuw (i8, ptr @__const._Z1fi.a, i64 4), i64 0, i64 %{{.*}}
@@ -116,8 +116,8 @@ namespace PR42276 {
       // CIR-CXX2A: %[[M:.*]] = cir.get_global @_ZN7PR422765State1mE : !cir.ptr<!cir.array<!rec_anon_struct x 2>>
       // CIR: cir.get_element inbounds %[[M]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!rec_anon_struct x 2>> -> !cir.ptr<!rec_anon_struct>
 
-      // LLVM-CXX11: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE.const, i32 0, i64 %{{.*}}
-      // LLVM-CXX2A: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE, i32 0, i64 %{{.*}}
+      // LLVM-CXX11: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE.const, i64 0, i64 %{{.*}}
+      // LLVM-CXX2A: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE, i64 0, i64 %{{.*}}
       // OGCG-CXX11: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE.const, i64 0, i64 %{{.*}}
       // OGCG-CXX2A: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE, i64 0, i64 %{{.*}}
       (this->*m[i])();
@@ -127,8 +127,8 @@ namespace PR42276 {
       // CIR-CXX11: %[[DMS:.*]] = cir.get_global @_ZN7PR422765State3dmsE.const : !cir.ptr<!cir.array<!s64i x 2>>
       // CIR-CXX2A: %[[DMS:.*]] = cir.get_global @_ZN7PR422765State3dmsE : !cir.ptr<!cir.array<!s64i x 2>>
       // CIR: cir.get_element inbounds %[[DMS]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s64i x 2>> -> !cir.ptr<!s64i>
-      // LLVM-CXX11: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE.const, i32 0, i64 %{{.*}}
-      // LLVM-CXX2A: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE, i32 0, i64 %{{.*}}
+      // LLVM-CXX11: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE.const, i64 0, i64 %{{.*}}
+      // LLVM-CXX2A: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE, i64 0, i64 %{{.*}}
       // OGCG-CXX11: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE.const, i64 0, i64 %{{.*}}
       // OGCG-CXX2A: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE, i64 0, i64 %{{.*}}
       sum += this->*dms[i];

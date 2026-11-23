@@ -38,7 +38,7 @@ defm : BoolField<"enable-constraint-elimination", "true",
 // TODO: There is a similar flag in WPD pass, we should consolidate them by
 // parsing the option only once in PassBuilder and share it across both places.
 defm : BoolField<"enable-devirtualize-speculatively", "false",
-  "Enable speculative devirtualization optimization">;
+  "Enable speculative devirtualization without LTO">;
 defm : BoolField<"enable-dfa-jump-thread", "true",
   "Enable DFA jump threading">;
 defm : BoolField<"enable-global-analyses", "true",
