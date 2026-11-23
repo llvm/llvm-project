@@ -4985,7 +4985,8 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   if (!TInfo)
     return ExprError();
 
-  if (!TInfo->getType()->isDependentType()) {
+  if (!TInfo->getType()->isDependentType() &&
+      TInfo->getType().getCanonicalType()->isVariablyModifiedType()) {
     // The operand of sizeof is parsed in an unevaluated context, but a
     // variably modified operand is evaluated if the sizeof itself is.
     // FIXME: TransformToPotentiallyEvaluated() above should take care of this,
@@ -17607,7 +17608,10 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
                               CopyExpr);
     Captures.push_back(NewCap);
   }
-  BD->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
+  QualType CXXThisType;
+  if (BSI->isCXXThisCaptured())
+    CXXThisType = BSI->getCXXThisCapture().getCaptureType();
+  BD->setCaptures(Context, Captures, CXXThisType);
 
   // Pop the block scope now but keep it alive to the end of this function.
   AnalysisBasedWarnings::Policy WP =

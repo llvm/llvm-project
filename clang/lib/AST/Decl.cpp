@@ -5545,7 +5545,6 @@ unsigned RecordDecl::getODRHash() {
 BlockDecl::BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
     : Decl(Block, DC, CaretLoc), DeclContext(Block) {
   setIsVariadic(false);
-  setCapturesCXXThis(false);
   setBlockMissingReturnType(true);
   setIsConversionFromLambda(false);
   setDoesNotEscape(false);
@@ -5564,8 +5563,8 @@ void BlockDecl::setParams(ArrayRef<ParmVarDecl *> NewParamInfo) {
 }
 
 void BlockDecl::setCaptures(ASTContext &Context, ArrayRef<Capture> Captures,
-                            bool CapturesCXXThis) {
-  this->setCapturesCXXThis(CapturesCXXThis);
+                            QualType CXXThisType) {
+  this->CXXThisType = CXXThisType;
   this->NumCaptures = Captures.size();
 
   if (Captures.empty()) {

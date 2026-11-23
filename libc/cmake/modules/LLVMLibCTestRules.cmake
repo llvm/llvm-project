@@ -617,11 +617,12 @@ function(_add_libc_test_runner fq_target_name fq_build_target_name test_args loa
     string(REPLACE "@BINARY@" "${test_binary}" test_cmd_parsed ${LIBC_TEST_CMD})
     string(REPLACE " " ";" test_cmd "${test_cmd_parsed}")
   else()
-    set(test_cmd ${test_env})
+    set(test_cmd)
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       list(APPEND test_cmd "LIBOMPTARGET_STACK_SIZE=3072")
     endif()
     list(APPEND test_cmd
+      ${test_env}
       ${CMAKE_CROSSCOMPILING_EMULATOR} ${loader_args}
       "${test_binary}" ${test_args})
   endif()
@@ -636,12 +637,12 @@ function(_add_libc_test_runner fq_target_name fq_build_target_name test_args loa
       string(APPEND _params_content "${_arg}\n")
     endforeach()
     string(APPEND _params_content "---\n")
-    foreach(_env_entry IN LISTS test_env)
-      string(APPEND _params_content "${_env_entry}\n")
-    endforeach()
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       string(APPEND _params_content "LIBOMPTARGET_STACK_SIZE=3072\n")
     endif()
+    foreach(_env_entry IN LISTS test_env)
+      string(APPEND _params_content "${_env_entry}\n")
+    endforeach()
 
     file(GENERATE
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"

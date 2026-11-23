@@ -20,6 +20,18 @@ public:
   /// Default constructor for an invalid Trace object.
   SBTrace();
 
+  SBTrace(const lldb::SBTrace &rhs);
+
+  lldb::SBTrace &operator=(const lldb::SBTrace &rhs);
+
+#ifndef SWIG
+  SBTrace(lldb::SBTrace &&rhs);
+
+  lldb::SBTrace &operator=(lldb::SBTrace &&rhs);
+#endif
+
+  ~SBTrace();
+
   /// See SBDebugger::LoadTraceFromFile.
   static SBTrace LoadTraceFromFile(SBError &error, SBDebugger &debugger,
                                    const SBFileSpec &trace_description_file);

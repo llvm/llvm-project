@@ -63,9 +63,9 @@ define void @widened_strided_load_runtime_more_elements(ptr %in0, ptr %out0, i64
 ; CHECK-LABEL: @widened_strided_load_runtime_more_elements(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[STRIDE:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 [[IN0:%.*]], i64 [[TMP0]], <4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP2]] to <8 x i8>
-; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[OUT0:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 [[IN0:%.*]], i64 [[TMP0]], <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    store <8 x i8> [[TMP2]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -208,12 +208,12 @@ define void @non_aligned_stride(ptr %in0, ptr %out0) {
 ; CHECK-LABEL: @non_aligned_stride(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, <2 x ptr> [[TMP5]], <2 x i64> <i64 0, i64 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <4 x ptr> [[TMP2]], <4 x i64> <i64 0, i64 1, i64 0, i64 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 2 [[TMP3]], <4 x i1> splat (i1 true), <4 x i8> poison)
-; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[OUT0:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i64> <i64 0, i64 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, <4 x ptr> [[TMP3]], <4 x i64> <i64 0, i64 1, i64 0, i64 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 2 [[TMP4]], <4 x i1> splat (i1 true), <4 x i8> poison)
+; CHECK-NEXT:    store <4 x i8> [[TMP5]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -303,4 +303,3 @@ entry:
   store <2 x i16> %8, ptr %out6, align 2
   ret void
 }
-

@@ -85,7 +85,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <set>
 
@@ -3955,6 +3955,9 @@ private:
       for (Fortran::lower::pft::Evaluation &e :
            getEval().getNestedEvaluations())
         genFIR(e);
+    // An unstructured acc.loop recorded the DOs whose induction variables it
+    // privatizes; they are all lowered now.
+    Fortran::lower::clearIvPrivatizedDoConstructs(getEval());
 
     if (!isCacheConstruct)
       localSymbols.popScope();
@@ -4057,8 +4060,16 @@ private:
         }
       // The descent lands on the loop the directive takes over, and every
       // level it steps through is one. A construct whose first evaluation is
-      // not a loop takes over none.
-      if (outerDo)
+      // not a loop takes over none. Neither does a DO WHILE lowered
+      // structurally: it has no bounds, so its acc.loop does not iterate, and
+      // the whole loop, condition included, is lowered inside it. The code
+      // below lowers the evaluations nested in curEval; for a loop the
+      // directive takes over, curEval is that loop, so only its body is
+      // lowered. Resetting curEval to the construct's own evaluation lowers
+      // the DO WHILE evaluation itself instead, through genFIR(DoConstruct).
+      if (outerDo && outerDo->IsDoWhile())
+        curEval = &getEval();
+      else if (outerDo)
         absorbedLoop = curEval;
     }
 
@@ -7511,7 +7522,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::TargetMachine &targetMachine,
+    llvm::StringRef targetFeatures,
     const Fortran::frontend::TargetOptions &targetOpts,
     const Fortran::frontend::CodeGenOptions &cgOpts)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
@@ -7572,18 +7583,17 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(*module && "module was not created");
   fir::setTargetTriple(*module, triple);
   fir::setKindMapping(*module, kindMap);
-  fir::setTargetCPU(*module, targetMachine.getTargetCPU());
+  fir::setTargetCPU(*module, targetOpts.cpu);
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
   fir::setAtomicIgnoreDenormalMode(*module,
                                    targetOpts.atomicIgnoreDenormalMode);
   fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
-  fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::setTargetFeatures(*module, targetFeatures);
   fir::setTargetABI(*module, targetOpts.abi);
   fir::support::setMLIRDataLayout(
       *module,
-      llvm::DataLayout(
-          targetMachine.getTargetTriple().computeDataLayout(targetOpts.abi)));
+      llvm::DataLayout(llvm::Triple(triple).computeDataLayout(targetOpts.abi)));
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);

@@ -231,9 +231,11 @@ clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer, off_t &Size,
   return std::move(Written);
 }
 
+#ifndef _WIN32
 /// The access time of a module file is only refreshed explicitly when it is
 /// older than this interval so we avoid frequent yet unnecessary updates.
 static constexpr std::chrono::seconds AccessTimeRefreshInterval(60);
+#endif
 
 /// Record that the module file open as \p FD has just been used by setting its
 /// access time to now, if it is older than AccessTimeRefreshInterval. Module
