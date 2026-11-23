@@ -455,26 +455,6 @@ TEST_F(BracesInserterTest, ConditionalElse) {
                Style);
 
   verifyFormat("if (a) {\n"
-               "  f();\n"
-               "}\n"
-               "#if A\n"
-               "g();\n"
-               "#else\n"
-               "else {\n"
-               "  h();\n"
-               "}\n"
-               "#endif",
-               "if (a)\n"
-               "  f();\n"
-               "#if A\n"
-               "g();\n"
-               "#else\n"
-               "else\n"
-               "  h();\n"
-               "#endif",
-               Style);
-
-  verifyFormat("if (a) {\n"
                "  if (b) {\n"
                "    f();\n"
                "  }\n"

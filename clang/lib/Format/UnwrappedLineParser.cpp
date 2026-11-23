@@ -2941,7 +2941,7 @@ bool UnwrappedLineParser::isFollowedByConditionalElse() const {
     Last = Line->Tokens.back().Tok;
   } else {
     for (const auto &PreviousLine : llvm::reverse(*CurrentLines)) {
-      if (!PreviousLine.InPPDirective && !PreviousLine.Tokens.empty()) {
+      if (!PreviousLine.InPPDirective) {
         Last = PreviousLine.Tokens.back().Tok;
         break;
       }
@@ -2972,10 +2972,10 @@ bool UnwrappedLineParser::isFollowedByConditionalElse() const {
     if (Tok.is(tok::hash) && IsFirstOnLine) {
       SmallVector<const FormatToken *, 4> Directive;
       for (const auto *Next = std::next(It);
-           Next != AllTokens.end() && !(*Next)->HasUnescapedNewline; ++Next) {
+           Next != AllTokens.end() && !(*Next)->HasUnescapedNewline;
+           ++Next, ++It) {
         if ((*Next)->isNot(tok::comment))
           Directive.push_back(*Next);
-        It = Next;
       }
       if (!Directive.empty()) {
         const auto &Keyword = *Directive.front();
