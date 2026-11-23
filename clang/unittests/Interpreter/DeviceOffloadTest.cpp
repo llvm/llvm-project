@@ -152,8 +152,6 @@ TEST(DeviceOffloadBuilderTest, HIPDeviceDefaultsToO3) {
   auto HostCI = CB.CreateHost(OffloadType::HIP);
   ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
   EXPECT_EQ((*HostCI)->getCodeGenOpts().OptimizationLevel, 0u);
-  cleanupRemappedFileBuffers(**DeviceCI);
-  cleanupRemappedFileBuffers(**HostCI);
 }
 
 TEST(DeviceOffloadBuilderTest, UserOptLevelOverridesHIPDeviceDefault) {
@@ -163,7 +161,6 @@ TEST(DeviceOffloadBuilderTest, UserOptLevelOverridesHIPDeviceDefault) {
   auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
   ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
   EXPECT_EQ((*DeviceCI)->getCodeGenOpts().OptimizationLevel, 1u);
-  cleanupRemappedFileBuffers(**DeviceCI);
 }
 
 TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {

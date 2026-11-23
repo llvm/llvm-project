@@ -3065,6 +3065,8 @@ PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   bool Changed = false;
+  bool ReplacedConstant = false;
+  SmallSetVector<Function *, 8> ModifiedFunctions;
   // Figure out whether inlining has exposed a constant address to a lowered
   // type test, and remove the test if so and the address is known to pass the
   // test. Unfortunately this pass ends up needing to reverse engineer what
@@ -3109,6 +3111,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           // This is an equality comparison (TypeTestResolution::Single case in
           // lowerTypeTestCall). In this case we just replace the comparison
           // with true.
+          ModifiedFunctions.insert(CI->getFunction());
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
@@ -3129,6 +3132,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           // should cause later passes to remove the range and alignment checks.
           // The bitset checks won't be removed but those are uncommon.
           CE->replaceAllUsesWith(ConstantInt::get(CE->getType(), 0));
+          ReplacedConstant = true;
           Changed = true;
         }
         auto *CI = dyn_cast<ICmpInst>(U.getUser());
@@ -3137,6 +3141,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
             MaySimplifyInt(CI->getOperand(0))) {
           // This is an equality comparison. Unlike in the case above it
           // remained as an integer compare.
+          ModifiedFunctions.insert(CI->getFunction());
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
@@ -3147,9 +3152,20 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
 
   if (!Changed)
     return PreservedAnalyses::all();
-  PreservedAnalyses PA = PreservedAnalyses::none();
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<PostDominatorTreeAnalysis>();
-  PA.preserve<LoopAnalysis>();
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *F : ModifiedFunctions)
+    FAM.invalidate(*F, FuncPA);
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  // Replacing a constant may affect any function using it, but not its CFG.
+  if (ReplacedConstant)
+    PA.preserveSet<CFGAnalyses>();
+  else
+    PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }

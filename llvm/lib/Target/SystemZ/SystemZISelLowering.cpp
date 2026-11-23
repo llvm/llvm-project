@@ -25,7 +25,6 @@
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -35,13 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "systemz-lower"
-
-// Temporarily let this be disabled by default until all known problems
-// related to argument extensions are fixed.
-static cl::opt<bool> EnableIntArgExtCheck(
-    "argext-abi-check", cl::init(false),
-    cl::desc("Verify that narrow int args are properly extended per the "
-             "SystemZ ABI."));
 
 namespace {
 // Represents information about a comparison.
@@ -11621,8 +11613,8 @@ bool SystemZTargetLowering::enableNarrowIntArgsVerification() const {
   if (!Subtarget.isTargetELF())
     return false;
 
-  if (EnableIntArgExtCheck.getNumOccurrences())
-    return EnableIntArgExtCheck;
+  if (auto V = toOptional(Subtarget.getCLOpts().argext_abi_check))
+    return *V;
 
 #ifdef NDEBUG
   return false;
