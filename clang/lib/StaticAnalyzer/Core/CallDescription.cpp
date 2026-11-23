@@ -99,10 +99,8 @@ bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
     break;
   }
 
-  // Fallback to the slow stringification and comparison for:
-  // C++ overloaded operators, constructors, destructors, etc.
-  // FIXME This comparison is way SLOWER than comparing pointers.
-  // At some point in the future, we should compare FunctionDecl pointers.
+  // Fall back to printing the name for overloaded, literal and conversion
+  // operators, and for constructors and destructors of unnamed records.
   return Name.getAsString() == getFunctionName();
 }
 
