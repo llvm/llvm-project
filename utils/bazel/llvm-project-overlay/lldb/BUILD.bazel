@@ -8,12 +8,13 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_shared_library", "objc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "cc_shared_library", "objc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "FALLBACK_PLUGINS", "OBJCPP_COPTS")
 load("//llvm:dylib.bzl", "llvm_dylib_deps", "llvm_libxml2_exports")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load(":liblldb.bzl", "liblldb_deps", "liblldb_dynamic_deps")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -909,6 +910,59 @@ cc_shared_library(
     }),
 )
 
+# The previous form of liblldb, kept for backwards compatibility.
+# A linkshared cc_binary names its file after its target, so there is one
+# target per extension and :liblldb picks the one for the platform.
+alias(
+    name = "liblldb",
+    actual = select({
+        "@platforms//os:macos": ":liblldb.dylib",
+        "//conditions:default": ":liblldb.so",
+    }),
+)
+
+[
+    cc_binary(
+        name = "liblldb" + extension,
+        additional_linker_inputs = select({
+            "@platforms//os:linux": [
+                ":gen_exports_file_linux",
+            ],
+            "@platforms//os:macos": [
+                ":gen_exports_file_macos",
+            ],
+            "//conditions:default": [],
+        }),
+        linkopts = select({
+            "@platforms//os:linux": [
+                "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
+            ],
+            "@platforms//os:macos": [
+                "-Wl,-exported_symbols_list,$(location :gen_exports_file_macos)",
+            ],
+            "//conditions:default": [],
+        }),
+        linkshared = True,
+        # Only one of the two is wanted on any platform, :liblldb is the correct target to build.
+        tags = ["manual"],
+        deps = [
+            ":API",
+            ":Interpreter",
+        ],
+    )
+    for extension in [
+        ".dylib",
+        ".so",
+    ]
+]
+
+# A linkshared cc_binary provides nothing to link against, so tools reach the
+# old library through this.
+cc_import(
+    name = "liblldb.import",
+    shared_library = ":liblldb",
+)
+
 gentbl_cc_library(
     name = "lldb_options_inc_gen",
     strip_include_prefix = ".",
@@ -932,13 +986,13 @@ cc_binary(
         "tools/driver/*.cpp",
         "tools/driver/*.h",
     ]),
-    dynamic_deps = [":lldb{}".format(PACKAGE_VERSION)] + llvm_dylib_deps(),
+    dynamic_deps = liblldb_dynamic_deps() + llvm_dylib_deps(),
     deps = [
         ":Headers",
         ":lldb_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
-    ],
+    ] + liblldb_deps(),
 )
 
 cc_library(
@@ -1188,7 +1242,7 @@ cc_binary(
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
-    dynamic_deps = [":lldb{}".format(PACKAGE_VERSION)] + llvm_dylib_deps(),
+    dynamic_deps = liblldb_dynamic_deps() + llvm_dylib_deps(),
     includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
@@ -1205,7 +1259,7 @@ cc_binary(
         "//llvm:Support",
         "//llvm:Telemetry",
         "//llvm:config",
-    ],
+    ] + liblldb_deps(),
 )
 
 expand_template(
@@ -1226,7 +1280,7 @@ cc_binary(
     additional_linker_inputs = [
         ":lldb-mcp-plist",
     ],
-    dynamic_deps = [":lldb{}".format(PACKAGE_VERSION)] + llvm_dylib_deps(),
+    dynamic_deps = liblldb_dynamic_deps() + llvm_dylib_deps(),
     includes = ["tools/lldb-mcp"],
     linkopts = select({
         "@platforms//os:macos": [
@@ -1242,5 +1296,5 @@ cc_binary(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:config",
-    ],
+    ] + liblldb_deps(),
 )
