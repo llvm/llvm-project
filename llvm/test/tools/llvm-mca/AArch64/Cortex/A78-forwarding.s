@@ -131,26 +131,26 @@ crc32b w0, w0, w0
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      803
+# CHECK-NEXT: Total Cycles:      603
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    5
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    0.66
+# CHECK-NEXT: IPC:               0.66
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT:                     01234
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeER.    .    .  .   mul	x0, x0, x0
-# CHECK-NEXT: [0,1]     D==eeER   .    .  .   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [0,2]     D====eeER .    .  .   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [0,3]     D======eeER    .  .   smaddl	x0, w0, w0, x0
-# CHECK-NEXT: [1,0]     D========eeER  .  .   mul	x0, x0, x0
-# CHECK-NEXT: [1,1]     .D=========eeER.  .   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [1,2]     .D===========eeER .   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [1,3]     .D=============eeER   smaddl	x0, w0, w0, x0
+# CHECK:      [0,0]     DeeER.    .   .   mul	x0, x0, x0
+# CHECK-NEXT: [0,1]     D=eeER    .   .   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [0,2]     D==eeER   .   .   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [0,3]     D====eeER .   .   smaddl	x0, w0, w0, x0
+# CHECK-NEXT: [1,0]     D======eeER   .   mul	x0, x0, x0
+# CHECK-NEXT: [1,1]     .D======eeER  .   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [1,2]     .D=======eeER .   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [1,3]     .D=========eeER   smaddl	x0, w0, w0, x0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -159,11 +159,11 @@ crc32b w0, w0, w0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     5.0    0.5    0.0       mul	x0, x0, x0
-# CHECK-NEXT: 1.     2     6.5    0.0    0.0       smaddl	x0, w1, w2, x0
-# CHECK-NEXT: 2.     2     8.5    0.0    0.0       smaddl	x0, w1, w2, x0
-# CHECK-NEXT: 3.     2     10.5   0.0    0.0       smaddl	x0, w0, w0, x0
-# CHECK-NEXT:        8     7.6    0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     4.0    0.5    0.0       mul	x0, x0, x0
+# CHECK-NEXT: 1.     2     4.5    0.0    0.0       smaddl	x0, w1, w2, x0
+# CHECK-NEXT: 2.     2     5.5    0.0    0.0       smaddl	x0, w1, w2, x0
+# CHECK-NEXT: 3.     2     7.5    0.0    0.0       smaddl	x0, w0, w0, x0
+# CHECK-NEXT:        8     5.4    0.1    0.0       <total>
 
 # CHECK:      [2] Code Region - fmadd
 

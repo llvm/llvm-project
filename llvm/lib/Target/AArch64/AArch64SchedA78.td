@@ -756,6 +756,7 @@ def A78Wr_IMA  : SchedWriteRes<[A78UnitM0]> { let Latency = 2; }
 def A78Wr_IMUL : SchedWriteVariant<[
                   SchedVar<IsReg3ZeroPred, [A78Wr_IM]>,
                   SchedVar<NoSchedPred,    [A78Wr_IMA]>]>;
+def A78Rd_IM   : SchedReadAdvance<1, [A78Wr_IM]>;
 def A78Rd_IMA  : SchedReadAdvance<1, [A78Wr_IMA]>;
 
 def A78Wr_FMA : SchedWriteRes<[A78UnitV]> { let Latency = 4; }
@@ -950,7 +951,7 @@ def : InstRW<[A78Wr_IMUL, ReadIM, ReadIM, A78Rd_IMA],
              (instregex "^M(ADD|SUB)[WX]rrr$")>;
 
 // Multiply accumulate long
-def : InstRW<[A78Wr_IM, ReadIM, ReadIM, A78Rd_IMA],
+def : InstRW<[A78Wr_IM, ReadIM, ReadIM, A78Rd_IM],
              (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
 
 // Multiply high
