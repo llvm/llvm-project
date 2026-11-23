@@ -18,6 +18,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "gtest/gtest.h"
 #include <cassert>
+#include <iterator>
 
 using namespace llvm;
 
@@ -34,16 +35,12 @@ constexpr ID test_two_guards = 100002;
 constexpr ID test_type_specific_guards = 100003;
 } // namespace llvm::Intrinsic
 
-namespace {
-
 #include "IntrinsicFeatureChecksGuards.inc"
 
+namespace {
+
 static const GuardedIntrinsicInfo &getInfo() {
-  static const GuardedIntrinsicInfo Info(
-      TestTargetIntrinsicFeatureClauses, TestTargetIntrinsicOverloadTypes,
-      TestTargetIntrinsicGuardIndices, TestTargetIntrinsicFeatureGuards,
-      TestTargetIntrinsicVariants, TestTargetIntrinsicEntries);
-  return Info;
+  return getTestTargetGeneratedGuardedIntrinsicInfo();
 }
 
 TEST(IntrinsicFeatureEmitterTest, SingleGuard) {
