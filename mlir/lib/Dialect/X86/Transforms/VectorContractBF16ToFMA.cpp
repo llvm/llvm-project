@@ -356,6 +356,13 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
       if (!pairContractOp)
         return failure();
 
+      // The pair is rewritten too, so its reads need the same checks.
+      if (!validateVectorContractOperands(pairContractOp.getLhs(), isVnni) ||
+          !validateVectorContractOperands(pairContractOp.getRhs(), isVnni))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The LHS or RHS of the pair contract is in an invalid "
+                        "format.");
+
       Operation *accReadOp0 =
           traceToVectorReadLikeParentOperation(contractOp.getAcc());
       Operation *accReadOp1 =
