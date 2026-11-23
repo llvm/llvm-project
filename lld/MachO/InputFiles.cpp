@@ -185,31 +185,30 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
-// The CPU subtype of an arm64e object also holds its pointer authentication
-// ABI version. ld64 names each version as a separate architecture.
+// ld-prime's names for arm64e subtypes. Anything else is "unknown".
 static StringRef getArm64eArchName(uint32_t cpuSubtype) {
-  if (!CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype))
-    return "arm64e.old";
-  bool isKernel = CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpuSubtype);
-  switch (CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype)) {
-  case 0:
-    return isKernel ? "arm64e.kernel" : "arm64e";
-  case 1:
-    return isKernel ? "arm64e.kernel.v1" : "arm64e.v1";
-  default:
-    return "unknown";
-  }
+  const std::pair<uint32_t, StringRef> names[] = {
+      {CPU_SUBTYPE_ARM64E, "arm64e.old"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false), "arm64e"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, false), "arm64e.v1"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true), "arm64e.kernel"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, true), "arm64e.kernel.v1"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(2, true), "arm64e.kernel.v2"},
+  };
+  for (auto [subtype, name] : names)
+    if (subtype == cpuSubtype)
+      return name;
+  return "unknown";
 }
 
-// Like ld64, take only userland pointer authentication ABI version 0, even on
-// macOS, whose executables are marked version 1. Static and preload links also
-// take unversioned and kernel objects.
+// As in ld-prime: userland version 0 only, plus unversioned and kernel
+// version 0 with -static or -preload.
 static bool hasCompatiblePtrAuthABI(uint32_t cpuSubtype) {
-  if (CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype) != 0)
-    return false;
-  bool isUserland = CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype) &&
-                    !CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpuSubtype);
-  return isUserland || config->staticLink || config->preload;
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
+    return true;
+  return (config->staticLink || config->preload) &&
+         (cpuSubtype == CPU_SUBTYPE_ARM64E ||
+          cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true));
 }
 
 static bool isCompatibleObject(uint32_t cpuType, uint32_t cpuSubtype) {

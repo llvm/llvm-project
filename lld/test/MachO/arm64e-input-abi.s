@@ -1,10 +1,9 @@
 # REQUIRES: aarch64
-## The CPU subtype of an arm64e object also holds its pointer authentication ABI
-## version. Like ld64, an arm64e link takes only objects with userland version 0,
-## even on macOS, whose executables are marked version 1. Static and preload
-## links also take unversioned and kernel objects. Any other object is ignored
-## with a warning, or rejected with -arch_errors_fatal, and named the way ld64
-## names it.
+## arm64e encodes the ptrauth ABI version in the CPU subtype. Follow ld-prime:
+## only accept userland v0 objects for regular links (macOS outputs are stamped
+## v1, not inputs), plus unversioned and kernel v0 objects for static/preload
+## links. Warn and ignore, or error out under -arch_errors_fatal, on anything
+## else, using ld-prime's names.
 
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos11.0 %t/main.s -o %t/main.o
@@ -15,6 +14,11 @@
 # RUN: yaml2obj -DSUBTYPE=0xC0000002 %t/helper.yaml -o %t/kernel.o
 # RUN: yaml2obj -DSUBTYPE=0xC1000002 %t/helper.yaml -o %t/kernel-v1.o
 # RUN: yaml2obj -DSUBTYPE=0x82000002 %t/helper.yaml -o %t/v2.o
+# RUN: yaml2obj -DSUBTYPE=0xC2000002 %t/helper.yaml -o %t/kernel-v2.o
+## Subtypes that ld-prime calls unknown.
+# RUN: yaml2obj -DSUBTYPE=0x40000002 %t/helper.yaml -o %t/kernel-unversioned.o
+# RUN: yaml2obj -DSUBTYPE=0xD0000002 %t/helper.yaml -o %t/extra-bit.o
+# RUN: yaml2obj -DSUBTYPE=0x90000002 %t/helper.yaml -o %t/v0-extra-bit.o
 # RUN: llvm-ar rcs %t/v1.a %t/v1.o
 
 # DEFINE: %{lld} = %no-fatal-warnings-lld -arch arm64e -arch_errors_fatal \
@@ -27,6 +31,10 @@
 # RUN: not %{lld} %t/kernel.o 2>&1 | FileCheck %s --check-prefix=KERNEL
 # RUN: not %{lld} %t/kernel-v1.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
 # RUN: not %{lld} %t/v2.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/kernel-v2.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V2
+# RUN: not %{lld} %t/kernel-unversioned.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/v0-extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 # RUN: %{lld} -static %t/old.o
 # RUN: %{lld} -static %t/kernel.o
@@ -35,6 +43,9 @@
 # RUN: not %{lld} -static %t/v1.o 2>&1 | FileCheck %s --check-prefix=V1
 # RUN: not %{lld} -static %t/kernel-v1.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
 # RUN: not %{lld} -preload %t/kernel-v1.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
+# RUN: not %{lld} -static %t/kernel-unversioned.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} -static %t/extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} -preload %t/extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 # RUN: %no-fatal-warnings-lld -arch arm64e %t/main.o %t/v1.o -o %t/out 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=WARN
@@ -71,7 +82,8 @@
 # V1:        error: {{.*}}v1.{{[oa]}} has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # KERNEL:    error: {{.*}}kernel.{{o|dylib}} has architecture arm64e.kernel which is incompatible with target architecture arm64e
 # KERNEL-V1: error: {{.*}}kernel-v1.o has architecture arm64e.kernel.v1 which is incompatible with target architecture arm64e
-# UNKNOWN:   error: {{.*}}v2.{{o|dylib}} has architecture unknown which is incompatible with target architecture arm64e
+# KERNEL-V2: error: {{.*}}kernel-v2.o has architecture arm64e.kernel.v2 which is incompatible with target architecture arm64e
+# UNKNOWN:   error: {{.*}}.{{o|dylib}} has architecture unknown which is incompatible with target architecture arm64e
 # WARN:      warning: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # V1-ARM64:  error: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64
 # FAT:       error: {{.*}}libfat.dylib has architecture arm64e.kernel which is incompatible with target architecture arm64e
