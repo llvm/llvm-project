@@ -149,7 +149,7 @@ struct TestString {
 };
 
 int main(int, char**) {
-  types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<TestInt>{});
-  types::for_each(types::forward_iterator_list<std::string*>{}, TestIteratorWithPolicies<TestString>{});
+  types::for_each(types::bidirectional_iterator_list<int*>{}, TestIteratorWithPolicies<TestInt>{});
+  types::for_each(types::bidirectional_iterator_list<std::string*>{}, TestIteratorWithPolicies<TestString>{});
   return 0;
 }
