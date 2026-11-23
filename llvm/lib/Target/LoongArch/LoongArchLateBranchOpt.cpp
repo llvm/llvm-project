@@ -12,8 +12,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "LoongArch.h"
 #include "LoongArchInstrInfo.h"
 #include "LoongArchSubtarget.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
@@ -21,10 +24,10 @@ using namespace llvm;
 
 namespace {
 
-struct LoongArchLateBranchOpt : public MachineFunctionPass {
+struct LoongArchLateBranchOptLegacy : public MachineFunctionPass {
   static char ID;
 
-  LoongArchLateBranchOpt() : MachineFunctionPass(ID) {}
+  LoongArchLateBranchOptLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return LOONGARCH_LATE_BRANCH_OPT_NAME;
@@ -34,20 +37,16 @@ struct LoongArchLateBranchOpt : public MachineFunctionPass {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  bool runOnMachineFunction(MachineFunction &Fn) override;
-
-private:
-  bool runOnBasicBlock(MachineBasicBlock &MBB) const;
-
-  const LoongArchInstrInfo *TII = nullptr;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
 
-char LoongArchLateBranchOpt::ID = 0;
-INITIALIZE_PASS(LoongArchLateBranchOpt, "loongarch-late-branch-opt",
+char LoongArchLateBranchOptLegacy::ID = 0;
+INITIALIZE_PASS(LoongArchLateBranchOptLegacy, "loongarch-late-branch-opt",
                 LOONGARCH_LATE_BRANCH_OPT_NAME, false, false)
 
-bool LoongArchLateBranchOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
+static bool runOnBasicBlock(MachineBasicBlock &MBB,
+                            const LoongArchInstrInfo *TII) {
   MachineBasicBlock *TBB, *FBB;
   SmallVector<MachineOperand, 4> Cond;
   if (TII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
@@ -103,19 +102,29 @@ bool LoongArchLateBranchOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
   return true;
 }
 
-bool LoongArchLateBranchOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
-  auto &ST = Fn.getSubtarget<LoongArchSubtarget>();
-  TII = ST.getInstrInfo();
+static bool runLateBranchOpt(MachineFunction &MF) {
+  auto &ST = MF.getSubtarget<LoongArchSubtarget>();
+  const LoongArchInstrInfo *TII = ST.getInstrInfo();
 
   bool Changed = false;
-  for (MachineBasicBlock &MBB : Fn)
-    Changed |= runOnBasicBlock(MBB);
+  for (MachineBasicBlock &MBB : MF)
+    Changed |= runOnBasicBlock(MBB, TII);
   return Changed;
 }
 
-FunctionPass *llvm::createLoongArchLateBranchOptPass() {
-  return new LoongArchLateBranchOpt();
+bool LoongArchLateBranchOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runLateBranchOpt(MF);
+}
+
+FunctionPass *llvm::createLoongArchLateBranchOptLegacyPass() {
+  return new LoongArchLateBranchOptLegacy();
+}
+
+PreservedAnalyses
+LoongArchLateBranchOptPass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  return runLateBranchOpt(MF) ? getMachineFunctionPassPreservedAnalyses()
+                              : PreservedAnalyses::all();
 }
