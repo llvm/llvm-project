@@ -395,3 +395,18 @@ define <2 x i8> @vslide1up_4xi8_neg_length_changing(<4 x i8> %v, i8 %b) {
   %v2 = shufflevector <4 x i8> %v1, <4 x i8> %v, <2 x i32> <i32 0, i32 4>
   ret <2 x i8> %v2
 }
+
+define <4 x float> @slide_one_insert(<4 x float> %x, float %first) {
+; CHECK-LABEL: slide_one_insert:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %v1 = shufflevector <4 x float> %x, <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
+  %v2 = insertelement <4 x float> %v1, float %first, i32 0
+  ret <4 x float> %v2
+}
+
