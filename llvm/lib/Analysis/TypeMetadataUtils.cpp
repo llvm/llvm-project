@@ -241,15 +241,26 @@ llvm::getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset,
   return std::pair<Function *, Constant *>(Fn, C);
 }
 
+// NOTE: this function only handles absolute pointer slots, not relative ones.
 bool llvm::isNullVTableSlot(GlobalVariable *GV, uint64_t Offset, Module &M) {
   if (!GV->isConstant() || !GV->hasDefinitiveInitializer())
     return false;
 
   const DataLayout &DL = M.getDataLayout();
   Type *FnPtrTy = PointerType::get(M.getContext(), DL.getProgramAddressSpace());
-  APInt Off(DL.getIndexTypeSizeInBits(GV->getType()), Offset);
-  Constant *C =
-      ConstantFoldLoadFromConst(GV->getInitializer(), FnPtrTy, Off, DL);
+  Constant *Init = GV->getInitializer();
+
+  TypeSize InitSize = DL.getTypeAllocSize(Init->getType());
+  TypeSize PtrSize = DL.getTypeStoreSize(FnPtrTy);
+  if (InitSize.isScalable() || PtrSize.isScalable())
+    return false;
+  uint64_t InitBytes = InitSize.getFixedValue();
+  uint64_t PtrBytes = PtrSize.getFixedValue();
+  if (Offset > InitBytes || InitBytes - Offset < PtrBytes ||
+      Offset > std::numeric_limits<int64_t>::max())
+    return false;
+
+  Constant *C = ConstantFoldLoadFromConst(Init, FnPtrTy, APInt(64, Offset), DL);
   return C && C->isNullValue();
 }
 
