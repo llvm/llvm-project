@@ -64,7 +64,8 @@ spirv::Deserializer::Deserializer(ArrayRef<uint32_t> binary,
                                   MLIRContext *context,
                                   const spirv::DeserializationOptions &options)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
-      module(createModuleOp()), opBuilder(module->getRegion()), options(options)
+      moduleOp(createModuleOp()), opBuilder(moduleOp->getRegion()),
+      options(options)
 #ifndef NDEBUG
       ,
       logger(llvm::dbgs())
@@ -120,7 +121,7 @@ LogicalResult spirv::Deserializer::deserialize() {
 }
 
 OwningOpRef<spirv::ModuleOp> spirv::Deserializer::collect() {
-  return std::move(module);
+  return std::move(moduleOp);
 }
 
 //===----------------------------------------------------------------------===//
@@ -225,7 +226,7 @@ spirv::Deserializer::processExtInstImport(ArrayRef<uint32_t> words) {
 }
 
 void spirv::Deserializer::attachVCETriple() {
-  module->setVceTripleAttr(spirv::VerCapExtAttr::get(
+  moduleOp->setVceTripleAttr(spirv::VerCapExtAttr::get(
       version, capabilities.getArrayRef(), extensions.getArrayRef(), context));
 }
 
@@ -234,10 +235,10 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
-  module->setAddressingModel(
+  moduleOp->setAddressingModel(
       static_cast<spirv::AddressingModel>(operands.front()));
 
-  module->setMemoryModel(static_cast<spirv::MemoryModel>(operands.back()));
+  moduleOp->setMemoryModel(static_cast<spirv::MemoryModel>(operands.back()));
 
   return success();
 }

@@ -146,7 +146,7 @@ private:
   // Module structure
   //===--------------------------------------------------------------------===//
 
-  /// Initializes the `module` ModuleOp in this deserializer instance.
+  /// Initializes the `moduleOp` ModuleOp in this deserializer instance.
   OwningOpRef<spirv::ModuleOp> createModuleOp();
 
   /// Processes SPIR-V module header in `binary`.
@@ -164,11 +164,11 @@ private:
   /// bookkeeping in the deserializer.
   LogicalResult processExtInstImport(ArrayRef<uint32_t> words);
 
-  /// Attaches (version, capabilities, extensions) triple to `module` as an
+  /// Attaches (version, capabilities, extensions) triple to `moduleOp` as an
   /// attribute.
   void attachVCETriple();
 
-  /// Processes the SPIR-V OpMemoryModel with `operands` and updates `module`.
+  /// Processes the SPIR-V OpMemoryModel with `operands` and updates `moduleOp`.
   LogicalResult processMemoryModel(ArrayRef<uint32_t> operands);
 
   /// Process SPIR-V OpName with `operands`.
@@ -305,7 +305,7 @@ private:
   bool isVoidType(Type type) const { return isa<NoneType>(type); }
 
   /// Processes a SPIR-V type instruction with given `opcode` and `operands` and
-  /// registers the type into `module`.
+  /// registers the type into `moduleOp`.
   LogicalResult processType(spirv::Opcode opcode, ArrayRef<uint32_t> operands);
 
   LogicalResult processOpTypePointer(ArrayRef<uint32_t> operands);
@@ -605,7 +605,7 @@ private:
   Location unknownLoc;
 
   /// The SPIR-V ModuleOp.
-  OwningOpRef<spirv::ModuleOp> module;
+  OwningOpRef<spirv::ModuleOp> moduleOp;
 
   /// The current function under construction.
   std::optional<spirv::FuncOp> curFunction;
