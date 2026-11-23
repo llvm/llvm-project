@@ -467,6 +467,8 @@ int llvm::omp::getBestVariantMatchForContext(
 SmallVector<unsigned> llvm::omp::getOrderedVariantMatchesForContext(
     const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx,
     ArrayRef<unsigned> ConditionIds) {
+  assert((ConditionIds.empty() || ConditionIds.size() == VMIs.size()) &&
+         "Expected one condition id per variant");
   SmallVector<std::pair<APInt, unsigned>> Scores;
   for (auto [Idx, VMI] : enumerate(VMIs)) {
     SmallVector<unsigned, 8> ConstructMatches;
@@ -485,8 +487,9 @@ SmallVector<unsigned> llvm::omp::getOrderedVariantMatchesForContext(
   // variant with the same score. OpenMP 6.0 [9.3] would give it a score of
   // zero instead.
   auto IsSubset = [&](unsigned I, unsigned J) {
-    unsigned Cond = ConditionIds.empty() ? 0 : ConditionIds[I];
-    return I != J && (Cond == 0 || Cond == ConditionIds[J]) &&
+    unsigned CondI = ConditionIds.empty() ? 0 : ConditionIds[I];
+    unsigned CondJ = ConditionIds.empty() ? 0 : ConditionIds[J];
+    return I != J && (CondI == 0 || CondJ == 0 || CondI == CondJ) &&
            isStrictSubset(VMIs[I], VMIs[J]);
   };
   auto SameScore = [](const APInt &A, const APInt &B) {

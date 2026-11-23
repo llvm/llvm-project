@@ -2822,6 +2822,10 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       if (HasSharedStmt) {
         ConsumeAnnotationToken();
         ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+        ParseScope SharedScope(this, Scope::DeclScope,
+                               /*EnteredScope=*/getLangOpts().C99 ||
+                                   getLangOpts().CPlusPlus,
+                               /*BeforeCompoundStmt=*/Tok.is(tok::l_brace));
         SharedStmt = ParseStatement();
         HasError |= SharedStmt.isInvalid();
       }

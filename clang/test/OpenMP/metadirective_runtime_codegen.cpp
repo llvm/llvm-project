@@ -305,6 +305,74 @@ void same_cond(int x) {
   bar();
 }
 
+int g();
+
+// Conditions with side effects are never the same condition, so the
+// clauses keep their order (OpenMP 6.0 [9.4]).
+// CHECK-LABEL: define {{.*}}void @_Z11side_effectv(
+// CHECK:       call {{.*}}i32 @_Z1gv()
+// CHECK:       br i1 {{.*}}, label %[[FIRST:omp.metadirective.variant[0-9]*]], label %
+// CHECK:       [[FIRST]]:
+// CHECK-NEXT:  call {{.*}}@__kmpc_fork_call(
+void side_effect() {
+#pragma omp metadirective when(user={condition(g())}: parallel) \
+    when(user={condition(g())}, implementation={vendor(llvm)}: single)
+  bar();
+}
+
+// condition(0) never applies, so it is not checked at runtime.
+// CHECK-LABEL: define {{.*}}void @_Z11const_falsei(
+// CHECK-NOT:   br i1 false
+// CHECK:       [[A:%.*]] = load i32, ptr %a.addr
+// CHECK-NEXT:  icmp ne i32 [[A]], 0
+void const_false(int a) {
+#pragma omp metadirective when(user={condition(0)}: parallel) \
+    when(user={condition(a)}: single)
+  bar();
+}
+
+// condition(1) always applies, so it ends the chain without a check.
+// CHECK-LABEL: define {{.*}}void @_Z10const_truei(
+// CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.variant[0-9]*]], label %[[ELSE:omp.metadirective.else[0-9]*]]
+// CHECK:       [[ELSE]]:
+// CHECK-NEXT:  br label %[[ONE:omp.metadirective.variant[0-9]*]]
+// CHECK:       [[ONE]]:
+// CHECK-NEXT:  call i32 @__kmpc_single(
+void const_true(int a) {
+#pragma omp metadirective when(user={condition(a)}: parallel) \
+    when(user={condition(1)}: single)
+  bar();
+}
+
+// 'target update' is standalone: it runs the shared statement.
+// CHECK-LABEL: define {{.*}}void @_Z13target_updateiPi(
+// CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.variant[0-9]*]], label %
+// CHECK:       [[WHEN]]:
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
+// CHECK-NEXT:  call void @_Z3barv()
+void target_update(int a, int *p) {
+#pragma omp metadirective when(user={condition(a)}: target update to(p[0:1])) otherwise(parallel)
+  bar();
+}
+
+struct S { S(); ~S(); };
+
+// The shared statement's object is destroyed in its own block.
+// CHECK-LABEL: define {{.*}}void @_Z11shared_decli(
+// CHECK:       call void @__kmpc_barrier(
+// CHECK-NEXT:  br label %[[STMT:omp.metadirective.stmt[0-9]*]]
+// CHECK:       [[STMT]]:
+// CHECK-NEXT:  call void @_ZN1SC1Ev(
+// CHECK-NEXT:  call void @_ZN1SD1Ev(
+// CHECK-NEXT:  br label %[[END:omp.metadirective.end[0-9]*]]
+// CHECK:       [[END]]:
+// CHECK-NEXT:  ret void
+void shared_decl(int flag) {
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(parallel)
+  S s;
+}
+
 // Variants without an associated statement share one copy of it.
 // CHECK-LABEL: define {{.*}}void @_Z12shared_labelii(
 // CHECK:       call void @__kmpc_barrier(

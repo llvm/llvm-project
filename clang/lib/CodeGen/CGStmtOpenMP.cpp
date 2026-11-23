@@ -2436,7 +2436,9 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   SmallVector<llvm::omp::VariantMatchInfo, 4> VMIs;
   SmallVector<unsigned, 4> VariantIdx;
   SmallVector<unsigned, 4> ConditionIds;
-  SmallVector<llvm::FoldingSetNodeID, 4> CondProfiles;
+  SmallVector<std::pair<llvm::FoldingSetNodeID, unsigned>, 4> CondProfiles;
+  SmallVector<const Expr *, 4> RuntimeConds(Variants.size(), nullptr);
+  unsigned NextCondId = 1;
   std::optional<unsigned> Fallback;
   for (auto [I, TI] : llvm::enumerate(S.traitInfos())) {
     if (TI->Sets.empty()) {
@@ -2445,24 +2447,36 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
     }
     llvm::omp::VariantMatchInfo &VMI = VMIs.emplace_back();
     TI->getAsVariantMatchInfo(getContext(), VMI);
-    // Treat the condition as true here; it is checked at runtime.
-    if (Conditions[I]) {
-      VMI.RequiredTraits.reset(
-          unsigned(llvm::omp::TraitProperty::user_condition_false));
-      VMI.RequiredTraits.set(
-          unsigned(llvm::omp::TraitProperty::user_condition_true));
-    }
-    VariantIdx.push_back(I);
-    // Identical conditions share an id; 0 means no condition.
+    // Non-constant conditions are checked at runtime; treat them as true here.
+    // Pure identical conditions share an id; 0 means no runtime condition.
     unsigned Id = 0;
     if (const Expr *Cond = Conditions[I]) {
-      llvm::FoldingSetNodeID Profile;
-      Cond->Profile(Profile, getContext(), /*Canonical=*/true);
-      auto *It = llvm::find(CondProfiles, Profile);
-      Id = std::distance(CondProfiles.begin(), It) + 1;
-      if (It == CondProfiles.end())
-        CondProfiles.push_back(Profile);
+      std::optional<llvm::APSInt> ConstVal =
+          Cond->getIntegerConstantExpr(getContext());
+      if (!ConstVal || !ConstVal->isZero()) {
+        VMI.RequiredTraits.reset(
+            unsigned(llvm::omp::TraitProperty::user_condition_false));
+        VMI.RequiredTraits.set(
+            unsigned(llvm::omp::TraitProperty::user_condition_true));
+      }
+      if (!ConstVal) {
+        RuntimeConds[I] = Cond;
+        if (Cond->HasSideEffects(getContext())) {
+          Id = NextCondId++;
+        } else {
+          llvm::FoldingSetNodeID Profile;
+          Cond->Profile(Profile, getContext(), /*Canonical=*/true);
+          auto *It = llvm::find_if(CondProfiles, [&](const auto &Entry) {
+            return Entry.first == Profile;
+          });
+          if (It == CondProfiles.end())
+            Id = CondProfiles.emplace_back(Profile, NextCondId++).second;
+          else
+            Id = It->second;
+        }
+      }
     }
+    VariantIdx.push_back(I);
     ConditionIds.push_back(Id);
   }
 
@@ -2474,7 +2488,7 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
            VMIs, OMPCtx, ConditionIds)) {
     unsigned I = VariantIdx[Idx];
     // Without a condition the variant always applies; later ones never run.
-    const Expr *Cond = Conditions[I];
+    const Expr *Cond = RuntimeConds[I];
     if (!Cond) {
       Fallback = I;
       break;
@@ -2492,12 +2506,16 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   // their target regions get the same names on both sides.
   for (auto [V, BB] : llvm::zip_equal(Variants, VariantBBs)) {
     EmitBlock(BB);
-    EmitStmt(V);
+    {
+      RunCleanupsScope VariantScope(*this);
+      EmitStmt(V);
+    }
     const auto *D = dyn_cast<OMPExecutableDirective>(V);
-    EmitBranch(D && D->hasAssociatedStmt() ? EndBB : SharedBB);
+    EmitBranch(D && !D->isStandaloneDirective() ? EndBB : SharedBB);
   }
   if (Shared) {
     EmitBlock(SharedBB);
+    RunCleanupsScope SharedScope(*this);
     EmitStmt(Shared);
   }
   EmitBlock(EndBB, /*IsFinished=*/true);

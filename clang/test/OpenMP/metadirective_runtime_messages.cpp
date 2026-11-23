@@ -60,3 +60,11 @@ void local_decl(int flag) {
     l.v = 1;
   }
 }
+
+// A declaration in the shared statement is not visible after it.
+struct S { S(); ~S(); void use(); };
+void shared_decl_scope(int flag) {
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(parallel)
+  S s;
+  s.use(); // expected-error {{use of undeclared identifier 's'}}
+}

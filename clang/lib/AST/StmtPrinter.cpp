@@ -829,7 +829,7 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
   // the statement follows the metadirective.
   for (Stmt *V : Variants) {
     auto *D = dyn_cast<OMPExecutableDirective>(V);
-    if (D && D->hasAssociatedStmt()) {
+    if (D && !D->isStandaloneDirective()) {
       PrintStmt(D->getRawStmt());
       break;
     }

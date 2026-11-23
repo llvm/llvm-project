@@ -855,6 +855,9 @@ TEST_F(OpenMPContextTest, OrderedVariantMatches) {
   // Different conditions: no subset, so ties keep their order.
   EXPECT_EQ(getOrderedVariantMatchesForContext(Pair, Context, {1, 2}),
             (SmallVector<unsigned>{0, 1}));
+  // No runtime condition on Vendor: Plain is a strict subset and goes last.
+  EXPECT_EQ(getOrderedVariantMatchesForContext(Pair, Context, {1, 0}),
+            (SmallVector<unsigned>{1, 0}));
 }
 
 } // namespace

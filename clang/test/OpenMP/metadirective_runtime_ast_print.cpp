@@ -69,4 +69,14 @@ void all_standalone(int flag, int n) {
   n = 1;
 }
 
+// 'target update' is standalone: the statement is printed once.
+// CHECK-LABEL: void target_update(int flag, int *p) {
+// CHECK-NEXT: #pragma omp metadirective when(user={condition(flag)}: target update to(p[0:1])) otherwise(parallel)
+// CHECK-NEXT: *p = 1;
+// CHECK-NEXT: }
+void target_update(int flag, int *p) {
+#pragma omp metadirective when(user={condition(flag)}: target update to(p[0:1])) otherwise(parallel)
+  *p = 1;
+}
+
 #endif
