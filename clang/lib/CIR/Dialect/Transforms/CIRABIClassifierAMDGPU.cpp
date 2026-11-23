@@ -26,10 +26,11 @@ public:
   AMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp)
       : CIRABIClassifierCommon(dl, modOp) {}
 
-  /// Each variadic argument is read in place from its own 4-byte slot.
-  mlir::FailureOr<ArgClassification> classifyVAArg(cir::VAArgOp) override {
-    return ArgClassification::getDirect(/*coerced=*/nullptr, /*offset=*/0,
-                                        llvm::Align(4));
+  mlir::FailureOr<ArgClassification>
+  classifyVAArg(cir::VAArgOp vaArg) override {
+    vaArg->emitOpError()
+        << "not yet implemented in CallConvLowering for AMDGPU";
+    return mlir::failure();
   }
 
 protected:
