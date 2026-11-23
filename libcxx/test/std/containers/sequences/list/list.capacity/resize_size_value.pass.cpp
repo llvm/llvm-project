@@ -8,7 +8,7 @@
 
 // <list>
 
-// void resize(size_type sz, const value_type& x);
+// void resize(size_type sz, const value_type& x); // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -16,39 +16,47 @@
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        std::list<double> l(5, 2);
-        l.resize(2, 3.5);
-        assert(l.size() == 2);
-        assert(std::distance(l.begin(), l.end()) == 2);
-        assert(l == std::list<double>(2, 2));
-    }
-    {
-        std::list<double> l(5, 2);
-        l.resize(10, 3.5);
-        assert(l.size() == 10);
-        assert(std::distance(l.begin(), l.end()) == 10);
-        assert(l.front() == 2);
-        assert(l.back() == 3.5);
-    }
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    std::list<double> l(5, 2);
+    l.resize(2, 3.5);
+    assert(l.size() == 2);
+    assert(std::distance(l.begin(), l.end()) == 2);
+    assert(l == std::list<double>(2, 2));
+  }
+  {
+    std::list<double> l(5, 2);
+    l.resize(10, 3.5);
+    assert(l.size() == 10);
+    assert(std::distance(l.begin(), l.end()) == 10);
+    assert(l.front() == 2);
+    assert(l.back() == 3.5);
+  }
 #if TEST_STD_VER >= 11
-    {
-        std::list<double, min_allocator<double>> l(5, 2);
-        l.resize(2, 3.5);
-        assert(l.size() == 2);
-        assert(std::distance(l.begin(), l.end()) == 2);
-        assert((l == std::list<double, min_allocator<double>>(2, 2)));
-    }
-    {
-        std::list<double, min_allocator<double>> l(5, 2);
-        l.resize(10, 3.5);
-        assert(l.size() == 10);
-        assert(std::distance(l.begin(), l.end()) == 10);
-        assert(l.front() == 2);
-        assert(l.back() == 3.5);
-    }
+  {
+    std::list<double, min_allocator<double>> l(5, 2);
+    l.resize(2, 3.5);
+    assert(l.size() == 2);
+    assert(std::distance(l.begin(), l.end()) == 2);
+    assert((l == std::list<double, min_allocator<double>>(2, 2)));
+  }
+  {
+    std::list<double, min_allocator<double>> l(5, 2);
+    l.resize(10, 3.5);
+    assert(l.size() == 10);
+    assert(std::distance(l.begin(), l.end()) == 10);
+    assert(l.front() == 2);
+    assert(l.back() == 3.5);
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

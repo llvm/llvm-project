@@ -2,12 +2,10 @@
 ; RUN: opt < %s -disable-output -passes="print<scalar-evolution>" \
 ; RUN:   -scalar-evolution-classify-expressions=0 2>&1 | FileCheck %s
 
-declare void @llvm.experimental.guard(i1, ...)
-
-define void @test_1(i32 %n) nounwind {
-; Prove that (n > 1) ===> (n / 2 > 0).
-; CHECK-LABEL: 'test_1'
-; CHECK-NEXT:  Determining loop execution counts for: @test_1
+define void @implied1(i32 %n) {
+; Prove that (n s> 1) ===> (n / 2 s> 0).
+; CHECK-LABEL: 'implied1'
+; CHECK-NEXT:  Determining loop execution counts for: @implied1
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + %n.div.2)<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + %n.div.2)<nsw>
@@ -29,10 +27,35 @@ exit:
   ret void
 }
 
-define void @test_1neg(i32 %n) nounwind {
-; Prove that (n > 0) =\=> (n / 2 > 0).
-; CHECK-LABEL: 'test_1neg'
-; CHECK-NEXT:  Determining loop execution counts for: @test_1neg
+define void @implied1_samesign(i32 %n) {
+; Prove that (n > 1) ===> (n / 2 s> 0).
+; CHECK-LABEL: 'implied1_samesign'
+; CHECK-NEXT:  Determining loop execution counts for: @implied1_samesign
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+;
+entry:
+  %cmp1 = icmp samesign ugt i32 %n, 1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %exitcond = icmp sgt i32 %n.div.2, %indvar.next
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @implied1_neg(i32 %n) {
+; Prove that (n s> 0) =\=> (n / 2 s> 0).
+; CHECK-LABEL: 'implied1_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @implied1_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
@@ -54,10 +77,10 @@ exit:
   ret void
 }
 
-define void @test_2(i32 %n) nounwind {
-; Prove that (n >= 2) ===> (n / 2 > 0).
-; CHECK-LABEL: 'test_2'
-; CHECK-NEXT:  Determining loop execution counts for: @test_2
+define void @implied2(i32 %n) {
+; Prove that (n s>= 2) ===> (n / 2 s> 0).
+; CHECK-LABEL: 'implied2'
+; CHECK-NEXT:  Determining loop execution counts for: @implied2
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + %n.div.2)<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + %n.div.2)<nsw>
@@ -79,10 +102,35 @@ exit:
   ret void
 }
 
-define void @test_2neg(i32 %n) nounwind {
-; Prove that (n >= 1) =\=> (n / 2 > 0).
-; CHECK-LABEL: 'test_2neg'
-; CHECK-NEXT:  Determining loop execution counts for: @test_2neg
+define void @implied2_samesign(i32 %n) {
+; Prove that (n >= 2) ===> (n / 2 s> 0).
+; CHECK-LABEL: 'implied2_samesign'
+; CHECK-NEXT:  Determining loop execution counts for: @implied2_samesign
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+;
+entry:
+  %cmp1 = icmp samesign uge i32 %n, 2
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %exitcond = icmp sgt i32 %n.div.2, %indvar.next
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @implied2_neg(i32 %n) {
+; Prove that (n s>= 1) =\=> (n / 2 s> 0).
+; CHECK-LABEL: 'implied2_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @implied2_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
@@ -104,10 +152,10 @@ exit:
   ret void
 }
 
-define void @test_3(i32 %n) nounwind {
-; Prove that (n > -2) ===> (n / 2 >= 0).
-; CHECK-LABEL: 'test_3'
-; CHECK-NEXT:  Determining loop execution counts for: @test_3
+define void @implied3(i32 %n) {
+; Prove that (n s> -2) ===> (n / 2 s>= 0).
+; CHECK-LABEL: 'implied3'
+; CHECK-NEXT:  Determining loop execution counts for: @implied3
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
@@ -129,10 +177,35 @@ exit:
   ret void
 }
 
-define void @test_3neg(i32 %n) nounwind {
+define void @implied3_samesign(i32 %n) {
+; Prove that (n > -2) ===> (n / 2 s>= 0).
+; CHECK-LABEL: 'implied3_samesign'
+; CHECK-NEXT:  Determining loop execution counts for: @implied3_samesign
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+;
+entry:
+  %cmp1 = icmp samesign ugt i32 %n, -2
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %exitcond = icmp sge i32 %n.div.2, %indvar
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @implied3_neg(i32 %n) {
 ; Prove that (n > -3) =\=> (n / 2 >= 0).
-; CHECK-LABEL: 'test_3neg'
-; CHECK-NEXT:  Determining loop execution counts for: @test_3neg
+; CHECK-LABEL: 'implied3_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @implied3_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
@@ -154,10 +227,10 @@ exit:
   ret void
 }
 
-define void @test_4(i32 %n) nounwind {
-; Prove that (n >= -1) ===> (n / 2 >= 0).
-; CHECK-LABEL: 'test_4'
-; CHECK-NEXT:  Determining loop execution counts for: @test_4
+define void @implied4(i32 %n) {
+; Prove that (n s>= -1) ===> (n / 2 s>= 0).
+; CHECK-LABEL: 'implied4'
+; CHECK-NEXT:  Determining loop execution counts for: @implied4
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
@@ -179,10 +252,35 @@ exit:
   ret void
 }
 
-define void @test_4neg(i32 %n) nounwind {
-; Prove that (n >= -2) =\=> (n / 2 >= 0).
-; CHECK-LABEL: 'test_4neg'
-; CHECK-NEXT:  Determining loop execution counts for: @test_4neg
+define void @implied4_samesign(i32 %n) {
+; Prove that (n >= -1) ===> (n / 2 s>= 0).
+; CHECK-LABEL: 'implied4_samesign'
+; CHECK-NEXT:  Determining loop execution counts for: @implied4_samesign
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+;
+entry:
+  %cmp1 = icmp samesign uge i32 %n, -1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %exitcond = icmp sge i32 %n.div.2, %indvar
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @implied4_neg(i32 %n) {
+; Prove that (n s>= -2) =\=> (n / 2 s>= 0).
+; CHECK-LABEL: 'implied4_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @implied4_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
@@ -406,6 +504,59 @@ header:
   %indvar = phi i64 [ %indvar.next, %header ], [ 0, %entry ]
   %indvar.next = add i64 %indvar, 1
   %exitcond = icmp sge i64 %n.div.2.ext, %indvar
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @swapped_predicate(i32 %n) {
+; Prove that (n s>= 1) ===> (0 s>= -n / 2).
+; CHECK-LABEL: 'swapped_predicate'
+; CHECK-NEXT:  Determining loop execution counts for: @swapped_predicate
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+;
+entry:
+  %cmp1 = icmp sge i32 %n, 1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %minus.indvar = sub nsw i32 0, %indvar
+  %minus.n.div.2 = sub nsw i32 0, %n.div.2
+  %exitcond = icmp sge i32 %minus.indvar, %minus.n.div.2
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @swapped_predicate_neg(i32 %n) {
+; Prove that (n s>= 1) =\=> (-n / 2 s>= 0).
+; CHECK-LABEL: 'swapped_predicate_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @swapped_predicate_neg
+; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %cmp1 = icmp sge i32 %n, 1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %minus.indvar = sub nsw i32 0, %indvar
+  %minus.n.div.2 = sub nsw i32 0, %n.div.2
+  %exitcond = icmp sge i32 %minus.n.div.2, %minus.indvar
   br i1 %exitcond, label %header, label %exit
 
 exit:

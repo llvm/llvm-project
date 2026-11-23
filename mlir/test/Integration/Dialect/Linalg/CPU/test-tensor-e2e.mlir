@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s \
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" \
 // RUN: -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops \
-// RUN: -convert-arith-to-llvm -convert-scf-to-cf -convert-cf-to-llvm --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: -convert-scf-to-cf -convert-arith-to-llvm -convert-cf-to-llvm --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_runner_utils \
 // RUN: | FileCheck %s
 

@@ -18,7 +18,7 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "STANDALONE"
 
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [".mlir"]
@@ -61,10 +61,8 @@ tools = [
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
-llvm_config.with_environment(
-    "PYTHONPATH",
-    [
-        os.path.join(config.mlir_obj_dir, "python_packages", "standalone"),
-    ],
-    append_path=True,
-)
+python_path = [os.path.join(config.mlir_obj_dir, "python_packages", "standalone")]
+if "PYTHONPATH" in os.environ:
+    python_path += [os.environ["PYTHONPATH"]]
+
+llvm_config.with_environment("PYTHONPATH", python_path, append_path=True)

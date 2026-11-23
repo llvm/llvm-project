@@ -4,4 +4,4 @@
 // RUN: %clang_cc1 -std=c++20 -E %s -o - | FileCheck %s
 import non_exist_modules;
 
-// CHECK: import non_exist_modules;
+// CHECK: __preprocessed_import non_exist_modules;

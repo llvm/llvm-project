@@ -677,16 +677,16 @@ void test_loop_eh() {
 #pragma omp for simd
   for (int i = 0; i < 10; i++) {
     c[i] = a[i] + b[i];
-    try { // expected-error {{'try' statement cannot be used in OpenMP simd region}}
+    try { // expected-error {{'try' cannot be used in OpenMP simd region}}
       for (int j = 0; j < 10; ++j) {
         if (a[i] > b[j])
-          throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
+          throw a[i]; // expected-error {{'throw' cannot be used in OpenMP simd region}}
       }
-      throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
+      throw a[i]; // expected-error {{'throw' cannot be used in OpenMP simd region}}
     }
     catch (float f) {
       if (f > 0.1)
-        throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
+        throw a[i]; // expected-error {{'throw' cannot be used in OpenMP simd region}}
       return; // expected-error {{cannot return from OpenMP region}}
     }
     switch (i) {
@@ -698,7 +698,7 @@ void test_loop_eh() {
     }
     for (int j = 0; j < 10; j++) {
       if (c[i] > 10)
-        throw c[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
+        throw c[i]; // expected-error {{'throw' cannot be used in OpenMP simd region}}
     }
   }
   if (c[9] > 10)
@@ -734,6 +734,9 @@ void test_ordered() {
 // expected-error@+1 {{'ordered' clause with a parameter cannot be specified in '#pragma omp for simd' directive}}
 #pragma omp for simd ordered(1)
   for (int i = 0; i < 16; ++i)
+    ;
+#pragma omp for simd ordered (0xFFFFFFFFFFFFFFFF) // expected-error {{argument to 'ordered' clause requires a value that can be represented by a 64-bit}}
+  for (int i = 0; i < 10; i++)
     ;
 }
 

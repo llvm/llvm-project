@@ -120,10 +120,12 @@ extern __inline int
 
 #define __ibar(/*ui15*/ _1) __builtin_loongarch_ibar((_1))
 
+#ifdef __loongarch_hard_float
 #define __movfcsr2gr(/*ui5*/ _1) __builtin_loongarch_movfcsr2gr((_1));
 
 #define __movgr2fcsr(/*ui5*/ _1, _2)                                           \
   __builtin_loongarch_movgr2fcsr((_1), (unsigned int)_2);
+#endif
 
 #define __syscall(/*ui15*/ _1) __builtin_loongarch_syscall((_1))
 

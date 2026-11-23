@@ -9,3 +9,10 @@ struct X : public Foo<Bar { // expected-error {{unknown template name 'Foo'}} ex
 template <class T>
 X<T>::X() {
 }
+
+namespace GH202320 {
+  struct S { S f(); };
+  struct S::S;
+  // expected-error@-1 {{forward declaration of struct cannot have a nested name specifier}}
+  S S::f() { return S(); }
+} // namespace GH202320

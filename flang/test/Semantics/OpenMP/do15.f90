@@ -5,7 +5,6 @@
 program omp
   integer i, j, k
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(3)
   do i = 0, 10
     if (i .lt. 1) then
@@ -20,7 +19,6 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10
@@ -35,7 +33,6 @@ program omp
   end do
   !$omp end do
 
-  !!ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(2)
   foo: do i = 0, 10
     foo1: do j = 0, 10
@@ -53,7 +50,6 @@ program omp
   !$omp end do
 
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do  collapse(3)
   foo: do i = 0, 10
     foo1: do j = 0, 10
@@ -64,10 +60,10 @@ program omp
         !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
         cycle foo1
       end if
-         foo2:  do k  = 0, 10
-             print *, i, j, k
-           end do foo2
-         end do foo1
+      foo2: do k  = 0, 10
+        print *, i, j, k
+      end do foo2
+    end do foo1
   end do foo
   !$omp end do
 

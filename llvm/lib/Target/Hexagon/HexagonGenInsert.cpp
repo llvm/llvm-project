@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitTracker.h"
+#include "Hexagon.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -16,7 +17,6 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -153,8 +153,7 @@ namespace {
       return !BitVector::any();
     }
     bool includes(const RegisterSet &Rs) const {
-      // A.BitVector::test(B)  <=>  A-B != {}
-      return !Rs.BitVector::test(*this);
+      return Rs.BitVector::subsetOf(*this);
     }
     bool intersects(const RegisterSet &Rs) const {
       return BitVector::anyCommon(Rs);
@@ -167,7 +166,7 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return Register::virtReg2Index(v);
+      return Register(v).virtRegIndex();
     }
 
     static inline unsigned x2v(unsigned x) {
@@ -271,7 +270,7 @@ namespace {
     CellMapShadow(const BitTracker &T) : BT(T) {}
 
     const BitTracker::RegisterCell &lookup(unsigned VR) {
-      unsigned RInd = Register::virtReg2Index(VR);
+      unsigned RInd = Register(VR).virtRegIndex();
       // Grow the vector to at least 32 elements.
       if (RInd >= CVect.size())
         CVect.resize(std::max(RInd+16, 32U), nullptr);
@@ -493,22 +492,13 @@ namespace {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-  void initializeHexagonGenInsertPass(PassRegistry&);
-  FunctionPass *createHexagonGenInsert();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonGenInsert : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonGenInsert() : MachineFunctionPass(ID) {
-      initializeHexagonGenInsertPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonGenInsert() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon generate \"insert\" instructions";
@@ -537,11 +527,12 @@ namespace {
     void getInstrDefs(const MachineInstr *MI, RegisterSet &Defs) const;
     void getInstrUses(const MachineInstr *MI, RegisterSet &Uses) const;
     unsigned distance(const MachineBasicBlock *FromB,
-          const MachineBasicBlock *ToB, const UnsignedMap &RPO,
-          PairMapType &M) const;
+                      const MachineBasicBlock *ToB, const UnsignedMap &RPO,
+                      const UnsignedMap &BlockSizes, PairMapType &M) const;
     unsigned distance(MachineBasicBlock::const_iterator FromI,
-          MachineBasicBlock::const_iterator ToI, const UnsignedMap &RPO,
-          PairMapType &M) const;
+                      MachineBasicBlock::const_iterator ToI,
+                      const UnsignedMap &RPO, const UnsignedMap &BlockSizes,
+                      PairMapType &M) const;
     bool findRecordInsertForms(unsigned VR, OrderedRegisterList &AVs);
     void collectInBlock(MachineBasicBlock *B, OrderedRegisterList &AVs);
     void findRemovableRegisters(unsigned VR, IFRecord IF,
@@ -550,7 +541,8 @@ namespace {
 
     void pruneEmptyLists();
     void pruneCoveredSets(unsigned VR);
-    void pruneUsesTooFar(unsigned VR, const UnsignedMap &RPO, PairMapType &M);
+    void pruneUsesTooFar(unsigned VR, const UnsignedMap &RPO,
+                         const UnsignedMap &BlockSizes, PairMapType &M);
     void pruneRegCopies(unsigned VR);
     void pruneCandidates();
     void selectCandidates();
@@ -738,8 +730,10 @@ void HexagonGenInsert::getInstrUses(const MachineInstr *MI,
 }
 
 unsigned HexagonGenInsert::distance(const MachineBasicBlock *FromB,
-      const MachineBasicBlock *ToB, const UnsignedMap &RPO,
-      PairMapType &M) const {
+                                    const MachineBasicBlock *ToB,
+                                    const UnsignedMap &RPO,
+                                    const UnsignedMap &BlockSizes,
+                                    PairMapType &M) const {
   // Forward distance from the end of a block to the beginning of it does
   // not make sense. This function should not be called with FromB == ToB.
   assert(FromB != ToB);
@@ -759,7 +753,8 @@ unsigned HexagonGenInsert::distance(const MachineBasicBlock *FromB,
     // on it.
     if (PB == FromB || RPO.lookup(PB->getNumber()) >= ToRPO)
       continue;
-    unsigned D = PB->size() + distance(FromB, PB, RPO, M);
+    unsigned D = BlockSizes.lookup(PB->getNumber()) +
+                 distance(FromB, PB, RPO, BlockSizes, M);
     if (D > MaxD)
       MaxD = D;
   }
@@ -770,14 +765,23 @@ unsigned HexagonGenInsert::distance(const MachineBasicBlock *FromB,
 }
 
 unsigned HexagonGenInsert::distance(MachineBasicBlock::const_iterator FromI,
-      MachineBasicBlock::const_iterator ToI, const UnsignedMap &RPO,
-      PairMapType &M) const {
+                                    MachineBasicBlock::const_iterator ToI,
+                                    const UnsignedMap &RPO,
+                                    const UnsignedMap &BlockSizes,
+                                    PairMapType &M) const {
   const MachineBasicBlock *FB = FromI->getParent(), *TB = ToI->getParent();
-  if (FB == TB)
-    return std::distance(FromI, ToI);
-  unsigned D1 = std::distance(TB->begin(), ToI);
-  unsigned D2 = distance(FB, TB, RPO, M);
-  unsigned D3 = std::distance(FromI, FB->end());
+  if (FB == TB) {
+    auto NonDebugInsts =
+        instructionsWithoutDebug(FromI, ToI, /*SkipPseudoOp=*/false);
+    return std::distance(NonDebugInsts.begin(), NonDebugInsts.end());
+  }
+  auto ToInsts = instructionsWithoutDebug(TB->begin(), ToI,
+                                          /*SkipPseudoOp=*/false);
+  auto FromInsts = instructionsWithoutDebug(FromI, FB->end(),
+                                            /*SkipPseudoOp=*/false);
+  unsigned D1 = std::distance(ToInsts.begin(), ToInsts.end());
+  unsigned D2 = distance(FB, TB, RPO, BlockSizes, M);
+  unsigned D3 = std::distance(FromInsts.begin(), FromInsts.end());
   return D1+D2+D3;
 }
 
@@ -929,6 +933,10 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
   // successors have been processed.
   RegisterSet BlockDefs, InsDefs;
   for (MachineInstr &MI : *B) {
+    // Stop if the map size is too large.
+    if (IFMap.size() >= MaxIFMSize)
+      break;
+
     InsDefs.clear();
     getInstrDefs(&MI, InsDefs);
     // Leave those alone. They are more transparent than "insert".
@@ -951,8 +959,8 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
 
         findRecordInsertForms(VR, AVs);
         // Stop if the map size is too large.
-        if (IFMap.size() > MaxIFMSize)
-          return;
+        if (IFMap.size() >= MaxIFMSize)
+          break;
       }
     }
 
@@ -1034,14 +1042,7 @@ void HexagonGenInsert::computeRemovableRegisters() {
 void HexagonGenInsert::pruneEmptyLists() {
   // Remove all entries from the map, where the register has no insert forms
   // associated with it.
-  using IterListType = SmallVector<IFMapType::iterator, 16>;
-  IterListType Prune;
-  for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
-    if (I->second.empty())
-      Prune.push_back(I);
-  }
-  for (const auto &It : Prune)
-    IFMap.erase(It);
+  IFMap.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
 void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
@@ -1130,7 +1131,8 @@ void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
 }
 
 void HexagonGenInsert::pruneUsesTooFar(unsigned VR, const UnsignedMap &RPO,
-      PairMapType &M) {
+                                       const UnsignedMap &BlockSizes,
+                                       PairMapType &M) {
   IFMapType::iterator F = IFMap.find(VR);
   assert(F != IFMap.end());
   IFListType &LL = F->second;
@@ -1141,9 +1143,9 @@ void HexagonGenInsert::pruneUsesTooFar(unsigned VR, const UnsignedMap &RPO,
     unsigned SR = LL[i-1].first.SrcR, IR = LL[i-1].first.InsR;
     const MachineInstr *DefS = MRI->getVRegDef(SR);
     const MachineInstr *DefI = MRI->getVRegDef(IR);
-    unsigned DSV = distance(DefS, DefV, RPO, M);
+    unsigned DSV = distance(DefS, DefV, RPO, BlockSizes, M);
     if (DSV < Cutoff) {
-      unsigned DIV = distance(DefI, DefV, RPO, M);
+      unsigned DIV = distance(DefI, DefV, RPO, BlockSizes, M);
       if (DIV < Cutoff)
         continue;
     }
@@ -1171,6 +1173,14 @@ void HexagonGenInsert::pruneCandidates() {
     pruneCoveredSets(I.first);
 
   UnsignedMap RPO;
+  UnsignedMap BlockSizes;
+
+  for (const MachineBasicBlock &B : *MFN) {
+    // Preserve the previous accounting for pseudo-probes and bundled
+    // instructions while excluding debug instructions.
+    BlockSizes[B.getNumber()] = llvm::count_if(
+        B.instrs(), [](const MachineInstr &MI) { return !MI.isDebugInstr(); });
+  }
 
   using RPOTType = ReversePostOrderTraversal<const MachineFunction *>;
 
@@ -1182,7 +1192,7 @@ void HexagonGenInsert::pruneCandidates() {
   PairMapType Memo; // Memoization map for distance calculation.
   // Remove candidates that would use registers defined too far away.
   for (const auto &I : IFMap)
-    pruneUsesTooFar(I.first, RPO, Memo);
+    pruneUsesTooFar(I.first, RPO, BlockSizes, Memo);
 
   pruneEmptyLists();
 
@@ -1281,7 +1291,7 @@ void HexagonGenInsert::selectCandidates() {
 
   for (unsigned R = AllRMs.find_first(); R; R = AllRMs.find_next(R)) {
     using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
-    using InstrSet = SmallSet<const MachineInstr *, 16>;
+    using InstrSet = SmallPtrSet<const MachineInstr *, 16>;
 
     InstrSet UIs;
     // Count as the number of instructions in which R is used, not the
@@ -1414,13 +1424,10 @@ bool HexagonGenInsert::generateInserts() {
       At = B.getFirstNonPHI();
 
     BuildMI(B, At, DL, D, NewR)
-      .addReg(IF.SrcR)
-      .addReg(IF.InsR, 0, InsS)
-      .addImm(Wdh)
-      .addImm(Off);
-
-    MRI->clearKillFlags(IF.SrcR);
-    MRI->clearKillFlags(IF.InsR);
+        .addReg(IF.SrcR)
+        .addReg(IF.InsR, {}, InsS)
+        .addImm(Wdh)
+        .addImm(Off);
   }
 
   for (const auto &I : IFMap) {
@@ -1573,17 +1580,9 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   // Filter out vregs beyond the cutoff.
   if (VRegIndexCutoff.getPosition()) {
     unsigned Cutoff = VRegIndexCutoff;
-
-    using IterListType = SmallVector<IFMapType::iterator, 16>;
-
-    IterListType Out;
-    for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
-      unsigned Idx = Register::virtReg2Index(I->first);
-      if (Idx >= Cutoff)
-        Out.push_back(I);
-    }
-    for (const auto &It : Out)
-      IFMap.erase(It);
+    IFMap.remove_if([&](const auto &P) {
+      return Register(P.first).virtRegIndex() >= Cutoff;
+    });
   }
   if (IFMap.empty())
     return Changed;

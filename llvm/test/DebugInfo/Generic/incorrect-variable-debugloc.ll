@@ -35,6 +35,9 @@
 ; }
 
 ; CHECK: DW_TAG_structure_type
+; CHECK-NEXT: DW_AT_name ("B")
+
+; CHECK: DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_name ("C")
 ; CHECK: [[M_FN3_DECL:.*]]:  DW_TAG_subprogram
 ; CHECK-NOT: {{DW_TAG|NULL}}
@@ -325,9 +328,9 @@ declare void @__asan_unregister_globals(i64, i64)
 
 declare void @__sanitizer_cov_module_init(i64)
 
-attributes #0 = { noreturn sanitize_address "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { sanitize_address "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noreturn sanitize_address "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { sanitize_address "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #3 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

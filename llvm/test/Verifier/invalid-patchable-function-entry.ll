@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: "patchable-function-entry" takes an unsigned integer:
 ; CHECK: "patchable-function-entry" takes an unsigned integer: a
@@ -19,3 +19,7 @@ define void @g() "patchable-function-prefix" { ret void }
 define void @ga() "patchable-function-prefix"="a" { ret void }
 define void @g_1() "patchable-function-prefix"="-1" { ret void }
 define void @g3comma() "patchable-function-prefix"="3," { ret void }
+
+; CHECK: "patchable-function-entry-section" must not be empty
+
+define void @s1() "patchable-function-entry"="1" "patchable-function-entry-section" { ret void }

@@ -12,6 +12,7 @@
 
 #include "LoongArchSubtarget.h"
 #include "LoongArchFrameLowering.h"
+#include "LoongArchSelectionDAGInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 
 using namespace llvm;
@@ -86,6 +87,19 @@ void LoongArchSubtarget::initializeProperties(StringRef TuneCPU) {
   PrefFunctionAlignment = Align(32);
   PrefLoopAlignment = Align(16);
   MaxBytesForAlignment = 16;
+
+  // Software prefetching is only enabled for uarches it has been tuned for.
+  PrefetchDistance = 0;
+  MinPrefetchStride = 1;
+  MaxPrefetchIterationsAhead = UINT_MAX;
+
+  if (TuneCPU == "la464" || TuneCPU == "la664") {
+    // The LA464/LA664 hardware prefetchers cover strides of up to 1 KiB, but
+    // stop tracking streams with a stride of 2 KiB or more. Only prefetch
+    // those, as software prefetches for smaller strides just add instructions.
+    PrefetchDistance = 200;
+    MinPrefetchStride = 2048;
+  }
 }
 
 LoongArchSubtarget::LoongArchSubtarget(const Triple &TT, StringRef CPU,
@@ -95,4 +109,12 @@ LoongArchSubtarget::LoongArchSubtarget(const Triple &TT, StringRef CPU,
     : LoongArchGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {}
+      InstrInfo(*this), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<LoongArchSelectionDAGInfo>();
+}
+
+LoongArchSubtarget::~LoongArchSubtarget() = default;
+
+const SelectionDAGTargetInfo *LoongArchSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}

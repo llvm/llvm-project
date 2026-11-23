@@ -13,18 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DDGPrinter.h"
-#include "llvm/Support/CommandLine.h"
+#include "AnalysisOptions.h"
 #include "llvm/Support/GraphWriter.h"
 
 using namespace llvm;
 
-static cl::opt<bool> DotOnly("dot-ddg-only", cl::Hidden,
-                             cl::desc("simple ddg dot graph"));
-static cl::opt<std::string> DDGDotFilenamePrefix(
-    "dot-ddg-filename-prefix", cl::init("ddg"), cl::Hidden,
-    cl::desc("The prefix used for the DDG dot file names."));
-
-static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly = false);
+static void writeDDGToDotFile(const AnalysisOptions &Opts,
+                              DataDependenceGraph &G);
 
 //===--------------------------------------------------------------------===//
 // Implementation of DDG DOT Printer for a loop
@@ -32,13 +27,14 @@ static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly = false);
 PreservedAnalyses DDGDotPrinterPass::run(Loop &L, LoopAnalysisManager &AM,
                                          LoopStandardAnalysisResults &AR,
                                          LPMUpdater &U) {
-  writeDDGToDotFile(*AM.getResult<DDGAnalysis>(L, AR), DotOnly);
+  writeDDGToDotFile(getAnalysisOptions(L), *AM.getResult<DDGAnalysis>(L, AR));
   return PreservedAnalyses::all();
 }
 
-static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly) {
+static void writeDDGToDotFile(const AnalysisOptions &Opts,
+                              DataDependenceGraph &G) {
   std::string Filename =
-      Twine(DDGDotFilenamePrefix + "." + G.getName() + ".dot").str();
+      Twine(Opts.dot_ddg_filename_prefix + "." + G.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;
@@ -47,7 +43,7 @@ static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly) {
   if (!EC)
     // We only provide the constant verson of the DOTGraphTrait specialization,
     // hence the conversion to const pointer
-    WriteGraph(File, (const DataDependenceGraph *)&G, DOnly);
+    WriteGraph(File, (const DataDependenceGraph *)&G, Opts.dot_ddg_only);
   else
     errs() << "  error opening file for writing!";
   errs() << "\n";
@@ -80,6 +76,17 @@ bool DDGDotGraphTraits::isNodeHidden(const DDGNode *Node,
     return true;
   assert(Graph && "expected a valid graph pointer");
   return Graph->getPiBlock(*Node) != nullptr;
+}
+
+std::string DDGDotGraphTraits::getNodeAttributes(const DDGNode *Node,
+                                                 const DataDependenceGraph *) {
+  if (isa<PiBlockDDGNode>(Node))
+    return "shape=box, style=\"rounded,filled\", fillcolor=lightyellow, "
+           "color=darkorange, penwidth=3";
+  if (isa<SimpleDDGNode>(Node) &&
+      Node->getKind() == DDGNode::NodeKind::MultiInstruction)
+    return "style=filled, fillcolor=lightcyan";
+  return "";
 }
 
 std::string
@@ -126,12 +133,24 @@ DDGDotGraphTraits::getVerboseNodeLabel(const DDGNode *Node,
   return OS.str();
 }
 
+/// EdgeKind to DOT color mapping:
+/// - MemoryDependence: red
+/// - RegisterDefUse: blue
+/// - Rooted/Unknown=default (no attribute).
+static void writeEdgeKindColorAttr(raw_ostream &OS, DDGEdge::EdgeKind Kind) {
+  if (Kind == DDGEdge::EdgeKind::MemoryDependence)
+    OS << ", color=red";
+  else if (Kind == DDGEdge::EdgeKind::RegisterDefUse)
+    OS << ", color=blue";
+}
+
 std::string DDGDotGraphTraits::getSimpleEdgeAttributes(
     const DDGNode *Src, const DDGEdge *Edge, const DataDependenceGraph *G) {
   std::string Str;
   raw_string_ostream OS(Str);
   DDGEdge::EdgeKind Kind = Edge->getKind();
   OS << "label=\"[" << Kind << "]\"";
+  writeEdgeKindColorAttr(OS, Kind);
   return OS.str();
 }
 
@@ -146,5 +165,6 @@ std::string DDGDotGraphTraits::getVerboseEdgeAttributes(
   else
     OS << Kind;
   OS << "]\"";
+  writeEdgeKindColorAttr(OS, Kind);
   return OS.str();
 }

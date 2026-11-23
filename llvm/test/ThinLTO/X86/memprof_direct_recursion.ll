@@ -33,6 +33,7 @@
 ; RUN: llvm-lto2 run %t/b.o %t/a.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -thinlto-distributed-indexes \
+; RUN:  -combined-index-memprof-context \
 ; RUN:  -r=%t/b.o,_Z3fooi,plx \
 ; RUN:  -r=%t/b.o,aliasee,plx \
 ; RUN:  -r=%t/b.o,a \
@@ -55,9 +56,11 @@
 ; SUMMARY: stackIds: (1985258834072910425, 2841526434899864997)
 ; SUMMARY-NOT: stackIds: (1985258834072910425, 1985258834072910425, 2841526434899864997)
 
+;; The original foo keeps the recursive contexts of both types, which cannot be
+;; disambiguated, so its allocation stays ambiguous.
 ; IR: _Z3fooi
 ; IR: _Z3fooi.memprof.1
-; IR: "memprof"="notcold" 
+; IR: "memprof"="ambiguous" 
 ; IR: "memprof"="cold" 
 
 ;--- b.ll

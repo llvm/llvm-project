@@ -82,7 +82,7 @@ define void @truncated_neg256(i16 %a, ptr %p) {
 ;
 ; CHECK-T2-LABEL: truncated_neg256:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    bic r0, r0, #255
+; CHECK-T2-NEXT:    and r0, r0, #65280
 ; CHECK-T2-NEXT:    strh r0, [r1]
 ; CHECK-T2-NEXT:    bx lr
   %and = and i16 %a, -256

@@ -16,6 +16,6 @@ define void @f1(i32 %a1, i32 %a2) {
 ; CHECK: .section .drectve,"yni"
 ; CHECK: .ascii " /EXPORT:y,DATA"
 ; CHECK: .globl x
-; CHECK: .set x, .L_MergedGlobals
+; CHECK: x = .L_MergedGlobals
 ; CHECK: .globl y
-; CHECK: .set y, .L_MergedGlobals+4
+; CHECK: y = .L_MergedGlobals+4

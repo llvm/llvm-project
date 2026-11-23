@@ -26,7 +26,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
   fir.type_info @_QMtest_1Tsometype nofinal : !fir.type<_QMtest_1Tsometype{m_array:!fir.array<3xi32>,m_vt1:!fir.box<!fir.heap<!fir.type<_QMtest_1Tt1{name:!fir.char<1,20>,height:f32}>>>,v2:i32,m_alloc:!fir.box<!fir.heap<!fir.array<?xi32>>>,v3:i32,m_first:!fir.box<!fir.heap<!fir.char<1,?>>>,v4:i32,m_p1:!fir.box<!fir.ptr<i32>>,v5:i32,m_p2:!fir.box<!fir.ptr<i32>>,v6:i32,m_p3:!fir.box<!fir.ptr<!fir.array<?xi32>>>,v7:i32}> loc(#loc12)
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {
     %1 = fir.alloca !fir.type<_QFTt_pair{i:i64,x:f64}> {bindc_name = "pair", uniq_name = "_QFEpair"}
-    %2 = fircg.ext_declare %1 {uniq_name = "_QFEpair"} : (!fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>>) -> !fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>> loc(#loc9)
+    %2 = fircg.ext_declare %1 uniq_name("_QFEpair") : (!fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>>) -> !fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>> loc(#loc9)
     return
   } loc(#loc10)
 }
@@ -44,13 +44,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
 #loc12 = loc("derived1.f90":105:3)
 
 
-// CHECK-DAG: #[[INT_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
-// CHECK-DAG: #[[INT8_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
-// CHECK-DAG: #[[REAL4_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
-// CHECK-DAG: #[[CMX8_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex", sizeInBits = 64, encoding = DW_ATE_complex_float>
+// CHECK-DAG: #[[INT_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=4)", sizeInBits = 32, encoding = DW_ATE_signed>
+// CHECK-DAG: #[[INT8_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=8)", sizeInBits = 64, encoding = DW_ATE_signed>
+// CHECK-DAG: #[[REAL4_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=4)", sizeInBits = 32, encoding = DW_ATE_float>
+// CHECK-DAG: #[[CMX8_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex(kind=4)", sizeInBits = 64, encoding = DW_ATE_complex_float>
 // CHECK-DAG: #[[CMX_ARR:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, baseType = #[[CMX8_TY:.*]]{{.*}}>
-// CHECK-DAG: #[[LOG_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 8, encoding = DW_ATE_boolean>
-// CHECK-DAG: #[[REAL8_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 64, encoding = DW_ATE_float>
+// CHECK-DAG: #[[LOG_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical(kind=1)", sizeInBits = 8, encoding = DW_ATE_boolean>
+// CHECK-DAG: #[[REAL8_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=8)", sizeInBits = 64, encoding = DW_ATE_float>
 // CHECK-DAG: #[[STR_TY:.*]] = #llvm.di_string_type
 // CHECK-DAG: #[[MOD:.*]] = #llvm.di_module<{{.*}}name = "m_employee"{{.*}}>
 // CHECK-DAG: #[[MOD1:.*]] = #llvm.di_module<{{.*}}name = "t1"{{.*}}>
@@ -59,7 +59,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
 // CHECK-DAG: #[[ELMD1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "year", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELMD2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "month", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32, offsetInBits = 32>
 // CHECK-DAG: #[[ELMD3:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "day", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32, offsetInBits = 64>
-// CHECK-DAG: #[[DATE:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_date", file = #di_file, line = 17, scope = #[[MOD]], sizeInBits = 96, elements = #[[ELMD1]], #[[ELMD2]], #[[ELMD3]]>
+// CHECK-DAG: #[[DATE:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_date"{{.*}}line = 17, scope = #[[MOD]], sizeInBits = 96, elements = #[[ELMD1]], #[[ELMD2]], #[[ELMD3]]>
 // CHECK-DAG: #[[ELMP1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "t_address", baseType = #[[ADDR]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELMP2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "name", baseType = #[[STR_TY]], sizeInBits = 160, alignInBits = 8, offsetInBits = 32>
 // CHECK-DAG: #[[PERS:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_person"{{.*}}line = 35, scope = #[[MOD]], sizeInBits = 192, elements = #[[ELMP1]], #[[ELMP2]]>

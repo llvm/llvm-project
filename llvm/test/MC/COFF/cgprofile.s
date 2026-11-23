@@ -18,7 +18,7 @@ late3:
 # CHECK:      Name: .llvm.call-graph-profile
 # CHECK-NEXT: VirtualSize:
 # CHECK-NEXT: VirtualAddress:
-# CHECK-NEXT: RawDataSize: 48
+# CHECK-NEXT: RawDataSize: 0x30
 # CHECK-NEXT: PointerToRawData:
 # CHECK-NEXT: PointerToRelocations:
 # CHECK-NEXT: PointerToLineNumbers:

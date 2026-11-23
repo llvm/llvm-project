@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o %t -filetype=obj
 ; RUN: llvm-dwarfdump --debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump --verify %t
 
 %struct.struct_t = type { i8 }
 
@@ -8,7 +9,7 @@
 ; CHECK-LABEL: DW_TAG_subprogram
 ; CHECK: DW_AT_name ("test1")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_fbreg -1, DW_OP_deref_size 0x1, DW_OP_constu 0x3d, DW_OP_shl, DW_OP_constu 0x3d, DW_OP_shr, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_fbreg -1, DW_OP_deref_size 0x1, DW_OP_constu 0x7, DW_OP_and, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("x")
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_location (DW_OP_fbreg -1, DW_OP_deref_size 0x1, DW_OP_constu 0x39, DW_OP_shl, DW_OP_constu 0x3c, DW_OP_shra, DW_OP_stack_value)
@@ -25,7 +26,7 @@ entry:
 ; CHECK-LABEL: DW_TAG_subprogram
 ; CHECK: DW_AT_name ("test2")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_breg0 {{R[^+]+}}+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_constu 0x3d, DW_OP_shl, DW_OP_constu 0x3d, DW_OP_shr, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_breg0 {{R[^+]+}}+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_constu 0x7, DW_OP_and, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("x")
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_location (DW_OP_breg0 {{R[^+]+}}+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_constu 0x39, DW_OP_shl, DW_OP_constu 0x3c, DW_OP_shra, DW_OP_stack_value)
@@ -67,6 +68,8 @@ entry:
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_location (DW_OP_fbreg -4, DW_OP_plus_uconst 0x3, DW_OP_deref_size 0x1, DW_OP_constu 0x38, DW_OP_shl, DW_OP_constu 0x39, DW_OP_shr, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("z")
+; CHECK: DW_AT_location (DW_OP_fbreg -4, DW_OP_deref, DW_OP_stack_value)
+; CHECK: DW_AT_name ("q")
 
 define i32 @test4() !dbg !28 {
 entry:
@@ -74,7 +77,28 @@ entry:
   tail call void @llvm.dbg.declare(metadata ptr %0, metadata !29, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 31, 1)), !dbg !30
   tail call void @llvm.dbg.declare(metadata ptr %0, metadata !31, metadata !DIExpression(DW_OP_LLVM_extract_bits_sext, 1, 31)), !dbg !30
   tail call void @llvm.dbg.declare(metadata ptr %0, metadata !32, metadata !DIExpression(DW_OP_plus_uconst, 3, DW_OP_LLVM_extract_bits_zext, 1, 7)), !dbg !30
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !33, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 64)), !dbg !30
   ret i32 0, !dbg !30
+}
+
+; DW_OP_deref_size has a one-byte operand, not a ULEB128 operand. Check the
+; encoding at the ULEB128 boundary and at the maximum one-byte value. These
+; oversized reads exercise the encoding only, not the generic type size limit.
+; CHECK-LABEL: DW_TAG_subprogram
+; CHECK: DW_AT_name ("test5")
+; CHECK: DW_TAG_variable
+; CHECK: DW_AT_location (DW_OP_fbreg {{-?[0-9]+}}, DW_OP_deref_size 0x80, DW_OP_stack_value)
+; CHECK: DW_AT_name ("x")
+; CHECK: DW_TAG_variable
+; CHECK: DW_AT_location (DW_OP_fbreg {{-?[0-9]+}}, DW_OP_deref_size 0xff, DW_OP_stack_value)
+; CHECK: DW_AT_name ("y")
+
+define i32 @test5() !dbg !35 {
+entry:
+  %0 = alloca [255 x i8], align 1
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !36, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 1024)), !dbg !37
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !39, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 2040)), !dbg !37
+  ret i32 0, !dbg !37
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
@@ -116,3 +140,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !30 = !DILocation(line: 0, scope: !28)
 !31 = !DILocalVariable(name: "y", scope: !28, file: !3, type: !19)
 !32 = !DILocalVariable(name: "z", scope: !28, file: !3, type: !9)
+!33 = !DILocalVariable(name: "q", scope: !28, file: !3, type: !34)
+!34 = !DIBasicType(name: "uint64_t", size: 64, encoding: DW_ATE_unsigned)
+!35 = distinct !DISubprogram(name: "test5", linkageName: "test5", scope: !3, file: !3, type: !14, spFlags: DISPFlagDefinition, unit: !2)
+!36 = !DILocalVariable(name: "x", scope: !35, file: !3, type: !38)
+!37 = !DILocation(line: 0, scope: !35)
+!38 = !DIBasicType(name: "uint1024_t", size: 1024, encoding: DW_ATE_unsigned)
+!39 = !DILocalVariable(name: "y", scope: !35, file: !3, type: !40)
+!40 = !DIBasicType(name: "uint2040_t", size: 2040, encoding: DW_ATE_unsigned)

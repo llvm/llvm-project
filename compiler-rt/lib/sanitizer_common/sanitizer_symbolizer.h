@@ -139,6 +139,14 @@ class Symbolizer final {
   // Returns a list of symbolized frames for a given address (containing
   // all inlined functions, if necessary).
   SymbolizedStack *SymbolizePC(uptr address);
+  // Returns a list of symbolized frames given a module separate from the
+  // current executing process, such as an offloading device.
+  SymbolizedStack* SymbolizeModuleOffset(const char* module_name,
+                                         uptr module_offset);
+  // Like SymbolizeData, but the module is not mapped in this process
+  // (offload device images).
+  bool SymbolizeModuleData(const char* module_name, uptr module_offset,
+                           DataInfo* info);
   bool SymbolizeData(uptr address, DataInfo *info);
   bool SymbolizeFrame(uptr address, FrameInfo *info);
 

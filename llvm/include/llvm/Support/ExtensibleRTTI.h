@@ -60,13 +60,15 @@
 #ifndef LLVM_SUPPORT_EXTENSIBLERTTI_H
 #define LLVM_SUPPORT_EXTENSIBLERTTI_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 /// Base class for the extensible RTTI hierarchy.
 ///
 /// This class defines virtual methods, dynamicClassID and isA, that enable
 /// type comparisons.
-class RTTIRoot {
+class LLVM_ABI RTTIRoot {
 public:
   virtual ~RTTIRoot() = default;
 

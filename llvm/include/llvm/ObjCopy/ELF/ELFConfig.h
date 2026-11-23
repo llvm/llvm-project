@@ -15,6 +15,12 @@
 namespace llvm {
 namespace objcopy {
 
+// Note to remove info specified by --remove-note option.
+struct RemoveNoteInfo {
+  StringRef Name;
+  uint32_t TypeId;
+};
+
 // ELF specific configuration for copying/stripping a single file.
 struct ELFConfig {
   uint8_t NewSymbolVisibility = (uint8_t)ELF::STV_DEFAULT;
@@ -31,6 +37,9 @@ struct ELFConfig {
   bool KeepFileSymbols = false;
   bool LocalizeHidden = false;
   bool VerifyNoteSections = true;
+
+  // Notes specified by --remove-note option.
+  SmallVector<RemoveNoteInfo, 0> NotesToRemove;
 };
 
 } // namespace objcopy

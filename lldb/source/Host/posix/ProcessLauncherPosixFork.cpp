@@ -17,6 +17,7 @@
 #include "llvm/Support/Errno.h"
 
 #include <climits>
+#include <fcntl.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -24,14 +25,7 @@
 #include <csignal>
 #include <sstream>
 
-#ifdef __ANDROID__
-#include <android/api-level.h>
-#define PT_TRACE_ME PTRACE_TRACEME
-#endif
-
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 15
-#include <linux/personality.h>
-#elif defined(__linux__)
+#if defined(__linux__)
 #include <sys/personality.h>
 #endif
 
@@ -101,6 +95,7 @@ struct ForkLaunchInfo {
   bool debug;
   bool disable_aslr;
   std::string wd;
+  std::string executable;
   const char **argv;
   Environment::Envp envp;
   std::vector<ForkFileAction> actions;
@@ -128,8 +123,14 @@ struct ForkLaunchInfo {
         ExitWithError(error_fd, "close");
       break;
     case FileAction::eFileActionDuplicate:
-      if (dup2(action.fd, action.arg) == -1)
-        ExitWithError(error_fd, "dup2");
+      if (action.fd != action.arg) {
+        if (dup2(action.fd, action.arg) == -1)
+          ExitWithError(error_fd, "dup2");
+      } else {
+        if (fcntl(action.fd, F_SETFD,
+                  fcntl(action.fd, F_GETFD) & ~FD_CLOEXEC) == -1)
+          ExitWithError(error_fd, "fcntl");
+      }
       break;
     case FileAction::eFileActionOpen:
       DupDescriptor(error_fd, action.path.c_str(), action.fd, action.arg);
@@ -201,7 +202,8 @@ struct ForkLaunchInfo {
   }
 
   // Execute.  We should never return...
-  execve(info.argv[0], const_cast<char *const *>(info.argv), info.envp);
+  execve(info.executable.c_str(), const_cast<char *const *>(info.argv),
+         info.envp);
 
 #if defined(__linux__)
   if (errno == ETXTBSY) {
@@ -214,7 +216,8 @@ struct ForkLaunchInfo {
     // Since this state should clear up quickly, wait a while and then give it
     // one more go.
     usleep(50000);
-    execve(info.argv[0], const_cast<char *const *>(info.argv), info.envp);
+    execve(info.executable.c_str(), const_cast<char *const *>(info.argv),
+           info.envp);
   }
 #endif
 
@@ -226,8 +229,8 @@ struct ForkLaunchInfo {
 // End of code running in the child process.
 
 ForkFileAction::ForkFileAction(const FileAction &act)
-    : action(act.GetAction()), fd(act.GetFD()), path(act.GetPath().str()),
-      arg(act.GetActionArgument()) {}
+    : action(act.GetAction()), fd(act.GetFD()),
+      path(act.GetFileSpec().GetPath()), arg(act.GetActionArgument()) {}
 
 static std::vector<ForkFileAction>
 MakeForkActions(const ProcessLaunchInfo &info) {
@@ -237,33 +240,22 @@ MakeForkActions(const ProcessLaunchInfo &info) {
   return result;
 }
 
-static Environment::Envp FixupEnvironment(Environment env) {
-#ifdef __ANDROID__
-  // If there is no PATH variable specified inside the environment then set the
-  // path to /system/bin. It is required because the default path used by
-  // execve() is wrong on android.
-  env.try_emplace("PATH", "/system/bin");
-#endif
-  return env.getEnvp();
-}
-
 ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info)
     : separate_process_group(
           info.GetFlags().Test(eLaunchFlagLaunchInSeparateProcessGroup)),
       debug(info.GetFlags().Test(eLaunchFlagDebug)),
       disable_aslr(info.GetFlags().Test(eLaunchFlagDisableASLR)),
       wd(info.GetWorkingDirectory().GetPath()),
+      executable(info.GetExecutableFile().GetPath()),
       argv(info.GetArguments().GetConstArgumentVector()),
-      envp(FixupEnvironment(info.GetEnvironment())),
-      actions(MakeForkActions(info)) {}
+      envp(info.GetEnvironment().getEnvp()), actions(MakeForkActions(info)) {}
 
 HostProcess
 ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                         Status &error) {
   // A pipe used by the child process to report errors.
   PipePosix pipe;
-  const bool child_processes_inherit = false;
-  error = pipe.CreateNew(child_processes_inherit);
+  error = pipe.CreateNew();
   if (error.Fail())
     return HostProcess();
 

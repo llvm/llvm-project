@@ -33,7 +33,6 @@ extern cl::OptionCategory BoltCategory;
 static cl::opt<uint32_t>
 DynoStatsScale("dyno-stats-scale",
   cl::desc("scale to be applied while reporting dyno stats"),
-  cl::Optional,
   cl::init(1),
   cl::Hidden,
   cl::cat(BoltCategory));
@@ -50,8 +49,6 @@ PrintDynoOpcodeStat("print-dyno-opcode-stats",
 
 namespace llvm {
 namespace bolt {
-
-constexpr const char *DynoStats::Desc[];
 
 bool DynoStats::operator<(const DynoStats &Other) const {
   return std::lexicographical_compare(

@@ -31,7 +31,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -109,7 +109,7 @@ AMDGPUPreloadKernArgProlog::AMDGPUPreloadKernArgProlog(MachineFunction &MF)
       TRI(*ST.getRegisterInfo()) {}
 
 bool AMDGPUPreloadKernArgProlog::run() {
-  if (!ST.hasKernargPreload())
+  if (!ST.needsKernArgPreloadProlog())
     return false;
 
   unsigned NumKernArgPreloadSGPRs = MFI.getNumKernargPreloadedSGPRs();
@@ -183,7 +183,7 @@ void AMDGPUPreloadKernArgProlog::addBackCompatLoads(
     MachineBasicBlock *BackCompatMBB, Register KernArgSegmentPtr,
     unsigned NumKernArgPreloadSGPRs) {
   Register KernArgPreloadSGPR = MFI.getArgInfo().FirstKernArgPreloadReg;
-  unsigned Offset = 0;
+  unsigned Offset = ST.getExplicitKernelArgOffset();
   // Fill all user SGPRs used for kernarg preloading with sequential data from
   // the kernarg segment
   while (NumKernArgPreloadSGPRs > 0) {
@@ -207,5 +207,5 @@ AMDGPUPreloadKernArgPrologPass::run(MachineFunction &MF,
   if (!AMDGPUPreloadKernArgProlog(MF).run())
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  return getMachineFunctionPassPreservedAnalyses();
 }

@@ -18,7 +18,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -29,16 +29,17 @@ namespace fputil {
 namespace generic {
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 fma(InType x, InType y, InType z);
 
 // TODO(lntue): Implement fmaf that is correctly rounded to all rounding modes.
 // The implementation below only is only correct for the default rounding mode,
 // round-to-nearest tie-to-even.
-template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float fma<float>(float x, float y, float z) {
   // Product is exact.
   double prod = static_cast<double>(x) * static_cast<double>(y);
   double z_d = static_cast<double>(z);
@@ -90,7 +91,8 @@ namespace internal {
 // Extract the sticky bits and shift the `mantissa` to the right by
 // `shift_length`.
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>,
+                                       bool>
 shift_mantissa(int shift_length, T &mant) {
   if (shift_length >= cpp::numeric_limits<T>::digits) {
     mant = 0;
@@ -105,10 +107,10 @@ shift_mantissa(int shift_length, T &mant) {
 } // namespace internal
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 fma(InType x, InType y, InType z) {
   using OutFPBits = FPBits<OutType>;
   using OutStorageType = typename OutFPBits::StorageType;
@@ -157,7 +159,7 @@ fma(InType x, InType y, InType z) {
     }
   }
 
-  if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0))
+  if (LIBC_UNLIKELY(x_bits.is_zero() || y_bits.is_zero() || z_bits.is_zero()))
     return cast<OutType>(x * y + z);
 
   int x_exp = 0;
@@ -168,7 +170,7 @@ fma(InType x, InType y, InType z) {
   constexpr InStorageType IMPLICIT_MASK =
       InFPBits::SIG_MASK - InFPBits::FRACTION_MASK;
 
-  constexpr InType DENORMAL_SCALING =
+  LIBC_BIT_CAST_CONSTEXPR_VAR InType DENORMAL_SCALING =
       InFPBits::create_value(
           Sign::POS, InFPBits::FRACTION_LEN + InFPBits::EXP_BIAS, IMPLICIT_MASK)
           .get_val();
@@ -198,8 +200,13 @@ fma(InType x, InType y, InType z) {
 
   if (LIBC_UNLIKELY(x_exp == InFPBits::MAX_BIASED_EXPONENT ||
                     y_exp == InFPBits::MAX_BIASED_EXPONENT ||
-                    z_exp == InFPBits::MAX_BIASED_EXPONENT))
+                    z_exp == InFPBits::MAX_BIASED_EXPONENT)) {
+    if (LIBC_UNLIKELY(x_exp != InFPBits::MAX_BIASED_EXPONENT &&
+                      y_exp != InFPBits::MAX_BIASED_EXPONENT &&
+                      z_bits.is_inf()))
+      return cast<OutType>(z);
     return cast<OutType>(x * y + z);
+  }
 
   // Extract mantissa and append hidden leading bits.
   InStorageType x_mant = x_bits.get_explicit_mantissa();
@@ -270,10 +277,14 @@ fma(InType x, InType y, InType z) {
   if (prod_mant == 0) {
     // When there is exact cancellation, i.e., x*y == -z exactly, return -0.0 if
     // rounding downward and +0.0 for other rounding modes.
-    if (quick_get_round() == FE_DOWNWARD)
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    prod_sign = Sign::POS;
+#else
+    if (fputil::quick_get_round() == FE_DOWNWARD)
       prod_sign = Sign::NEG;
     else
       prod_sign = Sign::POS;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   }
 
   DyadicFloat result(prod_sign, prod_lsb_exp - InFPBits::EXP_BIAS, prod_mant);

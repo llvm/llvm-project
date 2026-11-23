@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=r600 -mcpu=redwood -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; The test is for a bug in R600EmitClauseMarkers.cpp where this pass
 ; was searching for a use of the OQAP register in order to determine

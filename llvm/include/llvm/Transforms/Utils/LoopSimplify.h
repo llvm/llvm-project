@@ -39,6 +39,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPSIMPLIFY_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -48,11 +49,12 @@ class Loop;
 class LoopInfo;
 class MemorySSAUpdater;
 class ScalarEvolution;
+class TargetTransformInfo;
 
 /// This pass is responsible for loop canonicalization.
-class LoopSimplifyPass : public PassInfoMixin<LoopSimplifyPass> {
+class LoopSimplifyPass : public RequiredPassInfoMixin<LoopSimplifyPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Simplify each loop in a loop nest recursively.
@@ -61,9 +63,12 @@ public:
 /// it into a simplified loop nest with preheaders and single backedges. It will
 /// update \c DominatorTree, \c LoopInfo, \c ScalarEvolution and \c MemorySSA
 /// analyses if they're non-null, and LCSSA if \c PreserveLCSSA is true.
-bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-                  AssumptionCache *AC, MemorySSAUpdater *MSSAU,
-                  bool PreserveLCSSA);
+/// If \p TTI is non-null and the target has branch divergence, loops with
+/// multiple backedges are not split into nested loops.
+LLVM_ABI bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                           ScalarEvolution *SE, AssumptionCache *AC,
+                           MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                           const TargetTransformInfo *TTI = nullptr);
 
 } // end namespace llvm
 

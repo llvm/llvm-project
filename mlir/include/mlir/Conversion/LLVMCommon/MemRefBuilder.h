@@ -34,9 +34,9 @@ class MemRefDescriptor : public StructBuilder {
 public:
   /// Construct a helper for the given descriptor value.
   explicit MemRefDescriptor(Value descriptor);
-  /// Builds IR creating an `undef` value of the descriptor type.
-  static MemRefDescriptor undef(OpBuilder &builder, Location loc,
-                                Type descriptorType);
+  /// Builds IR creating a `poison` value of the descriptor type.
+  static MemRefDescriptor poison(OpBuilder &builder, Location loc,
+                                 Type descriptorType);
   /// Builds IR creating a MemRef descriptor that represents `type` and
   /// populates it with static shape and stride information extracted from the
   /// type.
@@ -104,7 +104,7 @@ public:
   /// - aligned pointer;
   /// - offset;
   /// - <rank> sizes;
-  /// - <rank> shapes;
+  /// - <rank> strides;
   /// where <rank> is the MemRef rank as provided in `type`.
   static Value pack(OpBuilder &builder, Location loc,
                     const LLVMTypeConverter &converter, MemRefType type,
@@ -160,8 +160,8 @@ public:
   /// Construct a helper for the given descriptor value.
   explicit UnrankedMemRefDescriptor(Value descriptor);
   /// Builds IR creating an `undef` value of the descriptor type.
-  static UnrankedMemRefDescriptor undef(OpBuilder &builder, Location loc,
-                                        Type descriptorType);
+  static UnrankedMemRefDescriptor poison(OpBuilder &builder, Location loc,
+                                         Type descriptorType);
 
   /// Builds IR extracting the rank from the descriptor
   Value rank(OpBuilder &builder, Location loc) const;
@@ -189,15 +189,13 @@ public:
   /// `unpack`.
   static unsigned getNumUnpackedValues() { return 2; }
 
-  /// Builds IR computing the sizes in bytes (suitable for opaque allocation)
-  /// and appends the corresponding values into `sizes`. `addressSpaces`
-  /// which must have the same length as `values`, is needed to handle layouts
-  /// where sizeof(ptr addrspace(N)) != sizeof(ptr addrspace(0)).
-  static void computeSizes(OpBuilder &builder, Location loc,
+  /// Builds and returns IR computing the size in bytes (suitable for opaque
+  /// allocation). `addressSpace` is needed to handle layouts where
+  /// sizeof(ptr addrspace(N)) != sizeof(ptr addrspace(0)).
+  static Value computeSize(OpBuilder &builder, Location loc,
                            const LLVMTypeConverter &typeConverter,
-                           ArrayRef<UnrankedMemRefDescriptor> values,
-                           ArrayRef<unsigned> addressSpaces,
-                           SmallVectorImpl<Value> &sizes);
+                           UnrankedMemRefDescriptor desc,
+                           unsigned addressSpace);
 
   /// TODO: The following accessors don't take alignment rules between elements
   /// of the descriptor struct into account. For some architectures, it might be

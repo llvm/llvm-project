@@ -20,7 +20,7 @@ define i32 @test(i1 %c, i32 %arg1, i32 %arg2) {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi i64 [ [[ADD7:%.*]], [[LOOP2]] ], [ 0, [[IF]] ]
 ; CHECK-NEXT:    [[ADD7]] = add nuw nsw i64 [[PHI6]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[PHI6]], [[ZEXT]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp samesign ult i64 [[PHI6]], [[ZEXT]]
 ; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP2]], label [[LOOP_LATCH_LOOPEXIT:%.*]]
 ; CHECK:       loop.latch.loopexit:
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]

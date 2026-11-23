@@ -1,0 +1,27 @@
+posix: posix-2024
+types:
+  gid_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  struct passwd:
+    in-latest-posix: ''
+  uid_t:
+    in-latest-posix: ''
+functions:
+  endpwent:
+    in-latest-posix: ''
+  getpwent:
+    in-latest-posix: ''
+  getpwnam:
+    in-latest-posix: ''
+  getpwnam_r:
+    in-latest-posix: ''
+  getpwuid:
+    in-latest-posix: ''
+  getpwuid_r:
+    in-latest-posix: ''
+  setpwent:
+    in-latest-posix: ''
+  getpwent_r:
+    extension: gnu

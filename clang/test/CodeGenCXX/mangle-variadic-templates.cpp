@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -Wno-error=return-type -std=c++11 -emit-llvm -triple=x86_64-apple-darwin9 -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -Wno-error=return-type -std=c++11 -emit-llvm -triple=x86_64-apple-darwin9 -o - %s | FileCheck %s %}
 
 template<unsigned I, typename ...Types>
 struct X { };

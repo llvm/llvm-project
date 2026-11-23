@@ -18,6 +18,8 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		else
 			HOST_GOARCH="mips64"
 		fi
+  	elif [ "`uname -a | grep riscv64`" != "" ]; then
+		HOST_GOARCH="riscv64"
 	elif [ "`uname -a | grep s390x`" != "" ]; then
 		HOST_GOARCH="s390x"
 	fi
@@ -86,6 +88,7 @@ if [ "$GOOS" = "linux" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cpp
+		../../sanitizer_common/sanitizer_dl.cpp
 		../../sanitizer_common/sanitizer_posix.cpp
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_common.cpp
@@ -110,6 +113,12 @@ if [ "$GOOS" = "linux" ]; then
 		ARCHCFLAGS="-mips64 -EL"
 	elif [ "$GOARCH" = "mips64" ]; then
 		ARCHCFLAGS="-mips64 -EB"
+	elif [ "$GOARCH" = "riscv64" ]; then
+		if [ "$GORISCV64" = "rva23u64" ]; then
+			ARCHCFLAGS="-march=rv64gcv"
+		else
+			ARCHCFLAGS="-march=rv64gc"
+		fi
 	elif [ "$GOARCH" = "s390x" ]; then
 		SRCS="$SRCS ../../sanitizer_common/sanitizer_linux_s390.cpp"
 		ARCHCFLAGS=""
@@ -119,12 +128,13 @@ elif [ "$GOOS" = "freebsd" ]; then
 	# We removed this dependency for Go runtime for other OSes,
 	# and we should remove it for FreeBSD as well, but there is no pressing need.
 	DEPENDS_ON_LIBC=1
-	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
+	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror -Wno-unused-template"
 	ARCHCFLAGS="-m64"
 	OSLDFLAGS="-lpthread -fPIC -fpie"
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cpp
+		../../sanitizer_common/sanitizer_dl.cpp
 		../../sanitizer_common/sanitizer_posix.cpp
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
@@ -139,12 +149,13 @@ elif [ "$GOOS" = "netbsd" ]; then
 	# We removed this dependency for Go runtime for other OSes,
 	# and we should remove it for NetBSD as well, but there is no pressing need.
 	DEPENDS_ON_LIBC=1
-	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
+	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror -Wno-unused-template"
 	ARCHCFLAGS="-m64"
 	OSLDFLAGS="-lpthread -fPIC -fpie"
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cpp
+		../../sanitizer_common/sanitizer_dl.cpp
 		../../sanitizer_common/sanitizer_posix.cpp
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
@@ -157,7 +168,7 @@ elif [ "$GOOS" = "netbsd" ]; then
 	"
 elif [ "$GOOS" = "darwin" ]; then
 	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option -mmacosx-version-min=10.7"
-	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7"
+	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7 -Wl,-U,__dyld_get_dyld_header"
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_mac.cpp

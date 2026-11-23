@@ -3,10 +3,6 @@
 ; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPT %s
 ; RUN: llc -O0 < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPTNONE %s
 
-; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPT %s
-; RUN: llc --try-experimental-debuginfo-iterators -O0 < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPTNONE %s
-; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPT %s
-; RUN: llc --try-experimental-debuginfo-iterators -O0 < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPTNONE %s
 
 ; Make sure we insert DW_OP_deref when spilling indirect DBG_VALUE instructions.
 
@@ -37,7 +33,7 @@
 ; OPTNONE: #DEBUG_VALUE: get_string:result <- [DW_OP_deref] [$rsp+0]
 ; OPTNONE: movq   %rdi, %rax
 ; OPTNONE: movq   %rax, [[OFFS:[0-9]+]](%rsp)          # 8-byte Spill
-; OPTNONE: #DEBUG_VALUE: get_string:result <- [$rdi+0]
+; OPTNONE: #DEBUG_VALUE: get_string:result <- [DW_OP_deref] [$rsp+0]
 ; OPTNONE: callq  _ZN6stringC1Ei
 
 ; CHECK: #APP

@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // CHECK: spirv.SpecConstant @sc_true = true
   spirv.SpecConstant @sc_true = true
   // CHECK: spirv.SpecConstant @sc_false spec_id(1) = false
@@ -48,7 +53,33 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+
+  spirv.SpecConstant @sc_f32_1 = 1.5 : f32
+  spirv.SpecConstant @sc_f32_2 = 2.5 : f32
+  spirv.SpecConstant @sc_f32_3 = 3.5 : f32
+
+  spirv.SpecConstant @sc_i32_1 = 1   : i32
+
+  // CHECK: spirv.SpecConstantComposite @scc_array (@sc_f32_1, @sc_f32_2, @sc_f32_3) : !spirv.array<3 x f32>
+  spirv.SpecConstantComposite @scc_array (@sc_f32_1, @sc_f32_2, @sc_f32_3) : !spirv.array<3 x f32>
+
+  // CHECK: spirv.SpecConstantComposite @scc_struct (@sc_i32_1, @sc_f32_2, @sc_f32_3) : !spirv.struct<(i32, f32, f32)>
+  spirv.SpecConstantComposite @scc_struct (@sc_i32_1, @sc_f32_2, @sc_f32_3) : !spirv.struct<(i32, f32, f32)>
+
+  // CHECK: spirv.SpecConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3xf32>
+  spirv.SpecConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3 x f32>
+
+  // CHECK: spirv.SpecConstantComposite @scc_nested (@scc_vector, @scc_vector) : !spirv.array<2 x vector<3xf32>>
+  spirv.SpecConstantComposite @scc_nested (@scc_vector, @scc_vector) : !spirv.array<2 x vector<3 x f32>>
+
+  // CHECK: spirv.SpecConstantComposite @scc_mixed (@sc_i32_1, @scc_vector) : !spirv.struct<(i32, vector<3xf32>)>
+  spirv.SpecConstantComposite @scc_mixed (@sc_i32_1, @scc_vector) : !spirv.struct<(i32, vector<3 x f32>)>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
   spirv.SpecConstant @sc_f32_1 = 1.5 : f32
   spirv.SpecConstant @sc_f32_2 = 2.5 : f32
@@ -68,27 +99,34 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, ReplicatedCompositesEXT], [SPV_EXT_replicated_composites]> {
 
-  spirv.SpecConstant @sc_f32_1 = 1.5 : f32
-  spirv.SpecConstant @sc_f32_2 = 2.5 : f32
-  spirv.SpecConstant @sc_f32_3 = 3.5 : f32
+  spirv.SpecConstant @sc_i32_1 = 1 : i32
 
-  spirv.SpecConstant @sc_i32_1 = 1   : i32
+  // CHECK: spirv.EXT.SpecConstantCompositeReplicate @scc_splat_array_of_i32 (@sc_i32_1) : !spirv.array<3 x i32>
+  spirv.EXT.SpecConstantCompositeReplicate @scc_splat_array_of_i32 (@sc_i32_1) : !spirv.array<3 x i32>
 
-  // CHECK: spirv.SpecConstantComposite @scc_array (@sc_f32_1, @sc_f32_2, @sc_f32_3) : !spirv.array<3 x f32>
-  spirv.SpecConstantComposite @scc_array (@sc_f32_1, @sc_f32_2, @sc_f32_3) : !spirv.array<3 x f32>
+  // CHECK: spirv.EXT.SpecConstantCompositeReplicate @scc_splat_struct_of_i32 (@sc_i32_1) : !spirv.struct<(i32, i32, i32)>
+  spirv.EXT.SpecConstantCompositeReplicate @scc_splat_struct_of_i32 (@sc_i32_1) : !spirv.struct<(i32, i32, i32)>
 
-  // CHECK: spirv.SpecConstantComposite @scc_struct (@sc_i32_1, @sc_f32_2, @sc_f32_3) : !spirv.struct<(i32, f32, f32)>
-  spirv.SpecConstantComposite @scc_struct (@sc_i32_1, @sc_f32_2, @sc_f32_3) : !spirv.struct<(i32, f32, f32)>
+  // CHECK: spirv.EXT.SpecConstantCompositeReplicate @scc_splat_vector_of_i32 (@sc_i32_1) : vector<3xi32>
+  spirv.EXT.SpecConstantCompositeReplicate @scc_splat_vector_of_i32 (@sc_i32_1) : vector<3 x i32>
 
-  // CHECK: spirv.SpecConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3xf32>
-  spirv.SpecConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3 x f32>
+  spirv.SpecConstant @sc_f32_1 = 1.0 : f32
+
+  // CHECK: spirv.EXT.SpecConstantCompositeReplicate @scc_splat_array_of_f32 (@sc_f32_1) : !spirv.array<3 x f32>
+  spirv.EXT.SpecConstantCompositeReplicate @scc_splat_array_of_f32 (@sc_f32_1) : !spirv.array<3 x f32>
+
+  // CHECK: spirv.EXT.SpecConstantCompositeReplicate @scc_splat_struct_of_f32 (@sc_f32_1) : !spirv.struct<(f32, f32, f32)>
+  spirv.EXT.SpecConstantCompositeReplicate @scc_splat_struct_of_f32 (@sc_f32_1) : !spirv.struct<(f32, f32, f32)>
+
+  // CHECK: spirv.EXT.SpecConstantCompositeReplicate @scc_splat_vector_of_f32 (@sc_f32_1) : vector<3xf32>
+  spirv.EXT.SpecConstantCompositeReplicate @scc_splat_vector_of_f32 (@sc_f32_1) : vector<3 x f32>
 }
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
   spirv.SpecConstant @sc_i32_1 = 1 : i32
 
@@ -99,9 +137,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     // CHECK: [[RES1:%.*]] = spirv.SpecConstantOperation wraps "spirv.ISub"([[USE1]], [[USE2]]) : (i32, i32) -> i32
 
     // CHECK: [[USE3:%.*]] = spirv.mlir.referenceof @sc_i32_1 : i32
-    // CHECK: [[USE4:%.*]] = spirv.Constant 0 : i32
 
-    // CHECK: [[RES2:%.*]] = spirv.SpecConstantOperation wraps "spirv.ISub"([[USE3]], [[USE4]]) : (i32, i32) -> i32
+    // CHECK: [[RES2:%.*]] = spirv.SpecConstantOperation wraps "spirv.ISub"([[USE3]], [[USE2]]) : (i32, i32) -> i32
 
     %0 = spirv.mlir.referenceof @sc_i32_1 : i32
     %1 = spirv.Constant 0 : i32

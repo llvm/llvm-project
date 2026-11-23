@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 # Ensure references to scavenged stack slots in the CSR area use the
 # FP as a base when the stack pointer must be aligned to something
@@ -6,7 +6,6 @@
 # alignment padding area is between the CSR area and the SP, so the SP
 # cannot be used to reference the CSR area.
 name:            test
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    64
 # CHECK:      stack:

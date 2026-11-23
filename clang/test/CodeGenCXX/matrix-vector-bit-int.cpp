@@ -7,6 +7,8 @@ using i32x3 = _BitInt(32) __attribute__((ext_vector_type(3)));
 using i32x3x3 = _BitInt(32) __attribute__((matrix_type(3, 3)));
 using i512x3 = _BitInt(512) __attribute__((ext_vector_type(3)));
 using i512x3x3 = _BitInt(512) __attribute__((matrix_type(3, 3)));
+using i4x3 = _BitInt(4) __attribute__((ext_vector_type(3)));
+using i4x3x3 = _BitInt(4) __attribute__((matrix_type(3, 3)));
 
 // CHECK-LABEL: define dso_local i32 @_Z2v1Dv3_DB8_(
 // CHECK-SAME: i32 [[A_COERCE:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -17,7 +19,7 @@ using i512x3x3 = _BitInt(512) __attribute__((matrix_type(3, 3)));
 // CHECK-NEXT:    store i32 [[A_COERCE]], ptr [[A]], align 4
 // CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i8>, ptr [[A]], align 4
 // CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i8> [[LOADVECN]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i8> [[A1]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i8> [[A1]], <3 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    store <4 x i8> [[EXTRACTVEC]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[LOADVECN2:%.*]] = load <4 x i8>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <4 x i8> [[LOADVECN2]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -36,7 +38,7 @@ i8x3 v1(i8x3 a) {
 // CHECK-SAME: <3 x i32> noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x i32>, align 16
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[A]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[A]], <3 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    store <4 x i32> [[EXTRACTVEC]], ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    [[EXTRACTVEC1:%.*]] = shufflevector <4 x i32> [[LOADVECN]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -55,7 +57,7 @@ i32x3 v2(i32x3 a) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x i512>, align 256
 // CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i512>, ptr [[TMP0]], align 256
 // CHECK-NEXT:    [[A:%.*]] = shufflevector <4 x i512> [[LOADVECN]], <4 x i512> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i512> [[A]], <3 x i512> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i512> [[A]], <3 x i512> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    store <4 x i512> [[EXTRACTVEC]], ptr [[A_ADDR]], align 256
 // CHECK-NEXT:    [[LOADVECN1:%.*]] = load <4 x i512>, ptr [[A_ADDR]], align 256
 // CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <4 x i512> [[LOADVECN1]], <4 x i512> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -68,8 +70,34 @@ i512x3 v3(i512x3 a) {
   return a + a;
 }
 
+// CHECK-LABEL: define dso_local i32 @_Z2v4Dv3_DB4_(
+// CHECK-SAME: i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <3 x i4>, align 4
+// CHECK-NEXT:    [[A:%.*]] = alloca <3 x i4>, align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x i4>, align 4
+// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[A_COERCE]], ptr [[A]], align 4
+// CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i4>, ptr [[A]], align 4
+// CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i4> [[LOADVECN]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i4> [[A1]], <3 x i4> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-NEXT:    store <4 x i4> [[EXTRACTVEC]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    [[LOADVECN2:%.*]] = load <4 x i4>, ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <4 x i4> [[LOADVECN2]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK-NEXT:    [[LOADVECN4:%.*]] = load <4 x i4>, ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    [[EXTRACTVEC5:%.*]] = shufflevector <4 x i4> [[LOADVECN4]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK-NEXT:    [[ADD:%.*]] = add <3 x i4> [[EXTRACTVEC3]], [[EXTRACTVEC5]]
+// CHECK-NEXT:    store <3 x i4> [[ADD]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RETVAL_COERCE]], ptr align 4 [[RETVAL]], i64 2, i1 false)
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL_COERCE]], align 4
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+i4x3 v4(i4x3 a) {
+  return a + a;
+}
+
 // CHECK-LABEL: define dso_local noundef <9 x i8> @_Z2m1u11matrix_typeILm3ELm3EDB8_E(
-// CHECK-SAME: <9 x i8> noundef [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: <9 x i8> noundef [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [9 x i8], align 1
 // CHECK-NEXT:    store <9 x i8> [[A]], ptr [[A_ADDR]], align 1
@@ -83,7 +111,7 @@ i8x3x3 m1(i8x3x3 a) {
 }
 
 // CHECK-LABEL: define dso_local noundef <9 x i32> @_Z2m2u11matrix_typeILm3ELm3EDB32_E(
-// CHECK-SAME: <9 x i32> noundef [[A:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: <9 x i32> noundef [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [9 x i32], align 4
 // CHECK-NEXT:    store <9 x i32> [[A]], ptr [[A_ADDR]], align 4
@@ -97,7 +125,7 @@ i32x3x3 m2(i32x3x3 a) {
 }
 
 // CHECK-LABEL: define dso_local noundef <9 x i512> @_Z2m3u11matrix_typeILm3ELm3EDB512_E(
-// CHECK-SAME: <9 x i512> noundef [[A:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: <9 x i512> noundef [[A:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [9 x i512], align 8
 // CHECK-NEXT:    store <9 x i512> [[A]], ptr [[A_ADDR]], align 8
@@ -107,5 +135,19 @@ i32x3x3 m2(i32x3x3 a) {
 // CHECK-NEXT:    ret <9 x i512> [[TMP2]]
 //
 i512x3x3 m3(i512x3x3 a) {
+  return a + a;
+}
+
+// CHECK-LABEL: define dso_local noundef <9 x i4> @_Z2m4u11matrix_typeILm3ELm3EDB4_E(
+// CHECK-SAME: <9 x i4> noundef [[A:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [9 x i4], align 1
+// CHECK-NEXT:    store <9 x i4> [[A]], ptr [[A_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load <9 x i4>, ptr [[A_ADDR]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = load <9 x i4>, ptr [[A_ADDR]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = add <9 x i4> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    ret <9 x i4> [[TMP2]]
+//
+i4x3x3 m4(i4x3x3 a) {
   return a + a;
 }

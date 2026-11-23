@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=objc-arc-apelim < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 
 ; See PR26774
 

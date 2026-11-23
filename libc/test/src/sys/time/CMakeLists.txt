@@ -1,0 +1,63 @@
+add_libc_testsuite(libc-sys-time-tests)
+
+add_libc_test(
+  utimes_test
+  SUITE
+    libc-sys-time-tests
+  SRCS
+    utimes_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.fcntl.open
+    libc.src.sys.time.utimes
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.src.unistd.write
+    libc.src.stdio.remove
+    libc.src.sys.stat.stat
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  setitimer_test
+  SUITE
+    libc-sys-time-tests
+  SRCS
+    setitimer_test.cpp
+  DEPENDS
+    libc.hdr.sys_time_macros
+    libc.include.signal
+    libc.src.sys.time.setitimer
+    libc.src.signal.sigaction
+    libc.src.signal.sigemptyset
+    libc.src.__support.common
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  getitimer_test
+  SUITE
+    libc-sys-time-tests
+  SRCS
+    getitimer_test.cpp
+  DEPENDS
+    libc.hdr.sys_time_macros
+    libc.src.sys.time.getitimer
+    libc.src.__support.common
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  gettimeofday_test
+  SUITE
+    libc-sys-time-tests
+  SRCS
+    gettimeofday_test.cpp
+  DEPENDS
+    libc.src.sys.time.gettimeofday
+    libc.hdr.types.struct_timeval
+    libc.test.UnitTest.ErrnoCheckingTest
+)

@@ -1,11 +1,17 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       .text 0x100000 : { *(SORT_BY_NAME(.text.*)) } \
-// RUN:       }" > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump -d %t2 --start-address=0x100000 --stop-address=0x100008 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x1000004 --stop-address=0x100000e | FileCheck --check-prefix=CHECK2 %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
+// RUN: ld.lld --script a.lds a.o -o exe
+// RUN: llvm-objdump -d exe --start-address=0x100000 --stop-address=0x100008 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d exe --start-address=0x1000004 --stop-address=0x100000e | FileCheck --check-prefix=CHECK2 %s
+// RUN: rm -rf a.o exe
+
+//--- a.lds
+SECTIONS {
+  .text 0x100000 : { *(SORT_BY_NAME(.text.*)) }
+}
+
+//--- a.s
 
  .syntax unified
 

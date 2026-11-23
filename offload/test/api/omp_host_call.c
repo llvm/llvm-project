@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// UNSUPPORTED: intelgpu
 
 #include <assert.h>
 #include <omp.h>

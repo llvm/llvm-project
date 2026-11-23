@@ -45,6 +45,7 @@ static_library("DWARF") {
     "DIERef.cpp",
     "DWARFASTParser.cpp",
     "DWARFASTParserClang.cpp",
+    "DWARFASTParserFortran.cpp",
     "DWARFAttribute.cpp",
     "DWARFBaseDIE.cpp",
     "DWARFCompileUnit.cpp",
@@ -64,10 +65,12 @@ static_library("DWARF") {
     "DebugNamesDWARFIndex.cpp",
     "LogChannelDWARF.cpp",
     "ManualDWARFIndex.cpp",
+    "ManualDWARFIndexSet.cpp",
     "NameToDIE.cpp",
     "SymbolFileDWARF.cpp",
     "SymbolFileDWARFDebugMap.cpp",
     "SymbolFileDWARFDwo.cpp",
+    "SymbolFileWasm.cpp",
     "UniqueDWARFASTType.cpp",
   ]
 }

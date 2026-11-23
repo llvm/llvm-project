@@ -44,10 +44,10 @@ public:
   // Listeners have to be constructed into shared pointers - at least if you
   // want them to listen to Broadcasters,
 protected:
-  Listener(const char *name);
+  Listener(std::string name);
 
 public:
-  static lldb::ListenerSP MakeListener(const char *name);
+  static lldb::ListenerSP MakeListener(llvm::StringRef name);
 
   ~Listener();
 

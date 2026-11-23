@@ -12,7 +12,7 @@ define x86_fp80 @f0(x86_fp80 noundef %a) nounwind {
 ; GISEL_X86-NEXT:    pushl %ebp
 ; GISEL_X86-NEXT:    movl %esp, %ebp
 ; GISEL_X86-NEXT:    andl $-16, %esp
-; GISEL_X86-NEXT:    subl $48, %esp
+; GISEL_X86-NEXT:    subl $32, %esp
 ; GISEL_X86-NEXT:    fldt 8(%ebp)
 ; GISEL_X86-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
 ; GISEL_X86-NEXT:    fxch %st(1)
@@ -30,7 +30,7 @@ define x86_fp80 @f0(x86_fp80 noundef %a) nounwind {
 ; SDAG_X86-NEXT:    pushl %ebp
 ; SDAG_X86-NEXT:    movl %esp, %ebp
 ; SDAG_X86-NEXT:    andl $-16, %esp
-; SDAG_X86-NEXT:    subl $48, %esp
+; SDAG_X86-NEXT:    subl $32, %esp
 ; SDAG_X86-NEXT:    fldt 8(%ebp)
 ; SDAG_X86-NEXT:    fld %st(0)
 ; SDAG_X86-NEXT:    fstpt {{[0-9]+}}(%esp)
@@ -186,8 +186,7 @@ define void @f6(ptr %a, ptr %b) nounwind {
 ; GISEL_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL_X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GISEL_X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; GISEL_X86-NEXT:    flds (%eax)
-; GISEL_X86-NEXT:    faddp %st, %st(1)
+; GISEL_X86-NEXT:    fadds (%eax)
 ; GISEL_X86-NEXT:    fstps (%ecx)
 ; GISEL_X86-NEXT:    retl
 ;
@@ -203,8 +202,7 @@ define void @f6(ptr %a, ptr %b) nounwind {
 ; GISEL_X64-LABEL: f6:
 ; GISEL_X64:       # %bb.0:
 ; GISEL_X64-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
-; GISEL_X64-NEXT:    flds (%rdi)
-; GISEL_X64-NEXT:    faddp %st, %st(1)
+; GISEL_X64-NEXT:    fadds (%rdi)
 ; GISEL_X64-NEXT:    fstps (%rsi)
 ; GISEL_X64-NEXT:    retq
 ;

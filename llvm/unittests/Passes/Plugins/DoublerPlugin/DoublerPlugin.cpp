@@ -9,11 +9,11 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 
 using namespace llvm;
 
-struct DoublerModulePass : public PassInfoMixin<DoublerModulePass> {
+struct DoublerModulePass : public OptionalPassInfoMixin<DoublerModulePass> {
 
   // Double the value of the initializer
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {

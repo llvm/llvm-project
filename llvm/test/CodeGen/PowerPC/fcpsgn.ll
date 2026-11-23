@@ -5,7 +5,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define double @foo_dd(double %a, double %b) #0 {
 entry:
-  %call = tail call double @copysign(double %a, double %b) #0
+  %call = tail call double @llvm.copysign.f64(double %a, double %b)
   ret double %call
 
 ; CHECK-LABEL: @foo_dd
@@ -16,11 +16,10 @@ entry:
 ; CHECK-VSX: blr
 }
 
-declare double @copysign(double, double) #0
 
 define float @foo_ss(float %a, float %b) #0 {
 entry:
-  %call = tail call float @copysignf(float %a, float %b) #0
+  %call = tail call float @llvm.copysign.f32(float %a, float %b)
   ret float %call
 
 ; CHECK-LABEL: @foo_ss
@@ -31,12 +30,11 @@ entry:
 ; CHECK-VSX: blr
 }
 
-declare float @copysignf(float, float) #0
 
 define float @foo_sd(float %a, double %b) #0 {
 entry:
   %conv = fptrunc double %b to float
-  %call = tail call float @copysignf(float %a, float %conv) #0
+  %call = tail call float @llvm.copysign.f32(float %a, float %conv)
   ret float %call
 
 ; CHECK-LABEL: @foo_sd
@@ -50,7 +48,7 @@ entry:
 define double @foo_ds(double %a, float %b) #0 {
 entry:
   %conv = fpext float %b to double
-  %call = tail call double @copysign(double %a, double %conv) #0
+  %call = tail call double @llvm.copysign.f64(double %a, double %conv)
   ret double %call
 
 ; CHECK-LABEL: @foo_ds

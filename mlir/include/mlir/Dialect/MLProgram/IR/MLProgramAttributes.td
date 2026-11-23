@@ -16,6 +16,7 @@ include "mlir/Dialect/MLProgram/IR/MLProgramBase.td"
 // Base class for MLProgram dialect attributes.
 class MLProgram_Attr<string name, list<Trait> traits = []>
     : AttrDef<MLProgram_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/MLProgram/IR/MLProgramAttributes.h"];
   let mnemonic = ?;
 }
 
@@ -40,6 +41,9 @@ def MLProgram_ExternAttr : MLProgram_Attr<"Extern", [TypedAttrInterface]> {
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
   let mnemonic = "extern";
   let assemblyFormat = "";
+
+  // Generate mnemonic alias for the attribute.
+  let genMnemonicAlias = 1;
 }
 
 #endif // MLPROGRAM_ATTRIBUTES

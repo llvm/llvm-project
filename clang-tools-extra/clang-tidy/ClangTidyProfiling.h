@@ -1,4 +1,4 @@
-//===--- ClangTidyProfiling.h - clang-tidy ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,14 +34,11 @@ public:
   };
 
 private:
-  std::optional<llvm::TimerGroup> TG;
-
   std::optional<StorageParams> Storage;
 
-  void printUserFriendlyTable(llvm::raw_ostream &OS);
-  void printAsJSON(llvm::raw_ostream &OS);
-
-  void storeProfileData();
+  void printUserFriendlyTable(llvm::raw_ostream &OS, llvm::TimerGroup &TG);
+  void printAsJSON(llvm::raw_ostream &OS, llvm::TimerGroup &TG);
+  void storeProfileData(llvm::TimerGroup &TG);
 
 public:
   llvm::StringMap<llvm::TimeRecord> Records;

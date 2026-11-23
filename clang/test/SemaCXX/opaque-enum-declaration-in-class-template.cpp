@@ -94,7 +94,9 @@ struct S5 {
 };
 
 int X5 = S5<char>::E1{} + '\0'; // expected-error{{invalid operands to binary expression}}
+                                // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
 int Y5 = S5<char>::E2{} + '\0'; // expected-error{{invalid operands to binary expression}}
+                                // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
 
 
 template <typename T>

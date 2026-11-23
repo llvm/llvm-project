@@ -75,8 +75,6 @@ protected:
 
   void SetupMostSpecializedValue();
 
-  llvm::Expected<std::string> GetDescriptionForDisplay();
-
   const char *GetRootNameForDisplay();
 
   bool ShouldPrintValueObject();
@@ -108,8 +106,7 @@ protected:
 
   bool PrintValueAndSummaryIfNeeded(bool &value_printed, bool &summary_printed);
 
-  llvm::Error PrintObjectDescriptionIfNeeded(bool value_printed,
-                                             bool summary_printed);
+  void PrintObjectDescriptionIfNeeded(std::optional<std::string> object_desc);
 
   bool
   ShouldPrintChildren(DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
@@ -141,6 +138,7 @@ protected:
 
 private:
   bool ShouldShowName() const;
+  bool ShouldPrintObjectDescription();
 
   ValueObject &m_orig_valobj;
   /// Cache the current "most specialized" value.  Don't use this

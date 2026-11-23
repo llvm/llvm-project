@@ -22,11 +22,6 @@ struct _LIBCPP_TEMPLATE_VIS add_cv {
   typedef _LIBCPP_NODEBUG const volatile _Tp type;
 };
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using add_cv_t = typename add_cv<_Tp>::type;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_ADD_CV_H

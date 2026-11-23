@@ -13,6 +13,7 @@
 
 #include "R600Subtarget.h"
 #include "AMDGPUSelectionDAGInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 
 using namespace llvm;
@@ -24,13 +25,15 @@ using namespace llvm;
 #include "R600GenSubtargetInfo.inc"
 
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                             const TargetMachine &TM)
-    : R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS), AMDGPUSubtarget(TT),
-      InstrInfo(*this),
+                             const AMDGPUTargetMachine &TM)
+    : R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
+      AMDGPUSubtarget(TT, TM.getCLOpts()), InstrInfo(*this),
       FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
       TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
       InstrItins(getInstrItineraryForCPU(GPU)) {
   LocalMemorySize = AddressableLocalMemorySize;
+  // R600 has no MaxWavesPerEU subtarget feature.
+  MaxWavesPerEU = 10;
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 }
 
@@ -43,9 +46,7 @@ const SelectionDAGTargetInfo *R600Subtarget::getSelectionDAGInfo() const {
 R600Subtarget &R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                               StringRef GPU,
                                                               StringRef FS) {
-  SmallString<256> FullFS("+promote-alloca,");
-  FullFS += FS;
-  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
+  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FS);
 
   HasMulU24 = getGeneration() >= EVERGREEN;
   HasMulI24 = hasCaymanISA();

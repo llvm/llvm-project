@@ -1,0 +1,15 @@
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %S/../Inputs/function-specifiers.cpp
+// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
+
+// CHECK:          "Functions": [
+// CHECK-NEXT:       {
+// CHECK:              "IsStatic": true,
+// COM:                FIXME: Emit ExceptionSpecificationType
+// CHECK-NOT:          "ExceptionSpecifcation" : "noexcept",
+// COM:                FIXME: Emit inline
+// CHECK-NOT:          "IsInline": true,
+// COM:                FIXME: Emit extern
+// CHECK-NOT:          "IsExtern": true,
+// COM:                FIXME: Emit constexpr
+// CHECK-NOT:          "IsConstexpr": true,

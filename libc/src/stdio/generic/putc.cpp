@@ -10,8 +10,8 @@
 #include "src/__support/File/file.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -28,7 +28,7 @@ LLVM_LIBC_FUNCTION(int, putc, (int c, ::FILE *stream)) {
     // The stream should be in an error state in this case.
     return EOF;
   }
-  return 0;
+  return static_cast<int>(uc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

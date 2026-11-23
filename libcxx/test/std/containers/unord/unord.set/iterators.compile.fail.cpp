@@ -22,47 +22,30 @@
 #include <unordered_set>
 #include <cassert>
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_set<int> C;
-        typedef int P;
-        P a[] =
-        {
-            P(1),
-            P(2),
-            P(3),
-            P(4),
-            P(1),
-            P(2)
-        };
-        C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() >= 5);
-        assert(c.size() == 6);
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
-        C::iterator i = c.begin();
-        assert(*i == 1);
-        *i = 2;
-    }
-    {
-        typedef std::unordered_set<int> C;
-        typedef int P;
-        P a[] =
-        {
-            P(1),
-            P(2),
-            P(3),
-            P(4),
-            P(1),
-            P(2)
-        };
-        const C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() >= 5);
-        assert(c.size() == 6);
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
-    }
+int main(int, char**) {
+  {
+    typedef std::unordered_set<int> C;
+    typedef int P;
+    P a[] = {P(1), P(2), P(3), P(4), P(1), P(2)};
+    C c(a, a + sizeof(a) / sizeof(a[0]));
+    assert(c.bucket_count() >= 5);
+    assert(c.size() == 6);
+    assert(std::distance(c.begin(), c.end()) == c.size());
+    assert(std::distance(c.cbegin(), c.cend()) == c.size());
+    C::iterator i = c.begin();
+    assert(*i == 1);
+    *i = 2;
+  }
+  {
+    typedef std::unordered_set<int> C;
+    typedef int P;
+    P a[] = {P(1), P(2), P(3), P(4), P(1), P(2)};
+    const C c(a, a + sizeof(a) / sizeof(a[0]));
+    assert(c.bucket_count() >= 5);
+    assert(c.size() == 6);
+    assert(std::distance(c.begin(), c.end()) == c.size());
+    assert(std::distance(c.cbegin(), c.cend()) == c.size());
+  }
 
   return 0;
 }

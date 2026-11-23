@@ -4,9 +4,9 @@
 define dso_local void @fn() {
 ; CHECK-LABEL: fn:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #4132
-; CHECK-NEXT:    mov w9, #1
-; CHECK-NEXT:    movk x8, #65489, lsl #16
+; CHECK-NEXT:    mov w8, #4132 // =0x1024
+; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    movk w8, #65489, lsl #16
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ret
 entry:

@@ -8,12 +8,12 @@ subroutine omp_firstprivate(init)
   end type my_type
   type(my_type) :: my_var
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a FIRSTPRIVATE clause
+  !ERROR: An array element cannot appear in a FIRSTPRIVATE clause
   !$omp parallel firstprivate(a(2))
     a(2) = init
   !$omp end parallel
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a FIRSTPRIVATE clause
+  !ERROR: A structure component cannot appear in a FIRSTPRIVATE clause
   !$omp parallel firstprivate(my_var%val)
     my_var%val = init
   !$omp end parallel

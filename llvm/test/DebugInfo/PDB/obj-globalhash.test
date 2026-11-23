@@ -1,15 +1,15 @@
-RUN: yaml2obj %p/Inputs/obj-hashes-1.yaml -o %T/obj-hashes-1.obj
-RUN: yaml2obj %p/Inputs/obj-hashes-2.yaml -o %T/obj-hashes-2.obj
-RUN: echo obj-hashes-1 > %T/hashes-combined.out
-RUN: llvm-pdbutil dump -type-extras %T/obj-hashes-1.obj >> %T/hashes-combined.out
-RUN: echo obj-hashes-2 >> %T/hashes-combined.out
-RUN: llvm-pdbutil dump -type-extras %T/obj-hashes-2.obj >> %T/hashes-combined.out
-RUN: cat %T/hashes-combined.out | FileCheck --check-prefix=CHECK-ONE %s
-RUN: cat %T/hashes-combined.out | FileCheck --check-prefix=CHECK-TWO %s
-RUN: cat %T/hashes-combined.out | FileCheck --check-prefix=CHECK-THREE %s
-RUN: cat %T/hashes-combined.out | FileCheck --check-prefix=CHECK-FOUR %s
-RUN: cat %T/hashes-combined.out | FileCheck --check-prefix=CHECK-FIVE %s
-RUN: cat %T/hashes-combined.out | FileCheck --check-prefix=CHECK-SIX %s
+RUN: yaml2obj %p/Inputs/obj-hashes-1.yaml -o %t.obj-hashes-1.obj
+RUN: yaml2obj %p/Inputs/obj-hashes-2.yaml -o %t.obj-hashes-2.obj
+RUN: echo obj-hashes-1 > %t.hashes-combined.out
+RUN: llvm-pdbutil dump -type-extras %t.obj-hashes-1.obj >> %t.hashes-combined.out
+RUN: echo obj-hashes-2 >> %t.hashes-combined.out
+RUN: llvm-pdbutil dump -type-extras %t.obj-hashes-2.obj >> %t.hashes-combined.out
+RUN: cat %t.hashes-combined.out | FileCheck --check-prefix=CHECK-ONE %s
+RUN: cat %t.hashes-combined.out | FileCheck --check-prefix=CHECK-TWO %s
+RUN: cat %t.hashes-combined.out | FileCheck --check-prefix=CHECK-THREE %s
+RUN: cat %t.hashes-combined.out | FileCheck --check-prefix=CHECK-FOUR %s
+RUN: cat %t.hashes-combined.out | FileCheck --check-prefix=CHECK-FIVE %s
+RUN: cat %t.hashes-combined.out | FileCheck --check-prefix=CHECK-SIX %s
 
 ; char**.  Both the local and global hashes should be the same, since the only
 ; back-references are for simple types which have fixed indices.

@@ -21,9 +21,12 @@ class RewritePatternSet;
 /// Collect a set of patterns to convert from the vector to XeGPU ops.
 void populateVectorToXeGPUConversionPatterns(RewritePatternSet &patterns);
 
-/// Create a pass to convert ops from vector to XeGPU.
-std::unique_ptr<Pass> createConvertVectorToXeGPUPass();
-
+/// Collect a set of patterns that bring vector ops into a form the conversion
+/// patterns lower directly: gather/scatter ops flattened to 1-D operands are
+/// un-flattened back to N-D, and transfer_read broadcast permutation maps are
+/// replaced by a transfer of the data plus the vector ops that expand it.
+/// Apply these before the conversion patterns.
+void populateVectorToXeGPULegalizationPatterns(RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTOXEGPU_VECTORTOXEGPU_H

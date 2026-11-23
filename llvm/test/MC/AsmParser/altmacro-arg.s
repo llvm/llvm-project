@@ -10,6 +10,7 @@
 # CHECK:      .data
 # CHECK-NEXT: .ascii "b cc rbx"
 # CHECK-NEXT: .ascii "bcc ccx rbx raxx"
+# CHECK-NEXT: .ascii "b?x b@x b#x b!x a_"
 .macro gen a, ra, rax
   ja 1f
   xorq %rax, %rax
@@ -17,6 +18,7 @@
 .data
   .ascii "\a \ra \rax"
   .ascii "a\()ra ra\()x rax raxx"
+  .ascii "a?x a@x a#x a!x a_"
 .endm
 gen b, cc, rbx
 

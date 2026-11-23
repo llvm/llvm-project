@@ -5,8 +5,7 @@
 ; RUN: llc < %s -debug-entry-values -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -stop-after=machineverifier
 
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -data-sections | FileCheck %s --check-prefix=X64
-; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39451.
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -relocation-model pic -data-sections -verify-machineinstrs=0 | FileCheck %s --check-prefix=X64-PIC
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -relocation-model pic -data-sections | FileCheck %s --check-prefix=X64-PIC
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -data-sections -mattr=+retpoline | FileCheck %s --check-prefix=X64-RETPOLINE
 ;
 ; FIXME: Add support for 32-bit.
@@ -464,34 +463,34 @@ define dso_local i32 @test_indirectbr_global(i32 %idx) nounwind {
 ; X64-RETPOLINE-NEXT:    cmoveq %rax, %rcx
 ; X64-RETPOLINE-NEXT:    cmpq $4, %rdx
 ; X64-RETPOLINE-NEXT:    jne .LBB6_3
-; X64-RETPOLINE-NEXT:  .Ltmp0: # Block address taken
 ; X64-RETPOLINE-NEXT:  # %bb.6: # %bb3
 ; X64-RETPOLINE-NEXT:    cmovneq %rax, %rcx
 ; X64-RETPOLINE-NEXT:    shlq $47, %rcx
 ; X64-RETPOLINE-NEXT:    movl $42, %eax
 ; X64-RETPOLINE-NEXT:    orq %rcx, %rsp
 ; X64-RETPOLINE-NEXT:    retq
-; X64-RETPOLINE-NEXT:  .Ltmp1: # Block address taken
 ; X64-RETPOLINE-NEXT:  .LBB6_5: # %bb2
 ; X64-RETPOLINE-NEXT:    cmovneq %rax, %rcx
 ; X64-RETPOLINE-NEXT:    shlq $47, %rcx
 ; X64-RETPOLINE-NEXT:    movl $13, %eax
 ; X64-RETPOLINE-NEXT:    orq %rcx, %rsp
 ; X64-RETPOLINE-NEXT:    retq
-; X64-RETPOLINE-NEXT:  .Ltmp2: # Block address taken
 ; X64-RETPOLINE-NEXT:  .LBB6_4: # %bb1
 ; X64-RETPOLINE-NEXT:    cmovneq %rax, %rcx
 ; X64-RETPOLINE-NEXT:    shlq $47, %rcx
 ; X64-RETPOLINE-NEXT:    movl $7, %eax
 ; X64-RETPOLINE-NEXT:    orq %rcx, %rsp
 ; X64-RETPOLINE-NEXT:    retq
-; X64-RETPOLINE-NEXT:  .Ltmp3: # Block address taken
 ; X64-RETPOLINE-NEXT:  .LBB6_3: # %bb0
 ; X64-RETPOLINE-NEXT:    cmoveq %rax, %rcx
 ; X64-RETPOLINE-NEXT:    shlq $47, %rcx
 ; X64-RETPOLINE-NEXT:    movl $2, %eax
 ; X64-RETPOLINE-NEXT:    orq %rcx, %rsp
 ; X64-RETPOLINE-NEXT:    retq
+; X64-RETPOLINE-NEXT:  .Ltmp0: # Address of block that was removed by CodeGen
+; X64-RETPOLINE-NEXT:  .Ltmp1: # Address of block that was removed by CodeGen
+; X64-RETPOLINE-NEXT:  .Ltmp2: # Address of block that was removed by CodeGen
+; X64-RETPOLINE-NEXT:  .Ltmp3: # Address of block that was removed by CodeGen
 entry:
   %ptr = getelementptr [4 x ptr], ptr @global_blockaddrs, i32 0, i32 %idx
   %a = load ptr, ptr %ptr

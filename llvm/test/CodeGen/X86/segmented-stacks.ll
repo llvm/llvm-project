@@ -28,6 +28,8 @@
 ; RUN: not --crash llc < %s -mcpu=generic -mtriple=i686-freebsd 2> %t.log
 ; RUN: FileCheck %s -input-file=%t.log -check-prefix=X86-FreeBSD
 
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux  -verify-machineinstrs -enable-new-pm | FileCheck %s -check-prefix=X64-Linux
+
 ; X64-Solaris: Segmented stacks not supported on this platform
 ; X86-FreeBSD: Segmented stacks not supported on FreeBSD i386
 
@@ -257,7 +259,9 @@ define void @test_basic() #0 {
 ; X64-MinGW-NEXT:    movl $10, %edx
 ; X64-MinGW-NEXT:    callq dummy_use
 ; X64-MinGW-NEXT:    nop
+; X64-MinGW-NEXT:    .seh_startepilogue
 ; X64-MinGW-NEXT:    addq $72, %rsp
+; X64-MinGW-NEXT:    .seh_endepilogue
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB0_1:
 ; X64-MinGW-NEXT:    movl $72, %r10d
@@ -603,8 +607,10 @@ define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
 ; X64-MinGW-NEXT:    movl $10, %edx
 ; X64-MinGW-NEXT:    callq dummy_use
 ; X64-MinGW-NEXT:    movl %esi, %eax
+; X64-MinGW-NEXT:    .seh_startepilogue
 ; X64-MinGW-NEXT:    addq $80, %rsp
 ; X64-MinGW-NEXT:    popq %rsi
+; X64-MinGW-NEXT:    .seh_endepilogue
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB1_1:
 ; X64-MinGW-NEXT:    movq %r10, %rax
@@ -859,7 +865,9 @@ define void @test_large() #0 {
 ; X64-MinGW-NEXT:    movl $3, %edx
 ; X64-MinGW-NEXT:    callq dummy_use
 ; X64-MinGW-NEXT:    nop
+; X64-MinGW-NEXT:    .seh_startepilogue
 ; X64-MinGW-NEXT:    addq $40040, %rsp # imm = 0x9C68
+; X64-MinGW-NEXT:    .seh_endepilogue
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB2_1:
 ; X64-MinGW-NEXT:    movl $40040, %r10d # imm = 0x9C68
@@ -1096,7 +1104,9 @@ define fastcc void @test_fastcc() #0 {
 ; X64-MinGW-NEXT:    movl $10, %edx
 ; X64-MinGW-NEXT:    callq dummy_use
 ; X64-MinGW-NEXT:    nop
+; X64-MinGW-NEXT:    .seh_startepilogue
 ; X64-MinGW-NEXT:    addq $72, %rsp
+; X64-MinGW-NEXT:    .seh_endepilogue
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB3_1:
 ; X64-MinGW-NEXT:    movl $72, %r10d
@@ -1347,7 +1357,9 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-MinGW-NEXT:    movl $3, %edx
 ; X64-MinGW-NEXT:    callq dummy_use
 ; X64-MinGW-NEXT:    nop
+; X64-MinGW-NEXT:    .seh_startepilogue
 ; X64-MinGW-NEXT:    addq $40040, %rsp # imm = 0x9C68
+; X64-MinGW-NEXT:    .seh_endepilogue
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB4_1:
 ; X64-MinGW-NEXT:    movl $40040, %r10d # imm = 0x9C68
@@ -1602,7 +1614,9 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-MinGW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; X64-MinGW-NEXT:    callq dummy_use
 ; X64-MinGW-NEXT:    nop
+; X64-MinGW-NEXT:    .seh_startepilogue
 ; X64-MinGW-NEXT:    addq $40040, %rsp # imm = 0x9C68
+; X64-MinGW-NEXT:    .seh_endepilogue
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB5_1:
 ; X64-MinGW-NEXT:    movl $40040, %r10d # imm = 0x9C68
@@ -2087,7 +2101,9 @@ define i32 @test_nested_unused(ptr nest %unused) #0 {
 ; X64-MinGW-NEXT:    movl $10, %edx
 ; X64-MinGW-NEXT:    callq dummy_use
 ; X64-MinGW-NEXT:    movl $123, %eax
+; X64-MinGW-NEXT:    .seh_startepilogue
 ; X64-MinGW-NEXT:    addq $72, %rsp
+; X64-MinGW-NEXT:    .seh_endepilogue
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB9_1:
 ; X64-MinGW-NEXT:    movl $72, %r10d
@@ -2106,7 +2122,7 @@ attributes #0 = { "split-stack" }
 ; X64-Linux-Large: .section ".note.GNU-split-stack","",@progbits
 ; X64-Linux-Large-NEXT: .section ".note.GNU-no-split-stack","",@progbits
 ; X64-Linux-Large-NEXT: .section	".note.GNU-stack","",@progbits
-; X64-Linux-Large-NEXT: .rodata
+; X64-Linux-Large-NEXT: .lrodata
 ; X64-Linux-Large-NEXT: __morestack_addr:
 ; X64-Linux-Large-NEXT: .quad	__morestack
 

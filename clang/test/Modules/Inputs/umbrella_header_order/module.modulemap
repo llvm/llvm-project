@@ -1,0 +1,3 @@
+module x {
+    umbrella "umbrella"
+}

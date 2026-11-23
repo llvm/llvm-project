@@ -139,7 +139,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     2.0    1.0    0.0       movb	%bpl, (%rcx)
 # CHECK-NEXT: 2.     1     3.0    1.0    0.0       movb	%sil, (%rdx)
 # CHECK-NEXT: 3.     1     4.0    1.0    0.0       movb	%dil, (%rbx)
-# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
+# CHECK-NEXT:        4     2.5    1.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -237,7 +237,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     2.0    1.0    0.0       movw	%bp, (%rcx)
 # CHECK-NEXT: 2.     1     3.0    1.0    0.0       movw	%si, (%rdx)
 # CHECK-NEXT: 3.     1     4.0    1.0    0.0       movw	%di, (%rbx)
-# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
+# CHECK-NEXT:        4     2.5    1.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -335,7 +335,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     2.0    1.0    0.0       movl	%ebp, (%rcx)
 # CHECK-NEXT: 2.     1     3.0    1.0    0.0       movl	%esi, (%rdx)
 # CHECK-NEXT: 3.     1     4.0    1.0    0.0       movl	%edi, (%rbx)
-# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
+# CHECK-NEXT:        4     2.5    1.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -433,7 +433,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     2.0    1.0    0.0       movq	%rbp, (%rcx)
 # CHECK-NEXT: 2.     1     3.0    1.0    0.0       movq	%rsi, (%rdx)
 # CHECK-NEXT: 3.     1     4.0    1.0    0.0       movq	%rdi, (%rbx)
-# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
+# CHECK-NEXT:        4     2.5    1.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
@@ -531,7 +531,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     2.0    1.0    0.0       movd	%mm1, (%rcx)
 # CHECK-NEXT: 2.     1     3.0    1.0    0.0       movd	%mm2, (%rdx)
 # CHECK-NEXT: 3.     1     4.0    1.0    0.0       movd	%mm3, (%rbx)
-# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
+# CHECK-NEXT:        4     2.5    1.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
@@ -629,4 +629,4 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     2.0    1.0    0.0       movaps	%xmm1, (%rcx)
 # CHECK-NEXT: 2.     1     3.0    1.0    0.0       movaps	%xmm2, (%rdx)
 # CHECK-NEXT: 3.     1     4.0    1.0    0.0       movaps	%xmm3, (%rbx)
-# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
+# CHECK-NEXT:        4     2.5    1.0    0.0       <total>

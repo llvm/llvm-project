@@ -40,6 +40,14 @@ static cl::opt<bool> Disable_gotol("disable-gotol", cl::Hidden, cl::init(false),
 static cl::opt<bool>
     Disable_StoreImm("disable-storeimm", cl::Hidden, cl::init(false),
                      cl::desc("Disable BPF_ST (immediate store) insn"));
+static cl::opt<bool> Disable_load_acq_store_rel(
+    "disable-load-acq-store-rel", cl::Hidden, cl::init(false),
+    cl::desc("Disable load-acquire and store-release insns"));
+static cl::opt<bool> Disable_gotox("disable-gotox", cl::Hidden, cl::init(false),
+                                   cl::desc("Disable gotox insn"));
+static cl::opt<bool>
+    Disable_hmul("disable-hmul", cl::Hidden, cl::init(false),
+                 cl::desc("Disable high-half multiply (UHMUL/SHMUL) insns"));
 
 void BPFSubtarget::anchor() {}
 
@@ -62,6 +70,11 @@ void BPFSubtarget::initializeEnvironment() {
   HasSdivSmod = false;
   HasGotol = false;
   HasStoreImm = false;
+  HasLoadAcqStoreRel = false;
+  HasGotox = false;
+  HasHmul = false;
+  AllowsMisalignedMemAccess = false;
+  HasFuncTable = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
@@ -81,7 +94,7 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasAlu32 = true;
     return;
   }
-  if (CPU == "v4") {
+  if (CPU == "v4" || CPU == "v5") {
     HasJmpExt = true;
     HasJmp32 = true;
     HasAlu32 = true;
@@ -91,6 +104,9 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasSdivSmod = !Disable_sdiv_smod;
     HasGotol = !Disable_gotol;
     HasStoreImm = !Disable_StoreImm;
+    HasLoadAcqStoreRel = !Disable_load_acq_store_rel;
+    HasGotox = !Disable_gotox;
+    HasHmul = CPU == "v5" && !Disable_hmul;
     return;
   }
 }
@@ -98,7 +114,7 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 BPFSubtarget::BPFSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const TargetMachine &TM)
     : BPFGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      FrameLowering(initializeSubtargetDependencies(CPU, FS)),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this) {
   IsLittleEndian = TT.isLittleEndian();
 

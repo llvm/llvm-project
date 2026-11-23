@@ -2,6 +2,16 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+; Test i64->f16.
+define half @f0(i64 %i) {
+; CHECK-LABEL: f0:
+; CHECK: cegbr %f0, %r2
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = sitofp i64 %i to half
+  ret half %conv
+}
+
 ; Test i64->f32.
 define float @f1(i64 %i) {
 ; CHECK-LABEL: f1:

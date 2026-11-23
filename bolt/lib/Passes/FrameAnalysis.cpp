@@ -41,7 +41,7 @@ static cl::opt<bool> TimeFA("time-fa", cl::desc("time frame analysis steps"),
 static cl::opt<bool>
     ExperimentalSW("experimental-shrink-wrapping",
                    cl::desc("process functions with stack pointer arithmetic"),
-                   cl::ReallyHidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+                   cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 bool shouldFrameOptimize(const llvm::bolt::BinaryFunction &Function) {
   if (Function.hasUnknownControlFlow())
@@ -198,7 +198,7 @@ public:
         if (CFIStack.empty())
           dbgs() << "Assertion is about to fail: " << BF.getPrintName() << "\n";
         assert(!CFIStack.empty() && "Corrupt CFI stack");
-        std::pair<int64_t, uint16_t> &Elem = CFIStack.top();
+        std::pair<int64_t, uint16_t> Elem = CFIStack.top();
         CFIStack.pop();
         CfaOffset = Elem.first;
         CfaReg = Elem.second;
@@ -320,7 +320,6 @@ bool FrameAnalysis::updateArgsTouchedFor(const BinaryFunction &BF, MCInst &Inst,
   if (!BC.MIB->isCall(Inst))
     return false;
 
-  std::set<int64_t> Res;
   const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
   // If indirect call, we conservatively assume it accesses all stack positions
   if (TargetSymbol == nullptr) {

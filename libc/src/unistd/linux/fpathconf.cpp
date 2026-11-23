@@ -7,19 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/fpathconf.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "hdr/types/struct_statfs.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/fstatfs.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/unistd/linux/pathconf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
-  if (cpp::optional<statfs_utils::LinuxStatFs> result =
-          statfs_utils::linux_fstatfs(fd))
-    return pathconfig(result.value(), name);
-  return -1;
+  struct statfs result;
+  auto error_or_ret = linux_syscalls::fstatfs(fd, &result);
+  if (!error_or_ret) {
+    libc_errno = error_or_ret.error();
+    return -1;
+  }
+  return pathconfig(result, name);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

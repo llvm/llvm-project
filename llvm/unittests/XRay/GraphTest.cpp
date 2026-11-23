@@ -23,8 +23,8 @@ struct EAttr {
   unsigned EA;
 };
 typedef Graph<VAttr, EAttr, unsigned> GraphT;
-typedef typename GraphT::VertexIdentifier VI;
-typedef typename GraphT::EdgeIdentifier EI;
+typedef GraphT::VertexIdentifier VI;
+typedef GraphT::EdgeIdentifier EI;
 
 // Test Fixture
 template <typename T> class GraphTest : public testing::Test {
@@ -56,8 +56,8 @@ private:
 
 typedef ::testing::Types<GraphT, const GraphT> GraphTestTypes;
 
-using VVT = typename GraphT::VertexValueType;
-using EVT = typename GraphT::EdgeValueType;
+using VVT = GraphT::VertexValueType;
+using EVT = GraphT::EdgeValueType;
 
 TYPED_TEST_SUITE(GraphTest, GraphTestTypes, );
 
@@ -72,9 +72,7 @@ template <typename T> void graphVertexTester(T &G) {
     ASSERT_TRUE(!!EVV);
     EXPECT_EQ(1u, G.count(u));
     EXPECT_EQ(VA[u], EVV->VA);
-    EXPECT_NE(G.vertices().end(),
-              std::find_if(G.vertices().begin(), G.vertices().end(),
-                           [&](const VVT &VV) { return VV.first == u; }));
+    EXPECT_TRUE(llvm::is_contained(llvm::make_first_range(G.vertices()), u));
     consumeError(EVV.takeError());
   }
 
@@ -85,8 +83,6 @@ template <typename T> void graphVertexTester(T &G) {
 }
 
 template <typename T> void graphEdgeTester(T &G) {
-  std::set<unsigned> V({1u, 2u, 3u, 4u, 5u, 6u});
-
   std::set<std::pair<unsigned, unsigned>> E(
       {{1u, 2u}, {2u, 3u}, {6u, 3u}, {4u, 6u}, {2u, 4u}, {2u, 5u}, {4u, 5u}});
   std::vector<unsigned> VA({0u, 3u, 5u, 7u, 11u, 13u, 17u});
@@ -99,9 +95,7 @@ template <typename T> void graphEdgeTester(T &G) {
     EXPECT_EQ(1u, G.count(u));
     EXPECT_EQ(VA[u.first] * VA[u.second] * ((u.first > u.second) ? 2 : 1),
               EEV->EA);
-    auto Pred = [&](const EVT &EV) { return EV.first == u; };
-    EXPECT_NE(G.edges().end(),
-              std::find_if(G.edges().begin(), G.edges().end(), Pred));
+    EXPECT_TRUE(llvm::is_contained(llvm::make_first_range(G.edges()), u));
     consumeError(EEV.takeError());
   }
 
@@ -116,31 +110,14 @@ template <typename T> void graphEdgeTester(T &G) {
     EXPECT_NE(OE.size(), 0u);
     EXPECT_NE(IE.begin(), IE.end());
     EXPECT_NE(OE.begin(), OE.end());
-    {
-      auto It = std::find_if(
-          G.inEdges(EV.first.second).begin(), G.inEdges(EV.first.second).end(),
-          [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_NE(G.inEdges(EV.first.second).end(), It);
-    }
-    {
-      auto It = std::find_if(
-          G.inEdges(EV.first.first).begin(), G.inEdges(EV.first.first).end(),
-          [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_EQ(G.inEdges(EV.first.first).end(), It);
-    }
-    {
-      auto It =
-          std::find_if(G.outEdges(EV.first.second).begin(),
-                       G.outEdges(EV.first.second).end(),
-                       [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_EQ(G.outEdges(EV.first.second).end(), It);
-    }
-    {
-      auto It = std::find_if(
-          G.outEdges(EV.first.first).begin(), G.outEdges(EV.first.first).end(),
-          [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_NE(G.outEdges(EV.first.first).end(), It);
-    }
+    EXPECT_TRUE(llvm::is_contained(
+        llvm::make_first_range(G.inEdges(EV.first.second)), EV.first));
+    EXPECT_FALSE(llvm::is_contained(
+        llvm::make_first_range(G.inEdges(EV.first.first)), EV.first));
+    EXPECT_FALSE(llvm::is_contained(
+        llvm::make_first_range(G.outEdges(EV.first.second)), EV.first));
+    EXPECT_TRUE(llvm::is_contained(
+        llvm::make_first_range(G.outEdges(EV.first.first)), EV.first));
   }
 }
 

@@ -12,7 +12,7 @@ from lldbsuite.test.lldbtest import *
 class TestSuspendedThreadHandling(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_suspended_threads(self):
         """Test that debugserver doesn't disturb the suspend count of a thread
         that has been suspended from within a program, when navigating breakpoints

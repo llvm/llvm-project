@@ -43,17 +43,10 @@ Macros:
 #  undef __alignof_is_defined
 #  define __alignof_is_defined 1
 
-#  if _LIBCPP_STD_VER >= 20
-
-using __standard_header_cstdalign _LIBCPP_DEPRECATED_("removed in C++20.") _LIBCPP_NODEBUG = void;
-using __use_standard_header_cstdalign _LIBCPP_NODEBUG = __standard_header_cstdalign;
-
-#  elif _LIBCPP_STD_VER >= 17
-
-using __standard_header_cstdalign _LIBCPP_DEPRECATED _LIBCPP_NODEBUG = void;
-using __use_standard_header_cstdalign _LIBCPP_NODEBUG                = __standard_header_cstdalign;
-
+#  if _LIBCPP_STD_VER >= 17 && !__building_module(std) && _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS
+#    warning <cstdalign> is deprecated in C++17 and removed in C++20.
 #  endif
+
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CSTDALIGN

@@ -12,20 +12,17 @@ from lldbsuite.test.lldbtest import *
 class TestScriptedResolver(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_scripted_resolver(self):
         """Use a scripted resolver to set a by symbol name breakpoint"""
         self.build()
         self.do_test()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_search_depths(self):
         """Make sure we are called at the right depths depending on what we return
         from __get_depth__"""
         self.build()
         self.do_test_depths()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_command_line(self):
         """Test setting a resolver breakpoint from the command line"""
         self.build()
@@ -235,11 +232,13 @@ class TestScriptedResolver(TestBase):
             substrs=["2"],
             msg="Was only passed modules",
         )
-
+        print(f"Made first breakpoint: {bkpt}")
+        bkpt = None
         # Make a breakpoint that asks for modules, check that we didn't get any files:
         bkpt = target.BreakpointCreateFromScript(
             "resolver.ResolverModuleDepth", extra_args, module_list, file_list
         )
+        print(f"Made Second breakpoint: {bkpt}")
         self.assertGreater(
             bkpt.GetNumLocations(), 0, "ResolverModuleDepth got no locations."
         )

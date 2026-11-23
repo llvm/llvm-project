@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-vulkan-runner-pipeline \
-// RUN:   | mlir-cpu-runner - \
+// RUN:   | mlir-runner - \
 // RUN:     --shared-libs=%mlir_vulkan_runtime,%mlir_runner_utils \
 // RUN:     --entry-point-result=void | FileCheck %s
 

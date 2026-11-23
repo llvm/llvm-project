@@ -12,7 +12,7 @@ program if_unparse
   ! CHECK: !$OMP TARGET UPDATE
   ! CHECK-SAME: IF(TARGET UPDATE: cond)
   !$omp target update if(target update: cond)
-  
+
   ! CHECK: !$OMP TARGET UPDATE
   ! CHECK-SAME: IF(TARGET UPDATE: cond)
   !$omp target update if(targetupdate: cond)

@@ -288,11 +288,11 @@ def get_availability_spec(enum_case, for_op, for_cap):
 
 
 def gen_operand_kind_enum_attr(operand_kind):
-    """Generates the TableGen EnumAttr definition for the given operand kind.
+    """Generates the TableGen EnumInfo definition for the given operand kind.
 
     Returns:
       - The operand kind's name
-      - A string containing the TableGen EnumAttr definition
+      - A string containing the TableGen EnumInfo definition
     """
     if "enumerants" not in operand_kind:
         return "", ""

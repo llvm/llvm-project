@@ -22,7 +22,6 @@
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <assert.h>
 #include <cerrno>
 #include <cstdio>
@@ -39,9 +38,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-#ifdef HAVE_DLFCN_H
-# include <dlfcn.h>
-#endif
+#include <dlfcn.h>
 
 # include <fcntl.h>
 

@@ -1,0 +1,25 @@
+add_header_library(
+  uefi_error
+  HDRS
+    error.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.include.llvm-libc-types.EFI_STATUS
+    libc.src.__support.CPP.array
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_object_library(
+  uefi_util
+  SRCS
+    io.cpp
+    exit.cpp
+  HDRS
+    io.h
+  DEPENDS
+    libc.config.app_h
+    libc.include.llvm-libc-types.EFI_SYSTEM_TABLE
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+)

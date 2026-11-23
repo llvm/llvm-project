@@ -4,6 +4,11 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-print %s -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -ast-print %s -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -ast-print %s -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
@@ -20,6 +25,9 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -ast-print %s -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP51
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=60 -std=c++11 -include-pch %t -verify %s -ast-print -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // expected-no-diagnostics
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -ast-print %s -Wno-openmp-mapping -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP52
@@ -46,23 +54,40 @@ public:
   S7(typename T::type v) : a(v) {
 #pragma omp target
 #pragma omp teams
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp distribute simd private(a) private(this->a) private(T::a) allocate(T::a)
+#else
+#pragma omp distribute simd private(a) private(this->a) private(T::a)
+#endif
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
   S7 &operator=(S7 &s) {
 #pragma omp target
 #pragma omp teams
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp distribute simd allocate(a) private(a) private(this->a)
+#else
+#pragma omp distribute simd private(a) private(this->a)
+#endif
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
   }
 };
 
-// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
-// CHECK: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
-// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
+// OMP45: #pragma omp distribute simd private(this->a) private(this->a) private(T::a){{$}}
+// OMP50: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
+// OMP51: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
+// OMP52: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
+// OMP45: #pragma omp distribute simd private(this->a) private(this->a)
+// OMP50: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
+// OMP51: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
+// OMP52: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
+// OMP45: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a)
+// OMP50: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
+// OMP51: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
+// OMP52: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
 
 class S8 : public S7<S> {
   S8() {}

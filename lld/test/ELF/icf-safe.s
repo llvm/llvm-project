@@ -1,49 +1,52 @@
 # REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %S/Inputs/shared.s -o %ta.o
+# RUN: ld.lld -shared -soname=ta %ta.o -o %ta.so
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: llvm-objcopy %t1.o %t1copy.o
 # RUN: llvm-objcopy --localize-symbol=h1 %t1.o %t1changed.o
 # RUN: ld.lld -r %t1.o -o %t1reloc.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/icf-safe.s -o %t2.o
-# RUN: ld.lld %t1.o %t2.o -o %t2 --icf=safe --print-icf-sections | FileCheck %s
+# RUN: ld.lld %t1.o %t2.o -o %t2 --icf=safe --print-icf-sections --export-dynamic | FileCheck %s
 # RUN: ld.lld %t1copy.o %t2.o -o %t2 --icf=safe --print-icf-sections | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -o %t3 --icf=safe --print-icf-sections -shared | FileCheck --check-prefix=EXPORT %s
-# RUN: ld.lld %t1.o %t2.o -o %t3 --icf=safe --print-icf-sections --export-dynamic | FileCheck --check-prefix=EXPORT %s
+## Exported symbols are suppressed for ICF when dynamic linking is enabled.
+# RUN: ld.lld %t1.o %t2.o %ta.so -o %t3 --icf=safe --print-icf-sections --export-dynamic | FileCheck --check-prefix=EXPORT %s
 # RUN: ld.lld %t1.o %t2.o -o %t2 --icf=all --print-icf-sections | FileCheck --check-prefix=ALL %s
-# RUN: ld.lld %t1.o %t2.o -o %t2 --icf=all --print-icf-sections --export-dynamic | FileCheck --check-prefix=ALL-EXPORT %s
+# RUN: ld.lld %t1.o %t2.o %ta.so -o %t2 --icf=all --print-icf-sections --export-dynamic | FileCheck --check-prefix=ALL-EXPORT %s
 # RUN: ld.lld %t1changed.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=SH_LINK_0 %s
 # RUN: ld.lld %t1reloc.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=SH_LINK_0 %s
 
 # CHECK-NOT:  {{.}}
-# CHECK:      selected section {{.*}}:(.rodata.h3)
-# CHECK-NEXT:   removing identical section {{.*}}:(.rodata.h4)
+# CHECK:      selected section {{.*}}:(.text)
+# CHECK-NEXT:   removing identical section {{.*}}:(.text)
 # CHECK-NEXT: selected section {{.*}}:(.text.f3)
 # CHECK-NEXT:   removing identical section {{.*}}:(.text.f4)
 # CHECK-NEXT: selected section {{.*}}:(.rodata.g3)
 # CHECK-NEXT:   removing identical section {{.*}}:(.rodata.g4)
 # CHECK-NEXT: selected section {{.*}}:(.rodata.l3)
 # CHECK-NEXT:   removing identical section {{.*}}:(.rodata.l4)
-# CHECK-NEXT: selected section {{.*}}:(.text)
-# CHECK-NEXT:   removing identical section {{.*}}:(.text)
+# CHECK-NEXT: selected section {{.*}}:(.rodata.h3)
+# CHECK-NEXT:   removing identical section {{.*}}:(.rodata.h4)
 # CHECK-NOT:  {{.}}
 
 # With --icf=all address-significance implies keep-unique only for rodata, not
 # text.
 # ALL-NOT:  {{.}}
-# ALL:      selected section {{.*}}:(.rodata.h3)
-# ALL-NEXT:   removing identical section {{.*}}:(.rodata.h4)
-# ALL-NEXT: selected section {{.*}}:(.text.f3)
-# ALL-NEXT:   removing identical section {{.*}}:(.text.f4)
+# ALL:      selected section {{.*}}:(.text)
+# ALL-NEXT:   removing identical section {{.*}}:(.text)
 # ALL-NEXT: selected section {{.*}}:(.text.f1)
 # ALL-NEXT:   removing identical section {{.*}}:(.text.f2)
 # ALL-NEXT:   removing identical section {{.*}}:(.text.non_addrsig1)
 # ALL-NEXT:   removing identical section {{.*}}:(.text.non_addrsig2)
+# ALL-NEXT: selected section {{.*}}:(.text.f3)
+# ALL-NEXT:   removing identical section {{.*}}:(.text.f4)
 # ALL-NEXT: selected section {{.*}}:(.rodata.g3)
 # ALL-NEXT:   removing identical section {{.*}}:(.rodata.g4)
 # ALL-NEXT: selected section {{.*}}:(.rodata.l3)
 # ALL-NEXT:   removing identical section {{.*}}:(.rodata.l4)
-# ALL-NEXT: selected section {{.*}}:(.text)
-# ALL-NEXT:   removing identical section {{.*}}:(.text)
+# ALL-NEXT: selected section {{.*}}:(.rodata.h3)
+# ALL-NEXT:   removing identical section {{.*}}:(.rodata.h4)
 # ALL-NOT:  {{.}}
 
 # llvm-mc normally emits an empty .text section into every object file. Since
@@ -54,27 +57,27 @@
 # STB_LOCAL or STV_HIDDEN symbols. The dynsym entries should have prevented
 # anything else from being merged.
 # EXPORT-NOT:  {{.}}
-# EXPORT:      selected section {{.*}}:(.rodata.h3)
-# EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.h4)
-# EXPORT-NEXT: selected section {{.*}}:(.rodata.l3)
+# EXPORT:      selected section {{.*}}:(.rodata.l3)
 # EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.l4)
+# EXPORT-NEXT: selected section {{.*}}:(.rodata.h3)
+# EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.h4)
 # EXPORT-NOT:  {{.}}
 
 # If --icf=all is specified when exporting we can also merge the exported text
 # sections, but not the exported rodata.
 # ALL-EXPORT-NOT:  {{.}}
-# ALL-EXPORT:      selected section {{.*}}:(.rodata.h3)
-# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.h4)
-# ALL-EXPORT-NEXT: selected section {{.*}}:(.text.f3)
-# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.f4)
+# ALL-EXPORT:      selected section {{.*}}:(.text)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text)
 # ALL-EXPORT-NEXT: selected section {{.*}}:(.text.f1)
 # ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.f2)
 # ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.non_addrsig1)
 # ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.non_addrsig2)
+# ALL-EXPORT-NEXT: selected section {{.*}}:(.text.f3)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.f4)
 # ALL-EXPORT-NEXT: selected section {{.*}}:(.rodata.l3)
 # ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.l4)
-# ALL-EXPORT-NEXT: selected section {{.*}}:(.text)
-# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text)
+# ALL-EXPORT-NEXT: selected section {{.*}}:(.rodata.h3)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.h4)
 # ALL-EXPORT-NOT:  {{.}}
 
 # SH_LINK_0: --icf=safe conservatively ignores SHT_LLVM_ADDRSIG [index [[#]]] with sh_link=0 (likely created using objcopy or ld -r)

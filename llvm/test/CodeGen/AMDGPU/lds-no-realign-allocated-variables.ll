@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
 
 ; Can't have a second variable without absolute_symbol showing it is realigned as
 ; there is a fatal error on mixing absolute and non-absolute symbols

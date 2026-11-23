@@ -3,9 +3,22 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare half @llvm.fabs.f16(half)
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare fp128 @llvm.fabs.f128(fp128)
+
+; Compare with 0 (unworthy)
+define i32 @f0(half %x) {
+; CHECK-LABEL: f0
+; CHECK-NOT: tceb
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: ltebr {{%f[0-9]+}}, %f0
+; CHECK-NOT: tceb
+  %res = fcmp ugt half %x, 0.0
+  %xres = zext i1 %res to i32
+  ret i32 %xres
+}
 
 ; Compare with 0 (unworthy)
 define i32 @f1(float %x) {
@@ -36,17 +49,28 @@ define i32 @f3(float %x) {
 ; CHECK-NOT: tceb
 ; CHECK: ceb %f0, 0(%r{{[0-9]+}})
 ; CHECK-NOT: tceb
-  %res = fcmp ult float %x, 0x7ff0000000000000
+  %res = fcmp ult float %x, +inf
+  %xres = zext i1 %res to i32
+  ret i32 %xres
+}
+
+; Compare fabs with inf
+define i32 @f4_half(half %x) {
+; CHECK-LABEL: f4_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: tceb %f0, 4047
+  %y = call half @llvm.fabs.f16(half %x)
+  %res = fcmp ult half %y, +inf
   %xres = zext i1 %res to i32
   ret i32 %xres
 }
 
 ; Compare fabs with inf
 define i32 @f4(float %x) {
-; CHECK-LABEL: f4
+; CHECK-LABEL: f4:
 ; CHECK: tceb %f0, 4047
   %y = call float @llvm.fabs.f32(float %x)
-  %res = fcmp ult float %y, 0x7ff0000000000000
+  %res = fcmp ult float %y, +inf
   %xres = zext i1 %res to i32
   ret i32 %xres
 }
@@ -123,7 +147,7 @@ define i32 @f11(double %x) {
 ; CHECK-LABEL: f11
 ; CHECK: tcdb %f0, 4032
   %y = call double @llvm.fabs.f64(double %x)
-  %res = fcmp one double %y, 0x7ff0000000000000
+  %res = fcmp one double %y, +inf
   %xres = zext i1 %res to i32
   ret i32 %xres
 }
@@ -133,7 +157,7 @@ define i32 @f12(double %x) {
 ; CHECK-LABEL: f12
 ; CHECK: tcdb %f0, 48
   %y = call double @llvm.fabs.f64(double %x)
-  %res = fcmp oeq double %y, 0x7ff0000000000000
+  %res = fcmp oeq double %y, +inf
   %xres = zext i1 %res to i32
   ret i32 %xres
 }

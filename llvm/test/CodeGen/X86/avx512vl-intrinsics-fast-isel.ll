@@ -3457,7 +3457,7 @@ entry:
 define <2 x i64> @test_mm_ternarylogic_epi32(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C) {
 ; CHECK-LABEL: test_mm_ternarylogic_epi32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & ~(xmm0 | xmm2)
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
@@ -3475,13 +3475,13 @@ define <2 x i64> @test_mm_mask_ternarylogic_epi32(<2 x i64> %__A, i8 zeroext %__
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    vpternlogd {{.*#+}} xmm0 {%k1} = xmm1 & ~(xmm0 | xmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_ternarylogic_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vpternlogd {{.*#+}} xmm0 {%k1} = xmm1 & ~(xmm0 | xmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
@@ -3500,13 +3500,13 @@ define <2 x i64> @test_mm_maskz_ternarylogic_epi32(i8 zeroext %__U, <2 x i64> %_
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X86-NEXT:    vpternlogd {{.*#+}} xmm0 {%k1} {z} = xmm1 & ~(xmm0 | xmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_ternarylogic_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    vpternlogd {{.*#+}} xmm0 {%k1} {z} = xmm1 & ~(xmm0 | xmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
@@ -3523,7 +3523,7 @@ entry:
 define <4 x i64> @test_mm256_ternarylogic_epi32(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C) {
 ; CHECK-LABEL: test_mm256_ternarylogic_epi32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 & ~(ymm0 | ymm2)
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <4 x i64> %__A to <8 x i32>
@@ -3541,13 +3541,13 @@ define <4 x i64> @test_mm256_mask_ternarylogic_epi32(<4 x i64> %__A, i8 zeroext 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X86-NEXT:    vpternlogd {{.*#+}} ymm0 {%k1} = ymm1 & ~(ymm0 | ymm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_ternarylogic_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X64-NEXT:    vpternlogd {{.*#+}} ymm0 {%k1} = ymm1 & ~(ymm0 | ymm2)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__A to <8 x i32>
@@ -3565,13 +3565,13 @@ define <4 x i64> @test_mm256_maskz_ternarylogic_epi32(i8 zeroext %__U, <4 x i64>
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X86-NEXT:    vpternlogd {{.*#+}} ymm0 {%k1} {z} = ymm1 & ~(ymm0 | ymm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_ternarylogic_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    vpternlogd {{.*#+}} ymm0 {%k1} {z} = ymm1 & ~(ymm0 | ymm2)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__A to <8 x i32>
@@ -3587,7 +3587,7 @@ entry:
 define <2 x i64> @test_mm_ternarylogic_epi64(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C) {
 ; CHECK-LABEL: test_mm_ternarylogic_epi64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 & ~(xmm0 | xmm2)
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C, i32 4)
@@ -3601,13 +3601,13 @@ define <2 x i64> @test_mm_mask_ternarylogic_epi64(<2 x i64> %__A, i8 zeroext %__
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    vpternlogq {{.*#+}} xmm0 {%k1} = xmm1 & ~(xmm0 | xmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_ternarylogic_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    vpternlogq {{.*#+}} xmm0 {%k1} = xmm1 & ~(xmm0 | xmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C, i32 4)
@@ -3622,13 +3622,13 @@ define <2 x i64> @test_mm_maskz_ternarylogic_epi64(i8 zeroext %__U, <2 x i64> %_
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X86-NEXT:    vpternlogq {{.*#+}} xmm0 {%k1} {z} = xmm1 & ~(xmm0 | xmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_ternarylogic_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    vpternlogq {{.*#+}} xmm0 {%k1} {z} = xmm1 & ~(xmm0 | xmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C, i32 4)
@@ -3641,7 +3641,7 @@ entry:
 define <4 x i64> @test_mm256_ternarylogic_epi64(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C) {
 ; CHECK-LABEL: test_mm256_ternarylogic_epi64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 & ~(ymm0 | ymm2)
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C, i32 4)
@@ -3655,13 +3655,13 @@ define <4 x i64> @test_mm256_mask_ternarylogic_epi64(<4 x i64> %__A, i8 zeroext 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X86-NEXT:    vpternlogq {{.*#+}} ymm0 {%k1} = ymm1 & ~(ymm0 | ymm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_ternarylogic_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X64-NEXT:    vpternlogq {{.*#+}} ymm0 {%k1} = ymm1 & ~(ymm0 | ymm2)
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C, i32 4)
@@ -3676,13 +3676,13 @@ define <4 x i64> @test_mm256_maskz_ternarylogic_epi64(i8 zeroext %__U, <4 x i64>
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X86-NEXT:    vpternlogq {{.*#+}} ymm0 {%k1} {z} = ymm1 & ~(ymm0 | ymm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_ternarylogic_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    vpternlogq {{.*#+}} ymm0 {%k1} {z} = ymm1 & ~(ymm0 | ymm2)
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C, i32 4)

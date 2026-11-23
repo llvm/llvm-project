@@ -7,6 +7,6 @@ x:
 // CHECK: [[@LINE+1]]:{{[0-9]+}}: error: symbol '__executable_start' can not be undefined in a subtraction expression
         .quad   x-__executable_start
 
-// CHECK: [[@LINE+1]]:{{[0-9]+}}: error: unsupported subtraction of qualified symbol
-        .long bar - foo@got
+// CHECK: [[@LINE+1]]:11: error: expected relocatable expression
+.long bar - foo@got
 foo:

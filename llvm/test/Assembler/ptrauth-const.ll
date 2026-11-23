@@ -14,6 +14,11 @@
 ; CHECK: @addrdisc = global ptr ptrauth (ptr @var, i32 2, i64 1234, ptr @addrdisc)
 @addrdisc = global ptr ptrauth (ptr @var, i32 2, i64 1234, ptr @addrdisc)
 
+; No operand refers to a global, so this constant is only destroyed with the
+; context, together with its constant expression operand.
+; CHECK: @inttoptr = global ptr ptrauth (ptr inttoptr (i64 4096 to ptr), i32 0)
+@inttoptr = global ptr ptrauth (ptr inttoptr (i64 4096 to ptr), i32 0)
+
 
 @var1 = addrspace(1) global i32 0
 

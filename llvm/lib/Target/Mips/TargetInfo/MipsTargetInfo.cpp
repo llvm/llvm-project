@@ -8,6 +8,7 @@
 
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 using namespace llvm;
 
 Target &llvm::getTheMipsTarget() {
@@ -26,8 +27,13 @@ Target &llvm::getTheMips64elTarget() {
   static Target TheMips64elTarget;
   return TheMips64elTarget;
 }
+Target &llvm::getTheNanoMipsTarget() {
+  static Target TheNanoMipsTarget;
+  return TheNanoMipsTarget;
+}
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMipsTargetInfo() {
   RegisterTarget<Triple::mips,
                  /*HasJIT=*/true>
       X(getTheMipsTarget(), "mips", "MIPS (32-bit big endian)", "Mips");
@@ -43,5 +49,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetInfo() {
   RegisterTarget<Triple::mips64el,
                  /*HasJIT=*/true>
       B(getTheMips64elTarget(), "mips64el", "MIPS (64-bit little endian)",
+        "Mips");
+  RegisterTarget<Triple::nanomips,
+                 /*HasJIT=*/false>
+      C(getTheNanoMipsTarget(), "nanomips", "nanoMIPS (32-bit little endian)",
         "Mips");
 }

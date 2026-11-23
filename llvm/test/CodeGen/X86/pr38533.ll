@@ -7,23 +7,20 @@
 define void @constant_fold_vector_to_half() {
 ; SSE2-LABEL: constant_fold_vector_to_half:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movw $16384, -{{[0-9]+}}(%rsp) # imm = 0x4000
-; SSE2-NEXT:    pinsrw $0, -{{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; AVX512-LABEL: constant_fold_vector_to_half:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movw $16384, -{{[0-9]+}}(%rsp) # imm = 0x4000
-; AVX512-NEXT:    vpinsrw $0, -{{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rax)
 ; AVX512-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: constant_fold_vector_to_half:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    movw $16384, -{{[0-9]+}}(%rsp) # imm = 0x4000
-; AVX512FP16-NEXT:    vmovsh -{{[0-9]+}}(%rsp), %xmm0
+; AVX512FP16-NEXT:    vmovsh {{.*#+}} xmm0 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512FP16-NEXT:    vmovsh %xmm0, (%rax)
 ; AVX512FP16-NEXT:    retq
   store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), ptr undef

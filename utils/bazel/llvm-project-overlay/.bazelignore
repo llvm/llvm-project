@@ -1,3 +1,5 @@
+# Prevent bazel from scanning git metadata
+.git
 # Ignore the utils/bazel directory when this is overlayed onto the repo root.
 utils/bazel
 # Ignore third-party projects. These should be configured separately and some

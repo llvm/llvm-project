@@ -1,6 +1,6 @@
 # Verify that a CFI instruction with no debug location
 # does not result in a line-0 location in the assembler.
-# RUN: %llc_dwarf -start-after=prologepilog -mtriple=x86_64 -use-unknown-locations=Enable %s -o - | FileCheck %s
+# RUN: %llc_dwarf -start-after=prolog-epilog -mtriple=x86_64 -use-unknown-locations=Enable %s -o - | FileCheck %s
 #
 # CHECK-NOT: .loc 1 0
 # CHECK:     .cfi_def_cfa_offset
@@ -47,7 +47,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx', 
                         '$rbp', '$rbx', '$r12', '$r13', '$r14', '$r15', 
                         '$r12b', '$r13b', '$r14b', '$r15b', '$r12d', '$r13d', 

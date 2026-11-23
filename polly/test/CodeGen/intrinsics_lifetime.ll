@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -passes=polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 ;
 ; Verify that we remove the lifetime markers from everywhere.
 ;
@@ -21,7 +21,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @A = common global [1024 x i32] zeroinitializer, align 16
 
 ; Function Attrs: nounwind uwtable
-define void @jd() #0 {
+define void @jd() {
 entry:
   %tmp = alloca [1024 x i32], align 16
   br label %for.cond
@@ -32,7 +32,7 @@ for.cond:                                         ; preds = %for.inc11, %entry
   br i1 %exitcond5, label %for.body, label %for.end13
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start(i64 4096, ptr %tmp) #1
+  call void @llvm.lifetime.start(i64 4096, ptr %tmp)
   br label %for.cond2
 
 for.cond2:                                        ; preds = %for.inc, %for.body
@@ -59,7 +59,7 @@ for.end:                                          ; preds = %for.cond2
   %tmp8 = load i32, ptr %arrayidx8, align 4
   %arrayidx10 = getelementptr inbounds [1024 x i32], ptr @A, i64 0, i64 %indvars.iv3
   store i32 %tmp8, ptr %arrayidx10, align 4
-  call void @llvm.lifetime.end(i64 4096, ptr %tmp) #1
+  call void @llvm.lifetime.end(i64 4096, ptr %tmp)
   br label %for.inc11
 
 for.inc11:                                        ; preds = %for.end
@@ -71,10 +71,7 @@ for.end13:                                        ; preds = %for.cond
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start(i64, ptr nocapture)
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, ptr nocapture) #1
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { nounwind }
+declare void @llvm.lifetime.end(i64, ptr nocapture)

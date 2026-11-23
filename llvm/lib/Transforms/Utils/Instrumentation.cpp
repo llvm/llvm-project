@@ -48,7 +48,7 @@ static BasicBlock::iterator moveBeforeInsertPoint(BasicBlock::iterator I,
     ++IP;
   } else {
     // Otherwise, move I before IP and return IP.
-    I->moveBefore(&*IP);
+    I->moveBefore(IP);
   }
   return IP;
 }
@@ -96,7 +96,10 @@ GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
 Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   if (auto Comdat = F.getComdat())
     return Comdat;
-  assert(F.hasName());
+  // Unnamed functions would share a single empty-name comdat, which has little
+  // linker garbage collection benefit.
+  if (!F.hasName())
+    return nullptr;
   Module *M = F.getParent();
 
   // Make a new comdat for the function. Use the "no duplicates" selection kind

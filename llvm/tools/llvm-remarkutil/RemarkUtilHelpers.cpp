@@ -53,5 +53,75 @@ getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat) {
                                                     ? sys::fs::OF_TextWithCRLF
                                                     : sys::fs::OF_None);
 }
+
+Format getSerializerFormat(StringRef OutputFileName, Format SelectedFormat,
+                           Format DefaultFormat) {
+  if (SelectedFormat != Format::Auto)
+    return SelectedFormat;
+  SelectedFormat = DefaultFormat;
+  if (OutputFileName.empty() || OutputFileName == "-" ||
+      OutputFileName.ends_with_insensitive(".yaml") ||
+      OutputFileName.ends_with_insensitive(".yml"))
+    SelectedFormat = Format::YAML;
+  if (OutputFileName.ends_with_insensitive(".bitstream"))
+    SelectedFormat = Format::Bitstream;
+  return SelectedFormat;
+}
+
+Expected<FilterMatcher>
+FilterMatcher::createRE(const llvm::cl::opt<std::string> &Arg) {
+  return createRE(Arg.ArgStr, Arg);
+}
+
+Expected<FilterMatcher>
+FilterMatcher::createRE(StringRef Filter, const cl::list<std::string> &Arg) {
+  return createRE(Arg.ArgStr, Filter);
+}
+
+Expected<FilterMatcher> FilterMatcher::createRE(StringRef Arg,
+                                                StringRef Value) {
+  FilterMatcher FM(Value, true);
+  std::string Error;
+  if (!FM.FilterRE.isValid(Error))
+    return createStringError(make_error_code(std::errc::invalid_argument),
+                             "invalid argument '--" + Arg + "=" + Value +
+                                 "': " + Error);
+  return std::move(FM);
+}
+
+Expected<std::optional<FilterMatcher>>
+FilterMatcher::createExactOrRE(const llvm::cl::opt<std::string> &ExactArg,
+                               const llvm::cl::opt<std::string> &REArg) {
+  if (!ExactArg.empty() && !REArg.empty())
+    return createStringError(make_error_code(std::errc::invalid_argument),
+                             "conflicting arguments: --" + ExactArg.ArgStr +
+                                 " and --" + REArg.ArgStr);
+
+  if (!ExactArg.empty())
+    return createExact(ExactArg);
+
+  if (!REArg.empty())
+    return createRE(REArg);
+
+  return std::nullopt;
+}
+
+bool Filters::filterRemark(const Remark &Remark) {
+  if (FunctionFilter && !FunctionFilter->match(Remark.FunctionName))
+    return false;
+  if (RemarkNameFilter && !RemarkNameFilter->match(Remark.RemarkName))
+    return false;
+  if (PassNameFilter && !PassNameFilter->match(Remark.PassName))
+    return false;
+  if (RemarkTypeFilter)
+    return *RemarkTypeFilter == Remark.RemarkType;
+  if (ArgFilter) {
+    if (!any_of(Remark.Args,
+                [this](Argument Arg) { return ArgFilter->match(Arg.Val); }))
+      return false;
+  }
+  return true;
+}
+
 } // namespace remarks
 } // namespace llvm

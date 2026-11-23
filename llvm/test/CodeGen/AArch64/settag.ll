@@ -151,7 +151,7 @@ define void @stg_alloca17() nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #288
 ; CHECK-NEXT:    mov x8, #256 // =0x100
-; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Spill
 ; CHECK-NEXT:  .LBB11_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st2g sp, [sp], #32
@@ -172,7 +172,7 @@ define void @stg_alloca18() uwtable {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #288
 ; CHECK-NEXT:    .cfi_def_cfa_offset 288
-; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    mov x8, #256 // =0x100
@@ -203,7 +203,7 @@ define void @test_slh() speculative_load_hardening {
 ; CHECK-NEXT:    cmp sp, #0
 ; CHECK-NEXT:    csetm x16, ne
 ; CHECK-NEXT:    sub sp, sp, #208
-; CHECK-NEXT:    str x30, [sp, #192] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #192] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 208
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov x1, sp
@@ -212,7 +212,7 @@ define void @test_slh() speculative_load_hardening {
 ; CHECK-NEXT:    mov sp, x1
 ; CHECK-NEXT:    bl b
 ; CHECK-NEXT:    cmp sp, #0
-; CHECK-NEXT:    ldr x30, [sp, #192] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #192] // 8-byte Reload
 ; CHECK-NEXT:    csetm x16, ne
 ; CHECK-NEXT:    and x30, x30, x16
 ; CHECK-NEXT:    add sp, sp, #208

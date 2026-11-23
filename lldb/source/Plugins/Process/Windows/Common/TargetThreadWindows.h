@@ -9,7 +9,6 @@
 #ifndef liblldb_Plugins_Process_Windows_TargetThreadWindows_H_
 #define liblldb_Plugins_Process_Windows_TargetThreadWindows_H_
 
-//#include "ForwardDecl.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/lldb-forward.h"
@@ -18,7 +17,6 @@
 
 namespace lldb_private {
 class ProcessWindows;
-class HostThread;
 class StackFrame;
 
 class TargetThreadWindows : public lldb_private::Thread {
@@ -35,6 +33,10 @@ public:
   CreateRegisterContextForFrame(StackFrame *frame) override;
   bool CalculateStopInfo() override;
   const char *GetName() override;
+
+  /// Exposes this thread's TEB address under the "teb_address" key, so that
+  /// language runtimes can resolve thread-local storage.
+  lldb_private::StructuredData::ObjectSP FetchThreadExtendedInfo() override;
 
   Status DoResume();
 

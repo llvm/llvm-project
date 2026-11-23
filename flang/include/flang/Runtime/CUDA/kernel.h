@@ -10,7 +10,6 @@
 #define FORTRAN_RUNTIME_CUDA_KERNEL_H_
 
 #include "flang/Runtime/entry-names.h"
-#include <cstddef>
 #include <stdint.h>
 
 extern "C" {
@@ -21,12 +20,18 @@ extern "C" {
 
 void RTDEF(CUFLaunchKernel)(const void *kernelName, intptr_t gridX,
     intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,
-    intptr_t blockZ, int32_t smem, void **params, void **extra);
+    intptr_t blockZ, int64_t *stream, int32_t smem, void **params,
+    void **extra);
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernelName, intptr_t clusterX,
     intptr_t clusterY, intptr_t clusterZ, intptr_t gridX, intptr_t gridY,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
-    int32_t smem, void **params, void **extra);
+    int64_t *stream, int32_t smem, void **params, void **extra);
+
+void RTDEF(CUFLaunchCooperativeKernel)(const void *kernelName, intptr_t gridX,
+    intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,
+    intptr_t blockZ, int64_t *stream, int32_t smem, void **params,
+    void **extra);
 
 } // extern "C"
 

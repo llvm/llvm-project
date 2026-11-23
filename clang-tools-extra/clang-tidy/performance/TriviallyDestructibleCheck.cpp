@@ -1,4 +1,4 @@
-//===--- TriviallyDestructibleCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,24 +20,23 @@ namespace clang::tidy::performance {
 
 namespace {
 
-AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
-
 AST_MATCHER_P(CXXRecordDecl, hasBase, Matcher<QualType>, InnerMatcher) {
-  for (const CXXBaseSpecifier &BaseSpec : Node.bases()) {
-    QualType BaseType = BaseSpec.getType();
-    if (InnerMatcher.matches(BaseType, Finder, Builder))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Node.bases(), [&](const CXXBaseSpecifier &BaseSpec) {
+    return InnerMatcher.matches(BaseSpec.getType(), Finder, Builder);
+  });
 }
 
 } // namespace
 
+// We use isOutOfLine() to find out-of-line defaulted destructor definitions.
+// This is more robust than !isFirstDecl() because with C++20 modules, when a
+// class is visible through both a header include and a module import, its
+// declarations may appear multiple times in the redeclaration chain.
 void TriviallyDestructibleCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxDestructorDecl(
-          isDefaulted(),
-          unless(anyOf(isFirstDecl(), isVirtual(),
+          isDefaulted(), isOutOfLine(),
+          unless(anyOf(isVirtual(),
                        ofClass(cxxRecordDecl(
                            anyOf(hasBase(unless(isTriviallyDestructible())),
                                  has(fieldDecl(unless(
@@ -50,7 +49,7 @@ void TriviallyDestructibleCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXDestructorDecl>("decl");
 
   // Get locations of both first and out-of-line declarations.
-  SourceManager &SM = *Result.SourceManager;
+  const SourceManager &SM = *Result.SourceManager;
   const auto *FirstDecl = cast<CXXMethodDecl>(MatchedDecl->getFirstDecl());
   const SourceLocation FirstDeclEnd = utils::lexer::findNextTerminator(
       FirstDecl->getEndLoc(), SM, getLangOpts());

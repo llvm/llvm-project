@@ -42,12 +42,12 @@
 ## $ clang -gdwarf-5 dwarf5-addrx.c -c -o dwarf5-addrx.o
 ## $ clang dwarf5-addrx.o -o dwarf5-addrx.out
 
-RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
 RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
 
 RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix DWARF
 
-RUN: dsymutil --update -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: dsymutil --linker classic --update -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
 RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
 
 RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix UPDATE-DWARF

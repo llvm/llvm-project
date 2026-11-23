@@ -17,6 +17,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCSection.h"
 
 using namespace llvm;
 
@@ -39,6 +40,20 @@ void LoongArchTargetELFStreamer::emitDirectiveOptionPush() {}
 void LoongArchTargetELFStreamer::emitDirectiveOptionPop() {}
 void LoongArchTargetELFStreamer::emitDirectiveOptionRelax() {}
 void LoongArchTargetELFStreamer::emitDirectiveOptionNoRelax() {}
+
+void LoongArchTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, LoongArch::fixup_loongarch_dtprel32);
+  S.appendContents(4, 0);
+}
+
+void LoongArchTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  S.addFixup(Value, LoongArch::fixup_loongarch_dtprel64);
+  S.appendContents(8, 0);
+}
 
 void LoongArchTargetELFStreamer::finish() {
   LoongArchTargetStreamer::finish();
@@ -74,15 +89,17 @@ void LoongArchTargetELFStreamer::finish() {
   W.setELFHeaderEFlags(EFlags);
 }
 
-namespace {
-class LoongArchELFStreamer : public MCELFStreamer {
-public:
-  LoongArchELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
-                       std::unique_ptr<MCObjectWriter> MOW,
-                       std::unique_ptr<MCCodeEmitter> MCE)
-      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
-};
-} // end namespace
+void LoongArchELFStreamer::emitCodeAlignment(Align Alignment,
+                                             const MCSubtargetInfo &STI,
+                                             unsigned MaxBytesToEmit) {
+  // Save the Align fragment.
+  auto *AlignFrag = getCurrentFragment();
+  MCELFStreamer::emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
+
+  // Pre-mark the Align fragment as linker-relaxable.
+  if (LoongArchAsmBackend::shouldRelaxAlign(*AlignFrag))
+    AlignFrag->setLinkerRelaxable();
+}
 
 namespace llvm {
 MCELFStreamer *createLoongArchELFStreamer(MCContext &C,

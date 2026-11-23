@@ -14,11 +14,18 @@
 ; CHECK: %[[#CastedGV:]] = OpBitcast %[[#CharPtr]] %[[#GV]]
 ; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#CastedGV]] %[[#ArgConst:]]
 ; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#CastedGV]] %[[#ArgConst]]
-; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#Arg1]] %[[#ArgConst:]]
+; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#Arg1]] %[[#ArgConst]]
 ; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#Arg1]] %[[#ArgConst]]
 ; CHECK-NEXT: %[[#CastedArg2:]] = OpBitcast %[[#CharPtr]] %[[#Arg2]]
 ; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#CastedArg2]] %[[#ArgConst]]
 ; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#CastedArg2]] %[[#ArgConst]]
+; CHECK: OpFunctionEnd
+
+; Unmangled printf, as emitted by Clang for OpenCL C.
+; CHECK: OpFunction
+; CHECK: %[[#CastedGV2:]] = OpBitcast %[[#CharPtr]] %[[#GV]]
+; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#CastedGV2]] %[[#ArgConst]]
+; CHECK-NEXT: OpExtInst %[[#]] %[[#ExtImport]] printf %[[#CastedGV2]] %[[#ArgConst]]
 ; CHECK: OpFunctionEnd
 
 %struct = type { [6 x i8] }
@@ -36,5 +43,14 @@ entry:
   ret void
 }
 
+define spir_kernel void @bar() {
+entry:
+  %r1 = tail call spir_func i32 (ptr addrspace(2), ...) @printf(ptr addrspace(2) @FmtStr, i8 signext 97)
+  %r2 = tail call spir_func i32 (ptr addrspace(2), ...) @__spirv_ocl_printf(ptr addrspace(2) @FmtStr, i8 signext 97)
+  ret void
+}
+
 declare dso_local spir_func i32 @_Z6printfPU3AS2Kcz(ptr addrspace(2), ...)
 declare dso_local spir_func i32 @_Z18__spirv_ocl_printfPU3AS2Kcz(ptr addrspace(2), ...)
+declare dso_local spir_func i32 @printf(ptr addrspace(2), ...)
+declare dso_local spir_func i32 @__spirv_ocl_printf(ptr addrspace(2), ...)

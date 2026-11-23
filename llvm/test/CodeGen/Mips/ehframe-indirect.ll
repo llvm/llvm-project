@@ -51,7 +51,7 @@ declare void @foo()
 ; O32: [[PC_LABEL:\$tmp[0-9]+]]:
 ; N32: [[PC_LABEL:\.Ltmp[0-9]+]]:
 ; N64: [[PC_LABEL:\.Ltmp[0-9]+]]:
-; O32: .4byte	($_ZTISt9exception.DW.stub)-([[PC_LABEL]])
+; O32: .4byte	$_ZTISt9exception.DW.stub-[[PC_LABEL]]
 ; N32: .4byte	.L_ZTISt9exception.DW.stub-[[PC_LABEL]]
 ; N64: .4byte	.L_ZTISt9exception.DW.stub-[[PC_LABEL]]
 ; O32: $_ZTISt9exception.DW.stub:

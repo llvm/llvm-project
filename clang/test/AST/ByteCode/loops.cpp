@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify %s
-// RUN: %clang_cc1 -std=c++14 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify                %s
+// RUN: %clang_cc1                                         -std=c++14 -verify=ref            %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected-cpp20 %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref %s
+// RUN: %clang_cc1                                         -std=c++20 -verify=ref            %s
 
 namespace WhileLoop {
   constexpr int f() {
@@ -351,4 +351,14 @@ namespace Scopes {
     return n;
   }
   static_assert(foo() == 14, "");
+
+  constexpr bool WhileConditionDecl() {
+    bool b = true;
+    for (int i = 0; i < 3; ++i) {
+      while (int x = 0) {
+      }
+    }
+    return true;
+  }
+  static_assert(WhileConditionDecl(), "");
 }

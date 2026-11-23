@@ -44,6 +44,9 @@ define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
 ; SSE-NEXT:    pand %xmm4, %xmm2
 ; SSE-NEXT:    pand %xmm4, %xmm3
 ; SSE-NEXT:    pavgw %xmm2, %xmm3
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    packuswb %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -86,14 +89,14 @@ define <8 x i16> @combine_pavgw_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgw %xmm1, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pavgw_demandedelts:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pavgw_demandedelts:

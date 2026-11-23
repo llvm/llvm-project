@@ -121,8 +121,8 @@ namespace PartialSpecialization {
 
 namespace FixedAliasTemplate {
   template<typename,typename,typename> struct S {};
-  template<typename T, typename U> using U = S<T, int, U>; // expected-note 2{{template parameter is declared here}}
-  template<typename...Ts> U<Ts...> &f(U<Ts...>, Ts...); // expected-error 2{{pack expansion used as argument for non-pack parameter of alias template}}
+  template<typename T, typename U> using Z = S<T, int, U>; // expected-note 2{{template parameter is declared here}}
+  template<typename...Ts> Z<Ts...> &f(Z<Ts...>, Ts...); // expected-error 2{{pack expansion used as argument for non-pack parameter of alias template}}
   S<int, int, double> &s1 = f({}, 0, 0.0); // expected-error {{no matching function}}
 }
 

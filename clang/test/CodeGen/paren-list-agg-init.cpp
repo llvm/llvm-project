@@ -377,7 +377,7 @@ void foo18() {
 // CHECK-NEXT: [[A:%.*a.*]] = getelementptr inbounds nuw [[STRUCT_G]], ptr [[G]], i32 0, i32 0
 // CHECK-NEXT: store i32 2, ptr [[A]], align 4
 // CHECK-NEXT: [[F:%.*]] = getelementptr inbounds i8, ptr [[G]], i64 4
-// CHECk-NEXT: call void @{{.*F.*}}(ptr noundef nonnull align 1 dereferenceable(1)) [[F]], ie32 noundef 1)
+// CHECK-NEXT: call void @{{.*F.*}}(ptr noundef nonnull align 1 dereferenceable(1) [[F]], i32 noundef 1)
 // CHECK: ret void
 void foo19() {
   G g(2);
@@ -394,7 +394,7 @@ namespace gh61145 {
   // a.k.a. Vec::Vec(Vec&&)
   // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // a.k.a. S1::~S1()
-  // CHECK-NEXT: call void @_ZN7gh611452S1D1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]])
+  // CHECK-NEXT: call void @_ZN7gh611452S1D1Ev(ptr noundef nonnull align 1 dead_on_return(1) dereferenceable(1) [[AGG_TMP_ENSURED]])
   // a.k.a.Vec::~Vec()
   // CHECK-NEXT: call void @_ZN7gh611453VecD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // CHECK-NEXT: ret void
@@ -416,7 +416,7 @@ namespace gh61145 {
   // CHECK-NEXT: [[C:%.*c.*]] = getelementptr inbounds nuw [[STRUCT_S2]], ptr [[AGG_TMP_ENSURED]], i32 0, i32
   // CHECK-NEXT: store i8 0, ptr [[C]], align 1
   // a.k.a. S2::~S2()
-  // CHECK-NEXT: call void @_ZN7gh611452S2D1Ev(ptr noundef nonnull align 1 dereferenceable(2) [[AGG_TMP_ENSURED]])
+  // CHECK-NEXT: call void @_ZN7gh611452S2D1Ev(ptr noundef nonnull align 1 dead_on_return(2) dereferenceable(2) [[AGG_TMP_ENSURED]])
   // a.k.a. Vec::~Vec()
   // CHECK-NEXT: call void @_ZN7gh611453VecD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // CHECK-NEXT: ret void

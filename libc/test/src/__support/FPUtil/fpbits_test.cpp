@@ -292,10 +292,14 @@ constexpr FP all_fp_values[] = {
 
 constexpr Sign all_signs[] = {Sign::POS, Sign::NEG};
 
-using FPTypes = LIBC_NAMESPACE::testing::TypeList<
+using FPTypes = LIBC_NAMESPACE::testing::Types<
     FPRep<FPType::IEEE754_Binary16>, FPRep<FPType::IEEE754_Binary32>,
     FPRep<FPType::IEEE754_Binary64>, FPRep<FPType::IEEE754_Binary128>,
     FPRep<FPType::X86_Binary80>>;
+
+template <typename T>
+class LlvmLibcTypedFPBitsTest : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedFPBitsTest, FPTypes);
 
 template <typename T> constexpr auto make(Sign sign, FP fp) {
   switch (fp) {
@@ -322,7 +326,8 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
 }
 
 // Tests all properties for all types of float.
-TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
+TYPED_TEST(LlvmLibcTypedFPBitsTest, Properties) {
+  using T = TypeParam;
   for (Sign sign : all_signs) {
     for (FP fp : all_fp_values) {
       const T value = make<T>(sign, fp);
@@ -362,7 +367,8 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
 
 #define ASSERT_SAME_REP(A, B) ASSERT_EQ(A.uintval(), B.uintval());
 
-TYPED_TEST(LlvmLibcFPBitsTest, NextTowardInf, FPTypes) {
+TYPED_TEST(LlvmLibcTypedFPBitsTest, NextTowardInf) {
+  using T = TypeParam;
   struct {
     FP before, after;
   } TEST_CASES[] = {
@@ -709,18 +715,18 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
 }
 #endif
 
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 TEST(LlvmLibcFPBitsTest, Float128Type) {
-  using Float128Bits = FPBits<float128>;
+  using DFloat128Bits = FPBits<float128>;
 
-  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::inf(Sign::POS)).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(DFloat128Bits::inf(Sign::POS)).c_str(),
                "(+Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::inf(Sign::NEG)).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(DFloat128Bits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::signaling_nan()).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(DFloat128Bits::signaling_nan()).c_str(),
                "(NaN)");
 
-  Float128Bits zero = Float128Bits::zero(Sign::POS);
+  DFloat128Bits zero = DFloat128Bits::zero(Sign::POS);
   EXPECT_TRUE(zero.is_pos());
   EXPECT_EQ(zero.get_biased_exponent(), 0_u16);
   EXPECT_EQ(zero.get_mantissa(), 0_u128);
@@ -729,7 +735,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0x00000000000000000000000000000000 = "
                "(S: 0, E: 0x0000, M: 0x00000000000000000000000000000000)");
 
-  Float128Bits negzero = Float128Bits::zero(Sign::NEG);
+  DFloat128Bits negzero = DFloat128Bits::zero(Sign::NEG);
   EXPECT_TRUE(negzero.is_neg());
   EXPECT_EQ(negzero.get_biased_exponent(), 0_u16);
   EXPECT_EQ(negzero.get_mantissa(), 0_u128);
@@ -738,7 +744,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0x80000000000000000000000000000000 = "
                "(S: 1, E: 0x0000, M: 0x00000000000000000000000000000000)");
 
-  Float128Bits one(float128(1.0));
+  DFloat128Bits one(float128(1.0));
   EXPECT_TRUE(one.is_pos());
   EXPECT_EQ(one.get_biased_exponent(), 0x3FFF_u16);
   EXPECT_EQ(one.get_mantissa(), 0_u128);
@@ -747,7 +753,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0x3FFF0000000000000000000000000000 = "
                "(S: 0, E: 0x3FFF, M: 0x00000000000000000000000000000000)");
 
-  Float128Bits negone(float128(-1.0));
+  DFloat128Bits negone(float128(-1.0));
   EXPECT_TRUE(negone.is_neg());
   EXPECT_EQ(negone.get_biased_exponent(), 0x3FFF_u16);
   EXPECT_EQ(negone.get_mantissa(), 0_u128);
@@ -756,7 +762,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0xBFFF0000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00000000000000000000000000000000)");
 
-  Float128Bits num(float128(1.125));
+  DFloat128Bits num(float128(1.125));
   EXPECT_TRUE(num.is_pos());
   EXPECT_EQ(num.get_biased_exponent(), 0x3FFF_u16);
   EXPECT_EQ(num.get_mantissa(), 0x2000'00000000'00000000'00000000_u128);
@@ -765,7 +771,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0x3FFF2000000000000000000000000000 = "
                "(S: 0, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  Float128Bits negnum(float128(-1.125));
+  DFloat128Bits negnum(float128(-1.125));
   EXPECT_TRUE(negnum.is_neg());
   EXPECT_EQ(negnum.get_biased_exponent(), 0x3FFF_u16);
   EXPECT_EQ(negnum.get_mantissa(), 0x2000'00000000'00000000'00000000_u128);
@@ -774,7 +780,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  Float128Bits quiet_nan = Float128Bits::quiet_nan();
+  DFloat128Bits quiet_nan = DFloat128Bits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128

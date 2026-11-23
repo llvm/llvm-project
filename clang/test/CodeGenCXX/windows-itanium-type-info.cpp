@@ -29,7 +29,7 @@ void f() {
 
 // CHECK-DAG: @_ZTI7derived = dso_local dllexport constant
 // CHECK-DAG: @_ZTS7derived = dso_local dllexport constant
-// CHECK-DAG: @_ZTV7derived = dso_local dllexport unnamed_addr constant
+// CHECK-DAG: @_ZTV7derived = dso_local dllexport constant
 
 // CHECK-DAG: @_ZTI4base = external dllimport constant
 

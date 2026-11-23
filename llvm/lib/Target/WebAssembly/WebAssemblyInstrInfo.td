@@ -18,6 +18,11 @@
 def IsPIC     : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC  : Predicate<"!TM.isPositionIndependent()">;
 
+def HasAcquireReleaseAtomics :
+    Predicate<"Subtarget->hasAcquireReleaseAtomics()">,
+    AssemblerPredicate<(all_of FeatureAcquireReleaseAtomics),
+                       "acquire-release-atomics">;
+
 def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
 
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
@@ -50,6 +55,9 @@ def HasFP16 :
     Predicate<"Subtarget->hasFP16()">,
     AssemblerPredicate<(all_of FeatureFP16), "fp16">;
 
+def HasGC : Predicate<"Subtarget->hasGC()">,
+            AssemblerPredicate<(all_of FeatureGC), "gc">;
+
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
     AssemblerPredicate<(all_of FeatureMultiMemory), "multimemory">;
@@ -69,7 +77,7 @@ def HasNontrappingFPToInt :
 
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)),
+    AssemblerPredicate<(none_of FeatureNontrappingFPToInt),
                        "nontrapping-fptoint">;
 
 def HasReferenceTypes :
@@ -227,6 +235,12 @@ def tag_op : Operand<i32>;
 
 } // OperandType = "OPERAND_P2ALIGN"
 
+let OperandType = "OPERAND_MEMORDER" in {
+def MemOrder : Operand<i32> {
+  let PrintMethod = "printWebAssemblyMemOrderOperand";
+}
+} // OperandType = "OPERAND_MEMORDER"
+
 let OperandType = "OPERAND_SIGNATURE" in
 def Signature : Operand<i32> {
   let PrintMethod = "printWebAssemblySignatureOperand";
@@ -239,7 +253,12 @@ def TypeIndex : Operand<i32>;
 
 // TODO: Find more places to use this.
 def bool_node : PatLeaf<(i32 I32:$cond), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMinLeadingZeros() == 31;
+  return CurDAG->computeKnownBits(Op).countMinLeadingZeros() == 31;
+}]>;
+
+/// Floating point constants
+def fpimm0    : PatLeaf<(fpimm), [{
+  return N->isPosZero();
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -457,8 +476,8 @@ def : Pat<(i64 (WebAssemblyWrapperREL texternalsym:$addr)),
 include "WebAssemblyInstrMemory.td"
 include "WebAssemblyInstrCall.td"
 include "WebAssemblyInstrControl.td"
-include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrConv.td"
+include "WebAssemblyInstrInteger.td"
 include "WebAssemblyInstrFloat.td"
 include "WebAssemblyInstrAtomics.td"
 include "WebAssemblyInstrSIMD.td"

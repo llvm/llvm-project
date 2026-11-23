@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -132,7 +132,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 
 ///
 /// \\pre The code point is a valid Unicode code point.
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __needs_escape(const char32_t __code_point) noexcept {{
+[[nodiscard]] constexpr bool __needs_escape(const char32_t __code_point) noexcept {{
 
   // The entries in the gap at the end.
   if(__code_point >= 0x{gap_lower:08x} && __code_point <= 0x{gap_upper:08x})
@@ -142,7 +142,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
   if (__code_point >= 0x{unallocated:08x})
     return true;
 
-  ptrdiff_t __i = std::ranges::upper_bound(__entries, (__code_point << 14) | 0x3fffu) - __entries;
+  ptrdiff_t __i = std::upper_bound(std::begin(__entries), std::end(__entries), (__code_point << 14) | 0x3fffu) - __entries;
   if (__i == 0)
     return false;
 
@@ -216,18 +216,19 @@ TABLES_HPP_TEMPLATE = """
 #ifndef _LIBCPP___FORMAT_ESCAPED_OUTPUT_TABLE_H
 #define _LIBCPP___FORMAT_ESCAPED_OUTPUT_TABLE_H
 
-#include <__algorithm/ranges_upper_bound.h>
+#include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__iterator/access.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __escaped_output_table {{
 // clang-format off
@@ -235,9 +236,9 @@ namespace __escaped_output_table {{
 // clang-format on
 }} // namespace __escaped_output_table
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_ESCAPED_OUTPUT_TABLE_H"""
 

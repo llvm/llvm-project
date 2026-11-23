@@ -83,12 +83,11 @@ static void WINAPI asan_thread_init(void *mod, unsigned long reason,
 // Our cloned variables must be initialized before C/C++ constructors.  If TLS
 // is used, our .CRT$XLAB initializer will run first. If not, our .CRT$XIB
 // initializer is needed as a backup.
-extern "C" __declspec(allocate(".CRT$XIB")) int (*__asan_thunk_init)() =
-    asan_thunk_init;
+extern "C" IN_SECTION(".CRT$XIB") int (*__asan_thunk_init)() = asan_thunk_init;
 WIN_FORCE_LINK(__asan_thunk_init)
 
-extern "C" __declspec(allocate(".CRT$XLAB")) void(WINAPI *__asan_tls_init)(
-    void *, unsigned long, void *) = asan_thread_init;
+extern "C" IN_SECTION(".CRT$XLAB") void(WINAPI* __asan_tls_init)(
+    void*, unsigned long, void*) = asan_thread_init;
 WIN_FORCE_LINK(__asan_tls_init)
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,7 +100,7 @@ static int SetSEHFilter() { return __asan_set_seh_filter(); }
 
 // Unfortunately, putting a pointer to __asan_set_seh_filter into
 // __asan_intercept_seh gets optimized out, so we have to use an extra function.
-extern "C" __declspec(allocate(".CRT$XCAB")) int (*__asan_seh_interceptor)() =
+extern "C" IN_SECTION(".CRT$XCAB") int (*__asan_seh_interceptor)() =
     SetSEHFilter;
 WIN_FORCE_LINK(__asan_seh_interceptor)
 }

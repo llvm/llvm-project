@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-dump %s | FileCheck %s -implicit-check-not=openmp_structured_block
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-dump %s | FileCheck %s -implicit-check-not=openmp_structured_block
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -ast-dump %s | FileCheck %s --check-prefix=OMP60
 // expected-no-diagnostics
 
 int ga, gb;
@@ -72,7 +73,13 @@ void foo();
 // CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:[[@LINE-4]]:1, col:34> Implicit BS_Inbranch
 // CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:[[@LINE-6]]:1, col:25> Implicit BS_Undefined
 
+// Beginning in OpenMP 5.2, this form began generating a warning that it
+// is deprecated and to use the 'begin declare target' form instead.
+#if _OPENMP <= 202011
 #pragma omp declare target
+#else
+#pragma omp begin declare target
+#endif // _OPENMP
 int bar() {
   int f;
   return f;
@@ -86,4 +93,22 @@ int bar() {
 // CHECK-NEXT:  | `-ReturnStmt {{.+}} <line:[[@LINE-8]]:3, col:10>
 // CHECK-NEXT:  |   `-ImplicitCastExpr {{.+}} <col:10> 'int' <LValueToRValue>
 // CHECK-NEXT:  |     `-DeclRefExpr {{.+}} <col:10> 'int' lvalue Var {{.+}} 'f' 'int'
-// CHECK-NEXT:  `-OMPDeclareTargetDeclAttr {{.+}} <line:75:21> Implicit MT_To DT_Any 1
+// CHECK-NEXT:  `-OMPDeclareTargetDeclAttr {{.+}} Implicit MT_To DT_Any 1
+
+#if _OPENMP >= 202411
+int v_enter;
+#pragma omp declare target enter(v_enter) device_type(nohost)
+int v_link;
+#pragma omp declare target link(v_link) device_type(host)
+int v_local;
+#pragma omp declare target local(v_local)
+#endif
+
+// OMP60:      FunctionDecl {{.+}} bar 'int ()'
+// OMP60:      `-OMPDeclareTargetDeclAttr {{.+}} Implicit MT_Enter DT_Any 1
+// OMP60:      VarDecl {{.+}} v_enter 'int'
+// OMP60-NEXT: `-OMPDeclareTargetDeclAttr {{.+}} Implicit MT_Enter DT_NoHost 4294967295
+// OMP60:      VarDecl {{.+}} v_link 'int'
+// OMP60-NEXT: `-OMPDeclareTargetDeclAttr {{.+}} Implicit MT_Link DT_Host 4294967295
+// OMP60:      VarDecl {{.+}} v_local 'int'
+// OMP60-NEXT: `-OMPDeclareTargetDeclAttr {{.+}} Implicit MT_Local DT_Any 4294967295

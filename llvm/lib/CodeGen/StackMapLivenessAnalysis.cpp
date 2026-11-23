@@ -62,8 +62,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   /// Calculate the liveness information for the given machine function.
@@ -88,9 +87,7 @@ INITIALIZE_PASS(StackMapLiveness, "stackmap-liveness",
                 "StackMap Liveness Analysis", false, false)
 
 /// Default construct and initialize the pass.
-StackMapLiveness::StackMapLiveness() : MachineFunctionPass(ID) {
-  initializeStackMapLivenessPass(*PassRegistry::getPassRegistry());
-}
+StackMapLiveness::StackMapLiveness() : MachineFunctionPass(ID) {}
 
 /// Tell the pass manager which passes we depend on and what information we
 /// preserve.

@@ -24,6 +24,7 @@ include "mlir/Dialect/EmitC/IR/EmitCBase.td"
 
 class EmitC_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<EmitC_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/EmitC/IR/EmitC.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -37,6 +38,16 @@ def EmitC_CmpPredicateAttr : I64EnumAttr<
       I64EnumAttrCase<"gt", 4>,
       I64EnumAttrCase<"ge", 5>,
       I64EnumAttrCase<"three_way", 6>,
+    ]> {
+  let cppNamespace = "::mlir::emitc";
+}
+
+def EmitC_ClassTypeAttr : I32EnumAttr<
+    "ClassType", "C++ aggregate type keyword",
+    [
+      I32EnumAttrCase<"class_",  0, "class">,
+      I32EnumAttrCase<"struct_", 1, "struct">,
+      I32EnumAttrCase<"union_",  2, "union">,
     ]> {
   let cppNamespace = "::mlir::emitc";
 }

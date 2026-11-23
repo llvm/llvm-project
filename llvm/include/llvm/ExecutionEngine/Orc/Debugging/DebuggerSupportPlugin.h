@@ -14,8 +14,8 @@
 #define LLVM_EXECUTIONENGINE_ORC_DEBUGGERSUPPORTPLUGIN_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
@@ -23,9 +23,10 @@ namespace orc {
 /// For each object containing debug info, installs JITLink passes to synthesize
 /// a debug object and then register it via the GDB JIT-registration interface.
 ///
-/// Currently MachO only. For ELF use DebugObjectManagerPlugin. These two
+/// Currently MachO only. For ELF use ELFDebugObjectPlugin. These two
 /// plugins will be merged in the near future.
-class GDBJITDebugInfoRegistrationPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_ABI GDBJITDebugInfoRegistrationPlugin
+    : public ObjectLinkingLayer::Plugin {
 public:
   class DebugSectionSynthesizer {
   public:
@@ -35,7 +36,7 @@ public:
   };
 
   static Expected<std::unique_ptr<GDBJITDebugInfoRegistrationPlugin>>
-  Create(ExecutionSession &ES, JITDylib &ProcessJD, const Triple &TT);
+  Create(ExecutionSession &ES, JITDylib &BootstrapJD);
 
   GDBJITDebugInfoRegistrationPlugin(ExecutorAddr RegisterActionAddr)
       : RegisterActionAddr(RegisterActionAddr) {}

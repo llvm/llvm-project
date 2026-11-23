@@ -5,13 +5,13 @@ clang_tablegen("AttrTemplateInstantiate") {
   td_file = "../Basic/Attr.td"
 }
 
-clang_tablegen("AttrParsedAttrList") {
-  args = [ "-gen-clang-attr-parsed-attr-list" ]
+clang_tablegen("AttrParsedAttrKinds") {
+  args = [ "-gen-clang-attr-parsed-attr-kinds" ]
   td_file = "../Basic/Attr.td"
 }
 
-clang_tablegen("AttrParsedAttrKinds") {
-  args = [ "-gen-clang-attr-parsed-attr-kinds" ]
+clang_tablegen("AttrIsTypeDependent") {
+  args = [ "-gen-clang-attr-is-type-dependent" ]
   td_file = "../Basic/Attr.td"
 }
 

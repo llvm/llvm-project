@@ -1,0 +1,35 @@
+R"(
+
+__TYPE_DEFINES__
+
+__NAMESPACE_OPEN__
+
+__TYPE_PARSER__
+
+__TYPE_PRINTER__
+
+/// Parse a type registered to this dialect.
+::mlir::Type __DIALECT_CPP_NAME__::parseType(::mlir::DialectAsmParser &parser) 
+  const
+{
+  ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  ::llvm::StringRef mnemonic;
+  ::mlir::Type genType;
+  auto parseResult = generatedTypeParser(parser, &mnemonic, genType);
+  if (parseResult.has_value())
+    return genType;
+  
+  parser.emitError(typeLoc) << "unknown  type `"
+      << mnemonic << "` in dialect `" << getNamespace() << "`";
+  return {};
+}
+
+/// Print a type registered to this dialect.
+void __DIALECT_CPP_NAME__::printType(::mlir::Type type,
+                    ::mlir::DialectAsmPrinter &printer) const {
+  ((void) generatedTypePrinter(type, printer));
+  
+}
+
+__NAMESPACE_CLOSE__
+)"

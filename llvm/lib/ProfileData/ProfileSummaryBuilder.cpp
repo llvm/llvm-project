@@ -77,9 +77,18 @@ static const uint32_t DefaultCutoffsData[] = {
 const ArrayRef<uint32_t> ProfileSummaryBuilder::DefaultCutoffs =
     DefaultCutoffsData;
 
+// An entry for the 0th percentile to correctly calculate hot/cold count
+// thresholds when -profile-summary-cutoff-hot/cold is 0.  If the hot cutoff is
+// 0, no sample counts are treated as hot.  If the cold cutoff is 0, all sample
+// counts are treated as cold.  Assumes there is no UINT64_MAX sample counts.
+static const ProfileSummaryEntry ZeroCutoffEntry = {0, UINT64_MAX, 0};
+
 const ProfileSummaryEntry &
 ProfileSummaryBuilder::getEntryForPercentile(const SummaryEntryVector &DS,
                                              uint64_t Percentile) {
+  if (Percentile == 0)
+    return ZeroCutoffEntry;
+
   auto It = partition_point(DS, [=](const ProfileSummaryEntry &Entry) {
     return Entry.Cutoff < Percentile;
   });

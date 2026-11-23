@@ -3,8 +3,8 @@
 
 # CHECK: Index   UserID DSX Type            File Address/Value Load Address       Size               Flags      Name
 # CHECK: [    0]      1     SourceFile      0x0000000000000000                    0x0000000000000000 0x00000004 -
-# CHECK: [    1]      2  SX Code            0x0000000000201180                    0x0000000000000010 0x00000000 ___lldb_unnamed_symbol{{[0-9]*}}
-# CHECK: [    2]      3  SX Code            0x0000000000201190                    0x0000000000000006 0x00000000 ___lldb_unnamed_symbol{{[0-9]*}}
+# CHECK: [    1]      2  SX Code            0x0000000000201180                    0x0000000000000010 0x00000000 ___lldb_unnamed_symbol_{{[0-9a-f]*}}
+# CHECK: [    2]      3  SX Code            0x0000000000201190                    0x0000000000000006 0x00000000 ___lldb_unnamed_symbol_{{[0-9a-f]*}}
 
 --- !ELF
 FileHeader:

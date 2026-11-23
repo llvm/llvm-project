@@ -1,4 +1,6 @@
 ## REQUIRES: x86
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 ## Test that we can parse SHT_GNU_verneed in a shared object and report certain errors.
 
 # RUN: echo '.globl _start; _start:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t.o

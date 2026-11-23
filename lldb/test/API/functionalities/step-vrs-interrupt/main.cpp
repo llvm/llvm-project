@@ -1,11 +1,7 @@
-#include <stdio.h>
 #include <chrono>
 #include <thread>
 
-void call_me() {
-  printf("I was called");
-  std::this_thread::sleep_for(std::chrono::seconds(3));
-}
+void call_me() { std::this_thread::sleep_for(std::chrono::seconds(3)); }
 
 int
 main()

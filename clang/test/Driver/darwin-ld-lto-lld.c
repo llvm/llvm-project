@@ -1,5 +1,3 @@
-// REQUIRES: shell
-
 // Check that lld gets "-lto_library".
 // (Separate test file since darwin-ld-lto requires system-darwin but this
 // test doesn't require that.)

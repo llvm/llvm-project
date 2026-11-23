@@ -22,6 +22,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -122,11 +123,16 @@ public:
 
 } // end anonymous namespace
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new MCTargetStreamer(S);
+}
+
 static MCInstrAnalysis *createLanaiInstrAnalysis(const MCInstrInfo *Info) {
   return new LanaiMCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLanaiTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<LanaiMCAsmInfo> X(getTheLanaiTarget());
 
@@ -156,6 +162,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTargetMC() {
 
   // Register the ELF streamer.
   TargetRegistry::RegisterELFStreamer(getTheLanaiTarget(), createMCStreamer);
+
+  TargetRegistry::RegisterNullTargetStreamer(getTheLanaiTarget(),
+                                             createNullTargetStreamer);
 
   // Register the MC relocation info.
   TargetRegistry::RegisterMCRelocationInfo(getTheLanaiTarget(),

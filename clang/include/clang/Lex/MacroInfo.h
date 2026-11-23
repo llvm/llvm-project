@@ -14,9 +14,10 @@
 #ifndef LLVM_CLANG_LEX_MACROINFO_H
 #define LLVM_CLANG_LEX_MACROINFO_H
 
-#include "clang/Lex/Token.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/MacroBase.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -296,6 +297,7 @@ public:
   void setUsedForHeaderGuard(bool Val) { UsedForHeaderGuard = Val; }
 
   void dump() const;
+  void dump(const SourceManager *SM) const;
 
 private:
   friend class Preprocessor;
@@ -328,10 +330,6 @@ protected:
   LLVM_PREFERRED_TYPE(Kind)
   unsigned MDKind : 2;
 
-  /// True if the macro directive was loaded from a PCH file.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsFromPCH : 1;
-
   // Used by VisibilityMacroDirective ----------------------------------------//
 
   /// Whether the macro has public visibility (when described in a
@@ -340,7 +338,7 @@ protected:
   unsigned IsPublic : 1;
 
   MacroDirective(Kind K, SourceLocation Loc)
-      : Loc(Loc), MDKind(K), IsFromPCH(false), IsPublic(true) {}
+      : Loc(Loc), MDKind(K), IsPublic(true) {}
 
 public:
   Kind getKind() const { return Kind(MDKind); }
@@ -355,11 +353,6 @@ public:
 
   /// Get previous definition of the macro with the same name.
   MacroDirective *getPrevious() { return Previous; }
-
-  /// Return true if the macro directive was loaded from a PCH file.
-  bool isFromPCH() const { return IsFromPCH; }
-
-  void setIsFromPCH() { IsFromPCH = true; }
 
   class DefInfo {
     DefMacroDirective *DefDirective = nullptr;
@@ -424,6 +417,7 @@ public:
                                    const SourceManager &SM) const;
 
   void dump() const;
+  void dump(const SourceManager *SM) const;
 
   static bool classof(const MacroDirective *) { return true; }
 };
@@ -510,7 +504,7 @@ MacroDirective::DefInfo::getPreviousDefinition() {
 /// the final directive for a macro name within a module. These entities also
 /// represent the macro override graph.
 ///
-/// These are stored in a FoldingSet in the preprocessor.
+/// These are stored in a UniquingSet in the preprocessor.
 class ModuleMacro : public llvm::FoldingSetNode {
   friend class Preprocessor;
 
@@ -542,14 +536,8 @@ public:
                              const IdentifierInfo *II, MacroInfo *Macro,
                              ArrayRef<ModuleMacro *> Overrides);
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    return Profile(ID, OwningModule, II);
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, Module *OwningModule,
-                      const IdentifierInfo *II) {
-    ID.AddPointer(OwningModule);
-    ID.AddPointer(II);
+  std::pair<Module *, const IdentifierInfo *> getKey() const {
+    return {OwningModule, II};
   }
 
   /// Get the name of the macro.
@@ -583,6 +571,11 @@ public:
   unsigned getNumOverridingMacros() const { return NumOverriddenBy; }
 };
 
+struct ModuleMacroInfo {
+  ArrayRef<ModuleMacro *> ActiveModuleMacros = {};
+  bool IsAmbiguous = false;
+};
+
 /// A description of the current definition of a macro.
 ///
 /// The definition of a macro comprises a set of (at least one) defining
@@ -593,9 +586,9 @@ class MacroDefinition {
 
 public:
   MacroDefinition() = default;
-  MacroDefinition(DefMacroDirective *MD, ArrayRef<ModuleMacro *> MMs,
-                  bool IsAmbiguous)
-      : LatestLocalAndAmbiguous(MD, IsAmbiguous), ModuleMacros(MMs) {}
+  MacroDefinition(DefMacroDirective *MD, ModuleMacroInfo Info)
+      : LatestLocalAndAmbiguous(MD, Info.IsAmbiguous),
+        ModuleMacros(Info.ActiveModuleMacros) {}
 
   /// Determine whether there is a definition of this macro.
   explicit operator bool() const {

@@ -10,4 +10,4 @@
 
 #include "src/math/fromfp.h"
 
-LIST_FROMFP_TESTS(double, LIBC_NAMESPACE::fromfp)
+LIST_FROMFP_TESTS(Fromfp, double, LIBC_NAMESPACE::fromfp)

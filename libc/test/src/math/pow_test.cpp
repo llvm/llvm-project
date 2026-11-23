@@ -1,15 +1,27 @@
-//===-- Unittests for pow -------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for pow.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/optimization.h"
 #include "src/math/pow.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcPowTest = LIBC_NAMESPACE::testing::FPTest<double>;
 using LIBC_NAMESPACE::testing::tlog;
@@ -25,14 +37,18 @@ TEST_F(LlvmLibcPowTest, TrickyInputs) {
       {0x1.ffffffffffffcp-1, 0x1.fffffffffffffp-2},
       {0x1.f558a88a8aadep-1, 0x1.88ap+12},
       {0x1.e84d32731e593p-1, 0x1.2cb8p+13},
-      {0x1.ffffffffffffcp-1, 0x1.fffffffffffffp-2},
+      {0x1.fd98b527935a2p-1, 0x1.71bp+13},
+      {0x1.01ff9791c39f9p+0, 0x1.62cc9e927e14ap+16},
+      {0x1.01ff3ca3af38bp+0, -0x1.605d9e6a8dce2p+16},
+      {0x1.01ff42c5cad93p+0, 0x1.63b5bb6d49873p+16},
+      {0x1.01e6666666669p+0, 0x1.fffffffffffffp+15},
   };
 
   for (auto input : INPUTS) {
     double x = input.x;
     double y = input.y;
     EXPECT_MPFR_MATCH(mpfr::Operation::Pow, input, LIBC_NAMESPACE::pow(x, y),
-                      1.5);
+                      TOLERANCE + 0.5);
   }
 }
 
@@ -77,7 +93,8 @@ TEST_F(LlvmLibcPowTest, InFloatRange) {
         mpfr::BinaryInput<double> inputs{x, y};
 
         if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Pow, inputs,
-                                               result, 1.5, rounding_mode)) {
+                                               result, TOLERANCE + 0.5,
+                                               rounding_mode)) {
           ++fails;
           while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(
               mpfr::Operation::Pow, inputs, result, tol, rounding_mode)) {
@@ -100,13 +117,15 @@ TEST_F(LlvmLibcPowTest, InFloatRange) {
     }
     if (fails) {
       mpfr::BinaryInput<double> inputs{mx, my};
-      EXPECT_MPFR_MATCH(mpfr::Operation::Pow, inputs, mr, 1.5, rounding_mode);
+      EXPECT_MPFR_MATCH(mpfr::Operation::Pow, inputs, mr, TOLERANCE + 0.5,
+                        rounding_mode);
     }
   };
 
   tlog << " Test Rounding To Nearest...\n";
   test(mpfr::RoundingMode::Nearest);
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   tlog << " Test Rounding Downward...\n";
   test(mpfr::RoundingMode::Downward);
 
@@ -115,4 +134,5 @@ TEST_F(LlvmLibcPowTest, InFloatRange) {
 
   tlog << " Test Rounding Toward Zero...\n";
   test(mpfr::RoundingMode::TowardZero);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }

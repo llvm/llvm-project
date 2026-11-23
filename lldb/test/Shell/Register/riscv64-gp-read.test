@@ -1,0 +1,108 @@
+# REQUIRES: native && target-riscv64
+# RUN: %clangxx_host %p/Inputs/riscv64-gp-read.cpp -o %t
+# RUN: %lldb -b -s %s %t | FileCheck %s
+process launch
+
+register read --all
+# CHECK-DAG: ra = 0x1
+# CHECK-DAG: sp = 0x2
+# CHECK-DAG: gp = 0x3
+# CHECK-DAG: tp = 0x4
+# CHECK-DAG: t0 = 0x5
+# CHECK-DAG: t1 = 0x6
+# CHECK-DAG: t2 = 0x7
+# CHECK-DAG: fp = 0x00007ffffffffc60
+# CHECK-DAG: s1 = 0x9
+# CHECK-DAG: a0 = 0xa
+# CHECK-DAG: a1 = 0xb
+# CHECK-DAG: a2 = 0xc
+# CHECK-DAG: a3 = 0xd
+# CHECK-DAG: a4 = 0xe
+# CHECK-DAG: a5 = 0xf
+# CHECK-DAG: a6 = 0x10
+# CHECK-DAG: a7 = 0x11
+# CHECK-DAG: s2 = 0x12
+# CHECK-DAG: s3 = 0x13
+# CHECK-DAG: s4 = 0x14
+# CHECK-DAG: s5 = 0x15
+# CHECK-DAG: s6 = 0x16
+# CHECK-DAG: s7 = 0x17
+# CHECK-DAG: s8 = 0x18
+# CHECK-DAG: s9 = 0x19
+# CHECK-DAG: s10 = 0x1a
+# CHECK-DAG: s11 = 0x1b
+# CHECK-DAG: t3 = 0x1c
+# CHECK-DAG: t4 = 0x1d
+# CHECK-DAG: t5 = 0x1e
+# CHECK-DAG: t6 = 0x1f
+# CHECK-DAG: zero = 0x0
+
+register read zero ra sp gp tp t0 t1 t2 s0 fp s1 a0 a1 a2 a3 a4 a5 a6 a7 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 t3 t4 t5 t6
+# CHECK-DAG: zero = 0x0
+# CHECK-DAG: ra = 0x1
+# CHECK-DAG: sp = 0x2
+# CHECK-DAG: gp = 0x3
+# CHECK-DAG: tp = 0x4
+# CHECK-DAG: t0 = 0x5
+# CHECK-DAG: t1 = 0x6
+# CHECK-DAG: t2 = 0x7
+# CHECK-DAG: fp = 0x00007ffffffffc60
+# CHECK-DAG: fp = 0x00007ffffffffc60
+# CHECK-DAG: s1 = 0x9
+# CHECK-DAG: a0 = 0xa
+# CHECK-DAG: a1 = 0xb
+# CHECK-DAG: a2 = 0xc
+# CHECK-DAG: a3 = 0xd
+# CHECK-DAG: a4 = 0xe
+# CHECK-DAG: a5 = 0xf
+# CHECK-DAG: a6 = 0x10
+# CHECK-DAG: a7 = 0x11
+# CHECK-DAG: s2 = 0x12
+# CHECK-DAG: s3 = 0x13
+# CHECK-DAG: s4 = 0x14
+# CHECK-DAG: s5 = 0x15
+# CHECK-DAG: s6 = 0x16
+# CHECK-DAG: s7 = 0x17
+# CHECK-DAG: s8 = 0x18
+# CHECK-DAG: s9 = 0x19
+# CHECK-DAG: s10 = 0x1a
+# CHECK-DAG: s11 = 0x1b
+# CHECK-DAG: t3 = 0x1c
+# CHECK-DAG: t4 = 0x1d
+# CHECK-DAG: t5 = 0x1e
+# CHECK-DAG: t6 = 0x1f
+
+register read x0 x1 x2 x3 x4 x5 x6 x7 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29 x30 x31
+# CHECK-DAG: zero = 0x0
+# CHECK-DAG: ra = 0x1
+# CHECK-DAG: sp = 0x2
+# CHECK-DAG: gp = 0x3
+# CHECK-DAG: tp = 0x4
+# CHECK-DAG: t0 = 0x5
+# CHECK-DAG: t1 = 0x6
+# CHECK-DAG: t2 = 0x7
+# x8 has been skipped here because it has two aliases
+# which causes problems. See issue #127900
+# CHECK-DAG: s1 = 0x9
+# CHECK-DAG: a0 = 0xa
+# CHECK-DAG: a1 = 0xb
+# CHECK-DAG: a2 = 0xc
+# CHECK-DAG: a3 = 0xd
+# CHECK-DAG: a4 = 0xe
+# CHECK-DAG: a5 = 0xf
+# CHECK-DAG: a6 = 0x10
+# CHECK-DAG: a7 = 0x11
+# CHECK-DAG: s2 = 0x12
+# CHECK-DAG: s3 = 0x13
+# CHECK-DAG: s4 = 0x14
+# CHECK-DAG: s5 = 0x15
+# CHECK-DAG: s6 = 0x16
+# CHECK-DAG: s7 = 0x17
+# CHECK-DAG: s8 = 0x18
+# CHECK-DAG: s9 = 0x19
+# CHECK-DAG: s10 = 0x1a
+# CHECK-DAG: s11 = 0x1b
+# CHECK-DAG: t3 = 0x1c
+# CHECK-DAG: t4 = 0x1d
+# CHECK-DAG: t5 = 0x1e
+# CHECK-DAG: t6 = 0x1f

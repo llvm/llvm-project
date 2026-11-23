@@ -30,6 +30,14 @@ bool OverrideFunction(uptr old_func, uptr new_func, uptr *orig_old_func = 0);
 // Overrides a function in a system DLL or DLL CRT by its exported name.
 bool OverrideFunction(const char *name, uptr new_func, uptr *orig_old_func = 0);
 
+// Like OverrideFunction(name), but skips any DLL where the |name| export is
+// the same function as the |alias_name| export (same address); patching
+// |alias_name| already covers those. A distinct address that cannot be hooked
+// is reported through the error report callback, but is not fatal; callers
+// are expected to install a safe fallback for REAL().
+bool OverrideFunctionIfNotAliased(const char* name, uptr new_func,
+                                  uptr* orig_old_func, const char* alias_name);
+
 // Windows-only replacement for GetProcAddress. Useful for some sanitizers.
 uptr InternalGetProcAddress(void *module, const char *func_name);
 

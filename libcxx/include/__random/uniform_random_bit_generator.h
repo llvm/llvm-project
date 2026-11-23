@@ -23,9 +23,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [rand.req.urng]
 template <class _Gen>
@@ -35,9 +35,9 @@ concept uniform_random_bit_generator = invocable<_Gen&> && unsigned_integral<inv
   requires bool_constant<(_Gen::min() < _Gen::max())>::value;
 };
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

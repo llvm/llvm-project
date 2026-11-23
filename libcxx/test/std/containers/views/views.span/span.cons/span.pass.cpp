@@ -5,16 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
 // template<class OtherElementType, size_t OtherExtent>
-//    constexpr span(const span<OtherElementType, OtherExtent>& s) noexcept;
+//   constexpr explicit(see below) span(const span<OtherElementType, OtherExtent>& s) noexcept;
 //
-//  Remarks: This constructor shall not participate in overload resolution unless:
-//      Extent == dynamic_extent || Extent == OtherExtent is true, and
-//      OtherElementType(*)[] is convertible to ElementType(*)[].
+// Constraints:
+//   - extent == dynamic_extent || OtherExtent == dynamic_extent || extent == OtherExtent is true, and
+//   - is_convertible_v<OtherElementType(*)[], element_type(*)[]> is true.
 
 #include <span>
 #include <cassert>

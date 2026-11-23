@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s %}
 
 struct P1 { char x[6]; } g1 = { "foo" };
 struct LP1 { struct P1 p1; };
@@ -92,7 +93,7 @@ void test5(void)
 void test6(void)
 {
   // CHECK: [[LP:%[a-z0-9]+]] = getelementptr{{.*}}%struct.LLP2P2, ptr{{.*}}, i32 0, i32 0
-  // CHECK: call {{.*}}get456789(ptr {{.*}}[[LP]])
+  // CHECK: call {{.*}}get456789(ptr {{.*}}sret{{.*}} [[LP]])
 
   // CHECK: [[CALL:%[a-z0-9]+]] = call {{.*}}@get235()
   // CHECK: store{{.*}}[[CALL]], {{.*}}[[TMP0:%[a-z0-9.]+]]

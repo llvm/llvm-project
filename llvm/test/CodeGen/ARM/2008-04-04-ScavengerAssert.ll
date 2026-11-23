@@ -46,7 +46,9 @@ bb17.i:		; preds = %cond_next119.i
 cond_true53.i:		; preds = %bb17.i
 	ret ptr null
 cond_false99.i:		; preds = %bb17.i
-        %malloccall = tail call ptr @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), i64 2) to i32))
+  %mul = mul nuw i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), 2
+  %trunc = trunc i64 %mul to i32
+  %malloccall = tail call ptr @malloc(i32 %trunc)
 	br i1 false, label %bb126.i, label %cond_next119.i
 cond_next119.i:		; preds = %cond_false99.i, %bb42
 	%curr_ptr.0.reg2mem.0.i = phi ptr [ %malloccall, %cond_false99.i ], [ null, %bb42 ]		; <ptr> [#uses=2]

@@ -8,13 +8,12 @@ entry:
 ; CHECK-NEXT: ![[IA]] = !{}
 
 exit:
-  ret void, !dbg !{}
-; CHECK: invalid !dbg metadata attachment
-; CHECK-NEXT: ret void, !dbg ![[LOC:[0-9]+]]
-; CHECK-NEXT: ![[LOC]] = !{}
+  ret void
 }
 
 ; CHECK: warning: ignoring invalid debug info
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram()
+!1 = distinct !DISubprogram(type: !3)
+!2 = !{null}
+!3 = !DISubroutineType(types: !2)

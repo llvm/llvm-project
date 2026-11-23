@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding -disassemble %s | FileCheck -check-prefix=GFX950 %s
+# RUN: llvm-mc -triple=amdgpu9.50 -show-encoding -disassemble %s | FileCheck -check-prefix=GFX950 %s
 
 # Check behavior of truncated instruction just to the ld_scale
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -Wno-deprecated-declarations %s
 #include "Inputs/cuda.h"
 
 

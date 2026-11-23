@@ -98,7 +98,26 @@ namespace __ubsan {
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts) {
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::CFIBadType;
+  ErrorType ET;
+  switch (Data->CheckKind) {
+  case CFITCK_VCall:
+    ET = ErrorType::CFIVCall;
+    break;
+  case CFITCK_NVCall:
+    ET = ErrorType::CFINVCall;
+    break;
+  case CFITCK_DerivedCast:
+    ET = ErrorType::CFIDerivedCast;
+    break;
+  case CFITCK_UnrelatedCast:
+    ET = ErrorType::CFIUnrelatedCast;
+    break;
+  case CFITCK_VMFCall:
+    ET = ErrorType::CFIMFCall;
+    break;
+  default:
+    Die();
+  }
 
   if (ignoreReport(Loc, Opts, ET))
     return;

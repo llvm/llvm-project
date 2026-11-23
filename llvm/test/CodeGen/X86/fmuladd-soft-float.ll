@@ -1555,30 +1555,30 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset %r14, -32
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset %r15, -24
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset %rbp, -16
+; SOFT-FLOAT-64-NEXT:    movq %r9, %rbp
 ; SOFT-FLOAT-64-NEXT:    movq %rcx, %r14
 ; SOFT-FLOAT-64-NEXT:    movq %rdx, %r15
-; SOFT-FLOAT-64-NEXT:    movq %rsi, %r12
+; SOFT-FLOAT-64-NEXT:    movq %rsi, %r13
 ; SOFT-FLOAT-64-NEXT:    movq %rdi, %rbx
-; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
 ; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-NEXT:    movq %r8, %rdi
 ; SOFT-FLOAT-64-NEXT:    callq __muldf3@PLT
-; SOFT-FLOAT-64-NEXT:    movq %rax, %r13
+; SOFT-FLOAT-64-NEXT:    movq %rax, %r12
 ; SOFT-FLOAT-64-NEXT:    movq %r14, %rdi
-; SOFT-FLOAT-64-NEXT:    movq %rbp, %rsi
+; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-NEXT:    movq %rax, %r14
 ; SOFT-FLOAT-64-NEXT:    movq %r15, %rdi
 ; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-NEXT:    movq %rax, %r15
-; SOFT-FLOAT-64-NEXT:    movq %r12, %rdi
-; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; SOFT-FLOAT-64-NEXT:    movq %r13, %rdi
+; SOFT-FLOAT-64-NEXT:    movq %rbp, %rsi
 ; SOFT-FLOAT-64-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-NEXT:    movq %rax, %rdi
 ; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-NEXT:    callq __adddf3@PLT
-; SOFT-FLOAT-64-NEXT:    movq %rax, %r12
+; SOFT-FLOAT-64-NEXT:    movq %rax, %r13
 ; SOFT-FLOAT-64-NEXT:    movq %r15, %rdi
 ; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-NEXT:    callq __adddf3@PLT
@@ -1587,13 +1587,13 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-NEXT:    callq __adddf3@PLT
 ; SOFT-FLOAT-64-NEXT:    movq %rax, %r14
-; SOFT-FLOAT-64-NEXT:    movq %r13, %rdi
+; SOFT-FLOAT-64-NEXT:    movq %r12, %rdi
 ; SOFT-FLOAT-64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-NEXT:    callq __adddf3@PLT
 ; SOFT-FLOAT-64-NEXT:    movq %rax, 24(%rbx)
 ; SOFT-FLOAT-64-NEXT:    movq %r14, 16(%rbx)
 ; SOFT-FLOAT-64-NEXT:    movq %r15, 8(%rbx)
-; SOFT-FLOAT-64-NEXT:    movq %r12, (%rbx)
+; SOFT-FLOAT-64-NEXT:    movq %r13, (%rbx)
 ; SOFT-FLOAT-64-NEXT:    movq %rbx, %rax
 ; SOFT-FLOAT-64-NEXT:    addq $8, %rsp
 ; SOFT-FLOAT-64-NEXT:    .cfi_def_cfa_offset 56
@@ -1633,30 +1633,30 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-64-FMA-NEXT:    .cfi_offset %r14, -32
 ; SOFT-FLOAT-64-FMA-NEXT:    .cfi_offset %r15, -24
 ; SOFT-FLOAT-64-FMA-NEXT:    .cfi_offset %rbp, -16
+; SOFT-FLOAT-64-FMA-NEXT:    movq %r9, %rbp
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rcx, %r14
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rdx, %r15
-; SOFT-FLOAT-64-FMA-NEXT:    movq %rsi, %r12
+; SOFT-FLOAT-64-FMA-NEXT:    movq %rsi, %r13
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rdi, %rbx
-; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
 ; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %r8, %rdi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __muldf3@PLT
-; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %r13
+; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %r12
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %r14, %rdi
-; SOFT-FLOAT-64-FMA-NEXT:    movq %rbp, %rsi
+; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %r14
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %r15, %rdi
 ; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %r15
-; SOFT-FLOAT-64-FMA-NEXT:    movq %r12, %rdi
-; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; SOFT-FLOAT-64-FMA-NEXT:    movq %r13, %rdi
+; SOFT-FLOAT-64-FMA-NEXT:    movq %rbp, %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %rdi
 ; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __adddf3@PLT
-; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %r12
+; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %r13
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %r15, %rdi
 ; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __adddf3@PLT
@@ -1665,13 +1665,13 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __adddf3@PLT
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, %r14
-; SOFT-FLOAT-64-FMA-NEXT:    movq %r13, %rdi
+; SOFT-FLOAT-64-FMA-NEXT:    movq %r12, %rdi
 ; SOFT-FLOAT-64-FMA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA-NEXT:    callq __adddf3@PLT
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rax, 24(%rbx)
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %r14, 16(%rbx)
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %r15, 8(%rbx)
-; SOFT-FLOAT-64-FMA-NEXT:    movq %r12, (%rbx)
+; SOFT-FLOAT-64-FMA-NEXT:    movq %r13, (%rbx)
 ; SOFT-FLOAT-64-FMA-NEXT:    movq %rbx, %rax
 ; SOFT-FLOAT-64-FMA-NEXT:    addq $8, %rsp
 ; SOFT-FLOAT-64-FMA-NEXT:    .cfi_def_cfa_offset 56
@@ -1711,30 +1711,30 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-64-FMA4-NEXT:    .cfi_offset %r14, -32
 ; SOFT-FLOAT-64-FMA4-NEXT:    .cfi_offset %r15, -24
 ; SOFT-FLOAT-64-FMA4-NEXT:    .cfi_offset %rbp, -16
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %r9, %rbp
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rcx, %r14
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rdx, %r15
-; SOFT-FLOAT-64-FMA4-NEXT:    movq %rsi, %r12
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %rsi, %r13
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rdi, %rbx
-; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %r8, %rdi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __muldf3@PLT
-; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %r13
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %r12
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %r14, %rdi
-; SOFT-FLOAT-64-FMA4-NEXT:    movq %rbp, %rsi
+; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %r14
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %r15, %rdi
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %r15
-; SOFT-FLOAT-64-FMA4-NEXT:    movq %r12, %rdi
-; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %r13, %rdi
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %rbp, %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __muldf3@PLT
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %rdi
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __adddf3@PLT
-; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %r12
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %r13
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %r15, %rdi
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __adddf3@PLT
@@ -1743,13 +1743,13 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __adddf3@PLT
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, %r14
-; SOFT-FLOAT-64-FMA4-NEXT:    movq %r13, %rdi
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %r12, %rdi
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; SOFT-FLOAT-64-FMA4-NEXT:    callq __adddf3@PLT
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rax, 24(%rbx)
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %r14, 16(%rbx)
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %r15, 8(%rbx)
-; SOFT-FLOAT-64-FMA4-NEXT:    movq %r12, (%rbx)
+; SOFT-FLOAT-64-FMA4-NEXT:    movq %r13, (%rbx)
 ; SOFT-FLOAT-64-FMA4-NEXT:    movq %rbx, %rax
 ; SOFT-FLOAT-64-FMA4-NEXT:    addq $8, %rsp
 ; SOFT-FLOAT-64-FMA4-NEXT:    .cfi_def_cfa_offset 56

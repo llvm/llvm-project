@@ -8,6 +8,10 @@
 
         ext v0.8b, v1.8b, v2.8b, #0x3
         ext v0.16b, v1.16b, v2.16b, #0x3
+        ext v0.8b, v1.8b, v2.8b, #7
+        ext v0.16b, v1.16b, v2.16b, #15
 
 // CHECK: ext	v0.8b, v1.8b, v2.8b, #{{0x3|3}}  // encoding: [0x20,0x18,0x02,0x2e]
 // CHECK: ext	v0.16b, v1.16b, v2.16b, #{{0x3|3}} // encoding: [0x20,0x18,0x02,0x6e]
+// CHECK: ext	v0.8b, v1.8b, v2.8b, #7  // encoding: [0x20,0x38,0x02,0x2e]
+// CHECK: ext	v0.16b, v1.16b, v2.16b, #15 // encoding: [0x20,0x78,0x02,0x6e]
