@@ -40,7 +40,8 @@ CheckerManager::CheckerManager(AnalyzerOptions &AOptions,
                                DiagnosticsEngine &Diags,
                                ArrayRef<std::string> plugins)
     : LangOpts(LangOpts), AOptions(AOptions), Diags(Diags),
-      RegistryData(std::make_unique<CheckerRegistryData>()) {
+      RegistryData(std::make_unique<CheckerRegistryData>()),
+      TimeTraceEnabled(llvm::timeTraceProfilerEnabled()) {
   CheckerRegistry Registry(*RegistryData, plugins, Diags, AOptions, {});
   Registry.initializeRegistry(*this);
 }

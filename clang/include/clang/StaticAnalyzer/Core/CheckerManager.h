@@ -132,7 +132,7 @@ class CheckerManager {
   /// Whether -ftime-trace is enabled. It cannot change during the analysis,
   /// and caching it avoids querying the thread-local profiler instance for
   /// every checker callback.
-  bool TimeTraceEnabled = false;
+  const bool TimeTraceEnabled;
 
 public:
   // These constructors are defined in the Frontend library, because
