@@ -5581,7 +5581,7 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
         return false;
 
       WithCache<const Value *> ZCache(B);
-      if (isKnownPositive(ZCache, Q)) {
+      if (IsEquality || isKnownPositive(ZCache, Q)) {
         LHS = A;
         RHS = C;
         return true;
@@ -6013,11 +6013,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       }
       break;
     }
-    case Instruction::SDiv:
-      if (!I.isEquality() || !BO0->isExact() || !BO1->isExact())
-        break;
-      return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
-
     }
   }
 
