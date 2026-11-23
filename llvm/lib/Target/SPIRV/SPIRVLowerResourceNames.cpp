@@ -80,7 +80,7 @@ static bool lowerResourceNames(Module &M) {
     StringRef Name;
     if (!isa<ConstantPointerNull>(NamePtr) &&
         !getConstantStringInfo(NamePtr, Name))
-      report_fatal_error("expected a constant resource name");
+      reportFatalUsageError("expected a constant resource name");
     if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(NamePtr)))
       Names.insert(GV);
     LLVMContext &Ctx = M.getContext();
