@@ -84,3 +84,10 @@ void Test() {
 }
 
 } // namespace __llvm_libc
+
+void test_implicit_delete(void *p) {
+  operator delete(p);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'operator delete' must resolve to a function declared within the namespace defined by the 'LIBC_NAMESPACE' macro
+  operator delete[](p);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'operator delete[]' must resolve to a function declared within the namespace defined by the 'LIBC_NAMESPACE' macro
+}
