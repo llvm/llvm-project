@@ -18,6 +18,53 @@ using namespace mlir;
 using namespace presburger;
 using ::testing::ElementsAre;
 
+TEST(IntegerRelationTest, getConstantBoundWithCongruence) {
+  // r = 4 * floor(x / 4), where 0 <= x <= 10. Even though projection
+  // leaves r <= 10, the largest feasible value of r is 8.
+  IntegerPolyhedron poly =
+      parseIntegerPolyhedron("(r, x, q) : (r - 4 * q == 0, x - 4 * q >= 0, "
+                             "4 * q + 3 - x >= 0, x >= 0, 10 - x >= 0)");
+  EXPECT_EQ(poly.getConstantBound64(BoundType::UB, 0), 8);
+  EXPECT_EQ(poly.getConstantBound64(BoundType::LB, 0), 0);
+
+  // Only a chain of identity equalities directly mentions the target t.
+  poly = parseIntegerPolyhedron(
+      "(t, r, s, q) : (r - 4 * q == 0, r - s == 0, s - t == 0, "
+      "t + 10 >= 0, 10 - t >= 0)");
+  EXPECT_EQ(poly.getConstantBound64(BoundType::LB, 0), -8);
+  EXPECT_EQ(poly.getConstantBound64(BoundType::UB, 0), 8);
+
+  // t - r + s = 0 does not imply t = r.
+  poly = parseIntegerPolyhedron(
+      "(t, r, s, q) : (r - 4 * q - 1 == 0, t - r + s == 0, "
+      "t + 6 >= 0, 6 - t >= 0)");
+  EXPECT_EQ(poly.getConstantBound64(BoundType::LB, 0), -6);
+  EXPECT_EQ(poly.getConstantBound64(BoundType::UB, 0), 6);
+
+  // r is odd (gcd(4, 6) = 2), so the bounds [-6, 6] tighten to
+  // [-5, 5]. The coefficients on both sides of r contribute to the gcd.
+  poly = parseIntegerPolyhedron(
+      "(a, r, b) : (-r - 4 * a + 6 * b - 3 == 0, r + 6 >= 0, 6 - r >= 0)");
+  EXPECT_EQ(poly.getConstantBound64(BoundType::LB, 1), -5);
+  EXPECT_EQ(poly.getConstantBound64(BoundType::UB, 1), 5);
+
+  // Only one integer congruent to 3 modulo 4 lies in [-5, -2].
+  poly = parseIntegerPolyhedron(
+      "(r, q) : (r - 4 * q - 3 == 0, r + 5 >= 0, -2 - r >= 0)");
+  EXPECT_EQ(poly.getConstantBound64(BoundType::EQ, 0), -5);
+}
+
+TEST(IntegerRelationTest, getConstantBoundExceedsInt64) {
+  // Tightening the upper bound gives a value below INT64_MIN.
+  constexpr int64_t divisor = 9223372036854775806;
+  IntegerPolyhedron poly(PresburgerSpace::getSetSpace(2));
+  poly.addEquality({1, -divisor, 0});
+  poly.addInequality({-1, 0, -9223372036854775807});
+  EXPECT_EQ(poly.getConstantBound(BoundType::UB, 0),
+            DynamicAPInt(-divisor) * 2);
+  EXPECT_EQ(poly.getConstantBound64(BoundType::UB, 0), std::nullopt);
+}
+
 TEST(IntegerRelationTest, getDomainAndRangeSet) {
   IntegerRelation rel = parseRelationFromSet(
       "(x, xr)[N] : (xr - x - 10 == 0, xr >= 0, N - xr >= 0)", 1);
