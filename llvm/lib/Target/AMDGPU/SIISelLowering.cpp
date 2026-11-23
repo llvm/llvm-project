@@ -4038,8 +4038,8 @@ SDValue SITargetLowering::LowerCallResult(
       Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
       break;
     case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL,
-                        VA.getValVT().changeTypeToInteger(), Val);
+      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT().changeTypeToInteger(),
+                        Val);
       Val = DAG.getBitcast(VA.getValVT(), Val);
       break;
     default:
