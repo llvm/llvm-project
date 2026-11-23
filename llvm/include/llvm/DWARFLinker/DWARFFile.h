@@ -12,8 +12,10 @@
 #include "AddressesMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Support/PrefixMapper.h"
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace llvm {
 namespace dwarf_linker {
@@ -25,6 +27,10 @@ namespace dwarf_linker {
 class DWARFFile {
 public:
   using UnloadCallbackTy = std::function<void(StringRef FileName)>;
+
+  using UnitOffsetsCallbackTy =
+      std::function<void(uint64_t OriginalUnitOffset, uint64_t DebugInfoOffset,
+                         uint64_t DebugAddrOffset)>;
 
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
             std::unique_ptr<AddressesMap> Addresses,
@@ -43,6 +49,23 @@ public:
 
   /// Callback to the module keeping object file to unload.
   UnloadCallbackTy UnloadFunc;
+
+  /// Maps the path prefixes that the compiler remapped in this file's debug
+  /// info back to the original ones.
+  std::shared_ptr<PrefixMapper> PrefixMap;
+
+  /// \returns \p Path, a path from this file's debug info, with the prefix
+  /// mapping undone. This is used both to locate build artifacts referenced by
+  /// the debug info, such as Swift interfaces and Clang modules, and to
+  /// restore the original paths in the linked debug info.
+  std::string remapPath(StringRef Path) const {
+    return PrefixMap ? PrefixMap->mapToString(Path) : Path.str();
+  }
+
+  /// Reports where a unit landed in the output .debug_info and .debug_addr, for
+  /// the relocations saved relative to it. Unlike Addresses, it outlives
+  /// unload(), as a linker may only place the units after unloading them.
+  UnitOffsetsCallbackTy UnitOffsetsFunc;
 
   /// Unloads object file and corresponding AddressesMap and Dwarf Context.
   void unload() {

@@ -8307,6 +8307,42 @@ void test_attr_refers_to_param(Mutex *m) {
   m->Unlock();
 }
 
+struct Owner {
+  Mutex gmu;
+};
+
+// An attribute on a redeclaration names that redeclaration's parameters.
+extern void (*redecl_cb)(int, Owner *g);
+void (*redecl_cb)(int, Owner *g) EXCLUSIVE_LOCKS_REQUIRED(g->gmu) = nullptr;
+
+void callRedecl(int n, Owner *arg) {
+  redecl_cb(n, arg); // expected-warning {{calling function 'redecl_cb' requires holding mutex 'arg->gmu' exclusively}}
+}
+
+// An instantiated pointee parameter belongs to no function either, not to the
+// lambda's call operator, which has no parameter at that position.
+template <typename T>
+void callInTemplateLambda(T *arg) {
+  auto lam = [&]() {
+    void (*cb)(T *g) EXCLUSIVE_LOCKS_REQUIRED(g->gmu) = nullptr;
+    cb(arg); // expected-warning {{calling function 'cb' requires holding mutex 'arg->gmu' exclusively}}
+  };
+  lam();
+}
+
+void testCallInTemplateLambda(Owner *arg) {
+  callInTemplateLambda(arg); // expected-note {{in instantiation of function template specialization}}
+}
+
+// The attribute on 'mu_of_g' names its sibling 'g', not a parameter of its own
+// prototype, so a call to 'mu_of_g' has no argument for it.
+void (*with_lock)(int n, Owner *g, Mutex *(*mu_of_g)() LOCK_RETURNED(&g->gmu))
+    EXCLUSIVE_LOCKS_REQUIRED(mu_of_g());
+
+void callWithLock(int n, Owner *arg, Mutex *(*fn)()) {
+  with_lock(n, arg, fn); // expected-warning {{calling function 'with_lock' requires holding mutex 'g->gmu' exclusively}}
+}
+
 // Function references name a function to call just like function pointers do.
 void lock_impl(void) EXCLUSIVE_LOCK_FUNCTION(mu);
 void unlock_impl(void) UNLOCK_FUNCTION(mu);

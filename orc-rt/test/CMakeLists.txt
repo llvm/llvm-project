@@ -1,5 +1,8 @@
 include(OrcRTTesting)
 
+# Inputs shared by the unit and regression tests.
+add_subdirectory(Inputs)
+
 if (ORC_RT_LLVM_TOOLS_AVAILABLE)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/regression/lit.site.cfg.py.in
@@ -16,6 +19,7 @@ if (ORC_RT_LLVM_TOOLS_AVAILABLE)
     orc-rt-log-check
     orc-rt-process-info-check
     orc-rt-smoke-check
+    orc-rt-test-dylib
   )
 
   add_custom_target(orc-rt-test-depends DEPENDS ${ORC_RT_TEST_DEPS})

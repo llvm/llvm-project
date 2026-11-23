@@ -845,10 +845,40 @@ void SPIRVModuleAnalysisImpl::numberRegistersGlobally(const Module &M) {
   }
 }
 
+static void addQuadControlRequirements(SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST,
+                                       StringRef Feature) {
+  if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    report_fatal_error(Twine(Feature) + " requires SPIR-V 1.3", false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    report_fatal_error(Twine(Feature) + " requires the following SPIR-V "
+                                        "extension: SPV_KHR_quad_control",
+                       false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence))
+    report_fatal_error("SPV_KHR_quad_control requires the following SPIR-V "
+                       "extension: SPV_KHR_maximal_reconvergence",
+                       false);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_quad_control);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+}
+
 // RequirementHandler implementations.
 void SPIRV::RequirementHandler::getAndAddRequirements(
     SPIRV::OperandCategory::OperandCategory Category, uint32_t i,
     const SPIRVSubtarget &ST) {
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      (i == SPIRV::ExecutionMode::QuadDerivativesKHR ||
+       i == SPIRV::ExecutionMode::RequireFullQuadsKHR))
+    addQuadControlRequirements(*this, ST,
+                               getSymbolicOperandMnemonic(Category, i));
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      (i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR ||
+       i == SPIRV::ExecutionMode::DerivativeGroupLinearKHR) &&
+      !ST.canUseExtension(SPIRV::Extension::SPV_KHR_compute_shader_derivatives))
+    report_fatal_error(Twine(getSymbolicOperandMnemonic(Category, i)) +
+                           " requires the following SPIR-V extension: "
+                           "SPV_KHR_compute_shader_derivatives",
+                       false);
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
@@ -1272,6 +1302,24 @@ static bool isBFloat16Type(SPIRVTypeInst TypeDef) {
          TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
          TypeDef->getOperand(1).getImm() == 16 &&
          TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
+// Adds the requirements for bfloat16 arithmetic. Prefers
+// SPV_EXT_bfloat16_arithmetic and falls back to the legacy
+// SPV_INTEL_bfloat16_arithmetic which enables the same capability.
+static bool addBFloat16ArithmeticRequirements(SPIRV::RequirementHandler &Reqs,
+                                              const SPIRVSubtarget &ST) {
+  if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic)) {
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic);
+    Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticEXT);
+    return true;
+  }
+  if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic)) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+    Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    return true;
+  }
+  return false;
 }
 
 // Registers created after isel (e.g. by MachineCSE) may lack registry entries.
@@ -1765,6 +1813,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
       break;
     }
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(SPIRV::InstructionSet::NonSemantic_DebugBreak)) {
+      // Non-semantic instruction sets no longer require
+      // SPV_KHR_non_semantic_info as of SPIR-V 1.6
+      if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
+    }
     if (MI.getOperand(3).getImm() ==
         static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
       addPrintfRequirements(MI, Reqs, ST);
@@ -1792,17 +1848,10 @@ void addInstrRequirements(const MachineInstr &MI,
               MO.getReg(), const_cast<MachineFunction *>(MF)));
       }
 
-      if (UsesBFloat16) {
-        if (!ST.canUseExtension(
-                SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic)) {
-          reportUnsupported(
-              MI, "OpenCL Extended instructions with bfloat16 require the "
-                  "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic");
-          break;
-        }
-        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-        Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
-      }
+      if (UsesBFloat16 && !addBFloat16ArithmeticRequirements(Reqs, ST))
+        reportUnsupported(
+            MI, "OpenCL Extended instructions with bfloat16 require the "
+                "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic");
     }
     break;
   }
@@ -2139,6 +2188,10 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
+    break;
+  case SPIRV::OpGroupNonUniformQuadAllKHR:
+    addQuadControlRequirements(Reqs, ST, "OpGroupNonUniformQuadAllKHR");
+    Reqs.addCapability(SPIRV::Capability::QuadControlKHR);
     break;
   case SPIRV::OpGroupNonUniformRotateKHR:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))
@@ -2699,15 +2752,11 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVTypeInst TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
-    if (isBFloat16Type(TypeDef)) {
-      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
-        report_fatal_error(
-            "Arithmetic instructions with bfloat16 arguments require the "
-            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
-            false);
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
-    }
+    if (isBFloat16Type(TypeDef) && !addBFloat16ArithmeticRequirements(Reqs, ST))
+      report_fatal_error(
+          "Arithmetic instructions with bfloat16 arguments require the "
+          "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic",
+          false);
     break;
   }
   case SPIRV::OpOrdered:
@@ -2730,15 +2779,11 @@ void addInstrRequirements(const MachineInstr &MI,
     assert(TypeDef && "Unexpected type instruction for comparison operand");
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
-    if (isBFloat16Type(TypeDef)) {
-      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
-        report_fatal_error(
-            "Relational instructions with bfloat16 arguments require the "
-            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
-            false);
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
-    }
+    if (isBFloat16Type(TypeDef) && !addBFloat16ArithmeticRequirements(Reqs, ST))
+      report_fatal_error(
+          "Relational instructions with bfloat16 arguments require the "
+          "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic",
+          false);
     break;
   }
   case SPIRV::OpDPdxCoarse:

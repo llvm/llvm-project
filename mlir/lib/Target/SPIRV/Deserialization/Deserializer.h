@@ -326,6 +326,8 @@ private:
 
   LogicalResult processNamedBarrierType(ArrayRef<uint32_t> operands);
 
+  LogicalResult processUntypedPointerType(ArrayRef<uint32_t> operands);
+
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
   LogicalResult processStructType(ArrayRef<uint32_t> operands);
@@ -696,6 +698,10 @@ private:
 
   // Mapping from result <id> to undef value of a type.
   DenseMap<uint32_t, Type> undefMap;
+
+  // Constant and undef ops already materialized in a block of the current
+  // function or graph.
+  DenseMap<std::pair<Block *, uint32_t>, Value> blockConstantMap;
 
   // Result <id> to name mapping.
   DenseMap<uint32_t, StringRef> nameMap;

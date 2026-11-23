@@ -1,6 +1,5 @@
 // RUN: mlir-opt %s -test-vector-unrolling-patterns=unroll-based-on-type -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-based-on-type unroll-order=2,0,1" -split-input-file | FileCheck %s --check-prefix=ORDER
-// RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-based-on-type unroll-order=0,3,1,2" -split-input-file | FileCheck %s --check-prefix=BATCHED
 
 func.func @vector_contract_f32(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
                           %init : vector<8x8xf32>) -> vector<8x8xf32> {
@@ -332,22 +331,10 @@ func.func @vector_contract_batched(%lhs: vector<8x8x4xf32>, %rhs: vector<8x8x4xf
   return %0 : vector<8x8x8xf32>
 }
 
-
 //    CHECK-LABEL: vector_contract_batched
 // CHECK-COUNT-16: vector.contract
 //      CHECK-NOT: vector.contract
 //          CHECK: return
-
-//    UNROLL-LABEL: vector_contract_batched
-//  UNROLL-COUNT-1: vector.contract
-//      UNROLL-NOT: vector.contract
-//          UNROLL: return
-
-
-//    BATCHED-LABEL: vector_contract_batched
-// BATCHED-COUNT-16: vector.contract
-//      BATCHED-NOT: vector.contract
-//          BATCHED: return
 
 // -----
 

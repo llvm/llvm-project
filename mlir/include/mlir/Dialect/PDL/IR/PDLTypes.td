@@ -22,6 +22,7 @@ include "mlir/Dialect/PDL/IR/PDLDialect.td"
 
 class PDL_Type<string name, string typeMnemonic>
     : TypeDef<PDL_Dialect, name, [], "::mlir::pdl::PDLType"> {
+  let cppIncludes = ["mlir/Dialect/PDL/IR/PDLTypes.h"];
   let mnemonic = typeMnemonic;
 }
 

@@ -381,16 +381,29 @@ values representing the result of unsigned 64-bit integer addition.
 
 // Returns True if all components of the x parameter are non-zero;
 // otherwise, false.
-def hlsl_all : HLSLOneArgBuiltin<"all", "__builtin_hlsl_all"> {
+def hlsl_all : HLSLBuiltin<"all"> {
   let Doc = [{
 \fn bool all(T x)
 \brief Returns True if all components of the \a x parameter are non-zero;
 otherwise, false.
 \param x The input value.
 }];
+  let ParamNames = ["V"];
+  let Body = "return V != 0;";
+  let Args = [Varying];
   let ReturnType = BoolTy;
   let VaryingTypes = AllTypesWithBool;
-  let VaryingMatDims = [];
+  let VaryingScalar = 1;
+}
+
+def hlsl_all_vector : HLSLBuiltin<"all"> {
+  let ParamNames = ["V"];
+  let DetailFunc = "all_impl";
+  let Args = [Varying];
+  let ReturnType = BoolTy;
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
 }
 
 // Returns the boolean AND of two boolean scalars, vectors, or matrices.
@@ -405,16 +418,29 @@ produces a bool vector or matrix output.
 
 // Returns True if any components of the x parameter are non-zero;
 // otherwise, false.
-def hlsl_any : HLSLOneArgBuiltin<"any", "__builtin_hlsl_any"> {
+def hlsl_any : HLSLBuiltin<"any"> {
   let Doc = [{
 \fn bool any(T x)
 \brief Returns True if any components of the \a x parameter are non-zero;
 otherwise, false.
 \param x The input value.
 }];
+  let ParamNames = ["V"];
+  let Body = "return V != 0;";
+  let Args = [Varying];
   let ReturnType = BoolTy;
   let VaryingTypes = AllTypesWithBool;
-  let VaryingMatDims = [];
+  let VaryingScalar = 1;
+}
+
+def hlsl_any_vector : HLSLBuiltin<"any"> {
+  let ParamNames = ["V"];
+  let DetailFunc = "any_impl";
+  let Args = [Varying];
+  let ReturnType = BoolTy;
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
 }
 
 // Reinterprets a cast value (two 32-bit values) into a double.
@@ -510,7 +536,6 @@ However for values of NaN, the results are undefined.
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Discards the current pixel if the specified value is less than zero.
@@ -978,7 +1003,7 @@ parameter.
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the fractional (or decimal) part of x.
@@ -1288,7 +1313,6 @@ def hlsl_mad : HLSLThreeArgBuiltin<"mad", "__builtin_hlsl_mad"> {
 \param B The second addition value.
 }];
   let VaryingTypes = AllNumericTypes;
-  let VaryingMatDims = [];
    let VaryingLongVector = 1;
 }
 
@@ -1369,6 +1393,17 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
 }];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
+}
+
+def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
+  let Doc = [{
+\brief Returns true if the condition is true in all active lanes in the quad.
+\param Cond The condition to evaluate.
+}];
+  let Args = [BoolTy];
+  let ReturnType = BoolTy;
+  let IsConvergent = 1;
+  let Availability = SM6_0;
 }
 
 // Reads the value from the lane across the X axis of the quad.
@@ -1562,7 +1597,6 @@ def hlsl_sign : HLSLOneArgBuiltin<"sign", "__builtin_hlsl_elementwise_sign"> {
   let ReturnType = VaryingShape<IntTy>;
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the sine of the input value, Val.

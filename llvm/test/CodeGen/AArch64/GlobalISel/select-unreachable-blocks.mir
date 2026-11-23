@@ -7,7 +7,6 @@ exposesReturnsTwice: false
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 liveins:
 body:             |
   ; CHECK-LABEL: name: test_unreachable_delete

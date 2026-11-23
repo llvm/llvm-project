@@ -837,7 +837,7 @@ define hidden void @pointer_phi_v4i32_uf2(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[STEP_ADD2]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER1]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 16
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -914,9 +914,9 @@ define hidden void @pointer_phi_v4i32_uf4(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER3]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i32 12
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 16
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 32
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 48
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP7]], align 4

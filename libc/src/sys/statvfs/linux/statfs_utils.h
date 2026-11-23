@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H
 #define LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/struct_statfs.h"
 #include "include/llvm-libc-types/struct_statvfs.h"
 #include "src/__support/macros/attributes.h"

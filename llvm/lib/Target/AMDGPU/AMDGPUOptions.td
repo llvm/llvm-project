@@ -350,6 +350,8 @@ defm : BoolField<"amdgpu-print-rp-downward", "false",
   "Use GCNDownwardRPTracker for GCNRegPressurePrinter pass">;
 
 // GCNSchedStrategy.cpp
+defm : BoolField<"amdgpu-avgpr-banking", "true",
+  "Distribute AVGPR pressure across the ArchVGPR and AGPR banks instead of charging all of it to ArchVGPR">;
 defm : BoolField<"amdgpu-clustered-low-occupancy-reschedule", "true",
   "Enable clustered low occupancy rescheduling for ILP scheduling stage">;
 defm : ValueField<"amdgpu-lirp-instant-lower-bound", "unsigned", "10",

@@ -101,7 +101,7 @@ define <16 x i8> @pext_v16i8(<16 x i8> %val, <16 x i8> %mask) nounwind {
 ; AVX2-NEXT:    vpand %xmm6, %xmm5, %xmm5
 ; AVX2-NEXT:    vpxor %xmm5, %xmm4, %xmm4
 ; AVX2-NEXT:    vpsubb %xmm3, %xmm1, %xmm3
-; AVX2-NEXT:    vpor %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vpor %xmm3, %xmm4, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm3, %xmm2
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
 ; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm3
@@ -166,7 +166,7 @@ define <16 x i8> @pext_v16i8(<16 x i8> %val, <16 x i8> %mask) nounwind {
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm4 = xmm3 ^ (xmm4 & xmm5)
 ; AVX512-NEXT:    vpsubb %xmm2, %xmm1, %xmm2
 ; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 ^ (xmm2 | xmm4)
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 ^ (xmm4 | xmm2)
 ; AVX512-NEXT:    vpaddb %xmm3, %xmm3, %xmm2
 ; AVX512-NEXT:    vpxor %xmm2, %xmm3, %xmm2
 ; AVX512-NEXT:    vpaddb %xmm2, %xmm2, %xmm6

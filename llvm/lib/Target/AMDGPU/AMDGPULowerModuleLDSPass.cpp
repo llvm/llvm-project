@@ -265,8 +265,7 @@ class AMDGPULowerModuleLDS {
     Function *Decl = Intrinsic::getOrInsertDeclaration(
         Func->getParent(), Intrinsic::donothing, {});
 
-    Value *UseInstance[1] = {
-        Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
+    Value *UseInstance[] = {SGV};
 
     Builder.CreateCall(
         Decl, {}, {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)});
@@ -950,7 +949,7 @@ public:
 
       std::string StructName =
           F->hasLocalLinkage()
-              ? ("__amdgpu_lds." + F->getName() + ModuleId).str()
+              ? ("__amdgpu_lds." + F->getName() + "." + ModuleId).str()
               : ("__amdgpu_lds." + F->getName()).str();
       LDSVariableReplacement Replacement =
           createLDSVariableReplacement(M, StructName, FuncScopeVars);
@@ -974,7 +973,7 @@ public:
     // different TUs). Pack them into a single per-module struct with a
     // module-unique name so the linker treats them as one allocation unit.
     if (!InternalMultiUserVars.empty()) {
-      std::string StructName = "__amdgpu_lds.__internal" + ModuleId;
+      std::string StructName = "__amdgpu_lds.__internal." + ModuleId;
       LDSVariableReplacement Replacement =
           createLDSVariableReplacement(M, StructName, InternalMultiUserVars);
 
@@ -1119,8 +1118,6 @@ public:
                                       KernelsThatIndirectlyAllocateDynamicLDS);
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      IRBuilder<> Builder(M);
-
       // The order must be consistent between lookup table and accesses to
       // lookup table
       auto TableLookupVariablesOrdered =

@@ -28,8 +28,7 @@ void acc_kernels(int cond) {
   // CHECK-NEXT: acc.kernels {
   // CHECK-NEXT: cir.scope {
   // CHECK-NEXT: cir.while {
-  // CHECK-NEXT: %[[INT:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[CAST:.*]] = cir.cast int_to_bool %[[INT]]
+  // CHECK-NEXT: %[[CAST:.*]] = cir.const #true
   // CHECK-NEXT: cir.condition(%[[CAST]])
   // CHECK-NEXT: } do {
   // CHECK-NEXT: cir.yield
@@ -57,8 +56,7 @@ void acc_kernels(int cond) {
 
 #pragma acc kernels self(0)
   {}
-  // CHECK-NEXT: %[[ZERO_LITERAL:.*]] = cir.const #cir.int<0> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ZERO_LITERAL]] : !s32i -> !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.const #false
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.kernels self(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator
@@ -75,8 +73,7 @@ void acc_kernels(int cond) {
 
 #pragma acc kernels if(1)
   {}
-  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.const #true
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.kernels if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator

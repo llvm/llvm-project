@@ -159,7 +159,8 @@ std::optional<unsigned> parseAndVerify<unsigned>(SPIRVDialect const &dialect,
                                                  DialectAsmParser &parser);
 
 static Type parseAndVerifyType(SPIRVDialect const &dialect,
-                               DialectAsmParser &parser) {
+                               DialectAsmParser &parser,
+                               bool allowFunctionType = false) {
   Type type;
   SMLoc typeLoc = parser.getCurrentLocation();
   if (parser.parseType(type))
@@ -170,7 +171,20 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
     return type;
 
   // Check other allowed types.
-  if (auto t = dyn_cast<FloatType>(type)) {
+  if (auto t = dyn_cast<FunctionType>(type); t && allowFunctionType) {
+    if (t.getNumResults() > 1) {
+      parser.emitError(typeLoc, "function type must have at most one result");
+      return Type();
+    }
+    for (Type elementType :
+         llvm::concat<const Type>(t.getInputs(), t.getResults())) {
+      if (!isa<SPIRVType>(elementType)) {
+        parser.emitError(typeLoc, "cannot use ")
+            << elementType << " to compose SPIR-V types";
+        return Type();
+      }
+    }
+  } else if (auto t = dyn_cast<FloatType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
                        "only 8/16/32/64-bit float type allowed but found ")
@@ -450,7 +464,8 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   if (parser.parseLess())
     return Type();
 
-  auto pointeeType = parseAndVerifyType(dialect, parser);
+  auto pointeeType =
+      parseAndVerifyType(dialect, parser, /*allowFunctionType=*/true);
   if (!pointeeType)
     return Type();
 
@@ -468,6 +483,28 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   if (parser.parseGreater())
     return Type();
   return PointerType::get(pointeeType, *storageClass);
+}
+
+// untyped-pointer-type ::= `!spirv.untyped_ptr<` storage-class `>`
+static Type parseUntypedPointerType(SPIRVDialect const &dialect,
+                                    DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  StringRef storageClassSpec;
+  SMLoc storageClassLoc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&storageClassSpec))
+    return Type();
+
+  auto storageClass = symbolizeStorageClass(storageClassSpec);
+  if (!storageClass) {
+    parser.emitError(storageClassLoc, "unknown storage class: ")
+        << storageClassSpec;
+    return Type();
+  }
+  if (parser.parseGreater())
+    return Type();
+  return UntypedPointerType::get(dialect.getContext(), *storageClass);
 }
 
 // runtime-array-type ::= `!spirv.rtarray` `<` element-type
@@ -868,6 +905,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return SamplerType::get(getContext());
   if (keyword == "named_barrier")
     return NamedBarrierType::get(getContext());
+  if (keyword == "untyped_ptr")
+    return parseUntypedPointerType(*this, parser);
   if (keyword == "struct")
     return parseStructType(*this, parser);
   if (keyword == "matrix")
@@ -918,6 +957,10 @@ static void print(SamplerType type, DialectAsmPrinter &os) { os << "sampler"; }
 
 static void print(NamedBarrierType type, DialectAsmPrinter &os) {
   os << "named_barrier";
+}
+
+static void print(UntypedPointerType type, DialectAsmPrinter &os) {
+  os << "untyped_ptr<" << stringifyStorageClass(type.getStorageClass()) << ">";
 }
 
 static void print(StructType type, DialectAsmPrinter &os) {
@@ -1015,7 +1058,7 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
             ImageType, SampledImageType, SamplerType, NamedBarrierType,
-            StructType, MatrixType, TensorArmType>(
+            StructType, MatrixType, TensorArmType, UntypedPointerType>(
           [&](auto type) { print(type, os); })
       .DefaultUnreachable("Unhandled SPIR-V type");
 }

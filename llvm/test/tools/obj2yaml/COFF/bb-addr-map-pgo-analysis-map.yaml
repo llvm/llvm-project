@@ -1,0 +1,279 @@
+## Check how obj2yaml produces YAML PGO Analysis Map in .llvm_bb_addr_map.
+
+## Check that obj2yaml uses the "PGOAnalyses" tag to describe PGO analysis data,
+## including post-link data.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=VALID
+
+# VALID:      sections:
+# VALID-NEXT:   - Name:            .llvm_bb_addr_map
+# VALID-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# VALID-NEXT:     Entries:
+# VALID-NEXT:       - Version:         5
+# VALID-NEXT:         Feature:         0x87
+## The 'BaseAddress' field is omitted when it's zero.
+# VALID-NEXT:         BBRanges:
+# VALID-NEXT:           - BBEntries:
+# VALID-NEXT:               - ID:              0
+# VALID-NEXT:                 AddressOffset:   0x1
+# VALID-NEXT:                 Size:            0x2
+# VALID-NEXT:                 Metadata:        0x3
+# VALID-NEXT:               - ID:              2
+# VALID-NEXT:                 AddressOffset:   0x4
+# VALID-NEXT:                 Size:            0x5
+# VALID-NEXT:                 Metadata:        0x6
+# VALID-NEXT:               - ID:              4
+# VALID-NEXT:                 AddressOffset:   0xFFFFFFFFFFFFFFF7
+# VALID-NEXT:                 Size:            0xFFFFFFFFFFFFFFF8
+# VALID-NEXT:                 Metadata:        0xFFFFFFFFFFFFFFF9
+# VALID-NEXT:       - Version:         5
+# VALID-NEXT:         Feature:         0xA
+# VALID-NEXT:         BBRanges:
+# VALID-NEXT:           - BaseAddress:     0xFFFFFFFFFFFFFF20
+# VALID-NEXT:             BBEntries:
+# VALID-NEXT:               - ID:              6
+# VALID-NEXT:                 AddressOffset:   0xA
+# VALID-NEXT:                 Size:            0xB
+# VALID-NEXT:                 Metadata:        0xC
+# VALID-NEXT:     PGOAnalyses:
+# VALID-NEXT:       - FuncEntryCount:  100
+# VALID-NEXT:         PGOBBEntries:
+# VALID-NEXT:           - BBFreq:          100
+# VALID-NEXT:             PostLinkBBFreq:  10
+# VALID-NEXT:             Successors:
+# VALID-NEXT:               - ID:              2
+# VALID-NEXT:                 BrProb:          0x80000000
+# VALID-NEXT:                 PostLinkBrFreq:  7
+# VALID-NEXT:               - ID:              4
+# VALID-NEXT:                 BrProb:          0x80000000
+# VALID-NEXT:                 PostLinkBrFreq:  0
+# VALID-NEXT:           - BBFreq:          50
+# VALID-NEXT:             PostLinkBBFreq:  0
+# VALID-NEXT:             Successors:
+# VALID-NEXT:               - ID:              4
+# VALID-NEXT:                 BrProb:          0xFFFFFFFF
+# VALID-NEXT:                 PostLinkBrFreq:  0
+# VALID-NEXT:           - BBFreq:          100
+# VALID-NEXT:             PostLinkBBFreq:  3
+# VALID-NEXT:             Successors:      []
+# VALID-NEXT:       - PGOBBEntries:
+# VALID-NEXT:           - BBFreq:          20
+# VALID-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 5
+        Feature: 0x87
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+              - ID:            2
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+              - ID:            4
+                AddressOffset: 0xFFFFFFFFFFFFFFF7
+                Size:          0xFFFFFFFFFFFFFFF8
+                Metadata:      0xFFFFFFFFFFFFFFF9
+      - Version: 5
+        Feature: 0xA
+        BBRanges:
+          - BaseAddress: 0xFFFFFFFFFFFFFF20
+            BBEntries:
+              - ID:            6
+                AddressOffset: 0xA
+                Size:          0xB
+                Metadata:      0xC
+    PGOAnalyses:
+      - FuncEntryCount: 100
+        PGOBBEntries:
+          - BBFreq:         100
+            PostLinkBBFreq: 10
+            Successors:
+              - ID:             2
+                BrProb:         0x80000000
+                PostLinkBrFreq: 7
+              - ID:             4
+                BrProb:         0x80000000
+          - BBFreq:         50
+            Successors:
+              - ID:             4
+                BrProb:         0xFFFFFFFF
+          - BBFreq:         100
+            PostLinkBBFreq: 3
+            Successors:     []
+      - PGOBBEntries:
+          - BBFreq: 20
+symbols: []
+
+## Check obj2yaml can dump multiple .llvm_bb_addr_map sections.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=MULTI
+
+# MULTI:      sections:
+# MULTI-NEXT:   - Name:            .llvm_bb_addr_map
+# MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# MULTI-NEXT:     Entries:
+## The 'BaseAddress' field is omitted when it's zero.
+# MULTI-NEXT:       - Version:         0
+# MULTI-NEXT:         Feature:         0x3
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BBEntries:
+# MULTI-NEXT:               - ID:              0
+# MULTI-NEXT:                 AddressOffset:   0x1
+# MULTI-NEXT:                 Size:            0x2
+# MULTI-NEXT:                 Metadata:        0x3
+# MULTI-NEXT:     PGOAnalyses:
+# MULTI-NEXT:       - FuncEntryCount:  0
+# MULTI-NEXT:         PGOBBEntries:
+# MULTI-NEXT:           - BBFreq:          0
+# MULTI-NEXT:   - Name:            .llvm_bb_addr_map
+# MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Version:         0
+# MULTI-NEXT:         Feature:         0x1
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BaseAddress:     0x20
+# MULTI-NEXT:             BBEntries:       []
+# MULTI-NEXT:     PGOAnalyses:
+# MULTI-NEXT:       - FuncEntryCount:  0
+# MULTI-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 0
+        Feature: 0x3
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+    PGOAnalyses:
+      - FuncEntryCount: 0
+        PGOBBEntries:
+          - BBFreq: 0
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 0
+        Feature: 0x1
+        BBRanges:
+          - BaseAddress: 0x20
+    PGOAnalyses:
+      - FuncEntryCount: 0
+symbols: []
+
+## Check that obj2yaml uses the "SectionData" tag when the section is truncated.
+## The section contains the first 0x1D bytes of document 1's section.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefixes=TRUNCATED,INVALID
+
+# INVALID:        - Name:            .llvm_bb_addr_map
+# INVALID-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# TRUNCATED-NEXT:   SectionData:     058700000000000000000003000102030204050604F7FFFFFFFFFFFFFF{{$}}
+# INVALID-NEXT:     SizeOfRawData:   29{{$}}
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    SectionData:     058700000000000000000003000102030204050604F7FFFFFFFFFFFFFF
+symbols: []
+
+## Check that obj2yaml uses the "SectionData" tag when the enabled
+## 'FuncEntryCount' field is missing.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=MISSING-FEC
+
+# MISSING-FEC:      sections:
+# MISSING-FEC-NEXT:   - Name:            .llvm_bb_addr_map
+# MISSING-FEC-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# MISSING-FEC-NEXT:     SectionData:     '{{([[:xdigit:]]+)}}'{{$}}
+# MISSING-FEC-NEXT:     SizeOfRawData:   {{[0-9]+}}{{$}}
+# MISSING-FEC-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 0
+        Feature: 0x1
+        BBRanges:
+          - BaseAddress: 0x20
+symbols: []
+
+## Check that obj2yaml keeps 'NumBlocks' and does not decode BB entries when
+## 'OmitBBEntries' is set, and that the output round-trips.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: obj2yaml %t5 -o %t5.out
+# RUN: FileCheck %s --input-file %t5.out --check-prefix=OMIT
+# RUN: yaml2obj %t5.out -o %t5.rt
+# RUN: cmp %t5 %t5.rt
+
+# OMIT:      Entries:
+# OMIT-NEXT:   - Version:         2
+# OMIT-NEXT:     Feature:         0x11
+# OMIT-NEXT:     BBRanges:
+# OMIT-NEXT:       - BaseAddress:     0x10
+# OMIT-NEXT:         NumBlocks:       1
+# OMIT-NEXT:   - Version:         2
+# OMIT-NEXT:     BBRanges:
+# OMIT-NEXT:       - BBEntries:
+# OMIT-NEXT:           - ID:              0
+# OMIT-NEXT:             AddressOffset:   0x0
+# OMIT-NEXT:             Size:            0x1
+# OMIT-NEXT:             Metadata:        0x0
+# OMIT-NEXT: PGOAnalyses:
+# OMIT-NEXT:   - FuncEntryCount:  100
+# OMIT-NEXT:   - {}
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 2
+        Feature: 0x11
+        BBRanges:
+          - BaseAddress: 0x10
+            NumBlocks:   1
+      - Version: 2
+        Feature: 0x0
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x0
+    PGOAnalyses:
+      - FuncEntryCount: 100
+      - {}
+symbols: []
