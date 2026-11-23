@@ -436,13 +436,6 @@ public:
 
   /// Runs the serialization pipeline, returning `std::nullopt` on error.
   std::optional<SmallVector<char, 0>> run() override;
-
-private:
-  /// Translates the LLVM module to SPIR-V binary using LLVM's
-  /// SPIR-V target.
-  std::optional<std::string>
-  translateToSPIRVBinary(llvm::Module &llvmModule,
-                         llvm::TargetMachine &targetMachine);
 };
 } // namespace
 
