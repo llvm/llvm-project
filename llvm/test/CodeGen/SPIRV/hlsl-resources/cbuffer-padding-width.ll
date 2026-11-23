@@ -1,10 +1,11 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - | FileCheck %s --implicit-check-not='"spirv.Padding"'
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
-; cbuffer padding is modeled with the widest of i32/i16/i8 that divides its
-; size, not always i8. The checks are on the struct members, not on module-wide
-; Int8: resource name strings emit i8 arrays of their own. Padding shares its
-; integer type with real members of the same width and must not be named.
+; cbuffer padding is modeled with the widest of i32/i16/i8 that divides both
+; its size and its offset, not always i8. The checks are on the struct members,
+; not on module-wide Int8: resource name strings emit i8 arrays of their own.
+; Padding shares its integer type with real members of the same width and must
+; not be named.
 
 ; CHECK-DAG: %[[U8:[0-9]+]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[U16:[0-9]+]] = OpTypeInt 16 0
@@ -29,16 +30,22 @@
 ; CHECK-DAG: %[[D:[0-9]+]] = OpTypeStruct %[[U32]] %[[U32]] %[[U32]]
 ; CHECK-DAG: OpMemberDecorate %[[D]] 1 Offset 4
 ; CHECK-DAG: OpMemberDecorate %[[D]] 2 Offset 8
+; 4 bytes at offset 2: i32 would be misaligned, so i16.
+; CHECK-DAG: %[[E:[0-9]+]] = OpTypeStruct %[[HALF]] %[[U16]] %[[HALF]]
+; CHECK-DAG: OpMemberDecorate %[[E]] 1 Offset 2
+; CHECK-DAG: OpMemberDecorate %[[E]] 2 Offset 6
 
 %A = type <{ float, target("spirv.Padding", 12), <4 x float> }>
 %B = type <{ half, target("spirv.Padding", 14), <4 x float> }>
 %C = type <{ i8, target("spirv.Padding", 3), float }>
 %D = type <{ i32, target("spirv.Padding", 4), i32 }>
+%E = type <{ half, target("spirv.Padding", 4), half }>
 
 @.str.a = private unnamed_addr constant [2 x i8] c"A\00", align 1
 @.str.b = private unnamed_addr constant [2 x i8] c"B\00", align 1
 @.str.c = private unnamed_addr constant [2 x i8] c"C\00", align 1
 @.str.d = private unnamed_addr constant [2 x i8] c"D\00", align 1
+@.str.e = private unnamed_addr constant [2 x i8] c"E\00", align 1
 
 define void @main() local_unnamed_addr #0 {
   %ha = tail call target("spirv.VulkanBuffer", %A, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_s_As_2_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str.a)
@@ -60,6 +67,11 @@ define void @main() local_unnamed_addr #0 {
   %bd = call ptr addrspace(12) @llvm.spv.resource.getbasepointer.p12.tspirv.VulkanBuffer_s_Ds_2_0t(target("spirv.VulkanBuffer", %D, 2, 0) %hd)
   %pd = getelementptr inbounds nuw i8, ptr addrspace(12) %bd, i64 8
   %vd = load volatile i32, ptr addrspace(12) %pd, align 4
+
+  %he = tail call target("spirv.VulkanBuffer", %E, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_s_Es_2_0t(i32 4, i32 0, i32 1, i32 0, ptr nonnull @.str.e)
+  %be = call ptr addrspace(12) @llvm.spv.resource.getbasepointer.p12.tspirv.VulkanBuffer_s_Es_2_0t(target("spirv.VulkanBuffer", %E, 2, 0) %he)
+  %pe = getelementptr inbounds nuw i8, ptr addrspace(12) %be, i64 6
+  %ve = load volatile half, ptr addrspace(12) %pe, align 2
   ret void
 }
 
@@ -71,5 +83,7 @@ declare target("spirv.VulkanBuffer", %C, 2, 0) @llvm.spv.resource.handlefrombind
 declare ptr addrspace(12) @llvm.spv.resource.getbasepointer.p12.tspirv.VulkanBuffer_s_Cs_2_0t(target("spirv.VulkanBuffer", %C, 2, 0))
 declare target("spirv.VulkanBuffer", %D, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_s_Ds_2_0t(i32, i32, i32, i32, ptr)
 declare ptr addrspace(12) @llvm.spv.resource.getbasepointer.p12.tspirv.VulkanBuffer_s_Ds_2_0t(target("spirv.VulkanBuffer", %D, 2, 0))
+declare target("spirv.VulkanBuffer", %E, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_s_Es_2_0t(i32, i32, i32, i32, ptr)
+declare ptr addrspace(12) @llvm.spv.resource.getbasepointer.p12.tspirv.VulkanBuffer_s_Es_2_0t(target("spirv.VulkanBuffer", %E, 2, 0))
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
