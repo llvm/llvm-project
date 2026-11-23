@@ -935,7 +935,7 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 }
 
 // Checks whether the given global value is in a non-prevailing comdat
-// (comdat containing values the linker indicated were not prevailing,
+// (comdat whose key symbol the linker indicated was not prevailing,
 // which we then dropped to available_externally), and if so, removes
 // it from the comdat. This is called for all global values to ensure the
 // comdat is empty rather than leaving an incomplete comdat. It is needed for
@@ -1083,7 +1083,10 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
         // module (in linkRegularLTO), based on whether it is undefined.
         Mod.Keep.push_back(GV);
         GV->setLinkage(GlobalValue::AvailableExternallyLinkage);
-        if (GV->hasComdat())
+        // Only a non-prevailing key makes the whole COMDAT non-prevailing.
+        // A non-key member, such as D0 in a D5 COMDAT, can be non-prevailing
+        // while other members of the COMDAT remain prevailing.
+        if (GV->hasComdat() && GV->getComdat()->getName() == GV->getName())
           NonPrevailingComdats.insert(GV->getComdat());
         cast<GlobalObject>(GV)->setComdat(nullptr);
       }
@@ -1120,7 +1123,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     }
   }
 
-  if (!M.getComdatSymbolTable().empty())
+  if (!NonPrevailingComdats.empty())
     for (GlobalValue &GV : M.global_values())
       handleNonPrevailingComdat(GV, NonPrevailingComdats);
 
