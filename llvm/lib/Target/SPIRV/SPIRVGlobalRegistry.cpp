@@ -853,7 +853,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
   MachineIRBuilder GVBuilder(MIRBuilder.getState());
   if (&GVBuilder.getMBB() != &EntryBB)
-    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+    GVBuilder.setInsertPt(EntryBB, getOpVariableMBBIt(MIRBuilder.getMF()));
 
   // Pointers to opaque types stay typed even with the extension on, so emit the
   // untyped variant only when the result is actually an untyped pointer.
