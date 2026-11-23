@@ -4186,6 +4186,7 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
   Function *LtGCFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_list_to_global_copy_func", &M);
+  LtGCFunc->setCallingConv(Config.getRuntimeCC());
   LtGCFunc->setAttributes(FuncAttrs);
   LtGCFunc->addParamAttr(0, Attribute::NoUndef);
   LtGCFunc->addParamAttr(1, Attribute::NoUndef);
@@ -4420,6 +4421,7 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
   Function *GtLCFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_copy_func", &M);
+  GtLCFunc->setCallingConv(Config.getRuntimeCC());
   GtLCFunc->setAttributes(FuncAttrs);
   GtLCFunc->addParamAttr(0, Attribute::NoUndef);
   GtLCFunc->addParamAttr(1, Attribute::NoUndef);
@@ -4543,6 +4545,7 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
   Function *GtLRFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_reduce_func", &M);
+  GtLRFunc->setCallingConv(Config.getRuntimeCC());
   GtLRFunc->setAttributes(FuncAttrs);
   GtLRFunc->addParamAttr(0, Attribute::NoUndef);
   GtLRFunc->addParamAttr(1, Attribute::NoUndef);
@@ -5056,7 +5059,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
       // to a debug-info-bearing helper needs one or the verifier rejects the
       // module ("!dbg attachment points at wrong subprogram") after inlining.
       Builder.SetCurrentDebugLocation(Loc.DL);
-      Builder.CreateCall(
+      createRuntimeFunctionCall(
           *LtGCFunc, {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
       CopyScratchToListFunc = *GtLCFunc;
     }
@@ -5087,7 +5090,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // needs one or the verifier rejects the module after inlining.
   if (ScratchForCopyBack) {
     Builder.SetCurrentDebugLocation(Loc.DL);
-    Builder.CreateCall(
+    createRuntimeFunctionCall(
         CopyScratchToListFunc,
         {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
   }

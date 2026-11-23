@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple x86_64-unknown-linux -fopenmp-targets=spirv64-intel -emit-llvm-bc %s -o %t-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple spirv64-intel -fopenmp-targets=spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple spirv64-intel -fopenmp-targets=spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefix=CC
 
 // expected-no-diagnostics
 
@@ -22,6 +23,14 @@
 // CHECK: define internal spir_func void @{{.*}}reduction{{.*}}func
 // CHECK: define internal spir_func void @{{.*}}shuffle_and_reduce_func
 // CHECK: define internal spir_func void @{{.*}}inter_warp_copy_func
+
+// The list<->global helpers, and the direct calls to them, use the runtime
+// calling convention like the helpers above.
+// CC: call spir_func addrspace(9) void @_omp_reduction_list_to_global_copy_func(
+// CC: call spir_func addrspace(9) void @_omp_reduction_global_to_list_copy_func(
+// CC: define internal spir_func void @_omp_reduction_list_to_global_copy_func(
+// CC: define internal spir_func void @_omp_reduction_global_to_list_copy_func(
+// CC: define internal spir_func void @_omp_reduction_global_to_list_reduce_func(
 
 int main() {
   int x = 0;
