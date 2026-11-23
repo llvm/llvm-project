@@ -25,7 +25,10 @@ public:
 
 private:
   llvm::Error Decode(llvm::StringRef input);
+  llvm::Error ParseXMLDecl();
   llvm::Error ParseMisc(bool &found);
+  llvm::Error ParseDoctype();
+  llvm::Error ParseExternalID();
   llvm::Error ParseElement();
   llvm::Error ParseStartTag(bool &is_empty);
   llvm::Error ParseAttValue(std::string &value);
@@ -33,6 +36,9 @@ private:
   llvm::Error ParseComment();
   llvm::Error ParsePI();
   llvm::Error ParseName(llvm::StringRef &name);
+  llvm::Error ParseQuoted(llvm::StringRef &value);
+  llvm::Expected<bool> ParseDeclAttribute(llvm::StringRef name,
+                                          llvm::StringRef &value);
   void Characters(llvm::StringRef text) {
     if (!text.empty())
       m_handler.Characters(text);
@@ -52,6 +58,9 @@ private:
   std::string m_text;
   size_t m_pos = 0;
   std::vector<std::string> m_open;
+  bool m_utf16 = false;
+  bool m_standalone = false;
+  bool m_has_unread_decls = false;
 };
 
 } // namespace
@@ -82,6 +91,11 @@ static bool IsNameChar(uint32_t c) {
   return IsNameStartChar(c) || c == '-' || c == '.' || (c >= '0' && c <= '9') ||
          c == 0xB7 || (c >= 0x300 && c <= 0x36F) ||
          (c >= 0x203F && c <= 0x2040);
+}
+
+static bool IsPubidChar(char c) {
+  return c == ' ' || c == '\r' || c == '\n' || llvm::isAlnum(c) ||
+         llvm::StringRef("-'()+,./:=?;!*#@$_%").contains(c);
 }
 
 static void AppendUTF8(uint32_t c, std::string &out) {
@@ -131,7 +145,26 @@ uint32_t Parser::PeekCodePoint(unsigned &length) const {
 }
 
 llvm::Error Parser::Decode(llvm::StringRef input) {
-  input.consume_front("\xEF\xBB\xBF");
+  std::string utf8;
+  if (input.starts_with("\xFE\xFF") || input.starts_with("\xFF\xFE")) {
+    if (input.size() % 2)
+      return MakeError("invalid UTF-16 input");
+    bool big_endian = input[0] == '\xFE';
+    std::vector<llvm::UTF16> units;
+    for (size_t i = 2; i < input.size(); i += 2) {
+      uint8_t first = input[i], second = input[i + 1];
+      units.push_back(big_endian ? (first << 8 | second)
+                                 : (second << 8 | first));
+    }
+    if ((!units.empty() &&
+         (units.front() == 0xFEFF || units.front() == 0xFFFE)) ||
+        !llvm::convertUTF16ToUTF8String(units, utf8))
+      return MakeError("invalid UTF-16 input");
+    input = utf8;
+    m_utf16 = true;
+  } else {
+    input.consume_front("\xEF\xBB\xBF");
+  }
 
   m_text.reserve(input.size());
   const auto *source = reinterpret_cast<const llvm::UTF8 *>(input.data());
@@ -167,6 +200,71 @@ llvm::Error Parser::ParseName(llvm::StringRef &name) {
     m_pos += length;
   name = llvm::StringRef(m_text).slice(start, m_pos);
   return llvm::Error::success();
+}
+
+llvm::Error Parser::ParseQuoted(llvm::StringRef &value) {
+  if (AtEnd() || (m_text[m_pos] != '"' && m_text[m_pos] != '\''))
+    return MakeError("expected a quoted string");
+  char quote = m_text[m_pos++];
+  size_t end = m_text.find(quote, m_pos);
+  if (end == std::string::npos)
+    return MakeError("unterminated quoted string");
+  value = llvm::StringRef(m_text).slice(m_pos, end);
+  m_pos = end + 1;
+  return llvm::Error::success();
+}
+
+llvm::Expected<bool> Parser::ParseDeclAttribute(llvm::StringRef name,
+                                                llvm::StringRef &value) {
+  size_t start = m_pos;
+  if (!SkipSpace() || !Consume(name)) {
+    m_pos = start;
+    return false;
+  }
+  SkipSpace();
+  if (llvm::Error error = Expect("="))
+    return std::move(error);
+  SkipSpace();
+  if (llvm::Error error = ParseQuoted(value))
+    return std::move(error);
+  return true;
+}
+
+llvm::Error Parser::ParseXMLDecl() {
+  llvm::StringRef version, encoding, standalone;
+  llvm::Expected<bool> found = ParseDeclAttribute("version", version);
+  if (!found)
+    return found.takeError();
+  if (!*found)
+    return MakeError("expected a version in the XML declaration");
+  if (!version.consume_front("1.") || version.empty() ||
+      !llvm::all_of(version, llvm::isDigit))
+    return MakeError("unsupported XML version");
+
+  found = ParseDeclAttribute("encoding", encoding);
+  if (!found)
+    return found.takeError();
+  if (*found) {
+    if (encoding.empty() || !llvm::isAlpha(encoding[0]) ||
+        !llvm::all_of(encoding, [](char c) {
+          return llvm::isAlnum(c) || c == '.' || c == '_' || c == '-';
+        }))
+      return MakeError("invalid encoding name");
+    bool matches = m_utf16 ? encoding.equals_insensitive("UTF-16")
+                           : encoding.equals_insensitive("UTF-8");
+    if (!matches)
+      return MakeError("unsupported encoding '" + encoding + "'");
+  }
+
+  found = ParseDeclAttribute("standalone", standalone);
+  if (!found)
+    return found.takeError();
+  if (*found && standalone != "yes" && standalone != "no")
+    return MakeError("invalid standalone declaration");
+  m_standalone = standalone == "yes";
+
+  SkipSpace();
+  return Expect("?>");
 }
 
 llvm::Error Parser::ParseComment() {
@@ -207,6 +305,41 @@ llvm::Error Parser::ParseMisc(bool &found) {
   return llvm::Error::success();
 }
 
+llvm::Error Parser::ParseExternalID() {
+  llvm::StringRef literal;
+  if (Consume("PUBLIC")) {
+    if (!SkipSpace())
+      return MakeError("expected whitespace");
+    if (llvm::Error error = ParseQuoted(literal))
+      return error;
+    if (!llvm::all_of(literal, IsPubidChar))
+      return MakeError("invalid character in public identifier");
+  } else if (!Consume("SYSTEM")) {
+    return MakeError("expected 'SYSTEM' or 'PUBLIC'");
+  }
+  if (!SkipSpace())
+    return MakeError("expected whitespace");
+  return ParseQuoted(literal);
+}
+
+llvm::Error Parser::ParseDoctype() {
+  llvm::StringRef name;
+  if (!SkipSpace())
+    return MakeError("expected whitespace");
+  if (llvm::Error error = ParseName(name))
+    return error;
+  bool space = SkipSpace();
+  if (space && !Rest().starts_with("[") && !Rest().starts_with(">")) {
+    if (llvm::Error error = ParseExternalID())
+      return error;
+    m_has_unread_decls = !m_standalone;
+    SkipSpace();
+  }
+  if (Rest().starts_with("["))
+    return MakeError("internal DTD subsets are not supported");
+  return Expect(">");
+}
+
 llvm::Error Parser::ParseReference(std::string &out) {
   if (Consume("#")) {
     unsigned radix = Consume("x") ? 16 : 10;
@@ -234,9 +367,10 @@ llvm::Error Parser::ParseReference(std::string &out) {
                                 .Case("apos", "'")
                                 .Case("quot", "\"")
                                 .Default(nullptr);
-  if (!replacement)
+  if (replacement)
+    out += replacement;
+  else if (!m_has_unread_decls)
     return MakeError("undeclared entity '" + name + "'");
-  out += replacement;
   return llvm::Error::success();
 }
 
@@ -368,11 +502,26 @@ llvm::Error Parser::Parse(llvm::StringRef input) {
   if (llvm::Error error = Decode(input))
     return error;
 
+  if (Rest().starts_with("<?xml") && Rest().size() > 5 && IsSpace(Rest()[5])) {
+    m_pos += 5;
+    if (llvm::Error error = ParseXMLDecl())
+      return error;
+  }
+
   bool found;
   do {
     if (llvm::Error error = ParseMisc(found))
       return error;
   } while (found);
+
+  if (Consume("<!DOCTYPE")) {
+    if (llvm::Error error = ParseDoctype())
+      return error;
+    do {
+      if (llvm::Error error = ParseMisc(found))
+        return error;
+    } while (found);
+  }
 
   if (llvm::Error error = ParseElement())
     return error;
