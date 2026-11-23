@@ -21,6 +21,7 @@
 // UNSUPPORTED: c++03
 
 #include <memory>
+#include <utility>
 
 #include <atomic>
 #include <cassert>
@@ -52,6 +53,45 @@ int main(int, char**)
         assert(*p == 2);
         assert(*v == 4);
         assert(*w == 2);
+    }
+    {
+      // Aliases with the same ownership but different stored pointers are not equivalent.
+      std::shared_ptr<std::pair<int, int> > owner = std::make_shared<std::pair<int, int> >(7, 11);
+      std::shared_ptr<int> p(owner, &owner->first);
+      std::shared_ptr<int> v(owner, &owner->second);
+      std::shared_ptr<int> w(new int(2));
+      bool b =
+          std::atomic_compare_exchange_weak_explicit(&p, &v, w, std::memory_order_seq_cst, std::memory_order_seq_cst);
+      assert(b == false);
+      assert(p.get() == &owner->first);
+      assert(v.get() == &owner->first); // expected was updated with p
+      assert(*w == 2);
+    }
+    {
+      // Aliases storing the same pointer and sharing ownership are equivalent.
+      std::shared_ptr<std::pair<int, int> > owner = std::make_shared<std::pair<int, int> >(7, 11);
+      std::shared_ptr<int> p(owner, &owner->first);
+      std::shared_ptr<int> v(owner, &owner->first);
+      std::shared_ptr<int> w(new int(2));
+      bool b =
+          std::atomic_compare_exchange_weak_explicit(&p, &v, w, std::memory_order_seq_cst, std::memory_order_seq_cst);
+      assert(b == true);
+      assert(*p == 2);
+      assert(v.get() == &owner->first);
+      assert(*w == 2);
+    }
+    {
+      // An ownerless non-null shared_ptr is not equivalent to an empty one.
+      int value = 7;
+      std::shared_ptr<int> p(std::shared_ptr<int>(), &value);
+      std::shared_ptr<int> v;
+      std::shared_ptr<int> w(new int(2));
+      bool b =
+          std::atomic_compare_exchange_weak_explicit(&p, &v, w, std::memory_order_seq_cst, std::memory_order_seq_cst);
+      assert(b == false);
+      assert(p.get() == &value);
+      assert(v.get() == &value); // expected was updated with p
+      assert(*w == 2);
     }
 
   return 0;
