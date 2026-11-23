@@ -21,9 +21,11 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -159,9 +161,54 @@ OffloadPackagerAttrImpl::launchKernel(Attribute, Operation *launchFuncOperation,
   return launchFuncOperation->emitError("unexpected kernel launch");
 }
 
+/// Registers the host function or variable `op` as an offloading entry of kind
+/// OpenACC.
+static LogicalResult
+convertOffloadEntry(Operation *op, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *m = moduleTranslation.getLLVMModule();
+  llvm::GlobalValue *global = nullptr;
+  uint64_t size = 0;
+  if (auto func = dyn_cast<LLVM::LLVMFuncOp>(op)) {
+    global = moduleTranslation.lookupFunction(func.getName());
+    assert(global && "could not find the translated host symbol");
+  } else if (auto variable = dyn_cast<LLVM::GlobalOp>(op)) {
+    global = moduleTranslation.lookupGlobal(variable);
+    assert(global && "could not find the translated host symbol");
+    auto *llvmVariable = cast<llvm::GlobalVariable>(global);
+    size = m->getDataLayout().getTypeStoreSize(llvmVariable->getValueType());
+  } else {
+    return op->emitError("unsupported operation for '")
+           << acc::getOffloadEntryAttrName() << "'";
+  }
+
+  StringRef symbolName = global->getName();
+  llvm::offloading::emitOffloadingEntry(*m, llvm::object::OFK_OpenACC, global,
+                                        symbolName, size,
+                                        /*Flags=*/0, /*Data=*/0);
+  return success();
+}
+
+namespace {
+class OpenACCDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  LogicalResult
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const override {
+    if (attribute.getName() == acc::getOffloadEntryAttrName())
+      return convertOffloadEntry(op, moduleTranslation);
+    return success();
+  }
+};
+} // namespace
+
 void mlir::registerOpenACCDialectTranslation(DialectRegistry &registry) {
   registry.insert<acc::OpenACCDialect>();
   registry.addExtension(+[](MLIRContext *ctx, acc::OpenACCDialect *dialect) {
+    dialect->addInterfaces<OpenACCDialectLLVMIRTranslationInterface>();
     acc::OffloadPackagerAttr::attachInterface<OffloadPackagerAttrImpl>(*ctx);
   });
 }
