@@ -185,5 +185,5 @@ DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_restore_0)
 #endif
 
 #else
-# error "xlen must be 32 or 64 for save-restore implementation
+# error "xlen must be 32 or 64 for save-restore implementation"
 #endif

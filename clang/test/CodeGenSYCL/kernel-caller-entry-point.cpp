@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spir64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRNV %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spirv32-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spirv64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
+// RUN: %clang_cc1 -fsycl-is-device -fexperimental-abi-lowering -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spirv64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
 // RUN: %clang_cc1 -fsycl-is-host -emit-llvm -triple x86_64-pc-windows-msvc -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-HOST,CHECK-HOST-WINDOWS %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple amdgpu-amd-amdhsa -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-AMDGCN %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple nvptx-nvidia-cuda -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
@@ -14,6 +15,7 @@
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spir64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRNV %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spirv32-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spirv64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
+// RUN: %clang_cc1 -fsycl-is-device -fexperimental-abi-lowering -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spirv64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
 // RUN: %clang_cc1 -fsycl-is-host -emit-llvm -triple x86_64-uefi -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-HOST,CHECK-HOST-WINDOWS %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-uefi -triple amdgpu-amd-amdhsa -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-AMDGCN %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-uefi -triple nvptx-nvidia-cuda -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
@@ -22,6 +24,7 @@
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-uefi -triple spir64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRNV %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-uefi -triple spirv32-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-uefi -triple spirv64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
+// RUN: %clang_cc1 -fsycl-is-device -fexperimental-abi-lowering -emit-llvm -aux-triple x86_64-uefi -triple spirv64-unknown-unknown -std=c++17 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR,CHECK-SPIRV %s
 
 // Test code generation for functions declared with the sycl_kernel_entry_point
 // attribute. During host compilation, the bodies of such functions are replaced

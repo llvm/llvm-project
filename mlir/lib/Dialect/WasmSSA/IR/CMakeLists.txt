@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRWasmSSADialect
 
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
+  MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRDialect
   MLIRInferTypeOpInterface

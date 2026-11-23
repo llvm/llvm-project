@@ -546,7 +546,7 @@ def ApplySplitTransferFullPartialPatternsOp : Op<Transform_Dialect,
 
   let arguments = (ins
      DefaultValuedAttr<VectorTransferSplitAttr,
-       "vector::VectorTransferSplit::LinalgCopy">:$split_transfer_strategy
+       "vector::VectorTransferSplit::MemRefCopy">:$split_transfer_strategy
   );
 
   let assemblyFormat = [{

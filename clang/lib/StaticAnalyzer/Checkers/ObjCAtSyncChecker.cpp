@@ -44,7 +44,7 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
 
   // Uninitialized value used for the mutex?
   if (isa<UndefinedVal>(V)) {
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       auto report = std::make_unique<PathSensitiveBugReport>(
           BT_undef, BT_undef.getDescription(), N);
       bugreporter::trackExpressionValue(N, Ex, *report);

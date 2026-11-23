@@ -946,11 +946,10 @@ define <16 x i32> @vwadd_sext_chain_v16i8_v16i32(<16 x i32> %acc, <16 x i8> %a, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vwadd.vv v16, v14, v15
-; CHECK-NEXT:    vwadd.vv v18, v12, v13
+; CHECK-NEXT:    vwadd.vv v14, v12, v13
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vwadd.vv v12, v18, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v12, v8
+; CHECK-NEXT:    vadd.vv v12, v14, v16
+; CHECK-NEXT:    vwadd.wv v8, v8, v12
 ; CHECK-NEXT:    ret
   %sa = sext <16 x i8> %a to <16 x i32>
   %sb = sext <16 x i8> %b to <16 x i32>
@@ -961,4 +960,23 @@ define <16 x i32> @vwadd_sext_chain_v16i8_v16i32(<16 x i32> %acc, <16 x i8> %a, 
   %s2 = add <16 x i32> %s1, %sc
   %s3 = add <16 x i32> %s2, %sd
   ret <16 x i32> %s3
+}
+
+define <4 x i32> @sext_add_chain_no_acc(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
+; CHECK-LABEL: sext_add_chain_no_acc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vwadd.vv v12, v10, v11
+; CHECK-NEXT:    vwadd.vv v10, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.vv v8, v10, v12
+; CHECK-NEXT:    ret
+  %sa = sext <4 x i8> %a to <4 x i32>
+  %sb = sext <4 x i8> %b to <4 x i32>
+  %sc = sext <4 x i8> %c to <4 x i32>
+  %sd = sext <4 x i8> %d to <4 x i32>
+  %ab = add <4 x i32> %sa, %sb
+  %cd = add <4 x i32> %sc, %sd
+  %r = add <4 x i32> %ab, %cd
+  ret <4 x i32> %r
 }

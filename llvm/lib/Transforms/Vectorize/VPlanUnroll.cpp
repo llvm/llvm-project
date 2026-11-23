@@ -206,7 +206,7 @@ void UnrollState::unrollWidenInductionByUF(
   // The newly added recipes are added to ToSkip to avoid interleaving them
   // again.
   VPValue *Prev = IV;
-  Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
+  Builder.setInsertPoint(InsertPtForPhi);
   unsigned AddOpc;
   VPIRFlags AddFlags;
   if (IVTy->isPointerTy()) {
@@ -259,7 +259,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
   auto InsertPt = std::next(R->getIterator());
   for (unsigned Part = 1; Part != UF; ++Part) {
     VPRecipeBase *Copy = R->clone();
-    Copy->insertBefore(*R->getParent(), InsertPt);
+    Copy->insertBefore(InsertPt);
     addRecipeForPart(R, Copy, Part);
     if (RdxPhi) {
       // If the start value is a ReductionStartVector, use the identity value
@@ -292,15 +292,18 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
 
 /// Handle non-header-phi recipes.
 void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
-  if (match(&R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount())))
+  if (match(&R, m_Branch()))
     return;
 
+  // VPInstructions with side-effects must be unrolled for all parts, regardless
+  // of how (or whether) their result is used.
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-    if (vputils::onlyFirstPartUsed(VPI)) {
+    if (!VPI->mayHaveSideEffects() && vputils::onlyFirstPartUsed(VPI)) {
       addUniformForAllParts(VPI);
       return;
     }
   }
+
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
     if (isa<StoreInst>(RepR->getUnderlyingValue()) &&
         RepR->getOperand(1)->isDefinedOutsideLoopRegions()) {
@@ -317,10 +320,9 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
 
   // Unroll non-uniform recipes.
   auto InsertPt = std::next(R.getIterator());
-  VPBasicBlock &VPBB = *R.getParent();
   for (unsigned Part = 1; Part != UF; ++Part) {
     VPRecipeBase *Copy = R.clone();
-    Copy->insertBefore(VPBB, InsertPt);
+    Copy->insertBefore(InsertPt);
     addRecipeForPart(&R, Copy, Part);
 
     // Phi operands are updated once all other recipes have been unrolled.
@@ -488,6 +490,13 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
+    auto *ALM = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R);
+    if (ALM && match(ALM->getBackedgeValue(),
+                     m_VPInstruction<VPInstruction::WideActiveLaneMask>())) {
+      addUniformForAllParts(ALM);
+      continue;
+    }
+
     if (match(&R,
               m_CombineOr(m_VPInstruction<VPInstruction::WideVectorLoad>(),
                           m_VPInstruction<VPInstruction::WideVectorStore>()))) {
@@ -519,6 +528,17 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
       for (VPInstruction &VPI :
            make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+        // With UF 1, the last part is the operand itself; with UF > 1,
+        // unrollBlock already replaced all uses.
+        VPValue *Op;
+        if (match(&VPI, m_ExtractLastPart(m_VPValue(Op)))) {
+          if (UF == 1)
+            VPI.replaceAllUsesWith(Op);
+          assert(VPI.user_empty() &&
+                 "ExtractLastPart must be resolved by unrolling");
+          VPI.eraseFromParent();
+          continue;
+        }
         if (VPI.getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
             VPI.getOperand(1) == &Plan.getVF()) {
           VPI.replaceAllUsesWith(VPI.getOperand(0));
@@ -607,7 +627,7 @@ static void addLaneToStartIndex(VPScalarIVStepsRecipe *Steps, unsigned Lane,
 /// Def2LaneDefs to look up scalar definitions for operands of \DefR.
 static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
-             VPSingleDefRecipe *DefR, VPLane Lane,
+             VPSingleDefRecipe *DefR, unsigned Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
   assert((isa<VPInstruction, VPReplicateRecipe, VPScalarIVStepsRecipe>(DefR)) &&
          "DefR must be a VPReplicateRecipe, VPInstruction or "
@@ -616,9 +636,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
     auto LaneDefs = Def2LaneDefs.find(Op);
     if (LaneDefs != Def2LaneDefs.end())
-      return LaneDefs->second[Lane.getKnownLane()];
+      return LaneDefs->second[Lane];
 
-    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane);
     return Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
   }
 
@@ -629,18 +649,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // the corresponding lane.
     auto LaneDefs = Def2LaneDefs.find(Op);
     if (LaneDefs != Def2LaneDefs.end()) {
-      NewOps.push_back(LaneDefs->second[Lane.getKnownLane()]);
-      continue;
-    }
-    if (Lane.getKind() == VPLane::Kind::ScalableLast) {
-      // Look through mandatory Unpack.
-      [[maybe_unused]] bool Matched =
-          match(Op, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)));
-      assert(Matched && "original op must have been Unpack");
-      auto *ExtractPart =
-          Builder.createNaryOp(VPInstruction::ExtractLastPart, {Op});
-      NewOps.push_back(
-          Builder.createNaryOp(VPInstruction::ExtractLastLane, {ExtractPart}));
+      NewOps.push_back(LaneDefs->second[Lane]);
       continue;
     }
     if (vputils::isSingleScalar(Op)) {
@@ -648,7 +657,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       continue;
     }
 
-    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane);
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
   }
@@ -668,9 +677,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     }
     if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(New)) {
       // Skip lane 0: an absent start index is implicitly zero.
-      unsigned KnownLane = Lane.getKnownLane();
-      if (KnownLane != 0)
-        addLaneToStartIndex(Steps, KnownLane, Plan, DefR);
+      if (Lane != 0)
+        addLaneToStartIndex(Steps, Lane, Plan, DefR);
     }
   }
   New->insertBefore(DefR);
@@ -846,26 +854,29 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   }
 
   // Create a BuildVector in successor block for every VPPhi in (first lane's)
-  // exiting block having vector uses. All their
-  // operands are initialized to poison and will be replaced when processing
-  // each clone, except for the operand of the first lane which set here.
-  // BuildVectors are recorded to be replaced later by chains of insert-element
-  // and widen phis.
+  // exiting block not only used by its first lane. All their operands are
+  // initialized to poison and will be replaced when processing each clone,
+  // except for the operand of the first lane which set here.
+  // BuildVectors of values with vector users are recorded to be replaced later
+  // by chains of insert-element and widen phis. Their scalar users keep
+  // extracting lanes, to avoid keeping the per-lane phis live as well. For
+  // values only used as scalars, combineRecipes folds the lane extracts to the
+  // per-lane phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
-  for (auto &R : FirstLaneExiting->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    if (vputils::onlyFirstLaneUsed(Phi))
+  for (VPPhi &Phi : map_range(FirstLaneExiting->phis(), CastTo<VPPhi>)) {
+    if (vputils::onlyFirstLaneUsed(&Phi))
       continue;
 
-    Type *ScalarTy = Phi->getScalarType();
+    Type *ScalarTy = Phi.getScalarType();
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
-    BuildVectors.push_back(BV);
-    Phi->replaceAllUsesWith(BV);
-    BV->setOperand(0, Phi);
-    BV->insertBefore(*Successor, Successor->getFirstNonPhi());
+    if (!vputils::onlyScalarValuesOrLanesUsed(&Phi))
+      BuildVectors.push_back(BV);
+    Phi.replaceAllUsesWith(BV);
+    BV->setOperand(0, &Phi);
+    BV->insertBefore(Successor->getFirstNonPhi());
   }
 
   // Clone converted blocks for remaining lanes and process each in reverse
@@ -976,7 +987,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       if (DefR->user_empty()) {
         // Create single-scalar version of DefR for all lanes.
         for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-          cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);
+          cloneForLane(Plan, Builder, IdxTy, DefR, I, Def2LaneDefs);
         DefR->eraseFromParent();
         continue;
       }
@@ -984,7 +995,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       SmallVector<VPValue *> LaneDefs;
       for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
         LaneDefs.push_back(
-            cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs));
+            cloneForLane(Plan, Builder, IdxTy, DefR, I, Def2LaneDefs));
 
       Def2LaneDefs[DefR] = LaneDefs;
       // Pack the lanes for vector users.
@@ -994,9 +1005,12 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
             [DefR](VPUser *U) { return !U->usesScalars(DefR); });
       }
       /// Users that only demand the first lane can use the definition for lane
-      /// 0.
-      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser *U) {
-        if (U->usesFirstLaneOnly(DefR))
+      /// 0. If DefR is a single scalar, all lanes are equal and all scalar
+      /// users can use lane 0.
+      bool IsSingleScalar = vputils::isSingleScalar(DefR);
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR, IsSingleScalar](VPUser *U) {
+        if (U->usesFirstLaneOnly(DefR) ||
+            (IsSingleScalar && U->usesScalars(DefR)))
           return true;
         auto *VPI = dyn_cast<VPInstruction>(U);
         return VPI && Instruction::isCast(VPI->getOpcode());

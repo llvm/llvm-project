@@ -17,6 +17,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -61,7 +62,7 @@ struct ImutKeyValueInfo {
 template <typename KeyT, typename ValT,
           typename ValInfo = ImutKeyValueInfo<KeyT, ValT>,
           bool Canonicalize = true>
-class ImmutableMap {
+class LLVM_ATTRIBUTE_WARN_UNUSED ImmutableMap {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
@@ -126,6 +127,17 @@ public:
 
     [[nodiscard]] ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
       TreeTy *T = F.remove(Old.Root.get(), K);
+      if constexpr (Canonicalize)
+        return ImmutableMap(F.getCanonicalTree(T));
+      else
+        return ImmutableMap(T);
+    }
+
+    /// Returns \p Old without the entries for which \p Pred is false (see
+    /// ImutAVLFactory::filterTree).
+    template <typename PredFn>
+    [[nodiscard]] ImmutableMap filter(ImmutableMap Old, PredFn Pred) {
+      TreeTy *T = F.filterTree(Old.Root.get(), Pred);
       if constexpr (Canonicalize)
         return ImmutableMap(F.getCanonicalTree(T));
       else
@@ -287,6 +299,12 @@ public:
   ImmutableMapRef remove(key_type_ref K) const {
     TreeTy *NewT = Factory->remove(Root.get(), K);
     return ImmutableMapRef(NewT, Factory);
+  }
+
+  /// Returns this map without the entries for which \p Pred is false (see
+  /// ImutAVLFactory::filterTree).
+  template <typename PredFn> ImmutableMapRef filter(PredFn Pred) const {
+    return ImmutableMapRef(Factory->filterTree(Root.get(), Pred), Factory);
   }
 
   [[nodiscard]] bool contains(key_type_ref K) const {

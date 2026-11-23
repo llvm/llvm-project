@@ -31,7 +31,10 @@ def NeoverseV1Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVE2Unsupported.F,
                                                     SMEUnsupported.F,
                                                     [HasMTE, HasCPA,
-                                                    HasCSSC, HasMOPS, HasMOPS_GO]);
+                                                    HasCSSC, HasMOPS, HasMOPS_GO,
+                                                    HasFPv2]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

@@ -911,7 +911,7 @@ namespace {
 ///     to produce non-trivial classes.
 ///     If, at some point, we can assume that two symbols from two distinct
 ///     classes are equal, we can merge these classes.
-class EquivalenceClass : public llvm::FoldingSetNode {
+class EquivalenceClass {
 public:
   /// Find equivalence class for the given symbol in the given state.
   [[nodiscard]] static inline EquivalenceClass find(ProgramStateRef State,
@@ -2062,7 +2062,7 @@ private:
 /// Derived class can control which types we handle by defining methods of the
 /// following form:
 ///
-///   bool handle${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
+///   bool assign${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
 ///                                       CONSTRAINT Constraint);
 ///
 /// where SYMBOL is the type of the symbol (e.g. SymSymExpr, SymbolCast, etc.)
@@ -2304,7 +2304,6 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   for (std::pair<EquivalenceClass, ClassSet> DisequalityEntry :
        DisequalityInfo) {
     EquivalenceClass Class = DisequalityEntry.first;
-    ClassSet DisequalClasses = DisequalityEntry.second;
     State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
@@ -2985,7 +2984,6 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   SymbolSet::Factory &SetFactory = State->get_context<SymbolSet>();
 
   ConstraintRangeTy Constraints = State->get<ConstraintRange>();
-  ConstraintRangeTy NewConstraints = Constraints;
   ConstraintRangeTy::Factory &ConstraintFactory =
       State->get_context<ConstraintRange>();
 
@@ -3047,14 +3045,9 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   }
 
   // 2. We don't need to track classes for dead symbols.
-  for (std::pair<SymbolRef, EquivalenceClass> SymbolClassPair : Map) {
-    SymbolRef Sym = SymbolClassPair.first;
-
-    if (SymReaper.isDead(Sym)) {
-      ClassMapChanged = true;
-      NewMap = ClassFactory.remove(NewMap, Sym);
-    }
-  }
+  NewMap = ClassFactory.filter(
+      Map, [&](const auto &E) { return !SymReaper.isDead(E.first); });
+  ClassMapChanged = NewMap != Map;
 
   // 3. Remove dead members from classes and remove dead non-trivial classes
   //    and their constraints.

@@ -910,6 +910,12 @@ public:
       return;
     }
 
+    // Unreachable, e.g. after a noreturn member copy; drop it like EmitStmt.
+    if (!CGF.HaveInsertPoint()) {
+      reset();
+      return;
+    }
+
     uint64_t FirstByteOffset;
     if (FirstField->isBitField()) {
       const CGRecordLayout &RL =
@@ -2916,21 +2922,42 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
-
-  std::string TypeName = RD->getQualifiedNameAsString();
+  auto [M, _] = SanitizerInfoFromCFICheckKind(TCK);
   if (getContext().getNoSanitizeList().containsType(
-          SanitizerMask::bitPosToMask(M), TypeName))
+          SanitizerMask::bitPosToMask(M), RD->getQualifiedNameAsString()))
     return;
-
-  EmitSanitizerStatReport(SSK);
 
   CanQualType T = CGM.getContext().getCanonicalTagType(RD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
-
   llvm::Value *TypeTest = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, TypeId});
+
+  EmitVTableCheck(TCK, T, MD, VTable, TypeTest, Loc,
+                  CGM.getCodeGenOpts().SanitizeCfiCrossDso);
+}
+
+void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
+                                      llvm::Metadata *MD, llvm::Value *VTable,
+                                      llvm::Value *TypeTest, SourceLocation Loc,
+                                      bool UseCrossDsoSlowPath) {
+  assert(IsSanitizerScope);
+  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
+  EmitSanitizerStatReport(SSK);
+
+  llvm::ConstantInt *CrossDsoTypeId =
+      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
+  if (!CrossDsoTypeId && (CGM.getCodeGenOpts().SanitizeTrap.has(M) ||
+                          CGM.getCodeGenOpts().SanitizeMinimalRuntime)) {
+    EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail, {},
+              {});
+    return;
+  }
+
+  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
+    EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, {});
+    return;
+  }
 
   llvm::Constant *StaticData[] = {
       llvm::ConstantInt::get(Int8Ty, TCK),
@@ -2938,15 +2965,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       EmitCheckTypeDescriptor(T),
   };
 
-  auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
-  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
+  if (CrossDsoTypeId) {
     EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
-    return;
-  }
-
-  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 
@@ -2959,53 +2979,58 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
             StaticData, {VTable, ValidVtable});
 }
 
+static std::pair<const CXXRecordDecl *, bool>
+getCFIVCallTarget(const CodeGenFunction &CGF, const CXXRecordDecl *RD) {
+  if (!CGF.SanOpts.has(SanitizerKind::CFIVCall))
+    return {RD, false};
+  if (!CGF.SanOpts.has(SanitizerKind::CFICastStrict))
+    RD = LeastDerivedClassWithSameLayout(RD);
+  bool ShouldEmitCFICheck = !CGF.getContext().getNoSanitizeList().containsType(
+      SanitizerKind::CFIVCall, RD->getQualifiedNameAsString());
+  return {RD, ShouldEmitCFICheck};
+}
+
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
-  if ((!CGM.getCodeGenOpts().WholeProgramVTables ||
-       !CGM.HasHiddenLTOVisibility(RD)) &&
-      !CGM.getCodeGenOpts().DevirtualizeSpeculatively)
+  if (!CGM.getCodeGenOpts().WholeProgramVTables)
     return false;
 
-  if (CGM.getCodeGenOpts().VirtualFunctionElimination)
-    return true;
-
-  if (!SanOpts.has(SanitizerKind::CFIVCall) ||
-      !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall))
+  auto [TargetRD, ShouldEmitCFICheck] = getCFIVCallTarget(*this, RD);
+  if (!CGM.HasHiddenLTOVisibility(TargetRD))
     return false;
 
-  std::string TypeName = RD->getQualifiedNameAsString();
-  return !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
-                                                        TypeName);
+  // GlobalDCE's virtual function elimination only treats vtable slots as live
+  // if they are loaded via llvm.type.checked.load, so it must always be used.
+  return CGM.getCodeGenOpts().VirtualFunctionElimination || ShouldEmitCFICheck;
 }
 
 llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
     const CXXRecordDecl *RD, llvm::Value *VTable, llvm::Type *VTableTy,
-    uint64_t VTableByteOffset) {
-  auto CheckOrdinal = SanitizerKind::SO_CFIVCall;
-  auto CheckHandler = SanitizerHandler::CFICheckFail;
-  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
+    uint64_t VTableByteOffset, SourceLocation Loc) {
+  auto [TargetRD, ShouldEmitCFICheck] = getCFIVCallTarget(*this, RD);
 
-  EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
-
-  CanQualType T = CGM.getContext().getCanonicalTagType(RD);
+  CanQualType T = CGM.getContext().getCanonicalTagType(TargetRD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
-
   auto CheckedLoadIntrinsic = CGM.getLangOpts().RelativeCXXABIVTables
                                   ? llvm::Intrinsic::type_checked_load_relative
                                   : llvm::Intrinsic::type_checked_load;
+
+  std::optional<SanitizerDebugLocation> SanScope;
+  if (ShouldEmitCFICheck) {
+    SanScope.emplace(this, SanitizerKind::SO_CFIVCall,
+                     SanitizerHandler::CFICheckFail);
+  }
   llvm::Value *CheckedLoad = Builder.CreateCall(
       CGM.getIntrinsic(CheckedLoadIntrinsic),
       {VTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset), TypeId});
-
-  llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
-
-  std::string TypeName = RD->getQualifiedNameAsString();
-  if (SanOpts.has(SanitizerKind::CFIVCall) &&
-      !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
-                                                     TypeName)) {
-    EmitCheck(std::make_pair(CheckResult, CheckOrdinal), CheckHandler, {}, {});
+  if (ShouldEmitCFICheck) {
+    llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
+    bool UseCrossDsoSlowPath =
+        CGM.getCodeGenOpts().SanitizeCfiCrossDso &&
+        !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall);
+    EmitVTableCheck(CFITCK_VCall, T, MD, VTable, CheckResult, Loc,
+                    UseCrossDsoSlowPath);
   }
-
   return Builder.CreateBitCast(Builder.CreateExtractValue(CheckedLoad, 0),
                                VTableTy);
 }

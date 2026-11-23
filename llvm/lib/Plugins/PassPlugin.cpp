@@ -9,6 +9,7 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
@@ -48,6 +49,18 @@ Expected<PassPlugin> PassPlugin::load(StringRef Filename) {
         inconvertibleErrorCode());
 
   return P;
+}
+
+bool PassPlugin::invokePreCodeGenCallback(
+    TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
+    raw_pwrite_stream *DwoOS, CodeGenFileType CGFT, bool DisableVerify,
+    bool DisableSimplifyLibCalls, const ModuleSummaryIndex *MSI,
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS) const {
+  if (Info.PreCodeGenCallback)
+    return Info.PreCodeGenCallback(TM, M, OS, DwoOS, CGFT, DisableVerify,
+                                   DisableSimplifyLibCalls, MSI,
+                                   std::move(VFS));
+  return false;
 }
 
 Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,

@@ -94,6 +94,16 @@ public:
   /// loader often knows what the program entry point is. So the process and
   /// the dynamic loader can work together to detect this.
   virtual bool ProcessDidExec() { return false; }
+
+  /// Allow the dynamic loader to handle a request to update loaded modules.
+  ///
+  /// This is intended for dynamic loaders that rely on notifications from a
+  /// driver or debug service instead of a rendezvous breakpoint.
+  ///
+  /// \returns
+  ///   True if shared-library loading was handled, false otherwise.
+  virtual bool HandleStopReasonDynamicLoader() { return false; }
+
   /// Get whether the process should stop when images change.
   ///
   /// When images (executables and shared libraries) get loaded or unloaded,

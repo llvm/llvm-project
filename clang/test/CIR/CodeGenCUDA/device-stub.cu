@@ -42,6 +42,14 @@
 // RUN:   -fhip-new-launch-api -o %t.nogpu.hip.cir
 // RUN: FileCheck --input-file=%t.nogpu.hip.cir %s --check-prefix=HIP-NOGPUBIN
 
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fclangir -emit-llvm %s -x hip \
+// RUN:   -fhip-new-launch-api -cuid=123 -o %t.cuid.hip-cir.ll
+// RUN: FileCheck --input-file=%t.cuid.hip-cir.ll %s --check-prefix=HIP-CUID
+
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -x hip \
+// RUN:   -fhip-new-launch-api -cuid=123 -o %t.cuid.hip.ll
+// RUN: FileCheck --input-file=%t.cuid.hip.ll %s --check-prefix=HIP-CUID
+
 #include "Inputs/cuda.h"
 
 __global__ void kernelfunc(int i, int j, int k) {}
@@ -358,10 +366,27 @@ __device__ _BitInt(36) c;
 // HIP-LLVM: call i32 @atexit(ptr @__hip_module_dtor)
 // HIP-LLVM: ret void
 
-// No GPU binary: no fatbin, no handle, no registration scaffolding.
+// No GPU binary: the wrapper points to an external __hip_fatbin, populated
+// at link time.
 // HIP-NOGPUBIN-NOT: cir.cu.device_binary
-// HIP-NOGPUBIN-NOT: __hip_fatbin
-// HIP-NOGPUBIN-NOT: __hip_gpubin_handle
-// HIP-NOGPUBIN-NOT: __hip_register_globals
-// HIP-NOGPUBIN-NOT: __hip_module_ctor
-// HIP-NOGPUBIN-NOT: __hip_module_dtor
+// HIP-NOGPUBIN: cir.global_ctors = [#cir.global_ctor<"__hip_module_ctor", 65535>]
+// HIP-NOGPUBIN: cir.func internal private @__hip_module_dtor()
+// HIP-NOGPUBIN: cir.func internal private @__hip_register_globals(
+// HIP-NOGPUBIN: cir.global "private" constant external @__hip_fatbin : !u8i section(".hip_fatbin")
+// HIP-NOGPUBIN: cir.global constant cir_private @__hip_fatbin_wrapper = #cir.const_record<{
+// HIP-NOGPUBIN-SAME: #cir.global_view<@__hip_fatbin> : !cir.ptr<!void>
+// HIP-NOGPUBIN: cir.global "private" internal @__hip_gpubin_handle = #cir.ptr<null>
+// HIP-NOGPUBIN: cir.func internal private @__hip_module_ctor()
+// HIP-NOGPUBIN: cir.call @__hipRegisterFatBinary(
+// HIP-NOGPUBIN: cir.call @__hip_register_globals(
+// HIP-NOGPUBIN: cir.call @atexit(
+
+// With a CUID, the external fatbin and the handle get its hash as a suffix.
+// HIP-CUID: @[[FATBIN:__hip_fatbin_[0-9a-f]+]] = external constant i8, section ".hip_fatbin"
+// HIP-CUID: @__hip_fatbin_wrapper = {{.*}}constant { i32, i32, ptr, ptr } { i32 1212764230, i32 1, ptr @[[FATBIN]], ptr null }, section ".hipFatBinSegment"
+// HIP-CUID: @[[HANDLE:__hip_gpubin_handle_[0-9a-f]+]] = internal global ptr null
+// HIP-CUID-DAG: define internal void @__hip_module_ctor()
+// HIP-CUID-DAG: store ptr %{{.*}}, ptr @[[HANDLE]]
+// HIP-CUID-DAG: call i32 @atexit(ptr @__hip_module_dtor)
+// HIP-CUID-DAG: define internal void @__hip_module_dtor()
+// HIP-CUID-DAG: store ptr null, ptr @[[HANDLE]]

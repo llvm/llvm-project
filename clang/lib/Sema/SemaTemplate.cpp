@@ -3911,6 +3911,8 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
     if (!AliasTemplate->getDeclContext()->isFileContext())
       SavedContext.emplace(*this, AliasTemplate->getDeclContext());
 
+    // FIXME: Preserve the pattern's type source information during substitution
+    // while respecting underlying type changes made by mode attributes.
     CanonType =
         SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
                   AliasTemplate->getLocation(), AliasTemplate->getDeclName());
@@ -10662,12 +10664,11 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                false, TypeResult(), /*IsTypeSpecifier*/ false,
                /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
+  assert(!IsDependent &&
+         "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
     return true;
-
-  assert(!IsDependent &&
-         "explicit instantiation of dependent name not yet handled");
 
   TagDecl *Tag = cast<TagDecl>(TagD);
   assert(!Tag->isEnum() && "shouldn't see enumerations here");

@@ -1314,7 +1314,9 @@ uint32_t InstructionList::GetIndexOfNextBranchInstruction(
     *found_calls = false;
   for (size_t i = start; i < num_instructions; i++) {
     if (m_instructions[i]->DoesBranch()) {
-      if (ignore_calls && m_instructions[i]->IsCall()) {
+      // A call that is a barrier, like a Wasm return_call, never returns here.
+      if (ignore_calls && m_instructions[i]->IsCall() &&
+          !m_instructions[i]->IsBarrier()) {
         if (found_calls)
           *found_calls = true;
         continue;

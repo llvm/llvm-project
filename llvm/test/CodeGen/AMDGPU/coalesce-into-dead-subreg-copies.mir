@@ -25,7 +25,7 @@ body:             |
   bb.0:
     %0:sreg_64_xexec = S_LOAD_DWORDX2_IMM undef %1:sgpr_64, 24, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     undef %2.sub0:sreg_64 = COPY %0.sub0:sreg_64_xexec
-    %2.sub1:sreg_64 = COPY killed %0.sub1:sreg_64_xexec
+    %2.sub1:sreg_64 = COPY %0.sub1:sreg_64_xexec
     S_BRANCH %bb.1
 
   bb.1:

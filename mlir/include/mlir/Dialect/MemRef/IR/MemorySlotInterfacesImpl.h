@@ -13,7 +13,8 @@ namespace mlir {
 class DialectRegistry;
 
 namespace memref {
-void registerDestructurableTypeExternalModels(DialectRegistry &registry);
+void registerDestructurableTypeInterfaceExternalModels(
+    DialectRegistry &registry);
 } // namespace memref
 } // namespace mlir
 

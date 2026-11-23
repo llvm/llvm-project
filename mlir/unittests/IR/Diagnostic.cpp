@@ -13,6 +13,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -22,6 +23,41 @@ using namespace mlir;
 using namespace mlir::detail;
 
 namespace {
+TEST(Diagnostic, SignedIntegerArguments) {
+  MLIRContext context;
+  Diagnostic diagnostic(UnknownLoc::get(&context), DiagnosticSeverity::Note);
+  const int64_t min = std::numeric_limits<int64_t>::min();
+  const int64_t max = std::numeric_limits<int64_t>::max();
+  diagnostic << min << ", " << max;
+
+  ArrayRef<DiagnosticArgument> arguments = diagnostic.getArguments();
+  ASSERT_EQ(arguments.size(), 3u);
+  ASSERT_EQ(arguments[0].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Integer);
+  ASSERT_EQ(arguments[2].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Integer);
+  EXPECT_EQ(arguments[0].getAsInteger(), min);
+  EXPECT_EQ(arguments[2].getAsInteger(), max);
+  EXPECT_EQ(diagnostic.str(), "-9223372036854775808, 9223372036854775807");
+}
+
+TEST(Diagnostic, UnsignedIntegerArguments) {
+  MLIRContext context;
+  Diagnostic diagnostic(UnknownLoc::get(&context), DiagnosticSeverity::Note);
+  const uint64_t large = uint64_t{1} << 32;
+  const uint64_t max = std::numeric_limits<uint64_t>::max();
+  diagnostic << large << ", " << max;
+
+  ArrayRef<DiagnosticArgument> arguments = diagnostic.getArguments();
+  ASSERT_EQ(arguments.size(), 3u);
+  ASSERT_EQ(arguments[0].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Unsigned);
+  ASSERT_EQ(arguments[2].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Unsigned);
+  EXPECT_EQ(arguments[0].getAsUnsigned(), large);
+  EXPECT_EQ(arguments[2].getAsUnsigned(), max);
+  EXPECT_EQ(diagnostic.str(), "4294967296, 18446744073709551615");
+}
 
 TEST(DiagnosticLifetime, TestCopiesConstCharStar) {
   const auto *expectedMessage = "Error 1, don't mutate this";
@@ -66,6 +102,23 @@ TEST(DiagnosticLifetime, TestLazyCopyStringLiteral) {
   llvm::raw_string_ostream stringStream(resultMessage);
   diagnostic.print(stringStream);
   ASSERT_STREQ("^rror 1, mutate this", resultMessage.c_str());
+}
+
+TEST(DiagnosticLifetime, TestMetadataOwnsStringArgument) {
+  mlir::MLIRContext context;
+  Diagnostic diagnostic(mlir::UnknownLoc::get(&context),
+                        DiagnosticSeverity::Note);
+  {
+    std::string value = "metadata value";
+    diagnostic.getMetadata().push_back(diagnostic.getStringArgument(value));
+    value[0] = '^';
+  }
+
+  ArrayRef<DiagnosticArgument> metadata = diagnostic.getMetadata();
+  ASSERT_EQ(metadata.size(), 1u);
+  ASSERT_EQ(metadata[0].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::String);
+  EXPECT_EQ(metadata[0].getAsString(), "metadata value");
 }
 
 // Register counting handlers first so they receive diagnostics only after

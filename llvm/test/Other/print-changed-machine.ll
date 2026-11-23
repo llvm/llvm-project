@@ -60,7 +60,8 @@
 ; RUN:   FileCheck %s --check-prefix=MODULE
 ; MODULE:      *** IR Dump After Pre-ISel Intrinsic Lowering (pre-isel-intrinsic-lowering) on {{.*}} ***
 ; MODULE:      define ptr @lr(ptr %p, i32 %n) {
-; MODULE-NEXT:   %1 = getelementptr i8, ptr %p, i32 %n
+; MODULE-NEXT:   [[SEXT:%.*]] = sext i32 %n to i64
+; MODULE-NEXT:   %{{.*}} = getelementptr i8, ptr %p, i64 [[SEXT]]
 
 @var = global i32 0
 

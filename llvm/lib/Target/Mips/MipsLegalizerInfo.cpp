@@ -293,6 +293,8 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalFor({{s32, s32}, {s32, s64}})
       .minScalar(0, s32);
 
+  getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
+
   getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
       .libcallFor({s32, s64});
 

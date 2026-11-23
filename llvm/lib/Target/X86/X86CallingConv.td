@@ -1198,6 +1198,20 @@ def CSR_64_AllRegs_AVX512 : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
                                                       (sequence "ZMM%u", 0, 31),
                                                       (sequence "K%u", 0, 7)),
                                                  (sequence "XMM%u", 0, 15))>;
+
+// CSR_64_AllRegs* plus R16-R31: the save lists of x86_intrcc,
+// "no_caller_saved_registers" and anyregcc functions when EGPR is available.
+// Call sites keep the CSR_64_AllRegs* masks and treat R16-R31 as clobbered,
+// since callees built without EGPR or by older compilers may not save them.
+def CSR_64_APX_AllRegs : CalleeSavedRegs<(add CSR_64_AllRegs,
+                                              (sequence "R%u", 16, 31))>;
+def CSR_64_APX_AllRegs_NoSSE : CalleeSavedRegs<(add CSR_64_AllRegs_NoSSE,
+                                                    (sequence "R%u", 16, 31))>;
+def CSR_64_APX_AllRegs_AVX : CalleeSavedRegs<(add CSR_64_AllRegs_AVX,
+                                                  (sequence "R%u", 16, 31))>;
+def CSR_64_APX_AllRegs_AVX512 : CalleeSavedRegs<(add CSR_64_AllRegs_AVX512,
+                                                     (sequence "R%u", 16, 31))>;
+
 def CSR_64_NoneRegs    : CalleeSavedRegs<(add RBP)>;
 
 // Standard C + YMM6-15

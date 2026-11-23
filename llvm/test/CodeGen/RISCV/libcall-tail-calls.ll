@@ -533,6 +533,8 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV32-ALL:       # %bb.0:
 ; RV32-ALL-NEXT:    addi sp, sp, -16
 ; RV32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ALL-NEXT:    slli a1, a1, 16
+; RV32-ALL-NEXT:    srli a1, a1, 16
 ; RV32-ALL-NEXT:    li a2, 3
 ; RV32-ALL-NEXT:    call __atomic_fetch_add_2
 ; RV32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -543,6 +545,8 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64-ALL:       # %bb.0:
 ; RV64-ALL-NEXT:    addi sp, sp, -16
 ; RV64-ALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ALL-NEXT:    slli a1, a1, 48
+; RV64-ALL-NEXT:    srli a1, a1, 48
 ; RV64-ALL-NEXT:    li a2, 3
 ; RV64-ALL-NEXT:    call __atomic_fetch_add_2
 ; RV64-ALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -567,6 +571,7 @@ define i32 @atomicrmw_xor_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64-ALL:       # %bb.0:
 ; RV64-ALL-NEXT:    addi sp, sp, -16
 ; RV64-ALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ALL-NEXT:    sext.w a1, a1
 ; RV64-ALL-NEXT:    li a2, 4
 ; RV64-ALL-NEXT:    call __atomic_fetch_xor_4
 ; RV64-ALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

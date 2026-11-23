@@ -85,12 +85,26 @@ struct CalleeInfo {
   LLVM_PREFERRED_TYPE(bool)
   uint32_t HasIndirectCall : 1;
 
+  // True if the thin link determined that at least a declaration of the callee
+  // must be available in any module containing the caller (including any
+  // module the caller is imported into), e.g. so that the ThinLTO backend can
+  // perform MemProf ICP to it. If the callee definition is not imported into
+  // such a module, a declaration is imported instead. This is only computed
+  // and used within the thin link, and is not serialized.
+  // Note that keeping this in-memory only information here does not increase
+  // the size of CalleeInfo, since it fits in the existing bit-field storage.
+  // If that changes, it could instead be tracked in a side structure computed
+  // by the thin link MemProf context disambiguation and passed to the function
+  // importer.
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t RequiresDeclImport : 1;
+
   CalleeInfo()
       : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
-        HasTailCall(false), HasIndirectCall(false) {}
+        HasTailCall(false), HasIndirectCall(false), RequiresDeclImport(false) {}
   explicit CalleeInfo(HotnessType Hotness, bool HasTC, bool HasIC = false)
       : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
-        HasIndirectCall(HasIC) {}
+        HasIndirectCall(HasIC), RequiresDeclImport(false) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
@@ -103,6 +117,10 @@ struct CalleeInfo {
   bool hasIndirectCall() const { return HasIndirectCall; }
 
   void setHasIndirectCall(const bool HasIC) { HasIndirectCall = HasIC; }
+
+  bool requiresDeclImport() const { return RequiresDeclImport; }
+
+  void setRequiresDeclImport(const bool RI) { RequiresDeclImport = RI; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 };
@@ -838,13 +856,6 @@ public:
   /// <CalleeValueInfo, CalleeInfo> call edge pair.
   using EdgeTy = std::pair<ValueInfo, CalleeInfo>;
 
-  /// Types for -force-summary-edges-cold debugging option.
-  enum ForceSummaryHotnessType : unsigned {
-    FSHT_None,
-    FSHT_AllNonCritical,
-    FSHT_All
-  };
-
   /// An "identifier" for a virtual function. This contains the type identifier
   /// represented as a GUID and the offset from the address point to the virtual
   /// function pointer, where "address point" is as defined in the Itanium ABI:
@@ -1360,6 +1371,7 @@ struct WholeProgramDevirtResolution {
     BranchFunnel, ///< When retpoline mitigation is enabled, use a branch funnel
                   ///< that is defined in the merged module. Otherwise same as
                   ///< Indir.
+    Speculative,  ///< Speculative devirtualization
   } TheKind = Indir;
 
   std::string SingleImplName;
@@ -1571,8 +1583,11 @@ private:
   /// Indicates that we have whole program visibility.
   bool WithWholeProgramVisibility = false;
 
-  /// Indicates that summary-based synthetic entry count propagation has run
-  bool HasSyntheticEntryCounts = false;
+  /// Indicates that speculative devirtualization was enabled during the thin
+  /// link, so that backends (including distributed ThinLTO backends, which do
+  /// not see the option) apply the speculative resolutions recorded in the
+  /// index and keep the public type tests needed to find the call sites.
+  bool WithSpeculativeDevirt = false;
 
   /// Indicates that we linked with allocator supporting hot/cold new operators.
   bool WithSupportsHotColdNew = false;
@@ -1782,6 +1797,9 @@ public:
 
   bool withWholeProgramVisibility() const { return WithWholeProgramVisibility; }
   void setWithWholeProgramVisibility() { WithWholeProgramVisibility = true; }
+
+  bool withSpeculativeDevirt() const { return WithSpeculativeDevirt; }
+  void setWithSpeculativeDevirt() { WithSpeculativeDevirt = true; }
 
   bool isReadOnly(const GlobalVarSummary *GVS) const {
     return WithAttributePropagation && GVS->maybeReadOnly();

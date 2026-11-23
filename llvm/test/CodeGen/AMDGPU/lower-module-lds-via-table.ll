@@ -29,11 +29,13 @@
 define void @f0() {
 ; OPT-LABEL: define void @f0() {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; OPT-NEXT:    [[V1:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; OPT-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V1:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
 ; OPT-NEXT:    [[V03:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V1]], align 4
 ; OPT-NEXT:    [[LD:%.*]] = load float, ptr addrspace(3) [[V03]], align 4
 ; OPT-NEXT:    [[MUL:%.*]] = fmul float [[LD]], 2.000000e+00
-; OPT-NEXT:    [[V0:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; OPT-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V0:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP4]]
 ; OPT-NEXT:    [[V01:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V0]], align 4
 ; OPT-NEXT:    store float [[MUL]], ptr addrspace(3) [[V01]], align 4
 ; OPT-NEXT:    ret void
@@ -68,11 +70,15 @@ define void @f0() {
 define void @f1() {
 ; OPT-LABEL: define void @f1() {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; OPT-NEXT:    [[V12:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
+; OPT-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V14:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
+; OPT-NEXT:    [[V12:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[V14]], i64 4
 ; OPT-NEXT:    [[V13:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V12]], align 4
 ; OPT-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[V13]], align 2
 ; OPT-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 3
-; OPT-NEXT:    [[V1:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
+; OPT-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V2:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP4]]
+; OPT-NEXT:    [[V1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[V2]], i64 4
 ; OPT-NEXT:    [[V11:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V1]], align 4
 ; OPT-NEXT:    store i16 [[MUL]], ptr addrspace(3) [[V11]], align 2
 ; OPT-NEXT:    ret void
@@ -107,11 +113,15 @@ define void @f1() {
 define void @f2() {
 ; OPT-LABEL: define void @f2() {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; OPT-NEXT:    [[V22:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 2
+; OPT-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V24:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
+; OPT-NEXT:    [[V22:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[V24]], i64 8
 ; OPT-NEXT:    [[V23:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V22]], align 4
 ; OPT-NEXT:    [[LD:%.*]] = load i64, ptr addrspace(3) [[V23]], align 8
 ; OPT-NEXT:    [[MUL:%.*]] = mul i64 [[LD]], 4
-; OPT-NEXT:    [[V2:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 2
+; OPT-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V3:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP4]]
+; OPT-NEXT:    [[V2:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[V3]], i64 8
 ; OPT-NEXT:    [[V21:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V2]], align 4
 ; OPT-NEXT:    store i64 [[MUL]], ptr addrspace(3) [[V21]], align 8
 ; OPT-NEXT:    ret void
@@ -146,11 +156,15 @@ define void @f2() {
 define void @f3() {
 ; OPT-LABEL: define void @f3() {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; OPT-NEXT:    [[V32:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 3
+; OPT-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V34:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP2]]
+; OPT-NEXT:    [[V32:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[V34]], i64 12
 ; OPT-NEXT:    [[V33:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V32]], align 4
 ; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) [[V33]], align 1
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 5
-; OPT-NEXT:    [[V3:%.*]] = getelementptr inbounds [3 x [4 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 3
+; OPT-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP1]] to i64
+; OPT-NEXT:    [[V4:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i64 [[TMP4]]
+; OPT-NEXT:    [[V3:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[V4]], i64 12
 ; OPT-NEXT:    [[V31:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V3]], align 4
 ; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) [[V31]], align 1
 ; OPT-NEXT:    ret void

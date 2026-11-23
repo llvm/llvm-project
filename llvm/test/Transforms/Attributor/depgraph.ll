@@ -126,7 +126,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node70:0x[a-z0-9]+]] [shape=record,label="{[AAAssumptionInfo]
 ; DOT-DAG: Node[[Node71:0x[a-z0-9]+]] [shape=record,label="{[AANoAlias]
 ; DOT-DAG: Node[[Node73:0x[a-z0-9]+]] [shape=record,label="{[AANoFree]
-; DOT-DAG: Node[[Node75:0x[a-z0-9]+]] [shape=record,label="{[AAAddressSpace]
 ; DOT-DAG: Node[[Node74:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]
 
 ; DOT-DAG: Node[[Node20]] -> Node[[Node19]];

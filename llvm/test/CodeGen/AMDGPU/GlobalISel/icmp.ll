@@ -33,32 +33,23 @@ define void @icmp_i16_uniform(i16 inreg %a, i16 inreg %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    s_cmp_lg_u32 s7, 0
 ; HAWAII-NEXT:    s_cselect_b32 s5, 1, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s8, 0
-; HAWAII-NEXT:    s_cselect_b32 s7, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s10, 0
-; HAWAII-NEXT:    s_cselect_b32 s8, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s11, 0
-; HAWAII-NEXT:    s_cselect_b32 s10, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s12, 0
-; HAWAII-NEXT:    s_cselect_b32 s11, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s9, 0
-; HAWAII-NEXT:    s_cselect_b32 s9, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s13, 0
-; HAWAII-NEXT:    s_cselect_b32 s12, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s14, 0
-; HAWAII-NEXT:    s_cselect_b32 s13, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s15, 0
-; HAWAII-NEXT:    s_cselect_b32 s14, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s4, 0
-; HAWAII-NEXT:    s_cselect_b32 s4, 1, 0
-; HAWAII-NEXT:    s_add_i32 s5, s5, s7
-; HAWAII-NEXT:    s_add_i32 s5, s5, s8
-; HAWAII-NEXT:    s_add_i32 s5, s5, s10
-; HAWAII-NEXT:    s_add_i32 s5, s5, s11
-; HAWAII-NEXT:    s_add_i32 s5, s5, s9
-; HAWAII-NEXT:    s_add_i32 s5, s5, s12
-; HAWAII-NEXT:    s_add_i32 s5, s5, s13
-; HAWAII-NEXT:    s_add_i32 s5, s5, s14
-; HAWAII-NEXT:    s_add_i32 s4, s5, s4
+; HAWAII-NEXT:    s_addc_u32 s4, s5, 0
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, s4
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
@@ -103,41 +94,32 @@ define void @icmp_i16_uniform(i16 inreg %a, i16 inreg %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
-; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s3, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s0, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
-; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s0, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
-; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s0, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX12-NEXT:    s_add_co_i32 s3, s3, s4
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s3, s3, s5
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s3, s3, s6
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s3, s3, s7
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s3, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s0, s8
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s0, s9
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s0, s2
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s0, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -182,37 +164,28 @@ define void @icmp_i16_divergent(i16 %a, i16 %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    v_and_b32_e32 v4, 0xffff, v0
 ; HAWAII-NEXT:    v_and_b32_e32 v5, 0xffff, v1
 ; HAWAII-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v5
-; HAWAII-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; HAWAII-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u32_e32 vcc, v4, v5
-; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; HAWAII-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; HAWAII-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_lt_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_gt_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_le_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u32_e32 vcc, v4, v5
-; HAWAII-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u32_e32 vcc, v4, v5
-; HAWAII-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
 ; HAWAII-NEXT:    v_cmp_le_u32_e32 vcc, v4, v5
-; HAWAII-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
 ; HAWAII-NEXT:    v_cmp_ge_u32_e32 vcc, v4, v5
-; HAWAII-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; HAWAII-NEXT:    v_add_i32_e32 v5, vcc, v6, v7
-; HAWAII-NEXT:    v_add_i32_e32 v5, vcc, v5, v8
-; HAWAII-NEXT:    v_add_i32_e32 v5, vcc, v5, v9
-; HAWAII-NEXT:    v_add_i32_e32 v5, vcc, v5, v10
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v5, v0
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v0, v11
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v0, v12
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v0, v4
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
@@ -231,40 +204,36 @@ define void @icmp_i16_divergent(i16 %a, i16 %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_i16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_u16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v0.l, v1.l
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %eq_result = icmp eq i16 %a, %b
@@ -327,32 +296,23 @@ define void @icmp_i32_uniform(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    s_cmp_lg_u32 s4, 0
 ; HAWAII-NEXT:    s_cselect_b32 s4, 1, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s5, 0
-; HAWAII-NEXT:    s_cselect_b32 s5, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s7, 0
-; HAWAII-NEXT:    s_cselect_b32 s7, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s8, 0
-; HAWAII-NEXT:    s_cselect_b32 s8, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s9, 0
-; HAWAII-NEXT:    s_cselect_b32 s9, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s10, 0
-; HAWAII-NEXT:    s_cselect_b32 s10, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s11, 0
-; HAWAII-NEXT:    s_cselect_b32 s11, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s12, 0
-; HAWAII-NEXT:    s_cselect_b32 s12, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s13, 0
-; HAWAII-NEXT:    s_cselect_b32 s13, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s14, 0
-; HAWAII-NEXT:    s_cselect_b32 s14, 1, 0
-; HAWAII-NEXT:    s_add_i32 s4, s4, s5
-; HAWAII-NEXT:    s_add_i32 s4, s4, s7
-; HAWAII-NEXT:    s_add_i32 s4, s4, s8
-; HAWAII-NEXT:    s_add_i32 s4, s4, s9
-; HAWAII-NEXT:    s_add_i32 s4, s4, s10
-; HAWAII-NEXT:    s_add_i32 s4, s4, s11
-; HAWAII-NEXT:    s_add_i32 s4, s4, s12
-; HAWAII-NEXT:    s_add_i32 s4, s4, s13
-; HAWAII-NEXT:    s_add_i32 s4, s4, s14
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, s4
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
@@ -392,41 +352,32 @@ define void @icmp_i32_uniform(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
-; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
-; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
-; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s2
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s3
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s4
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s5
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s6
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s7
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s8
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s9
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s1, s0
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -471,33 +422,24 @@ define void @icmp_i32_divergent(i32 %a, i32 %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_lt_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_gt_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_le_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_le_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v4, v5
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v6
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v7
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v8
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v9
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v10
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v11
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v12
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
@@ -516,40 +458,36 @@ define void @icmp_i32_divergent(i32 %a, i32 %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_i32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %eq_result = icmp eq i32 %a, %b
@@ -594,33 +532,24 @@ define void @icmp_i64_divergent(i64 %a, i64 %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
-; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
-; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_gt_i64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_ge_i64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_ge_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v6, v7
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v8
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v9
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v10
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v11
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v12
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v13
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v14
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    buffer_store_dword v0, v[4:5], s[4:7], 0 addr64
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
@@ -637,40 +566,36 @@ define void @icmp_i64_divergent(i64 %a, i64 %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_i64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_i64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v6, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_i64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v6, v6, v7, v10
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add3_u32 v0, v1, v7, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %eq_result = icmp eq i64 %a, %b
@@ -726,20 +651,15 @@ define void @icmp_p3_uniform(ptr addrspace(3) inreg %a, ptr addrspace(3) inreg %
 ; HAWAII-NEXT:    s_cmp_lg_u32 s4, 0
 ; HAWAII-NEXT:    s_cselect_b32 s4, 1, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s5, 0
-; HAWAII-NEXT:    s_cselect_b32 s5, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s7, 0
-; HAWAII-NEXT:    s_cselect_b32 s7, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s8, 0
-; HAWAII-NEXT:    s_cselect_b32 s8, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s9, 0
-; HAWAII-NEXT:    s_cselect_b32 s9, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s10, 0
-; HAWAII-NEXT:    s_cselect_b32 s10, 1, 0
-; HAWAII-NEXT:    s_add_i32 s4, s4, s5
-; HAWAII-NEXT:    s_add_i32 s4, s4, s7
-; HAWAII-NEXT:    s_add_i32 s4, s4, s8
-; HAWAII-NEXT:    s_add_i32 s4, s4, s9
-; HAWAII-NEXT:    s_add_i32 s4, s4, s10
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, s4
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
@@ -771,25 +691,20 @@ define void @icmp_p3_uniform(ptr addrspace(3) inreg %a, ptr addrspace(3) inreg %
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s2
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s3
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s4
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s5
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s1, s0
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -822,21 +737,16 @@ define void @icmp_p3_divergent(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr add
 ; HAWAII-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_le_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v4, v5
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v6
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v7
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v8
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
@@ -855,24 +765,22 @@ define void @icmp_p3_divergent(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr add
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %eq_result = icmp eq ptr addrspace(3) %a, %b
@@ -915,20 +823,15 @@ define void @icmp_p5_uniform(ptr addrspace(5) inreg %a, ptr addrspace(5) inreg %
 ; HAWAII-NEXT:    s_cmp_lg_u32 s4, 0
 ; HAWAII-NEXT:    s_cselect_b32 s4, 1, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s5, 0
-; HAWAII-NEXT:    s_cselect_b32 s5, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s7, 0
-; HAWAII-NEXT:    s_cselect_b32 s7, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s8, 0
-; HAWAII-NEXT:    s_cselect_b32 s8, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s9, 0
-; HAWAII-NEXT:    s_cselect_b32 s9, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s10, 0
-; HAWAII-NEXT:    s_cselect_b32 s10, 1, 0
-; HAWAII-NEXT:    s_add_i32 s4, s4, s5
-; HAWAII-NEXT:    s_add_i32 s4, s4, s7
-; HAWAII-NEXT:    s_add_i32 s4, s4, s8
-; HAWAII-NEXT:    s_add_i32 s4, s4, s9
-; HAWAII-NEXT:    s_add_i32 s4, s4, s10
+; HAWAII-NEXT:    s_addc_u32 s4, s4, 0
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, s4
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
@@ -960,25 +863,20 @@ define void @icmp_p5_uniform(ptr addrspace(5) inreg %a, ptr addrspace(5) inreg %
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s2
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s3
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s4
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s5
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s1, s0
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -1011,21 +909,16 @@ define void @icmp_p5_divergent(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr add
 ; HAWAII-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_le_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v1
-; HAWAII-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v4, v5
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v6
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v7
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v8
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; HAWAII-NEXT:    s_mov_b32 s6, 0
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v4, vcc
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
 ; HAWAII-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
@@ -1044,24 +937,22 @@ define void @icmp_p5_divergent(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr add
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v1
-; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add3_u32 v0, v1, v5, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v4, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %eq_result = icmp eq ptr addrspace(5) %a, %b
@@ -1115,20 +1006,15 @@ define void @icmp_p0_uniform(ptr inreg %a, ptr inreg %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    s_cmp_lg_u32 s7, 0
 ; HAWAII-NEXT:    s_cselect_b32 s5, 1, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s8, 0
-; HAWAII-NEXT:    s_cselect_b32 s7, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s9, 0
-; HAWAII-NEXT:    s_cselect_b32 s8, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s10, 0
-; HAWAII-NEXT:    s_cselect_b32 s9, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s11, 0
-; HAWAII-NEXT:    s_cselect_b32 s10, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s4, 0
-; HAWAII-NEXT:    s_cselect_b32 s4, 1, 0
-; HAWAII-NEXT:    s_add_i32 s5, s5, s7
-; HAWAII-NEXT:    s_add_i32 s5, s5, s8
-; HAWAII-NEXT:    s_add_i32 s5, s5, s9
-; HAWAII-NEXT:    s_add_i32 s5, s5, s10
-; HAWAII-NEXT:    s_add_i32 s4, s5, s4
+; HAWAII-NEXT:    s_addc_u32 s4, s5, 0
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, s4
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
@@ -1163,25 +1049,20 @@ define void @icmp_p0_uniform(ptr inreg %a, ptr inreg %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s2, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s2, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s2, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s2, s2, s3
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s2, s2, s4
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s2, s2, s5
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s2, s1
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s1, s0
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -1216,21 +1097,16 @@ define void @icmp_p0_divergent(ptr %a, ptr %b, ptr addrspace(1) %p) {
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
-; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
-; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_ge_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v6, v7
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v8
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v9
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v10
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    buffer_store_dword v0, v[4:5], s[4:7], 0 addr64
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
@@ -1247,24 +1123,22 @@ define void @icmp_p0_divergent(ptr %a, ptr %b, ptr addrspace(1) %p) {
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add3_u32 v0, v1, v7, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %eq_result = icmp eq ptr %a, %b
@@ -1316,20 +1190,15 @@ define void @icmp_p1_uniform(ptr addrspace(1) inreg %a, ptr addrspace(1) inreg %
 ; HAWAII-NEXT:    s_cmp_lg_u32 s7, 0
 ; HAWAII-NEXT:    s_cselect_b32 s5, 1, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s8, 0
-; HAWAII-NEXT:    s_cselect_b32 s7, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s9, 0
-; HAWAII-NEXT:    s_cselect_b32 s8, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s10, 0
-; HAWAII-NEXT:    s_cselect_b32 s9, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s11, 0
-; HAWAII-NEXT:    s_cselect_b32 s10, 1, 0
+; HAWAII-NEXT:    s_addc_u32 s5, s5, 0
 ; HAWAII-NEXT:    s_cmp_lg_u32 s4, 0
-; HAWAII-NEXT:    s_cselect_b32 s4, 1, 0
-; HAWAII-NEXT:    s_add_i32 s5, s5, s7
-; HAWAII-NEXT:    s_add_i32 s5, s5, s8
-; HAWAII-NEXT:    s_add_i32 s5, s5, s9
-; HAWAII-NEXT:    s_add_i32 s5, s5, s10
-; HAWAII-NEXT:    s_add_i32 s4, s5, s4
+; HAWAII-NEXT:    s_addc_u32 s4, s5, 0
 ; HAWAII-NEXT:    v_mov_b32_e32 v2, s4
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
@@ -1364,25 +1233,20 @@ define void @icmp_p1_uniform(ptr addrspace(1) inreg %a, ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s2, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s2, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s2, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_ci_u32 s1, s2, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s2, s2, s3
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s2, s2, s4
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s2, s2, s5
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s2, s1
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s0, s1, s0
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -1417,21 +1281,16 @@ define void @icmp_p1_divergent(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr add
 ; HAWAII-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; HAWAII-NEXT:    v_cmp_ne_u64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    s_mov_b32 s7, 0xf000
-; HAWAII-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], 0
-; HAWAII-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_gt_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; HAWAII-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    v_cmp_ge_u64_e32 vcc, v[0:1], v[2:3]
-; HAWAII-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v6, v7
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v8
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v9
-; HAWAII-NEXT:    v_add_i32_e32 v1, vcc, v1, v10
-; HAWAII-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; HAWAII-NEXT:    v_addc_u32_e32 v0, vcc, 0, v6, vcc
 ; HAWAII-NEXT:    buffer_store_dword v0, v[4:5], s[4:7], 0 addr64
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
@@ -1448,24 +1307,22 @@ define void @icmp_p1_divergent(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr add
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v6, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    v_cmp_ge_u64_e32 vcc_lo, v[0:1], v[2:3]
-; GFX12-NEXT:    v_add3_u32 v1, v6, v8, v9
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add3_u32 v0, v1, v7, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v6, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %eq_result = icmp eq ptr addrspace(1) %a, %b

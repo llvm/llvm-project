@@ -5,8 +5,10 @@ add_entrypoint_object(
   HDRS
     ../epoll_create.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_create
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -17,8 +19,10 @@ add_entrypoint_object(
   HDRS
     ../epoll_create1.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_create1
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -39,22 +43,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  epoll_wait
-  SRCS
-    epoll_wait.cpp
-  HDRS
-    ../epoll_wait.h
-  DEPENDS
-    libc.hdr.types.sigset_t
-    libc.hdr.types.struct_epoll_event
-    libc.hdr.types.struct_timespec
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.macros.sanitizer
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
   epoll_pwait
   SRCS
     epoll_pwait.cpp
@@ -63,11 +51,10 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.sigset_t
     libc.hdr.types.struct_epoll_event
-    libc.hdr.types.struct_timespec
-    libc.hdr.sys_epoll_macros
-    libc.hdr.signal_macros
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_pwait
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
@@ -82,10 +69,26 @@ add_entrypoint_object(
     libc.hdr.types.sigset_t
     libc.hdr.types.struct_epoll_event
     libc.hdr.types.struct_timespec
-    libc.hdr.sys_epoll_macros
-    libc.hdr.signal_macros
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_pwait2
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_wait
+  SRCS
+    epoll_wait.cpp
+  HDRS
+    ../epoll_wait.h
+  DEPENDS
+    libc.hdr.types.struct_epoll_event
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_wait
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )

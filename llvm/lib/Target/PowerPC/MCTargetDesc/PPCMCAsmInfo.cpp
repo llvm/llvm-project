@@ -201,9 +201,6 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
   // Set up DWARF directives
   MinInstAlignment = 4;
 
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
-
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = is64Bit ? "\t.quad\t" : nullptr;
   AssemblerDialect = 1;           // New-Style mnemonics.

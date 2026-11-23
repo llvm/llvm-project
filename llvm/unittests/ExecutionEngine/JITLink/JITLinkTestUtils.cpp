@@ -58,18 +58,24 @@ static const char BlockContentBytes[] = {
 ArrayRef<char> BlockContent(BlockContentBytes);
 
 void lookupResolveEverythingToNull(
-    const llvm::jitlink::JITLinkContext::LookupMap &Symbols,
+    llvm::jitlink::JITLinkContext::LookupMap Symbols,
     std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation> LC) {
   llvm::orc::ExecutorAddr Null;
   llvm::jitlink::AsyncLookupResult Result;
-  for (auto &KV : Symbols)
-    Result[KV.first] = {Null, llvm::JITSymbolFlags::Exported};
+  // The continuation may destroy the symbol string pool: move names out
+  // of Symbols and into Result below so that Symbols holds no references
+  // into the pool when the continuation runs.
+  for (auto &[Name, _] : Symbols)
+    Result[std::move(Name)] = {Null, llvm::JITSymbolFlags::Exported};
   LC->run(std::move(Result));
 }
 
 void lookupErrorOut(
-    const llvm::jitlink::JITLinkContext::LookupMap &Symbols,
+    llvm::jitlink::JITLinkContext::LookupMap Symbols,
     std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation> LC) {
+  // The continuation may destroy the symbol string pool: release our
+  // references first.
+  Symbols.clear();
   LC->run(llvm::make_error<llvm::StringError>("Lookup failed",
                                               llvm::inconvertibleErrorCode()));
 }

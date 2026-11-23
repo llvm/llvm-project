@@ -24,10 +24,12 @@ add_lldb_unittest(SymbolTests
     lldbHost
     lldbSymbol
     lldbUtilityHelpers
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
+    lldbPluginSymbolLocatorDefault
     lldbPluginTypeSystemClang
     lldbPluginTypeSystemFortran
     lldbPluginSymbolLocatorSymStore

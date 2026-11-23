@@ -129,6 +129,12 @@ typedef struct __SomeStruct {
 } SomeStruct;
 void fakeSystemHeaderCall(SomeStruct *);
 
+// The following is a fake system header function.
+typedef struct __FileStruct {
+  FILE * p;
+} FileStruct;
+void fakeSystemHeaderCallFS(FileStruct *);
+
 typedef int pid_t;
 pid_t fork(void);
 pid_t vfork(void);

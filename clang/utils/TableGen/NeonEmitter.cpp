@@ -2694,9 +2694,15 @@ __arm_set_fpm_overflow_cvt(fpm_t __fpm, enum __ARM_FPM_OVERFLOW __behaviour) {
   return (__fpm & ~0x8000ull) | ((fpm_t)__behaviour << 15u);
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 __inline__ fpm_t __attribute__((__always_inline__, __nodebug__)) __arm_set_fpm_lscale(fpm_t __fpm, uint64_t __scale);
 __inline__ fpm_t __attribute__((__always_inline__, __nodebug__)) __arm_set_fpm_nscale(fpm_t __fpm, int64_t __scale);
-__inline__ fpm_t __attribute__((__always_inline__, __nodebug__))  __arm_set_fpm_lscale2(fpm_t __fpm, uint64_t __scale);
+__inline__ fpm_t __attribute__((__always_inline__, __nodebug__)) __arm_set_fpm_lscale2(fpm_t __fpm, uint64_t __scale);
+#ifdef __cplusplus
+}
+#endif
 
 )";
 

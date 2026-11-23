@@ -86,6 +86,38 @@ bool TypeSystemFortran::IsFloatingPointType(opaque_compiler_type_t type) {
   return false;
 }
 
+bool TypeSystemFortran::IsFunctionType(opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+
+  return static_cast<FortranType *>(type)->GetKind() ==
+         FortranType::KIND_FUNCTION;
+}
+
+size_t TypeSystemFortran::GetNumberOfFunctionArguments(
+    lldb::opaque_compiler_type_t type) {
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
+    return 0;
+
+  return function_type->GetNumParams();
+}
+
+CompilerType
+TypeSystemFortran::GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
+                                              const size_t index) {
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
+    return CompilerType();
+
+  llvm::ArrayRef<lldb_private::CompilerType> param_types =
+      function_type->GetParamTypes();
+  if (index >= param_types.size())
+    return CompilerType();
+
+  return param_types[index];
+}
+
 bool TypeSystemFortran::IsIntegerType(opaque_compiler_type_t type,
                                       bool &is_signed) {
   if (!type)
@@ -118,6 +150,8 @@ ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
   case FortranType::KIND_COMPLEX:
   case FortranType::KIND_UNSIGNED:
     return fortran_type->GetName();
+  case FortranType::KIND_FUNCTION:
+    return static_cast<FortranFunction *>(fortran_type)->GetSignature();
   case FortranType::KIND_UNKNOWN:
     return ConstString("Unsupported");
   }
@@ -183,6 +217,28 @@ CompilerType TypeSystemFortran::GetOrCreateFortranBaseType(int kind,
   return CompilerType(weak_from_this(), (void *)candidate_type);
 }
 
+CompilerType TypeSystemFortran::CreateFortranFunction(
+    ConstString name, const SmallVectorImpl<CompilerType> &parameters,
+    const SmallVectorImpl<StringRef> &parameter_names,
+    CompilerType return_type) {
+  llvm::FoldingSetNodeID id;
+  FortranFunction::Profile(id, name, parameters, return_type);
+  FoldingSetInsertToken token;
+
+  FortranFunction *function_type = m_functions.lookup(id, token);
+  if (function_type)
+    return CompilerType(weak_from_this(), (void *)function_type);
+
+  auto new_type_up = std::make_unique<FortranFunction>(
+      name, parameters, parameter_names, return_type);
+  function_type = new_type_up.get();
+
+  m_functions.insert(function_type, token);
+  m_types.push_back(std::move(new_type_up));
+
+  return CompilerType(weak_from_this(), (void *)function_type);
+}
+
 lldb::TypeClass
 TypeSystemFortran::GetTypeClass(lldb::opaque_compiler_type_t type) {
   return type ? lldb::eTypeClassBuiltin : lldb::eTypeClassInvalid;
@@ -193,6 +249,26 @@ TypeSystemFortran::GetCanonicalType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return CompilerType();
   return CompilerType(weak_from_this(), type);
+}
+
+int TypeSystemFortran::GetFunctionArgumentCount(
+    lldb::opaque_compiler_type_t type) {
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
+    return -1;
+
+  return function_type->GetNumParams();
+}
+
+CompilerType
+TypeSystemFortran::GetFunctionReturnType(lldb::opaque_compiler_type_t type) {
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
+    return CompilerType();
+
+  CompilerType return_type = function_type->GetReturnType();
+
+  return return_type.IsValid() ? return_type : CompilerType();
 }
 
 Expected<uint64_t>

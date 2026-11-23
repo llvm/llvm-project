@@ -50,8 +50,7 @@ struct __padding_size_result {
   size_t __after_;
 };
 
-_LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
-__padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
+constexpr __padding_size_result __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
   _LIBCPP_ASSERT_INTERNAL(__width > __size, "don't call this function when no padding is required");
   _LIBCPP_ASSERT_INTERNAL(
       __align != __format_spec::__alignment::__zero_padding, "the caller should have handled the zero-padding");
@@ -83,7 +82,7 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
+constexpr auto
 __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
@@ -99,7 +98,7 @@ __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto _
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
+constexpr auto
 __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
@@ -107,8 +106,7 @@ __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> au
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+auto __copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{std::to_address(__first), __n}, std::move(__out_it));
 }
 
@@ -119,7 +117,7 @@ template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __transform(
+constexpr auto __transform(
     _Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it, _UnaryOperation __operation)
     -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
@@ -137,7 +135,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __transform(
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI constexpr _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
+constexpr _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_CharT>>>) {
     __out_it.__get_container()->__fill(__n, __value);
     return __out_it;
@@ -150,7 +148,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _OutIt __fill(_OutIt __out_it, size_t __n, _Char
 }
 
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI constexpr _OutIt
+constexpr _OutIt
 __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
 #  if _LIBCPP_HAS_UNICODE
   if constexpr (same_as<_CharT, char>) {
@@ -208,7 +206,7 @@ __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value)
 /// conversion, which means the [\a __first, \a __last) always contains elements
 /// of the type \c char.
 template <class _CharT, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
+constexpr auto
 __write(basic_string_view<_CharT> __str,
         output_iterator<const _CharT&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs,
@@ -223,7 +221,7 @@ __write(basic_string_view<_CharT> __str,
 }
 
 template <contiguous_iterator _Iterator, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
+constexpr auto
 __write(_Iterator __first,
         _Iterator __last,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
@@ -237,7 +235,7 @@ __write(_Iterator __first,
 ///
 /// Calls the function above where \a __size = \a __last - \a __first.
 template <contiguous_iterator _Iterator, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
+constexpr auto
 __write(_Iterator __first,
         _Iterator __last,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
@@ -250,7 +248,7 @@ template <contiguous_iterator _Iterator,
           class _CharT = typename iterator_traits<_Iterator>::value_type,
           class _ParserCharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __write_transformed(
+constexpr auto __write_transformed(
     _Iterator __first,
     _Iterator __last,
     output_iterator<const _CharT&> auto __out_it,
@@ -274,7 +272,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __write_transformed(
 ///
 /// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __write_string_no_precision(
+constexpr auto __write_string_no_precision(
     basic_string_view<_CharT> __str,
     output_iterator<const _CharT&> auto __out_it,
     __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
@@ -294,7 +292,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __write_string_no_precision(
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr int __truncate(basic_string_view<_CharT>& __str, int __precision) {
+constexpr int __truncate(basic_string_view<_CharT>& __str, int __precision) {
   __format_spec::__column_width_result __result =
       __format_spec::__estimate_column_width(__str, __precision, __format_spec::__column_width_rounding::__down);
   __str = basic_string_view<_CharT>{__str.begin(), __result.__last_};
