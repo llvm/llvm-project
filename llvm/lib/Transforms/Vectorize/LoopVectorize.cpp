@@ -6874,18 +6874,16 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
-    ElementCount MinProfitableTripCount, bool TailFoldedEpilogue) const {
+    ElementCount MinProfitableTripCount, const VPlan &GuardedPlan) const {
   const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
           : nullptr;
-  // If either the main vector loop or the epilogue vector loop is tail-folded,
-  // it can handle any trip count, so the min iter check never needs
-  // to branch to the scalar loop.
+  // If the guarded vector loop is tail-folded, it can handle any trip count,
+  // so the min iter check never needs to branch to the scalar loop.
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
-                 MinProfitableTripCount, Plan.requiresScalarEpilogue(),
-                 Plan.hasTailFolded() || TailFoldedEpilogue, OrigLoop,
-                 BranchWeights,
+                 MinProfitableTripCount, GuardedPlan.requiresScalarEpilogue(),
+                 GuardedPlan.hasTailFolded(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                  PSE, Plan.getEntry());
 }
@@ -7931,6 +7929,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (EpiPlan) {
     VPlan &BestEpiPlan = *EpiPlan;
     VPlan &BestMainPlan = BestPlan;
+    assert(!BestMainPlan.hasTailFolded() &&
+           "epilogue vectorization requires a main loop with a scalar tail");
     ElementCount EpilogueVF = BestEpiPlan.getSingleVF();
 
     // The first pass vectorizes the main loop and creates a scalar epilogue
@@ -7943,8 +7943,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
     LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
-                                 ElementCount::getFixed(0),
-                                 BestEpiPlan.hasTailFolded());
+                                 ElementCount::getFixed(0), BestEpiPlan);
     LVP.attachRuntimeChecks(BestMainPlan, Checks, VF.Width, IC,
                             HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
@@ -7997,8 +7996,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     ++LoopsEpilogueVectorized;
   } else {
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
-                                 VF.MinProfitableTripCount,
-                                 /*TailFoldedEpilogue=*/false);
+                                 VF.MinProfitableTripCount, BestPlan);
     LVP.attachRuntimeChecks(BestPlan, Checks, VF.Width, IC, HasBranchWeights);
 
     if (!IsInnerLoop)

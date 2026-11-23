@@ -1055,14 +1055,13 @@ public:
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
 
-  /// Create a check to \p Plan to see if the vector loop should be executed
-  /// based on its trip count. When \p TailFoldedEpilogue is true, the
-  /// tail-folded vector epilogue executes all iterations not executed by
-  /// the main vector loop, so the check never needs to branch to the scalar
-  /// loop.
+  /// Create a check to \p Plan to see if the vector loop of \p GuardedPlan,
+  /// which runs with \p VF and \p UF, should be executed based on its trip
+  /// count. \p GuardedPlan is \p Plan itself, or the epilogue plan when
+  /// vectorizing the epilogue.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount,
-                                bool TailFoldedEpilogue) const;
+                                const VPlan &GuardedPlan) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
   /// used to compute the thresholds of difference checks.
