@@ -158,11 +158,20 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
     auto Index = IndexData.getU32(&Offset);
     if (!Index)
       continue;
+    // Indexes in the parallel table are 1-based unit numbers.  Reject values
+    // past the number of units instead of writing outside the Contribs array.
+    if (Index > Header.NumUnits)
+      return false;
     Rows[i].Index = this;
     Rows[i].Contributions =
         std::make_unique<Entry::SectionContribution[]>(Header.NumColumns);
     Contribs[Index - 1] = Rows[i].Contributions.get();
   }
+
+  // Every unit must be referenced by exactly one non-empty bucket.
+  for (unsigned i = 0; i != Header.NumUnits; ++i)
+    if (!Contribs[i])
+      return false;
 
   // Read the Column Headers
   for (unsigned i = 0; i != Header.NumColumns; ++i) {
