@@ -473,6 +473,10 @@ public:
   SmallVector<std::pair<Register, Register>>
   getVRegTypeIDs(const MachineFunction &MF) const;
 
+  // Types and constants are inserted after this one at the entry of MF.
+  Register getLastInsertedTypeReg(const MachineFunction &MF) const;
+  void setLastInsertedType(const MachineFunction &MF, MachineInstr *MI);
+
 private:
   SPIRVTypeInst getOpTypeBool(MachineIRBuilder &MIRBuilder);
 
@@ -702,7 +706,9 @@ public:
                               SPIRV::StorageClass::StorageClass SC,
                               bool IsWritable, bool EmitIr = false);
 
-  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
+                                       uint64_t PaddingSizeInBytes,
+                                       uint64_t OffsetInBytes = 0);
 
   SPIRVTypeInst getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
                                                   Type *ElemType);
