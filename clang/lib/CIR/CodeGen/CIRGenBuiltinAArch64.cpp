@@ -282,7 +282,8 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
     auto resVecTy = mlir::dyn_cast<cir::VectorType>(funcResTy);
     assert(resVecTy &&
            "SISD LLVM argument reconstruction requires a vector result");
-    vecArgTy = cir::VectorType::get(arg0Ty, resVecTy.getSize());
+    vecArgTy =
+        cir::VectorType::get(arg0Ty, resVecTy.getSize(), resVecTy.getKind());
   }
 
   // True if `ty` is arg0's type, or an integer of the same width that only
@@ -737,7 +738,7 @@ static cir::VectorType getSignChangedVectorType(CIRGenBuilderTy &builder,
   auto elemTy = mlir::cast<cir::IntType>(vecTy.getElementType());
   elemTy = elemTy.isSigned() ? builder.getUIntNTy(elemTy.getWidth())
                              : builder.getSIntNTy(elemTy.getWidth());
-  return cir::VectorType::get(elemTy, vecTy.getSize());
+  return cir::VectorType::get(elemTy, vecTy.getSize(), vecTy.getKind());
 }
 
 static mlir::Value emitCommonNeonShift(CIRGenBuilderTy &builder,
@@ -784,9 +785,11 @@ static cir::VectorType getIntVecFromVecTy(CIRGenBuilderTy &builder,
     return vecTy;
 
   if (mlir::isa<cir::SingleType>(vecTy.getElementType()))
-    return cir::VectorType::get(builder.getSInt32Ty(), vecTy.getSize());
+    return cir::VectorType::get(builder.getSInt32Ty(), vecTy.getSize(),
+                                vecTy.getKind());
   if (mlir::isa<cir::DoubleType>(vecTy.getElementType()))
-    return cir::VectorType::get(builder.getSInt64Ty(), vecTy.getSize());
+    return cir::VectorType::get(builder.getSInt64Ty(), vecTy.getSize(),
+                                vecTy.getKind());
   llvm_unreachable(
       "Unsupported element type in getVecOfIntTypeWithSameEltWidth");
 }
@@ -1528,7 +1531,8 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
 
   // TODO: Handle "aarch64.svcount" once we get round to supporting SME.
 
-  auto retTy = cir::VectorType::getScalable(builder.getUIntNTy(1), minNumElts);
+  auto retTy = cir::VectorType::getScalable(builder.getUIntNTy(1), minNumElts,
+                                            cir::VectorAbiKind::SVEPredicate);
   if (pred.getType() == retTy)
     return pred;
 
@@ -1601,33 +1605,46 @@ cir::VectorType CIRGenFunction::getSVEType(const SVETypeFlags &typeFlags) {
     llvm_unreachable("Invalid SVETypeFlag!");
 
   case SVETypeFlags::EltTyInt8:
-    return cir::VectorType::getScalable(builder.getUInt8Ty(), 16);
+    return cir::VectorType::getScalable(builder.getUInt8Ty(), 16,
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyInt16:
-    return cir::VectorType::getScalable(builder.getUInt16Ty(), 8);
+    return cir::VectorType::getScalable(builder.getUInt16Ty(), 8,
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyInt32:
-    return cir::VectorType::getScalable(builder.getUInt32Ty(), 4);
+    return cir::VectorType::getScalable(builder.getUInt32Ty(), 4,
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyInt64:
-    return cir::VectorType::getScalable(builder.getUInt64Ty(), 2);
+    return cir::VectorType::getScalable(builder.getUInt64Ty(), 2,
+                                        cir::VectorAbiKind::SVEData);
 
   case SVETypeFlags::EltTyMFloat8:
-    return cir::VectorType::getScalable(builder.getUInt8Ty(), 16);
+    return cir::VectorType::getScalable(builder.getUInt8Ty(), 16,
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat16:
-    return cir::VectorType::getScalable(builder.getFp16Ty(), 8);
+    return cir::VectorType::getScalable(builder.getFp16Ty(), 8,
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyBFloat16:
-    return cir::VectorType::getScalable(builder.getBfloat16Ty(), 8);
+    return cir::VectorType::getScalable(builder.getBfloat16Ty(), 8,
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat32:
-    return cir::VectorType::getScalable(builder.getSingleTy(), 4);
+    return cir::VectorType::getScalable(builder.getSingleTy(), 4,
+                                        cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat64:
-    return cir::VectorType::getScalable(builder.getDoubleTy(), 2);
+    return cir::VectorType::getScalable(builder.getDoubleTy(), 2,
+                                        cir::VectorAbiKind::SVEData);
 
   case SVETypeFlags::EltTyBool8:
-    return cir::VectorType::getScalable(builder.getUIntNTy(1), 16);
+    return cir::VectorType::getScalable(builder.getUIntNTy(1), 16,
+                                        cir::VectorAbiKind::SVEPredicate);
   case SVETypeFlags::EltTyBool16:
-    return cir::VectorType::getScalable(builder.getUIntNTy(1), 8);
+    return cir::VectorType::getScalable(builder.getUIntNTy(1), 8,
+                                        cir::VectorAbiKind::SVEPredicate);
   case SVETypeFlags::EltTyBool32:
-    return cir::VectorType::getScalable(builder.getUIntNTy(1), 4);
+    return cir::VectorType::getScalable(builder.getUIntNTy(1), 4,
+                                        cir::VectorAbiKind::SVEPredicate);
   case SVETypeFlags::EltTyBool64:
-    return cir::VectorType::getScalable(builder.getUIntNTy(1), 2);
+    return cir::VectorType::getScalable(builder.getUIntNTy(1), 2,
+                                        cir::VectorAbiKind::SVEPredicate);
   }
 }
 
@@ -1638,7 +1655,8 @@ static cir::VectorType getSVEVectorForElementType(CIRGenModule &cgm,
                                                   mlir::Type eltTy) {
   unsigned numElts =
       sveBitsPerBlock / cgm.getDataLayout().getTypeSizeInBits(eltTy);
-  return cir::VectorType::getScalable(eltTy, numElts);
+  return cir::VectorType::getScalable(eltTy, numElts,
+                                      cir::VectorAbiKind::SVEData);
 }
 
 //===----------------------------------------------------------------------===//

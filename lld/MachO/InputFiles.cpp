@@ -570,6 +570,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
 
   Subsections &subsections = section.subsections;
   auto subsecIt = subsections.rbegin();
+  uint32_t prevOffset = UINT32_MAX;
   for (size_t i = 0; i < relInfos.size(); i++) {
     // Paired relocations serve as Mach-O's method for attaching a
     // supplemental datum to a primary relocation record. ELF does not
@@ -658,6 +659,9 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     // relocations in order, so let's take advantage of it. However, ld64 emits
     // unsorted relocations (in `-r` mode), so we have a fallback for that
     // uncommon case.
+    if (r.offset > prevOffset)
+      subsecIt = subsections.rend();
+    prevOffset = r.offset;
     InputSection *subsec;
     while (subsecIt != subsections.rend() && subsecIt->offset > r.offset)
       ++subsecIt;
@@ -697,6 +701,14 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       subsec->relocs.push_back(p);
     }
   }
+  // The branch extension algorithm relies on the descending order compilers
+  // emit, which relocations in object files produced by `ld -r` do not follow.
+  if (subsecIt == subsections.rend())
+    for (const Subsection &subsection : subsections)
+      llvm::stable_sort(subsection.isec->relocs,
+                        [](const Relocation &a, const Relocation &b) {
+                          return a.offset > b.offset;
+                        });
 }
 
 // ld64 never turns these labels into named atoms or symbol table entries.
