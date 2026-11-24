@@ -14,6 +14,7 @@
 #include "FormatStringParsing.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include <optional>
@@ -75,15 +76,26 @@ OptionalAmount FormatStringParser::parseAmount(const char *&Beg,
 bool FormatStringParser::parseWidthModifier(const char *&I, const char *E,
                                             unsigned &BitWidth,
                                             unsigned &ModifierLength) const {
-  if (I == E || Conv.convertBasicChar(*I) == u8'0')
+  // The format string is in the execution charset, so convert each digit to
+  // UTF-8 before checking it. getAsInteger rejects values that overflow
+  // BitWidth.
+  llvm::SmallString<16> Digits;
+  const char *J = I;
+  for (; J != E; ++J) {
+    char c = Conv.convertBasicChar(*J);
+    if (c < u8'0' || c > u8'9')
+      break;
+    Digits += c;
+  }
+
+  if (Digits.empty() || Digits.front() == u8'0')
     return false;
 
-  OptionalAmount Amt = parseAmount(I, E);
-  if (Amt.getHowSpecified() != OptionalAmount::Constant)
+  if (Digits.str().getAsInteger(10, BitWidth))
     return false;
 
-  BitWidth = Amt.getConstantAmount();
-  ModifierLength += Amt.getConstantLength();
+  I = J;
+  ModifierLength += Digits.size();
   return true;
 }
 
