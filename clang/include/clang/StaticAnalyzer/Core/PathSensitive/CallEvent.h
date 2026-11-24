@@ -1249,7 +1249,8 @@ public:
 ///
 /// The call has no syntactic representation: like \c CXXDestructorCall it is
 /// Decl-origin, and its single argument, the address of the annotated
-/// variable, is not written in the source. The inherited \c getResultType()
+/// variable, is not written in the source. The call is anchored at the end of
+/// the variable's scope, where it runs. The inherited \c getResultType()
 /// reports `void`: the return value of a cleanup function (if any) is always
 /// ignored.
 class CleanupFunctionCall : public AnyFunctionCall {
@@ -1257,11 +1258,12 @@ class CleanupFunctionCall : public AnyFunctionCall {
 
 protected:
   CleanupFunctionCall(const FunctionDecl *FD, const VarDecl *VD,
-                      ProgramStateRef St, const StackFrame *SF,
+                      const Stmt *Trigger, ProgramStateRef St,
+                      const StackFrame *SF,
                       CFGBlock::ConstCFGElementRef ElemRef)
       : AnyFunctionCall(FD, St, SF, ElemRef) {
     Data = VD;
-    Location = VD->getAttr<CleanupAttr>()->getLoc();
+    Location = Trigger->getEndLoc();
   }
 
   CleanupFunctionCall(const CleanupFunctionCall &Other) = default;
@@ -1540,9 +1542,10 @@ public:
 
   CallEventRef<CleanupFunctionCall>
   getCleanupFunctionCall(const FunctionDecl *FD, const VarDecl *VD,
-                         ProgramStateRef State, const StackFrame *SF,
+                         const Stmt *Trigger, ProgramStateRef State,
+                         const StackFrame *SF,
                          CFGBlock::ConstCFGElementRef ElemRef) {
-    return create<CleanupFunctionCall>(FD, VD, State, SF, ElemRef);
+    return create<CleanupFunctionCall>(FD, VD, Trigger, State, SF, ElemRef);
   }
 };
 

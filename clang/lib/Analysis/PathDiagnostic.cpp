@@ -560,13 +560,11 @@ static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
                                              CallerSF);
   }
   case CFGElement::CleanupFunction: {
-    const CFGCleanupFunction &Cleanup = Source.castAs<CFGCleanupFunction>();
-    // The implicit call is not written in the source; anchor it at the
-    // location of the `cleanup` attribute. (CleanupAttr::getLoc() returns
-    // the location of the `cleanup` keyword, not of the cleanup function
-    // name, which may sit on a different line.)
-    const CleanupAttr *A = Cleanup.getVarDecl()->getAttr<CleanupAttr>();
-    return PathDiagnosticLocation(A->getLoc(), SM);
+    // The cleanup call is implicit and runs when the variable goes out of
+    // scope, so anchor it at the end of the trigger statement.
+    const auto &Cleanup = Source.castAs<CFGCleanupFunction>();
+    return PathDiagnosticLocation::createEnd(Cleanup.getTriggerStmt(), SM,
+                                             CallerSF);
   }
   case CFGElement::ScopeBegin:
   case CFGElement::ScopeEnd:

@@ -1561,11 +1561,13 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction Cleanup,
   const StackFrame *SF = Pred->getStackFrame();
 
   // The implicit f(&var) call is not written in the source; anchor it at the
-  // location of the `cleanup` attribute.
+  // end of the variable's scope, which is where the call happens.
+  const Stmt *Trigger = Cleanup.getTriggerStmt();
+  SourceLocation CallLoc = Trigger->getEndLoc();
+
   static SimpleProgramPointTag PT("ExprEngine",
                                   "Prepare for cleanup function call");
-  PreImplicitCall PP(FD, VD->getAttr<CleanupAttr>()->getLoc(), SF,
-                     getCFGElementRef(), &PT);
+  PreImplicitCall PP(FD, CallLoc, SF, getCFGElementRef(), &PT);
   Pred = Engine.makeNode(PP, State, Pred);
 
   if (!Pred)
@@ -1573,10 +1575,9 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction Cleanup,
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CleanupFunctionCall> Call = CEMgr.getCleanupFunctionCall(
-      FD, VD, Pred->getState(), SF, getCFGElementRef());
+      FD, VD, Trigger, Pred->getState(), SF, getCFGElementRef());
 
-  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
-                                Call->getSourceRange().getBegin(),
+  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(), CallLoc,
                                 "Error evaluating cleanup function");
 
   ExplodedNodeSet DstPreCall;

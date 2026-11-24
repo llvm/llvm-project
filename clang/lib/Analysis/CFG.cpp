@@ -922,8 +922,8 @@ private:
     B->appendAutomaticObjDtor(VD, S, cfg->getBumpVectorContext());
   }
 
-  void appendCleanupFunction(CFGBlock *B, VarDecl *VD) {
-    B->appendCleanupFunction(VD, cfg->getBumpVectorContext());
+  void appendCleanupFunction(CFGBlock *B, VarDecl *VD, Stmt *S) {
+    B->appendCleanupFunction(VD, S, cfg->getBumpVectorContext());
   }
 
   void appendLifetimeEnds(CFGBlock *B, VarDecl *VD, Stmt *S) {
@@ -2025,7 +2025,7 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
     if (BuildOpts.AddImplicitDtors && !hasTrivialDestructor(VD))
       appendAutomaticObjDtor(Block, VD, S);
     if (VD->hasAttr<CleanupAttr>())
-      appendCleanupFunction(Block, VD);
+      appendCleanupFunction(Block, VD, S);
   }
 }
 

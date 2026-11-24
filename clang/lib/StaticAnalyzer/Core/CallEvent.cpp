@@ -1514,7 +1514,8 @@ CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
 
   if (const auto Cleanup = E.getAs<CFGCleanupFunction>()) {
     const auto *FD = cast<FunctionDecl>(CalleeSF->getDecl());
-    return getCleanupFunctionCall(FD, Cleanup->getVarDecl(), State, CallerSF,
+    return getCleanupFunctionCall(FD, Cleanup->getVarDecl(),
+                                  Cleanup->getTriggerStmt(), State, CallerSF,
                                   ElemRef);
   }
 

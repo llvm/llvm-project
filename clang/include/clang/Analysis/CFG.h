@@ -435,13 +435,20 @@ private:
 class CFGCleanupFunction final : public CFGElement {
 public:
   CFGCleanupFunction() = default;
-  CFGCleanupFunction(const VarDecl *VD)
-      : CFGElement(Kind::CleanupFunction, VD) {
+  CFGCleanupFunction(const VarDecl *VD, const Stmt *S)
+      : CFGElement(Kind::CleanupFunction, VD, S) {
     assert(VD->hasAttr<CleanupAttr>());
+    assert(S && "A cleanup function needs a trigger statement");
   }
 
   const VarDecl *getVarDecl() const {
     return static_cast<const VarDecl *>(Data1.getPointer());
+  }
+
+  /// Returns the statement that ends the scope of the variable, e.g. the
+  /// CompoundStmt whose closing brace triggers the cleanup call.
+  const Stmt *getTriggerStmt() const {
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
   /// Returns the function to be called when cleaning up the var decl.
@@ -1245,8 +1252,9 @@ public:
     Elements.push_back(CFGAutomaticObjDtor(VD, S), C);
   }
 
-  void appendCleanupFunction(const VarDecl *VD, BumpVectorContext &C) {
-    Elements.push_back(CFGCleanupFunction(VD), C);
+  void appendCleanupFunction(const VarDecl *VD, const Stmt *S,
+                             BumpVectorContext &C) {
+    Elements.push_back(CFGCleanupFunction(VD, S), C);
   }
 
   void appendLifetimeEnds(VarDecl *VD, Stmt *S, BumpVectorContext &C) {
