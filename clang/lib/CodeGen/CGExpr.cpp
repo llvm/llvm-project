@@ -114,7 +114,14 @@ CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
                                              const Twine &Name,
                                              llvm::Value *ArraySize) {
   if (getLangOpts().EmitLogicalPointer) {
-    auto Alloca = Builder.CreateStructuredAlloca(Ty, Name);
+    llvm::CallInst *Alloca;
+    if (ArraySize) {
+      Alloca = Builder.CreateStructuredAlloca(Ty, Name);
+    } else {
+      llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+      Builder.SetInsertPoint(AllocaInsertPt);
+      Alloca = Builder.CreateStructuredAlloca(Ty, Name);
+    }
     return RawAddress(Alloca, Ty, Align, KnownNonNull);
   }
 
