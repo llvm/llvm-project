@@ -27,8 +27,10 @@ namespace unittests {
 
 class ScopedBinaryRegistration {
 public:
-  explicit ScopedBinaryRegistration(llvm::ArrayRef<llvm::StringRef> KernelNames)
-      : MBinary(createSYCLDeviceBinary(KernelNames)) {
+  explicit ScopedBinaryRegistration(llvm::ArrayRef<llvm::StringRef> KernelNames,
+                                    llvm::StringRef Triple = DefaultImageTriple)
+      : MBinary(createSYCLDeviceBinary(KernelNames, llvm::object::IMG_SPIRV,
+                                       llvm::object::OFK_SYCL, Triple)) {
     sycl::detail::ProgramAndKernelManager::getInstance().registerFatBin(
         MBinary.data(), MBinary.size());
   }
@@ -44,9 +46,10 @@ private:
 
 class ScopedKernelRegistration {
 public:
-  explicit ScopedKernelRegistration(std::string KernelName)
+  explicit ScopedKernelRegistration(std::string KernelName,
+                                    llvm::StringRef Triple = DefaultImageTriple)
       : MKernelName(std::move(KernelName)),
-        MRegistration(createKernelNames(MKernelName)) {}
+        MRegistration(createKernelNames(MKernelName), Triple) {}
 
 private:
   static std::array<llvm::StringRef, 1>

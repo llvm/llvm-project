@@ -1,18 +1,24 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  FrontendOffloading
   Support
+  TransformUtils
   )
 
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
+  LowerToLLVMMetadata.cpp
+  LowerToLLVMOffloadPrintf.cpp
+  LowerToLLVMOffloadPrintfAMDGPU.cpp
+  LowerToLLVMOffloadPrintfNVPTX.cpp
   LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS
   CIRLowering
   MLIRCIREnumsGen
-  MLIRCIROpsIncGen
-  MLIRCIROpInterfacesIncGen
+  MLIRCIRPassIncGen
+  mlir-headers
 
   LINK_LIBS
   clangCIRLoweringCommon
@@ -24,9 +30,10 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRFuncDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRLLVMIRTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPDialect
-  MLIROpenMPToLLVM
+  MLIROpenMPToLLVMConversion
   MLIROpenMPToLLVMIRTranslation
   MLIROpenMPTransforms
   MLIRIR

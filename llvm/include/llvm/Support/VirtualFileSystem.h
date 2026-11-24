@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 #define LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -109,6 +110,11 @@ public:
   LLVM_ABI bool isStatusKnown() const;
   LLVM_ABI bool exists() const;
   /// @}
+
+  /// Returns true if any of the owner, group, or others execute permissions is
+  /// set. Unlike llvm::sys::fs::can_execute, this does not check whether the
+  /// current process is allowed to execute the file.
+  LLVM_ABI bool isExecutable() const;
 };
 
 /// Represents an open file.
@@ -314,6 +320,16 @@ public:
   virtual std::error_code getRealPath(const Twine &Path,
                                       SmallVectorImpl<char> &Output);
 
+  /// Collect the paths in the real file system that contribute to a potentially
+  /// virtual directory when iterated via \a dir_begin. This can be used for
+  /// directory watching.
+  ///
+  /// Only paths that are OS-level visible are returned, so in memory and other
+  /// such entirely virtual filesystems contribute no paths.
+  virtual void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) {}
+
   /// Check whether \p Path exists. By default this uses \c status(), but
   /// filesystems may provide a more efficient implementation if available.
   virtual bool exists(const Twine &Path);
@@ -382,6 +398,16 @@ LLVM_ABI IntrusiveRefCntPtr<FileSystem> getRealFileSystem();
 /// This may only be called outside the IO sandbox.
 LLVM_ABI std::unique_ptr<FileSystem> createPhysicalFileSystem();
 
+/// Searches \p Dir and then each of its parent directories for a regular file
+/// named one of \p FileNames, trying the names in order in each directory. A
+/// relative \p Dir is only searched up to its first component.
+///
+/// \returns the path of the first file found, or std::nullopt if there is
+/// none.
+LLVM_ABI std::optional<std::string>
+findFileInParentDirectories(FileSystem &FS, StringRef Dir,
+                            ArrayRef<StringRef> FileNames);
+
 /// A file system that allows overlaying one \p AbstractFileSystem on top
 /// of another.
 ///
@@ -417,6 +443,9 @@ public:
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
+  void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) override;
 
   using iterator = FileSystemList::reverse_iterator;
   using const_iterator = FileSystemList::const_reverse_iterator;
@@ -480,6 +509,11 @@ public:
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override {
     return FS->getRealPath(Path, Output);
+  }
+  void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) override {
+    return FS->getDirectoryContentRealSources(Dir, Out);
   }
   std::error_code isLocal(const Twine &Path, bool &Result) override {
     return FS->isLocal(Path, Result);
@@ -1079,6 +1113,10 @@ public:
 
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
+
+  void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
 

@@ -125,7 +125,7 @@ private:
   }
   ProgramStateRef cloneAsPosteriorlyOverconstrained() const;
 
-  unsigned refCount;
+  mutable unsigned refCount;
 
   /// makeWithStore - Return a ProgramState with the same values as the current
   ///  state with the exception of using the specified Store.
@@ -142,6 +142,7 @@ public:
   /// Copy ctor - We must explicitly define this or else the "Next" ptr
   ///  in FoldingSetNode will also get copied.
   ProgramState(const ProgramState &RHS);
+  ProgramState(ProgramState &&RHS);
 
   ~ProgramState();
 
@@ -483,8 +484,10 @@ public:
   void dump() const;
 
 private:
-  friend void ProgramStateRetain(const ProgramState *state);
-  friend void ProgramStateRelease(const ProgramState *state);
+  friend struct llvm::IntrusiveRefCntPtrInfo<const ProgramState>;
+
+  void retain() const { ++refCount; }
+  void release() const;
 
   SVal desugarReference(SVal Val) const;
   SVal wrapSymbolicRegion(SVal Base) const;
@@ -496,7 +499,7 @@ private:
 
 class ProgramStateManager {
   friend class ProgramState;
-  friend void ProgramStateRelease(const ProgramState *state);
+
 private:
   /// Eng - The ExprEngine that owns this state manager.
   ExprEngine *Eng; /* Can be null. */
@@ -526,6 +529,9 @@ private:
 
   /// A vector of ProgramStates that we can reuse.
   std::vector<ProgramState *> freeStates;
+
+  /// Called when the reference count of \p State drops to zero.
+  void freeState(ProgramState *State);
 
 public:
   ProgramStateManager(ASTContext &Ctx,
@@ -598,7 +604,7 @@ public:
     StoreMgr->iterBindings(state->getStore(), F);
   }
 
-  ProgramStateRef getPersistentState(ProgramState &Impl);
+  ProgramStateRef getPersistentState(ProgramState &&Impl);
   ProgramStateRef getPersistentStateWithGDM(ProgramStateRef FromState,
                                            ProgramStateRef GDMState);
 
@@ -689,6 +695,12 @@ public:
 //===----------------------------------------------------------------------===//
 // Out-of-line method definitions for ProgramState.
 //===----------------------------------------------------------------------===//
+
+inline void ProgramState::release() const {
+  assert(refCount > 0);
+  if (--refCount == 0)
+    stateMgr->freeState(const_cast<ProgramState *>(this));
+}
 
 inline ConstraintManager &ProgramState::getConstraintManager() const {
   return stateMgr->getConstraintManager();

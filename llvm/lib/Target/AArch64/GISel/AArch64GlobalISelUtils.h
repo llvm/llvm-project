@@ -23,21 +23,16 @@ namespace llvm {
 
 namespace AArch64GISelUtils {
 
-/// \returns A value when \p MI is a vector splat of a Register or constant.
-/// Checks for generic opcodes and AArch64-specific generic opcodes.
-std::optional<RegOrConstant>
-getAArch64VectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
-
-/// \returns A value when \p MI is a constant vector splat.
-/// Checks for generic opcodes and AArch64-specific generic opcodes.
-std::optional<int64_t>
-getAArch64VectorSplatScalar(const MachineInstr &MI,
-                            const MachineRegisterInfo &MRI);
-
 /// \returns true if \p MaybeSub and \p Pred are part of a CMN tree for an
 /// integer compare.
 bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
            const MachineRegisterInfo &MRI);
+
+/// \returns true if \p Reg is a valid immediate for a vector shift right of
+/// type \p Ty: a constant splat with 1 <= value <= element bits, stored in
+/// \p Cnt. Undef lanes (e.g. from widening odd-sized vectors) are allowed.
+bool isVShiftRImm(Register Reg, const MachineRegisterInfo &MRI, LLT Ty,
+                  int64_t &Cnt);
 
 /// Replace a G_MEMSET with a value of 0 with a G_BZERO instruction if it is
 /// supported and beneficial to do so.

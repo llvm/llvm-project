@@ -13,7 +13,6 @@
 #include "llvm/DWARFLinker/AddressesMap.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 
 namespace llvm {
@@ -82,7 +81,6 @@ private:
                                "no register info for target %s",
                                TripleName.c_str());
 
-    MCOptions = mc::InitMCTargetOptionsFromFlags();
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     if (!MAI)
       return createStringError(std::errc::invalid_argument,
@@ -137,7 +135,7 @@ private:
         return;
       }
 
-      Section.emitString(Include.getForm(), *IncludeStr);
+      emitPath(Section, Include.getForm(), *IncludeStr);
     }
     // The last entry is followed by a single null byte.
     Section.emitIntVal(0, 1);
@@ -152,7 +150,7 @@ private:
 
       // A null-terminated string containing the full or relative path name of a
       // source file.
-      Section.emitString(File.Name.getForm(), *FileNameStr);
+      emitPath(Section, File.Name.getForm(), *FileNameStr);
 
       // An unsigned LEB128 number representing the directory index of a
       // directory in the include_directories section.
@@ -193,7 +191,7 @@ private:
         return;
       }
 
-      Section.emitString(Include.getForm(), *IncludeStr);
+      emitPath(Section, Include.getForm(), *IncludeStr);
     }
 
     bool HasChecksums = P.ContentTypes.HasMD5;
@@ -244,7 +242,7 @@ private:
 
       // A null-terminated string containing the full or relative path name of a
       // source file.
-      Section.emitString(FileNameForm, *FileNameStr);
+      emitPath(Section, FileNameForm, *FileNameStr);
       encodeULEB128(File.DirIdx, Section.OS);
 
       if (HasChecksums) {
@@ -435,6 +433,13 @@ private:
       Section.OS.write(EncodingBuffer.c_str(), EncodingBuffer.size());
       EncodingBuffer.resize(0);
     }
+  }
+
+  /// Emit \p Path, a path from the input line table, as a string of form
+  /// \p Form.
+  void emitPath(SectionDescriptor &Section, dwarf::Form Form,
+                const char *Path) {
+    Section.emitString(Form, U.remapPath(Path).c_str());
   }
 
   Triple TheTriple;

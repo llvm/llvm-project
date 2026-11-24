@@ -1,4 +1,4 @@
-; RUN: opt -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-write-summary=%t -o /dev/null %s
+; RUN: opt -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-write-summary=%t -disable-output %s
 ; RUN: FileCheck %s < %t
 
 ; CHECK: ---

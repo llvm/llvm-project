@@ -16,7 +16,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -117,7 +116,6 @@ body:             |
 ---
 name:            test_inline_asm_no_compress
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -202,7 +200,6 @@ body:             |
 ---
 name:            test_bb_alignment_not_byte_compressable
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }

@@ -1246,6 +1246,14 @@ bool FastISel::lowerDbgValue(const Value *V, DIExpression *Expr,
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II, false, 0U, Var, Expr);
     return true;
   }
+  if (auto *CE = dyn_cast<ConstantExpr>(V);
+      CE && CE->getOpcode() == Instruction::IntToPtr)
+    if (auto *Int = dyn_cast<ConstantInt>(CE->getOperand(0))) {
+      unsigned PtrSize =
+          FuncInfo.MF->getDataLayout().getPointerTypeSizeInBits(CE->getType());
+      V = ConstantInt::get(CE->getContext(),
+                           Int->getValue().zextOrTrunc(PtrSize));
+    }
   if (const auto *CI = dyn_cast<ConstantInt>(V)) {
     // See if there's an expression to constant-fold.
     if (Expr)
@@ -1262,6 +1270,14 @@ bool FastISel::lowerDbgValue(const Value *V, DIExpression *Expr,
           .addImm(0U)
           .addMetadata(Var)
           .addMetadata(Expr);
+    return true;
+  }
+  if (isa<ConstantPointerNull>(V)) {
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II)
+        .addImm(0)
+        .addImm(0U)
+        .addMetadata(Var)
+        .addMetadata(Expr);
     return true;
   }
   if (const auto *CF = dyn_cast<ConstantFP>(V)) {
@@ -2233,6 +2249,11 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (!LI->isUnordered())
     return false;
 
+  // Where the target supports swifterror, the value lives in a register, so a
+  // load from it can't become a memory operand.
+  if (TLI.supportSwiftError() && LI->getPointerOperand()->isSwiftError())
+    return false;
+
   // Figure out which vreg this is going into.  If there is no assigned vreg yet
   // then there actually was no reference to it.  Perhaps the load is referenced
   // by a dead instruction.
@@ -2240,10 +2261,10 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (!LoadReg)
     return false;
 
-  // We can't fold if this vreg has no uses or more than one use.  Multiple uses
-  // may mean that the instruction got lowered to multiple MIs, or the use of
-  // the loaded value ended up being multiple operands of the result.
-  if (!MRI.hasOneUse(LoadReg))
+  // We can't fold if this vreg has no uses or more than one non-debug use.
+  // Multiple uses may mean that the instruction got lowered to multiple MIs, or
+  // the use of the loaded value ended up being multiple operands of the result.
+  if (!MRI.hasOneNonDBGUse(LoadReg))
     return false;
 
   // If the register has fixups, there may be additional uses through a
@@ -2251,7 +2272,7 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (FuncInfo.RegsWithFixups.contains(LoadReg))
     return false;
 
-  MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LoadReg);
+  MachineRegisterInfo::use_nodbg_iterator RI = MRI.use_nodbg_begin(LoadReg);
   MachineInstr *User = RI->getParent();
 
   // Set the insertion point properly.  Folding the load can cause generation of
@@ -2261,7 +2282,12 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   FuncInfo.MBB = User->getParent();
 
   // Ask the target to try folding the load.
-  return tryToFoldLoadIntoMI(User, RI.getOperandNo(), LI);
+  if (!tryToFoldLoadIntoMI(User, RI.getOperandNo(), LI))
+    return false;
+
+  // The loaded value no longer lives in LoadReg.
+  MRI.markUsesInDebugValueAsUndef(LoadReg);
+  return true;
 }
 
 bool FastISel::canFoldAddIntoGEP(const User *GEP, const Value *Add) {

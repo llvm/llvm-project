@@ -20,6 +20,9 @@ namespace llvm {
 class Triple;
 class TargetLibraryInfoImpl;
 enum class VectorLibrary;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 } // namespace llvm
 
 namespace llvm::driver {
@@ -67,7 +70,8 @@ enum ProfileInstrKind {
 };
 
 // Default filename used for profile generation.
-LLVM_ABI std::string getDefaultProfileGenName();
+LLVM_ABI std::string
+getDefaultProfileGenName(const cl::LibraryOptionsContext &LibraryOptions);
 } // end namespace llvm::driver
 
 #endif

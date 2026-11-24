@@ -819,17 +819,26 @@ func.func @insert_extract_transpose_3d(
 
 // CHECK-LABEL: fold_extracts
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: vector<3x4x5x6xf32>
-func.func @fold_extracts(%a : vector<3x4x5x6xf32>) -> (f32, vector<4x5x6xf32>) {
-  %b = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %c = vector.extract %b[1, 2] : vector<6xf32> from vector<4x5x6xf32>
-  //  CHECK-NEXT: vector.extract %[[A]][0, 1, 2, 3] : f32 from vector<3x4x5x6xf32>
-  %d = vector.extract %c[3] : f32 from vector<6xf32>
+//  CHECK-SAME:   %[[I:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:   %[[J:[a-zA-Z0-9]*]]: index
+func.func @fold_extracts(%a : vector<3x4x5x6xf32>, %i : index, %j : index) -> (f32, f32, f32) {
+  // Dynamic position (%i) in the inner extract.
+  %b = vector.extract %a[%i] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, 2, 3] : f32 from vector<3x4x5x6xf32>
+  %c = vector.extract %b[1, 2, 3] : f32 from vector<4x5x6xf32>
 
-  //  CHECK-NEXT: vector.extract %[[A]][0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %e = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
+  // Dynamic position (%j) in the outer extract.
+  %d = vector.extract %a[0, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][0, 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
+  %e = vector.extract %d[%j, 3] : f32 from vector<5x6xf32>
+
+  // Dynamic positions (%i, %j) in both extracts.
+  %f = vector.extract %a[%i, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
+  %g = vector.extract %f[%j, 3] : f32 from vector<5x6xf32>
 
   //  CHECK-NEXT: return
-  return %d, %e : f32, vector<4x5x6xf32>
+  return %c, %e, %g : f32, f32, f32
 }
 
 // -----
@@ -1764,6 +1773,40 @@ func.func @extract_strided_broadcast5(%arg0: vector<2x1xf32>) -> vector<2x4xf32>
 
 // -----
 
+// ExtractStridedSliceOp only extracts a prefix of its source vector
+// (#num_offsets < #source_rank).
+// CHECK-LABEL: func @extract_strided_broadcast_prefix(
+//  CHECK-SAME: %[[ARG:.+]]: vector<4x1xf32>
+//       CHECK: %[[E:.+]] = vector.extract %[[ARG]][3] : vector<1xf32> from vector<4x1xf32>
+//  CHECK-NEXT: %[[B:.+]] = vector.broadcast %[[E]] : vector<1xf32> to vector<1x4xf32>
+//  CHECK-NEXT: return %[[B]] : vector<1x4xf32>
+func.func @extract_strided_broadcast_prefix(%arg0: vector<4x1xf32>) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4x1xf32> to vector<4x4xf32>
+  %1 = vector.extract_strided_slice %0
+      offsets = [3], sizes = [1], strides = [1]
+      : vector<4x4xf32> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// ExtractStridedSliceOp only extracts a prefix of its source vector
+// (#num_offsets < #source_rank). In addition, BroadcastOp bumps the output rank.
+// CHECK-LABEL: func @extract_strided_broadcast_prefix_rank_increase(
+//  CHECK-SAME: %[[ARG:.+]]: vector<8x1x1xf32>
+//       CHECK: %[[E:.+]] = vector.extract_strided_slice %[[ARG]] offsets = [5, 0], sizes = [2, 1], strides = [1, 1] : vector<8x1x1xf32> to vector<2x1x1xf32>
+//  CHECK-NEXT: %[[B:.+]] = vector.broadcast %[[E]] : vector<2x1x1xf32> to vector<1x2x2x5xf32>
+//  CHECK-NEXT: return %[[B]] : vector<1x2x2x5xf32>
+func.func @extract_strided_broadcast_prefix_rank_increase(%arg0: vector<8x1x1xf32>) -> vector<1x2x2x5xf32> {
+  %0 = vector.broadcast %arg0 : vector<8x1x1xf32> to vector<4x8x7x5xf32>
+  %1 = vector.extract_strided_slice %0
+      offsets = [3, 5, 3], sizes = [1, 2, 2], strides = [1, 1, 1]
+      : vector<4x8x7x5xf32> to vector<1x2x2x5xf32>
+  return %1 : vector<1x2x2x5xf32>
+}
+
+// -----
+
 // CHECK-LABEL: consecutive_shape_cast
 //       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<16xf16> to vector<4x4xf16>
 //  CHECK-NEXT:   return %[[C]] : vector<4x4xf16>
@@ -2020,6 +2063,31 @@ func.func @negative_store_to_load_tensor(%arg0 : tensor<4x4xf32>,
 
 // -----
 
+// Same as @store_to_load_tensor, but the read is under vector.mask: its
+// masked-off lanes get the padding value, so it must not fold to the stored
+// vector.
+// CHECK-LABEL: func @negative_store_to_load_tensor_region_masked_read
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//       CHECK:   return %[[R]] : vector<1x4xf32>
+func.func @negative_store_to_load_tensor_region_masked_read(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %mask : vector<1x4xi1>) -> vector<1x4xf32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v1, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.mask %mask { vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    tensor<4x4xf32>, vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @store_to_load_tensor_broadcast
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4xf32>, %[[V0:.*]]: vector<4x2xf32>)
 //       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<4x2xf32> to vector<6x4x2xf32>
@@ -2034,6 +2102,27 @@ func.func @store_to_load_tensor_broadcast(%arg0 : tensor<4x4xf32>,
   %0 = vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true, true],
   permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
     tensor<4x4xf32>, vector<4x2x6xf32>
+  return %0 : vector<4x2x6xf32>
+}
+
+// -----
+
+// Same as above, but the read is under vector.mask: its masked-off lanes get
+// the padding value, so it must not become a broadcast of the stored vector.
+// CHECK-LABEL: func @negative_store_to_load_tensor_broadcast_region_masked
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//   CHECK-NOT:   vector.broadcast
+//       CHECK:   return %[[R]] : vector<4x2x6xf32>
+func.func @negative_store_to_load_tensor_broadcast_region_masked(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<4x2xf32>, %mask : vector<4x2xi1>) -> vector<4x2x6xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0] {in_bounds = [true, true]} :
+    vector<4x2xf32>, tensor<4x4xf32>
+  %0 = vector.mask %mask { vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true, true],
+  permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
+    tensor<4x4xf32>, vector<4x2x6xf32> } : vector<4x2xi1> -> vector<4x2x6xf32>
   return %0 : vector<4x2x6xf32>
 }
 
@@ -2230,6 +2319,32 @@ func.func @negative_dead_store_tensor(%arg0 : tensor<4x4xf32>,
 
 // -----
 
+// Same as @dead_store_tensor, but the last write is under vector.mask: it does
+// not overwrite the masked-off lanes, so the first write must be kept.
+// CHECK-LABEL: func @negative_dead_store_tensor_region_masked
+//   CHECK-DAG:      %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:      %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:   vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   vector.transfer_write {{.*}}, {{.*}}[%[[C2]], %[[C0]]
+//       CHECK:   %[[VTW:.*]] = vector.mask %{{.*}} { vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   return %[[VTW]] : tensor<4x4xf32>
+func.func @negative_dead_store_tensor_region_masked(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %mask : vector<1x4xi1>) -> tensor<4x4xf32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w2 = vector.mask %mask { vector.transfer_write %v1, %w1[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32> } : vector<1x4xi1> -> tensor<4x4xf32>
+  return %w2 : tensor<4x4xf32>
+}
+
+// -----
+
 //       CHECK: #[[$MAP:[0-9a-z]+]] = affine_map<(d0, d1) -> (d1, d0)>
 
 // CHECK-LABEL: func @swap_extract_slice_transfer_write
@@ -2351,7 +2466,7 @@ func.func @masked_vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3x
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4x1x20xf32>, %[[ACC:.+]]: vector<5x4x20xf32>
 func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x4x20xf32>) -> vector<5x4x20xf32> {
 //       CHECK:   %[[CAST:.+]] = vector.shape_cast  %[[SOURCE]] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
-//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[ACC]], %[[CAST]] : vector<5x4x20xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[CAST]], %[[ACC]] : vector<5x4x20xf32>
     %0 = vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
 
 //       CHECK:     return %[[RESULT]] : vector<5x4x20xf32>
@@ -2360,6 +2475,21 @@ func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32
 
 // -----
 
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_fastmath(
+//  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4xf32>, %[[ACC:.+]]: vector<5x4xf32>
+func.func @vector_multi_reduction_unit_dimensions_fastmath(%source: vector<5x1x4xf32>, %acc: vector<5x4xf32>) -> vector<5x4xf32> {
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[SOURCE]] : vector<5x1x4xf32> to vector<5x4xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.maximumf %[[CAST]], %[[ACC]] fastmath<nnan,nsz> : vector<5x4xf32>
+    %0 = vector.multi_reduction <maximumf>, %source, %acc fastmath<nnan,nsz> [1] : vector<5x1x4xf32> to vector<5x4xf32>
+//       CHECK:   return %[[RESULT]] : vector<5x4xf32>
+    return %0 : vector<5x4xf32>
+}
+
+// -----
+
+// The accumulator is the value the masked lanes keep, so it ends up as the
+// right-hand operand of the reduction op and as the on-false value of the
+// select.
 // CHECK-LABEL:   func.func @vector_multi_reduction_scalable(
 // CHECK-SAME:     %[[VAL_0:.*]]: vector<1x[4]x1xf32>,
 // CHECK-SAME:     %[[VAL_1:.*]]: vector<1x[4]xf32>,
@@ -2369,8 +2499,8 @@ func.func @vector_multi_reduction_scalable(%source: vector<1x[4]x1xf32>,
                                            %mask: vector<1x[4]x1xi1>) -> vector<1x[4]xf32> {
 // CHECK:           %[[VAL_3:.*]] = vector.shape_cast %[[VAL_2]] : vector<1x[4]x1xi1> to vector<1x[4]xi1>
 // CHECK:           %[[VAL_4:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x[4]x1xf32> to vector<1x[4]xf32>
-// CHECK:           %[[VAL_5:.*]] = arith.addf %[[VAL_1]], %[[VAL_4]] : vector<1x[4]xf32>
-// CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_4]] : vector<1x[4]xi1>, vector<1x[4]xf32>
+// CHECK:           %[[VAL_5:.*]] = arith.addf %[[VAL_4]], %[[VAL_1]] : vector<1x[4]xf32>
+// CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_1]] : vector<1x[4]xi1>, vector<1x[4]xf32>
     %0 = vector.mask %mask { vector.multi_reduction <add>, %source, %acc [2] : vector<1x[4]x1xf32> to vector<1x[4]xf32> } :
           vector<1x[4]x1xi1> -> vector<1x[4]xf32>
 
@@ -2379,6 +2509,9 @@ func.func @vector_multi_reduction_scalable(%source: vector<1x[4]x1xf32>,
 
 // -----
 
+// As above: the accumulator is the passthrough of the masked select, so it is
+// the right-hand operand of the arith.mulf and the on-false value of the
+// select.
 // CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions
 //  CHECK-SAME: %[[VAL_0:.*]]: vector<5x1x4x1x20xf32>, %[[VAL_1:.*]]: vector<5x4x20xf32>,
 //  CHECK-SAME: %[[VAL_2:.*]]: vector<5x1x4x1x20xi1>)
@@ -2387,8 +2520,8 @@ func.func @masked_vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1
                                                          %mask: vector<5x1x4x1x20xi1>) -> vector<5x4x20xf32> {
 //       CHECK:   %[[VAL_3:.*]] = vector.shape_cast %[[VAL_2]] : vector<5x1x4x1x20xi1> to vector<5x4x20xi1>
 //       CHECK:   %[[VAL_4:.*]] = vector.shape_cast %[[VAL_0]] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
-//       CHECK:   %[[VAL_5:.*]] = arith.mulf %[[VAL_1]], %[[VAL_4]] : vector<5x4x20xf32>
-//       CHECK:   %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_4]] : vector<5x4x20xi1>, vector<5x4x20xf32>
+//       CHECK:   %[[VAL_5:.*]] = arith.mulf %[[VAL_4]], %[[VAL_1]] : vector<5x4x20xf32>
+//       CHECK:   %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_1]] : vector<5x4x20xi1>, vector<5x4x20xf32>
 %0 = vector.mask %mask { vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32> } :
            vector<5x1x4x1x20xi1> -> vector<5x4x20xf32>
     return %0 : vector<5x4x20xf32>
@@ -2412,7 +2545,7 @@ func.func @vector_multi_reduction_unit_dimensions_fail(%source: vector<5x1x4x1x2
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<1x1x1xf32>, %[[ACC:.+]]: f32
 func.func @vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x1x1xf32>, %acc: f32) -> f32 {
 //       CHECK:   %[[CAST:.+]] = vector.extract  %[[SOURCE]][0, 0, 0] : f32 from vector<1x1x1xf32>
-//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[ACC]], %[[CAST]] : f32
+//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[CAST]], %[[ACC]] : f32
     %0 = vector.multi_reduction <mul>, %source, %acc [0,1,2] : vector<1x1x1xf32> to f32
 
 //       CHECK:     return %[[RESULT]] : f32
@@ -2421,16 +2554,58 @@ func.func @vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x
 
 // -----
 
+// Same for the scalar case: the accumulator (%[[VAL_1]]) is the on-false value
+// of the select, not the extracted source element.
 // CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_single_elem(
 //  CHECK-SAME: %[[VAL_0:.*]]: vector<1x1x1xf32>, %[[VAL_1:.*]]: f32,
 //  CHECK-SAME: %[[VAL_2:.*]]: vector<1x1x1xi1>)
 func.func @masked_vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x1x1xf32>, %acc: f32, %mask: vector<1x1x1xi1>) -> f32 {
       // CHECK:           %[[VAL_3:.*]] = vector.extract %[[VAL_2]][0, 0, 0] : i1 from vector<1x1x1xi1>
       // CHECK:           %[[VAL_4:.*]] = vector.extract %[[VAL_0]][0, 0, 0] : f32 from vector<1x1x1xf32>
-      // CHECK:           %[[VAL_5:.*]] = arith.mulf %[[VAL_1]], %[[VAL_4]] : f32
-      // CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_4]] : f32
+      // CHECK:           %[[VAL_5:.*]] = arith.mulf %[[VAL_4]], %[[VAL_1]] : f32
+      // CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_1]] : f32
   %0 = vector.mask %mask { vector.multi_reduction <mul>, %source, %acc [0,1,2] : vector<1x1x1xf32> to f32 } : vector<1x1x1xi1> -> f32
     return %0 : f32
+}
+
+// -----
+
+// The mask is all false, so no element is reduced and the accumulator has to
+// come back unchanged. Once everything is folded away the function is just the
+// constant 42; a wrong passthrough (the source instead of the accumulator) in
+// the masked select would leave 7 here.
+// CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_false_mask(
+//       CHECK:   %[[RESULT:.*]] = arith.constant 42 : i32
+//  CHECK-NEXT:   return %[[RESULT]] : i32
+func.func @masked_vector_multi_reduction_unit_dimensions_false_mask() -> i32 {
+  %mask = arith.constant dense<false> : vector<1xi1>
+  %source = arith.constant dense<7> : vector<1xi32>
+  %acc = arith.constant 42 : i32
+  %result = vector.mask %mask {
+    %reduced = vector.multi_reduction <maxui>, %source, %acc [0] : vector<1xi32> to i32
+    vector.yield %reduced : i32
+  } : vector<1xi1> -> i32
+  return %result : i32
+}
+
+// -----
+
+// Only the second row is masked in, so row 0 has to keep the accumulator (42)
+// while row 1 reduces maxui(9, 3) = 9. The expected constant is therefore
+// dense<[42, 9]>; picking up the source as the passthrough of the masked select
+// would give dense<[77, 9]> instead.
+// CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_mixed_mask(
+//       CHECK:   %[[RESULT:.*]] = arith.constant dense<[42, 9]> : vector<2xi32>
+//  CHECK-NEXT:   return %[[RESULT]] : vector<2xi32>
+func.func @masked_vector_multi_reduction_unit_dimensions_mixed_mask() -> vector<2xi32> {
+  %mask = arith.constant dense<[[false], [true]]> : vector<2x1xi1>
+  %source = arith.constant dense<[[77], [9]]> : vector<2x1xi32>
+  %acc = arith.constant dense<[42, 3]> : vector<2xi32>
+  %result = vector.mask %mask {
+    %reduced = vector.multi_reduction <maxui>, %source, %acc [1] : vector<2x1xi32> to vector<2xi32>
+    vector.yield %reduced : vector<2xi32>
+  } : vector<2x1xi1> -> vector<2xi32>
+  return %result : vector<2xi32>
 }
 
 // -----
@@ -2706,18 +2881,6 @@ func.func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %
     : vector<2x16xf32> into vector<12x8x16xf32>
   %2 = vector.extract %1[4, 2] : vector<16xf32> from vector<12x8x16xf32>
   return %2 : vector<16xf32>
-}
-
-// -----
-
-// CHECK-LABEL: extract_from_extract_chain_should_not_fold_dynamic_extracts
-//  CHECK-SAME: (%[[VEC:.*]]: vector<2x4xf32>, %[[IDX:.*]]: index)
-//       CHECK: %[[A:.*]] = vector.extract %[[VEC]][%[[IDX]]] : vector<4xf32> from vector<2x4xf32>
-//       CHECK: %[[B:.*]] = vector.extract %[[A]][1] : f32 from vector<4xf32>
-func.func @extract_from_extract_chain_should_not_fold_dynamic_extracts(%v: vector<2x4xf32>, %index: index) -> f32 {
-  %0 = vector.extract %v[%index] : vector<4xf32> from vector<2x4xf32>
-  %1 = vector.extract %0[1] : f32 from vector<4xf32>
-  return %1 : f32
 }
 
 // -----
@@ -3506,9 +3669,9 @@ func.func @all_true_vector_mask_no_result(%a : vector<3x4xf32>, %m : memref<3x4x
 // Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Trailing>
 // +---------------------------------------------------------------------------
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_provable_true(
 // CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x4xi1> {
-func.func @fold_shape_cast_with_mask_trailing_unit(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
+func.func @fold_shape_cast_with_mask_trailing_unit_provable_true(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3519,6 +3682,23 @@ func.func @fold_shape_cast_with_mask_trailing_unit(%arg0: tensor<1x?xf32>) -> ve
   %1 = vector.create_mask %c1, %dim, %c1, %c1 : vector<1x4x1x1xi1>
   %2 = vector.shape_cast %1 : vector<1x4x1x1xi1> to vector<1x4xi1>
   return %2 : vector<1x4xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @no_fold_shape_cast_with_mask_trailing_unit_dynamic_unknown(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<8xi1> {
+func.func @no_fold_shape_cast_with_mask_trailing_unit_dynamic_unknown(%n: index) -> vector<8xi1> {
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK:     %[[MASK:.*]] = vector.create_mask %[[C8]], %[[N]], %[[C1]] : vector<8x1x1xi1>
+// CHECK:     %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<8x1x1xi1> to vector<8xi1>
+// CHECK:     return %[[CAST]] : vector<8xi1>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c8, %n, %c1 : vector<8x1x1xi1>
+  %cast = vector.shape_cast %mask : vector<8x1x1xi1> to vector<8xi1>
+  return %cast : vector<8xi1>
 }
 
 // -----
@@ -3573,9 +3753,9 @@ func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1>{
 // Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Leading>
 // +---------------------------------------------------------------------------
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_provable_true(
 // CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<4x1xi1> {
-func.func @fold_shape_cast_with_mask_leading_unit(%arg0: tensor<1x?xf32>) -> vector<4x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_provable_true(%arg0: tensor<1x?xf32>) -> vector<4x1xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3586,6 +3766,23 @@ func.func @fold_shape_cast_with_mask_leading_unit(%arg0: tensor<1x?xf32>) -> vec
   %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x4x1xi1>
   %2 = vector.shape_cast %1 : vector<1x1x4x1xi1> to vector<4x1xi1>
   return %2 : vector<4x1xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @no_fold_shape_cast_with_mask_leading_unit_dynamic_unknown(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<8xi1> {
+func.func @no_fold_shape_cast_with_mask_leading_unit_dynamic_unknown(%n: index) -> vector<8xi1> {
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK:     %[[MASK:.*]] = vector.create_mask %[[C1]], %[[N]], %[[C8]] : vector<1x1x8xi1>
+// CHECK:     %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x1x8xi1> to vector<8xi1>
+// CHECK:     return %[[CAST]] : vector<8xi1>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c1, %n, %c8 : vector<1x1x8xi1>
+  %cast = vector.shape_cast %mask : vector<1x1x8xi1> to vector<8xi1>
+  return %cast : vector<8xi1>
 }
 
 // -----
@@ -4449,14 +4646,14 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
 
 // CHECK-LABEL: @fold_insert_use_chain(
 //  CHECK-SAME:   %[[ARG:.*]]: vector<4x4xf32>,
-//  CHECK-SAME:   %[[VAL:.*]]: f32,
+//  CHECK-SAME:   %[[VAL0:.*]]: f32, %[[VAL1:.*]]: f32, %[[VAL2:.*]]: f32,
 //  CHECK-SAME:   %[[POS:.*]]: index) -> vector<4x4xf32> {
-//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
+//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL2]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
 //  CHECK-NEXT:   return %[[RES]] : vector<4x4xf32>
-func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val : f32, %pos: index) -> vector<4x4xf32> {
-  %v_0 = vector.insert %val, %arg[%pos, 0] : f32 into vector<4x4xf32>
-  %v_1 = vector.insert %val, %v_0[%pos, 0] : f32 into vector<4x4xf32>
-  %v_2 = vector.insert %val, %v_1[%pos, 0] : f32 into vector<4x4xf32>
+func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val0 : f32, %val1 : f32, %val2 : f32, %pos: index) -> vector<4x4xf32> {
+  %v_0 = vector.insert %val0, %arg[%pos, 0] : f32 into vector<4x4xf32>
+  %v_1 = vector.insert %val1, %v_0[%pos, 0] : f32 into vector<4x4xf32>
+  %v_2 = vector.insert %val2, %v_1[%pos, 0] : f32 into vector<4x4xf32>
   return %v_2 : vector<4x4xf32>
 }
 
@@ -4573,4 +4770,102 @@ func.func @interleave_splat() -> vector<[4]xf32> {
   %cst = arith.constant dense<0.0> : vector<[2]xf32>
   %0 = vector.interleave %cst, %cst : vector<[2]xf32> -> vector<[4]xf32>
   return %0 : vector<[4]xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_condition(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<4xf32>, %[[B:[^:]+]]: vector<4xf32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<4xf32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_condition(%p: i1, %a: vector<4xf32>, %b: vector<4xf32>) -> vector<4xf32> {
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xf32>
+  return %x : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_multidimensional(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<2x4xi32>, %[[B:[^:]+]]: vector<2x4xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<2x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_multidimensional(%p: i1, %a: vector<2x4xi32>, %b: vector<2x4xi32>) -> vector<2x4xi32> {
+  %m = vector.broadcast %p : i1 to vector<2x4xi1>
+  %x = arith.select %m, %a, %b : vector<2x4xi1>, vector<2x4xi32>
+  return %x : vector<2x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_scalable(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<[4]xi32>, %[[B:[^:]+]]: vector<[4]xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<[4]xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_scalable(%p: i1, %a: vector<[4]xi32>, %b: vector<[4]xi32>) -> vector<[4]xi32> {
+  %m = vector.broadcast %p : i1 to vector<[4]xi1>
+  %x = arith.select %m, %a, %b : vector<[4]xi1>, vector<[4]xi32>
+  return %x : vector<[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_rank_zero(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<i32>, %[[B:[^:]+]]: vector<i32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<i32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_rank_zero(%p: i1, %a: vector<i32>, %b: vector<i32>) -> vector<i32> {
+  %m = vector.broadcast %p : i1 to vector<i1>
+  %x = arith.select %m, %a, %b : vector<i1>, vector<i32>
+  return %x : vector<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_shared_mask(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[M:.*]] = vector.broadcast %[[P]]
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]], %[[M]]
+func.func @select_broadcast_shared_mask(%p: i1, %a: vector<4xi32>, %b: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  return %x, %m : vector<4xi32>, vector<4xi1>
+}
+
+// -----
+
+// A vector source need not be uniform; do not replace its broadcast mask.
+// CHECK-LABEL: func.func @select_nonuniform_broadcast(
+// CHECK: %[[M:.*]] = vector.broadcast %{{.*}} : vector<4xi1> to vector<2x4xi1>
+// CHECK: arith.select %[[M]], %{{.*}}, %{{.*}} : vector<2x4xi1>, vector<2x4xi32>
+func.func @select_nonuniform_broadcast(%p: vector<4xi1>, %a: vector<2x4xi32>, %b: vector<2x4xi32>) -> vector<2x4xi32> {
+  %m = vector.broadcast %p : vector<4xi1> to vector<2x4xi1>
+  %x = arith.select %m, %a, %b : vector<2x4xi1>, vector<2x4xi32>
+  return %x : vector<2x4xi32>
+}
+
+// -----
+
+// Preserve the existing refinement of a select with a fully poisoned arm.
+// CHECK-LABEL: func.func @select_uniform_unselected_poison_vector(
+// CHECK-SAME: %[[P:[^:]+]]: i1
+// CHECK-SAME: %[[A:[^:]+]]: vector<4xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK-NOT: arith.select
+// CHECK: return %[[A]] : vector<4xi32>
+func.func @select_uniform_unselected_poison_vector(%p: i1, %a: vector<4xi32>) -> vector<4xi32> {
+  %bad = ub.poison : vector<4xi32>
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %bad : vector<4xi1>, vector<4xi32>
+  return %x : vector<4xi32>
 }

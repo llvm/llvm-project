@@ -29,6 +29,7 @@
 namespace llvm {
 
 class AAResults;
+class AssumptionCache;
 class BasicBlock;
 class BinaryOperator;
 class CondBrInst;
@@ -40,6 +41,7 @@ class IntrinsicInst;
 class LazyValueInfo;
 class LoadInst;
 class PHINode;
+struct ScalarOptions;
 class SelectInst;
 class SwitchInst;
 class TargetLibraryInfo;
@@ -77,12 +79,14 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 /// In this case, the unconditional branch at the end of the first if can be
 /// revectored to the false side of the second if.
 class JumpThreadingPass : public OptionalPassInfoMixin<JumpThreadingPass> {
+  const ScalarOptions *Opts = nullptr;
   Function *F = nullptr;
   FunctionAnalysisManager *FAM = nullptr;
   TargetLibraryInfo *TLI = nullptr;
   TargetTransformInfo *TTI = nullptr;
   LazyValueInfo *LVI = nullptr;
   AAResults *AA = nullptr;
+  AssumptionCache *AC = nullptr;
   std::unique_ptr<DomTreeUpdater> DTU;
   BlockFrequencyInfo *BFI = nullptr;
   BranchProbabilityInfo *BPI = nullptr;
@@ -148,7 +152,7 @@ public:
 
   LLVM_ABI Constant *evaluateOnPredecessorEdge(BasicBlock *BB,
                                                BasicBlock *PredPredBB,
-                                               Value *cond,
+                                               Value *Cond,
                                                const DataLayout &DL);
   LLVM_ABI bool maybethreadThroughTwoBasicBlocks(BasicBlock *BB, Value *Cond);
   LLVM_ABI void threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
@@ -217,8 +221,9 @@ private:
 
   // Internal overload of evaluateOnPredecessorEdge().
   Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,
-                                      Value *cond, const DataLayout &DL,
-                                      SmallPtrSet<Value *, 8> &Visited);
+                                      Value *Cond, const DataLayout &DL,
+                                      SmallPtrSet<Value *, 8> &Visited,
+                                      const Use *U = nullptr);
 };
 
 } // end namespace llvm

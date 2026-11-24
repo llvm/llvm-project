@@ -297,6 +297,13 @@ add_llvm_install_targets(install-flang-rt DEPENDS flang-rt COMPONENT flang-rt)
 # Build Artifacts #
 ###################
 
+if(FLANG_RT_LIBDIR_SUBDIR)
+  string(APPEND RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "/${FLANG_RT_LIBDIR_SUBDIR}")
+  string(APPEND RUNTIMES_INSTALL_RESOURCE_LIB_PATH "/${FLANG_RT_LIBDIR_SUBDIR}")
+  cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
+  cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+endif()
+
 add_subdirectory(lib)
 
 if (LLVM_INCLUDE_EXAMPLES)

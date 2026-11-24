@@ -118,6 +118,17 @@ def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
   }];
 }
 
+def TosaReduceReshapes
+    : Pass<"tosa-reduce-reshapes", "func::FuncOp"> {
+  let summary = "Reduce reshapes through elementwise operators and casts";
+  let description = [{
+    Propagates statically shaped, rank-expanding TOSA reshapes backward through
+    single-use chains of elementwise operators and casts. This allows
+    consecutive reshapes to be composed and reshapes of constants to be folded
+    into their constant attributes.
+  }];
+}
+
 def TosaArithConstantToTosaConstPass
     : Pass<"tosa-arith-const-to-tosa-const", "func::FuncOp"> {
   let summary = "Convert tensor arith.constant operations into tosa.const";
@@ -215,6 +226,36 @@ def TosaGatherScatterHardeningPass
     Currently the pass only supports static index dimensions and fails
     otherwise.
   }];
+}
+
+def TosaConvertIntegerTypesBitwidthPass : Pass<"tosa-convert-integer-types-bitwidth", "ModuleOp"> {
+  let summary = "Convert selected TOSA integer types bitwidth";
+  let description = [{
+    Converts integer types using `bitwidth-mappings`, a required list of
+    `<source>:<destination>` bitwidth pairs.
+    Only `4:8` and `48:64` are supported, mapping i4 to i8 and i48 to i64.
+    Specify either mapping or both with `bitwidth-mappings=4:8,48:64`.
+    This facilitates lowering to dialects that do not support such
+    non-standard bitwidths.
+
+    Mappings apply once to the original width, leaving unmapped widths unchanged.
+    Signless values are expected. Widening sign-extends constants.
+    The caller is responsible for ensuring the conversion is appropriate.
+
+    Conversion covers types, function signatures and attribute payloads
+    throughout the module, including non-TOSA operations.
+    External callers and implementations must use the converted signatures.
+
+    Run after `tosa-validate`: converted IR may not conform to the TOSA
+    specification.
+  }];
+
+  let options = [
+    ListOption<"bitwidthMappings", "bitwidth-mappings",
+               "std::pair<unsigned, unsigned>",
+               "Integer bitwidth mappings <source>:<destination> "
+               "(required, non-empty; supported: 4:8, 48:64)">
+  ];
 }
 
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {

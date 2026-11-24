@@ -168,7 +168,8 @@ class LValue {
   // this is the alignment of the whole vector)
   unsigned alignment;
   mlir::Value v;
-  mlir::Value vectorIdx;      // Index for vector subscript
+  mlir::Value vectorIdx;      // Index for vector subscript & MatrixElt row idx
+  mlir::Value matrixColIdx;   // Matrix column index for MatrixElt
   mlir::Attribute vectorElts; // ExtVector element subset: V.xyx
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
@@ -291,6 +292,34 @@ public:
     r.elementType = vecAddress.getElementType();
     r.vectorIdx = index;
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  Address getMatrixAddress() const {
+    assert(isMatrixElt());
+    return Address(v, elementType, getAlignment());
+  }
+
+  mlir::Value getMatrixRowIdx() const {
+    assert(isMatrixElt());
+    return vectorIdx;
+  }
+
+  mlir::Value getMatrixColumnIdx() const {
+    assert(isMatrixElt());
+    return matrixColIdx;
+  }
+
+  static LValue makeMatrixElt(Address matAddress, mlir::Value rowIdx,
+                              mlir::Value colIdx, clang::QualType t,
+                              LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = MatrixElt;
+    r.v = matAddress.getPointer();
+    r.elementType = matAddress.getElementType();
+    r.vectorIdx = rowIdx;
+    r.matrixColIdx = colIdx;
+    r.initialize(t, t.getQualifiers(), matAddress.getAlignment(), baseInfo);
     return r;
   }
 
@@ -444,6 +473,7 @@ public:
   Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
+  void setZeroed(bool zeroed = true) { zeroedFlag = zeroed; }
 
   IsAliased_t isPotentiallyAliased() const { return IsAliased_t(aliasedFlag); }
 
@@ -452,6 +482,15 @@ public:
       return RValue::getIgnored();
     assert(!cir::MissingFeatures::aggValueSlot());
     return RValue::getAggregate(getAddress());
+  }
+
+  /// Get the preferred size to use when storing a value to this slot. This
+  /// is the type size unless that might overlap another object, in which
+  /// case it's the dsize.
+  clang::CharUnits getPreferredSize(clang::ASTContext &ctx,
+                                    clang::QualType type) const {
+    return mayOverlap() ? ctx.getTypeInfoDataSizeInChars(type).Width
+                        : ctx.getTypeSizeInChars(type);
   }
 };
 

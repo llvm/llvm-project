@@ -1,8 +1,8 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu11.00--amdhsa -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu10.10--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu9.00--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.03--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu7.00--amdhsa -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu11.00--amdhsa -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu10.10--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu9.00--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
 ; FIXME: Merge into imm.ll
 
 ; GCN-LABEL: {{^}}store_inline_imm_neg_0.0_v2i16:
@@ -340,49 +340,37 @@ define amdgpu_kernel void @add_inline_imm_neg_4.0_v2f16(ptr addrspace(1) %out, <
 }
 
 ; GCN-LABEL: {{^}}commute_add_inline_imm_0.5_v2f16:
-; GFX10: buffer_load_{{dword|b32}} [[VAL:v[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5
-; GFX10: buffer_store_{{dword|b32}} [[REG]]
+; GFX10: v_pk_add_f16 v0, v0, 0.5 op_sel_hi:[1,0]
 
-; GFX9: buffer_load_dword [[VAL:v[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5
-; GFX9: buffer_store_dword [[REG]]
+; GFX9: v_pk_add_f16 v0, v0, 0.5 op_sel_hi:[1,0]
 
 ; VI-DAG: v_mov_b32_e32 [[CONST05:v[0-9]+]], 0x3800
-; VI-DAG: buffer_load_dword
 ; VI-NOT: and
-; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[CONST05]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, v{{[0-9]+}}
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, v0, [[CONST05]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, v0
 ; VI: v_or_b32
-; VI: buffer_store_dword
-define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load <2 x half>, ptr addrspace(1) %in
-  %y = fadd <2 x half> %x, <half 0.5, half 0.5>
-  store <2 x half> %y, ptr addrspace(1) %out
-  ret void
+; VI: s_setpc_b64
+define <2 x half> @commute_add_inline_imm_0.5_v2f16(<2 x half> %in) #0 {
+  %y = fadd <2 x half> %in, <half 0.5, half 0.5>
+  ret <2 x half> %y
 }
 
 ; GCN-LABEL: {{^}}commute_add_literal_v2f16:
-; GFX10: v_pk_add_f16 v0, 0x6400, v0 op_sel_hi:[0,1] ; encoding: [0x00,0x40,0x0f,0xcc,0xff,0x00,0x02,0x12,0x00,0x64,0x00,0x00]
+; GFX10: v_pk_add_f16 v0, v0, 0x6400 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x00,0xff,0x01,0x0a,0x00,0x64,0x00,0x00]
 
-; GFX9-DAG: buffer_load_dword [[VAL:v[0-9]+]]
-; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x6400 ; encoding
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], [[K]] op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x00,0x01,0x00,0x08]
-; GFX9: buffer_store_dword [[REG]]
+; GFX9: s_movk_i32 s4, 0x6400 ; encoding
+; GFX9: v_pk_add_f16 v0, v0, s4 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x00,0x09,0x00,0x08]
 
-; VI-DAG: buffer_load_dword
 ; VI-NOT: and
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0x6400, v{{[0-9]+}}
 ; gfx8 does not support sreg or imm in sdwa - this will be move then
 ; VI-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x6400
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; VI: buffer_store_dword
-define amdgpu_kernel void @commute_add_literal_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load <2 x half>, ptr addrspace(1) %in
-  %y = fadd <2 x half> %x, <half 1024.0, half 1024.0>
-  store <2 x half> %y, ptr addrspace(1) %out
-  ret void
+; VI: s_setpc_b64
+define <2 x half> @commute_add_literal_v2f16(<2 x half> %in) #0 {
+  %y = fadd <2 x half> %in, <half 1024.0, half 1024.0>
+  ret <2 x half> %y
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_1_v2f16:
@@ -580,7 +568,7 @@ define amdgpu_kernel void @add_inline_imm_64_v2f16(ptr addrspace(1) %out, <2 x h
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x3800
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x38,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x3800 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0x38,0x00,0x00]
 define <2 x i16> @mul_inline_imm_0.5_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 0.5, half 0.5> to <2 x i16>)
   ret <2 x i16> %y
@@ -590,7 +578,7 @@ define <2 x i16> @mul_inline_imm_0.5_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0xb800
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xffffb800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xb8,0xff,0xff]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0xffffb800 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0xb8,0xff,0xff]
 define <2 x i16> @mul_inline_imm_neg_0.5_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -0.5, half -0.5> to <2 x i16>)
   ret <2 x i16> %y
@@ -600,7 +588,7 @@ define <2 x i16> @mul_inline_imm_neg_0.5_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x3c00
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3c00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x3c,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x3c00 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0x3c,0x00,0x00]
 define <2 x i16> @mul_inline_imm_1.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 1.0, half 1.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -610,7 +598,7 @@ define <2 x i16> @mul_inline_imm_1.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0xbc00
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xffffbc00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xbc,0xff,0xff]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0xffffbc00 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0xbc,0xff,0xff]
 define <2 x i16> @mul_inline_imm_neg_1.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -1.0, half -1.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -638,7 +626,7 @@ define <2 x i16> @shl_inline_imm_neg_2.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x4400
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x4400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x44,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x4400 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0x44,0x00,0x00]
 define <2 x i16> @mul_inline_imm_4.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 4.0, half 4.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -649,7 +637,7 @@ define <2 x i16> @mul_inline_imm_4.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0xc400
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xffffc400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xc4,0xff,0xff]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0xffffc400 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x00,0xc4,0xff,0xff]
 define <2 x i16> @mul_inline_imm_neg_4.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -4.0, half -4.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -659,7 +647,7 @@ define <2 x i16> @mul_inline_imm_neg_4.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x3118
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]] op_sel_hi:[1,0]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3118, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x18,0x31,0x00,0x00]
+; GFX10: v_pk_mul_lo_u16 v0, v0, 0x3118 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x01,0xcc,0x00,0xff,0x01,0x0a,0x18,0x31,0x00,0x00]
 define <2 x i16> @mul_inline_imm_inv2pi_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 0xH3118, half 0xH3118> to <2 x i16>)
   ret <2 x i16> %y

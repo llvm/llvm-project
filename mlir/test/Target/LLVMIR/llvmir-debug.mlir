@@ -734,7 +734,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 #sty1 = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
- stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+ stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, charType = #bt>
 #var1 = #llvm.di_local_variable<scope = #sp, name = "str1", type = #sty1>
 #sty2 = #llvm.di_string_type<tag = DW_TAG_string_type>
 #var2 = #llvm.di_local_variable<scope = #sp, name = "str2", type = #sty2>
@@ -748,8 +748,9 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc1 = loc("test.f90":1:1)
 #loc2 = loc(fused<#sp>[#loc1])
 
-// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
+// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8, charType: ![[CHARTYPE:[0-9]+]])
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
+// CHECK-DAG: ![[CHARTYPE]] = !DIBasicType(name: "int", size: 32)
 // CHECK-DAG: !DIStringType()
 // -----
 
@@ -963,4 +964,38 @@ module {
   llvm.func @recursive_variant_part() {
     llvm.return
   } loc(#recursive_variant_loc)
+}
+
+// -----
+
+// CHECK-LABEL: define void @enum_emission()
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Color"{{.*}}elements: ![[ELEMENTS:[0-9]+]])
+// CHECK: ![[ELEMENTS]] = !{![[E0:[0-9]+]], ![[E1:[0-9]+]], ![[E2:[0-9]+]], ![[E3:[0-9]+]], ![[E4:[0-9]+]], ![[E5:[0-9]+]], ![[E6:[0-9]+]]}
+// CHECK-DAG: ![[E0]] = !DIEnumerator(name: "zero", value: 0)
+// CHECK-DAG: ![[E1]] = !DIEnumerator(name: "thirty", value: 30)
+// CHECK-DAG: ![[E2]] = !DIEnumerator(name: "neg_one", value: -1)
+// CHECK-DAG: ![[E3]] = !DIEnumerator(name: "u64_max", value: 18446744073709551615, isUnsigned: true)
+// CHECK-DAG: ![[E4]] = !DIEnumerator(name: "i128_min", value: -170141183460469231731687303715884105728)
+// CHECK-DAG: ![[E5]] = !DIEnumerator(name: "u132", value: 2722258935367507707706996859454145691648, isUnsigned: true)
+// CHECK-DAG: ![[E6]] = !DIEnumerator(name: "", value: 0)
+
+#enum_file = #llvm.di_file<"enum.mlir" in "/">
+#enum_cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #enum_file, isOptimized = false, emissionKind = Full>
+#enum_int = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
+#enum0 = #llvm.di_enumerator<name = "zero", value = 0 : i64>
+#enum1 = #llvm.di_enumerator<name = "thirty", value = 30 : i64>
+#enum2 = #llvm.di_enumerator<name = "neg_one", value = -1 : i64>
+#enum3 = #llvm.di_enumerator<name = "u64_max", value = -1 : i64, isUnsigned = true>
+#enum4 = #llvm.di_enumerator<name = "i128_min", value = -170141183460469231731687303715884105728 : i128>
+#enum5 = #llvm.di_enumerator<name = "u132", value = -2722258935367507707706996859454145691648 : i132, isUnsigned = true>
+#enum6 = #llvm.di_enumerator<value = 0 : i64>
+#enum_comp = #llvm.di_composite_type<tag = DW_TAG_enumeration_type, name = "Color", file = #enum_file, line = 1, baseType = #enum_int, sizeInBits = 32, alignInBits = 32, elements = #enum0, #enum1, #enum2, #enum3, #enum4, #enum5, #enum6>
+#enum_subroutine = #llvm.di_subroutine_type<types = #enum_comp>
+#enum_sp = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #enum_cu, scope = #enum_file, name = "enum_emission", file = #enum_file, subprogramFlags = Definition, type = #enum_subroutine>
+#enum_loc = loc(fused<#enum_sp>["enum.mlir":1:1])
+
+module {
+  llvm.func @enum_emission() {
+    llvm.return
+  } loc(#enum_loc)
 }

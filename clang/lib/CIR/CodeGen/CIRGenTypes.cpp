@@ -8,6 +8,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -302,6 +303,20 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   return entry;
 }
 
+static cir::VectorAbiKind getCIRVectorAbiKind(clang::VectorKind kind) {
+  switch (kind) {
+  case VectorKind::SveFixedLengthData:
+    return cir::VectorAbiKind::SVEData;
+  case VectorKind::SveFixedLengthPredicate:
+    return cir::VectorAbiKind::SVEPredicate;
+  default:
+    // Most vector kinds aren't needed during code generation. RISC-V vector
+    // kinds will be needed for ABI lowering.
+    assert(!cir::MissingFeatures::riscvVectorKinds());
+    return cir::VectorAbiKind::Generic;
+  }
+}
+
 mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
@@ -376,59 +391,36 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
                             /*isSigned=*/true);
       break;
 
-    // SVE types
-    case BuiltinType::SveInt8:
-      resultType =
-          cir::VectorType::get(builder.getSInt8Ty(), 16, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint8:
-      resultType =
-          cir::VectorType::get(builder.getUInt8Ty(), 16, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveInt16:
-      resultType =
-          cir::VectorType::get(builder.getSInt16Ty(), 8, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint16:
-      resultType =
-          cir::VectorType::get(builder.getUInt16Ty(), 8, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveFloat16:
-      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
-                                        /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveBFloat16:
-      resultType = cir::VectorType::get(builder.getBfloat16Ty(), 8,
-                                        /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveInt32:
-      resultType =
-          cir::VectorType::get(builder.getSInt32Ty(), 4, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint32:
-      resultType =
-          cir::VectorType::get(builder.getUInt32Ty(), 4, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveFloat32:
-      resultType = cir::VectorType::get(builder.getSingleTy(), 4,
-                                        /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveInt64:
-      resultType =
-          cir::VectorType::get(builder.getSInt64Ty(), 2, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint64:
-      resultType =
-          cir::VectorType::get(builder.getUInt64Ty(), 2, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveFloat64:
-      resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
-                                        /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveBool:
-      resultType = cir::VectorType::get(builder.getUIntNTy(1), 16,
-                                        /*is_scalable=*/true);
-      break;
+      // SVE data and predicate types.
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
+#include "clang/Basic/AArch64ACLETypes.def"
+      {
+        ASTContext::BuiltinVectorTypeInfo info =
+            astContext.getBuiltinVectorTypeInfo(cast<BuiltinType>(ty));
+        if (info.NumVectors != 1) {
+          cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
+          resultType = cgm.sInt32Ty;
+          break;
+        }
+        // A predicate holds one bit per lane. An svmfloat8_t lane is an 8-bit
+        // integer, independent of how the scalar __mfp8 type is represented.
+        bool isPredicate = info.ElementType->isBooleanType();
+        mlir::Type eltTy;
+        if (isPredicate)
+          eltTy = builder.getUIntNTy(1);
+        else if (info.ElementType->isMFloat8Type())
+          eltTy = builder.getUInt8Ty();
+        else
+          eltTy = convertType(info.ElementType);
+        resultType =
+            cir::VectorType::get(eltTy, info.EC,
+                                 isPredicate ? cir::VectorAbiKind::SVEPredicate
+                                             : cir::VectorAbiKind::SVEData);
+        break;
+      }
 
     // Unsigned integral types.
     case BuiltinType::Char8:
@@ -508,7 +500,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 #define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
   case BuiltinType::Id: {                                                      \
     if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
-      resultType = cir::VectorType::get(builder.getSInt32Ty(), 8);             \
+      resultType = cir::VectorType::getFixed(builder.getSInt32Ty(), 8);        \
     } else {                                                                   \
       resultType = builder.getPointerTo(                                       \
           cgm.voidTy,                                                          \
@@ -562,8 +554,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::VariableArray: {
     const VariableArrayType *a = cast<VariableArrayType>(ty);
-    if (a->getIndexTypeCVRQualifiers() != 0)
-      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
+    // CVR index qualifiers are ONLY valid on parameter arrays, which are
+    // automatically decayed to pointer, so they can't reach here.  All other
+    // uses (outside of a top-level function parameter) is rejected by Sema, so
+    // we don't have to worry about these reaching here.
+    assert(a->getIndexTypeCVRQualifiers() == 0 &&
+           "Parameter types cannot make it here");
     // VLAs resolve to the innermost element type; this matches
     // the return of alloca, and there isn't any obviously better choice.
     resultType = convertTypeForMem(a->getElementType());
@@ -572,9 +568,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::IncompleteArray: {
     const IncompleteArrayType *arrTy = cast<IncompleteArrayType>(ty);
-    if (arrTy->getIndexTypeCVRQualifiers() != 0)
-      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
-
+    // CVR index qualifiers are ONLY valid on parameter arrays, which are
+    // automatically decayed to pointer, so they can't reach here.  All other
+    // uses (outside of a top-level function parameter) is rejected by Sema, so
+    // we don't have to worry about these reaching here.
+    assert(arrTy->getIndexTypeCVRQualifiers() == 0 &&
+           "Parameter types cannot make it here");
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
     // int X[] -> [0 x int], unless the element type is not sized.  If it is
     // unsized (e.g. an incomplete record) just use [0 x i8].
@@ -602,7 +601,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
-    resultType = cir::VectorType::get(elemTy, vec->getNumElements());
+    resultType =
+        cir::VectorType::getFixed(elemTy, vec->getNumElements(),
+                                  getCIRVectorAbiKind(vec->getVectorKind()));
     break;
   }
 
@@ -698,7 +699,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
   if (astContext.getLangOpts().HLSL && qualType->isConstantMatrixType()) {
-    cgm.errorNYI("convertTypeForMem: HLSL & ConstantMatrixType");
+    if (isMatrixRowMajor(astContext.getLangOpts(), qualType)) {
+      cgm.errorNYI("convertTypeForMem: HLSL & Matrix row major");
+    }
   }
 
   mlir::Type convertedType = convertType(qualType);
@@ -735,7 +738,7 @@ CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
 }
 
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
-  if (t->getAs<PointerType>())
+  if (t->getAs<PointerType>() || t->isNullPtrType())
     return astContext.getTargetNullPointerValue(t) == 0;
 
   if (const auto *at = astContext.getAsArrayType(t)) {
@@ -745,6 +748,8 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
     if (const auto *cat = dyn_cast<ConstantArrayType>(at))
       if (astContext.getConstantArrayElementCount(cat) == 0)
         return true;
+
+    t = astContext.getBaseElementType(t);
   }
 
   if (const auto *rd = t->getAsRecordDecl())
@@ -764,6 +769,13 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+bool CIRGenTypes::isPointerZeroInitializable(clang::QualType t) {
+  assert((t->isAnyPointerType() || t->isBlockPointerType() ||
+          t->isNullPtrType()) &&
+         "Invalid type");
+  return isZeroInitializable(t);
+}
+
 cir::CallingConv
 CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
   switch (cc) {
@@ -776,6 +788,8 @@ CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
     return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
   default:
     // TODO(cir): Support the remaining target-specific calling conventions.
+    cgm.errorNYI(SourceLocation(), "calling convention",
+                 FunctionType::getNameForCallConv(cc));
     return cir::CallingConv::C;
   }
 }

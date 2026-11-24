@@ -320,6 +320,10 @@ public:
     return readInt();
   }
 
+  DynAllocKind readDynAllocKind() {
+    return static_cast<DynAllocKind>(readInt());
+  }
+
   UnsignedOrNone readUnsignedOrNone() {
     return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
   }

@@ -61,7 +61,6 @@ class TestDAP_Progress(DAPTestCaseBase):
             if expected_not_in_message is not None:
                 self.assertNotIn(expected_not_in_message, message)
 
-    @skipIfWindows
     def test_progress(self):
         program = self.getBuildArtifact("a.out")
         session = self.build_and_create_session()

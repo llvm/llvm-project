@@ -233,3 +233,28 @@ define i16 @concat_roundps_cmp_v8f32(<8 x float> %x0, <8 x float> %x1, <8 x floa
   %res = bitcast <16 x i1> %concat to i16
   ret i16 %res
 }
+
+define <2 x double> @demandedelts_roundpd_v2f64(<2 x double> %a, <2 x double> %b) {
+; AVX-LABEL: demandedelts_roundpd_v2f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vroundpd $12, %xmm0, %xmm0
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-NEXT:    retq
+  %i0 = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 0, i32 2>
+  %i1 = tail call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %i0, i32 12)
+  %i2 = shufflevector <2 x double> %i1, <2 x double> poison, <2 x i32> zeroinitializer
+  ret <2 x double> %i2
+}
+
+define <8 x float> @demandedelts_roundps_v8f32(<8 x float> %a, <8 x float> %b) {
+; AVX-LABEL: demandedelts_roundps_v8f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; AVX-NEXT:    vroundps $12, %ymm0, %ymm0
+; AVX-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,7,7,7,7]
+; AVX-NEXT:    retq
+  %i0 = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 8, i32 4, i32 4, i32 4>
+  %i1 = tail call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %i0, i32 12)
+  %i2 = shufflevector <8 x float> %i1, <8 x float> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 7, i32 7, i32 7, i32 7>
+  ret <8 x float> %i2
+}

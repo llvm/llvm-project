@@ -8,9 +8,11 @@
 
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/ADT/STLExtras.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using testing::ElementsAre;
 
 namespace {
 
@@ -201,5 +203,27 @@ TEST(ConstraintSolverTest, IsConditionImpliedOverflow) {
   // The same row is implied by the single row of the system, without
   // Fourier-Motzkin elimination.
   EXPECT_TRUE(isConditionImplied(CS, {Limit - 1, Limit - 2, Limit - 3}));
+}
+
+TEST(ConstraintSolverTest, NormalizeByGCD) {
+  // Normalize the row for dense coefficient vector R and convert it back.
+  auto Normalize = [](ArrayRef<int64_t> R) {
+    RowTy Row = toRow(R);
+    ConstraintSystem::normalizeByGCD(Row);
+    SmallVector<int64_t> Dense(R.size(), 0);
+    for (const ConstraintSystem::Entry &E : Row)
+      Dense[E.Id] = E.Coefficient;
+    return Dense;
+  };
+  // Coefficients are divided by their GCD, the constant is rounded down.
+  EXPECT_THAT(Normalize({7, 2, 4}), ElementsAre(3, 1, 2));
+  EXPECT_THAT(Normalize({-7, 2, 4}), ElementsAre(-4, 1, 2));
+  EXPECT_THAT(Normalize({6, -3, 9}), ElementsAre(2, -1, 3));
+  // Unchanged if the GCD is 1 or there are no variable terms.
+  EXPECT_THAT(Normalize({7, 2, 3}), ElementsAre(7, 2, 3));
+  EXPECT_THAT(Normalize({7, 0, 0}), ElementsAre(7, 0, 0));
+  // Unchanged if a coefficient is INT64_MIN.
+  int64_t Min = std::numeric_limits<int64_t>::min();
+  EXPECT_THAT(Normalize({7, Min, 2}), ElementsAre(7, Min, 2));
 }
 } // namespace

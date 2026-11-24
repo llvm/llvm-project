@@ -179,7 +179,7 @@ subroutine test_dummy_allocatable(arr)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_dummy_allocatable(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuf.data_attr = #cuf.cuda<managed>, fir.bindc_name = "arr"})
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuf.data_attr = #cuf.cuda<managed>, fir.bindc_name = "arr", fir.fortran_attrs = #fir.var_attrs<intent_inout>})
 ! CHECK: hlfir.declare {{.*}} {{.*}}fortran_attrs<allocatable, intent_inout> data_attr(#cuf.cuda<managed>)
 
 ! -----------------------------------------------------------------------------

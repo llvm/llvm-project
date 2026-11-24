@@ -52,11 +52,12 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
 // CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
-// CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
+// CHECK:               %[[VAL_36:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_29]] : !fir.heap<!fir.array<?x?xf32>>
 // CHECK:             }
 // CHECK:           }
@@ -116,11 +117,12 @@ func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name =
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
 // CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
-// CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
+// CHECK:               %[[VAL_36:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return
@@ -231,11 +233,12 @@ func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "
 // CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_28:.*]] = arith.cmpi ne, %[[VAL_25]], %[[VAL_27]] : index
 // CHECK:             fir.if %[[VAL_28]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_7]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK:               %[[VAL_29:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
-// CHECK:               %[[VAL_31:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
+// CHECK:               %[[VAL_31:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_30]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_30]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_24]] : !fir.heap<!fir.array<?x?xf32>>
 // CHECK:             }
 // CHECK:           }
@@ -306,11 +309,12 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 // CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_39:.*]] = arith.cmpi ne, %[[VAL_36]], %[[VAL_38]] : index
 // CHECK:             fir.if %[[VAL_39]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_14]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:               %[[VAL_40:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_41:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_42:.*]] = fir.convert %[[VAL_14]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_42:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_40]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_41]], %[[VAL_42]], %[[VAL_43]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_41]], %[[VAL_42]], %[[VAL_43]], %[[VAL_2]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_35]] : !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             }
 // CHECK:           }
@@ -381,11 +385,12 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 // CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_39:.*]] = arith.cmpi ne, %[[VAL_36]], %[[VAL_38]] : index
 // CHECK:             fir.if %[[VAL_39]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_14]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:               %[[VAL_40:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_41:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_42:.*]] = fir.convert %[[VAL_14]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_42:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_40]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_41]], %[[VAL_42]], %[[VAL_43]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_41]], %[[VAL_42]], %[[VAL_43]], %[[VAL_2]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return
@@ -445,11 +450,12 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
 // CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_37:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_38:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_30]] : !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             }
 // CHECK:           }
@@ -510,11 +516,12 @@ func.func @_QPtest3_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.b
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
 // CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_37:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_38:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return
@@ -575,11 +582,12 @@ func.func @_QPtest4(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.bindc_
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
 // CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_9]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_37:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_38:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_30]] : !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:             }
 // CHECK:           }
@@ -641,11 +649,12 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
 // CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_9]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_37:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_38:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_36]], %[[VAL_37]], %[[VAL_38]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return
@@ -705,11 +714,12 @@ func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bind
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
 // CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_36:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_29]] : !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             }
 // CHECK:           }
@@ -770,11 +780,12 @@ func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fi
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
 // CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_36:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_35]], %[[VAL_36]], %[[VAL_37]], %[[VAL_1]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return
@@ -845,11 +856,12 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
 // CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_44:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_45:.*]] = fir.convert %[[VAL_42]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_37]] : !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             }
 // CHECK:           }
@@ -922,11 +934,12 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
 // CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
-// CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_44:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_45:.*]] = fir.convert %[[VAL_42]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_37]] : !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             }
 // CHECK:           }
@@ -998,11 +1011,12 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?xnone>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
 // CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.class<!fir.array<?x?xnone>>>
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
-// CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
+// CHECK:               %[[VAL_44:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.class<!fir.array<?x?xnone>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_45:.*]] = fir.convert %[[VAL_42]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_37]] : !fir.heap<!fir.array<?x?xnone>>
 // CHECK:             }
 // CHECK:           }
@@ -1075,11 +1089,12 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?xnone>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
 // CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
+// CHECK:               fir.store %[[VAL_8]] to %[[TEMP_BOX:.*]] : !fir.ref<!fir.class<!fir.array<?x?xnone>>>
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
-// CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
+// CHECK:               %[[VAL_44:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.class<!fir.array<?x?xnone>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:               %[[VAL_45:.*]] = fir.convert %[[VAL_42]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.call @_FortranACopyOutAssignDirect(%[[VAL_43]], %[[VAL_44]], %[[VAL_45]], %[[VAL_0]]) : (!fir.box<none>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 // CHECK:               fir.freemem %[[VAL_37]] : !fir.heap<!fir.array<?x?xnone>>
 // CHECK:             }
 // CHECK:           }

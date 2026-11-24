@@ -361,6 +361,37 @@ struct TestXeGPUResolveLayoutConflicts
   }
 };
 
+struct TestXeGPURematerializeConversionSources
+    : public PassWrapper<TestXeGPURematerializeConversionSources,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestXeGPURematerializeConversionSources)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-rematerialize-conversion-sources";
+  }
+
+  StringRef getDescription() const final {
+    return "Test replacing XeGPU layout conversions of trivially "
+           "rematerializable values by recomputation.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestXeGPURematerializeConversionSources() = default;
+  TestXeGPURematerializeConversionSources(
+      const TestXeGPURematerializeConversionSources &pass) = default;
+
+  void runOnOperation() override {
+    OpBuilder builder(&getContext());
+    xegpu::rematerializeConversionSources(builder, getOperation());
+  }
+};
+
 struct TestXeGPUSinkElementwiseConversions
     : public PassWrapper<TestXeGPUSinkElementwiseConversions,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -588,6 +619,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUSgToLaneDistribute>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
+  PassRegistration<TestXeGPURematerializeConversionSources>();
   PassRegistration<TestXeGPUSinkElementwiseConversions>();
   PassRegistration<TestXeGPUArrayLengthOptimization>();
   PassRegistration<TestXeGPUCoalesceGatherScatter>();

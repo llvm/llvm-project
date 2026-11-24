@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=ve-unknown-unknown | FileCheck %s
+; RUN: llc < %s -mtriple=ve-unknown-unknown -verify-machineinstrs | FileCheck %s
 
 declare void @bar(ptr, i64)
 

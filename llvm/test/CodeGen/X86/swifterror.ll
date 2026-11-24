@@ -2083,3 +2083,72 @@ a:
   %error = load ptr, ptr %err
   ret ptr %error
 }
+
+; Make sure we don't fold a load from a swifterror value into a memory operand
+; during -O0: on x86-64 the value lives in a register.
+define swiftcc i64 @dontFoldSwiftErrorLoad(ptr swifterror %err) nounwind {
+; CHECK-APPLE-LABEL: dontFoldSwiftErrorLoad:
+; CHECK-APPLE:       ## %bb.0: ## %entry
+; CHECK-APPLE-NEXT:    pushq %rax
+; CHECK-APPLE-NEXT:    callq _foo2
+; CHECK-APPLE-NEXT:    testq %r12, %r12
+; CHECK-APPLE-NEXT:    je LBB26_2
+; CHECK-APPLE-NEXT:  ## %bb.1: ## %failure
+; CHECK-APPLE-NEXT:    movl $1, %eax
+; CHECK-APPLE-NEXT:    popq %rcx
+; CHECK-APPLE-NEXT:    retq
+; CHECK-APPLE-NEXT:  LBB26_2: ## %success
+; CHECK-APPLE-NEXT:    xorl %eax, %eax
+; CHECK-APPLE-NEXT:    popq %rcx
+; CHECK-APPLE-NEXT:    retq
+;
+; CHECK-O0-LABEL: dontFoldSwiftErrorLoad:
+; CHECK-O0:       ## %bb.0: ## %entry
+; CHECK-O0-NEXT:    pushq %rax
+; CHECK-O0-NEXT:    callq _foo2
+; CHECK-O0-NEXT:    movq %r12, (%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    cmpq $0, %r12
+; CHECK-O0-NEXT:    je LBB26_2
+; CHECK-O0-NEXT:  ## %bb.1: ## %failure
+; CHECK-O0-NEXT:    movq (%rsp), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movl $1, %eax
+; CHECK-O0-NEXT:    popq %rcx
+; CHECK-O0-NEXT:    retq
+; CHECK-O0-NEXT:  LBB26_2: ## %success
+; CHECK-O0-NEXT:    movq (%rsp), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    ## kill: def $rax killed $eax
+; CHECK-O0-NEXT:    popq %rcx
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-i386-LABEL: dontFoldSwiftErrorLoad:
+; CHECK-i386:       ## %bb.0: ## %entry
+; CHECK-i386-NEXT:    pushl %esi
+; CHECK-i386-NEXT:    subl $8, %esp
+; CHECK-i386-NEXT:    movl 16(%esp), %esi
+; CHECK-i386-NEXT:    movl %esi, (%esp)
+; CHECK-i386-NEXT:    calll _foo2
+; CHECK-i386-NEXT:    cmpl $0, (%esi)
+; CHECK-i386-NEXT:    je LBB26_3
+; CHECK-i386-NEXT:  ## %bb.1: ## %failure
+; CHECK-i386-NEXT:    movl $1, %eax
+; CHECK-i386-NEXT:  LBB26_2: ## %failure
+; CHECK-i386-NEXT:    xorl %edx, %edx
+; CHECK-i386-NEXT:    addl $8, %esp
+; CHECK-i386-NEXT:    popl %esi
+; CHECK-i386-NEXT:    retl
+; CHECK-i386-NEXT:  LBB26_3: ## %success
+; CHECK-i386-NEXT:    xorl %eax, %eax
+; CHECK-i386-NEXT:    jmp LBB26_2
+entry:
+  call swiftcc void @foo2(ptr swifterror %err)
+  %error = load ptr, ptr %err
+  %is_error = icmp ne ptr %error, null
+  br i1 %is_error, label %failure, label %success
+
+failure:
+  ret i64 1
+
+success:
+  ret i64 0
+}

@@ -28,7 +28,10 @@ def TSV110Model : SchedMachineModel {
                                                     SVE2p1Unsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
+                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 // Define each kind of processor resource and number available on the TSV110,

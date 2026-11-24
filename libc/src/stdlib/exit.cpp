@@ -1,9 +1,14 @@
-//===-- Implementation of exit --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of exit.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/exit.h"
@@ -13,6 +18,10 @@
 
 #ifdef LIBC_COPT_SUPPORT_THREADS
 #include "src/__support/threads/thread.h"
+#endif
+
+#ifdef LIBC_COPT_EXIT_FLUSH_STREAMS
+#include "src/stdio/fflush_internal.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -26,6 +35,10 @@ extern "C" void __cxa_finalize(void *);
   internal::call_atexit_callbacks();
 #endif
   __cxa_finalize(nullptr);
+#ifdef LIBC_COPT_EXIT_FLUSH_STREAMS
+  // C23 7.24.4.4: streams are flushed after the atexit handlers have run.
+  internal::flush_all_streams();
+#endif
   internal::exit(status);
 }
 

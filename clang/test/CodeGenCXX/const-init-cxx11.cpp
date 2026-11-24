@@ -649,6 +649,18 @@ namespace GH147949 {
   }
 }
 
+namespace GH228162 {
+  int counter = 0;
+
+  // CHECK: define{{.*}}_ZN8GH2281624nextEv
+  // CHECK: alloca [1 x i32]
+  // CHECK-NEXT: load i32, ptr @_ZN8GH2281627counterE
+  int next() {
+    const int value[] = { __builtin_is_constant_evaluated() ? 0 : ++counter };
+    return value[0];
+  }
+}
+
 // VirtualMembers::TemplateClass::templateMethod() must be defined in this TU,
 // not just declared.
 // CHECK: define linkonce_odr void @_ZN14VirtualMembers13TemplateClassIiE14templateMethodEv(ptr {{[^,]*}} %this)

@@ -360,11 +360,11 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     OS << "Global Variables: " << Globals.size() << '\n';
   }
   unsigned GI = 0;
-  for (const Global *G : Globals) {
-    const Descriptor *Desc = G->block()->getDescriptor();
+  for (const Block *G : Globals) {
+    const Descriptor *Desc = G->getDescriptor();
     Pointer GP = getPtrGlobal(GI);
 
-    OS << GI << ": " << (const void *)G->block() << " ";
+    OS << GI << ": " << (const void *)G << " ";
     {
       ColorScope SC(OS, true,
                     GP.isInitialized()
@@ -456,9 +456,6 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " zero-size-array";
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
-
-  if (IsConstexprUnknown)
-    OS << " constexpr-unknown";
 }
 
 /// Dump descriptor, including all valid offsets.
@@ -541,7 +538,7 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     if (getCallee())
       describe(OS);
     else
-      OS << "Frame (Depth: " << getDepth() << ")";
+      OS << "Frame";
     OS << "\n";
   }
   OS.indent(Spaces) << "Function: " << getFunction();
@@ -557,7 +554,6 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
   else
     OS.indent(Spaces) << "RVO: -\n";
-  OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
 #ifndef NDEBUG
@@ -628,12 +624,10 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
     OS << "-\n";
   OS << "  Pointers: " << NPointers << "\n";
   OS << "  Dead: " << isDead() << "\n";
-  OS << "  Static: " << IsStatic << "\n";
   OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
   OS << "  Weak: " << isWeak() << "\n";
   OS << "  Dynamic: " << isDynamic() << "\n";
-  OS << "  Metadata: " << MDSize << '\n';
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {

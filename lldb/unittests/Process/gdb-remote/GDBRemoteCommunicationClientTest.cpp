@@ -258,6 +258,50 @@ TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpacesMalformed) {
   EXPECT_TRUE(result.get().empty());
 }
 
+static void EnableLLDBSettings(GDBRemoteCommunicationClient &client,
+                               MockServer &server) {
+  std::future<void> result =
+      std::async(std::launch::async, [&] { client.GetRemoteQSupported(); });
+  HandlePacket(server, testing::StartsWith("qSupported:"),
+               "PacketSize=3fff;lldb-settings+");
+  result.get();
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetLLDBSettings) {
+  EnableLLDBSettings(client, server);
+
+  std::future<std::optional<LLDBSettings>> result =
+      std::async(std::launch::async, [&] { return client.GetLLDBSettings(); });
+  StreamGDBRemote escaped;
+  llvm::StringRef json =
+      R"({"dyld_plugin_name":"accelerator-gdb-remote","accelerator_plugin_name":"mock","send_dyld_packet_to_accelerator":false})";
+  escaped.PutEscapedBytes(json);
+  HandlePacket(server, "jLLDBSettings", escaped.GetString());
+
+  std::optional<LLDBSettings> settings = result.get();
+  ASSERT_TRUE(settings);
+  EXPECT_EQ("accelerator-gdb-remote", settings->dyld_plugin_name);
+  EXPECT_EQ("mock", settings->accelerator_plugin_name);
+  EXPECT_FALSE(settings->send_dyld_packet_to_accelerator);
+
+  // A second request is served from the client's cache.
+  settings = client.GetLLDBSettings();
+  ASSERT_TRUE(settings);
+  EXPECT_EQ("accelerator-gdb-remote", settings->dyld_plugin_name);
+  EXPECT_EQ("mock", settings->accelerator_plugin_name);
+  EXPECT_FALSE(settings->send_dyld_packet_to_accelerator);
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetLLDBSettingsNotSupported) {
+  std::future<void> supported =
+      std::async(std::launch::async, [&] { client.GetRemoteQSupported(); });
+  HandlePacket(server, testing::StartsWith("qSupported:"), "PacketSize=3fff");
+  supported.get();
+
+  // Without the feature in qSupported the client does not send the packet.
+  EXPECT_FALSE(client.GetLLDBSettings());
+}
+
 TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix) {
   const lldb::tid_t tid = 0x47;
   uint32_t save_id;

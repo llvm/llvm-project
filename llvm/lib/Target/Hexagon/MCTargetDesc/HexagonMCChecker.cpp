@@ -102,7 +102,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     initReg(MCI, ImpUse, PredReg, isTrue);
 
   const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
-                             HexagonMCInstrInfo::hasHvxTmp(MCII, MCI)) &&
+                             HexagonMCInstrInfo::isTmpWrite(MCII, MCI)) &&
                             STI.hasFeature(Hexagon::ArchV69);
 
   // Get implicit register definitions.
@@ -226,12 +226,16 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkAXOK = checkAXOK();
   bool chkCofMax1 = checkCOFMax1();
   bool chkHWLoop = checkHWLoop();
+  bool chkHMX = checkValidHMX();
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool ChkHVXAccum = checkHVXAccum();
+  bool ChkHVXRestrictions = checkHVXRestrictions();
+  bool ChkHLX64BitRegUse = checkHLX64BitRegUse();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
-             chkAXOK && chkCofMax1 && chkHWLoop && chkValidTmpDst &&
-             chkLegalVecRegPair && ChkHVXAccum;
+             chkAXOK && chkCofMax1 && chkHWLoop && chkHMX && chkValidTmpDst &&
+             chkLegalVecRegPair && ChkHVXAccum && ChkHVXRestrictions &&
+             ChkHLX64BitRegUse;
 
   return chk;
 }
@@ -688,6 +692,36 @@ bool HexagonMCChecker::checkRegisters() {
   return true;
 }
 
+bool HexagonMCChecker::checkValidHMX() {
+  bool hasWeight = false;
+  bool hasActivation = false;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    hasWeight = hasWeight || (HexagonMCInstrInfo::isHMXWeight(MCII, I));
+    hasActivation =
+        hasActivation || (HexagonMCInstrInfo::isHMXActivation(MCII, I));
+  }
+
+  // To be valid they must both be present or neither:
+  const bool ValidWeightActPairing = hasWeight == hasActivation;
+  if (!ValidWeightActPairing) {
+    const std::string ErrMsg = hasWeight ? "weight without an activation"
+                                         : "activation without a weight";
+    reportError(MCB.getLoc(), Twine("packet has HMX ") + ErrMsg);
+
+    if (HexagonMCInstrInfo::bundleSize(MCB) > 1)
+      for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+        if (HexagonMCInstrInfo::isHMXWeight(MCII, I))
+          reportNote(I.getLoc(), "this is an HMX weight instruction");
+        else if (HexagonMCInstrInfo::isHMXActivation(MCII, I))
+          reportNote(I.getLoc(), "this is an HMX activation instruction");
+        else
+          reportNote(I.getLoc(),
+                     "this is neither an HMX weight nor activation");
+      }
+  }
+  return ValidWeightActPairing;
+}
+
 // Check for legal use of solo insns.
 bool HexagonMCChecker::checkSolo() {
   if (HexagonMCInstrInfo::bundleSize(MCB) > 1)
@@ -714,7 +748,8 @@ bool HexagonMCChecker::checkValidTmpDst() {
   }
   auto HasTmp = [&](MCInst const &I) {
     return HexagonMCInstrInfo::hasTmpDst(MCII, I) ||
-           HexagonMCInstrInfo::hasHvxTmp(MCII, I);
+           (HexagonMCInstrInfo::isTmpWrite(MCII, I) &&
+            HexagonMCInstrInfo::isHVX(MCII, I));
   };
   unsigned HasTmpCount =
       llvm::count_if(HexagonMCInstrInfo::bundleInstructions(MCII, MCB), HasTmp);
@@ -811,6 +846,42 @@ bool HexagonMCChecker::checkLegalVecRegPair() {
   return true;
 }
 
+bool HexagonMCChecker::checkHVXRestrictions() {
+  bool PacketHasVS3SRC = false;
+  MCInst U;
+  bool PacketHasNonUnaryALU = false;
+  bool PacketHasVP = false;
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (HexagonMCInstrInfo::isHVXVS3SRC(MCII, I)) {
+      U = I;
+      PacketHasVS3SRC = true;
+    }
+    if (HexagonMCInstrInfo::isHVXALU2SRC(MCII, I))
+      PacketHasNonUnaryALU = true;
+    if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VP)
+      PacketHasVP = true;
+  }
+  if (!PacketHasVS3SRC)
+    return true;
+  bool ret = !PacketHasNonUnaryALU && !PacketHasVP;
+  if (!ret) {
+    reportError("invalid instruction packet: HVX resource use violation");
+    if (PacketHasNonUnaryALU)
+      reportNote(U.getLoc(), "This instruction cannot be paired with an HVX "
+                             "non-unary instruction");
+    if (PacketHasVP)
+      reportNote(U.getLoc(), "This instruction cannot be paired with an HVX "
+                             "permute instruction");
+    for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+      if (HexagonMCInstrInfo::isHVXALU2SRC(MCII, I))
+        reportNote(I.getLoc(), "HVX non-unary instruction");
+      if (HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeCVI_VP)
+        reportNote(I.getLoc(), "HVX permute instruction");
+    }
+  }
+  return ret;
+}
+
 // Vd.tmp can't be accumulated
 bool HexagonMCChecker::checkHVXAccum()
 {
@@ -826,6 +897,41 @@ bool HexagonMCChecker::checkHVXAccum()
                   "' is accumulated in this packet");
       return false;
     }
+  }
+  return true;
+}
+
+bool HexagonMCChecker::checkHLX64BitRegUse() {
+  const MCRegisterClass &DoubleRegs =
+      RI.getRegClass(Hexagon::DoubleRegsRegClassID);
+  const MCRegisterClass &IntRegs = RI.getRegClass(Hexagon::IntRegsRegClassID);
+  const MCInst *DoubleInst = nullptr;
+  unsigned NumScalarArg = 0;
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (!HexagonMCInstrInfo::isHLX(MCII, I))
+      continue;
+    const MCInstrDesc &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    if (Desc.mayLoad() || Desc.mayStore())
+      continue;
+    bool UsesScalarArg = false;
+    for (const auto &Op : I) {
+      if (!DoubleInst && Op.isReg() && DoubleRegs.contains(Op.getReg()))
+        DoubleInst = &I;
+      if (Op.isImm() || Op.isExpr() ||
+          (Op.isReg() &&
+           (IntRegs.contains(Op.getReg()) || DoubleRegs.contains(Op.getReg()))))
+        UsesScalarArg = true;
+    }
+    if (UsesScalarArg)
+      ++NumScalarArg;
+  }
+
+  if (DoubleInst && NumScalarArg > 1) {
+    reportError(DoubleInst->getLoc(),
+                "HLX instruction using a 64-bit scalar register cannot be "
+                "in the same packet with another HLX instruction using a "
+                "scalar register or immediate");
+    return false;
   }
   return true;
 }

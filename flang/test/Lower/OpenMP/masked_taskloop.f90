@@ -50,7 +50,7 @@
 
 subroutine test_masked_taskloop
   integer :: i, j = 1
-  !$omp masked taskloop
+  !$omp masked taskloop default(firstprivate)
   do i=1,10
    j = j + 1
   end do

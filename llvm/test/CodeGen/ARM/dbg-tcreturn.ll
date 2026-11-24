@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -stop-after=finalize-isel -verify-machineinstrs | FileCheck %s
+; RUN: llc %s -o - -stop-after=finalize-isel | FileCheck %s
 
 target datalayout = "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7-apple-ios7.0.0"

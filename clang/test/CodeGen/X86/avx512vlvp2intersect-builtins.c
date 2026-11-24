@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -x c %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 -x c %s -flax-vector-conversions=none -ffreestanding -triple=i386-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c %s -flax-vector-conversions=none -ffreestanding -triple=i386-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=i386-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ %s -flax-vector-conversions=none -ffreestanding -triple=i386-unknown-unknown -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 
 #include <immintrin.h>
 

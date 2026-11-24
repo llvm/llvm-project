@@ -7,6 +7,7 @@
 
 ---
 name:            trans_writes_valu_reads_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_writes_valu_reads_hazard
@@ -27,6 +28,7 @@ body:            |
 
 ---
 name:            trans_writes_valu_valu_reads_hazard_covered
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_writes_valu_valu_reads_hazard_covered
@@ -40,6 +42,7 @@ body:            |
 
 ---
 name:            trans_writes_salu_valu_reads_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_writes_salu_valu_reads_hazard
@@ -64,6 +67,7 @@ body:            |
 
 ---
 name:            trans_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_no_hazard
@@ -75,6 +79,7 @@ body:            |
 
 ---
 name:            trans_reads_valu_writes_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_reads_valu_writes_hazard
@@ -95,6 +100,7 @@ body:            |
 
 ---
 name:            trans_reads_valu_valu_writes_hazard_covered
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_reads_valu_valu_writes_hazard_covered
@@ -108,6 +114,7 @@ body:            |
 
 ---
 name:            trans_reads__salu_valu_writes_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX125X-LABEL: name: trans_reads__salu_valu_writes_hazard
@@ -132,6 +139,7 @@ body:            |
 
 ---
 name:            trans_writes_trans_reads_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_writes_trans_reads_no_hazard
@@ -143,6 +151,7 @@ body:            |
 
 ---
 name:            trans_reads_trans_writes_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_reads_trans_writes_no_hazard
@@ -150,4 +159,25 @@ body:            |
     ; GCN-NEXT: $vgpr0 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
     $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     $vgpr0 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
+...
+
+---
+name:            trans_reads_vopd_writes_hazard
+tracksRegLiveness: false
+body:            |
+  bb.0:
+    ; GFX125X-LABEL: name: trans_reads_vopd_writes_hazard
+    ; GFX125X: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GFX125X-NEXT: V_NOP_e32 implicit $exec
+    ; GFX125X-NEXT: $vgpr2, $vgpr0 = V_DUAL_ADD_F32_e32_X_ADD_F32_e32_gfx1250 $vgpr3, $vgpr4, $vgpr5, $vgpr6, implicit $mode, implicit $exec
+    ;
+    ; GFX1310-LABEL: name: trans_reads_vopd_writes_hazard
+    ; GFX1310: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GFX1310-NEXT: $vgpr2, $vgpr0 = V_DUAL_ADD_F32_e32_X_ADD_F32_e32_gfx1250 $vgpr3, $vgpr4, $vgpr5, $vgpr6, implicit $mode, implicit $exec
+    ;
+    ; GFX1200-LABEL: name: trans_reads_vopd_writes_hazard
+    ; GFX1200: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
+    ; GFX1200-NEXT: $vgpr2, $vgpr0 = V_DUAL_ADD_F32_e32_X_ADD_F32_e32_gfx1250 $vgpr3, $vgpr4, $vgpr5, $vgpr6, implicit $mode, implicit $exec
+    $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
+    $vgpr2, $vgpr0 = V_DUAL_ADD_F32_e32_X_ADD_F32_e32_gfx1250 $vgpr3, $vgpr4, $vgpr5, $vgpr6, implicit $mode, implicit $exec
 ...

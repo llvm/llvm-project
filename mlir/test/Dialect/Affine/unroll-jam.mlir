@@ -4,6 +4,7 @@
 
 // CHECK-DAG: [[$MAP_PLUS_1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 // CHECK-DAG: [[$MAP_DIV_OFFSET:#map[0-9]*]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1)>
+// CHECK-DAG: [[$MAP_CLEANUP_LB:#map[0-9]*]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1, 1)>
 // CHECK-DAG: [[$MAP_SYM_UB:#map[0-9]*]] = affine_map<()[s0, s1] -> (s0, s1, 1024)>
 
 // UJAM-FOUR-DAG: [[$UBMAP:#map[0-9]*]] = affine_map<()[s0] -> (s0 + 8)>
@@ -96,8 +97,8 @@ func.func @loop_nest_unknown_count_1(%N : index) {
   // CHECK-NEXT:     "foo"() : () -> i32
   // CHECK-NEXT:   }
   // CHECK-NEXT: }
-  // A cleanup loop should be generated here.
-  // CHECK-NEXT: affine.for %{{.*}} = [[$MAP_DIV_OFFSET]]()[%[[N]]] to %[[N]] {
+  // A cleanup loop should be generated here. It must not execute if %N < 1.
+  // CHECK-NEXT: affine.for %{{.*}} = max [[$MAP_CLEANUP_LB]]()[%[[N]]] to %[[N]] {
   // CHECK-NEXT:   affine.for %{{.*}} = 1 to 100 {
   // CHECK-NEXT:     "foo"() : () -> i32
   // CHECK-NEXT:   }

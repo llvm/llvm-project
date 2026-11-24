@@ -63,6 +63,18 @@ class LiveRegMatrix {
       : LIUAlloc(std::make_unique<LiveIntervalUnion::Allocator>()) {};
   void releaseMemory();
 
+  /// Check regmask interference only, restricted to the segment
+  /// [Start, End). Returns true if a regmask operand in that segment
+  /// clobbers PhysReg.
+  bool checkRegMaskInterference(SlotIndex Start, SlotIndex End,
+                                MCRegister PhysReg);
+
+  /// Check regunit interference only, restricted to the segment
+  /// [Start, End). Returns true if a fixed live range on one of PhysReg's
+  /// register units overlaps [Start, End).
+  bool checkRegUnitInterference(SlotIndex Start, SlotIndex End,
+                                MCRegister PhysReg);
+
 public:
   LiveRegMatrix(LiveRegMatrix &&Other) = default;
 
@@ -109,10 +121,16 @@ public:
                                               MCRegister PhysReg);
 
   /// Check for interference in the segment [Start, End) that may prevent
-  /// assignment to PhysReg. If this function returns true, there is
-  /// interference in the segment [Start, End) of some other interval already
-  /// assigned to PhysReg. If this function returns false, PhysReg is free at
-  /// the segment [Start, End).
+  /// assignment to PhysReg. This checks regmask interference (e.g. PhysReg
+  /// is clobbered by a call in [Start, End)), fixed register unit
+  /// interference (e.g. PhysReg is used directly by some instruction in
+  /// [Start, End)), and virtual register interference (some other interval
+  /// already assigned to PhysReg overlaps [Start, End)) -- the same kinds of
+  /// interference considered by the checkInterference(LiveInterval&, ...)
+  /// overload above, restricted to a single contiguous segment. If this
+  /// function returns true, there is interference in the segment
+  /// [Start, End). If this function returns false, PhysReg is free at the
+  /// segment [Start, End).
   LLVM_ABI bool checkInterference(SlotIndex Start, SlotIndex End,
                                   MCRegister PhysReg);
 

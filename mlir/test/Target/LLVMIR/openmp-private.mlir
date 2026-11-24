@@ -20,7 +20,7 @@ llvm.func @parallel_op_1_private(%arg0: !llvm.ptr) {
 // CHECK: }
 
 // CHECK-LABEL: void @parallel_op_1_private..omp_par
-// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[ARG:.*]])
+// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %[[ARG:.*]])
 // CHECK: %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
 
@@ -52,7 +52,7 @@ llvm.func @parallel_op_2_privates(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
 // CHECK: }
 
 // CHECK-LABEL: void @parallel_op_2_privates..omp_par
-// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[ARG:.*]])
+// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %[[ARG:.*]])
 // CHECK: %[[ORIG1_PTR_PTR:.*]] = getelementptr { ptr, ptr }, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %[[ORIG1_PTR:.*]] = load ptr, ptr %[[ORIG1_PTR_PTR]], align 8
 // CHECK: %[[ORIG2_PTR_PTR:.*]] = getelementptr { ptr, ptr }, ptr %[[ARG]], i32 0, i32 1

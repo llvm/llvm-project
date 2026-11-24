@@ -28,10 +28,10 @@ define float @select_fcmp_oeq(float %a, float %b, float %c, float %d) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fr32 = COPY $xmm2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr32 = COPY $xmm1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fr32 = COPY $xmm0
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fr32 = COPY killed [[COPY3]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fr32 = COPY killed [[COPY2]]
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:fr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:fr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fr32 = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fr32 = COPY [[COPY2]]
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:fr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:fr32 = COPY [[COPY]]
   ; CHECK-NEXT:   UCOMISSrr [[COPY4]], [[COPY5]], implicit-def $eflags, implicit $mxcsr
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 11, implicit $eflags

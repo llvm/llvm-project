@@ -1,4 +1,5 @@
 add_lldb_unittest(SymbolFileNativePDBTests
+  PDBFactoryTests.cpp
   PdbFPOProgramToDWARFExpressionTests.cpp
   UdtRecordCompleterTests.cpp
 
@@ -9,6 +10,10 @@ add_lldb_unittest(SymbolFileNativePDBTests
     lldbCore
     lldbHost
     lldbSymbol
+    lldbPluginObjectFileELF
+    lldbPluginObjectFilePECOFF
     lldbPluginSymbolFileNativePDB
+    lldbPluginSymbolFilePDB
     lldbUtilityHelpers
+    LLVMTestingSupport
   )

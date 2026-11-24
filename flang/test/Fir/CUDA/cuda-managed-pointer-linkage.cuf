@@ -33,6 +33,7 @@ end module
 ! DEFINING: llvm.func internal @__cudaFortranConstructor()
 ! DEFINING: fir.address_of(@_QMmEg.managed.ptr) : !fir.ref<!fir.llvm_ptr<i8>>
 ! DEFINING: fir.call @_FortranACUFRegisterManagedVariable
+! DEFINING: llvm.func internal @__cudaFortranInitConstructor()
 ! DEFINING: fir.call @_FortranACUFInitModule
 
 !--- useonly.cuf
@@ -51,3 +52,4 @@ end subroutine
 ! USEONLY: llvm.func internal @__cudaFortranConstructor()
 ! USEONLY-NOT: fir.call @_FortranACUFRegisterManagedVariable
 ! USEONLY-NOT: fir.call @_FortranACUFInitModule
+! USEONLY-NOT: __cudaFortranInitConstructor

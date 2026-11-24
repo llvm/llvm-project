@@ -44,6 +44,7 @@ static_library("Passes") {
     "PointerAuthCFIAnalyzer.cpp",
     "PointerAuthCFIFixup.cpp",
     "ProfileQualityStats.cpp",
+    "RISCVLongJmpPass.cpp",
     "RegAnalysis.cpp",
     "RegReAssign.cpp",
     "ReorderAlgorithm.cpp",

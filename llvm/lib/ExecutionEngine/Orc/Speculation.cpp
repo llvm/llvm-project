@@ -75,7 +75,7 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
         M, SpeculatorVTy, false, GlobalValue::LinkageTypes::ExternalLinkage,
         nullptr, "__orc_speculator");
 
-    IRBuilder<> Mutator(MContext);
+    IRBuilder<> Mutator(M);
 
     // QueryAnalysis allowed to transform the IR source, one such example is
     // Simplify CFG helps the static branch prediction heuristics!
