@@ -185,6 +185,11 @@ namespace {
 class HorizontalReduction;
 } // namespace
 
+static std::pair<size_t, size_t> generateKeySubkey(
+    Value *V, const TargetLibraryInfo *TLI,
+    function_ref<hash_code(size_t, LoadInst *)> LoadsSubkeyGenerator,
+    bool AllowAlternate);
+
 /// Bottom Up SLP Vectorizer.
 class slpvectorizer::BoUpSLP {
   class TreeEntry;
@@ -1291,8 +1296,8 @@ public:
     /// Path Operation (APO).
     struct OperandData {
       OperandData() = default;
-      OperandData(Value *V, bool APO, bool IsUsed)
-          : V(V), APO(APO), IsUsed(IsUsed) {}
+      OperandData(Value *V, bool APO, bool IsUsed, size_t RootUsersKey = 0)
+          : V(V), APO(APO), IsUsed(IsUsed), RootUsersKey(RootUsersKey) {}
       /// The operand value.
       Value *V = nullptr;
       /// TreeEntries only allow a single opcode, or an alternate sequence of
@@ -1303,7 +1308,30 @@ public:
       bool APO = false;
       /// Helper data for the reordering function.
       bool IsUsed = false;
+      /// Key of the binary users of the lane root, which also use this
+      /// operand, like the subtraction in s = a + b; e = s - b. 0 if none.
+      size_t RootUsersKey = 0;
     };
+
+    /// \returns the key of the binary users of \p Root, which also use its
+    /// operand \p Op, built from the keys of the users and the operand
+    /// positions of \p Root in the non-commutative users.
+    size_t getRootUsersKey(Instruction *Root, Value *Op) const {
+      if (Root->hasNUsesOrMore(UsesLimit))
+        return 0;
+      // The users come in no particular order, so their keys are summed.
+      size_t Key = 0;
+      for (User *U : Root->users()) {
+        auto *BO = dyn_cast<BinaryOperator>(U);
+        if (BO && is_contained(BO->operands(), Op))
+          Key += hash_combine(
+              generateKeySubkey(BO, &TLI, /*LoadsSubkeyGenerator=*/nullptr,
+                                /*AllowAlternate=*/false)
+                  .first,
+              !BO->isCommutative() && BO->getOperand(0) == Root);
+      }
+      return Key;
+    }
 
     /// During operand reordering, we are trying to select the operand at lane
     /// that matches best with the operand at the neighboring lane. Our
@@ -1510,6 +1538,7 @@ public:
       BestOp.Score =
           BestScoresPerLanes.try_emplace(std::make_pair(OpIdx, Lane), 0)
               .first->second;
+      const unsigned InitScore = BestOp.Score;
 
       // Track if the operand must be marked as used. If the operand is set to
       // Score 1 explicitly (because of non power-of-2 unique scalars, we may
@@ -1517,6 +1546,24 @@ public:
       bool IsUsed = RMode == ReorderingMode::Splat ||
                     RMode == ReorderingMode::Constant ||
                     RMode == ReorderingMode::Load;
+      // An operand, used with the lane root by the same binary users as the
+      // operand in the previous lane, is preferred. An operand, matching
+      // another column of the previous lane this way, is the last choice. A
+      // matching operand of a better rank blocks the worse ranked ones, even if
+      // its score does not beat the best score of the previous pass.
+      size_t LastKey = getData(OpIdx, LastLane).RootUsersKey;
+      auto GetKeyRank = [&](size_t Key) -> unsigned {
+        if (Key == 0)
+          return 1;
+        if (Key == LastKey)
+          return 0;
+        if (any_of(seq<unsigned>(NumOperands), [&](unsigned Idx) {
+              return getData(Idx, LastLane).RootUsersKey == Key;
+            }))
+          return 2;
+        return 1;
+      };
+      unsigned BestRank = UINT_MAX;
       // Iterate through all unused operands and look for the best.
       for (unsigned Idx = 0; Idx != NumOperands; ++Idx) {
         // Get the operand at Idx and Lane.
@@ -1543,12 +1590,19 @@ public:
           Value *OpRight = (LeftToRight) ? Op : OpLastLane;
           int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
                                         OpIdx, Idx, IsUsed, UsedLanes);
+          if (Score <= 0)
+            break;
+          unsigned Rank = GetKeyRank(OpData.RootUsersKey);
+          if (Rank > BestRank)
+            break;
+          if (Rank < BestRank) {
+            BestRank = Rank;
+            BestOp = {std::nullopt, InitScore};
+          }
           if (Score > static_cast<int>(BestOp.Score) ||
-              (Score > 0 && Score == static_cast<int>(BestOp.Score) &&
-               Idx == OpIdx)) {
+              (Score == static_cast<int>(BestOp.Score) && Idx == OpIdx)) {
             BestOp.Idx = Idx;
             BestOp.Score = Score;
-            BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
           }
           break;
         }
@@ -1556,11 +1610,8 @@ public:
           if (isa<Constant>(Op) ||
               (!BestOp.Score && L && L->isLoopInvariant(Op))) {
             BestOp.Idx = Idx;
-            if (isa<Constant>(Op)) {
+            if (isa<Constant>(Op))
               BestOp.Score = LookAheadHeuristics::ScoreConstants;
-              BestScoresPerLanes[std::make_pair(OpIdx, Lane)] =
-                  LookAheadHeuristics::ScoreConstants;
-            }
             if (isa<UndefValue>(Op) || !isa<Constant>(Op))
               IsUsed = false;
           }
@@ -1568,11 +1619,8 @@ public:
         case ReorderingMode::Splat:
           if (Op == OpLastLane || (!BestOp.Score && isa<Constant>(Op))) {
             IsUsed = Op == OpLastLane;
-            if (Op == OpLastLane) {
+            if (Op == OpLastLane)
               BestOp.Score = LookAheadHeuristics::ScoreSplat;
-              BestScoresPerLanes[std::make_pair(OpIdx, Lane)] =
-                  LookAheadHeuristics::ScoreSplat;
-            }
             BestOp.Idx = Idx;
           }
           break;
@@ -1582,6 +1630,7 @@ public:
       }
 
       if (BestOp.Idx) {
+        BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = BestOp.Score;
         getData(*BestOp.Idx, Lane).IsUsed = IsUsed;
         return BestOp.Idx;
       }
@@ -1750,7 +1799,8 @@ public:
           continue;
         }
         bool IsInverseOperation = false;
-        if (S.isCopyableElement(VL[Lane])) {
+        bool IsCopyable = S.isCopyableElement(VL[Lane]);
+        if (IsCopyable) {
           // The value is a copyable element.
           IsInverseOperation =
               !isCommutative(MainOp, VL[Lane], /*IsCopyable=*/true);
@@ -1764,7 +1814,9 @@ public:
         }
         for (unsigned OpIdx : seq<unsigned>(ArgSize)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {Operands[OpIdx][Lane], APO, false};
+          Value *Op = Operands[OpIdx][Lane];
+          OpsVec[OpIdx][Lane] = {Op, APO, false,
+                                 IsCopyable ? 0 : getRootUsersKey(I, Op)};
         }
       }
     }
@@ -13092,12 +13144,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         RegisterReassocScalars(TE);
       }
 
-      VLOperands Ops(VL, Operands, S, *this);
       if (cast<CmpInst>(VL0)->isCommutative()) {
         // Commutative predicate - collect + sort operands of the instructions
         // so that each side is more likely to have the same opcode.
         assert(P0 == CmpInst::getSwappedPredicate(P0) &&
                "Commutative Predicate mismatch");
+        VLOperands Ops(VL, Operands, S, *this);
         Ops.reorder();
         Operands.front() = Ops.getVL(0);
         Operands.back() = Ops.getVL(1);
@@ -37772,6 +37824,7 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
           const SCEV *SCEVJ = SE->getSCEV(GEPList[J]);
           const SCEV *Diff = SE->getMinusSCEV(SCEVI, SCEVJ);
           if (isa<SCEVConstant>(Diff) || (IsAffineI && IsAffineInLoop(SCEVJ) &&
+                                          !isa<SCEVCouldNotCompute>(Diff) &&
                                           SE->isLoopInvariant(Diff, L))) {
             Candidates.remove(GEPI);
             Candidates.remove(GEPJ);

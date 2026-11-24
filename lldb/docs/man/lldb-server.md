@@ -166,6 +166,7 @@ the server. Note that terminating the server will usually cause the process
 to be detached and continue execution.
 
 > lldb-server g :1234 --attach 12345
+>
 > lldb-server g :1234 --attach program-name
 
 Use *gdb-remote* command to connect to the server:
@@ -179,6 +180,7 @@ can select the target after connecting to the server. Note that some commands
 > lldb-server g :1234
 >
 > (lldb) gdb-remote 1234
+>
 > (lldb) process launch a.out
 
 ## SEE ALSO

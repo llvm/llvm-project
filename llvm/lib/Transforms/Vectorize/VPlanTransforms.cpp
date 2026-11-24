@@ -2482,6 +2482,12 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
+  // TODO: Support outer-loop plans. Their loop region need not form a
+  // single-successor chain, which the alias check below expects, and sinking
+  // only supports stores with an invariant address.
+  if (FirstBB->getPlan()->isOuterLoop())
+    return true;
+
   // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
 
@@ -3499,14 +3505,19 @@ static bool handleUncountableExitsWithSideEffects(
   // the FirstActiveLane.
   assert(match(MiddleVPBB->getTerminator(), m_BranchOnCond()) &&
          "Expected BranchOnCond terminator for MiddleVPBB");
+  // The trip count may be wider than the IV; compute the exit IV in its type,
+  // as it may be one past the largest IV value.
   VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
   Type *IVScalarTy = IV->getScalarType();
+  Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue *Zero = Plan.getZero(IVScalarTy);
   VPValue *FirstActive = MiddleBuilder.createScalarZExtOrTrunc(
-      MiddleBuilder.createFirstActiveLane(Cond), IVScalarTy, DebugLoc());
+      MiddleBuilder.createFirstActiveLane(Cond), TCTy, DebugLoc());
   VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
                                                  {Zero, IV}, DebugLoc());
-  VPValue *ExitIV = MiddleBuilder.createAdd(ScalarIV, FirstActive);
+  VPValue *ExitIV = MiddleBuilder.createAdd(
+      MiddleBuilder.createScalarZExtOrTrunc(ScalarIV, TCTy, DebugLoc()),
+      FirstActive);
   VPValue *FullTC =
       MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
   MiddleVPBB->getTerminator()->setOperand(0, FullTC);
@@ -3529,7 +3540,8 @@ static bool handleUncountableExitsWithSideEffects(
       match(ContinueIV->getOperand(0),
             m_VPInstruction<VPInstruction::ExitingIVValue>(m_Specific(IV))) &&
       "Continuing from different IV");
-  ContinueIV->setOperand(0, ExitIV);
+  ContinueIV->setOperand(
+      0, MiddleBuilder.createScalarZExtOrTrunc(ExitIV, IVScalarTy, DebugLoc()));
   return true;
 }
 

@@ -1,5 +1,7 @@
 // RUN: mlir-tblgen -gen-attrdef-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL
 // RUN: mlir-tblgen -gen-attrdef-defs -I %S/../../include %s | FileCheck %s --check-prefix=DEF
+// RUN: mlir-tblgen -gen-attrdef-decls -attrdefs-registration-name=Ext -I %S/../../include %s | FileCheck %s --check-prefix=NAME
+// RUN: mlir-tblgen -gen-attrdef-defs -attrdefs-registration-name=Ext -I %S/../../include %s | FileCheck %s --check-prefix=NAME
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -40,6 +42,7 @@ def Test_Dialect: Dialect {
 // DEF-NOT: TestDialect
     let name = "TestDialect";
     let cppNamespace = "::test";
+    let useDefaultAttributeRegistration = 1;
 }
 
 class TestAttr<string name> : AttrDef<Test_Dialect, name> { }
@@ -204,3 +207,16 @@ def J_CustomStorageCtorAttr : AttrDef<Test_Dialect, "CustomStorageCtorAttr"> {
 // DEF-LABEL: struct CustomStorageCtorAttrAttrStorage : public ::mlir::AttributeStorage
 // DEF: static CustomStorageCtorAttrAttrStorage *construct
 // DEF-SAME: (::mlir::AttributeStorageAllocator &allocator, KeyTy &&tblgenKey);
+
+// The registration hook registers every attribute.
+// DECL: class TestDialect;
+// DECL-NEXT: /// Registers the attributes defined in this file with `dialect`.
+// DECL-NEXT: void registerTestDialectAttributes(TestDialect *dialect);
+
+// DEF: void registerTestDialectAttributes(TestDialect *dialect) {
+// DEF-NEXT:   ::mlir::AbstractAttribute::insert<IndexAttr>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractAttribute::insert<SimpleAAttr>(*dialect);
+// DEF:        ::mlir::AbstractAttribute::insert<CustomStorageCtorAttrAttr>(*dialect);
+// DEF-NEXT: }
+
+// NAME: void registerExtAttributes(TestDialect *dialect)
