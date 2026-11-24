@@ -5,8 +5,11 @@
 ! RUN: %flang_fc1 -ffast-real-mod -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s -DFMF=contract --check-prefixes=CHECK,CHECK-EMU
 ! RUN: %flang_fc1 -ffast-math -mllvm -fast-real-mod-trunc=emulate-trunc -emit-mlir -o - %s | FileCheck %s -DFMF=fast --check-prefixes=CHECK,CHECK-EMU
 
-! REAL(2) MOD is only supported inline, so it is not tested with
-! -fno-fast-real-mod.
+! The reason this comes separately from fast-real-mod.f90 is that there is no
+! runtime support for REAL(2) MOD yet. It is only supported inline, so it has
+! no RUN which invokes it with -fno-fast-real-mod like its sibling (also avoided
+! running the test via preprocessor).
+! TODO: merge the two once the runtime support added.
 
 ! CHECK-LABEL: @_QPmod_real2
 subroutine mod_real2(r, a, p)
