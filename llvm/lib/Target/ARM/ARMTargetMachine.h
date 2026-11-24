@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include <memory>
@@ -31,6 +32,22 @@ protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
   mutable StringMap<std::unique_ptr<ARMSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS, SoftFloat, MinSize, DenormalFPEnv;
+    FloatABI::ABIType FloatABI = FloatABI::Default;
+    ARM::ARMABI ABI = ARM::ARM_ABI_UNKNOWN;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS && SoftFloat == RHS.SoftFloat &&
+             MinSize == RHS.MinSize && DenormalFPEnv == RHS.DenormalFPEnv &&
+             FloatABI == RHS.FloatABI && ABI == RHS.ABI;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<ARMSubtarget, SubtargetAttrs> LastSubtarget;
 
   /// Reset internal state.
   void reset() override;

@@ -200,6 +200,35 @@ TEST_F(BasicGraphBuilderTest, BuildFlowGraphTestSinglePathJumpUd2) {
       << PrintToString(Result);
 }
 
+TEST_F(BasicGraphBuilderTest, BuildFlowGraphTestSinglePathJumpUd1) {
+  if (!SuccessfullyInitialised)
+    GTEST_SKIP();
+  // clang-format off
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x02,                   // 0: jne 4 [+2]
+          0xff, 0x10,                   // 2: callq *(%rax)
+          0x67, 0x0f, 0xb9, 0x40, 0x1b, // 4: ud1l 0x1b(%eax), %eax
+      },
+      {0xDEADBEEF, 0x0});
+  // clang-format on
+  const auto Result =
+      GraphBuilder::buildFlowGraph(Analysis, {0xDEADBEEF + 2, 0x0});
+
+  EXPECT_THAT(Result.OrphanedNodes, IsEmpty());
+  EXPECT_THAT(Result.ConditionalBranchNodes, SizeIs(1));
+  EXPECT_THAT(Result.ConditionalBranchNodes,
+              Each(Field(&ConditionalBranchNode::CFIProtection, Eq(true))));
+  EXPECT_THAT(
+      Result.ConditionalBranchNodes,
+      Contains(AllOf(Field(&ConditionalBranchNode::Address, Eq(0xDEADBEEF)),
+                     Field(&ConditionalBranchNode::Target,
+                           HasPath(Result, ElementsAre(0xDEADBEEF + 4))),
+                     Field(&ConditionalBranchNode::Fallthrough,
+                           HasPath(Result, ElementsAre(0xDEADBEEF + 2))))))
+      << PrintToString(Result);
+}
+
 TEST_F(BasicGraphBuilderTest, BuildFlowGraphTestDualPathDualUd2) {
   if (!SuccessfullyInitialised)
     GTEST_SKIP();

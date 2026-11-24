@@ -400,21 +400,58 @@ public:
         << 2 << "" << Attr->getRange();
   }
 
+  /// Returns the name of \p CapturingParam on the declaration where \p Attr of
+  /// \p PVD is written, as the attribute's parameter names refer to that
+  /// declaration.
+  static StringRef getCapturerName(const ParmVarDecl *PVD,
+                                   const LifetimeCaptureByAttr *Attr,
+                                   const ParmVarDecl *CapturingParam) {
+    if (!CapturingParam)
+      return "";
+    const auto *Fn = cast<FunctionDecl>(PVD->getDeclContext());
+    for (const FunctionDecl *Redecl : Fn->redecls()) {
+      const ParmVarDecl *P = Redecl->getParamDecl(PVD->getFunctionScopeIndex());
+      if (llvm::any_of(P->specific_attrs<LifetimeCaptureByAttr>(),
+                       [&](const LifetimeCaptureByAttr *A) {
+                         return !A->isInherited() &&
+                                A->getLocation() == Attr->getLocation();
+                       })) {
+        StringRef Name =
+            Redecl->getParamDecl(CapturingParam->getFunctionScopeIndex())
+                ->getName();
+        if (!Name.empty())
+          return Name;
+        break;
+      }
+    }
+    return CapturingParam->getName();
+  }
+
   void reportCaptureByViolation(const ParmVarDecl *PVD,
                                 const LifetimeCaptureByAttr *Attr,
                                 int CapturerIdx,
                                 const ValueDecl *CapturedBy) override {
     assert(!Attr->isImplicit() && "only written attributes are verified");
-    assert((CapturerIdx == LifetimeCaptureByAttr::This ||
+    const auto *CapturingParam = dyn_cast_if_present<ParmVarDecl>(CapturedBy);
+    assert((CapturingParam || CapturerIdx == LifetimeCaptureByAttr::This ||
             CapturerIdx == LifetimeCaptureByAttr::Global) &&
-           "only this and global capturers are verified");
+           "only this, global and parameter capturers are verified");
+    // The capturer kinds of warn_lifetime_safety_capture_by_violation.
+    enum CapturerKind { CapturedByThis, CapturedByGlobal, CapturedByParam };
+    CapturerKind Kind = CapturedByThis;
+    if (CapturingParam)
+      Kind = CapturedByParam;
+    else if (CapturerIdx == LifetimeCaptureByAttr::Global)
+      Kind = CapturedByGlobal;
     S.Diag(Attr->getLocation(), diag::warn_lifetime_safety_capture_by_violation)
-        << PVD << (CapturerIdx == LifetimeCaptureByAttr::Global)
+        << PVD << Kind << getCapturerName(PVD, Attr, CapturingParam)
         << Attr->getRange();
     if (!CapturedBy)
       return;
     unsigned NoteID = diag::note_lifetime_safety_escapes_to_global_here;
-    if (isa<FieldDecl>(CapturedBy))
+    if (CapturingParam)
+      NoteID = diag::note_lifetime_safety_escapes_to_param_here;
+    else if (isa<FieldDecl>(CapturedBy))
       NoteID = diag::note_lifetime_safety_escapes_to_field_here;
     else if (const auto *VD = cast<VarDecl>(CapturedBy);
              VD->isStaticLocal() || VD->isStaticDataMember())
@@ -554,6 +591,15 @@ public:
       S.Diag(EscapeGlobal->getLocation(),
              diag::note_lifetime_safety_escapes_to_global_here)
           << EscapeGlobal->getEndLoc();
+  }
+
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const CXXMethodDecl *EscapeMethod) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+    S.Diag(EscapeMethod->getLocation(),
+           diag::note_lifetime_safety_escapes_to_object_here);
   }
 
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {

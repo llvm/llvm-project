@@ -766,7 +766,6 @@ namespace {
 class EarlyIfConverter {
   const CodeGenOptions &Opts;
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   const TargetSubtargetInfo *STI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
@@ -1399,7 +1398,6 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
     return false;
 
   TII = STI->getInstrInfo();
-  TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
   MinInstr = nullptr;
 
@@ -1460,9 +1458,7 @@ bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
 namespace {
 class EarlyIfPredicator : public MachineFunctionPass {
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   TargetSchedModel SchedModel;
-  MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
@@ -1567,8 +1563,6 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  MRI = &MF.getRegInfo();
   SchedModel.init(&STI);
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();

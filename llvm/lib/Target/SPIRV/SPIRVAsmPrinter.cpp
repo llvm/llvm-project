@@ -894,6 +894,10 @@ void SPIRVAsmPrinter::outputModuleSections() {
     NSDebugHandler->prepareModuleOutput(*ST, *MAI);
   if (AuxDataHandler)
     AuxDataHandler->prepareModuleOutput(*ST, *MAI);
+  // Generate the module-scope NSDI to decide if extensions (like
+  // SPV_KHR_relaxed_extended_instruction) are actually needed.
+  if (NSDebugHandler)
+    NSDebugHandler->generateModuleDebugInfo(*MAI);
 
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
@@ -933,8 +937,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
   // 10. All global NonSemantic.Shader.DebugInfo.100 instructions. The
-  // SPIRVNonSemanticDebugHandler emits these directly as MCInsts; the
-  // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
+  // SPIRVNonSemanticDebugHandler outputs the MCInsts it buffered;
+  // the MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
   if (AuxDataHandler)

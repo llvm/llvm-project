@@ -1187,7 +1187,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // MemsetArg is the number of bytes for the memset libcall, and the number
   // of pattern repetitions if the memset.pattern intrinsic is being used.
   Value *MemsetArg;
-  std::optional<int64_t> BytesWritten;
+  std::optional<uint64_t> BytesWritten;
   uint64_t PatternRepsPerTrip = 0;
 
   if (PatternValue &&
@@ -1234,10 +1234,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   AAMDNodes AATags = TheStore->getAAMetadata();
   for (Instruction *Store : Stores)
     AATags = AATags.merge(Store->getAAMetadata());
-  if (BytesWritten)
-    AATags = AATags.extendTo(BytesWritten.value());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(BytesWritten);
 
   CallInst *NewCall;
   if (SplatValue) {
@@ -1548,10 +1545,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   AAMDNodes AATags = TheLoad->getAAMetadata();
   AAMDNodes StoreAATags = TheStore->getAAMetadata();
   AATags = AATags.merge(StoreAATags);
-  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-    AATags = AATags.extendTo(CI->getZExtValue());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(NumBytes);
 
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:

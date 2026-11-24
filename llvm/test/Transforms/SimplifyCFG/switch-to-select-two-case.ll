@@ -774,6 +774,37 @@ default:
   ret i32 %ret
 }
 
+define i1 @switch_to_select_assumptions(i8 %x) {
+; CHECK-LABEL: @switch_to_select_assumptions(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = icmp ule i8 [[X:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+entry:
+  %bound = icmp ule i8 %x, 3
+  call void @llvm.assume(i1 %bound)
+  switch i8 %x, label %other [
+  i8 1, label %odd
+  i8 3, label %odd
+  ]
+
+other:
+  br label %exit
+
+odd:
+  br label %exit
+
+exit:
+  %r = phi i1 [ false, %other ], [ true, %odd ]
+  ret i1 %r
+}
+
+declare void @llvm.assume(i1 noundef)
+
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 3, i32 5, i32 7}
 !2 = !{!"branch_weights", i32 3, i32 5, i32 7, i32 11, i32 13}
@@ -782,6 +813,8 @@ default:
 !5 = !{!"branch_weights", i32 3, i32 5}
 !6 = !{!"branch_weights", i32 3, i32 5, i32 7, i32 11, i32 13, i32 17}
 !7 = !{!"branch_weights", i32 3, i32 5, i32 7, i32 11, i32 13, i32 17, i32 19}
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 7, i32 8}
