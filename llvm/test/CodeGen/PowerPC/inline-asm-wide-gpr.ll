@@ -53,7 +53,7 @@ define void @test_i64_input(i64 %x) {
   ; PPC32-NEXT:   [[COPY1:%[0-9]+]]:gprc = COPY $r3
   ; PPC32-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[COPY1]]
   ; PPC32-NEXT:   [[COPY3:%[0-9]+]]:gprc = COPY [[COPY]]
-  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC, [[COPY2]], [[COPY3]]
+  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC ops:2, [[COPY2]], [[COPY3]]
   ; PPC32-NEXT:   BLR implicit $lr, implicit $rm
 entry:
   call void asm sideeffect "# $0", "r"(i64 %x)
@@ -69,7 +69,7 @@ define i64 @test_i64_output() {
   ;
   ; PPC32-LABEL: name: test_i64_output
   ; PPC32: bb.0.entry:
-  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, regdef:GPRC, def %0, def %1
+  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, regdef:GPRC ops:2, def %0, def %1
   ; PPC32-NEXT:   $r3 = COPY %0
   ; PPC32-NEXT:   $r4 = COPY %1
   ; PPC32-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4
@@ -96,7 +96,7 @@ define void @test_i64_input_b(i64 %x) {
   ; PPC32-NEXT:   [[COPY1:%[0-9]+]]:gprc = COPY $r3
   ; PPC32-NEXT:   [[COPY2:%[0-9]+]]:gprc_nor0 = COPY [[COPY1]]
   ; PPC32-NEXT:   [[COPY3:%[0-9]+]]:gprc_nor0 = COPY [[COPY]]
-  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC_NOR0, [[COPY2]], [[COPY3]]
+  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC_NOR0 ops:2, [[COPY2]], [[COPY3]]
   ; PPC32-NEXT:   BLR implicit $lr, implicit $rm
 entry:
   call void asm sideeffect "# $0", "b"(i64 %x)
@@ -112,7 +112,7 @@ define void @test_i128_input(i128 %x) {
   ; PPC64-NEXT:   [[COPY1:%[0-9]+]]:g8rc = COPY $x3
   ; PPC64-NEXT:   [[COPY2:%[0-9]+]]:g8rc = COPY [[COPY1]]
   ; PPC64-NEXT:   [[COPY3:%[0-9]+]]:g8rc = COPY [[COPY]]
-  ; PPC64-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:G8RC, [[COPY2]], [[COPY3]]
+  ; PPC64-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:G8RC ops:2, [[COPY2]], [[COPY3]]
   ; PPC64-NEXT:   BLR8 implicit $lr8, implicit $rm
   ;
   ; PPC32-LABEL: name: test_i128_input
@@ -127,7 +127,7 @@ define void @test_i128_input(i128 %x) {
   ; PPC32-NEXT:   [[COPY5:%[0-9]+]]:gprc = COPY [[COPY2]]
   ; PPC32-NEXT:   [[COPY6:%[0-9]+]]:gprc = COPY [[COPY1]]
   ; PPC32-NEXT:   [[COPY7:%[0-9]+]]:gprc = COPY [[COPY]]
-  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC, [[COPY4]], [[COPY5]], [[COPY6]], [[COPY7]]
+  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC ops:4, [[COPY4]], [[COPY5]], [[COPY6]], [[COPY7]]
   ; PPC32-NEXT:   BLR implicit $lr, implicit $rm
 entry:
   call void asm sideeffect "# $0", "r"(i128 %x)
@@ -137,14 +137,14 @@ entry:
 define i128 @test_i128_output() {
   ; PPC64-LABEL: name: test_i128_output
   ; PPC64: bb.0.entry:
-  ; PPC64-NEXT:   INLINEASM &"# $0", sideeffect attdialect, regdef:G8RC, def %0, def %1
+  ; PPC64-NEXT:   INLINEASM &"# $0", sideeffect attdialect, regdef:G8RC ops:2, def %0, def %1
   ; PPC64-NEXT:   $x3 = COPY %0
   ; PPC64-NEXT:   $x4 = COPY %1
   ; PPC64-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3, implicit $x4
   ;
   ; PPC32-LABEL: name: test_i128_output
   ; PPC32: bb.0.entry:
-  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, regdef:GPRC, def %0, def %1, def %2, def %3
+  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, regdef:GPRC ops:4, def %0, def %1, def %2, def %3
   ; PPC32-NEXT:   $r3 = COPY %0
   ; PPC32-NEXT:   $r4 = COPY %1
   ; PPC32-NEXT:   $r5 = COPY %2
@@ -164,7 +164,7 @@ define i128 @test_i128_tied(i128 %x) {
   ; PPC64-NEXT:   [[COPY1:%[0-9]+]]:g8rc = COPY $x3
   ; PPC64-NEXT:   [[COPY2:%[0-9]+]]:g8rc = COPY [[COPY1]]
   ; PPC64-NEXT:   [[COPY3:%[0-9]+]]:g8rc = COPY [[COPY]]
-  ; PPC64-NEXT:   INLINEASM &"", sideeffect attdialect, regdef-ec:G8RC, def early-clobber %2, def early-clobber %3, reguse tiedto:$0, [[COPY2]](tied-def 3), [[COPY3]](tied-def 4)
+  ; PPC64-NEXT:   INLINEASM &"", sideeffect attdialect, regdef-ec:G8RC ops:2, def early-clobber %2, def early-clobber %3, reguse tiedto:$0 ops:2, [[COPY2]](tied-def 3), [[COPY3]](tied-def 4)
   ; PPC64-NEXT:   $x3 = COPY %2
   ; PPC64-NEXT:   $x4 = COPY %3
   ; PPC64-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3, implicit $x4
@@ -181,7 +181,7 @@ define i128 @test_i128_tied(i128 %x) {
   ; PPC32-NEXT:   [[COPY5:%[0-9]+]]:gprc = COPY [[COPY2]]
   ; PPC32-NEXT:   [[COPY6:%[0-9]+]]:gprc = COPY [[COPY1]]
   ; PPC32-NEXT:   [[COPY7:%[0-9]+]]:gprc = COPY [[COPY]]
-  ; PPC32-NEXT:   INLINEASM &"", sideeffect attdialect, regdef-ec:GPRC, def early-clobber %4, def early-clobber %5, def early-clobber %6, def early-clobber %7, reguse tiedto:$0, [[COPY4]](tied-def 3), [[COPY5]](tied-def 4), [[COPY6]](tied-def 5), [[COPY7]](tied-def 6)
+  ; PPC32-NEXT:   INLINEASM &"", sideeffect attdialect, regdef-ec:GPRC ops:4, def early-clobber %4, def early-clobber %5, def early-clobber %6, def early-clobber %7, reguse tiedto:$0 ops:4, [[COPY4]](tied-def 3), [[COPY5]](tied-def 4), [[COPY6]](tied-def 5), [[COPY7]](tied-def 6)
   ; PPC32-NEXT:   $r3 = COPY %4
   ; PPC32-NEXT:   $r4 = COPY %5
   ; PPC32-NEXT:   $r5 = COPY %6
@@ -201,7 +201,7 @@ define void @test_i128_input_b(i128 %x) {
   ; PPC64-NEXT:   [[COPY1:%[0-9]+]]:g8rc = COPY $x3
   ; PPC64-NEXT:   [[COPY2:%[0-9]+]]:g8rc_nox0 = COPY [[COPY1]]
   ; PPC64-NEXT:   [[COPY3:%[0-9]+]]:g8rc_nox0 = COPY [[COPY]]
-  ; PPC64-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:G8RC_NOX0, [[COPY2]], [[COPY3]]
+  ; PPC64-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:G8RC_NOX0 ops:2, [[COPY2]], [[COPY3]]
   ; PPC64-NEXT:   BLR8 implicit $lr8, implicit $rm
   ;
   ; PPC32-LABEL: name: test_i128_input_b
@@ -216,7 +216,7 @@ define void @test_i128_input_b(i128 %x) {
   ; PPC32-NEXT:   [[COPY5:%[0-9]+]]:gprc_nor0 = COPY [[COPY2]]
   ; PPC32-NEXT:   [[COPY6:%[0-9]+]]:gprc_nor0 = COPY [[COPY1]]
   ; PPC32-NEXT:   [[COPY7:%[0-9]+]]:gprc_nor0 = COPY [[COPY]]
-  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC_NOR0, [[COPY4]], [[COPY5]], [[COPY6]], [[COPY7]]
+  ; PPC32-NEXT:   INLINEASM &"# $0", sideeffect attdialect, reguse:GPRC_NOR0 ops:4, [[COPY4]], [[COPY5]], [[COPY6]], [[COPY7]]
   ; PPC32-NEXT:   BLR implicit $lr, implicit $rm
 entry:
   call void asm sideeffect "# $0", "b"(i128 %x)
