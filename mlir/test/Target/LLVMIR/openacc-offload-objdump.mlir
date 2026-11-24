@@ -1,4 +1,10 @@
 // REQUIRES: has_llc_binary
+// The LLVM offloading image packaging pipeline (section naming, linker
+// wrapper, image extraction) is currently built around ELF/COFF and has
+// not been adapted to Mach-O's "<segment>,<section>" section-name format,
+// so the Mach-O backend of llc rejects the hard-coded ".llvm.offloading"
+// section name. Skip this test on Darwin until Mach-O is wired up.
+// UNSUPPORTED: system-darwin
 // RUN: mlir-translate -mlir-to-llvmir %s | llc -filetype=obj -o %t.o
 // RUN: llvm-objdump --offloading %t.o | FileCheck %s
 
