@@ -2216,7 +2216,7 @@ void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
                                                                   : &MI;
 
   // A #dbg_declare reaches Machine IR as an indirect DBG_VALUE. Its storage is
-  // an OpVariable in the entry block, so it is in the output by the time any
+  // an OpVariable (or OpUntypedVariableKHR) in the entry block, so it is in the output by the time any
   // record naming it is reached.
   if (std::optional<Register> LocReg = getDebugDeclareStorageReg(
           MI, CLOpts.debug_declare_untyped_variable)) {
