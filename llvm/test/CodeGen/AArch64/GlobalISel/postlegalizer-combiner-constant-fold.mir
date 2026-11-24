@@ -129,8 +129,8 @@ body:             |
     ; CHECK-LABEL: name: xor
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(i64) = G_CONSTANT i64 12
-    ; CHECK-NEXT: $x0 = COPY %res(i64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+    ; CHECK-NEXT: $x0 = COPY [[C]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(i64) = G_CONSTANT i64 8
     %b:_(i64) = G_CONSTANT i64 4

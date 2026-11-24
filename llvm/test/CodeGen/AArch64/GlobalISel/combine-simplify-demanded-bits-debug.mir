@@ -9,6 +9,7 @@
   define void @nested_logical_debug() !dbg !30 { ret void }
   define void @shared_mask_debug() !dbg !50 { ret void }
   define void @full_demand_debug() !dbg !60 { ret void }
+  define void @xor_bypass_debug() !dbg !70 { ret void }
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!5}
@@ -37,6 +38,10 @@
   !60 = distinct !DISubprogram(name: "full_demand_debug", scope: !1, file: !1, line: 6, type: !3, spFlags: DISPFlagDefinition, unit: !0)
   !61 = !DILocalVariable(name: "masked", scope: !60, file: !1, line: 6, type: !2)
   !69 = !DILocation(line: 6, column: 1, scope: !60)
+
+  !70 = distinct !DISubprogram(name: "xor_bypass_debug", scope: !1, file: !1, line: 7, type: !3, spFlags: DISPFlagDefinition, unit: !0)
+  !71 = !DILocalVariable(name: "flipped", scope: !70, file: !1, line: 7, type: !2)
+  !79 = !DILocation(line: 7, column: 1, scope: !70)
 
 ...
 ---
@@ -120,6 +125,27 @@ body: |
     %masked:_(i32) = G_AND %x, %mask
     DBG_VALUE %masked, $noreg, !61, !DIExpression(), debug-location !69
     %res:_(i32) = G_OR %y, %masked
+    $w0 = COPY %res(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+# A bypassed G_XOR differs from its operand in undemanded bits only, so its
+# debug users cannot be redirected to the operand.
+name: xor_bypass_debug
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: xor_bypass_debug
+    ; CHECK: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
+    ; CHECK: %res:_(i32) = G_AND %x, %mask
+    %x:_(i32) = COPY $w0
+    %high:_(i32) = G_CONSTANT i32 256
+    %flipped:_(i32) = G_XOR %x, %high
+    DBG_VALUE %flipped, $noreg, !71, !DIExpression(), debug-location !79
+    %mask:_(i32) = G_CONSTANT i32 255
+    %res:_(i32) = G_AND %flipped, %mask
     $w0 = COPY %res(i32)
     RET_ReallyLR implicit $w0
 ...

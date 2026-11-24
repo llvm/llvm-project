@@ -229,8 +229,8 @@ define amdgpu_cs i32 @test_ashr_or_3(i32 inreg %arg1) {
 define amdgpu_cs i32 @test_shl_xor_1(i32 inreg %arg1) {
 ; CHECK-LABEL: test_shl_xor_1:
 ; CHECK:       ; %bb.0: ; %.entry
+; CHECK-NEXT:    s_not_b32 s0, s0
 ; CHECK-NEXT:    s_lshl_b32 s0, s0, 4
-; CHECK-NEXT:    s_xor_b32 s0, s0, -16
 ; CHECK-NEXT:    ; return to shader part epilog
 .entry:
   %z1 = shl i32 %arg1, 2
@@ -267,8 +267,8 @@ define amdgpu_cs i32 @test_shl_xor_3(i32 inreg %arg1) {
 define amdgpu_cs i32 @test_lshr_xor_1(i32 inreg %arg1) {
 ; CHECK-LABEL: test_lshr_xor_1:
 ; CHECK:       ; %bb.0: ; %.entry
+; CHECK-NEXT:    s_not_b32 s0, s0
 ; CHECK-NEXT:    s_lshr_b32 s0, s0, 4
-; CHECK-NEXT:    s_xor_b32 s0, s0, 0xfffffff
 ; CHECK-NEXT:    ; return to shader part epilog
 .entry:
   %z1 = lshr i32 %arg1, 2
@@ -293,7 +293,7 @@ define amdgpu_cs i32 @test_lshr_xor_3(i32 inreg %arg1) {
 ; CHECK-LABEL: test_lshr_xor_3:
 ; CHECK:       ; %bb.0: ; %.entry
 ; CHECK-NEXT:    s_lshr_b32 s0, s0, 5
-; CHECK-NEXT:    s_xor_b32 s0, s0, 0x18000000
+; CHECK-NEXT:    s_or_b32 s0, s0, 0x18000000
 ; CHECK-NEXT:    ; return to shader part epilog
 .entry:
   %z1 = lshr i32 %arg1, 2

@@ -14,7 +14,8 @@ define <8 x i16> @dupsext_v8i8_v8i16(i8 %src, <8 x i8> %b) {
 ; CHECK-GI-LABEL: dupsext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    lsl w8, w0, #8
-; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
+; CHECK-GI-NEXT:    sxth w8, w8
+; CHECK-GI-NEXT:    lsr w8, w8, #8
 ; CHECK-GI-NEXT:    dup v1.8b, w8
 ; CHECK-GI-NEXT:    smull v0.8h, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
@@ -28,18 +29,11 @@ entry:
 }
 
 define <8 x i16> @dupzext_v8i8_v8i16(i8 %src, <8 x i8> %b) {
-; CHECK-SD-LABEL: dupzext_v8i8_v8i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    dup v1.8b, w0
-; CHECK-SD-NEXT:    umull v0.8h, v1.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dupzext_v8i8_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    dup v1.8b, w8
-; CHECK-GI-NEXT:    umull v0.8h, v1.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dupzext_v8i8_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    dup v1.8b, w0
+; CHECK-NEXT:    umull v0.8h, v1.8b, v0.8b
+; CHECK-NEXT:    ret
 entry:
   %in = zext i8 %src to i16
   %ext.b = zext <8 x i8> %b to <8 x i16>
@@ -72,18 +66,11 @@ entry:
 }
 
 define <4 x i32> @dupzext_v4i16_v4i32(i16 %src, <4 x i16> %b) {
-; CHECK-SD-LABEL: dupzext_v4i16_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    dup v1.4h, w0
-; CHECK-SD-NEXT:    umull v0.4s, v1.4h, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dupzext_v4i16_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    dup v1.4h, w8
-; CHECK-GI-NEXT:    umull v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dupzext_v4i16_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    dup v1.4h, w0
+; CHECK-NEXT:    umull v0.4s, v1.4h, v0.4h
+; CHECK-NEXT:    ret
 entry:
   %in = zext i16 %src to i32
   %ext.b = zext <4 x i16> %b to <4 x i32>

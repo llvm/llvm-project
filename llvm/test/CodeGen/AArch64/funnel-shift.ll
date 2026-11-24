@@ -31,23 +31,14 @@ define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
 }
 
 define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) {
-; CHECK-SD-LABEL: fshl_i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsr x8, x1, #1
-; CHECK-SD-NEXT:    mvn w9, w2
-; CHECK-SD-NEXT:    lsl x10, x0, x2
-; CHECK-SD-NEXT:    lsr x8, x8, x9
-; CHECK-SD-NEXT:    orr x0, x10, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fshl_i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    lsr x8, x1, #1
-; CHECK-GI-NEXT:    mvn x9, x2
-; CHECK-GI-NEXT:    lsl x10, x0, x2
-; CHECK-GI-NEXT:    lsr x8, x8, x9
-; CHECK-GI-NEXT:    orr x0, x10, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fshl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x1, #1
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsl x10, x0, x2
+; CHECK-NEXT:    lsr x8, x8, x9
+; CHECK-NEXT:    orr x0, x10, x8
+; CHECK-NEXT:    ret
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 %z)
   ret i64 %f
 }
@@ -72,37 +63,36 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ;
 ; CHECK-GI-LABEL: fshl_i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and x9, x4, #0x7f
-; CHECK-GI-NEXT:    mov w8, #127 // =0x7f
-; CHECK-GI-NEXT:    lsl x13, x1, x4
-; CHECK-GI-NEXT:    neg x11, x9
-; CHECK-GI-NEXT:    bic x8, x8, x4
-; CHECK-GI-NEXT:    extr x14, x3, x2, #1
-; CHECK-GI-NEXT:    lsr x11, x0, x11
-; CHECK-GI-NEXT:    lsr x16, x3, #1
-; CHECK-GI-NEXT:    mvn x10, x4
-; CHECK-GI-NEXT:    lsl x12, x0, x4
-; CHECK-GI-NEXT:    lsl x15, x0, x9
-; CHECK-GI-NEXT:    cmp x9, #64
-; CHECK-GI-NEXT:    orr x9, x11, x13
+; CHECK-GI-NEXT:    and x8, x4, #0x7f
+; CHECK-GI-NEXT:    mvn w9, w4
+; CHECK-GI-NEXT:    lsl x12, x1, x4
 ; CHECK-GI-NEXT:    neg x11, x8
-; CHECK-GI-NEXT:    lsr x13, x14, x10
-; CHECK-GI-NEXT:    lsl x11, x16, x11
-; CHECK-GI-NEXT:    csel x12, x12, xzr, lo
-; CHECK-GI-NEXT:    csel x9, x9, x15, lo
+; CHECK-GI-NEXT:    extr x13, x3, x2, #1
+; CHECK-GI-NEXT:    lsr x14, x3, #1
+; CHECK-GI-NEXT:    lsr x11, x0, x11
+; CHECK-GI-NEXT:    and x15, x9, #0x7f
+; CHECK-GI-NEXT:    lsl x10, x0, x4
+; CHECK-GI-NEXT:    lsl x16, x0, x8
+; CHECK-GI-NEXT:    cmp x8, #64
+; CHECK-GI-NEXT:    neg x8, x15
+; CHECK-GI-NEXT:    orr x11, x11, x12
+; CHECK-GI-NEXT:    lsr x12, x13, x9
+; CHECK-GI-NEXT:    lsl x8, x14, x8
+; CHECK-GI-NEXT:    csel x10, x10, xzr, lo
+; CHECK-GI-NEXT:    csel x11, x11, x16, lo
 ; CHECK-GI-NEXT:    tst x4, #0x7f
-; CHECK-GI-NEXT:    lsr x15, x16, x8
-; CHECK-GI-NEXT:    csel x9, x1, x9, eq
-; CHECK-GI-NEXT:    orr x11, x13, x11
-; CHECK-GI-NEXT:    cmp x8, #64
-; CHECK-GI-NEXT:    lsr x13, x16, x10
-; CHECK-GI-NEXT:    csel x11, x11, x15, lo
-; CHECK-GI-NEXT:    tst x10, #0x7f
-; CHECK-GI-NEXT:    csel x10, x14, x11, eq
-; CHECK-GI-NEXT:    cmp x8, #64
-; CHECK-GI-NEXT:    csel x8, x13, xzr, lo
-; CHECK-GI-NEXT:    orr x0, x12, x10
-; CHECK-GI-NEXT:    orr x1, x9, x8
+; CHECK-GI-NEXT:    lsr x16, x14, x15
+; CHECK-GI-NEXT:    csel x11, x1, x11, eq
+; CHECK-GI-NEXT:    orr x8, x12, x8
+; CHECK-GI-NEXT:    cmp x15, #64
+; CHECK-GI-NEXT:    lsr x12, x14, x9
+; CHECK-GI-NEXT:    csel x8, x8, x16, lo
+; CHECK-GI-NEXT:    tst x9, #0x7f
+; CHECK-GI-NEXT:    csel x8, x13, x8, eq
+; CHECK-GI-NEXT:    cmp x15, #64
+; CHECK-GI-NEXT:    csel x9, x12, xzr, lo
+; CHECK-GI-NEXT:    orr x0, x10, x8
+; CHECK-GI-NEXT:    orr x1, x11, x9
 ; CHECK-GI-NEXT:    ret
   %f = call i128 @llvm.fshl.i128(i128 %x, i128 %y, i128 %z)
   ret i128 %f
@@ -305,7 +295,7 @@ define i64 @fshr_i64(i64 %x, i64 %y, i64 %z) {
 ; CHECK-GI-LABEL: fshr_i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    lsl x8, x0, #1
-; CHECK-GI-NEXT:    mvn x9, x2
+; CHECK-GI-NEXT:    mvn w9, w2
 ; CHECK-GI-NEXT:    lsl x8, x8, x9
 ; CHECK-GI-NEXT:    lsr x9, x1, x2
 ; CHECK-GI-NEXT:    orr x0, x8, x9

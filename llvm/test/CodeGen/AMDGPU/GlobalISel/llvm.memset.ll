@@ -8,52 +8,52 @@ define amdgpu_cs void @memset_p1i8(ptr addrspace(1) %dst, i8 %val) {
 ; LOOP-LABEL: memset_p1i8:
 ; LOOP:       ; %bb.0:
 ; LOOP-NEXT:    v_and_b32_e32 v3, 0xff, v2
-; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 8, v3
-; LOOP-NEXT:    v_or_b32_e32 v4, v3, v4
+; LOOP-NEXT:    v_lshlrev_b32_e32 v7, 8, v3
+; LOOP-NEXT:    v_or_b32_e32 v4, v3, v7
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; LOOP-NEXT:    v_or_b32_e32 v4, v4, v3
-; LOOP-NEXT:    v_lshlrev_b32_e32 v3, 24, v2
-; LOOP-NEXT:    v_or_b32_e32 v4, v4, v3
+; LOOP-NEXT:    v_or_b32_e32 v3, v4, v3
+; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 24, v2
+; LOOP-NEXT:    v_or_b32_e32 v5, v3, v4
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
-; LOOP-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
-; LOOP-NEXT:    v_bfe_u32 v6, v4, 8, 8
+; LOOP-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
+; LOOP-NEXT:    v_lshrrev_b32_e32 v7, 8, v7
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
-; LOOP-NEXT:    v_lshrrev_b32_e32 v7, 24, v4
+; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 24, v4
 ; LOOP-NEXT:  .LBB0_1: ; %static-memset-expansion-main-body
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:1
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:2
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:3
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:4
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:5
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:6
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:7
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:8
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:9
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:10
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:11
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:12
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:13
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:14
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:15
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:16
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:17
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:18
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:19
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:20
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:21
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:22
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:23
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:24
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:25
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:26
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:27
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:28
-; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:29
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:30
-; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:31
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:1
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:2
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:3
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:4
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:5
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:6
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:7
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:8
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:9
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:10
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:11
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:12
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:13
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:14
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:15
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:16
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:17
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:18
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:19
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:20
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:21
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:22
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:23
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:24
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:25
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:26
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:27
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:28
+; LOOP-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:29
+; LOOP-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:30
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:31
 ; LOOP-NEXT:    s_add_u32 s0, s0, 32
 ; LOOP-NEXT:    s_addc_u32 s1, s1, 0
 ; LOOP-NEXT:    s_cmp_lt_u32 s0, 32
@@ -61,22 +61,21 @@ define amdgpu_cs void @memset_p1i8(ptr addrspace(1) %dst, i8 %val) {
 ; LOOP-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; LOOP-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; LOOP-NEXT:    s_waitcnt expcnt(3)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 8, v2
-; LOOP-NEXT:    v_or_b32_e32 v4, v2, v4
+; LOOP-NEXT:    v_lshlrev_b32_e32 v5, 8, v2
+; LOOP-NEXT:    s_waitcnt expcnt(1)
+; LOOP-NEXT:    v_or_b32_e32 v6, v2, v5
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; LOOP-NEXT:    v_or_b32_e32 v2, v4, v2
-; LOOP-NEXT:    v_or_b32_e32 v2, v2, v3
-; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; LOOP-NEXT:    v_or_b32_e32 v2, v6, v2
+; LOOP-NEXT:    v_or_b32_e32 v2, v2, v4
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
-; LOOP-NEXT:    v_bfe_u32 v4, v2, 8, 8
+; LOOP-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v5, 8, v5
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:32
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:33
-; LOOP-NEXT:    s_waitcnt expcnt(1)
-; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
-; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:34
-; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:35
+; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:33
+; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:34
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:35
 ; LOOP-NEXT:    s_endpgm
 ;
 ; UNROLL-LABEL: memset_p1i8:
