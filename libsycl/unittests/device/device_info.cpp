@@ -202,6 +202,28 @@ TEST_F(DeviceInfoTest, FPConfig) {
   EXPECT_THAT(Device.get_info<info::device::double_fp_config>(), IsEmpty());
 }
 
+TEST_F(DeviceInfoTest, DoubleFPConfigWithoutCorrectlyRoundedDivideSqrt) {
+  // correctly_rounded_divide_sqrt is only defined for single precision, so it
+  // is dropped from double_fp_config even if liboffload reports it.
+  mockDeviceInfo<ol_device_fp_capability_flags_t>(
+      getMock(), OL_DEVICE_INFO_DOUBLE_FP_CONFIG,
+      OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+          OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+          OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
+          OL_DEVICE_FP_CAPABILITY_FLAG_FMA |
+          OL_DEVICE_FP_CAPABILITY_FLAG_SOFT_FLOAT);
+
+  EXPECT_THAT(Device.get_info<info::device::double_fp_config>(),
+              UnorderedElementsAre(
+                  info::fp_config::round_to_nearest,
+                  info::fp_config::round_to_zero, info::fp_config::round_to_inf,
+                  info::fp_config::inf_nan, info::fp_config::denorm,
+                  info::fp_config::fma, info::fp_config::soft_float));
+}
+
 TEST_F(DeviceInfoTest, Strings) {
   mockDeviceInfoString(getMock(), OL_DEVICE_INFO_PRODUCT_NAME, "Mock GPU");
   mockDeviceInfoString(getMock(), OL_DEVICE_INFO_VENDOR, "Mock Vendor");

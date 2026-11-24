@@ -99,7 +99,7 @@ public:
   /// param.
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type getInfo() const {
-    // TODO implement caching
+    // TODO: implement caching.
     using namespace info::device;
     using Map = InfoOLMapping<ol_device_info_t>;
 
@@ -162,8 +162,12 @@ public:
     } else if constexpr (std::is_arithmetic_v<RetT>) {
       return getOLInfoAs<RetT>(OLInfo);
     } else if constexpr (std::is_same_v<RetT, std::vector<info::fp_config>>) {
+      // correctly_rounded_divide_sqrt doesn't apply to double precision, whose
+      // divide and sqrt are required to be correctly rounded anyway.
       return convertFPConfigToSYCL(
-          getOLInfoAs<ol_device_fp_capability_flags_t>(OLInfo));
+          getOLInfoAs<ol_device_fp_capability_flags_t>(OLInfo),
+          /*AllowCorrectlyRoundedDivideSqrt=*/
+          !std::is_same_v<Param, double_fp_config>);
     } else if constexpr (std::is_same_v<RetT, info::device_type>) {
       return convertDeviceTypeToSYCL(getOLInfoAs<ol_device_type_t>(OLInfo));
     } else if constexpr (std::is_same_v<RetT, std::string>) {

@@ -99,7 +99,11 @@ info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType) {
 }
 
 std::vector<info::fp_config>
-convertFPConfigToSYCL(ol_device_fp_capability_flags_t Flags) {
+convertFPConfigToSYCL(ol_device_fp_capability_flags_t Flags,
+                      bool AllowCorrectlyRoundedDivideSqrt) {
+  if (!AllowCorrectlyRoundedDivideSqrt)
+    Flags &= ~OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT;
+
   constexpr std::pair<ol_device_fp_capability_flag_t, info::fp_config>
       FlagMap[] = {
           {OL_DEVICE_FP_CAPABILITY_FLAG_DENORM, info::fp_config::denorm},

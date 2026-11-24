@@ -167,10 +167,14 @@ info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
 /// Converts liboffload floating point capability flags to SYCL fp_config list.
 ///
 /// \param Flags liboffload floating point capability bitfield.
+/// \param AllowCorrectlyRoundedDivideSqrt whether
+/// info::fp_config::correctly_rounded_divide_sqrt may be reported. SYCL does
+/// not define it for info::device::double_fp_config.
 ///
-/// \return SYCL fp_config values matching the bits set in Flags.
+/// \return SYCL fp_config values matching the bits set in \p Flags.
 std::vector<info::fp_config>
-convertFPConfigToSYCL(ol_device_fp_capability_flags_t Flags);
+convertFPConfigToSYCL(ol_device_fp_capability_flags_t Flags,
+                      bool AllowCorrectlyRoundedDivideSqrt);
 
 /// Converts a SYCL USM kind to a liboffload type.
 ///
