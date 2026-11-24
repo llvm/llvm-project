@@ -140,7 +140,7 @@ L#tmp1   EQU L#stack_update0-main
          DC A(L#EPM_main_0-L#PPA1_main_0)
 
 main#C   CSECT
-C_WSA64  CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
+C_DATA   CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
                in#S)
 main#S   XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 * Case A: V(ext)
@@ -186,7 +186,7 @@ C_OTHER  CATTR ALIGN(3),FILL(0),READONLY,RMODE(64)
          bcr 0,0
 
 main#C   CSECT
-C_WSA64  CATTR PART(main#S)
+C_DATA   CATTR PART(main#S)
          EXTRN PART(ExtPart)
 
          END

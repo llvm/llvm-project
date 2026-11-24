@@ -21,10 +21,10 @@
 *
 * ESDIDs, in order of definition:
 *    1 SD #C        2 ED C_CODE64     (root SD that owns the ERs)
-*    3 SD main#C    4 ED C_CODE64     5 ED C_WSA64
+*    3 SD main#C    4 ED C_CODE64     5 ED C_DATA
 *    6 PR main#S    7 ED C_PREG64 (NAMESPACE(PSEUDOREG))
 *    8 PR DumLoc    9 LD main        10 ER C_CODE64
-*   11 ER C_WSA64  12 ER C_PREG64    13 PR ExtDummy
+*   11 ER C_DATA  12 ER C_PREG64    13 PR ExtDummy
 *   14 ER ExtCsect
 *
 * The P pointer is always ESDID 6 (the main#S pointer section). The items are
@@ -33,7 +33,7 @@
 *
 * Kinds of symbols (offsets are in main#S):
 *   A. class (code class)                 C_CODE64             (ER, R=10, offset 0)
-*   B. class (WSA class)                  C_WSA64              (ER, R=11, offset 8)
+*   B. class (WSA class)                  C_DATA              (ER, R=11, offset 8)
 *   C. class (pseudo-register class)      C_PREG64             (ER, R=12, offset 16)
 *   D. external dummy section             EXTRN PART(ExtDummy) (PR in the pseudo
 *                                                               register class,
@@ -52,7 +52,7 @@
 * RLD-SAME: 0020000008000000000000080000000600000020
 * R=10 (C_CODE64): case A at 0.
 * RLD-SAME: 40200000080000000000000a00000000
-* R=11 (C_WSA64): case B at 8.
+* R=11 (C_DATA): case B at 8.
 * RLD-SAME: 40200000080000000000000b00000008
 * R=12 (C_PREG64): case C at 16.
 * RLD-SAME: 40200000080000000000000c00000010
@@ -81,13 +81,13 @@ main     DS 0H
          b 2(7)
 
 main#C   CSECT
-C_WSA64  CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
+C_DATA   CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
                in#S)
 main#S   XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 * Case A: class (code class).
          DC JD(C_CODE64)
 * Case B: class (WSA class).
-         DC JD(C_WSA64)
+         DC JD(C_DATA)
 * Case C: class (pseudo-register class).
          DC JD(C_PREG64)
 * Case D: external dummy section.

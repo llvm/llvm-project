@@ -22,7 +22,7 @@
 *
 * ESDIDs, in order of definition:
 *    1 SD #C        2 ED C_CODE64     (root SD that owns the ERs)
-*    3 SD main#C    4 ED C_CODE64     5 ED C_WSA64
+*    3 SD main#C    4 ED C_CODE64     5 ED C_DATA
 *    6 PR main#S    7 ED C_OTHER      8 SD Other#C
 *   10 LD main     11 ER ExtFunc     12 ER ExtSym
 *   13 LD OtherSecLabel
@@ -94,7 +94,7 @@ ExtFunc  XATTR LINKAGE(XPLINK),SCOPE(EXPORT)
 ExtSym   XATTR LINKAGE(XPLINK),SCOPE(EXPORT)
 
 main#C   CSECT
-C_WSA64  CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
+C_DATA   CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
                in#S)
 main#S   XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
          DS 0D

@@ -22,7 +22,7 @@
 *
 * ESDIDs, in order of definition:
 *    1 SD #C        2 ED C_CODE64     (root SD that owns the ERs)
-*    3 SD main#C    4 ED C_CODE64     5 ED C_WSA64
+*    3 SD main#C    4 ED C_CODE64     5 ED C_DATA
 *    6 PR main#S    7 SD Other#C      8 ED C_CODE64     9 ED C_OTHER
 *   10 PR LocPart  11 LD main        12 ER ExtElem     13 PR ExtPart
 *   14 ER Other#C
@@ -92,7 +92,7 @@ main     DS 0H
          b 2(7)
 
 main#C   CSECT
-C_WSA64  CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
+C_DATA   CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(mai
                in#S)
 main#S   XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 * Case A: external element.
@@ -123,14 +123,14 @@ C_OTHER  CATTR ALIGN(3),FILL(0),READONLY,RMODE(64)
          bcr 0,0
 
 main#C   CSECT
-C_WSA64  CATTR ALIGN(3),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(Loc
+C_DATA   CATTR ALIGN(3),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(Loc
                cPart)
 LocPart  XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
 LocPart  DS 0H
          DC XL4'00000000'
 
 main#C   CSECT
-C_WSA64  CATTR PART(main#S)
+C_DATA   CATTR PART(main#S)
          EXTRN PART(ExtPart)
 
 main#C   CSECT
