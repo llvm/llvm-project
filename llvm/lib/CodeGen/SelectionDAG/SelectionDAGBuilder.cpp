@@ -10503,6 +10503,37 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     // Compute the constraint code and ConstraintType to use.
     TLI.ComputeConstraintToUse(OpInfo, OpInfo.CallOperand, &DAG);
 
+    // A label (e.g. "!i") is a branch target. It has no value in memory, to
+    // take the address of, or to point to.
+    if (OpInfo.Type == InlineAsm::isLabel) {
+      if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
+        Info.ErrorMsg << "cannot handle memory constraint '"
+                      << OpInfo.ConstraintCode << "' for a label";
+        return true;
+      }
+
+      if (OpInfo.ConstraintType == TargetLowering::C_Address) {
+        Info.ErrorMsg << "cannot handle address constraint '"
+                      << OpInfo.ConstraintCode << "' for a label";
+        return true;
+      }
+
+      if (OpInfo.isIndirect) {
+        Info.ErrorMsg << "cannot handle indirect labels for constraint '"
+                      << OpInfo.ConstraintCode << "'";
+        return true;
+      }
+    }
+
+    // An address constraint (e.g. "p") passes an address to the asm, which
+    // only an input has.
+    if (OpInfo.ConstraintType == TargetLowering::C_Address &&
+        OpInfo.Type == InlineAsm::isOutput) {
+      Info.ErrorMsg << "cannot handle address constraint '"
+                    << OpInfo.ConstraintCode << "' for an output";
+      return true;
+    }
+
     if ((OpInfo.ConstraintType == TargetLowering::C_Memory &&
          OpInfo.Type == InlineAsm::isClobber) ||
         OpInfo.ConstraintType == TargetLowering::C_Address)
@@ -10532,14 +10563,6 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
         TM.getCodeModel() != CodeModel::Large) {
       OpInfo.isIndirect = false;
       OpInfo.ConstraintType = TargetLowering::C_Address;
-    }
-
-    // A label (e.g. "!m") is a branch target, which has no value in memory.
-    if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
-        OpInfo.Type == InlineAsm::isLabel) {
-      Info.ErrorMsg << "cannot handle memory constraint '"
-                    << OpInfo.ConstraintCode << "' for a label";
-      return true;
     }
 
     // A direct operand with a memory constraint needs an address. An input's
