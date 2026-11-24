@@ -9,13 +9,8 @@
 #ifndef LLDB_HOST_XML_H
 #define LLDB_HOST_XML_H
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_LIBXML2
-#include <libxml/xmlreader.h>
-#endif
-
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -27,14 +22,7 @@
 
 namespace lldb_private {
 
-#if LLDB_ENABLE_LIBXML2
-typedef xmlNodePtr XMLNodeImpl;
-typedef xmlDocPtr XMLDocumentImpl;
-#else
-typedef void *XMLNodeImpl;
-typedef void *XMLDocumentImpl;
-#endif
-
+struct XMLNodeImpl;
 class XMLNode;
 
 typedef std::vector<std::string> NamePath;
@@ -47,7 +35,7 @@ class XMLNode {
 public:
   XMLNode();
 
-  XMLNode(XMLNodeImpl node);
+  XMLNode(const XMLNodeImpl *node);
 
   ~XMLNode();
 
@@ -107,7 +95,7 @@ public:
   void ForEachAttribute(AttributeCallback const &callback) const;
 
 protected:
-  XMLNodeImpl m_node = nullptr;
+  const XMLNodeImpl *m_node = nullptr;
 };
 
 class XMLDocument {
@@ -133,12 +121,10 @@ public:
 
   llvm::StringRef GetErrors() const;
 
-  static void ErrorCallback(void *ctx, const char *format, ...);
-
   static bool XMLEnabled();
 
 protected:
-  XMLDocumentImpl m_document = nullptr;
+  std::unique_ptr<XMLNodeImpl> m_document;
   StreamString m_errors;
 };
 

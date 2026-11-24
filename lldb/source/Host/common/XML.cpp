@@ -6,66 +6,116 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
 #include "lldb/Host/XML.h"
+#include "lldb/Host/XMLParser.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+struct lldb_private::XMLNodeImpl {
+  bool is_element = false;
+  /// The element name, empty for text nodes.
+  std::string name;
+  /// The character data of a text node.
+  std::string text;
+  std::vector<std::pair<std::string, std::string>> attributes;
+  XMLNodeImpl *parent = nullptr;
+  XMLNodeImpl *next = nullptr;
+  std::vector<std::unique_ptr<XMLNodeImpl>> children;
+
+  ~XMLNodeImpl() {
+    std::vector<std::unique_ptr<XMLNodeImpl>> pending = std::move(children);
+    while (!pending.empty()) {
+      std::vector<std::unique_ptr<XMLNodeImpl>> grandchildren =
+          std::move(pending.back()->children);
+      pending.pop_back();
+      for (std::unique_ptr<XMLNodeImpl> &node : grandchildren)
+        pending.push_back(std::move(node));
+    }
+  }
+};
+
+namespace {
+class TreeBuilder : public xml::Handler {
+public:
+  explicit TreeBuilder(XMLNodeImpl &document) : m_current(&document) {}
+
+  void StartElement(llvm::StringRef name,
+                    llvm::ArrayRef<xml::Attribute> attributes) override {
+    XMLNodeImpl &node = AddChild();
+    node.is_element = true;
+    node.name = name.str();
+    for (const xml::Attribute &attr : attributes)
+      node.attributes.emplace_back(attr.name.str(), attr.value.str());
+    m_current = &node;
+  }
+
+  void EndElement(llvm::StringRef name) override {
+    m_current = m_current->parent;
+  }
+
+  void Characters(llvm::StringRef text) override {
+    if (m_current->children.empty() || m_current->children.back()->is_element)
+      AddChild();
+    m_current->children.back()->text.append(text);
+  }
+
+private:
+  XMLNodeImpl &AddChild() {
+    auto node = std::make_unique<XMLNodeImpl>();
+    node->parent = m_current;
+    if (!m_current->children.empty())
+      m_current->children.back()->next = node.get();
+    m_current->children.push_back(std::move(node));
+    return *m_current->children.back();
+  }
+
+  XMLNodeImpl *m_current;
+};
+} // namespace
 
 #pragma mark-- XMLDocument
 
 XMLDocument::XMLDocument() = default;
 
-XMLDocument::~XMLDocument() { Clear(); }
+XMLDocument::~XMLDocument() = default;
 
-void XMLDocument::Clear() {
-#if LLDB_ENABLE_LIBXML2
-  if (m_document) {
-    xmlDocPtr doc = m_document;
-    m_document = nullptr;
-    xmlFreeDoc(doc);
-  }
-#endif
-}
+void XMLDocument::Clear() { m_document.reset(); }
 
 bool XMLDocument::IsValid() const { return m_document != nullptr; }
 
-void XMLDocument::ErrorCallback(void *ctx, const char *format, ...) {
-  XMLDocument *document = (XMLDocument *)ctx;
-  va_list args;
-  va_start(args, format);
-  document->m_errors.PrintfVarArg(format, args);
-  document->m_errors.EOL();
-  va_end(args);
-}
-
 bool XMLDocument::ParseFile(const char *path) {
-#if LLDB_ENABLE_LIBXML2
   Clear();
-  xmlSetGenericErrorFunc((void *)this, XMLDocument::ErrorCallback);
-  m_document = xmlReadFile(path, nullptr, 0);
-  xmlSetGenericErrorFunc(nullptr, nullptr);
-#endif
-  return IsValid();
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
+      llvm::MemoryBuffer::getFile(path);
+  if (!buffer) {
+    m_errors.Printf("%s: %s\n", path, buffer.getError().message().c_str());
+    return false;
+  }
+  return ParseMemory((*buffer)->getBufferStart(), (*buffer)->getBufferSize(),
+                     path);
 }
 
 bool XMLDocument::ParseMemory(const char *xml, size_t xml_length,
                               const char *url) {
-#if LLDB_ENABLE_LIBXML2
   Clear();
-  xmlSetGenericErrorFunc((void *)this, XMLDocument::ErrorCallback);
-  m_document = xmlReadMemory(xml, (int)xml_length, url, nullptr, 0);
-  xmlSetGenericErrorFunc(nullptr, nullptr);
-#endif
-  return IsValid();
+  auto document = std::make_unique<XMLNodeImpl>();
+  TreeBuilder builder(*document);
+  if (llvm::Error error =
+          xml::Parse(llvm::StringRef(xml, xml_length), builder)) {
+    m_errors.Printf("%s: %s\n", url, llvm::toString(std::move(error)).c_str());
+    return false;
+  }
+  m_document = std::move(document);
+  return true;
 }
 
 XMLNode XMLDocument::GetRootElement(const char *required_name) {
-#if LLDB_ENABLE_LIBXML2
   if (IsValid()) {
-    XMLNode root_node(xmlDocGetRootElement(m_document));
+    XMLNode root_node(m_document->children.front().get());
     if (required_name) {
       llvm::StringRef actual_name = root_node.GetName();
       if (actual_name == required_name)
@@ -74,82 +124,55 @@ XMLNode XMLDocument::GetRootElement(const char *required_name) {
       return root_node;
     }
   }
-#endif
   return XMLNode();
 }
 
 llvm::StringRef XMLDocument::GetErrors() const { return m_errors.GetString(); }
 
-bool XMLDocument::XMLEnabled() {
-#if LLDB_ENABLE_LIBXML2
-  return true;
-#else
-  return false;
-#endif
-}
+bool XMLDocument::XMLEnabled() { return true; }
 
 #pragma mark-- XMLNode
 
 XMLNode::XMLNode() = default;
 
-XMLNode::XMLNode(XMLNodeImpl node) : m_node(node) {}
+XMLNode::XMLNode(const XMLNodeImpl *node) : m_node(node) {}
 
 XMLNode::~XMLNode() = default;
 
 void XMLNode::Clear() { m_node = nullptr; }
 
 XMLNode XMLNode::GetParent() const {
-#if LLDB_ENABLE_LIBXML2
   if (IsValid())
     return XMLNode(m_node->parent);
   else
     return XMLNode();
-#else
-  return XMLNode();
-#endif
 }
 
 XMLNode XMLNode::GetSibling() const {
-#if LLDB_ENABLE_LIBXML2
   if (IsValid())
     return XMLNode(m_node->next);
   else
     return XMLNode();
-#else
-  return XMLNode();
-#endif
 }
 
 XMLNode XMLNode::GetChild() const {
-#if LLDB_ENABLE_LIBXML2
-
-  if (IsValid())
-    return XMLNode(m_node->children);
+  if (IsValid() && !m_node->children.empty())
+    return XMLNode(m_node->children.front().get());
   else
     return XMLNode();
-#else
-  return XMLNode();
-#endif
 }
 
 std::string XMLNode::GetAttributeValue(const char *name,
                                        const char *fail_value) const {
   std::string attr_value;
-#if LLDB_ENABLE_LIBXML2
   if (IsValid()) {
-    xmlChar *value = xmlGetProp(m_node, (const xmlChar *)name);
-    if (value) {
-      attr_value = (const char *)value;
-      xmlFree(value);
-    }
+    for (const auto &[attr_name, value] : m_node->attributes)
+      if (attr_name == name)
+        attr_value = value;
   } else {
     if (fail_value)
       attr_value = fail_value;
   }
-#else
-  if (fail_value)
-    attr_value = fail_value;
-#endif
   return attr_value;
 }
 
@@ -160,139 +183,96 @@ bool XMLNode::GetAttributeValueAsUnsigned(const char *name, uint64_t &value,
 }
 
 void XMLNode::ForEachChildNode(NodeCallback const &callback) const {
-#if LLDB_ENABLE_LIBXML2
   if (IsValid())
     GetChild().ForEachSiblingNode(callback);
-#endif
 }
 
 void XMLNode::ForEachChildElement(NodeCallback const &callback) const {
-#if LLDB_ENABLE_LIBXML2
   XMLNode child = GetChild();
   if (child)
     child.ForEachSiblingElement(callback);
-#endif
 }
 
 void XMLNode::ForEachChildElementWithName(const char *name,
                                           NodeCallback const &callback) const {
-#if LLDB_ENABLE_LIBXML2
   XMLNode child = GetChild();
   if (child)
     child.ForEachSiblingElementWithName(name, callback);
-#endif
 }
 
 void XMLNode::ForEachAttribute(AttributeCallback const &callback) const {
-#if LLDB_ENABLE_LIBXML2
-
   if (IsValid()) {
-    for (xmlAttrPtr attr = m_node->properties; attr != nullptr;
-         attr = attr->next) {
-      // check if name matches
-      if (attr->name) {
-        // check child is a text node
-        xmlNodePtr child = attr->children;
-        if (child->type == XML_TEXT_NODE) {
-          llvm::StringRef attr_value;
-          if (child->content)
-            attr_value = llvm::StringRef((const char *)child->content);
-          if (!callback(llvm::StringRef((const char *)attr->name), attr_value))
-            return;
-        }
-      }
-    }
+    for (const auto &[name, value] : m_node->attributes)
+      if (!callback(name, value))
+        return;
   }
-#endif
 }
 
 void XMLNode::ForEachSiblingNode(NodeCallback const &callback) const {
-#if LLDB_ENABLE_LIBXML2
-
   if (IsValid()) {
     // iterate through all siblings
-    for (xmlNodePtr node = m_node; node; node = node->next) {
+    for (const XMLNodeImpl *node = m_node; node; node = node->next) {
       if (!callback(XMLNode(node)))
         return;
     }
   }
-#endif
 }
 
 void XMLNode::ForEachSiblingElement(NodeCallback const &callback) const {
-#if LLDB_ENABLE_LIBXML2
-
   if (IsValid()) {
     // iterate through all siblings
-    for (xmlNodePtr node = m_node; node; node = node->next) {
+    for (const XMLNodeImpl *node = m_node; node; node = node->next) {
       // we are looking for element nodes only
-      if (node->type != XML_ELEMENT_NODE)
+      if (!node->is_element)
         continue;
 
       if (!callback(XMLNode(node)))
         return;
     }
   }
-#endif
 }
 
 void XMLNode::ForEachSiblingElementWithName(
     const char *name, NodeCallback const &callback) const {
-#if LLDB_ENABLE_LIBXML2
-
   if (IsValid()) {
     // iterate through all siblings
-    for (xmlNodePtr node = m_node; node; node = node->next) {
+    for (const XMLNodeImpl *node = m_node; node; node = node->next) {
       // we are looking for element nodes only
-      if (node->type != XML_ELEMENT_NODE)
+      if (!node->is_element)
         continue;
 
       // If name is nullptr, we take all nodes of type "t", else just the ones
-      // whose name matches
-      if (name) {
-        if (strcmp((const char *)node->name, name) != 0)
-          continue; // Name mismatch, ignore this one
-      } else {
-        if (node->name)
-          continue; // nullptr name specified and this element has a name,
-                    // ignore this one
-      }
+      // whose name matches. Elements always have a name.
+      if (!name || node->name != name)
+        continue;
 
       if (!callback(XMLNode(node)))
         return;
     }
   }
-#endif
 }
 
 llvm::StringRef XMLNode::GetName() const {
-#if LLDB_ENABLE_LIBXML2
-  if (IsValid()) {
-    if (m_node->name)
-      return llvm::StringRef((const char *)m_node->name);
-  }
-#endif
+  if (IsValid())
+    return m_node->name;
   return llvm::StringRef();
 }
 
 bool XMLNode::GetElementText(std::string &text) const {
   text.clear();
-#if LLDB_ENABLE_LIBXML2
   if (IsValid()) {
     bool success = false;
-    if (m_node->type == XML_ELEMENT_NODE) {
+    if (m_node->is_element) {
       // check child is a text node
-      for (xmlNodePtr node = m_node->children; node != nullptr;
-           node = node->next) {
-        if (node->type == XML_TEXT_NODE) {
-          text.append((const char *)node->content);
+      for (const auto &node : m_node->children) {
+        if (!node->is_element) {
+          text.append(node->text);
           success = true;
         }
       }
     }
     return success;
   }
-#endif
   return false;
 }
 
@@ -312,47 +292,27 @@ bool XMLNode::GetElementTextAsFloat(double &value, double fail_value) const {
 }
 
 bool XMLNode::NameIs(const char *name) const {
-#if LLDB_ENABLE_LIBXML2
-
-  if (IsValid()) {
-    // In case we are looking for a nullptr name or an exact pointer match
-    if (m_node->name == (const xmlChar *)name)
-      return true;
-    if (m_node->name)
-      return strcmp((const char *)m_node->name, name) == 0;
-  }
-#endif
-  return false;
+  return IsValid() && name && m_node->name == name;
 }
 
 XMLNode XMLNode::FindFirstChildElementWithName(const char *name) const {
   XMLNode result_node;
 
-#if LLDB_ENABLE_LIBXML2
-  ForEachChildElementWithName(
-      name, [&result_node](const XMLNode &node) -> bool {
-        result_node = node;
-        // Stop iterating, we found the node we wanted
-        return false;
-      });
-#endif
+  ForEachChildElementWithName(name,
+                              [&result_node](const XMLNode &node) -> bool {
+                                result_node = node;
+                                // Stop iterating, we found the node we wanted
+                                return false;
+                              });
 
   return result_node;
 }
 
 bool XMLNode::IsValid() const { return m_node != nullptr; }
 
-bool XMLNode::IsElement() const {
-#if LLDB_ENABLE_LIBXML2
-  if (IsValid())
-    return m_node->type == XML_ELEMENT_NODE;
-#endif
-  return false;
-}
+bool XMLNode::IsElement() const { return IsValid() && m_node->is_element; }
 
 XMLNode XMLNode::GetElementForPath(const NamePath &path) {
-#if LLDB_ENABLE_LIBXML2
-
   if (IsValid()) {
     if (path.empty())
       return *this;
@@ -364,7 +324,6 @@ XMLNode XMLNode::GetElementForPath(const NamePath &path) {
       return node;
     }
   }
-#endif
 
   return XMLNode();
 }
@@ -411,7 +370,6 @@ bool ApplePropertyList::GetValueAsString(const char *key,
 
 XMLNode ApplePropertyList::GetValueNode(const char *key) const {
   XMLNode value_node;
-#if LLDB_ENABLE_LIBXML2
 
   if (IsValid()) {
     m_dict_node.ForEachChildElementWithName(
@@ -428,14 +386,12 @@ XMLNode ApplePropertyList::GetValueNode(const char *key) const {
           return true; // Keep iterating
         });
   }
-#endif
   return value_node;
 }
 
 bool ApplePropertyList::ExtractStringFromValueNode(const XMLNode &node,
                                                    std::string &value) {
   value.clear();
-#if LLDB_ENABLE_LIBXML2
   if (node.IsValid()) {
     llvm::StringRef element_name = node.GetName();
     if (element_name == "true" || element_name == "false") {
@@ -447,11 +403,8 @@ bool ApplePropertyList::ExtractStringFromValueNode(const XMLNode &node,
     else
       return node.GetElementText(value);
   }
-#endif
   return false;
 }
-
-#if LLDB_ENABLE_LIBXML2
 
 static StructuredData::ObjectSP CreatePlistValue(XMLNode node) {
   llvm::StringRef element_name = node.GetName();
@@ -506,14 +459,11 @@ static StructuredData::ObjectSP CreatePlistValue(XMLNode node) {
   }
   return StructuredData::ObjectSP(new StructuredData::Null());
 }
-#endif
 
 StructuredData::ObjectSP ApplePropertyList::GetStructuredData() {
   StructuredData::ObjectSP root_sp;
-#if LLDB_ENABLE_LIBXML2
   if (IsValid()) {
     return CreatePlistValue(m_dict_node);
   }
-#endif
   return root_sp;
 }
