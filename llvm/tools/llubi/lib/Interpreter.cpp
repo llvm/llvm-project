@@ -116,7 +116,7 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
   if (!MO)
     return true;
 
-  if (MO->getState() == MemoryObjectState::Freed)
+  if (MO->getState() == MemoryObjectState::Freed || MO->isInaccessible())
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -1183,6 +1183,10 @@ public:
       handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
       handleMetadata(RetTy, RetVal, CB);
     }
+    if (CurrentFrame->HasInaccessibleStackObjects) {
+      setFrameStackInaccessible(*CurrentFrame, false);
+      CurrentFrame->HasInaccessibleStackObjects = false;
+    }
     setResult(CB, std::move(RetVal));
 
     for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
@@ -1557,6 +1561,11 @@ public:
                                      [](const Provenance &) { return true; });
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
+      if (MO->isInaccessible()) {
+        reportImmediateUB() << "Try to access an inaccessible memory object: "
+                            << Ptr.asPointer() << ".";
+        return AnyValue();
+      }
       if (IID == Intrinsic::lifetime_start) {
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
@@ -2440,6 +2449,21 @@ public:
     }
   }
 
+  void setFrameStackInaccessible(Frame &F, bool Inaccessible) {
+    for (auto &Obj : F.Allocas) {
+      assert(Obj->isInaccessible() != Inaccessible &&
+             "Unexpected stack object accessibility state.");
+      Obj->setIsInaccessible(Inaccessible);
+    }
+    if (F.LastFrame) {
+      for (auto &Obj : F.LastFrame->CalleeByValArgs) {
+        assert(Obj->isInaccessible() != Inaccessible &&
+               "Unexpected byval object accessibility state.");
+        Obj->setIsInaccessible(Inaccessible);
+      }
+    }
+  }
+
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
     // TODO: handle initializes
@@ -2489,8 +2513,8 @@ public:
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
 
-    // Handle parameter attributes (Attributes from resolved callee should be
-    // applied if available).
+    // Copy byval arguments before marking caller stack objects inaccessible on
+    // tail calls.
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
@@ -2556,8 +2580,24 @@ public:
           ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
         }
       }
+    }
+
+    if (CB.isTailCall()) {
+      setFrameStackInaccessible(*CurrentFrame, true);
+      CurrentFrame->HasInaccessibleStackObjects = true;
+    }
+
+    // Handle parameter attributes (Attributes from resolved callee should be
+    // applied if available).
+    for (auto [I, Arg] : enumerate(CB.args())) {
+      Type *ArgTy = Arg->getType();
+      AnyValue &ArgVal = CalleeArgs[I];
+      AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
+      AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
+    if (hasProgramExited())
+      return;
 
     CurrentFrame->ResolvedCallee = Callee;
     ArrayRef<AnyValue> Args = CalleeArgs;

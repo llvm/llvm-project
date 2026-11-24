@@ -1790,7 +1790,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   // 'An assignment expression has the value of the left operand after the
   // assignment...'.
   if (lhsLV.isBitField())
-    cgf.emitStoreThroughBitfieldLValue(RValue::get(result), lhsLV);
+    result = cgf.emitStoreThroughBitfieldLValue(RValue::get(result), lhsLV);
   else
     cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
 

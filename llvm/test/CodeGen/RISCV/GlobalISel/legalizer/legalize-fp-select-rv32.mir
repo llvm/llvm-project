@@ -14,16 +14,16 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $f10_d
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f64) = COPY $f11_d
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(f64) = G_SELECT [[AND]](s32), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(f64) = G_SELECT [[AND]](i32), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $f10_d = COPY [[SELECT]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %3:_(i32) = COPY $x10
     %0:_(i1) = G_TRUNC %3(i32)
     %1:_(f64) = COPY $f10_d
     %2:_(f64) = COPY $f11_d
-    %4:_(f64) = G_SELECT %0(s1), %1, %2
+    %4:_(f64) = G_SELECT %0(i1), %1, %2
     $f10_d = COPY %4(f64)
     PseudoRET implicit $f10_d
 

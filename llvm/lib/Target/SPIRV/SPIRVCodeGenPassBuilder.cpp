@@ -90,6 +90,8 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 
   flushFPMsToMPM(PMW);
 
+  addModulePass(SPIRVLowerResourceNamesPass(), PMW);
+
   if (getTM().getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None) {
       addModulePass(SPIRVFinalizeShaderLinkagePass(getTM()), PMW);

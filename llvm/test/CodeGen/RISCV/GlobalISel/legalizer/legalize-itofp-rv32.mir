@@ -12,10 +12,10 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[SHL]], [[C]](i32)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](i32)
     ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %1:_(i32) = COPY $x10
@@ -35,9 +35,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](i32)
     ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %1:_(i32) = COPY $x10
@@ -57,10 +57,10 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[SHL]], [[C]](i32)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](i32)
     ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %1:_(i32) = COPY $x10
@@ -80,9 +80,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](i32)
     ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %1:_(i32) = COPY $x10
@@ -102,10 +102,10 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[SHL]], [[C]](i32)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](i32)
     ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %1:_(i32) = COPY $x10
@@ -125,9 +125,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](i32)
     ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %1:_(i32) = COPY $x10
@@ -185,10 +185,10 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[SHL]], [[C]](i32)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](i32)
     ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %1:_(i32) = COPY $x10
@@ -208,9 +208,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](i32)
     ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %1:_(i32) = COPY $x10
@@ -230,10 +230,10 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[SHL]], [[C]](i32)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](i32)
     ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %1:_(i32) = COPY $x10
@@ -253,9 +253,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](i32)
     ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %1:_(i32) = COPY $x10
@@ -275,10 +275,10 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[SHL]], [[C]](i32)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](i32)
     ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %1:_(i32) = COPY $x10
@@ -298,9 +298,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](i32)
     ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %1:_(i32) = COPY $x10

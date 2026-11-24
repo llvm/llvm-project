@@ -1093,12 +1093,11 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
-; GFX7-GI-NEXT:    v_mov_b32_e32 v4, 0
-; GFX7-GI-NEXT:    v_mov_b32_e32 v5, 0x3df00000
+; GFX7-GI-NEXT:    s_movk_i32 s4, 0xffe0
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v7, 0xc1f00000
 ; GFX7-GI-NEXT:    v_cmp_u_f64_e64 s[6:7], v[0:1], v[0:1]
-; GFX7-GI-NEXT:    v_mul_f64 v[4:5], v[2:3], v[4:5]
+; GFX7-GI-NEXT:    v_ldexp_f64 v[4:5], v[2:3], s4
 ; GFX7-GI-NEXT:    v_floor_f64_e32 v[4:5], v[4:5]
 ; GFX7-GI-NEXT:    v_fma_f64 v[2:3], v[4:5], v[6:7], v[2:3]
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v6, -1
@@ -1209,7 +1208,7 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; GFX12-GI-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
 ; GFX12-GI-NEXT:    v_cmp_nle_f64_e32 vcc_lo, 0xc3e00000, v[0:1]
 ; GFX12-GI-NEXT:    v_cmp_u_f64_e64 s1, v[0:1], v[0:1]
-; GFX12-GI-NEXT:    v_mul_f64_e32 v[4:5], 0x3df00000, v[2:3]
+; GFX12-GI-NEXT:    v_ldexp_f64 v[4:5], v[2:3], 0xffffffe0
 ; GFX12-GI-NEXT:    v_floor_f64_e32 v[4:5], v[4:5]
 ; GFX12-GI-NEXT:    v_fma_f64 v[2:3], v[4:5], 0xc1f00000, v[2:3]
 ; GFX12-GI-NEXT:    v_cvt_i32_f64_e32 v4, v[4:5]
@@ -1495,15 +1494,14 @@ define i64 @test_s_signed_i64_f64(double inreg %f) nounwind {
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_trunc_f64_e32 v[0:1], s[16:17]
-; GFX7-GI-NEXT:    v_mov_b32_e32 v2, 0
-; GFX7-GI-NEXT:    v_mov_b32_e32 v3, 0x3df00000
+; GFX7-GI-NEXT:    s_movk_i32 s4, 0xffe0
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v7, 0xc3e00000
 ; GFX7-GI-NEXT:    v_cmp_nge_f64_e32 vcc, s[16:17], v[6:7]
-; GFX7-GI-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; GFX7-GI-NEXT:    v_cmp_u_f64_e64 s[8:9], s[16:17], s[16:17]
+; GFX7-GI-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; GFX7-GI-NEXT:    s_mov_b32 s6, 0
 ; GFX7-GI-NEXT:    s_brev_b32 s7, 1
 ; GFX7-GI-NEXT:    s_mov_b32 s10, -1
@@ -1619,7 +1617,7 @@ define i64 @test_s_signed_i64_f64(double inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_mov_b32 s2, 0
 ; GFX12-GI-NEXT:    s_brev_b32 s3, 1
 ; GFX12-GI-NEXT:    s_brev_b32 s5, -2
-; GFX12-GI-NEXT:    v_mul_f64_e32 v[2:3], 0x3df00000, v[0:1]
+; GFX12-GI-NEXT:    v_ldexp_f64 v[2:3], v[0:1], 0xffffffe0
 ; GFX12-GI-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-GI-NEXT:    s_mov_b32 s4, -1
 ; GFX12-GI-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]

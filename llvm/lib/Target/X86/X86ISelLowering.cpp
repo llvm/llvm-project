@@ -65388,7 +65388,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     // Literal immediates are always ok.
     if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
       bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
-      BooleanContent BCont = getBooleanContents(MVT::i64);
+      BooleanContent BCont = getBooleanContents(/*isVec=*/false);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
       SDLoc DL(Op);
