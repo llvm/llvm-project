@@ -1,14 +1,13 @@
-; RUN: opt -passes=dce %s -S -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
-; RUN: opt -passes=dce -use-constant-int-for-fixed-length-splat %s -S -o - | FileCheck %s --check-prefixes=CHECK,SPLAT
+; RUN: opt -passes=dce %s -S -o - | FileCheck %s
+; RUN: opt -passes=dce -use-constant-int-for-fixed-length-splat %s -S -o - | FileCheck %s
 
 ; DWARF expressions have no lane-wise arithmetic, so dead vector binary
 ; operators must not be salvaged into scalar expressions.
 
 ; CHECK-LABEL: define void @f(
-; CHECK-NEXT:    #dbg_value(!DIArgList(<2 x i32> %a, <2 x i32> %b), ![[#]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value),
-; DEFAULT-NEXT:  #dbg_value(!DIArgList(<2 x i32> %a, <2 x i32> splat (i32 3)), ![[#]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value),
-; SPLAT-NEXT:    #dbg_value(<2 x i32> %a, ![[#]], !DIExpression(DW_OP_plus_uconst, 3, DW_OP_stack_value),
-; CHECK-NEXT:    #dbg_value(!DIArgList(<2 x i32> %a, <2 x i32> <i32 1, i32 2>), ![[#]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value),
+; CHECK-NEXT:    #dbg_value(<2 x i32> poison, ![[#]], !DIExpression(),
+; CHECK-NEXT:    #dbg_value(<2 x i32> poison, ![[#]], !DIExpression(),
+; CHECK-NEXT:    #dbg_value(<2 x i32> poison, ![[#]], !DIExpression(),
 ; CHECK-NEXT:    #dbg_value(i32 %s, ![[#]], !DIExpression(DW_OP_plus_uconst, 5, DW_OP_stack_value),
 ; CHECK-NEXT:    ret void
 define void @f(<2 x i32> %a, <2 x i32> %b, i32 %s) !dbg !5 {

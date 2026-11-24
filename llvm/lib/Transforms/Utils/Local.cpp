@@ -2265,6 +2265,10 @@ static void handleSSAValueOperands(uint64_t CurrentLocOps,
 Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
                              SmallVectorImpl<uint64_t> &Opcodes,
                              SmallVectorImpl<Value *> &AdditionalValues) {
+  // DWARF arithmetic is not lane-wise.
+  if (BI->getType()->isVectorTy())
+    return nullptr;
+
   // Handle binary operations with constant integer operands as a special case.
   auto *ConstInt = dyn_cast<ConstantInt>(BI->getOperand(1));
   // Values wider than 64 bits cannot be represented within a DIExpression.
