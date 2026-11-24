@@ -15,6 +15,10 @@ define void @positivezero() denormal_fpenv(positivezero|ieee) {
   %truncate_positive = fptrunc double 0x37F0000000000000 to float
   %truncate_negative = fptrunc double 0xB7F0000000000000 to float
   %truncate_vector = fptrunc <4 x double> <double 0x37F0000000000000, double 0xB7F0000000000000, double 0x37F0000000000000, double 0xB7F0000000000000> to <4 x float>
+  %extend_bfloat = fpext <3 x bfloat> <bfloat 0xR0040, bfloat 0xR8040, bfloat 0xR8080> to <3 x float>
+  %extend_half = fpext <2 x half> <half 0xH0200, half 0xH8200> to <2 x float>
+  %truncate_bfloat = fptrunc <2 x float> <float f0x00400000, float f0x80400000> to <2 x bfloat>
+  %truncate_half = fptrunc <2 x float> <float f0x38000000, float f0xB8000000> to <2 x half>
   ret void
 }
 
@@ -25,6 +29,10 @@ define void @preservesign() denormal_fpenv(preservesign|ieee) {
   %truncate_positive = fptrunc double 0x37F0000000000000 to float
   %truncate_negative = fptrunc double 0xB7F0000000000000 to float
   %truncate_vector = fptrunc <4 x double> <double 0x37F0000000000000, double 0xB7F0000000000000, double 0x37F0000000000000, double 0xB7F0000000000000> to <4 x float>
+  %extend_bfloat = fpext <3 x bfloat> <bfloat 0xR0040, bfloat 0xR8040, bfloat 0xR8080> to <3 x float>
+  %extend_half = fpext <2 x half> <half 0xH0200, half 0xH8200> to <2 x float>
+  %truncate_bfloat = fptrunc <2 x float> <float f0x00400000, float f0x80400000> to <2 x bfloat>
+  %truncate_half = fptrunc <2 x float> <float f0x38000000, float f0xB8000000> to <2 x half>
   ret void
 }
 
@@ -34,6 +42,10 @@ define void @ieee() denormal_fpenv(ieee|ieee) {
   %vector = fmul <2 x float> <float f0x1F800000, float f0x9F800000>, <float f0x1F800000, float f0x1F800000>
   %truncate_positive = fptrunc double 0x37F0000000000000 to float
   %truncate_negative = fptrunc double 0xB7F0000000000000 to float
+  %extend_bfloat = fpext <3 x bfloat> <bfloat 0xR0040, bfloat 0xR8040, bfloat 0xR8080> to <3 x float>
+  %extend_half = fpext <2 x half> <half 0xH0200, half 0xH8200> to <2 x float>
+  %truncate_bfloat = fptrunc <2 x float> <float f0x00400000, float f0x80400000> to <2 x bfloat>
+  %truncate_half = fptrunc <2 x float> <float f0x38000000, float f0xB8000000> to <2 x half>
   ret void
 }
 ; CHECK: Entering function: main
@@ -44,16 +56,24 @@ define void @ieee() denormal_fpenv(ieee|ieee) {
 ; CHECK-NEXT:   %truncate_positive = fptrunc double f0x37F0000000000000 to float => float 0x00200000
 ; CHECK-NEXT:   %truncate_negative = fptrunc double f0xB7F0000000000000 to float => float 0.000000e+00
 ; CHECK-NEXT:   %truncate_vector = fptrunc <4 x double> <double f0x37F0000000000000, double f0xB7F0000000000000, double f0x37F0000000000000, double f0xB7F0000000000000> to <4 x float> => { float 0.000000e+00, float 0x80200000, float 0x00200000, float 0.000000e+00 }
+; CHECK-NEXT:   %extend_bfloat = fpext <3 x bfloat> <bfloat 5.877470e-39, bfloat -5.877470e-39, bfloat -1.175490e-38> to <3 x float> => { float 0.000000e+00, float 0.000000e+00, float 0x80800000 }
+; CHECK-NEXT:   %extend_half = fpext <2 x half> <half 3.051760e-05, half -3.051760e-05> to <2 x float> => { float 0x38000000, float 0xB8000000 }
+; CHECK-NEXT:   %truncate_bfloat = fptrunc <2 x float> <float f0x00400000, float f0x80400000> to <2 x bfloat> => { bfloat 0.000000e+00, bfloat -5.877470e-39 }
+; CHECK-NEXT:   %truncate_half = fptrunc <2 x float> <float f0x38000000, float f0xB8000000> to <2 x half> => { half 3.051760e-05, half -3.051760e-05 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: positivezero
 ; CHECK-NEXT:   call void @positivezero()
 ; CHECK-NEXT: Entering function: preservesign
-; CHECK-NEXT:   %positive = fmul float f0x1F800000, f0x1F800000 => float 0.000000e+00
+; CHECK-NEXT:   %positive = fmul float f0x1F800000, f0x1F800000 => float 0x00200000
 ; CHECK-NEXT:   %negative = fmul float f0x9F800000, f0x1F800000 => float -0.000000e+00
-; CHECK-NEXT:   %vector = fmul <4 x float> <float f0x1F800000, float f0x9F800000, float f0x1F800000, float f0x9F800000>, splat (float f0x1F800000) => { float 0.000000e+00, float 0x80200000, float 0x00200000, float 0x80200000 }
-; CHECK-NEXT:   %truncate_positive = fptrunc double f0x37F0000000000000 to float => float 0x00200000
-; CHECK-NEXT:   %truncate_negative = fptrunc double f0xB7F0000000000000 to float => float -0.000000e+00
-; CHECK-NEXT:   %truncate_vector = fptrunc <4 x double> <double f0x37F0000000000000, double f0xB7F0000000000000, double f0x37F0000000000000, double f0xB7F0000000000000> to <4 x float> => { float 0x00200000, float 0x80200000, float 0.000000e+00, float -0.000000e+00 }
+; CHECK-NEXT:   %vector = fmul <4 x float> <float f0x1F800000, float f0x9F800000, float f0x1F800000, float f0x9F800000>, splat (float f0x1F800000) => { float 0x00200000, float 0x80200000, float 0.000000e+00, float -0.000000e+00 }
+; CHECK-NEXT:   %truncate_positive = fptrunc double f0x37F0000000000000 to float => float 0.000000e+00
+; CHECK-NEXT:   %truncate_negative = fptrunc double f0xB7F0000000000000 to float => float 0x80200000
+; CHECK-NEXT:   %truncate_vector = fptrunc <4 x double> <double f0x37F0000000000000, double f0xB7F0000000000000, double f0x37F0000000000000, double f0xB7F0000000000000> to <4 x float> => { float 0.000000e+00, float -0.000000e+00, float 0x00200000, float 0x80200000 }
+; CHECK-NEXT:   %extend_bfloat = fpext <3 x bfloat> <bfloat 5.877470e-39, bfloat -5.877470e-39, bfloat -1.175490e-38> to <3 x float> => { float 0.000000e+00, float 0x80400000, float 0x80800000 }
+; CHECK-NEXT:   %extend_half = fpext <2 x half> <half 3.051760e-05, half -3.051760e-05> to <2 x float> => { float 0x38000000, float 0xB8000000 }
+; CHECK-NEXT:   %truncate_bfloat = fptrunc <2 x float> <float f0x00400000, float f0x80400000> to <2 x bfloat> => { bfloat 5.877470e-39, bfloat -5.877470e-39 }
+; CHECK-NEXT:   %truncate_half = fptrunc <2 x float> <float f0x38000000, float f0xB8000000> to <2 x half> => { half 3.051760e-05, half -3.051760e-05 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: preservesign
 ; CHECK-NEXT:   call void @preservesign()
@@ -63,6 +83,10 @@ define void @ieee() denormal_fpenv(ieee|ieee) {
 ; CHECK-NEXT:   %vector = fmul <2 x float> <float f0x1F800000, float f0x9F800000>, splat (float f0x1F800000) => { float 0x00200000, float 0x80200000 }
 ; CHECK-NEXT:   %truncate_positive = fptrunc double f0x37F0000000000000 to float => float 0x00200000
 ; CHECK-NEXT:   %truncate_negative = fptrunc double f0xB7F0000000000000 to float => float 0x80200000
+; CHECK-NEXT:   %extend_bfloat = fpext <3 x bfloat> <bfloat 5.877470e-39, bfloat -5.877470e-39, bfloat -1.175490e-38> to <3 x float> => { float 0x00400000, float 0x80400000, float 0x80800000 }
+; CHECK-NEXT:   %extend_half = fpext <2 x half> <half 3.051760e-05, half -3.051760e-05> to <2 x float> => { float 0x38000000, float 0xB8000000 }
+; CHECK-NEXT:   %truncate_bfloat = fptrunc <2 x float> <float f0x00400000, float f0x80400000> to <2 x bfloat> => { bfloat 5.877470e-39, bfloat -5.877470e-39 }
+; CHECK-NEXT:   %truncate_half = fptrunc <2 x float> <float f0x38000000, float f0xB8000000> to <2 x half> => { half 3.051760e-05, half -3.051760e-05 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: ieee
 ; CHECK-NEXT:   call void @ieee()
