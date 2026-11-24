@@ -126,6 +126,11 @@ static cl::opt<bool>
 static cl::opt<bool>
     ForceNoopHazards("force-noop-hazards", cl::Hidden, cl::init(false),
                      cl::desc("Force noop hazards in scheduler"));
+cl::opt<bool> EnableDefUseSamePacket(
+    "enable-def-use-same-packet", cl::Hidden, cl::init(true),
+    cl::desc(
+        "Allow moving an instruction out of a packet that redefines one of "
+        "its source registers"));
 extern cl::opt<bool> OneFloatPerPacket;
 extern cl::opt<bool> OneComplexPerPacket;
 
@@ -136,6 +141,10 @@ void initializeHexagonGlobalSchedulerPass(PassRegistry &);
 
 namespace {
 class HexagonGlobalSchedulerImpl;
+
+// MIa = existing bundle sibling; MIb = candidate being moved.
+// WAR_SameBundle: MIa defs a reg MIb uses, same bundle, ISA-safe forwarding.
+enum class DepKind { Independent, WAR_SameBundle, Dependent };
 
 class HexagonGlobalScheduler : public MachineFunctionPass {
 public:
@@ -422,7 +431,10 @@ private:
   bool AliasingRegs(unsigned RegA, unsigned RegB);
 
   // Test is true if the two MIs cannot be safely reordered.
-  bool ReorderDependencyTest(MachineInstr *MIa, MachineInstr *MIb);
+  bool ReorderDependencyTest(MachineInstr *MIa, MachineInstr *MIb) {
+    return analyzeDependence(MIa, MIb) != DepKind::Independent;
+  }
+  DepKind analyzeDependence(MachineInstr *MIa, MachineInstr *MIb);
 
   bool canAddMIToThisPacket(
       MachineInstr *MI,
@@ -1446,9 +1458,25 @@ bool HexagonGlobalSchedulerImpl::canAddMIToThisPacket(
   return true;
 }
 
-/// Test is true if the two MIs cannot be safely reordered.
-bool HexagonGlobalSchedulerImpl::ReorderDependencyTest(MachineInstr *MIa,
-                                                       MachineInstr *MIb) {
+/// Classify the dependence between \p MIa (an instruction resident in the
+/// bundle) and \p MIb (the instruction being moved): DepKind::Dependent if
+/// they cannot share a packet, Independent if freely reorderable, or
+/// WAR_SameBundle for a def/use pair legal only when \p MIb joins \p MIa's
+/// packet.
+///
+/// Anti-symmetric: the WAR_SameBundle carve-out applies only when \p MIa
+/// *defines* a register \p MIb *uses*; the reverse is always Dependent. So
+/// argument order matters: always pass the instruction being moved as \p MIb.
+DepKind HexagonGlobalSchedulerImpl::analyzeDependence(MachineInstr *MIa,
+                                                      MachineInstr *MIb) {
+  if (MIa == MIb)
+    return DepKind::Independent;
+
+  bool sameBundle =
+      MIa->isBundled() && MIb->isBundled() &&
+      getBundleStart(MIa->getIterator()) == getBundleStart(MIb->getIterator());
+  bool foundBundleWAR = false;
+
   SmallVector<unsigned, 4> DefsA;
   SmallVector<unsigned, 4> DefsB;
   SmallVector<unsigned, 8> UsesA;
@@ -1463,16 +1491,31 @@ bool HexagonGlobalSchedulerImpl::ReorderDependencyTest(MachineInstr *MIa,
     for (SmallVector<unsigned, 8>::iterator IUB = UsesB.begin(),
                                             IUBE = UsesB.end();
          IUB != IUBE; ++IUB)
-      // True data dependency.
-      if (AliasingRegs(*IDA, *IUB))
-        return true;
+      // MIa defines a register that MIb reads. In one packet MIb reads the old
+      // value, so moving MIb out of the packet may be safe.
+      if (AliasingRegs(*IDA, *IUB)) {
+        if (sameBundle && EnableDefUseSamePacket) {
+          int DefIdx = MIa->findRegisterDefOperandIdx(*IDA, QRI);
+          int UseIdx = MIb->findRegisterUseOperandIdx(*IUB, QRI);
+          // DefIdx < 0 means *IDA has no explicit def operand: parseOperands
+          // surfaced it from a regmask clobber, which never forwards a value.
+          bool DefViaRegMask = DefIdx < 0;
+          if (UseIdx >= 0 && QII->isSafeInBundleWAR(
+                                 *MIa, DefViaRegMask ? 0 : DefIdx, *MIb, UseIdx,
+                                 /*IsPullDown=*/false, DefViaRegMask)) {
+            foundBundleWAR = true;
+            continue;
+          }
+        }
+        return DepKind::Dependent;
+      }
 
     for (SmallVector<unsigned, 4>::iterator IDB = DefsB.begin(),
                                             IDBE = DefsB.end();
          IDB != IDBE; ++IDB)
       // Output dependency.
       if (AliasingRegs(*IDA, *IDB))
-        return true;
+        return DepKind::Dependent;
   }
 
   for (SmallVector<unsigned, 4>::iterator IDB = DefsB.begin(),
@@ -1481,21 +1524,21 @@ bool HexagonGlobalSchedulerImpl::ReorderDependencyTest(MachineInstr *MIa,
     for (SmallVector<unsigned, 8>::iterator IUA = UsesA.begin(),
                                             IUAE = UsesA.end();
          IUA != IUAE; ++IUA)
-      // True data dependency.
+      // WAR: MIb defs, MIa uses.
       if (AliasingRegs(*IDB, *IUA))
-        return true;
+        return DepKind::Dependent;
   }
 
   // Do not reorder two calls...
   if (MIa->isCall() && MIb->isCall())
-    return true;
+    return DepKind::Dependent;
 
   // For calls we also check callee save regs.
   if (MIa->isCall())
     for (const uint16_t *I = QRI->getCalleeSavedRegs(&MF); *I; ++I) {
       for (unsigned i = 0; i < DefsB.size(); i++) {
         if (AliasingRegs(DefsB[i], *I))
-          return true;
+          return DepKind::Dependent;
       }
     }
 
@@ -1503,7 +1546,7 @@ bool HexagonGlobalSchedulerImpl::ReorderDependencyTest(MachineInstr *MIa,
     for (const uint16_t *I = QRI->getCalleeSavedRegs(&MF); *I; ++I) {
       for (unsigned i = 0; i < DefsA.size(); i++) {
         if (AliasingRegs(DefsA[i], *I))
-          return true;
+          return DepKind::Dependent;
       }
     }
 
@@ -1511,16 +1554,16 @@ bool HexagonGlobalSchedulerImpl::ReorderDependencyTest(MachineInstr *MIa,
   // First, be conservative on these objects.
   // Might be overly constraining, so recheck.
   if ((isGlobalMemoryObject(MIa)) || (isGlobalMemoryObject(MIb)))
-    return true;
+    return DepKind::Dependent;
 
   // If any of these is true, check aliasing.
   if (((MIa->mayLoad() && MIb->mayStore()) ||
        (MIa->mayStore() && MIb->mayLoad()) ||
        (MIa->mayStore() && MIb->mayStore())) &&
       QII->areMemAccessesDependent(AA, MIa, MIb))
-    return true;
+    return DepKind::Dependent;
 
-  return false;
+  return foundBundleWAR ? DepKind::WAR_SameBundle : DepKind::Independent;
 }
 
 /// Serial semantics.
@@ -1573,13 +1616,22 @@ bool HexagonGlobalSchedulerImpl::canReorderMIs(MachineInstr *MIa,
 
   // Within bundle semantics are parallel.
   if (MIa->isBundle()) {
+    // WAR_SameBundle = ISA-safe in-bundle def/use pair; treat as reorderable.
     MachineBasicBlock::instr_iterator MII = MIa->getIterator();
     MachineBasicBlock::instr_iterator MIIE = MIa->getParent()->instr_end();
     for (++MII; MII != MIIE && MII->isInsideBundle(); ++MII) {
       if (MII->isDebugInstr())
         continue;
-      if (MIsAreDependent(&*MII, MIb))
-        return false;
+      DepKind dk = analyzeDependence(&*MII, MIb);
+      if (dk == DepKind::Independent)
+        continue;
+      LLVM_DEBUG(dbgs() << "\t\t[MIsAreDependent]:\n\t\t"; (*MII).dump();
+                 dbgs() << "\t\t"; MIb->dump());
+      if (dk == DepKind::WAR_SameBundle) {
+        LLVM_DEBUG(dbgs() << "\t\t[canReorderMIs] WAR_SameBundle, allow.\n");
+        continue;
+      }
+      return false;
     }
     return true;
   }
@@ -1702,6 +1754,8 @@ bool HexagonGlobalSchedulerImpl::canCauseStall(MachineInstr *MI,
           if (DefIdx >= 0) {
             int Latency =
                 TSchedModel.computeOperandLatency(&*MJI, DefIdx, MI, UseIdx);
+            Latency = MF.getSubtarget<HexagonSubtarget>().updateLatency(
+                *MJI, *MI, false, Latency);
             if (Latency > BundleCount)
               // There will be a stall if MI is moved to MJ's packet.
               return true;
@@ -1849,24 +1903,31 @@ bool HexagonGlobalSchedulerImpl::canThisMIBeMoved(
          ++MII) {
       if (MII->isDebugInstr())
         continue;
-      if (MIsAreDependent(&*MII, MI)) {
-        if (!AllowDependentPullUp) {
-          LLVM_DEBUG(dbgs() << "\t\tDependent.\n");
-          return false;
+      DepKind dk = analyzeDependence(&*MII, MI);
+      if (dk == DepKind::Independent)
+        continue;
+      LLVM_DEBUG(dbgs() << "\t\t[MIsAreDependent]:\n\t\t"; (*MII).dump();
+                 dbgs() << "\t\t"; MI->dump());
+      if (dk == DepKind::WAR_SameBundle) {
+        LLVM_DEBUG(dbgs() << "\t\t[canThisMIBeMoved] WAR_SameBundle, allow.\n");
+        continue;
+      }
+      if (!AllowDependentPullUp) {
+        LLVM_DEBUG(dbgs() << "\t\tDependent.\n");
+        return false;
+      } else {
+        // There are a few cases that we can safely move a dependent
+        // instruction away from this packet.
+        // One example is an instruction setting a call operands.
+        if ((MII->isCall() && !IsIndirectCall(&*MII)) ||
+            IsDualJumpSecondCandidate(&*MII) || MI->isBranch()) {
+          LLVM_DEBUG(dbgs() << "\t\tDependent, but allow to move.\n");
+          MovingDependentOp = true;
+          Cost -= 10;
+          continue;
         } else {
-          // There are a few cases that we can safely move a dependent
-          // instruction away from this packet.
-          // One example is an instruction setting a call operands.
-          if ((MII->isCall() && !IsIndirectCall(&*MII)) ||
-              IsDualJumpSecondCandidate(&*MII) || MI->isBranch()) {
-            LLVM_DEBUG(dbgs() << "\t\tDependent, but allow to move.\n");
-            MovingDependentOp = true;
-            Cost -= 10;
-            continue;
-          } else {
-            LLVM_DEBUG(dbgs() << "\t\tDependent, and do not allow for now.\n");
-            return false;
-          }
+          LLVM_DEBUG(dbgs() << "\t\tDependent, and do not allow for now.\n");
+          return false;
         }
       }
     }
@@ -3739,6 +3800,34 @@ bool HexagonGlobalSchedulerImpl::MoveMItoBundle(
             if (NeedCleanup)
               CleanupBB->erase(InstrToMove);
             return false;
+          }
+          // Don't pull a predicated instruction above the def of its
+          // predicate (which may live in PreviousBB), as that reads a stale
+          // predicate. PredCond holds the predication; Cond was just clobbered
+          // by analyzeBranch(CurrentBB).
+          if (!PredCond.empty()) {
+            for (const MachineOperand &CMO : PredCond) {
+              if (!CMO.isReg())
+                continue;
+              Register PredReg = CMO.getReg();
+              bool DefinedInPrev = false;
+              for (MachineInstr &PMI : PreviousBB->instrs()) {
+                if (PMI.isBundle())
+                  continue;
+                if (PMI.definesRegister(PredReg, QRI)) {
+                  DefinedInPrev = true;
+                  break;
+                }
+              }
+              if (DefinedInPrev) {
+                LLVM_DEBUG(dbgs()
+                           << "\tFall-through would pull predicated insn above "
+                              "its predicate def; bailing out.\n");
+                if (NeedCleanup)
+                  CleanupBB->erase(InstrToMove);
+                return false;
+              }
+            }
           }
           SpeculatedIns.insert(
               std::make_pair(OriginalInstructionToMove, OriginBB));

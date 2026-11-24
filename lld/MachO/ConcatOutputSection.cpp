@@ -9,7 +9,6 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "OutputSegment.h"
-#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -183,19 +182,12 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   StringRef thunkName =
       saver().save(funcSym->getName() + addendSuffix + ".thunk." +
                    std::to_string(thunkInfo.sequence++));
-  if (!isa<Defined>(funcSym) || cast<Defined>(funcSym)->isExternal()) {
-    thunkInfo.sym = symtab->addDefined(
-        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-        /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-        /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
-        /*isWeakDefCanBeHidden=*/false);
-  } else {
-    thunkInfo.sym = make<Defined>(
-        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-        /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
-        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
-        /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
-  }
+  thunkInfo.sym = make<Defined>(
+      thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
+      /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/false,
+      /*includeInSymtab=*/!isPrivateLabel(funcSym->getName()),
+      /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
+      /*isWeakDefCanBeHidden=*/false);
   thunkInfo.sym->used = true;
   thunkInfo.sym->branchExtensionThunk = true;
   target->populateThunk(thunkInfo.isec, funcSym, r.getAddend());

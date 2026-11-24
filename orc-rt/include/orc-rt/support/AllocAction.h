@@ -15,6 +15,7 @@
 
 #include "orc-rt/support/ArgForwardingTraits.h"
 #include "orc-rt/support/Error.h"
+#include "orc-rt/support/ExecutorAddress.h"
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/scope_exit.h"
 
@@ -47,6 +48,43 @@ struct AllocActionFunction {
 
     return S.serialize(std::apply(
         HandlerTraits::forwardArgsAsRequested(std::forward<Handler>(H)), Args));
+  }
+
+  /// Wraps a noexcept method for use as an allocation action handler.
+  ///
+  /// Method's call operator takes an ExecutorAddr as its first argument,
+  /// casts it to a ClassT*, and calls the wrapped method on that object,
+  /// forwarding the remaining arguments. The address is not checked: it must
+  /// point to a live ClassT instance.
+  template <typename ClassT, typename ReturnT, typename... ArgTs>
+  struct Method {
+    Method(ReturnT (ClassT::*M)(ArgTs...) noexcept) noexcept : M(M) {}
+    ReturnT operator()(ExecutorAddr Obj, ArgTs &&...Args) noexcept {
+      return (Obj.toPtr<ClassT *>()->*M)(std::forward<ArgTs>(Args)...);
+    }
+
+  private:
+    ReturnT (ClassT::*M)(ArgTs...) noexcept;
+  };
+
+  /// Create a Method wrapper for the given (non-const, noexcept) method
+  /// pointer. The action's argument list should start with the address of the
+  /// object to call the method on:
+  ///
+  ///   @code{.cpp}
+  ///   class Registrar {
+  ///   public:
+  ///     Error registerRange(ExecutorAddrRange R) noexcept;
+  ///   };
+  ///
+  ///   ORC_RT_SPS_ALLOC_ACTION_IMPL(
+  ///       registrar_register, (SPSExecutorAddr, SPSExecutorAddrRange),
+  ///       AllocActionFunction::handleWithMethod(&Registrar::registerRange));
+  ///   @endcode
+  template <typename ClassT, typename ReturnT, typename... ArgTs>
+  static Method<ClassT, ReturnT, ArgTs...>
+  handleWithMethod(ReturnT (ClassT::*M)(ArgTs...) noexcept) noexcept {
+    return Method<ClassT, ReturnT, ArgTs...>(M);
   }
 };
 
