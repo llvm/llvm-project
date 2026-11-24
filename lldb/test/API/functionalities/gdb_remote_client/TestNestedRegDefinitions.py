@@ -6,7 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestNestedRegDefinitions(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
         """

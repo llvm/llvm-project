@@ -16,7 +16,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestRemoteRegNums(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def haltReason(self):

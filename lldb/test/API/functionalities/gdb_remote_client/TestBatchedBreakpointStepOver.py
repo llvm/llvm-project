@@ -17,7 +17,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     def test(self):
         BP_ADDR = 0x0000000000401020
         # PC after stepping past the breakpoint instruction.

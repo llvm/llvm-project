@@ -101,7 +101,6 @@ class MyResponder(MockGDBServerResponder):
 
 
 class TestGdbClientModuleLoad(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     def test_android_app_process(self):
         """
         This test simulates the scenario where the (android) dynamic linker
@@ -129,7 +128,6 @@ class TestGdbClientModuleLoad(GDBRemoteTestBase):
     # ANDROID: [  0] {{.*}} 0x0000000000ee0000 {{.*}}module_load
     # ANDROID: [  1] {{.*}} 0x0000000000ef0000 {{.*}}libmodule_load.so
 
-    @skipIfXmlSupportMissing
     def test_vdso(self):
         """
         This test checks vdso loading in the situation where the process does

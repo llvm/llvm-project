@@ -13,7 +13,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestUnavailableRegisters(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     @skipIfLLVMTargetMissing("AArch64")
     def test(self):
         class MyResponder(MockGDBServerResponder):

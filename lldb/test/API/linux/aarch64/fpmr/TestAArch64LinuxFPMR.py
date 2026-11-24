@@ -51,8 +51,7 @@ class AArch64LinuxFPMR(TestBase):
             ],
         )
 
-        if self.hasXMLSupport():
-            self.expect("register read fpmr", substrs=self.EXPECTED_FPMR_FIELDS)
+        self.expect("register read fpmr", substrs=self.EXPECTED_FPMR_FIELDS)
 
         # Write a value for the program to find. Same fields but with bit values
         # inverted.

@@ -93,7 +93,6 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             substrs=["d0 = {0x0202020201010101}"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_v_sub_registers(self):

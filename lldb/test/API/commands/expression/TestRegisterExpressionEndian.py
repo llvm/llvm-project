@@ -115,13 +115,11 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.assertEqual(pc.GetValueAsSigned(), pc_ull.GetValueAsSigned())
         self.assertEqual(pc.GetValueAsUnsigned(), pc_ull.GetValueAsUnsigned())
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_little_endian_target(self):
         self.do_endian_test(Endian.LITTLE)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("SystemZ")
     def test_big_endian_target(self):

@@ -6,7 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestStopPCs(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def haltReason(self):

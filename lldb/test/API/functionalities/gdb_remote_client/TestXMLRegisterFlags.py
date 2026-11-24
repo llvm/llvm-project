@@ -72,13 +72,11 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             )
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_no_flags(self):
         self.setup_flags_test("")
         self.expect("register read cpsr", substrs=["= 0xeeee7777"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_unsupported_flags_size_stays_raw(self):
         self.setup_register_test(
@@ -93,20 +91,17 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         self.expect("register read flags24", substrs=["flags24 = 0x777777"])
         self.expect("register read flags24", matching=False, substrs=["field ="])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_single_field_pad_msb(self):
         self.setup_flags_test("""<field name="SP" start="0" end="0"/>""")
         # Pads from 31 to 1.
         self.expect("register read cpsr", substrs=["(SP = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_single_field_pad_lsb(self):
         self.setup_flags_test("""<field name="SP" start="31" end="31"/>""")
         self.expect("register read cpsr", substrs=["(SP = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_multiple_fields_sorted(self):
         self.setup_flags_test(
@@ -117,7 +112,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         # Fields should be sorted with MSB on the left.
         self.expect("register read cpsr", substrs=["(EL = 3, SP = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_ignore_invalid_start_end(self):
         self.setup_flags_test(
@@ -136,7 +130,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(EL = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_field_overlap(self):
         self.setup_flags_test(
@@ -149,7 +142,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         # Ignore the whole flags set, it is unlikely to be valid.
         self.expect("register read cpsr", substrs=["("], matching=False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_field_required_attributes(self):
         # Fields must have a name, start and end. Any without are ignored.
@@ -166,7 +158,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(C = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_little_endian_target_order(self):
         # We are using little endian AArch64 here.
@@ -198,7 +189,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     # Unlike AArch64, we do need the backend present for this test to work.
     @skipIfLLVMTargetMissing("SystemZ")
@@ -241,7 +231,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_many_flag_sets(self):
         self.setup_register_test(
@@ -270,7 +259,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_repeated_flag_set(self):
         # The second definition of "cpsr_flags" should be ignored.
@@ -291,7 +279,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(correct = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_missing_flags(self):
         self.setup_register_test(
@@ -305,7 +292,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         self.expect("register read cpsr", substrs=["cpsr = 0xeeee7777"])
         self.expect("register read cpsr", substrs=["("], matching=False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_invalid_size(self):
         # We're not using the size for anything yet so just check that we handle
@@ -328,7 +314,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         # Only the final set has a valid size, use that.
         self.expect("register read cpsr", substrs=["(C = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_unknown_attribute(self):
         # Unknown attributes on flags or field are ignored.
@@ -343,7 +328,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(A = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_required_attributes(self):
         # flags must have an id and size so the flags with "C" is the only valid one
@@ -365,7 +349,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(C = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_register_size_mismatch(self):
         # If the size of the flag set found does not match the size of the
@@ -381,7 +364,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(C = 1)"], matching=False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_set_even_if_format_set(self):
         # lldb also sends "format". If that is set, we should still read the
@@ -398,7 +380,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(B = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_set_even_if_encoding_set(self):
         # lldb also sends "encoding". If that is set, we should still read the
@@ -415,7 +396,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(B = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_set_even_if_encoding_and_format_set(self):
         # As above but both encoding and format are set.
@@ -431,7 +411,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(B = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_multiple_lines(self):
         # Since we use C types they follow lldb's usual decisions as to whether
@@ -457,7 +436,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_child_limit(self):
         # Flags print like C types so they should follow the child limit setting.
@@ -470,7 +448,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["= (field_2 = 1, field_1 = 1, ...)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_format_disables_flags(self):
         # If asked for a specific format, don't print flags after it.
@@ -481,7 +458,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             "register read cpsr --format X", substrs=["field_0"], matching=False
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_xml_includes(self):
         # Certain targets e.g. s390x QEMU split their definitions over multiple
@@ -516,7 +492,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", substrs=["(B = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_xml_includes_multiple(self):
         self.setup_multidoc_test(
@@ -557,7 +532,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read x0 cpsr", substrs=["(B = 1)", "(C = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_xml_type_ids_scoped_to_feature(self):
         self.setup_multidoc_test(
@@ -601,7 +575,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         self.expect("register read cpsr", substrs=["(field_b = enum_b)"])
         self.expect("register read pc", substrs=["("], matching=False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_xml_type_kinds_scoped_to_included_feature(self):
         self.setup_multidoc_test(
@@ -649,7 +622,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         self.expect("register read x0", substrs=["(field = correct)"])
         self.expect("register read cpsr", substrs=["(incorrect = 1)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_in_register_info(self):
         # See RegisterTypeFlags for comprehensive formatting tests.
@@ -680,7 +652,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_name_xml_reserved_characters(self):
         """Check that lldb converts reserved character replacements like &amp;
@@ -698,7 +669,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             substrs=["| A< | B> | C' | D\" | E& |"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_no_enum(self):
         """Check that lldb does not try to print an enum when there isn't one."""
@@ -707,7 +677,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register info cpsr", patterns=["E:.*$"], matching=False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_enum_type_not_found(self):
         """Check that lldb uses the default format if we don't find the enum type."""
@@ -723,7 +692,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register read cpsr", patterns=[r"\(E = 1\)$"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_enum_duplicated_evalue(self):
         """Check that lldb only uses the last instance of a evalue for each
@@ -746,7 +714,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         self.expect("register info cpsr", patterns=["E: 1 = def, 2 = geh$"])
         self.expect("register read cpsr", patterns=[r"\(E = def \| geh\)$"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_enum_duplicated(self):
         """Check that lldb only uses the last instance of enums with the same
@@ -770,7 +737,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         self.expect("register info cpsr", patterns=["E: 1 = def$"])
         self.expect("register read cpsr", patterns=[r"\(E = def\)$"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_enum_use_first_valid(self):
         """Check that lldb uses the first enum that parses correctly and ignores
@@ -797,7 +763,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register info cpsr", patterns=["E: 1 = valid$"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_evalue_empty_name(self):
         """Check that lldb ignores evalues with an empty name."""
@@ -824,7 +789,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register info cpsr", patterns=["E: 2 = valid$"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_evalue_invalid_value(self):
         """Check that lldb ignores evalues with an invalid value."""
@@ -854,7 +818,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             "register info cpsr", patterns=["E: 1 = dec, 2 = hex, 3 = octal, 4 = bin$"]
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_evalue_out_of_range(self):
         """Check that lldb will not use an enum type if one of its evalues
@@ -876,7 +839,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         # The whole eunm is rejected even if just 1 value is out of range.
         self.expect("register info cpsr", patterns=["E: 0 = "], matching=False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_enum_ignore_unknown_attributes(self):
         """Check that lldb ignores unknown attributes on an enum or evalue."""
@@ -895,7 +857,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register info cpsr", patterns=["E: 1 = valid$"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_evalue_required_attributes(self):
         """Check that lldb rejects any evalue missing a name and/or value."""
@@ -917,7 +878,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
         self.expect("register info cpsr", patterns=["E: 1 = valid$"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_evalue_name_xml_reserved_characters(self):
         """Check that lldb converts reserved character replacements like &amp;
@@ -944,7 +904,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             patterns=["E: 0 = A&, 1 = B\", 2 = C', 3 = D>, 4 = E<$"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_enum_value_range(self):
         """Check that lldb ignores enums whose values would not fit into
@@ -975,7 +934,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         # but not to bar
         self.expect("register info cpsr", patterns=["foo: "], matching=False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_evalue_value_limits(self):
         """Check that lldb can handle an evalue for a field up to 64 bits
@@ -1000,7 +958,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             "register info x0", patterns=["foo: 0 = min, 18446744073709551615 = max$"]
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_field_size_limit(self):
         """Check that lldb ignores any field > 64 bits. We can't handle those
@@ -1021,7 +978,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             "register info x0", substrs=["| 63-0  |\n" "|-------|\n" "| valid |"]
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_many_fields_same_enum(self):
         """Check that an enum can be reused by many fields, and fields of many
@@ -1059,7 +1015,6 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         self.expect("register read x0", patterns=expected_read)
         self.expect("register read cpsr", patterns=expected_read)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_fields_same_name_different_enum(self):
         """Check that lldb does something sensible when there are two fields with

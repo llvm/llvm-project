@@ -46,15 +46,14 @@ class MTECtrlRegisterTestCase(TestBase):
             )
             expected = [value]
 
-            if self.hasXMLSupport():
-                fields = "("
-                if has_store_only:
-                    fields += f"STORE_ONLY = {store_only}, "
+            fields = "("
+            if has_store_only:
+                fields += f"STORE_ONLY = {store_only}, "
 
-                tfc_modes = ["NONE", "SYNC", "ASYNC", "ASYMM"]
-                fields += f"TAGS = 0, TCF = TCF_{tfc_modes[async_err << 1 | sync_err]}, TAGGED_ADDR_ENABLE = 1)"
+            tfc_modes = ["NONE", "SYNC", "ASYNC", "ASYMM"]
+            fields += f"TAGS = 0, TCF = TCF_{tfc_modes[async_err << 1 | sync_err]}, TAGGED_ADDR_ENABLE = 1)"
 
-                expected.append(fields)
+            expected.append(fields)
 
             self.expect("register read mte_ctrl", substrs=expected)
 

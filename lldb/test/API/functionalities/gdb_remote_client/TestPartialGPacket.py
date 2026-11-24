@@ -6,7 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestPartialGPacket(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
         """

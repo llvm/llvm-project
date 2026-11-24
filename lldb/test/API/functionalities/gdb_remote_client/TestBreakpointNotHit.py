@@ -18,7 +18,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestBreakpointNotHit(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     def test(self):
         BP_ADDR = 0x1004
         NUM_THREADS = 4

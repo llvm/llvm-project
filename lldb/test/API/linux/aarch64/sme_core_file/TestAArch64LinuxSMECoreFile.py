@@ -58,8 +58,7 @@ class AArch64LinuxSMECoreFileTestCase(TestBase):
             svcr |= 2
 
         expected_svcr = ["0x{:016x}".format(svcr)]
-        if self.hasXMLSupport():
-            expected_svcr.append("(ZA = {:d}, SM = {})".format(za, sve_mode))
+        expected_svcr.append("(ZA = {:d}, SM = {})".format(za, sve_mode))
 
         self.expect("register read svcr", substrs=expected_svcr)
 

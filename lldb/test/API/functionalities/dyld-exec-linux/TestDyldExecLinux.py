@@ -14,7 +14,6 @@ from lldbsuite.test import lldbutil
 class TestLinux64ExecViaDynamicLoader(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfXmlSupportMissing
     @skipIf(oslist=no_match(["linux"]))
     def test_with_svr4(self):
         self.runCmd("settings set plugin.process.gdb-remote.use-libraries-svr4 true")

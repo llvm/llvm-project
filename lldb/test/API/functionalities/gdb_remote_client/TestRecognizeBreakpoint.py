@@ -17,7 +17,6 @@ class TestRecognizeBreakpoint(GDBRemoteTestBase):
     we would be able to reconstruct it from the thread info, but not if the
     stub doesn't support it"""
 
-    @skipIfXmlSupportMissing
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def __init__(self):
