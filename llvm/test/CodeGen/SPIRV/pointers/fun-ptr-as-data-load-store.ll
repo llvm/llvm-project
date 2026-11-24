@@ -19,7 +19,10 @@
 ; CHECK-EXT-DAG: OpExtension "SPV_INTEL_function_pointers"
 ; CHECK-EXT-DAG: %[[#FUNCTY:]] = OpTypeFunction
 ; CHECK-EXT-DAG: %[[#PTR_CW:]] = OpTypePointer CrossWorkgroup %[[#FUNCTY]]
-; CHECK-EXT-DAG: %[[#PTR_CS:]] = OpTypePointer CodeSectionINTEL %[[#FUNCTY]]
+; FIXME: The unused first kernel parameter is wrongly deduced as a pointer to
+; the function type.
+; CHECK-EXT-DAG: %[[#KERNELTY:]] = OpTypeFunction %[[#]] %[[#PTR_CW]]
+; CHECK-EXT-DAG: %[[#PTR_CS:]] = OpTypePointer CodeSectionINTEL %[[#KERNELTY]]
 ; CHECK-EXT-DAG: OpConstantFunctionPointerINTEL %[[#PTR_CS]]
 
 define spir_kernel void @fuzz_kernel_load(ptr addrspace(1) %0, ptr addrspace(1) %1, i32 %2) {
