@@ -26,7 +26,6 @@ using namespace mlir::vector;
 using namespace mlir::x86;
 
 namespace {
-
 // Return true if the operation is a constant dense element
 // attribute.
 static bool isZeroVectorConstant(Operation *op) {
@@ -947,9 +946,9 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
          !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
          !accTy.getElementType().isSignlessInteger(32)))
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Only F32 for BF16/F16/F8 or Int32 for Int8 "
-                                         "accumulation type is supported.");
+      return rewriter.notifyMatchFailure(
+          contractOp, "Only F32 for BF16/F16/F8 or Int32 for Int8 "
+                      "accumulation type is supported.");
 
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
@@ -1393,8 +1392,9 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
           validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
-            contractOp, "Invalid loop step. The step should be 32 for BF16/F16 and "
-                        "64 for Int8/F8.");
+            contractOp,
+            "Invalid loop step. The step should be 32 for BF16/F16 and "
+            "64 for Int8/F8.");
 
       SmallVector<Value> loopItrArgs = createInitTiles(outerLoop);
       rewriter.setInsertionPoint(outerLoop);
