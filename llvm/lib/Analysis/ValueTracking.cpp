@@ -516,15 +516,10 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
 /// Infer non-negativity for R + (R < 0 ? A : 0), where R = srem X, Y.
 /// A must be a non-negative Y or abs(Y).
 static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
+                                             const APInt &DemandedElts,
                                              KnownBits &KnownOut,
                                              const SimplifyQuery &Q,
                                              unsigned Depth) {
-  Type *Ty = Op0->getType();
-
-  // Only handle scalars for now.
-  if (Ty->isVectorTy())
-    return;
-
   const Value *Divisor = nullptr, *Cond = nullptr, *Remainder = nullptr,
               *AdjustmentValue = nullptr;
   CmpPredicate Pred;
@@ -546,8 +541,10 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Accept Y itself if non-negative, or abs(Y).
+  // For vectors, only check the demanded elements.
   bool IsPositiveDivisorCase =
-      Divisor == AdjustmentValue && isKnownNonNegative(Divisor, Q, Depth + 1);
+      Divisor == AdjustmentValue &&
+      computeKnownBits(Divisor, DemandedElts, Q, Depth + 1).isNonNegative();
   bool IsAbsoluteValueCase =
       match(AdjustmentValue,
             m_Intrinsic<Intrinsic::abs>(m_Specific(Divisor), m_Value()));
@@ -556,6 +553,8 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Repeated uses must agree. An undef value could break this relationship.
+  // For vectors, this check is conservative (checks the entire vector, not just
+  // the demanded elements).
   if (!isGuaranteedNotToBeUndef(Remainder, Q.AC, Q.CtxI, Q.DT, Depth + 1) ||
       !isGuaranteedNotToBeUndef(Divisor, Q.AC, Q.CtxI, Q.DT, Depth + 1))
     return;
@@ -579,7 +578,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
       // Independent operand bits give no result, but the Euclidean remainder
       // pattern can establish non-negativity through the operands'
       // relationship.
-      computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+      computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                       Depth);
     }
     return;
   }
@@ -598,7 +598,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
     computeKnownBitsFromLerpPattern(Op0, Op1, DemandedElts, KnownOut, Q, Depth);
 
     // Use the relationship between the remainder and its adjustment.
-    computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+    computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                     Depth);
   }
 }
 
@@ -4895,12 +4896,19 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       return 1;
     }
 
-    case Instruction::ExtractElement:
-      // Look through extract element. At the moment we keep this simple and
-      // skip tracking the specific element. But at least we might find
-      // information valid for all elements of the vector (for example if vector
-      // is sign extended, shifted, etc).
-      return ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+    case Instruction::ExtractElement: {
+      const Value *Vec = U->getOperand(0);
+      auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+      if (!VecTy)
+        return ComputeNumSignBits(Vec, Q, Depth + 1);
+
+      unsigned NumElts = VecTy->getNumElements();
+      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      if (auto *CIdx = dyn_cast<ConstantInt>(U->getOperand(1)))
+        if (CIdx->getValue().ult(NumElts))
+          DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+      return ComputeNumSignBits(Vec, DemandedVecElts, Q, Depth + 1);
+    }
 
     case Instruction::ShuffleVector: {
       // Collect the minimum number of sign bits that are shared by every vector
@@ -5357,8 +5365,8 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
                                           KnownFPClass &Known,
                                           const SimplifyQuery &Q,
                                           unsigned Depth) {
-  if ((InterestedClasses &
-       (KnownFPClass::OrderedLessThanZeroMask | fcNan)) == fcNone)
+  if ((InterestedClasses & (KnownFPClass::OrderedLessThanZeroMask | fcNan)) ==
+      fcNone)
     return;
 
   KnownFPClass KnownSrc;
@@ -6598,7 +6606,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // the shuffle result.
     APInt DemandedLHS, DemandedRHS;
     auto *Shuf = dyn_cast<ShuffleVectorInst>(Op);
-    if (!Shuf || !getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
+    if (!Shuf ||
+        !getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
       return;
 
     if (!!DemandedLHS) {

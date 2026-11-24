@@ -4397,6 +4397,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp1 = Node->getOperand(0 + Offset);
     Tmp2 = Node->getOperand(1 + Offset);
     Tmp3 = Node->getOperand(2 + Offset);
+    EVT OpVT = Tmp1.getValueType();
     bool Legalized =
         TLI.LegalizeSetCCCondCode(DAG, Node->getValueType(0), Tmp1, Tmp2, Tmp3,
                                   NeedInvert, dl, Chain, IsSignaling);
@@ -4416,9 +4417,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       }
 
       // If we expanded the SETCC by inverting the condition code, then wrap
-      // the existing SETCC in a NOT to restore the intended condition.
+      // the existing SETCC in a NOT to restore the intended condition. The
+      // true value comes from the boolean contents of the compared operand
+      // type, which can differ from those of the result type.
       if (NeedInvert) {
-        Tmp1 = DAG.getLogicalNOT(dl, Tmp1, Tmp1->getValueType(0));
+        EVT ResVT = Tmp1.getValueType();
+        Tmp1 = DAG.getNode(ISD::XOR, dl, ResVT, Tmp1,
+                           DAG.getBoolConstant(true, dl, ResVT, OpVT));
       }
 
       Results.push_back(Tmp1);
