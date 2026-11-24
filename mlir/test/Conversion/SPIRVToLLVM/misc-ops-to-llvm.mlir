@@ -175,7 +175,7 @@ spirv.func @vector_shuffle_different_size(%vector1: vector<3xf32>, %vector2: vec
 // CHECK-NEXT:     %[[RET:.*]] = llvm.insertvalue %[[VAL]], %[[UNDEF]][0] : !llvm.struct<(i32)>
 // CHECK-NEXT:     llvm.return %[[RET]] : !llvm.struct<(i32)>
 // CHECK-NEXT:   }
-// CHECK-NEXT:   llvm.func @empty
+// CHECK-NEXT:   llvm.func spir_kernelcc @empty
 // CHECK-NEXT:     llvm.return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
@@ -201,7 +201,7 @@ spirv.module Logical OpenCL {
 // CHECK-NEXT:     llvm.return %[[RET]] : !llvm.struct<(i32, array<3 x i32>)>
 // CHECK-NEXT:   }
 // CHECK-NEXT:   llvm.mlir.global external constant @{{.*}}() {addr_space = 0 : i32} : !llvm.struct<(i32)> {
-//      CHECK:   llvm.func @bar
+//      CHECK:   llvm.func spir_kernelcc @bar
 // CHECK-NEXT:     llvm.return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
