@@ -21,8 +21,6 @@
 @lds.small = internal addrspace(3) global [16 x i32] poison, align 16
 @lds.large = internal addrspace(3) global [16384 x i32] poison, align 16
 
-declare i32 @llvm.amdgcn.workitem.id.x()
-
 define internal void @create_pressure(ptr addrspace(1) %in,
                                       ptr addrspace(1) %out) alwaysinline {
 entry:
