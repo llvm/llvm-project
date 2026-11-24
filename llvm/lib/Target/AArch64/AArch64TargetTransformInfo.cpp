@@ -5029,8 +5029,10 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       return false;
 
     if (Scalar) {
+      assert(Index != -1U && "Index of Scalar must be known");
       bool HasScalarUser = false;
       for (auto &[S, U, L] : ScalarUserAndIdx) {
+        assert(L >= 0 && "Vector element index can't be negative");
         if (!IsUserFMulScalarTy(U)) {
           // Every user of Scalar must be suitable FMul
           if (S == Scalar)
