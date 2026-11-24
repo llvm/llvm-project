@@ -103,6 +103,8 @@ config.substitutions.append(
 config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir))
 
 
+# TODO: Consolidate this version and the one in compiler-rt into
+# llvm/utils/lit/lit/llvm/config.py
 def push_dynamic_library_lookup_path(config, new_path):
     if platform.system() == "Windows":
         dynamic_library_lookup_var = "PATH"
