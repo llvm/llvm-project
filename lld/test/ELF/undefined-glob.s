@@ -54,18 +54,14 @@
 
 # BAD-PATTERN: --undefined-glob: invalid glob pattern, unmatched '[': [
 
-## Deterministic parallel matching (--threads=1 vs --threads=8).
-# RUN: ld.lld --threads=1 --why-extract=%t.why1 -o %t.par1.exe %t.o %t.a \
-# RUN:   --undefined-glob 'foo*' --undefined-glob 'bar'
-# RUN: ld.lld --threads=8 --why-extract=%t.why8 -o %t.par8.exe %t.o %t.a \
-# RUN:   --undefined-glob 'foo*' --undefined-glob 'bar'
-# RUN: cmp %t.par1.exe %t.par8.exe
-# RUN: diff -u %t.why1 %t.why8
-# RUN: llvm-readobj --symbols %t.par8.exe | FileCheck --check-prefix=PAR-ALL %s
-# PAR-ALL-DAG: foo1
-# PAR-ALL-DAG: foo2
-# PAR-ALL-DAG: foo32
-# PAR-ALL-DAG: bar
+## Matched members are extracted in symbol table order.
+# RUN: ld.lld -o /dev/null %t.o %t.a --undefined-glob 'foo*' --why-extract=- | FileCheck --check-prefix=WHY %s
+
+# WHY:      reference	extracted	symbol
+# WHY-NEXT: --undefined-glob	{{.*}}.a({{.*}}1.o)	foo1
+# WHY-NEXT: --undefined-glob	{{.*}}.a({{.*}}2.o)	foo2
+# WHY-NEXT: --undefined-glob	{{.*}}.a({{.*}}3.o)	foo32
+# WHY-NOT:  {{.}}
 
 .globl _start
 _start:
