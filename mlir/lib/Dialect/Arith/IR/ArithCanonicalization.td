@@ -288,6 +288,13 @@ def XOrINotCmpI :
           (ConstantLikeMatcher ConstantAttr<I1Attr, "1">)),
         (Arith_CmpIOp (InvertPredicate $pred), $a, $b)>;
 
+// not(cmpf(pred, a, b)) -> cmpf(~pred, a, b), where not(x) is xori(x, 1)
+def XOrINotCmpF :
+    Pat<(Arith_XOrIOp
+          (Arith_CmpFOp $pred, $a, $b, $fastmath),
+          (ConstantLikeMatcher ConstantAttr<I1Attr, "1">)),
+        (Arith_CmpFOp (InvertPredicate $pred), $a, $b, $fastmath)>;
+
 // xor extui(x), extui(y) -> extui(xor(x,y))
 // XOR preserves nneg only if both operands are non-negative: xor of two values
 // with sign bit 0 has sign bit 0.

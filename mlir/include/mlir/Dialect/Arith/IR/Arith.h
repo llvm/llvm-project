@@ -151,6 +151,7 @@ Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
                      Value lhs, Value rhs);
 
 arith::CmpIPredicate invertPredicate(arith::CmpIPredicate pred);
+arith::CmpFPredicate invertPredicate(arith::CmpFPredicate pred);
 
 /// Creates an `arith.constant` operation with a zero value of type `type`. This
 /// method asserts if `type` is invalid for representing zero with
