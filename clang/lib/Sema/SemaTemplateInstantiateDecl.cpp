@@ -29,6 +29,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
@@ -629,30 +630,32 @@ static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
   S.AMDGPU().addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
 }
 
-static void instantiateDependentReqdWorkGroupSizeAttr(
-    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
-    const ReqdWorkGroupSizeAttr &Attr, Decl *New) {
-  // Both min and max expression are constant expressions.
-  EnterExpressionEvaluationContext Unevaluated(
+template <typename WorkGroupAttr>
+static void
+instantiateWorkGroupSizeAttr(Sema &S,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             const WorkGroupAttr &Attr, Decl *New) {
+  EnterExpressionEvaluationContext ConstantEvaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-
-  ExprResult Result = S.SubstExpr(Attr.getXDim(), TemplateArgs);
-  if (Result.isInvalid())
+  Expr *Dims[] = {Attr.getXDim(), Attr.getYDim(), Attr.getZDim()};
+  for (auto [I, Dim] : llvm::enumerate(Dims)) {
+    ExprResult Result = S.SubstExpr(Dim, TemplateArgs);
+    if (Result.isInvalid())
+      return;
+    // Non-dependent arguments were already checked and converted to int.
+    if (Dim->isValueDependent()) {
+      Dim = S.OpenCL().checkWorkGroupSizeArgument(Attr, Result.get(), I);
+      if (!Dim)
+        return;
+    } else {
+      Dim = Result.get();
+    }
+  }
+  if (S.OpenCL().checkWorkGroupSizeDimensions(Attr, Dims))
     return;
-  Expr *X = Result.getAs<Expr>();
 
-  Result = S.SubstExpr(Attr.getYDim(), TemplateArgs);
-  if (Result.isInvalid())
-    return;
-  Expr *Y = Result.getAs<Expr>();
-
-  Result = S.SubstExpr(Attr.getZDim(), TemplateArgs);
-  if (Result.isInvalid())
-    return;
-  Expr *Z = Result.getAs<Expr>();
-
-  ASTContext &Context = S.getASTContext();
-  New->addAttr(::new (Context) ReqdWorkGroupSizeAttr(Context, Attr, X, Y, Z));
+  New->addAttr(::new (S.Context)
+                   WorkGroupAttr(S.Context, Attr, Dims[0], Dims[1], Dims[2]));
 }
 
 ExplicitSpecifier Sema::instantiateExplicitSpecifier(
@@ -1006,8 +1009,13 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
     if (const auto *ReqdWorkGroupSize =
             dyn_cast<ReqdWorkGroupSizeAttr>(TmplAttr)) {
-      instantiateDependentReqdWorkGroupSizeAttr(*this, TemplateArgs,
-                                                *ReqdWorkGroupSize, New);
+      instantiateWorkGroupSizeAttr(*this, TemplateArgs, *ReqdWorkGroupSize,
+                                   New);
+      continue;
+    }
+
+    if (const auto *Hint = dyn_cast<WorkGroupSizeHintAttr>(TmplAttr)) {
+      instantiateWorkGroupSizeAttr(*this, TemplateArgs, *Hint, New);
       continue;
     }
 

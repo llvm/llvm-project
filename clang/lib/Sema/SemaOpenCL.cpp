@@ -16,6 +16,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 
@@ -76,6 +77,57 @@ void SemaOpenCL::handleAccessAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (getASTContext()) OpenCLAccessAttr(getASTContext(), AL));
+}
+
+Expr *SemaOpenCL::checkWorkGroupSizeArgument(const AttributeCommonInfo &CI,
+                                             Expr *E, unsigned Idx) {
+  if (SemaRef.DiagnoseUnexpandedParameterPack(E))
+    return nullptr;
+  if (E->isValueDependent())
+    return E;
+
+  ASTContext &Context = getASTContext();
+  std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(Context);
+  if (!I) {
+    Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
+        << CI << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
+    return nullptr;
+  }
+  if (!I->isIntN(32)) {
+    Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 32 << /*Unsigned=*/1;
+    return nullptr;
+  }
+  if (*I < 0) {
+    Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
+        << CI << /*non-negative=*/1 << E->getSourceRange();
+    return nullptr;
+  }
+
+  InitializedEntity Entity = InitializedEntity::InitializeParameter(
+      Context, Context.getConstType(Context.IntTy), /*consume=*/false);
+  return SemaRef.PerformCopyInitialization(Entity, SourceLocation(), E).get();
+}
+
+bool SemaOpenCL::checkWorkGroupSizeDimensions(const AttributeCommonInfo &CI,
+                                              ArrayRef<Expr *> Dims) {
+  // Check dependent dimensions once their values are known after substitution.
+  Expr *Zero = nullptr;
+  bool HasNonZero = false;
+  for (Expr *Dim : Dims) {
+    if (Dim->isValueDependent())
+      continue;
+    if (!Dim->EvaluateKnownConstInt(getASTContext()).isZero())
+      HasNonZero = true;
+    else if (!Zero)
+      Zero = Dim;
+  }
+  if (Zero && HasNonZero) {
+    Diag(CI.getLoc(), diag::err_attribute_argument_is_zero)
+        << CI << Zero->getSourceRange();
+    return true;
+  }
+  return false;
 }
 
 void SemaOpenCL::handleSubGroupSize(Decl *D, const ParsedAttr &AL) {
