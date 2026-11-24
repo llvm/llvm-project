@@ -34,11 +34,11 @@ define i32 @folded(ptr %p, i32 %x, i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    movl $1000, (%ebx) # imm = 0x3E8
 ; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    incl %edi
