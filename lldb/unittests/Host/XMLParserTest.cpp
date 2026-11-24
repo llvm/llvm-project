@@ -58,6 +58,33 @@ TEST(XMLParserTest, CharacterData) {
                        llvm::HasValue("<r>\xC3\xA9</r>"));
 }
 
+TEST(XMLParserTest, Prolog) {
+  EXPECT_THAT_EXPECTED(
+      ParseToString("<?xml version='1.0' encoding='UTF-8' standalone='no'?>\n"
+                    "<!-- comment -->\n"
+                    "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" "
+                    "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+                    "<plist>a&external;b</plist>"),
+      llvm::HasValue("<plist>ab</plist>"));
+  EXPECT_THAT_EXPECTED(ParseToString("<!DOCTYPE r SYSTEM 'r.dtd'><r/>"),
+                       llvm::HasValue("<r></r>"));
+}
+
+TEST(XMLParserTest, UTF16) {
+  std::string text = "<?xml version='1.0' encoding='UTF-16'?><r>\xE9</r>";
+  std::string utf16le = "\xFF\xFE", utf16be = "\xFE\xFF";
+  for (char c : text) {
+    utf16le += {c, '\0'};
+    utf16be += {'\0', c};
+  }
+  EXPECT_THAT_EXPECTED(ParseToString(utf16le),
+                       llvm::HasValue("<r>\xC3\xA9</r>"));
+  EXPECT_THAT_EXPECTED(ParseToString(utf16be),
+                       llvm::HasValue("<r>\xC3\xA9</r>"));
+  EXPECT_THAT_EXPECTED(ParseToString("\xFF\xFE\xFF\xFE" + utf16le.substr(2)),
+                       llvm::Failed());
+}
+
 TEST(XMLParserTest, DeepNesting) {
   const size_t depth = 1000000;
   std::string input;
@@ -103,6 +130,21 @@ TEST(XMLParserTest, NotWellFormed) {
       "<r><!-- a ---></r>",
       "<r><![CDATA[</r>",
       "<r><?xml version='1.0'?></r>",
+      "<r/><!DOCTYPE r>",
+      " <?xml version='1.0'?><r/>",
+      "<?xml?><r/>",
+      "<?xml version='2.0'?><r/>",
+      "<?xml encoding='UTF-8'?><r/>",
+      "<?xml version='1.0' encoding='ISO-8859-1'?><r/>",
+      "<?xml version='1.0' encoding='UTF-16'?><r/>",
+      "<?xml version='1.0' standalone='maybe'?><r/>",
+      "<?xml version='1.0' standalone='yes' encoding='UTF-8'?><r/>",
+      "<!DOCTYPE r [<!ENTITY e 'x'>]><r>&e;</r>",
+      "<!DOCTYPE r><r>&e;</r>",
+      "<?xml version='1.0' standalone='yes'?><!DOCTYPE r SYSTEM 'r'><r>&e;</r>",
+      "<!DOCTYPE r SYSTEM><r/>",
+      "<!DOCTYPE r PUBLIC '{}' 'r.dtd'><r/>",
+      "<!DOCTYPE r><!DOCTYPE r><r/>",
       "<r><?pi</r>",
       "<r>\x01</r>",
       "<r>\xFF</r>",
