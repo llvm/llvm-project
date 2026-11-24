@@ -15,6 +15,13 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu", gpu.container_module
       cir.store align(4) %0, %arg0 : !s32i, !cir.ptr<!s32i>
       gpu.return
     }
+
+    // Workgroup and private attributions are not part of the signature and
+    // must survive the conversion.
+    // CHECK: gpu.func @attrs(%[[A:.*]]: !llvm.ptr) workgroup(%{{.*}} : memref<4xf32, 3>) private(%{{.*}} : memref<2xf32, 5>) kernel {
+    gpu.func @attrs(%arg0: !cir.ptr<!s32i>) workgroup(%w : memref<4xf32, 3>) private(%p : memref<2xf32, 5>) kernel {
+      gpu.return
+    }
   }
 
   // CHECK-LABEL: llvm.func @host
