@@ -22624,14 +22624,14 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getZExtOrTrunc(Cvt, dl, DstVT);
     }
 
-    // For SatWidth < 32, use vpmovusd (VTRUNCUS) or vpminu (UMIN) with VLX.
+    // For SatWidth < 32 or 32 < SatWidth < 64, use vector conversion and
+    // saturating truncation (VTRUNCUS) or unsigned min (UMIN) with VLX.
     if (Subtarget.hasVLX()) {
       bool IsFP16 = SrcVT == MVT::f16 && Subtarget.hasFP16();
       bool IsDQI =
           (SrcVT == MVT::f32 || SrcVT == MVT::f64) && Subtarget.hasDQI();
-      unsigned Precision = APFloat::semanticsPrecision(SrcVT.getFltSemantics());
-      bool NeedsNewSeq = isPowerOf2_32(SatWidth) || SatWidth > Precision;
-      if (IsFP16 && SatWidth <= 16 && NeedsNewSeq) {
+
+      if (IsFP16 && SatWidth <= 16) {
         SDValue VecSrc =
             DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v8f16, Clamped);
         SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v8i16, VecSrc);
@@ -22649,23 +22649,38 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         SDValue Res = DAG.getExtractVectorElt(dl, MVT::i16, Val, 0);
         return DAG.getZExtOrTrunc(Res, dl, DstVT);
       }
-      if (IsDQI && SatWidth < 32 && NeedsNewSeq) {
-        MVT VecSrcVT = SrcVT == MVT::f64 ? MVT::v2f64 : MVT::v4f32;
+
+      if (IsFP16 || IsDQI) {
+        MVT VecSrcVT = IsFP16              ? MVT::v8f16
+                       : SrcVT == MVT::f64 ? MVT::v2f64
+                                           : MVT::v4f32;
         SDValue VecSrc =
             DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecSrcVT, Clamped);
-        SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
-        if (SatWidth == 8 || SatWidth == 16) {
-          MVT TruncVT = SatWidth == 8 ? MVT::v16i8 : MVT::v8i16;
-          MVT EltVT = SatWidth == 8 ? MVT::i8 : MVT::i16;
-          SDValue Trunc = DAG.getNode(X86ISD::VTRUNCUS, dl, TruncVT, Cvt);
-          SDValue Res = DAG.getExtractVectorElt(dl, EltVT, Trunc, 0);
+
+        if (SatWidth < 32) {
+          SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
+          if (IsDQI && (SatWidth == 8 || SatWidth == 16)) {
+            MVT TruncVT = SatWidth == 8 ? MVT::v16i8 : MVT::v8i16;
+            MVT EltVT = SatWidth == 8 ? MVT::i8 : MVT::i16;
+            SDValue Trunc = DAG.getNode(X86ISD::VTRUNCUS, dl, TruncVT, Cvt);
+            SDValue Res = DAG.getExtractVectorElt(dl, EltVT, Trunc, 0);
+            return DAG.getZExtOrTrunc(Res, dl, DstVT);
+          }
+          uint64_t MaxVal = (1ULL << SatWidth) - 1;
+          SDValue Val = DAG.getNode(ISD::UMIN, dl, MVT::v4i32, Cvt,
+                                    DAG.getConstant(MaxVal, dl, MVT::v4i32));
+          SDValue Res = DAG.getExtractVectorElt(dl, MVT::i32, Val, 0);
           return DAG.getZExtOrTrunc(Res, dl, DstVT);
         }
-        uint64_t MaxVal = (1ULL << SatWidth) - 1;
-        SDValue Val = DAG.getNode(ISD::UMIN, dl, MVT::v4i32, Cvt,
-                                  DAG.getConstant(MaxVal, dl, MVT::v4i32));
-        SDValue Res = DAG.getExtractVectorElt(dl, MVT::i32, Val, 0);
-        return DAG.getZExtOrTrunc(Res, dl, DstVT);
+
+        if (SatWidth < 64 && Subtarget.is64Bit()) {
+          SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v2i64, VecSrc);
+          uint64_t MaxVal = (1ULL << SatWidth) - 1;
+          SDValue Val = DAG.getNode(ISD::UMIN, dl, MVT::v2i64, Cvt,
+                                    DAG.getConstant(MaxVal, dl, MVT::v2i64));
+          SDValue Res = DAG.getExtractVectorElt(dl, MVT::i64, Val, 0);
+          return DAG.getZExtOrTrunc(Res, dl, DstVT);
+        }
       }
     }
   }
