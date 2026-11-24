@@ -1466,16 +1466,19 @@ define <4 x double> @PR231453(ptr %p0) {
   ret <4 x double> %shuf0
 }
 
-; FIXME: elts[1..3] incorrectly assumed to be zero
 define <4 x i32> @PR244566(<4 x i32> %x) {
 ; X86-LABEL: PR244566:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR244566:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    retq
   %s = ashr <4 x i32> %x, <i32 9, i32 33, i32 33, i32 33>
   %r1 = insertelement <4 x i32> %s, i32 0, i64 2
