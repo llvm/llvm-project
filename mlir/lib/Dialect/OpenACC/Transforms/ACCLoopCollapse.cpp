@@ -93,12 +93,14 @@ public:
 
     IRRewriter rewriter(&getContext());
 
-    // The walk is post-order, so a nested loop is collapsed before its parent.
-    // Replacing the visited loop is safe because the walk has already moved
-    // past it.
-    getOperation().walk([&](scf::ParallelOp op) {
-      if (op.getNumLoops() > 1 && op->getParentOfType<acc::ComputeRegionOp>())
-        collapseParallelOp(rewriter, op);
+    // Only loops inside a compute region are collapsed. The inner walk is
+    // post-order, so a nested loop is collapsed before its parent. Replacing
+    // the visited loop is safe because the walk has already moved past it.
+    getOperation().walk([&](acc::ComputeRegionOp computeRegion) {
+      computeRegion.walk([&](scf::ParallelOp op) {
+        if (op.getNumLoops() > 1)
+          collapseParallelOp(rewriter, op);
+      });
     });
 
     LLVM_DEBUG(llvm::dbgs() << "Exit ACCLoopCollapse()\n");
