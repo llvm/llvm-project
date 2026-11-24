@@ -4841,6 +4841,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // So, for any valid shift amount, X - ashr(X, C) stays in the signed
       // range between X and 0.
 
+      // For lshr:
+      //
       // For nonnegative X: 0 <= X <= M
       // tmp = lshr(X, C) : 0 <= tmp <= M
       // So, -M <= X - tmp <= M.
