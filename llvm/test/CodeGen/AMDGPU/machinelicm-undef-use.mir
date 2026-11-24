@@ -83,7 +83,6 @@ body: |
 # with a trailing metadata operand is rematerializable.
 ---
 name: test_metadata_operand
-tracksRegLiveness: true
 machineMetadataNodes:
   - '!0 = !{!"test_metadata"}'
 body: |

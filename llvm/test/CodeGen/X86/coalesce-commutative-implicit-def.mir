@@ -60,7 +60,6 @@ body: |
 # implicit-def of the destination reg from being updated.
 ---
 name: implicit_def_dst_metadata
-tracksRegLiveness: true
 machineMetadataNodes:
   - '!0 = !{!"test_metadata"}'
 body: |
