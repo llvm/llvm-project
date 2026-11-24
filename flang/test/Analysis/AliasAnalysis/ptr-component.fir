@@ -1046,3 +1046,211 @@ func.func @_QMmPtest_ptr_arrays.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fi
   %12 = fir.box_addr %11 {test.ptr = "parr.tgt.fir"} : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>>
   return
 }
+
+// -----
+
+// Access paths merged at a region branch miss their start.
+
+// joined is the descriptor of x%c or x%d, so it is part of the data of x
+// (xdata).  joined.c is the descriptor of x%c%c or x%d%c, and x%c%c is part of
+// the data of x%c (cdata).  The data of x%c does not contain its own
+// descriptor (c).  joined2 is c or joined.c: their paths have the same steps,
+// but the path of joined.c misses its start.
+
+// CHECK-LABEL: Testing : "_QPtest_merged"
+// CHECK-DAG: xdata#0 <-> joined#0: MayAlias
+// CHECK-DAG: cdata#0 <-> joined.c#0: MayAlias
+// CHECK-DAG: c#0 <-> cdata#0: NoAlias
+// CHECK-DAG: cdata#0 <-> joined2#0: MayAlias
+
+!t = !fir.type<_QTt{c:!fir.box<!fir.heap<!fir.type<_QTt>>>,d:!fir.box<!fir.heap<!fir.type<_QTt>>>}>
+
+func.func @_QPtest_merged(%arg0: i1) {
+  %0 = fir.alloca !fir.box<!fir.heap<!t>> {uniq_name = "_QFtest_mergedEx"}
+  %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %2 = fir.box_addr %1 {test.ptr = "xdata"} : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %3 = fir.coordinate_of %2, c {test.ptr = "c"} : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %4 = fir.coordinate_of %2, d : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %5 = fir.load %3 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %6 = fir.box_addr %5 {test.ptr = "cdata"} : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %7 = fir.if %arg0 -> !fir.ref<!fir.box<!fir.heap<!t>>> {
+    fir.result %3 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  } else {
+    fir.result %4 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  } {test.ptr = "joined"}
+  %8 = fir.load %7 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %9 = fir.box_addr %8 : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %10 = fir.coordinate_of %9, c {test.ptr = "joined.c"} : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %11 = fir.if %arg0 -> !fir.ref<!fir.box<!fir.heap<!t>>> {
+    fir.result %3 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  } else {
+    fir.result %10 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  } {test.ptr = "joined2"}
+  return
+}
+
+// -----
+
+// An access path merged at a region branch may miss a pointer dereference.
+
+// The data of x%p1%a (a1data) is reached through a pointer, so it may contain
+// the descriptor of the allocatable dummy arg x, e.g. when x is v%a%q and
+// x%p1 => v.  seldata is the data of x%p1%a or x%p2%a.
+
+// CHECK-LABEL: Testing : "_QPtest_merged_ptr"
+// CHECK-DAG: x#0 <-> a1data#0: MayAlias
+// CHECK-DAG: x#0 <-> seldata#0: MayAlias
+
+!w = !fir.type<_QTw{q:!fir.box<!fir.heap<!fir.type<_QTt>>>}>
+!u = !fir.type<_QTu{a:!fir.box<!fir.heap<!w>>}>
+!t = !fir.type<_QTt{p1:!fir.box<!fir.ptr<!u>>,p2:!fir.box<!fir.ptr<!u>>}>
+
+func.func @_QPtest_merged_ptr(%arg0: i1, %arg1: !fir.ref<!fir.box<!fir.heap<!t>>> {fir.bindc_name = "x"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg1 dummy_scope %0 arg 1 uniq_name("_QFtest_merged_ptrEx") fortran_attrs<allocatable> {test.ptr = "x"} : (!fir.ref<!fir.box<!fir.heap<!t>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %2 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %3 = fir.box_addr %2 : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %4 = fir.coordinate_of %3, p1 : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %5 = fir.coordinate_of %3, p2 : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %6 = fir.load %4 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %7 = fir.load %5 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %8 = fir.box_addr %6 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %9 = fir.box_addr %7 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %10 = fir.coordinate_of %8, a : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!w>>>
+  %11 = fir.coordinate_of %9, a : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!w>>>
+  %12 = fir.load %10 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  %13 = fir.box_addr %12 {test.ptr = "a1data"} : (!fir.box<!fir.heap<!w>>) -> !fir.heap<!w>
+  %14 = fir.if %arg0 -> !fir.ref<!fir.box<!fir.heap<!w>>> {
+    fir.result %10 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  } else {
+    fir.result %11 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  }
+  %15 = fir.load %14 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  %16 = fir.box_addr %15 {test.ptr = "seldata"} : (!fir.box<!fir.heap<!w>>) -> !fir.heap<!w>
+  return
+}
+
+// -----
+
+// arg%p1%a%z (a1z) is reached through a pointer, so it may be the actual
+// argument of the pointer dummy arg argp, even though arg has neither TARGET
+// nor POINTER.  selz is arg%p1%a%z or arg%p2%a%z.
+
+// CHECK-LABEL: Testing : "_QPtest_merged_arg"
+// CHECK-DAG: argp#0 <-> a1z#0: MayAlias
+// CHECK-DAG: argp#0 <-> selz#0: MayAlias
+
+!w = !fir.type<_QTw{z:!fir.box<!fir.ptr<i32>>}>
+!u = !fir.type<_QTu{a:!fir.box<!fir.heap<!w>>}>
+!t = !fir.type<_QTt{p1:!fir.box<!fir.ptr<!u>>,p2:!fir.box<!fir.ptr<!u>>}>
+
+func.func @_QPtest_merged_arg(%arg0: i1, %arg1: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "argp"}, %arg2: !fir.ref<!t> {fir.bindc_name = "arg"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg1 dummy_scope %0 arg 1 uniq_name("_QFtest_merged_argEargp") fortran_attrs<pointer> {test.ptr = "argp"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %2 = fir.declare %arg2 dummy_scope %0 arg 2 uniq_name("_QFtest_merged_argEarg") : (!fir.ref<!t>, !fir.dscope) -> !fir.ref<!t>
+  %3 = fir.coordinate_of %2, p1 : (!fir.ref<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %4 = fir.coordinate_of %2, p2 : (!fir.ref<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %5 = fir.load %3 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %6 = fir.load %4 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %7 = fir.box_addr %5 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %8 = fir.box_addr %6 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %9 = fir.coordinate_of %7, a : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!w>>>
+  %10 = fir.coordinate_of %8, a : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!w>>>
+  %11 = fir.load %9 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  %12 = fir.box_addr %11 : (!fir.box<!fir.heap<!w>>) -> !fir.heap<!w>
+  %13 = fir.coordinate_of %12, z {test.ptr = "a1z"} : (!fir.heap<!w>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %14 = fir.if %arg0 -> !fir.ref<!fir.box<!fir.heap<!w>>> {
+    fir.result %9 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  } else {
+    fir.result %10 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  }
+  %15 = fir.load %14 : !fir.ref<!fir.box<!fir.heap<!w>>>
+  %16 = fir.box_addr %15 : (!fir.box<!fir.heap<!w>>) -> !fir.heap<!w>
+  %17 = fir.coordinate_of %16, z {test.ptr = "selz"} : (!fir.heap<!w>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  return
+}
+
+// -----
+
+// The steps of an access path merged at a region branch do not tell which
+// object its components belong to.
+
+// sela is x%p1%q%a or x%p2%q%a, so it may be x%p1%q%a (a1).  The data of x%p1%q
+// is part of a pointer target, so x%r may point to its component a.
+
+// CHECK-LABEL: Testing : "_QPtest_merged_diverge"
+// CHECK-DAG: a1#0 <-> sela#0: MayAlias
+// CHECK-DAG: rtarget#0 <-> a1#0: MayAlias
+// CHECK-DAG: rtarget#0 <-> sela#0: MayAlias
+
+!u = !fir.type<_QTu{q:!fir.box<!fir.heap<!fir.type<_QTt>>>}>
+!t = !fir.type<_QTt{a:i32,r:!fir.box<!fir.ptr<i32>>,p1:!fir.box<!fir.ptr<!u>>,p2:!fir.box<!fir.ptr<!u>>}>
+
+func.func @_QPtest_merged_diverge(%arg0: i1, %arg1: !fir.ref<!fir.box<!fir.heap<!t>>> {fir.bindc_name = "x"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg1 dummy_scope %0 arg 1 uniq_name("_QFtest_merged_divergeEx") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!t>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %2 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %3 = fir.box_addr %2 : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %4 = fir.coordinate_of %3, r : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %5 = fir.load %4 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %6 = fir.box_addr %5 {test.ptr = "rtarget"} : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+  %7 = fir.coordinate_of %3, p1 : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %8 = fir.coordinate_of %3, p2 : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %9 = fir.load %7 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %10 = fir.load %8 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %11 = fir.box_addr %9 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %12 = fir.box_addr %10 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %13 = fir.coordinate_of %11, q : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %14 = fir.coordinate_of %12, q : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %15 = fir.load %13 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %16 = fir.box_addr %15 : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %17 = fir.coordinate_of %16, a {test.ptr = "a1"} : (!fir.heap<!t>) -> !fir.ref<i32>
+  %18 = fir.if %arg0 -> !fir.ref<!fir.box<!fir.heap<!t>>> {
+    fir.result %13 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  } else {
+    fir.result %14 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  }
+  %19 = fir.load %18 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %20 = fir.box_addr %19 : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %21 = fir.coordinate_of %20, a {test.ptr = "sela"} : (!fir.heap<!t>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+
+// The data of x%p1%q (q1data) is part of a pointer target, so it may contain
+// the descriptor of the TARGET allocatable dummy arg y: the actual argument may
+// be x%p1%q%c.  seldata is the data of x%p1%q or x%p2%q.
+
+// CHECK-LABEL: Testing : "_QPtest_merged_target"
+// CHECK-DAG: y#0 <-> q1data#0: MayAlias
+// CHECK-DAG: y#0 <-> seldata#0: MayAlias
+
+!u = !fir.type<_QTu{q:!fir.box<!fir.heap<!fir.type<_QTt>>>}>
+!t = !fir.type<_QTt{c:!fir.box<!fir.heap<i32>>,p1:!fir.box<!fir.ptr<!u>>,p2:!fir.box<!fir.ptr<!u>>}>
+
+func.func @_QPtest_merged_target(%arg0: i1, %arg1: !fir.ref<!fir.box<!fir.heap<!t>>> {fir.bindc_name = "x"}, %arg2: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.bindc_name = "y", fir.target}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg1 dummy_scope %0 arg 1 uniq_name("_QFtest_merged_targetEx") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!t>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %2 = fir.declare %arg2 dummy_scope %0 arg 2 uniq_name("_QFtest_merged_targetEy") fortran_attrs<allocatable, target> {test.ptr = "y"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+  %3 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %4 = fir.box_addr %3 : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %5 = fir.coordinate_of %4, p1 : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %6 = fir.coordinate_of %4, p2 : (!fir.heap<!t>) -> !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %7 = fir.load %5 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %8 = fir.load %6 : !fir.ref<!fir.box<!fir.ptr<!u>>>
+  %9 = fir.box_addr %7 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %10 = fir.box_addr %8 : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
+  %11 = fir.coordinate_of %9, q : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %12 = fir.coordinate_of %10, q : (!fir.ptr<!u>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %13 = fir.load %11 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %14 = fir.box_addr %13 {test.ptr = "q1data"} : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %15 = fir.if %arg0 -> !fir.ref<!fir.box<!fir.heap<!t>>> {
+    fir.result %11 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  } else {
+    fir.result %12 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  }
+  %16 = fir.load %15 : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %17 = fir.box_addr %16 {test.ptr = "seldata"} : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  return
+}

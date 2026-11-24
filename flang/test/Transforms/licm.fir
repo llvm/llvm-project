@@ -3012,3 +3012,40 @@ func.func private @_QPreplace(!fir.box<!fir.array<?x!fir.type<_QFtest_componentT
 // CHECK-NOT: {{^ *[}]}}
 // CHECK: fir.load %[[C]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 // CHECK: {{^ *[}]}}
+
+// -----
+// The store to the data of x changes the descriptors of both components a and
+// b.  The load of the descriptor of the component selected by fir.if must
+// remain in the loop after the store.
+func.func @_QPtest_merged_component(%arg0: i1, %arg1: !fir.box<!fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>>, %arg2: !fir.ref<i32>, %arg3: !fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>) {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>> {uniq_name = "_QFtest_merged_componentEx"}
+  fir.store %arg1 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>>>
+  %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>>>
+  %2 = fir.box_addr %1 : (!fir.box<!fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>
+  %3 = fir.coordinate_of %2, a : (!fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %4 = fir.coordinate_of %2, b : (!fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %5 = fir.if %arg0 -> !fir.ref<!fir.box<!fir.ptr<i32>>> {
+    fir.result %3 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  } else {
+    fir.result %4 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  }
+  scf.for %arg4 = %c1 to %c3 step %c1 {
+    fir.store %arg3 to %2 : !fir.heap<!fir.type<_QTt{a:!fir.box<!fir.ptr<i32>>,b:!fir.box<!fir.ptr<i32>>}>>
+    %6 = fir.load %5 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+    %7 = fir.box_addr %6 : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+    %8 = fir.load %7 : !fir.ptr<i32>
+    fir.store %8 to %arg2 : !fir.ref<i32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtest_merged_component(
+// CHECK: %[[SEL:[^ ]+]] = fir.if
+// CHECK: scf.for
+// CHECK-NOT: {{^ *[}]}}
+// CHECK: fir.store %{{.*}} to %{{.*}} : !fir.heap<
+// CHECK-NOT: {{^ *[}]}}
+// CHECK: fir.load %[[SEL]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+// CHECK: {{^ *[}]}}

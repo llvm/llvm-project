@@ -215,22 +215,29 @@ struct AliasAnalysis {
       /// MustAlias.
       bool isApproximate{false};
 
+      /// Whether steps may be missing from the start of the path: different
+      /// paths of region branch predecessors are merged into an empty path,
+      /// and the steps after the merge are appended to it.
+      bool isIncomplete{false};
+
       /// The storage-associated (EQUIVALENCE/COMMON) declaration crossed by
       /// the path, if any. Objects of the same type may partially overlap
       /// only through storage association, so component steps are only
       /// compared between paths crossing the same such declaration.
       mlir::Operation *storageDecl{nullptr};
 
-      /// Return true if any step is a PointerDeref.
-      bool hasPointerDeref() const {
-        return llvm::any_of(steps, [](const PathStep &s) {
-          return s.kind == PathStep::Kind::PointerDeref;
-        });
+      /// Return true if any step is a PointerDeref, or if the path is
+      /// incomplete, since the missing steps may include one.
+      bool mayHavePointerDeref() const {
+        return isIncomplete || llvm::any_of(steps, [](const PathStep &s) {
+                 return s.kind == PathStep::Kind::PointerDeref;
+               });
       }
 
       bool operator==(const AccessPath &o) const {
         return isApproximate == o.isApproximate &&
-               storageDecl == o.storageDecl && steps == o.steps;
+               isIncomplete == o.isIncomplete && storageDecl == o.storageDecl &&
+               steps == o.steps;
       }
       bool operator!=(const AccessPath &o) const { return !(*this == o); }
 
