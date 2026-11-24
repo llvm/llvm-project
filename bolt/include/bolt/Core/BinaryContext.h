@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -241,6 +242,14 @@ class BinaryContext {
 
   /// Functions injected by BOLT.
   BinaryFunctionListType InjectedBinaryFunctions;
+
+  struct RegisteredPatchEntry {
+    BinaryFunction *PatchBinaryFunction;
+    const MCSymbol *Target;
+  };
+
+  /// Entry patches tracked by function until finalization.
+  MapVector<BinaryFunction *, std::vector<RegisteredPatchEntry>> PatchEntries;
 
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
@@ -636,10 +645,23 @@ public:
   ///
   /// Optional \p Name can be assigned to the patch. The name will be emitted to
   /// the symbol table at \p Address.
-  BinaryFunction *
-  createInstructionPatch(uint64_t Address,
-                         const InstructionListType &Instructions,
-                         const Twine &Name = "");
+  /// Supply \p Function and \p TargetSymbol together to track an entry patch.
+  BinaryFunction *createInstructionPatch(
+      uint64_t Address, const InstructionListType &Instructions,
+      const Twine &Name = "", BinaryFunction *Function = nullptr,
+      const MCSymbol *TargetSymbol = nullptr);
+
+  /// Return true if \p Function has registered entry patches.
+  bool hasPatchEntry(BinaryFunction &Function) const {
+    return PatchEntries.contains(&Function);
+  }
+
+  /// Remove registered patches for the primary and secondary entries of \p
+  /// Function.
+  void removePatchEntry(BinaryFunction &Function);
+
+  /// Apply BTI fixups for the surviving entry patches before layout.
+  void finalizePatchEntries();
 
   /// Create a binary function with a base \p Name.
   BinaryFunction *createThunkBinaryFunction(const std::string &Name);

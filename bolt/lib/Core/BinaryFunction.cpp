@@ -3325,6 +3325,8 @@ void BinaryFunction::setTrapOnEntry() {
 }
 
 void BinaryFunction::setIgnored() {
+  if (BC.hasPatchEntry(*this))
+    BC.removePatchEntry(*this);
   IsIgnored = true;
 
   if (opts::processAllFunctions()) {

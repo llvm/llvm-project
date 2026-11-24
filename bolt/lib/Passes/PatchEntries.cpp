@@ -149,10 +149,8 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
 
       BinaryFunction *PatchFunction = BC.createInstructionPatch(
           Patch.Address, Instructions,
-          NameResolver::append(Patch.Symbol->getName(), ".org.0"));
-      if (BC.usesBTI())
-        BC.MIB->applyBTIFixupToSymbol(BC, Patch.Symbol,
-                                      *(Instructions.end() - 1));
+          NameResolver::append(Patch.Symbol->getName(), ".org.0"), &Function,
+          Patch.Symbol);
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;
@@ -162,6 +160,10 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
              "max patch size exceeded");
     }
   }
+  // defer finalization of patch entries until after all functions have been
+  // processed
+  if (BC.usesBTI())
+    BC.finalizePatchEntries();
   return Error::success();
 }
 

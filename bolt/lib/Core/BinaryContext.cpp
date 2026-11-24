@@ -14,6 +14,7 @@
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -2922,10 +2923,9 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   return BF;
 }
 
-BinaryFunction *
-BinaryContext::createInstructionPatch(uint64_t Address,
-                                      const InstructionListType &Instructions,
-                                      const Twine &Name) {
+BinaryFunction *BinaryContext::createInstructionPatch(
+    uint64_t Address, const InstructionListType &Instructions,
+    const Twine &Name, BinaryFunction *Function, const MCSymbol *TargetSymbol) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot get section for patching");
   assert(Section->hasSectionRef() && Section->isText() &&
@@ -2956,7 +2956,29 @@ BinaryContext::createInstructionPatch(uint64_t Address,
   if (Name.str().empty())
     PBF->setAnonymous(true);
 
+  if (Function)
+    PatchEntries[Function].push_back({PBF, TargetSymbol});
   return PBF;
+}
+
+void BinaryContext::removePatchEntry(BinaryFunction &Function) {
+  auto It = PatchEntries.find(&Function);
+  for (const RegisteredPatchEntry &Entry : It->second) {
+    BinaryFunction *Patch = Entry.PatchBinaryFunction;
+    llvm::erase(InjectedBinaryFunctions, Patch);
+    llvm::erase(OutputFunctions, Patch);
+    SymbolToFunctionMap.erase(Patch->getSymbol());
+    delete Patch;
+  }
+  PatchEntries.erase(It);
+}
+
+void BinaryContext::finalizePatchEntries() {
+  for (const auto &Entries : PatchEntries.values())
+    for (const RegisteredPatchEntry &Entry : Entries)
+      MIB->applyBTIFixupToSymbol(
+          *this, Entry.Target,
+          *Entry.PatchBinaryFunction->begin()->getLastNonPseudoInstr());
 }
 
 BinaryFunction *
