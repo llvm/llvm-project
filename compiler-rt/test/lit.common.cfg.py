@@ -770,30 +770,6 @@ elif config.target_os == "NetBSD":
     ver = [int(x) for x in re.findall(r"\d+", platform.release())[:2]]
     if ver >= [10, 1]:
         config.available_features.add("have-uchar-c8")
-    # Detect whether the target's <uchar.h> declares mbrtoc8() and c8rtomb().
-    cmd_args = [config.clang.strip()]
-    if compiler_id == "Clang":
-        cmd_args.append(f"--target={config.target_triple}")
-    cmd_args += shlex.split(config.target_cflags)
-    cmd_args += ["-xc++", "-std=c++20", "-", "-fsyntax-only"]
-    try:
-        cmd = subprocess.Popen(
-            cmd_args,
-            stdout=subprocess.DEVNULL,
-            stdin=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            env=config.environment,
-        )
-        cmd.communicate(
-            b"#include <uchar.h>\n"
-            b"size_t f(char8_t *p, char *s, mbstate_t *ps) {\n"
-            b"  return mbrtoc8(p, s, 0, ps) + c8rtomb(s, *p, ps);\n"
-            b"}\n"
-        )
-        if cmd.returncode == 0:
-            config.available_features.add("have-uchar-c8")
-    except OSError:
-        pass
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):
