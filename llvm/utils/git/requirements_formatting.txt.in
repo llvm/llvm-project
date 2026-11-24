@@ -1,3 +1,3 @@
-black~=23.0
+black~=26.10
 darker==1.7.2
 PyGithub==1.59.1
