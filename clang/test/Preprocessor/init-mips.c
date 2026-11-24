@@ -1935,6 +1935,26 @@
 // MIPS-XXR6:#define __mips_fpr 64
 // MIPS-XXR6:#define __mips_nan2008 1
 
+// MIPS I and the R5900 have no ll and sc, so atomic operations are libcalls.
+//
+// RUN: %clang_cc1 -target-cpu mips1 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix NO-LLSC %s
+// RUN: %clang_cc1 -target-cpu r5900 \
+// RUN:   -E -dM -triple=mipsel-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix NO-LLSC %s
+// RUN: %clang_cc1 -target-cpu r5900 -target-abi n64 \
+// RUN:   -E -dM -triple=mips64el-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix NO-LLSC %s
+// NO-LLSC:#define __CLANG_ATOMIC_INT_LOCK_FREE 1
+// NO-LLSC-NOT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_{{[0-9]}} 1
+//
+// RUN: %clang_cc1 -target-cpu mips2 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix LLSC %s
+// LLSC:#define __CLANG_ATOMIC_INT_LOCK_FREE 2
+// LLSC:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+
 // RUN: %clang_cc1 -target-cpu mips32 \
 // RUN:   -E -dM -triple=mips-unknown-netbsd -mrelocation-model pic < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-NETBSD %s

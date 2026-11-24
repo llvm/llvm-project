@@ -42,6 +42,8 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
   // to 6 for MIPS32 and MIPS64 and 0 for the older ISAs.
   unsigned ISALevel = 0;
   unsigned ISARev = 0;
+  // MIPS I and the R5900 have no ll and sc.
+  bool HasLLSC = true;
 
 protected:
   enum FPModeEnum { FPXX, FP32, FP64 } FPMode;
@@ -316,6 +318,7 @@ public:
     bool OddSpregGiven = false;
     bool StrictAlign = false;
     bool FpGiven = false;
+    bool IsR5900 = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -361,6 +364,8 @@ public:
         IsNoABICalls = true;
       else if (Feature == "+use-indirect-jump-hazard")
         UseIndirectJumpHazard = true;
+      else if (Feature == "+r5900")
+        IsR5900 = true;
       else if (Feature == "+nooddspreg") {
         NoOddSpreg = true;
         OddSpregGiven = false;
@@ -380,6 +385,11 @@ public:
       FPMode = FP64;
       Features.push_back("+fp64");
     }
+
+    // Without ll and sc, the backend uses libcalls for atomic operations.
+    HasLLSC = ISALevel != 1 && !IsR5900;
+    if (!HasLLSC)
+      MaxAtomicInlineWidth = 0;
 
     resetDataLayout();
 
