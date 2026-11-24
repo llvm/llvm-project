@@ -4085,9 +4085,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     APInt DemandedSrc = APInt::getBitsSet(NumElts, Lo, Hi);
     APInt UndefSrc, ZeroSrc;
-    if (SimplifyDemandedVectorElts(Src, DemandedSrc, UndefSrc, ZeroSrc, TLO,
-                                   Depth + 1))
-      return true;
+    if (!DemandedSrc.isAllOnes())
+      if (SimplifyDemandedVectorElts(Src, DemandedSrc, UndefSrc, ZeroSrc, TLO,
+                                     Depth + 1))
+        return true;
 
     break;
   }
