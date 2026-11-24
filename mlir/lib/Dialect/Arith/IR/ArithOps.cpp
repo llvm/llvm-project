@@ -1348,8 +1348,8 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
 
 void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(
-      context);
+  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrINotCmpF, XOrIOfExtUI,
+               XOrIOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//

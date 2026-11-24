@@ -3365,7 +3365,7 @@ func.func @notCmpFUNO(%arg0: f32, %arg1: f32) -> i1 {
 // CHECK-LABEL: @notCmpF_fastmath
 //       CHECK:   %[[cres:.+]] = arith.cmpf ugt, %arg0, %arg1 fastmath<nnan,ninf> : f32
 //       CHECK:   return %[[cres]]
-func.func @notCmpFFastMath(%arg0: f32, %arg1: f32) -> i1 {
+func.func @notCmpF_fastmath(%arg0: f32, %arg1: f32) -> i1 {
   %true = arith.constant true
   %cmp = arith.cmpf ole, %arg0, %arg1 fastmath<nnan,ninf> : f32
   %ncmp = arith.xori %cmp, %true : i1
