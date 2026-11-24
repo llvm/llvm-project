@@ -414,47 +414,139 @@ define <9 x i64> @test_divv_9i64(<9 x i64> %a, <9 x i64> %b) nounwind {
 }
 
 define <2 x i64> @test_divv_2i64_uniform(<2 x i64> %a, i64 %b) nounwind {
-; FASTMULLQ-LABEL: test_divv_2i64_uniform:
-; FASTMULLQ:       # %bb.0:
-; FASTMULLQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; FASTMULLQ-NEXT:    vpbroadcastq %rdi, %xmm1
-; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm2
-; FASTMULLQ-NEXT:    vcvtusi2sd %rdi, {ru-sae}, %xmm15, %xmm3
-; FASTMULLQ-NEXT:    vmovddup {{.*#+}} xmm4 = [1.0E+0,1.0E+0]
-; FASTMULLQ-NEXT:    # xmm4 = mem[0,0]
-; FASTMULLQ-NEXT:    vdivsd {rd-sae}, %xmm3, %xmm4, %xmm3
-; FASTMULLQ-NEXT:    vbroadcastsd %xmm3, %zmm3
-; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm2, %zmm2
-; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
-; FASTMULLQ-NEXT:    vpmullq %xmm1, %xmm2, %xmm4
-; FASTMULLQ-NEXT:    vpsubq %xmm4, %xmm0, %xmm0
-; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
-; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm4, %zmm3
-; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
-; FASTMULLQ-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
-; FASTMULLQ-NEXT:    vpmullq %xmm1, %xmm3, %xmm3
-; FASTMULLQ-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
-; FASTMULLQ-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k0
-; FASTMULLQ-NEXT:    vpmovm2q %k0, %xmm0
-; FASTMULLQ-NEXT:    vpsubq %xmm0, %xmm2, %xmm0
-; FASTMULLQ-NEXT:    vzeroupper
-; FASTMULLQ-NEXT:    retq
-;
-; SLOWMULLQ-LABEL: test_divv_2i64_uniform:
-; SLOWMULLQ:       # %bb.0:
-; SLOWMULLQ-NEXT:    vpextrq $1, %xmm0, %rax
-; SLOWMULLQ-NEXT:    xorl %edx, %edx
-; SLOWMULLQ-NEXT:    divq %rdi
-; SLOWMULLQ-NEXT:    vmovq %rax, %xmm1
-; SLOWMULLQ-NEXT:    vmovq %xmm0, %rax
-; SLOWMULLQ-NEXT:    xorl %edx, %edx
-; SLOWMULLQ-NEXT:    divq %rdi
-; SLOWMULLQ-NEXT:    vmovq %rax, %xmm0
-; SLOWMULLQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SLOWMULLQ-NEXT:    retq
+; CHECK-LABEL: test_divv_2i64_uniform:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vpbroadcastq %rdi, %xmm1
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm2
+; CHECK-NEXT:    vcvtusi2sd %rdi, {ru-sae}, %xmm15, %xmm3
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm4 = [1.0E+0,1.0E+0]
+; CHECK-NEXT:    # xmm4 = mem[0,0]
+; CHECK-NEXT:    vdivsd {rd-sae}, %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vbroadcastsd %xmm3, %zmm3
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm2, %zmm2
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; CHECK-NEXT:    vpmullq %xmm1, %xmm2, %xmm4
+; CHECK-NEXT:    vpsubq %xmm4, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm4, %zmm3
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; CHECK-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
+; CHECK-NEXT:    vpmullq %xmm1, %xmm3, %xmm3
+; CHECK-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k0
+; CHECK-NEXT:    vpmovm2q %k0, %xmm0
+; CHECK-NEXT:    vpsubq %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %ins = insertelement <2 x i64> poison, i64 %b, i64 0
   %bv = shufflevector <2 x i64> %ins, <2 x i64> poison, <2 x i32> zeroinitializer
   %res = udiv <2 x i64> %a, %bv
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @test_sdivv_2i64_uniform(<2 x i64> %a, i64 %b) nounwind {
+; CHECK-LABEL: test_sdivv_2i64_uniform:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastq %rdi, %xmm2
+; CHECK-NEXT:    vpabsq %xmm0, %xmm1
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm1, %zmm3
+; CHECK-NEXT:    vpabsq %xmm2, %xmm4
+; CHECK-NEXT:    vmovq %xmm4, %rax
+; CHECK-NEXT:    vcvtusi2sd %rax, {ru-sae}, %xmm15, %xmm5
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm6 = [1.0E+0,1.0E+0]
+; CHECK-NEXT:    # xmm6 = mem[0,0]
+; CHECK-NEXT:    vdivsd {rd-sae}, %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vbroadcastsd %xmm5, %zmm5
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm5, %zmm3, %zmm3
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; CHECK-NEXT:    vpmullq %xmm4, %xmm3, %xmm6
+; CHECK-NEXT:    vpsubq %xmm6, %xmm1, %xmm1
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm1, %zmm6
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm5, %zmm6, %zmm5
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm5, %zmm5
+; CHECK-NEXT:    vpaddq %xmm5, %xmm3, %xmm3
+; CHECK-NEXT:    vpmullq %xmm4, %xmm5, %xmm5
+; CHECK-NEXT:    vpsubq %xmm5, %xmm1, %xmm1
+; CHECK-NEXT:    vpcmpnltuq %xmm4, %xmm1, %k0
+; CHECK-NEXT:    vpmovm2q %k0, %xmm1
+; CHECK-NEXT:    vpsubq %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovq2m %xmm0, %k1
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubq %xmm1, %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %ins = insertelement <2 x i64> poison, i64 %b, i64 0
+  %bv = shufflevector <2 x i64> %ins, <2 x i64> poison, <2 x i32> zeroinitializer
+  %res = sdiv <2 x i64> %a, %bv
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @test_remv_2i64_uniform(<2 x i64> %a, i64 %b) nounwind {
+; CHECK-LABEL: test_remv_2i64_uniform:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vpbroadcastq %rdi, %xmm1
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm2
+; CHECK-NEXT:    vcvtusi2sd %rdi, {ru-sae}, %xmm15, %xmm3
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm4 = [1.0E+0,1.0E+0]
+; CHECK-NEXT:    # xmm4 = mem[0,0]
+; CHECK-NEXT:    vdivsd {rd-sae}, %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vbroadcastsd %xmm3, %zmm3
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm2, %zmm2
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; CHECK-NEXT:    vpmullq %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm2
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm2, %zmm2
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; CHECK-NEXT:    vpmullq %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vpsubq %xmm1, %xmm0, %xmm0 {%k1}
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %ins = insertelement <2 x i64> poison, i64 %b, i64 0
+  %bv = shufflevector <2 x i64> %ins, <2 x i64> poison, <2 x i32> zeroinitializer
+  %res = urem <2 x i64> %a, %bv
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @test_sremv_2i64_uniform(<2 x i64> %a, i64 %b) nounwind {
+; CHECK-LABEL: test_sremv_2i64_uniform:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastq %rdi, %xmm1
+; CHECK-NEXT:    vpabsq %xmm0, %xmm2
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm3
+; CHECK-NEXT:    vpabsq %xmm1, %xmm4
+; CHECK-NEXT:    vmovq %xmm4, %rax
+; CHECK-NEXT:    vcvtusi2sd %rax, {ru-sae}, %xmm15, %xmm1
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm5 = [1.0E+0,1.0E+0]
+; CHECK-NEXT:    # xmm5 = mem[0,0]
+; CHECK-NEXT:    vdivsd {rd-sae}, %xmm1, %xmm5, %xmm1
+; CHECK-NEXT:    vbroadcastsd %xmm1, %zmm1
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm1, %zmm3, %zmm3
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; CHECK-NEXT:    vpmullq %xmm4, %xmm3, %xmm3
+; CHECK-NEXT:    vpsubq %xmm3, %xmm2, %xmm2
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm3
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm1, %zmm3, %zmm1
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm1, %zmm1
+; CHECK-NEXT:    vpmullq %xmm4, %xmm1, %xmm1
+; CHECK-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
+; CHECK-NEXT:    vpcmpnltuq %xmm4, %xmm1, %k1
+; CHECK-NEXT:    vpsubq %xmm4, %xmm1, %xmm1 {%k1}
+; CHECK-NEXT:    vpmovq2m %xmm0, %k1
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubq %xmm1, %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %ins = insertelement <2 x i64> poison, i64 %b, i64 0
+  %bv = shufflevector <2 x i64> %ins, <2 x i64> poison, <2 x i32> zeroinitializer
+  %res = srem <2 x i64> %a, %bv
   ret <2 x i64> %res
 }
 
@@ -729,7 +821,7 @@ define void @test_divv_8i64_uniform_loop(ptr noalias %a, i64 %b, i64 %n) nounwin
 ; CHECK-NEXT:    vdivsd {rd-sae}, %xmm1, %xmm2, %xmm1
 ; CHECK-NEXT:    vbroadcastsd %xmm1, %zmm1
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB21_1: # %loop
+; CHECK-NEXT:  .LBB24_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 (%rdi), %zmm2
 ; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm3
@@ -749,7 +841,7 @@ define void @test_divv_8i64_uniform_loop(ptr noalias %a, i64 %b, i64 %n) nounwin
 ; CHECK-NEXT:    vmovdqu64 %zmm2, (%rdi)
 ; CHECK-NEXT:    addq $64, %rdi
 ; CHECK-NEXT:    addq $-8, %rdx
-; CHECK-NEXT:    jne .LBB21_1
+; CHECK-NEXT:    jne .LBB24_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -780,7 +872,7 @@ define void @test_masked_divv_8i64_uniform_loop(ptr noalias %a, i64 %b, i64 %n, 
 ; CHECK-NEXT:    vdivsd {rd-sae}, %xmm1, %xmm2, %xmm1
 ; CHECK-NEXT:    vbroadcastsd %xmm1, %zmm1
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB22_1: # %loop
+; CHECK-NEXT:  .LBB25_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 (%rdi), %zmm2
 ; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm3
@@ -800,7 +892,7 @@ define void @test_masked_divv_8i64_uniform_loop(ptr noalias %a, i64 %b, i64 %n, 
 ; CHECK-NEXT:    vmovdqu64 %zmm2, (%rdi)
 ; CHECK-NEXT:    addq $64, %rdi
 ; CHECK-NEXT:    addq $-8, %rdx
-; CHECK-NEXT:    jne .LBB22_1
+; CHECK-NEXT:    jne .LBB25_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

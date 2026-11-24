@@ -51318,8 +51318,10 @@ static SDValue combineInt64DivRemViaFPReciprocal(SDNode *N, bool IsSigned,
 
   bool Widen = VT != MVT::v8i64;
   // The chain multiplies twice on its critical path, so v2i64 only pays
-  // off where vpmullq is fast.
-  if (VT == MVT::v2i64 && Subtarget.isPMULLQSlow())
+  // off where vpmullq is fast. A uniform divisor takes its reciprocal from a
+  // scalar divide, which wins on throughput even where vpmullq is slow.
+  if (VT == MVT::v2i64 && Subtarget.isPMULLQSlow() &&
+      !DAG.getSplatValue(Divisor))
     return SDValue();
 
   MVT FPVT = MVT::v8f64;
