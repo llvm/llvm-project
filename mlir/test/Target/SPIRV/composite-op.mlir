@@ -37,3 +37,13 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     spirv.ReturnValue %0: vector<3xf32>
   }
 }
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
+  spirv.func @copy_logical(%arg0: !spirv.array<4 x f32, stride=4>) -> !spirv.array<4 x f32> "None" {
+    // CHECK: spirv.CopyLogical {{%.*}} : !spirv.array<4 x f32, stride=4> to !spirv.array<4 x f32>
+    %0 = spirv.CopyLogical %arg0 : !spirv.array<4 x f32, stride=4> to !spirv.array<4 x f32>
+    spirv.ReturnValue %0 : !spirv.array<4 x f32>
+  }
+}
