@@ -140,6 +140,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
       Includes.push_back("hlsl.h");
     // Set maximum matrix dimension to 4 for HLSL
     Opts.MaxMatrixDimension = 4;
+    // Set default fp contract mode to fast
+    Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   }
 
   // Set OpenCL Version.

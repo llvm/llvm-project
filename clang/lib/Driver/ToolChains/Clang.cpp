@@ -2990,7 +2990,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
-                                       const JobAction &JA) {
+                                       const JobAction &JA,
+                                       types::ID InputType) {
   // List of veclibs which when used with -fveclib imply -fno-math-errno.
   constexpr std::array VecLibImpliesNoMathErrno{llvm::StringLiteral("ArmPL"),
                                                 llvm::StringLiteral("SLEEF")};
@@ -3027,8 +3028,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   llvm::DenormalMode DenormalFP32Math =
       TC.getDefaultDenormalModeForType(Args, JA, &llvm::APFloat::IEEEsingle());
 
-  // CUDA and HIP don't rely on the frontend to pass an ffp-contract option.
-  // If one wasn't given by the user, don't pass it here.
+  // CUDA, HLSL, and HIP don't rely on the frontend to pass an ffp-contract
+  // option. If one wasn't given by the user, don't pass it here.
   StringRef FPContract;
   // Explicit contraction options and unsafe math establish a fallback.
   // Without one, disabling unsafe math leaves precise/strict models unchanged.
@@ -3036,7 +3037,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   StringRef LastFpContractOverrideOption;
   const bool UseFrontendFPContractDefault =
       JA.isDeviceOffloading(Action::OFK_Cuda) ||
-      JA.isOffloading(Action::OFK_HIP);
+      JA.isOffloading(Action::OFK_HIP) || types::isHLSL(InputType);
   if (!UseFrontendFPContractDefault)
     FPContract = "on";
   bool StrictFPModel = false;
@@ -3399,6 +3400,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ApproxFunc = false;
       SignedZeros = true;
       restoreFPContractState();
+      if (types::isHLSL(InputType)) {
+        if (FPContractFallback)
+          FPContract = *FPContractFallback;
+        else if (FPContract.empty())
+          FPContract = "on";
+      }
       if (Range != LangOptions::ComplexRangeKind::CX_Full)
         setComplexRange(D, A->getSpelling(),
                         LangOptions::ComplexRangeKind::CX_None,
@@ -3527,6 +3534,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
       ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath)
     CmdArgs.push_back("-ffast-math");
+  else if (Args.hasArg(options::OPT_fno_fast_math))
+    CmdArgs.push_back("-fno-fast-math");
 
   // Handle __FINITE_MATH_ONLY__ similarly.
   // The -ffinite-math-only is added to CmdArgs when !HonorINFs && !HonorNaNs.
@@ -5802,7 +5811,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_optimize_sibling_calls);
 
     RenderFloatingPointOptions(TC, D, isOptimizationLevelFast(Args), Args,
-                               CmdArgs, JA);
+                               CmdArgs, JA, Input.getType());
 
     // Render ABI arguments
     switch (TC.getArch()) {
@@ -6325,7 +6334,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_protect_parens, false))
     CmdArgs.push_back("-fprotect-parens");
 
-  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
+  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA,
+                             Input.getType());
 
   Args.addOptInFlag(CmdArgs, options::OPT_fatomic_remote_memory,
                     options::OPT_fno_atomic_remote_memory);

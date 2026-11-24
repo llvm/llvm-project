@@ -11,21 +11,21 @@
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <3 x half> [[P0]], i64 1
 // CHECK-NEXT:    [[VECEXT1_I:%.*]] = extractelement <3 x half> [[P1]], i64 2
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[VECEXT1_I]], [[VECEXT_I]]
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul fast half [[VECEXT1_I]], [[VECEXT_I]]
 // CHECK-NEXT:    [[VECEXT2_I:%.*]] = extractelement <3 x half> [[P1]], i64 1
 // CHECK-NEXT:    [[VECEXT3_I:%.*]] = extractelement <3 x half> [[P0]], i64 2
-// CHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[VECEXT2_I]], [[VECEXT3_I]]
-// CHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[MUL_I]], [[MUL4_I]]
+// CHECK-NEXT:    [[MUL4_I:%.*]] = fmul fast half [[VECEXT2_I]], [[VECEXT3_I]]
+// CHECK-NEXT:    [[SUB_I:%.*]] = fsub fast half [[MUL_I]], [[MUL4_I]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <3 x half> poison, half [[SUB_I]], i64 0
 // CHECK-NEXT:    [[VECEXT6_I:%.*]] = extractelement <3 x half> [[P1]], i64 0
-// CHECK-NEXT:    [[MUL7_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[VECEXT6_I]], [[VECEXT3_I]]
+// CHECK-NEXT:    [[MUL7_I:%.*]] = fmul fast half [[VECEXT6_I]], [[VECEXT3_I]]
 // CHECK-NEXT:    [[VECEXT9_I:%.*]] = extractelement <3 x half> [[P0]], i64 0
-// CHECK-NEXT:    [[MUL10_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[VECEXT1_I]], [[VECEXT9_I]]
-// CHECK-NEXT:    [[SUB11_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[MUL7_I]], [[MUL10_I]]
+// CHECK-NEXT:    [[MUL10_I:%.*]] = fmul fast half [[VECEXT1_I]], [[VECEXT9_I]]
+// CHECK-NEXT:    [[SUB11_I:%.*]] = fsub fast half [[MUL7_I]], [[MUL10_I]]
 // CHECK-NEXT:    [[VECINIT12_I:%.*]] = insertelement <3 x half> [[VECINIT_I]], half [[SUB11_I]], i64 1
-// CHECK-NEXT:    [[MUL15_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[VECEXT2_I]], [[VECEXT9_I]]
-// CHECK-NEXT:    [[MUL18_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[VECEXT6_I]], [[VECEXT_I]]
-// CHECK-NEXT:    [[SUB19_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[MUL15_I]], [[MUL18_I]]
+// CHECK-NEXT:    [[MUL15_I:%.*]] = fmul fast half [[VECEXT2_I]], [[VECEXT9_I]]
+// CHECK-NEXT:    [[MUL18_I:%.*]] = fmul fast half [[VECEXT6_I]], [[VECEXT_I]]
+// CHECK-NEXT:    [[SUB19_I:%.*]] = fsub fast half [[MUL15_I]], [[MUL18_I]]
 // CHECK-NEXT:    [[VECINIT20_I:%.*]] = insertelement <3 x half> [[VECINIT12_I]], half [[SUB19_I]], i64 2
 // CHECK-NEXT:    ret <3 x half> [[VECINIT20_I]]
 //
@@ -39,21 +39,21 @@ half3 test_cross_half3(half3 p0, half3 p1)
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <3 x float> [[P0]], i64 1
 // CHECK-NEXT:    [[VECEXT1_I:%.*]] = extractelement <3 x float> [[P1]], i64 2
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[VECEXT1_I]], [[VECEXT_I]]
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul fast float [[VECEXT1_I]], [[VECEXT_I]]
 // CHECK-NEXT:    [[VECEXT2_I:%.*]] = extractelement <3 x float> [[P1]], i64 1
 // CHECK-NEXT:    [[VECEXT3_I:%.*]] = extractelement <3 x float> [[P0]], i64 2
-// CHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[VECEXT2_I]], [[VECEXT3_I]]
-// CHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL_I]], [[MUL4_I]]
+// CHECK-NEXT:    [[MUL4_I:%.*]] = fmul fast float [[VECEXT2_I]], [[VECEXT3_I]]
+// CHECK-NEXT:    [[SUB_I:%.*]] = fsub fast float [[MUL_I]], [[MUL4_I]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <3 x float> poison, float [[SUB_I]], i64 0
 // CHECK-NEXT:    [[VECEXT6_I:%.*]] = extractelement <3 x float> [[P1]], i64 0
-// CHECK-NEXT:    [[MUL7_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[VECEXT6_I]], [[VECEXT3_I]]
+// CHECK-NEXT:    [[MUL7_I:%.*]] = fmul fast float [[VECEXT6_I]], [[VECEXT3_I]]
 // CHECK-NEXT:    [[VECEXT9_I:%.*]] = extractelement <3 x float> [[P0]], i64 0
-// CHECK-NEXT:    [[MUL10_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[VECEXT1_I]], [[VECEXT9_I]]
-// CHECK-NEXT:    [[SUB11_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL7_I]], [[MUL10_I]]
+// CHECK-NEXT:    [[MUL10_I:%.*]] = fmul fast float [[VECEXT1_I]], [[VECEXT9_I]]
+// CHECK-NEXT:    [[SUB11_I:%.*]] = fsub fast float [[MUL7_I]], [[MUL10_I]]
 // CHECK-NEXT:    [[VECINIT12_I:%.*]] = insertelement <3 x float> [[VECINIT_I]], float [[SUB11_I]], i64 1
-// CHECK-NEXT:    [[MUL15_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[VECEXT2_I]], [[VECEXT9_I]]
-// CHECK-NEXT:    [[MUL18_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[VECEXT6_I]], [[VECEXT_I]]
-// CHECK-NEXT:    [[SUB19_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL15_I]], [[MUL18_I]]
+// CHECK-NEXT:    [[MUL15_I:%.*]] = fmul fast float [[VECEXT2_I]], [[VECEXT9_I]]
+// CHECK-NEXT:    [[MUL18_I:%.*]] = fmul fast float [[VECEXT6_I]], [[VECEXT_I]]
+// CHECK-NEXT:    [[SUB19_I:%.*]] = fsub fast float [[MUL15_I]], [[MUL18_I]]
 // CHECK-NEXT:    [[VECINIT20_I:%.*]] = insertelement <3 x float> [[VECINIT12_I]], float [[SUB19_I]], i64 2
 // CHECK-NEXT:    ret <3 x float> [[VECINIT20_I]]
 //

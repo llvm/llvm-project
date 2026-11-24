@@ -2,6 +2,24 @@
 // the options -ffast-math, -fno-fast-math, funsafe-math-optimizations,
 // fno-unsafe-math-optimizations.
 
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=HLSL-DEFAULT %s
+// HLSL-DEFAULT-NOT: "-ffp-contract=
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-ON %s
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -ffast-math -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-ON %s
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -ffp-contract=off -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-OFF %s
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -ffp-contract=fast -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-FAST %s
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -fno-fast-math -ffast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-FAST %s
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -fno-fast-math -ffp-contract=off -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-OFF %s
+// RUN: %clang -### -x hlsl --target=dxil-pc-shadermodel6.3-library -ffp-model=strict -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FPC-OFF %s
+
 // These warning checks are above the run lines because the warning is reported
 // before the drive options that are checked below the run lines.
 // WARN_FM_OFF: warning: overriding '-ffast-math' option with '-ffp-contract=off'

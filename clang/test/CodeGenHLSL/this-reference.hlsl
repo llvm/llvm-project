@@ -25,7 +25,7 @@ void main() {
   // CHECK:       %[[CALL1:.*]] = call noundef i32 @_ZN4Pair8getFirstEv(ptr noundef nonnull align 1 dereferenceable(8) %Vals) #{{[0-9]+}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
   // CHECK-NEXT:  %First = getelementptr inbounds nuw %struct.Pair, ptr %Vals, i32 0, i32 0
   // CHECK-NEXT:  store i32 %[[CALL1]], ptr %First, align 1
-  // CHECK-NEXT:  %[[CALL2:.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @_ZN4Pair9getSecondEv(ptr noundef nonnull align 1 dereferenceable(8) %Vals) #{{[0-9]+}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+  // CHECK-NEXT:  %[[CALL2:.*]] = call fast noundef nofpclass(nan inf) float @_ZN4Pair9getSecondEv(ptr noundef nonnull align 1 dereferenceable(8) %Vals) #{{[0-9]+}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
   // CHECK-NEXT:  %Second = getelementptr inbounds nuw %struct.Pair, ptr %Vals, i32 0, i32 1
 
 // CHECK: [[Pair:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Pair"
