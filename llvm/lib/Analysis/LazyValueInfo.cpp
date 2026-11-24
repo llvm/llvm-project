@@ -492,8 +492,7 @@ public:
                                      BasicBlock *ToBB,
                                      Instruction *CtxI = nullptr);
 
-  ValueLatticeElement getValueAtUse(const Use &U
-                                    bool AssumeFrozen = false);
+  ValueLatticeElement getValueAtUse(const Use &U, bool AssumeFrozen = false);
 
   /// Complete flush all previously computed values
   void clear() {
@@ -1886,8 +1885,8 @@ getValueOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
   return *Result;
 }
 
-ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U
-                                                     bool AssumeFrozen) {
+ValueLatticeElement
+LazyValueInfoImpl::getValueAtUse(const Use &U, bool AssumeFrozen) {
   Value *V = U.get();
   auto *CtxI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CtxI->getParent(), CtxI);
@@ -2088,9 +2087,9 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CtxI,
   return Result.asConstantRange(V->getType(), UndefAllowed);
 }
 
-ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
-                                                   bool UndefAllowed
-                                                   bool AssumeFrozen) {
+ConstantRange
+LazyValueInfo::getConstantRangeAtUse(const Use &U,
+                                     bool UndefAllowed, bool AssumeFrozen) {
   ValueLatticeElement Result = getOrCreateImpl().getValueAtUse(U, AssumeFrozen);
   return Result.asConstantRange(U->getType(), UndefAllowed);
 }
