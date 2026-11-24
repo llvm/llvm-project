@@ -186,9 +186,9 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   MCContext *Ctx = BC.Ctx.get();
   const uint64_t InstOffset = InstAddress - Function.getAddress();
 
-  // Branches and calls are resolved by BinaryFunction's target-independent
-  // control-flow handling.
-  if (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst))
+  // BinaryFunction resolves direct calls and branches.
+  if ((BC.MIB->isBranch(Inst) && !BC.MIB->isIndirectBranch(Inst)) ||
+      (BC.MIB->isCall(Inst) && !BC.MIB->isIndirectCall(Inst)))
     return false;
 
   // Linker processing of R_RISCV_ALIGN can leave emitted relocations at an
