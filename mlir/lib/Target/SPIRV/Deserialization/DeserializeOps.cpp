@@ -695,6 +695,47 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
 }
 
 template <>
+LogicalResult Deserializer::processOp<spirv::INTELFunctionPointerCallOp>(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() < 3) {
+    return emitError(
+        unknownLoc, "OpFunctionPointerCallINTEL must have at least 3 operands");
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  if (isVoidType(resultType))
+    resultType = nullptr;
+
+  uint32_t resultID = operands[1];
+  SmallVector<Value, 4> values;
+  for (uint32_t operand : llvm::drop_begin(operands, 2)) {
+    Value value = getValue(operand);
+    if (!value) {
+      return emitError(unknownLoc, "unknown <id> ")
+             << operand << " used by OpFunctionPointerCallINTEL";
+    }
+    values.push_back(value);
+  }
+
+  auto callOp = spirv::INTELFunctionPointerCallOp::create(
+      opBuilder, unknownLoc, resultType, values.front(),
+      ArrayRef(values).drop_front());
+
+  if (auto it = decorations.find(resultID); it != decorations.end())
+    for (NamedAttribute attr : it->second)
+      callOp->setAttr(attr.getName(), attr.getValue());
+
+  if (resultType)
+    valueMap[resultID] = callOp.getReturnValue();
+  return success();
+}
+
+template <>
 LogicalResult
 Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   SmallVector<Type, 1> resultTypes;

@@ -37824,6 +37824,7 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
           const SCEV *SCEVJ = SE->getSCEV(GEPList[J]);
           const SCEV *Diff = SE->getMinusSCEV(SCEVI, SCEVJ);
           if (isa<SCEVConstant>(Diff) || (IsAffineI && IsAffineInLoop(SCEVJ) &&
+                                          !isa<SCEVCouldNotCompute>(Diff) &&
                                           SE->isLoopInvariant(Diff, L))) {
             Candidates.remove(GEPI);
             Candidates.remove(GEPJ);

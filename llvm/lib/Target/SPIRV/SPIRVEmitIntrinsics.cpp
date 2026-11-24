@@ -494,10 +494,11 @@ bool isConvergenceIntrinsic(const Instruction *I) {
 }
 
 bool expectIgnoredInIRTranslation(const Instruction *I) {
-  return match(I, m_AnyIntrinsic<Intrinsic::invariant_start,
-                                 Intrinsic::spv_resource_handlefrombinding,
-                                 Intrinsic::spv_resource_getbasepointer,
-                                 Intrinsic::spv_resource_getpointer>());
+  return match(I,
+               m_AnyIntrinsic<Intrinsic::invariant_start,
+                              Intrinsic::spv_resource_handlefrombinding_mdname,
+                              Intrinsic::spv_resource_getbasepointer,
+                              Intrinsic::spv_resource_getpointer>());
 }
 
 // Returns the source pointer from `I` ignoring intermediate ptrcast.
