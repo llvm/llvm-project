@@ -2333,6 +2333,13 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
     return failure();
 
+  // The merged block takes the source's place in the region. Keep a region
+  // exit in the last block, where CFG flattening and the cir.await verifier
+  // expect it.
+  if (src->getNextNode() != dst && dst == &dst->getParent()->back() &&
+      isa<RegionBranchTerminatorOpInterface>(dst->getTerminator()))
+    return failure();
+
   // An operand that is an argument of the destination itself (possible in an
   // unreachable cycle) would be replaced by itself, leaving its other uses
   // dangling once the destination is erased.

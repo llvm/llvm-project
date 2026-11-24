@@ -1332,8 +1332,7 @@ public:
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
-          NewMemCheckCost = std::max(NewMemCheckCost.getValue(),
-                                     (InstructionCost::CostType)1);
+          NewMemCheckCost = std::max(NewMemCheckCost, InstructionCost(1));
 
           if (BestTripCount > 1)
             LLVM_DEBUG(dbgs()
@@ -3538,8 +3537,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
         InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
         if (StallCycles.isValid() && RecipThroughput.isValid() &&
             StallCycles > 0 && RecipThroughput > 0) {
-          unsigned ThisIC = bit_floor<uint64_t>(
-              1 + (StallCycles / RecipThroughput).getValue());
+          InstructionCost ModifiedCycles = (StallCycles / RecipThroughput) + 1;
+          unsigned ThisIC = bit_floor<uint64_t>(ModifiedCycles.getValue());
           StallsIC = std::max(StallsIC, ThisIC);
         }
       }
@@ -3584,9 +3583,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // We assume that the cost overhead is 1 and we use the cost model
     // to estimate the cost of the loop and interleave until the cost of the
     // loop overhead is about 5% of the cost of the loop.
+    InstructionCost NumLoops = InstructionCost(Opts.small_loop_cost) / LoopCost;
     unsigned SmallIC =
-        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(Opts.small_loop_cost /
-                                                         LoopCost.getValue()));
+        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(NumLoops.getValue()));
 
     // Interleave until store/load ports (estimated by max interleave count) are
     // saturated.
