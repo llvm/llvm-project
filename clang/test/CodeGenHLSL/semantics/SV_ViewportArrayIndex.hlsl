@@ -40,7 +40,7 @@ float4 ps_main(float4 Pos : SV_Position, IN_TYPE Viewport : SV_ViewportArrayInde
 // CHECK-DXIL: call i32 @llvm.dx.load.input.i32(i32 1, i32 0, i8 0, i32 poison)
 
 // The vertex input is arbitrary (kind 0). The output and the pixel input are
-// unsigned (5), nointerpolation (1) ViewportArrayIndex (kind 5) elements.
+// unsigned (5), nointerpolation (1) ViewPortArrayIndex (kind 5) elements.
 // CHECK-DXIL-DAG: !{ptr @vs_main, ![[#VS_IN:]], ![[#VS_OUT:]]}
 // CHECK-DXIL-DAG: ![[#VS_IN]] = !{![[#VS_IN_VP:]]}
 // CHECK-DXIL-DAG: ![[#VS_IN_VP]] = !{i32 0, !"SV_ViewportArrayIndex", i32 5, i32 0, ![[#ZERO:]], i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
