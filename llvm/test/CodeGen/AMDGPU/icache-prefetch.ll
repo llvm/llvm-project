@@ -60,23 +60,23 @@ define amdgpu_kernel void @partial_final_slot(ptr addrspace(1) %out) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:  .set .Lpref_target0, .Lpref_func_begin0+min(8192, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target0, null, min(max(.Lpref_lines0, 65), 96)-65
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target0, null, min(max(.Lpref_lines0-65, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target1, .Lpref_func_begin0+min(12288, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target1, null, min(max(.Lpref_lines0, 97), 128)-97
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target1, null, min(max(.Lpref_lines0-97, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target2, .Lpref_func_begin0+min(16384, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target2, null, min(max(.Lpref_lines0, 129), 160)-129
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target2, null, min(max(.Lpref_lines0-129, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target3, .Lpref_func_begin0+min(20480, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target3, null, min(max(.Lpref_lines0, 161), 192)-161
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target3, null, min(max(.Lpref_lines0-161, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target4, .Lpref_func_begin0+min(24576, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target4, null, min(max(.Lpref_lines0, 193), 224)-193
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target4, null, min(max(.Lpref_lines0-193, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target5, .Lpref_func_begin0+min(28672, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target5, null, min(max(.Lpref_lines0, 225), 256)-225
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target5, null, min(max(.Lpref_lines0-225, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target6, .Lpref_func_begin0+min(32768, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target6, null, min(max(.Lpref_lines0, 257), 288)-257
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target6, null, min(max(.Lpref_lines0-257, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target7, .Lpref_func_begin0+min(36864, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target7, null, min(max(.Lpref_lines0, 289), 320)-289
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target7, null, min(max(.Lpref_lines0-289, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target8, .Lpref_func_begin0+min(40960, (.Lpref_lines0*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target8, null, min(max(.Lpref_lines0, 321), 352)-321
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target8, null, min(max(.Lpref_lines0-321, 0), 31)
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    ;;#ASMSTART
@@ -118,33 +118,33 @@ define amdgpu_kernel void @cache_size_limit() {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:  .set .Lpref_target9, .Lpref_func_begin1+min(8192, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target9, null, min(max(.Lpref_lines1, 65), 96)-65
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target9, null, min(max(.Lpref_lines1-65, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target10, .Lpref_func_begin1+min(12288, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target10, null, min(max(.Lpref_lines1, 97), 128)-97
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target10, null, min(max(.Lpref_lines1-97, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target11, .Lpref_func_begin1+min(16384, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target11, null, min(max(.Lpref_lines1, 129), 160)-129
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target11, null, min(max(.Lpref_lines1-129, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target12, .Lpref_func_begin1+min(20480, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target12, null, min(max(.Lpref_lines1, 161), 192)-161
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target12, null, min(max(.Lpref_lines1-161, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target13, .Lpref_func_begin1+min(24576, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target13, null, min(max(.Lpref_lines1, 193), 224)-193
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target13, null, min(max(.Lpref_lines1-193, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target14, .Lpref_func_begin1+min(28672, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target14, null, min(max(.Lpref_lines1, 225), 256)-225
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target14, null, min(max(.Lpref_lines1-225, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target15, .Lpref_func_begin1+min(32768, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target15, null, min(max(.Lpref_lines1, 257), 288)-257
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target15, null, min(max(.Lpref_lines1-257, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target16, .Lpref_func_begin1+min(36864, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target16, null, min(max(.Lpref_lines1, 289), 320)-289
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target16, null, min(max(.Lpref_lines1-289, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target17, .Lpref_func_begin1+min(40960, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target17, null, min(max(.Lpref_lines1, 321), 352)-321
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target17, null, min(max(.Lpref_lines1-321, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target18, .Lpref_func_begin1+min(45056, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target18, null, min(max(.Lpref_lines1, 353), 384)-353
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target18, null, min(max(.Lpref_lines1-353, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target19, .Lpref_func_begin1+min(49152, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target19, null, min(max(.Lpref_lines1, 385), 416)-385
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target19, null, min(max(.Lpref_lines1-385, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target20, .Lpref_func_begin1+min(53248, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target20, null, min(max(.Lpref_lines1, 417), 448)-417
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target20, null, min(max(.Lpref_lines1-417, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target21, .Lpref_func_begin1+min(57344, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target21, null, min(max(.Lpref_lines1, 449), 480)-449
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target21, null, min(max(.Lpref_lines1-449, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target22, .Lpref_func_begin1+min(61440, (.Lpref_lines1*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target22, null, min(max(.Lpref_lines1, 481), 512)-481
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target22, null, min(max(.Lpref_lines1-481, 0), 31)
 ; GFX1250-NEXT:    ;;#ASMSTART
 ; GFX1250-NEXT:    .zero 65536
 ; GFX1250-NEXT:    ;;#ASMEND
@@ -169,13 +169,13 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:  .set .Lpref_target23, .Lpref_func_begin2+min(8192, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target23, null, min(max(.Lpref_lines2, 65), 96)-65
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target23, null, min(max(.Lpref_lines2-65, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target24, .Lpref_func_begin2+min(12288, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target24, null, min(max(.Lpref_lines2, 97), 128)-97
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target24, null, min(max(.Lpref_lines2-97, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target25, .Lpref_func_begin2+min(16384, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target25, null, min(max(.Lpref_lines2, 129), 160)-129
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target25, null, min(max(.Lpref_lines2-129, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target26, .Lpref_func_begin2+min(20480, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target26, null, min(max(.Lpref_lines2, 161), 192)-161
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target26, null, min(max(.Lpref_lines2-161, 0), 31)
 ; GFX1250-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
 ; GFX1250-NEXT:    s_and_b32 s1, ttmp6, 15
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 1
@@ -198,19 +198,19 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:  .LBB3_3: ; %join
 ; GFX1250-NEXT:  .set .Lpref_target27, .Lpref_func_begin2+min(24576, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target27, null, min(max(.Lpref_lines2, 193), 224)-193
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target27, null, min(max(.Lpref_lines2-193, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target28, .Lpref_func_begin2+min(28672, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target28, null, min(max(.Lpref_lines2, 225), 256)-225
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target28, null, min(max(.Lpref_lines2-225, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target29, .Lpref_func_begin2+min(32768, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target29, null, min(max(.Lpref_lines2, 257), 288)-257
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target29, null, min(max(.Lpref_lines2-257, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target30, .Lpref_func_begin2+min(36864, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target30, null, min(max(.Lpref_lines2, 289), 320)-289
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target30, null, min(max(.Lpref_lines2-289, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target31, .Lpref_func_begin2+min(40960, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target31, null, min(max(.Lpref_lines2, 321), 352)-321
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target31, null, min(max(.Lpref_lines2-321, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target32, .Lpref_func_begin2+min(45056, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target32, null, min(max(.Lpref_lines2, 353), 384)-353
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target32, null, min(max(.Lpref_lines2-353, 0), 31)
 ; GFX1250-NEXT:  .set .Lpref_target33, .Lpref_func_begin2+min(49152, (.Lpref_lines2*128)-128)
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target33, null, min(max(.Lpref_lines2, 385), 416)-385
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel .Lpref_target33, null, min(max(.Lpref_lines2-385, 0), 31)
 ; GFX1250-NEXT:    ;;#ASMSTART
 ; GFX1250-NEXT:    .zero 32000
 ; GFX1250-NEXT:    ;;#ASMEND

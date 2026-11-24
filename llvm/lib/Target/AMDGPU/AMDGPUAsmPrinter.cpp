@@ -257,39 +257,47 @@ void AMDGPUAsmPrinter::lowerICachePrefetch(MCInst &Inst) {
   constexpr unsigned OffsetIdx = 0;
   constexpr unsigned SdataIdx = 2;
 
-  MCContext &Ctx = OutContext;
-  const auto Const = [&](int64_t V) { return MCConstantExpr::create(V, Ctx); };
+  const auto CreateConst = [&](int64_t V) {
+    return MCConstantExpr::create(V, OutContext);
+  };
   const int64_t LineSize =
       MF->getSubtarget<GCNSubtarget>().getInstCacheLineSize();
   const int64_t TargetLine = Inst.getOperand(OffsetIdx).getImm();
-  const MCExpr *Lines = MCSymbolRefExpr::create(PrefetchLinesSym, Ctx);
+  const MCExpr *NumPrefetchableLines =
+      MCSymbolRefExpr::create(PrefetchLinesSym, OutContext);
 
   // Targets beyond the prefetchable code are clamped to its last line, where
-  // they prefetch a single line.
+  // they prefetch a single line:
+  //   pref_target = PrefetchBegin + min(TargetLine * LineSize,
+  //                                     (NumPrefetchableLines - 1) * LineSize)
   const MCExpr *LastLineOffset = MCBinaryExpr::createSub(
-      MCBinaryExpr::createMul(Lines, Const(LineSize), Ctx), Const(LineSize),
-      Ctx);
+      MCBinaryExpr::createMul(NumPrefetchableLines, CreateConst(LineSize),
+                              OutContext),
+      CreateConst(LineSize), OutContext);
   const MCExpr *TargetOffset = AMDGPUMCExpr::createMin(
-      {Const(TargetLine * LineSize), LastLineOffset}, Ctx);
+      {CreateConst(TargetLine * LineSize), LastLineOffset}, OutContext);
   MCSymbol *TargetSym = createTempSymbol("pref_target");
   OutStreamer->emitAssignment(
-      TargetSym,
-      MCBinaryExpr::createAdd(MCSymbolRefExpr::create(PrefetchBeginSym, Ctx),
-                              TargetOffset, Ctx));
+      TargetSym, MCBinaryExpr::createAdd(
+                     MCSymbolRefExpr::create(PrefetchBeginSym, OutContext),
+                     TargetOffset, OutContext));
 
-  // sdata is the number of lines minus one:
-  //   clamp(Lines, TargetLine + 1, TargetLine + MaxInstPrefetchLines)
-  //     - (TargetLine + 1)
-  // Every intermediate value is non-negative.
-  const MCExpr *TargetEnd = AMDGPUMCExpr::createMin(
-      {AMDGPUMCExpr::createMax({Lines, Const(TargetLine + 1)}, Ctx),
-       Const(TargetLine + AMDGPU::MaxInstPrefetchLines)},
-      Ctx);
+  // sdata is the number of lines to prefetch after the target line, limited to
+  // the end of the prefetchable code and the maximum prefetch length:
+  //   min(max(NumPrefetchableLines - (TargetLine + 1), 0),
+  //       MaxInstPrefetchLines - 1)
+  const MCExpr *LinesAfterTarget = AMDGPUMCExpr::createMax(
+      {MCBinaryExpr::createSub(NumPrefetchableLines,
+                               CreateConst(TargetLine + 1), OutContext),
+       CreateConst(0)},
+      OutContext);
+  const MCExpr *SdataExpr = AMDGPUMCExpr::createMin(
+      {LinesAfterTarget, CreateConst(AMDGPU::MaxInstPrefetchLines - 1)},
+      OutContext);
 
   Inst.getOperand(OffsetIdx) =
-      MCOperand::createExpr(MCSymbolRefExpr::create(TargetSym, Ctx));
-  Inst.getOperand(SdataIdx) = MCOperand::createExpr(
-      MCBinaryExpr::createSub(TargetEnd, Const(TargetLine + 1), Ctx));
+      MCOperand::createExpr(MCSymbolRefExpr::create(TargetSym, OutContext));
+  Inst.getOperand(SdataIdx) = MCOperand::createExpr(SdataExpr);
 }
 
 /// Set bits in a kernel descriptor MCExpr field:
@@ -322,22 +330,23 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   // right after the function code, so (Lfunc_end - func_sym) gives the
   // exact function code size in bytes.
   //
-  // When explicit ICache prefetch is enabled, INST_PREF_SIZE prefetches the
-  // initial cache-line prefix and enables scalar prefetch for the first WGP
-  // wave.
+  // When explicit ICache prefetch is enabled, INST_PREF_SIZE is limited to the
+  // initial cache-line prefix, which also enables scalar prefetch for the first
+  // WGP wave.
   if (STM.hasInstPrefSize()) {
     uint32_t Mask, Shift, Width, CacheLineSize;
     STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
 
-    const MCExpr *InstPrefSize;
-    if (MFI.hasICachePrefetch()) {
-      InstPrefSize = MCConstantExpr::create(MFI.getICachePrefetchLines(), Ctx);
-    } else {
-      const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
-          MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
-          MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
-      InstPrefSize = AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
-    }
+    const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
+        MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
+    const MCExpr *InstPrefSize =
+        AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
+    if (MFI.hasICachePrefetch())
+      InstPrefSize = AMDGPUMCExpr::createMin(
+          {MCConstantExpr::create(MFI.getICachePrefetchLines(), Ctx),
+           InstPrefSize},
+          Ctx);
     KD.compute_pgm_rsrc3 =
         setBits(KD.compute_pgm_rsrc3, InstPrefSize, Mask, Shift, Ctx);
   }

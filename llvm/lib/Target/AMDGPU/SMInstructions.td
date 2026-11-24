@@ -9,7 +9,7 @@
 def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 
 // Prefetch sdata operand. An expression is resolved by fixup_si_prefetch_sdata.
-def PrefetchSdata : ImmOperand<i8, "PrefetchSdata", 1> {
+def PrefetchSdata : ImmOperand<i8, "PrefetchSdata"> {
   let EncoderMethod = "getPrefetchSdataEncoding";
 }
 
