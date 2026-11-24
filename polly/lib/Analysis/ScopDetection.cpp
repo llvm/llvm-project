@@ -108,22 +108,26 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
         "Process scops that are unlikely to benefit from Polly optimizations."),
     cl::location(PollyProcessUnprofitable), cl::cat(PollyCategory));
 
-/// Bypass some of polly's profitability checks that might harm
+/// Bypass some of Polly's profitability checks that might harm
 /// loops from getting annotated with vectorize (see
 /// PollyOptimizeForVectorization).
 bool polly::PollyDetectForVectorization;
 static cl::opt<bool, true> XPollyDetectForVectorization(
     "polly-detect-for-vectorization",
-    cl::desc("Bypass some polly profitability checks for vectorization"),
+    cl::desc("Bypass some Polly profitability checks for vectorization"),
     cl::location(PollyDetectForVectorization), cl::init(false),
     cl::cat(PollyCategory));
 
-/// Bypass some of polly's profitability checks and add vectorize.enable
+/// Bypass some of Polly's profitability checks and add vectorize.enable
 /// metadata to vectorizable loops after analyses.
+///
+/// Combines -polly-detect-for-vectorization and
+/// -polly-annotate-metadata-vectorize
 bool polly::PollyOptimizeForVectorization;
 static cl::opt<bool, true> XPollyOptimizeForVectorization(
     "polly-optimize-for-vectorization",
-    cl::desc("Bypass some checks and add vectorize.enable metadata to loops"),
+    cl::desc("Make the profitability heuristic consider vectorization "
+             "opportunities"),
     cl::location(PollyOptimizeForVectorization), cl::init(false),
     cl::cat(PollyCategory));
 
@@ -1755,8 +1759,8 @@ bool ScopDetection::hasPossiblyDistributableLoop(
 bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
-  if(PollyProcessUnprofitable)
-	return true;
+  if (PollyProcessUnprofitable)
+    return true;
 
   // Skip these checks when polly is attempting to add vectorization
   // metadata as they reject some beneficial cases

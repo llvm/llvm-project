@@ -1943,7 +1943,7 @@ isl::set Scop::getAssumedContext() const {
 
 bool Scop::isProfitable(bool ScalarsAreUnprofitable) const {
   if (PollyProcessUnprofitable)
-	return true;
+    return true;
 
   if (isEmpty())
     return false;
