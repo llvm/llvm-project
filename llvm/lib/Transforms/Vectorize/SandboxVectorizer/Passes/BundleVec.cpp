@@ -52,6 +52,7 @@ Value *BundleVec::createVectorInstr(BndlRef<Value *> Bndl,
     case Instruction::Opcode::FPToUI:
     case Instruction::Opcode::FPToSI:
     case Instruction::Opcode::FPExt:
+    case Instruction::Opcode::PtrToAddr:
     case Instruction::Opcode::PtrToInt:
     case Instruction::Opcode::IntToPtr:
     case Instruction::Opcode::SIToFP:
@@ -505,6 +506,7 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << schedDirectionToStr(Dir)
                     << "Vec: Vectorization Actions:\n";
              Actions.dump());
+  Change |= !Actions.empty();
   emitVectors();
   DeadInstrMorgue.tryEraseDeadInstrs();
   return Change;

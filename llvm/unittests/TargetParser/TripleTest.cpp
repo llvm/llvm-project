@@ -4146,6 +4146,15 @@ TEST(DataLayoutTest, PowerPC64FreeBSD) {
             "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
 }
 
+TEST(DataLayoutTest, PowerPC64OpenBSD) {
+  // OpenBSD uses the ELFv2 ABI on big-endian powerpc64 and shares the
+  // 16-byte stack alignment and the vector alignment of Linux.
+  EXPECT_EQ(Triple("powerpc64-unknown-openbsd").computeDataLayout(),
+            Triple("powerpc64-unknown-freebsd").computeDataLayout());
+  EXPECT_EQ(Triple("powerpc64-unknown-openbsd").computeDataLayout(),
+            "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
+}
+
 TEST(DataLayoutTest, CheriRISCV32) {
   Triple TT = Triple("riscv32-unknown-unknown");
 

@@ -7779,36 +7779,14 @@ static void genMetadirective(lower::AbstractConverter &converter,
           converter.genEval(*it);
     } else if (unsupportedInterveningEval) {
       std::string evalName;
-      if (unsupportedInterveningEval->getIf<parser::EntryStmt>())
-        evalName = "ENTRY statement";
-      else if (unsupportedInterveningEval->getIf<parser::FormatStmt>())
-        evalName = "FORMAT statement";
-      else if (const auto *directive =
-                   unsupportedInterveningEval
-                       ->getIf<parser::CompilerDirective>()) {
+      if (const auto *directive =
+              unsupportedInterveningEval->getIf<parser::CompilerDirective>()) {
         assert(!isSupportedMetadirectiveLoopCompilerDirective(*directive) &&
                "unexpected compiler directive");
         evalName = std::holds_alternative<parser::CompilerDirective::Prefetch>(
                        directive->u)
                        ? "PREFETCH compiler directive"
                        : "unsupported compiler directive";
-      } else if (const auto *omp =
-                     unsupportedInterveningEval
-                         ->getIf<parser::OpenMPDeclarativeConstruct>()) {
-        evalName =
-            parser::omp::GetUpperName(parser::omp::GetOmpDirectiveName(*omp).v,
-                                      semaCtx.langOptions().getOpenMPVersion());
-        evalName += " directive";
-      } else if (const auto *acc =
-                     unsupportedInterveningEval
-                         ->getIf<parser::OpenACCDeclarativeConstruct>()) {
-        evalName = std::holds_alternative<
-                       parser::OpenACCStandaloneDeclarativeConstruct>(acc->u)
-                       ? "OpenACC DECLARE directive"
-                       : "OpenACC ROUTINE directive";
-      } else if (unsupportedInterveningEval
-                     ->getIf<parser::OpenACCRoutineConstruct>()) {
-        evalName = "OpenACC ROUTINE directive";
       } else {
         evalName = "non-executable directive";
       }

@@ -275,3 +275,16 @@ define i32 @read_pointer_constants_in_node() {
 }
 
 !0 = !{ptr null, ptr addrspacecast (ptr addrspace(1) @nested_global to ptr)}
+
+; // -----
+
+declare i32 @llvm.experimental.deoptimize.i32(...)
+
+; CHECK-LABEL: llvm.func @deoptimize(
+; CHECK-SAME: %[[ARG:.*]]: i32)
+; CHECK: %[[RESULT:.*]] = llvm.call_intrinsic "llvm.experimental.deoptimize.i32"() ["deopt"(%[[ARG]] : i32), "empty"()] : () -> i32
+; CHECK: llvm.return %[[RESULT]] : i32
+define i32 @deoptimize(i32 %arg) {
+  %result = call i32 (...) @llvm.experimental.deoptimize.i32() ["deopt"(i32 %arg), "empty"()]
+  ret i32 %result
+}

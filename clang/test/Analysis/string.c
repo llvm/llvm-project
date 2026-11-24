@@ -1370,10 +1370,11 @@ void strsep_changes_input_string(void) {
 }
 
 //===----------------------------------------------------------------------===
-// memset() / explicit_bzero() / bzero()
+// memset() / memset_explicit() / explicit_bzero() / bzero()
 //===----------------------------------------------------------------------===
 
 void *memset(void *dest, int ch, size_t count);
+void *memset_explicit(void *dest, int ch, size_t count);
 
 void bzero(void *dst, size_t count);
 void explicit_bzero(void *dest, size_t count);
@@ -1621,6 +1622,21 @@ void explicit_bzero3_out_ofbound(void) {
   // expected-warning@-2 {{UNKNOWN}}
 #endif
   free(privkey);
+}
+
+void memset_explicit1_null(void) {
+  char *a = NULL;
+
+  memset_explicit(a, 0, 10); // expected-warning{{Null pointer passed as 1st argument to memory set function}}
+}
+
+void memset_explicit2_clear(void) {
+  char passwd[7] = "passwd";
+
+  memset_explicit(passwd, 0, sizeof(passwd));
+
+  clang_analyzer_eval(strlen(passwd) == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(passwd[0] == '\0'); // expected-warning{{TRUE}}
 }
 
 //===----------------------------------------------------------------------===

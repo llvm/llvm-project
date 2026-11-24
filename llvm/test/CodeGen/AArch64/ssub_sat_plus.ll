@@ -121,8 +121,8 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mul w8, w1, w2
 ; CHECK-SD-NEXT:    sbfx w9, w0, #0, #4
-; CHECK-SD-NEXT:    lsl w8, w8, #28
-; CHECK-SD-NEXT:    sub w8, w9, w8, asr #28
+; CHECK-SD-NEXT:    sbfx w8, w8, #0, #4
+; CHECK-SD-NEXT:    sub w8, w9, w8
 ; CHECK-SD-NEXT:    mov w9, #7 // =0x7
 ; CHECK-SD-NEXT:    cmp w8, #7
 ; CHECK-SD-NEXT:    csel w8, w8, w9, lt

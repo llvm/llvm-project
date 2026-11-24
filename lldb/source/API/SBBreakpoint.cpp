@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpoint.h"
+#include "Utils.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
@@ -295,7 +296,7 @@ const char *SBBreakpoint::GetCondition() {
   StopCondition cond = bkpt_sp->GetCondition();
   if (!cond)
     return nullptr;
-  return ConstString(cond.GetText()).GetCString();
+  return GetDebuggerStringPool(bkpt_sp->GetTarget()).Intern(cond.GetText());
 }
 
 void SBBreakpoint::SetConditionMode(lldb::BreakpointConditionMode mode) {
@@ -448,7 +449,8 @@ const char *SBBreakpoint::GetThreadName() const {
   std::lock_guard<TargetAPIMutex> guard(api_lock);
   if (const ThreadSpec *thread_spec =
           bkpt_sp->GetOptions().GetThreadSpecNoCreate())
-    return ConstString(thread_spec->GetName()).GetCString();
+    return GetDebuggerStringPool(bkpt_sp->GetTarget())
+        .Intern(thread_spec->GetName());
 
   return nullptr;
 }
@@ -475,7 +477,8 @@ const char *SBBreakpoint::GetQueueName() const {
   std::lock_guard<TargetAPIMutex> guard(api_lock);
   if (const ThreadSpec *thread_spec =
           bkpt_sp->GetOptions().GetThreadSpecNoCreate())
-    return ConstString(thread_spec->GetQueueName()).GetCString();
+    return GetDebuggerStringPool(bkpt_sp->GetTarget())
+        .Intern(thread_spec->GetQueueName());
 
   return nullptr;
 }

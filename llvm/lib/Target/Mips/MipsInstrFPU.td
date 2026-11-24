@@ -855,12 +855,7 @@ class BuildPairF64Base<RegisterOperand RO> :
   PseudoSE<(outs RO:$dst), (ins GPR32Opnd:$lo, GPR32Opnd:$hi),
            [(set RO:$dst, (MipsBuildPairF64 GPR32Opnd:$lo, GPR32Opnd:$hi))]>;
 
-class BuildPairF64Base_FPR<RegisterOperand RO> :
-  PseudoSE<(outs RO:$dst), (ins FGR32Opnd:$lo, FGR32Opnd:$hi),
-           [(set RO:$dst, (MipsBuildPairF64_FPR FGR32Opnd:$lo, FGR32Opnd:$hi))]>;
-
 def BuildPairF64 : BuildPairF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
-def BuildPairF64_FPR : BuildPairF64Base_FPR<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def BuildPairF64_64 : BuildPairF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
 // This pseudo instr gets expanded into 2 mfc1 instrs after register
@@ -912,6 +907,16 @@ def LoadImmDoubleFGR : MipsAsmPseudoInst<(outs StrictlyFGR64Opnd:$rd),
                                          (ins imm64:$fpimm),
                                          "li.d\t$rd, $fpimm">,
                        FGR_64, HARDFLOAT;
+
+// MIPS I has no trunc.w.fmt. These pseudos are expanded by a custom inserter
+// into cvt.w.fmt with the rounding mode set to round toward zero.
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+  def PseudoTRUNC_W_S_M1 : PseudoSE<(outs FGR32Opnd:$fd),
+                                    (ins FGR32Opnd:$fs), []>, HARDFLOAT;
+  def PseudoTRUNC_W_D32_M1 : PseudoSE<(outs FGR32Opnd:$fd),
+                                      (ins AFGR64Opnd:$fs), []>, FGR_32,
+                             HARDFLOAT;
+}
 
 def SDC1_M1 : MipsAsmPseudoInst<(outs AFGR64Opnd:$fd),
                                 (ins MemBase:$base, mem_simm16:$offset),
@@ -1046,7 +1051,9 @@ let Predicates = [IsR5900] in {
                 (CVT_W_S FGR32Opnd:$src)>, ISA_MIPS1;
 }
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
-              (TRUNC_W_S FGR32Opnd:$src)>, ISA_MIPS1;
+              (TRUNC_W_S FGR32Opnd:$src)>, ISA_MIPS2;
+def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+              (PseudoTRUNC_W_S_M1 FGR32Opnd:$src)>, ISA_MIPS1_NOT_MIPS2;
 
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
               (MTC1_D64 GPR32Opnd:$src)>, ISA_MIPS1, FGR_64;
@@ -1064,6 +1071,9 @@ def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)),
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
                 (TRUNC_W_D32 AFGR64Opnd:$src)>, ISA_MIPS2, FGR_32;
+  def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
+                (PseudoTRUNC_W_D32_M1 AFGR64Opnd:$src)>, ISA_MIPS1_NOT_MIPS2,
+        FGR_32;
   def : MipsPat<(f32 (any_fpround AFGR64Opnd:$src)),
                 (CVT_S_D32 AFGR64Opnd:$src)>, ISA_MIPS1, FGR_32;
   def : MipsPat<(f64 (any_fpextend FGR32Opnd:$src)),
@@ -1079,6 +1089,10 @@ def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 0)),
 
 def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 1)),
               (EXTRACT_SUBREG AFGR64Opnd:$src, sub_hi)>;
+
+def : MipsPat<(f64 (MipsBuildPairF64_FPR FGR32Opnd:$lo, FGR32Opnd:$hi)),
+              (REG_SEQUENCE AFGR64, FGR32Opnd:$lo, sub_lo,
+                                    FGR32Opnd:$hi, sub_hi)>, FGR_32;
 
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)), 
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;

@@ -350,7 +350,6 @@ func.func private @insert_slice_vector_matches_dest_non_zero_offset(
 // CHECK:           %[[C_0_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[C_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[C_4_1:.*]] = arith.constant 4 : index
-// CHECK:           %[[C_8:.*]] = arith.constant 8 : index
 // CHECK:           %[[C_6_1:.*]] = arith.constant 6 : index
 // CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_4_1]], %[[C_6_1]] : vector<4x8xi1>
 // CHECK:           %[[RES:.*]] = vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[DEST]][%[[C_0_2]], %[[C_2]]] {in_bounds = [true, true]} : vector<4x8xi32>, tensor<4x8xi32> } : vector<4x8xi1> -> tensor<4x8xi32>
@@ -479,7 +478,6 @@ func.func private @insert_slice_leading_unit_dim_dropped_non_zero_offset(
 // CHECK:           %[[C_0_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[C_6:.*]] = arith.constant 6 : index
 // CHECK:           %[[C_0_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[C_8:.*]] = arith.constant 8 : index
 // CHECK:           %[[C_2_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[C_8_1:.*]] = arith.constant 8 : index
 // CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_2_2]], %[[C_8_1]] : vector<4x2xi1>
@@ -517,14 +515,11 @@ func.func private @insert_slice_non_leading_unit_dim_dropped_non_zero_offsets(
 // CHECK:           %[[C_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[C_0_1:.*]] = arith.constant 0 : index
 // CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%[[C_0_1]], %[[C_0_1]]], %[[PAD]] {in_bounds = [true, true]} : tensor<4x4xi32>, vector<4x4xi32>
-// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK-NEXT:      %[[C_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[C_6:.*]] = arith.constant 6 : index
 // CHECK:           %[[C_0_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[DEST]][%[[C_2]], %[[C_6]], %[[C_0_2]]] {in_bounds = [true, true], permutation_map = #[[$MAP_D0_D2]]} : vector<4x4xi32>, tensor<8x8x8xi32>
-// CHECK:           %[[C_8:.*]] = arith.constant 8 : index
-// CHECK:           %[[C_6_1:.*]] = arith.constant 6 : index
-// CHECK:           %[[C_8_1:.*]] = arith.constant 8 : index
-// CHECK:           return %[[RES]] : tensor<8x8x8xi32>
+// CHECK-NEXT:      return %[[RES]] : tensor<8x8x8xi32>
 
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {

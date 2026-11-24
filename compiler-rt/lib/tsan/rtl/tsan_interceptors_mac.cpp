@@ -480,7 +480,13 @@ TSAN_INTERCEPTOR(int, objc_sync_enter, id obj) {
   MutexPreLock(thr, pc, addr, MutexFlagWriteReentrant);
   int result = REAL(objc_sync_enter)(obj);
   CHECK_EQ(result, OBJC_SYNC_SUCCESS);
+  // MutexPostLock first records a 1-byte read access to addr, before doing
+  // clock.Acquire on addr. This read 'races' with writes reported by
+  // Foundation via calls to `__tsan_external_write`; suppress to avoid false
+  // positives.
+  ThreadIgnoreBegin(thr, 0);
   MutexPostLock(thr, pc, addr, MutexFlagWriteReentrant);
+  ThreadIgnoreEnd(thr);
   return result;
 }
 
