@@ -121,6 +121,119 @@ isValidContiguity(std::optional<uint64_t> contiguity, Type offsetsTy,
   return success();
 }
 
+// Sub-byte element types (e.g. i4, f4E2M1FN) are allowed only for contiguous
+// access. The hardware works at 8-bit granularity at minimum; a contiguous
+// access whose size is a multiple of 8 bits maps onto it directly. Strided
+// access, i.e. transpose or VNNI packing (transform), is not
+// supported for sub-byte types; users are expected to program it at the 8-bit
+// level.
+static bool isSubByteType(Type elemTy) {
+  return elemTy.isIntOrFloat() && elemTy.getIntOrFloatBitWidth() < 8;
+}
+
+// If a layout is present, the access is strided when lane_data is greater than
+// 1 on any dimension other than the fastest-changing one (the first entry of
+// the layout order).
+static LogicalResult
+verifySubByteLayout(Type elemTy, DistributeLayoutAttr layout,
+                    function_ref<InFlightDiagnostic()> emitError) {
+  if (!layout)
+    return success();
+
+  SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
+  if (laneData.size() < 2)
+    return success();
+  SmallVector<int64_t> order = layout.getEffectiveOrderAsInt();
+  if (order.empty())
+    return success();
+  int64_t fastestDim = order.front();
+  for (auto [dim, data] : llvm::enumerate(laneData)) {
+    if (static_cast<int64_t>(dim) != fastestDim && data > 1)
+      return emitError() << "layout implies strided access, which is not "
+                            "supported for sub-byte element type "
+                         << elemTy << "; use an 8-bit element type instead";
+  }
+  return success();
+}
+
+// For block access (load_nd/store_nd), the explicit op attributes
+// (`isTransposed`, `isPacked`) are checked first, then the layout.
+static LogicalResult
+verifySubByteBlockAccess(Type elemTy, bool isTransposed, bool isPacked,
+                         DistributeLayoutAttr layout,
+                         function_ref<InFlightDiagnostic()> emitError) {
+  if (!isSubByteType(elemTy))
+    return success();
+
+  if (isTransposed)
+    return emitError() << "transpose is not supported for sub-byte element "
+                          "type "
+                       << elemTy << "; use an 8-bit element type instead";
+  if (isPacked)
+    return emitError() << "packed is not supported for sub-byte element type "
+                       << elemTy << "; use an 8-bit element type instead";
+
+  return verifySubByteLayout(elemTy, layout, emitError);
+}
+
+// For matrix access (load_matrix/store_matrix), the layout is checked, and the
+// elements along the fastest-changing dimension (the first entry of the layout
+// order, or the innermost dimension without a layout) must also be contiguous
+// in memory, i.e. that dimension must have stride 1 in the mem_desc.
+static LogicalResult
+verifySubByteMatrixAccess(VectorType dataTy, MemDescType mdescTy,
+                          DistributeLayoutAttr layout,
+                          function_ref<InFlightDiagnostic()> emitError) {
+  Type elemTy = mdescTy.getElementType();
+  if (!isSubByteType(elemTy))
+    return success();
+
+  if (failed(verifySubByteLayout(elemTy, layout, emitError)))
+    return failure();
+
+  SmallVector<int64_t> strides;
+  for (Attribute attr : mdescTy.getStrideAttr().getValue())
+    strides.push_back(cast<IntegerAttr>(attr).getInt());
+
+  int64_t dataRank = dataTy.getRank();
+  int64_t fastestDim = dataRank - 1;
+  if (layout) {
+    SmallVector<int64_t> order = layout.getEffectiveOrderAsInt();
+    if (!order.empty())
+      fastestDim = order.front();
+  }
+  // Align the data dimensions with the trailing mem_desc dimensions.
+  int64_t mdescDim =
+      fastestDim + static_cast<int64_t>(strides.size()) - dataRank;
+  if (mdescDim >= 0 && mdescDim < static_cast<int64_t>(strides.size()) &&
+      strides[mdescDim] != 1)
+    return emitError() << "the fastest-changing dimension " << fastestDim
+                       << " must have stride 1 in mem_desc for sub-byte "
+                          "element type "
+                       << elemTy << ", but its stride is " << strides[mdescDim];
+  return success();
+}
+
+// For gather/scatter (load/store), the offsets are arbitrary, so neither the
+// layout nor its absence implies contiguous access. Only `contiguity` does: a
+// sub-byte element type requires it, and each contiguous run must cover a
+// whole number of bytes.
+static LogicalResult
+verifySubByteScatterAccess(Type elemTy, std::optional<uint64_t> contiguity,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  if (!isSubByteType(elemTy))
+    return success();
+  if (!contiguity)
+    return emitError() << "sub-byte element type " << elemTy
+                       << " requires contiguity";
+  if ((*contiguity * elemTy.getIntOrFloatBitWidth()) % 8 != 0)
+    return emitError() << "contiguity = " << *contiguity
+                       << " must cover a multiple of 8 bits for sub-byte "
+                          "element type "
+                       << elemTy;
+  return success();
+}
+
 LogicalResult
 IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
                       UnitAttr subgroup_block_io, DistributeLayoutAttr layout,
@@ -137,12 +250,16 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
 
+  if (failed(verifySubByteMatrixAccess(dataTy, mdescTy, layout, emitError)))
+    return failure();
+
   SmallVector<int64_t> blockShape = mdescTy.getBlockShape();
   ArrayAttr strideAttr = mdescTy.getStrideAttr();
   SmallVector<int64_t> strides;
   for (Attribute attr : strideAttr.getValue()) {
     strides.push_back(cast<IntegerAttr>(attr).getInt());
   }
+
   if (subgroup_block_io && layout) {
     auto laneData = layout.getEffectiveLaneDataAsInt();
     auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
@@ -376,6 +493,15 @@ LogicalResult LoadNdOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
+  DistributeLayoutAttr layout = getAnchorLayout();
+  if (!layout)
+    layout = tdescTy.getLayoutAttr();
+  if (failed(verifySubByteBlockAccess(tdescTy.getElementType(),
+                                      getTranspose().has_value(),
+                                      getPacked().value_or(false), layout,
+                                      [&]() { return emitOpError(); })))
+    return failure();
+
   int tdescElems = tdescTy.getNumElements() * tdescTy.getArrayLength();
   int valueElems = valueTy.getNumElements();
 
@@ -499,6 +625,14 @@ LogicalResult StoreNdOp::verify() {
   if (array_len > 1)
     return emitOpError("array length is not supported by store_nd.\n");
 
+  DistributeLayoutAttr layout = getAnchorLayout();
+  if (!layout)
+    layout = dstTy.getLayoutAttr();
+  if (failed(verifySubByteBlockAccess(
+          dstTy.getElementType(), /*isTransposed=*/false, /*isPacked=*/false,
+          layout, [&]() { return emitOpError(); })))
+    return failure();
+
   auto tdescElems = dstTy.getNumElements();
   auto valueElems = valTy.getNumElements();
 
@@ -595,6 +729,10 @@ LogicalResult LoadGatherOp::verify() {
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
+  if (failed(verifySubByteScatterAccess(getElementType(), getContiguity(),
+                                        [&]() { return emitOpError(); })))
+    return failure();
+
   if (auto layout = getAnchorLayout()) {
     if (!layout.isDistributable(getShapeOf(valueTy)))
       return emitOpError("Value shape is not distributable with the layout");
@@ -663,6 +801,10 @@ LogicalResult StoreScatterOp::verify() {
 
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
+
+  if (failed(verifySubByteScatterAccess(getElementType(), getContiguity(),
+                                        [&]() { return emitOpError(); })))
+    return failure();
 
   if (auto layout = getAnchorLayout()) {
     if (!layout.isDistributable(getShapeOf(valueTy)))

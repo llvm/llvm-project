@@ -744,4 +744,40 @@ gpu.func @dpas_mx_3d_batch(%a : vector<4x8x32xf8E5M2>, %b: vector<4x32x16xf8E5M2
   gpu.return
 }
 
+// Sub-byte element types are allowed for contiguous access.
+// CHECK-LABEL: gpu.func @sub_byte_contiguous_access
+gpu.func @sub_byte_contiguous_access(%src: memref<64x64xi4>, %mdesc: !xegpu.mem_desc<32x64xf4E2M1FN>,
+    %cmdesc: !xegpu.mem_desc<32x64xi4, #xegpu.mem_layout<stride = [1, 32]>>,
+    %ptr: ui64, %offsets: vector<16x8xindex>, %mask: vector<16x8xi1>) {
+  // CHECK: xegpu.create_nd_tdesc
+  %0 = xegpu.create_nd_tdesc %src : memref<64x64xi4>
+      -> !xegpu.tensor_desc<16x64xi4, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>>
+  // CHECK: xegpu.prefetch_nd
+  xegpu.prefetch_nd %0[0, 0] : !xegpu.tensor_desc<16x64xi4, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>>
+  // CHECK: xegpu.load_nd
+  %1 = xegpu.load_nd %0[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>}>
+      : !xegpu.tensor_desc<16x64xi4, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>> -> vector<16x64xi4>
+  // CHECK: xegpu.store_nd
+  xegpu.store_nd %1, %0[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>}>
+      : vector<16x64xi4>, !xegpu.tensor_desc<16x64xi4, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>>
+  // CHECK: xegpu.load {{.*}}contiguity = 8{{.*}} -> vector<16x8xi4>
+  %2 = xegpu.load %ptr[%offsets], %mask <{contiguity = 8 : i64, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}>
+      : ui64, vector<16x8xindex>, vector<16x8xi1> -> vector<16x8xi4>
+  // CHECK: xegpu.store {{.*}} : vector<16x8xi4>
+  xegpu.store %2, %ptr[%offsets], %mask <{contiguity = 8 : i64, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}>
+      : vector<16x8xi4>, ui64, vector<16x8xindex>, vector<16x8xi1>
+  // CHECK: xegpu.load_matrix
+  %3 = xegpu.load_matrix %mdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
+      : !xegpu.mem_desc<32x64xf4E2M1FN> -> vector<8x32xf4E2M1FN>
+  // CHECK: xegpu.store_matrix
+  xegpu.store_matrix %3, %mdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
+      : vector<8x32xf4E2M1FN>, !xegpu.mem_desc<32x64xf4E2M1FN>
+  // Column-major mem_desc: contiguous when the layout's fastest dimension is
+  // the unit-stride dimension 0.
+  // CHECK: xegpu.load_matrix {{.*}} -> vector<32x8xi4>
+  %4 = xegpu.load_matrix %cmdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [2, 1], order = [0, 1]>}>
+      : !xegpu.mem_desc<32x64xi4, #xegpu.mem_layout<stride = [1, 32]>> -> vector<32x8xi4>
+  gpu.return
+}
+
 }
