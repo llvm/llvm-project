@@ -6125,11 +6125,16 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
       if (!Inst.use_empty() &&
           (Inst.getNumOperands() == 0 || isa<Constant>(Inst.getOperand(0))))
         if (Constant *C = ConstantFoldInstruction(&Inst, DL, &TLI)) {
+          bool IsDead = wouldInstructionBeTriviallyDead(&Inst, &TLI);
+          auto *CB = dyn_cast<CallBase>(&Inst);
+          if (CB && CB->isMustTailCall() && !IsDead)
+            continue;
+
           LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
                             << '\n');
           Inst.replaceAllUsesWith(C);
           ++NumConstProp;
-          if (isInstructionTriviallyDead(&Inst, &TLI))
+          if (IsDead)
             Inst.eraseFromParent();
           MadeIRChange = true;
           continue;
