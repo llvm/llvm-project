@@ -1384,3 +1384,12 @@ llvm.func @switch_result_number(%arg0: i32) -> i32 {
 ^bb2(%2: i32):
   llvm.return %2 : i32
 }
+
+// CHECK-LABEL: @switch_i8_distinct_signs
+// CHECK: 1: ^bb1
+// CHECK-NEXT: -1: ^bb1
+llvm.func @switch_i8_distinct_signs(%arg0: i8) {
+  llvm.switch %arg0 : i8, ^bb1 [1: ^bb1, -1: ^bb1]
+^bb1:
+  llvm.return
+}
