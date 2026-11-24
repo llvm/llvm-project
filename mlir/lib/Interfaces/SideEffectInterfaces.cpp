@@ -231,10 +231,9 @@ void DeadnessCache::notifyOperationErased(Operation *op) {
 
 void DeadnessCache::flushInvalidations() {
   removeCancelled();
-  // Expand all requests first so a parent walk can skip every nested root.
-  // With a single loop, a later block request could schedule a subtree that
-  // its parent already walked. Erasing the same cache entries again is safe,
-  // but requires another walk.
+  // A block can promote an ancestor request after this loop has passed its
+  // slot. Defer subtree walks until all such promotions are visible. Otherwise
+  // we could miss the promoted op's descendants and use stale cache entries.
   for (size_t i = 0; i < pending.size(); ++i) {
     Target target = pending.getArrayRef()[i].first;
     if (auto *block = dyn_cast<Block *>(target)) {
@@ -250,8 +249,7 @@ void DeadnessCache::flushInvalidations() {
       scheduleAncestorInvalidation(parent);
   }
 
-  // Skip nested roots with their own subtree request so each body is visited
-  // once, including roots that were upgraded during the first loop.
+  // A nested root has its own walk. Skip its descendants in the parent walk.
   for (auto [target, request] : pending) {
     Operation *root = dyn_cast<Operation *>(target);
     if (!root || request != Request::Subtree)
