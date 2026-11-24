@@ -303,6 +303,14 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
   return Kinds;
 }
 
+/// Clears group bits from \p Kinds.
+static SanitizerMask clearGroupBits(SanitizerMask Kinds) {
+#define SANITIZER(NAME, ID)
+#define SANITIZER_GROUP(NAME, ID, ALIAS) Kinds &= ~SanitizerKind::ID##Group;
+#include "clang/Basic/Sanitizers.def"
+  return Kinds;
+}
+
 // Computes the sanitizer mask as:
 //     Default + Arguments (in or out) + AlwaysIn - AlwaysOut
 // with arguments parsed from left to right.
@@ -358,7 +366,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
   Output |= AlwaysIn;
   Output &= ~AlwaysOut;
 
-  return Output;
+  return clearGroupBits(Output);
 }
 
 static SanitizerMask parseSanitizeTrapArgs(const Driver &D,

@@ -437,10 +437,11 @@ public:
 
   Intrinsic::ID getIntrinsicId(unsigned Opc) const;
 
-private:
   // Helper function responsible for increasing the latency only.
   int updateLatency(MachineInstr &SrcInst, MachineInstr &DstInst,
                     bool IsArtificial, int Latency) const;
+
+private:
   void restoreLatency(SUnit *Src, SUnit *Dst) const;
   void changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat) const;
   bool isBestZeroLatency(SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,

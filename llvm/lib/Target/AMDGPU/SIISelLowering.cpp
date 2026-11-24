@@ -1880,6 +1880,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.align = Align(Info.memVT.getStoreSize());
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    Info.flags |= Flags & MachineMemOperand::MONonTemporal;
     // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
     // flags appropriately.
     Info.order = AtomicOrdering::Monotonic;
@@ -5096,16 +5097,7 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
     return SDValue();
 
-  // Prefetch the 64-bit address that a 32-bit constant pointer is cast to, as
-  // a load does.
-  SDValue Ptr = Op.getOperand(1);
-  if (Ptr.getValueType() != MVT::i32)
-    return Op;
-  SmallVector<SDValue, 5> Ops(Op->ops());
-  Ops[1] = DAG.getAddrSpaceCast(SDLoc(Op), MVT::i64, Ptr,
-                                AMDGPUAS::CONSTANT_ADDRESS_32BIT,
-                                AMDGPUAS::CONSTANT_ADDRESS);
-  return SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
+  return Op;
 }
 
 // Work around DAG legality rules only based on the result type.
@@ -20261,27 +20253,15 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
-    case 'm':
-      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
-    if (Constraint == "RF")
-      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
-}
-
-InlineAsm::ConstraintCode
-SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
-  if (ConstraintCode == "RF")
-    return InlineAsm::ConstraintCode::RF;
-
-  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {
