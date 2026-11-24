@@ -236,16 +236,16 @@ void DeadnessCache::flushInvalidations() {
   // its parent already walked. Erasing the same cache entries again is safe,
   // but requires another walk.
   for (size_t i = 0; i < pending.size(); ++i) {
-    auto [target, request] = pending.getArrayRef()[i];
+    Target target = pending.getArrayRef()[i].first;
     if (auto *block = dyn_cast<Block *>(target)) {
       for (Operation &op : *block)
         enqueue(&op, Request::Subtree);
       continue;
     }
     Operation *op = cast<Operation *>(target);
-    // Erase the entry here so we stop queuing ancestors if the cache is empty.
-    if (request == Request::Ancestors)
-      cache.erase(op);
+    // Even a subtree request can name the last cached op. Erase it before
+    // scheduling its parent so we can stop queuing ancestors in that case.
+    cache.erase(op);
     if (Operation *parent = op->getParentOp())
       scheduleAncestorInvalidation(parent);
   }
