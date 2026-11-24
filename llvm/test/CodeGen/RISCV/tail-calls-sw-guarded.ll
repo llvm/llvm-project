@@ -4,8 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -riscv-landing-pad-label=778899 -mattr=+d -target-abi=lp64d -O2 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefix=RV64
 
-; Libcalls created while expanding intrinsics have no CallBase, so they are
-; not lowered as software-guarded tail calls.
+;; Libcalls created while expanding intrinsics have no CallBase, so they are
+;; not lowered as software-guarded tail calls.
 
 define ptr @tail_memset(ptr %p, i64 %n) {
 ; RV32-LABEL: tail_memset:
@@ -178,19 +178,6 @@ define double @tail_nearbyint(double %x) {
   %r = tail call double @llvm.nearbyint.f64(double %x)
   ret double %r
 }
-
-declare void @llvm.memset.p0.i64(ptr, i8, i64, i1 immarg)
-declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1 immarg)
-declare void @llvm.memmove.p0.p0.i64(ptr, ptr, i64, i1 immarg)
-declare double @llvm.sin.f64(double)
-declare double @llvm.cos.f64(double)
-declare double @llvm.exp.f64(double)
-declare double @llvm.exp2.f64(double)
-declare double @llvm.log.f64(double)
-declare double @llvm.log2.f64(double)
-declare double @llvm.log10.f64(double)
-declare double @llvm.pow.f64(double, double)
-declare double @llvm.nearbyint.f64(double)
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 8, !"cf-protection-branch", i32 1}
