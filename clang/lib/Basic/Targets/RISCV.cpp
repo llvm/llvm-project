@@ -410,6 +410,13 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
   return ISAInfo->hasExtension(Feature);
 }
 
+void RISCVTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                             const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
+  // -fcf-protection=return uses the Zicfiss shadow stack.
+  Opts.HWShadowStack = Opts.CFProtectionReturn;
+}
+
 /// Perform initialization based on the user configured set of features.
 bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                            DiagnosticsEngine &Diags) {

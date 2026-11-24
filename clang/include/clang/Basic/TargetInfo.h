@@ -1484,6 +1484,7 @@ public:
     bool BranchTargetEnforcement;
     bool BranchProtectionPAuthLR;
     bool GuardedControlStack;
+    bool HWShadowStack;
 
     const char *getSignReturnAddrStr() const {
       switch (SignReturnAddr) {
@@ -1523,7 +1524,7 @@ public:
           SignReturnAddressHardening(
               LangOptions::SignReturnAddressHardeningKind::None),
           BranchTargetEnforcement(false), BranchProtectionPAuthLR(false),
-          GuardedControlStack(false) {}
+          GuardedControlStack(false), HWShadowStack(false) {}
 
     BranchProtectionInfo(const LangOptions &LangOpts) {
       SignReturnAddr =
@@ -1539,6 +1540,7 @@ public:
       BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
       BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
       GuardedControlStack = LangOpts.GuardedControlStack;
+      HWShadowStack = LangOpts.HWShadowStack;
     }
   };
 
