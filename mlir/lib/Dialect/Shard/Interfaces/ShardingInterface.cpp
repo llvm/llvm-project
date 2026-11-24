@@ -314,7 +314,7 @@ shard::detail::defaultGetShardingOption(Operation *op,
       return failure();
     if (grid)
       shardingOption.grid = grid;
-    anyShardingInResultsOrOperands |= !shardAttr.getSplitAxes().empty();
+    anyShardingInResultsOrOperands = !shardAttr.getSplitAxes().empty();
     AffineMap map = maps[shardingIt.index()];
     unsigned numDims = map.getNumDims();
 
