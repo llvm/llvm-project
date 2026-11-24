@@ -59,9 +59,16 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
           peek->descriptor == DataEdit::ListDirectedRealPart)) {
     // Defined formatting
     IoErrorHandler &handler{io.GetIoErrorHandler()};
-    DataEdit edit{peek->descriptor == DataEdit::ListDirectedRealPart
-            ? *peek
-            : *io.GetNextDataEdit(1)};
+    common::optional<DataEdit> next{
+        peek->descriptor == DataEdit::ListDirectedRealPart
+            ? peek
+            : io.GetNextDataEdit(1)};
+    if (!next) {
+      // List-directed input reached the end of the file, which has now been
+      // signaled; there is no value for the defined input procedure to read.
+      return false;
+    }
+    DataEdit edit{*next};
     char ioType[2 + edit.maxIoTypeChars];
     auto ioTypeLen{std::size_t{2} /*"DT"*/ + edit.ioTypeChars};
     auto &definedIoArgs{*io.get_if<DefinedIoArgs>()};
