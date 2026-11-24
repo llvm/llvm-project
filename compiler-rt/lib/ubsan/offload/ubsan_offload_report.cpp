@@ -292,6 +292,10 @@ void Replay(unsigned Kind, void *Data, ValueHandle V0, ValueHandle V1,
     handlePointerOverflowImpl(reinterpret_cast<PointerOverflowData *>(Data), V0,
                               V1, Opts);
     break;
+  case UBSAN_OFFLOAD_pointer_subtraction:
+    handlePointerSubtractionImpl(
+        reinterpret_cast<PointerSubtractionData *>(Data), V0, V1, Opts);
+    break;
   case UBSAN_OFFLOAD_function_type_mismatch:
     handleFunctionTypeMismatch(
         reinterpret_cast<FunctionTypeMismatchData *>(Data), V0, Opts);

@@ -42,7 +42,7 @@ struct S {
 // TRAP_CUTOFF-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // TRAP_CUTOFF-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
 // TRAP_CUTOFF-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS1S"), !nosanitize [[META1:![0-9]+]]
-// TRAP_CUTOFF-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 54), !nosanitize [[META1]]
+// TRAP_CUTOFF-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 55), !nosanitize [[META1]]
 // TRAP_CUTOFF-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true, !nosanitize [[META1]]
 // TRAP_CUTOFF-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]], !nosanitize [[META1]]
 // TRAP_CUTOFF-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META1]]

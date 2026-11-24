@@ -59,6 +59,9 @@ void handleNonNullReturn(NonNullReturnData *Data, SourceLocation *LocPtr,
 void handleNonNullArg(NonNullArgData *Data, ReportOptions Opts, bool IsAttr);
 void handlePointerOverflowImpl(PointerOverflowData *Data, ValueHandle Base,
                                ValueHandle Result, ReportOptions Opts);
+void handlePointerSubtractionImpl(PointerSubtractionData *Data,
+                                  ValueHandle Diff, ValueHandle EltSize,
+                                  ReportOptions Opts);
 void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                        ReportOptions Opts);
 bool handleFunctionTypeMismatch(FunctionTypeMismatchData *Data,
