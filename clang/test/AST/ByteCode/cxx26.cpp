@@ -61,6 +61,19 @@ namespace ExplicitThisInBacktrace {
 
   static_assert(test()); // both-error {{not an integral constant expression}} \
                          // both-note {{in call to}}
+
+  // GH245413
+  struct A {
+    int a;
+    constexpr operator int(this A a) { return a.a; } // both-note {{read of uninitialized object}} \
+                                                    // ref-note {{declared here}}
+    constexpr A(const A &) {}
+    A() {}
+  };
+  A a;
+  constexpr int z = a; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{in call to 'a.operator int()'}} \
+                       // expected-note {{temporary created here}}
 }
 
 namespace ConstexprUnknownNestedVariables {
