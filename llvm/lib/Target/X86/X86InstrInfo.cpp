@@ -3144,17 +3144,6 @@ X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
                                        : X86::COND_INVALID;
 }
 
-X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
-  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                         : X86::COND_INVALID;
-}
-
-X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
-  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
-             ? X86::getCondFromMI(MI)
-             : X86::COND_INVALID;
-}
-
 int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   // CCMP/CTEST has two conditional operands:
   // - SCC: source conditonal code (same as CMOV)
@@ -6075,7 +6064,13 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       //          %100 = add %101, 0
       //    ==>
       //          %100 = COPY %101
-      UseMI.setDesc(get(TargetOpcode::COPY));
+      // On x86-64 a 32-bit result has its upper 32 bits zeroed, which
+      // SUBREG_TO_REG users may rely on, so keep a real MOV32rr.
+      unsigned CopyOpc = TargetOpcode::COPY;
+      if (Subtarget.is64Bit() &&
+          RI.getRegSizeInBits(UseMI.getOperand(0).getReg(), *MRI) == 32)
+        CopyOpc = X86::MOV32rr;
+      UseMI.setDesc(get(CopyOpc));
       UseMI.removeOperand(
           UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
       UseMI.removeOperand(

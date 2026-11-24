@@ -17,7 +17,7 @@ load(
     "mlir_c_api_cc_library",
 )
 load(":linalggen.bzl", "genlinalg")
-load(":tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_op_defs", "gentbl_sharded_ops", "td_library")
+load(":tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_op_defs", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -240,8 +240,14 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "BuiltinLocationAttributesIncGen",
     tbl_outs = {
-        "include/mlir/IR/BuiltinLocationAttributes.h.inc": ["--gen-attrdef-decls"],
-        "include/mlir/IR/BuiltinLocationAttributes.cpp.inc": ["--gen-attrdef-defs"],
+        "include/mlir/IR/BuiltinLocationAttributes.h.inc": [
+            "--gen-attrdef-decls",
+            "-attrdefs-registration-name=BuiltinLocation",
+        ],
+        "include/mlir/IR/BuiltinLocationAttributes.cpp.inc": [
+            "--gen-attrdef-defs",
+            "-attrdefs-registration-name=BuiltinLocation",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/BuiltinLocationAttributes.td",
@@ -6776,16 +6782,41 @@ cc_library(
     name = "NVVMDialect",
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMArithOps.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMAsyncCopyOps.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMAttributes.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMConvertOps.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMDataMovementOps.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMIndexSRegOps.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMMBarrierOps.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMMiscOps.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMMiscSRegOps.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMMmaOps.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
-    ] + [":NVVMOpSrcs"],
+        "lib/Dialect/LLVMIR/IR/NVVMSyncOps.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMTcgen05Ops.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMWgmmaOps.cpp",
+    ],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
+        "include/mlir/Dialect/LLVMIR/NVVMArithOps.h",
+        "include/mlir/Dialect/LLVMIR/NVVMAsyncCopyOps.h",
         "include/mlir/Dialect/LLVMIR/NVVMAttributes.h",
+        "include/mlir/Dialect/LLVMIR/NVVMConvertOps.h",
+        "include/mlir/Dialect/LLVMIR/NVVMDataMovementOps.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialectDecl.h",
+        "include/mlir/Dialect/LLVMIR/NVVMIndexSRegOps.h",
+        "include/mlir/Dialect/LLVMIR/NVVMIntrinsicLowering.h",
+        "include/mlir/Dialect/LLVMIR/NVVMMBarrierOps.h",
+        "include/mlir/Dialect/LLVMIR/NVVMMiscOps.h",
+        "include/mlir/Dialect/LLVMIR/NVVMMiscSRegOps.h",
+        "include/mlir/Dialect/LLVMIR/NVVMMmaOps.h",
         "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
+        "include/mlir/Dialect/LLVMIR/NVVMSyncOps.h",
+        "include/mlir/Dialect/LLVMIR/NVVMTcgen05Ops.h",
+        "include/mlir/Dialect/LLVMIR/NVVMWgmmaOps.h",
         "lib/Dialect/LLVMIR/IR/NVVMOps.h",
     ],
     includes = [
@@ -6797,6 +6828,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":ConvertToLLVMInterface",
         ":DialectUtils",
+        ":FunctionInterfaces",
         ":GPUDialect",
         ":IR",
         ":InferIntRangeCommon",
@@ -6804,7 +6836,6 @@ cc_library(
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialect",
-        ":NVVMOpSrcs__gentbl_cc_lib",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
         ":PtrDialect",
@@ -6957,21 +6988,47 @@ gentbl_cc_library(
     deps = [":NVVMRequiresSMTraitsTdFiles"],
 )
 
-gentbl_sharded_ops(
-    name = "NVVMOpSrcs",
-    hdr_out = "include/mlir/Dialect/LLVMIR/NVVMOps.h.inc",
-    shard_count = 8,
-    sharder = ":mlir-src-sharder",
-    src_file = "lib/Dialect/LLVMIR/IR/NVVMOps.cpp",
-    src_out = "include/mlir/Dialect/LLVMIR/NVVMOps.cpp.inc",
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
-    deps = [":NVVMOpsTdFiles"],
-)
-
 gentbl_cc_library(
     name = "NVVMOpsIncGen",
     tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/NVVM" + partition + "Ops.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=" + partition,
+        ]
+        for partition in [
+            "Arith",
+            "AsyncCopy",
+            "Convert",
+            "DataMovement",
+            "IndexSReg",
+            "MBarrier",
+            "Misc",
+            "MiscSReg",
+            "Mma",
+            "Sync",
+            "Tcgen05",
+            "Wgmma",
+        ]
+    } | {
+        "include/mlir/Dialect/LLVMIR/NVVM" + partition + "Ops.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=" + partition,
+        ]
+        for partition in [
+            "Arith",
+            "AsyncCopy",
+            "Convert",
+            "DataMovement",
+            "IndexSReg",
+            "MBarrier",
+            "Misc",
+            "MiscSReg",
+            "Mma",
+            "Sync",
+            "Tcgen05",
+            "Wgmma",
+        ]
+    } | {
         "include/mlir/Dialect/LLVMIR/NVVMOpsDialect.h.inc": [
             "-gen-dialect-decls",
             "-dialect=nvvm",
@@ -9893,6 +9950,30 @@ cc_library(
 )
 
 cc_library(
+    name = "OpenACCToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/OpenACC/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenACC/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":NVVMDialect",
+        ":OpenACCDialect",
+        ":ROCDLDialect",
+        ":Support",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:FrontendOffloading",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:TransformUtils",
+    ],
+)
+
+cc_library(
     name = "OpenMPToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenMP/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]) + [
@@ -9969,6 +10050,7 @@ cc_library(
         ":LLVMIRToNVVMTranslation",
         ":LLVMToLLVMIRTranslation",
         ":NVVMToLLVMIRTranslation",
+        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":PtrToLLVMIRTranslation",
         ":ROCDLToLLVMIRTranslation",
@@ -11007,6 +11089,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":AtomicInterfacesTdFiles",
+        ":GPUOpsTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",

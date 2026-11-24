@@ -328,6 +328,19 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                        /*trailingZerosNum=*/0);
   }
 
+  if (attrName == getCUDAOffloadEntriesAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getCUDAOffloadEntriesAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto entries = mlir::dyn_cast<mlir::ArrayAttr>(attr.getValue());
+    if (!entries ||
+        !llvm::all_of(entries, llvm::IsaPred<cir::CUDAOffloadEntryAttr>))
+      return op->emitOpError() << "expects '" << getCUDAOffloadEntriesAttrName()
+                               << "' to be an array of #cir.cu.offload_entry";
+    return success();
+  }
+
   if (attrName == getTripleAttrName()) {
     if (!mlir::isa<mlir::ModuleOp>(op))
       return op->emitOpError()
@@ -2318,6 +2331,13 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   // Don't merge blocks that start with LabelOp or IndirectBrOp.
   // This is to avoid merging blocks that have an indirect predecessor.
   if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
+    return failure();
+
+  // The merged block takes the source's place in the region. Keep a region
+  // exit in the last block, where CFG flattening and the cir.await verifier
+  // expect it.
+  if (src->getNextNode() != dst && dst == &dst->getParent()->back() &&
+      isa<RegionBranchTerminatorOpInterface>(dst->getTerminator()))
     return failure();
 
   // An operand that is an argument of the destination itself (possible in an
