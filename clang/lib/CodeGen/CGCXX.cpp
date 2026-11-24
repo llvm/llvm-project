@@ -276,7 +276,7 @@ llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
   if (!tryEmitCUDADeviceInvalidFunctionBody(GD, Fn))
     CodeGenFunction(*this).GenerateCode(GD, Fn, FnInfo);
   setNonAliasAttributes(GD, Fn);
-  SetLLVMFunctionAttributesForDefinition(cast<CXXMethodDecl>(GD.getDecl()), Fn);
+  SetLLVMFunctionAttributesForDefinition(GD, Fn);
   return Fn;
 }
 

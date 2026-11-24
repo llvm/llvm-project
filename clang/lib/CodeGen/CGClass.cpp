@@ -1519,11 +1519,6 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
       assert(Dtor->isImplicit() && "bodyless dtor not implicit");
       // nothing to do besides what's in the epilogue
     }
-    // -fapple-kext must inline any call to this dtor into
-    // the caller's body.
-    if (getLangOpts().AppleKext)
-      CurFn->addFnAttr(llvm::Attribute::AlwaysInline);
-
     break;
   }
 
@@ -3221,9 +3216,8 @@ void CodeGenFunction::EmitLambdaInAllocaImplFn(
     CGM.SetInternalFunctionAttributes(CallOp, Fn, **ImplFnInfo);
 
     const GlobalDecl &GD = GlobalDecl(CallOp);
-    const auto *D = cast<FunctionDecl>(GD.getDecl());
     CodeGenFunction(CGM).GenerateCode(GD, Fn, **ImplFnInfo);
-    CGM.SetLLVMFunctionAttributesForDefinition(D, Fn);
+    CGM.SetLLVMFunctionAttributesForDefinition(GD, Fn);
   }
   *ImplFn = Fn;
 }

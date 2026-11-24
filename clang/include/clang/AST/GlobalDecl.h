@@ -93,6 +93,7 @@ public:
   GlobalDecl(const NamedDecl *D) { Init(D); }
   GlobalDecl(const BlockDecl *D) { Init(D); }
   GlobalDecl(const CapturedDecl *D) { Init(D); }
+  GlobalDecl(const OutlinedFunctionDecl *D) { Init(D); }
   GlobalDecl(const ObjCMethodDecl *D) { Init(D); }
   GlobalDecl(const OMPDeclareReductionDecl *D);
   GlobalDecl(const OMPDeclareMapperDecl *D);

@@ -1492,7 +1492,7 @@ public:
 
   /// Set the LLVM function attributes which only apply to a function
   /// definition.
-  void SetLLVMFunctionAttributesForDefinition(const Decl *D, llvm::Function *F);
+  void SetLLVMFunctionAttributesForDefinition(GlobalDecl GD, llvm::Function *F);
 
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);
