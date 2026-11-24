@@ -408,13 +408,10 @@ private:
     }
   }
 
-  template <size_t _Np = sizeof...(_Vs)>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const {
-    if (std::get<_Np>(__current_) == ranges::end(std::get<_Np>(__parent_->__bases_)))
-      return true;
-    if constexpr (_Np > 0)
-      return __at_end<_Np - 1>();
-    return false;
+    return [&]<size_t... _Ip>(index_sequence<_Ip...>) {
+      return ((std::get<_Ip>(__current_) == ranges::end(std::get<_Ip>(__parent_->__bases_))) || ...);
+    }(make_index_sequence<1 + sizeof...(_Vs)>{});
   }
 
   template <class _Tuple>
