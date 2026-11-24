@@ -85,13 +85,10 @@ gpu.module @load_store_check {
     }
 
     // CHECK-LABEL: gpu.func @load_matrix_b_request_pack
-    gpu.func @load_matrix_b_request_pack(%src: memref<64x128xi4, 1>, %dst: memref<64x128xi4, 1>,
-                                         %src_batch: memref<2x64x128xi4, 1>) kernel {
-        // CHECK-DAG: %[[C16_I32:.*]] = arith.constant 16 : i32
-        // CHECK-DAG: %[[C32_I32:.*]] = arith.constant 32 : i32
-        // CHECK-DAG: %[[C64_I32:.*]] = arith.constant 64 : i32
-        // CHECK-DAG: %[[C96_I32:.*]] = arith.constant 96 : i32
-        // CHECK-DAG: %[[C128_I32:.*]] = arith.constant 128 : i32
+    gpu.func @load_matrix_b_request_pack(%src: memref<64x128xi4, 1>, %dst: memref<64x128xi4, 1>) kernel {
+        // CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
+        // CHECK: %[[C32_I32:.*]] = arith.constant 32 : i32
+        // CHECK: %[[C64_I32:.*]] = arith.constant 64 : i32
         %srcce = memref.memory_space_cast %src : memref<64x128xi4, 1> to memref<64x128xi4>
         %dstte = memref.memory_space_cast %dst : memref<64x128xi4, 1> to memref<64x128xi4>
 
@@ -107,15 +104,6 @@ gpu.module @load_store_check {
         %c32 = arith.constant 32 : index
         %c0 = arith.constant 0 : index
         vector.store %loaded, %dstte[%c32, %c0] : memref<64x128xi4>, vector<64xi4>
-
-        // A packed load takes its tile height from the second-to-last dim.
-        // Offset [1, 32, 32] of a 2x64x128 source is row 64 + 32 = 96.
-        %srcb_ce = memref.memory_space_cast %src_batch : memref<2x64x128xi4, 1> to memref<2x64x128xi4>
-        %srcb_tdesc = xegpu.create_nd_tdesc %srcb_ce : memref<2x64x128xi4> -> !xegpu.tensor_desc<1x32x32xi4>
-        // CHECK: xevm.blockload2d %{{.*}}, %[[C64_I32]], %[[C128_I32]], %[[C64_I32]], %[[C16_I32]], %[[C96_I32]] <{
-        // CHECK-SAME: elem_size_in_bits = 8 : i32, pack_register = true, tile_height = 32 : i32, tile_width = 16 : i32
-        %loadedb = xegpu.load_nd %srcb_tdesc[1, 32, 32] <{packed}> : !xegpu.tensor_desc<1x32x32xi4> -> vector<64xi4>
-        vector.store %loadedb, %dstte[%c0, %c0] : memref<64x128xi4>, vector<64xi4>
         gpu.return
     }
 }

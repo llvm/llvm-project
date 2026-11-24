@@ -564,10 +564,13 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         return rewriter.notifyMatchFailure(
             op, "Sub byte types need a tensor descriptor of rank 2 or more.");
       auto subByteFactor = 8 / elemBitSize;
-      auto tileH = tdescTy.getDimSize(tileRank - 2);
+      auto tileH = tdescTy.getDimSize(0);
       // Handle special case for packed load.
       if constexpr (std::is_same_v<OpType, xegpu::LoadNdOp>) {
         if (op.getPacked().value_or(false)) {
+          if (tileRank != 2)
+            return rewriter.notifyMatchFailure(
+                op, "Packed sub byte loads need a 2D tensor descriptor.");
           // packed load is implemented as packed loads of 8bit elements.
           if (tileH == systolicDepth * 4 &&
               tileW == executionSize * subByteFactor) {
