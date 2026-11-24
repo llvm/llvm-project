@@ -743,8 +743,8 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_refract:
   case Intrinsic::spv_resource_getbasepointer:
   case Intrinsic::spv_resource_getpointer:
-  case Intrinsic::spv_resource_handlefrombinding:
-  case Intrinsic::spv_resource_handlefromimplicitbinding:
+  case Intrinsic::spv_resource_handlefrombinding_mdname:
+  case Intrinsic::spv_resource_handlefromimplicitbinding_mdname:
   case Intrinsic::spv_resource_nonuniformindex:
   case Intrinsic::spv_resource_sample:
   case Intrinsic::spv_rsqrt:
@@ -5961,7 +5961,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
-  case Intrinsic::spv_resource_handlefrombinding: {
+  case Intrinsic::spv_resource_handlefrombinding_mdname: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
   case Intrinsic::spv_resource_counterhandlefrombinding:
@@ -6088,14 +6088,16 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   Register MainHandleReg = Intr.getOperand(2).getReg();
   auto *MainHandleDef = cast<GIntrinsic>(getVRegDef(*MRI, MainHandleReg));
   assert(MainHandleDef->getIntrinsicID() ==
-         Intrinsic::spv_resource_handlefrombinding);
+         Intrinsic::spv_resource_handlefrombinding_mdname);
 
   uint32_t Set = getIConstVal(Intr.getOperand(3).getReg(), MRI);
   uint32_t Binding = getIConstVal(Intr.getOperand(4).getReg(), MRI);
   uint32_t ArraySize = getIConstVal(MainHandleDef->getOperand(4).getReg(), MRI);
   Register IndexReg = MainHandleDef->getOperand(5).getReg();
   std::string CounterName =
-      getStringValueFromReg(MainHandleDef->getOperand(6).getReg(), *MRI) +
+      cast<MDString>(MainHandleDef->getOperand(6).getMetadata()->getOperand(0))
+          ->getString()
+          .str() +
       ".counter";
 
   // Create the counter variable.
@@ -7911,13 +7913,15 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     MachineInstr &Pos) const {
 
   assert(HandleDef.getIntrinsicID() ==
-         Intrinsic::spv_resource_handlefrombinding);
+         Intrinsic::spv_resource_handlefrombinding_mdname);
   uint32_t Set = foldImm(HandleDef.getOperand(2), MRI);
   uint32_t Binding = foldImm(HandleDef.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(HandleDef.getOperand(4), MRI);
   Register IndexReg = HandleDef.getOperand(5).getReg();
   std::string Name =
-      getStringValueFromReg(HandleDef.getOperand(6).getReg(), *MRI);
+      cast<MDString>(HandleDef.getOperand(6).getMetadata()->getOperand(0))
+          ->getString()
+          .str();
 
   bool IsStructuredBuffer = ResType->getOpcode() == SPIRV::OpTypePointer;
   MachineIRBuilder MIRBuilder(HandleDef);

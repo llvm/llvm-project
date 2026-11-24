@@ -1429,7 +1429,7 @@ vi4 ternary_expression_with_vec_cond() {
   return c ? a : b;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>

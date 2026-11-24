@@ -230,6 +230,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::BRCOND,             MVT::Other, Custom);
   setOperationAction(ISD::FABS,               MVT::f32,   Custom);
   setOperationAction(ISD::FABS,               MVT::f64,   Custom);
+  setOperationAction(ISD::FNEG, MVT::f32, Custom);
+  setOperationAction(ISD::FNEG, MVT::f64, Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f32,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
@@ -1275,6 +1277,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::VAARG:              return lowerVAARG(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
   case ISD::FABS:               return lowerFABS(Op, DAG);
+  case ISD::FNEG:
+    return lowerFNEG(Op, DAG);
   case ISD::FCANONICALIZE:
     return lowerFCANONICALIZE(Op, DAG);
   case ISD::FRAMEADDR:          return lowerFRAMEADDR(Op, DAG);
@@ -2702,6 +2706,40 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
     return lowerFABS64(Op, DAG, Subtarget.hasExtractInsert());
 
   return lowerFABS32(Op, DAG, Subtarget.hasExtractInsert());
+}
+
+SDValue MipsTargetLowering::lowerFNEG(SDValue Op, SelectionDAG &DAG) const {
+  // Unless in abs2008 mode, neg.fmt is arithmetic: it raises invalid for a
+  // signaling NaN and does not flip the sign of a NaN. Only use it when NaNs
+  // can be ignored, otherwise flip the sign bit in a GPR.
+  if (Op->getFlags().hasNoNaNs() || Subtarget.inAbs2008Mode())
+    return Op;
+
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(0);
+
+  if (VT == MVT::f32) {
+    SDValue X = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Src);
+    X = DAG.getNode(ISD::XOR, DL, MVT::i32, X,
+                    DAG.getConstant(APInt::getSignMask(32), DL, MVT::i32));
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f32, X);
+  }
+
+  if (ABI.IsN32() || ABI.IsN64()) {
+    SDValue X = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Src);
+    X = DAG.getNode(ISD::XOR, DL, MVT::i64, X,
+                    DAG.getConstant(APInt::getSignMask(64), DL, MVT::i64));
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f64, X);
+  }
+
+  SDValue Lo = DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Src,
+                           DAG.getConstant(0, DL, MVT::i32));
+  SDValue Hi = DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Src,
+                           DAG.getConstant(1, DL, MVT::i32));
+  Hi = DAG.getNode(ISD::XOR, DL, MVT::i32, Hi,
+                   DAG.getConstant(APInt::getSignMask(32), DL, MVT::i32));
+  return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
 }
 
 SDValue MipsTargetLowering::lowerFCANONICALIZE(SDValue Op,

@@ -120,6 +120,128 @@ exit:
   ret void
 }
 
+; The FP argument lane may be a NaN, the lanes in the conditional block are not
+; speculated.
+define void @fp_arg_lane(ptr %p, ptr %q, i1 %c, float %y) {
+; CHECK-LABEL: define void @fp_arg_lane(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[P3]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[A0:%.*]] = fadd float [[X0]], 3.000000e+00
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[X1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[X3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], <float 5.000000e+00, float 7.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[Y]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 2, i32 5>
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[TMP6]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load float, ptr %p, align 4
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
+  %x1 = load float, ptr %p1, align 4
+  %p3 = getelementptr inbounds float, ptr %p, i64 3
+  %x3 = load float, ptr %p3, align 4
+  br label %bb
+
+bb:
+  %a0 = fadd float %x0, 3.0
+  br i1 %c, label %then, label %exit
+
+then:
+  %a1 = fadd float %x1, 5.0
+  %a3 = fadd float %x3, 7.0
+  br label %exit
+
+exit:
+  %r0 = phi float [ %a0, %then ], [ 0.0, %bb ]
+  %r1 = phi float [ %a1, %then ], [ 0.0, %bb ]
+  %r2 = phi float [ %y, %then ], [ 0.0, %bb ]
+  %r3 = phi float [ %a3, %then ], [ 0.0, %bb ]
+  store float %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds float, ptr %q, i64 1
+  store float %r1, ptr %q1, align 4
+  %q2 = getelementptr inbounds float, ptr %q, i64 2
+  store float %r2, ptr %q2, align 4
+  %q3 = getelementptr inbounds float, ptr %q, i64 3
+  store float %r3, ptr %q3, align 4
+  ret void
+}
+
+; The FP argument lane may be a subnormal, the lanes in the conditional block
+; are not speculated.
+define void @fp_arg_lane_preserve_sign(ptr %p, ptr %q, i1 %c, float %y) denormal_fpenv(preservesign) {
+; CHECK-LABEL: define void @fp_arg_lane_preserve_sign(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], float [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[P3]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[A0:%.*]] = fmul float [[X0]], 3.000000e+00
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[X1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[X3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 5.000000e+00, float 7.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[Y]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 2, i32 5>
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[TMP6]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load float, ptr %p, align 4
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
+  %x1 = load float, ptr %p1, align 4
+  %p3 = getelementptr inbounds float, ptr %p, i64 3
+  %x3 = load float, ptr %p3, align 4
+  br label %bb
+
+bb:
+  %a0 = fmul float %x0, 3.0
+  br i1 %c, label %then, label %exit
+
+then:
+  %a1 = fmul float %x1, 5.0
+  %a3 = fmul float %x3, 7.0
+  br label %exit
+
+exit:
+  %r0 = phi float [ %a0, %then ], [ 0.0, %bb ]
+  %r1 = phi float [ %a1, %then ], [ 0.0, %bb ]
+  %r2 = phi float [ %y, %then ], [ 0.0, %bb ]
+  %r3 = phi float [ %a3, %then ], [ 0.0, %bb ]
+  store float %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds float, ptr %q, i64 1
+  store float %r1, ptr %q1, align 4
+  %q2 = getelementptr inbounds float, ptr %q, i64 2
+  store float %r2, ptr %q2, align 4
+  %q3 = getelementptr inbounds float, ptr %q, i64 3
+  store float %r3, ptr %q3, align 4
+  ret void
+}
+
 ; The PHI of the region entry is copyable.
 define void @entry_phi_lane(ptr %p, ptr %q, i32 %n, i32 %y, i1 %c) {
 ; CHECK-LABEL: define void @entry_phi_lane(
@@ -329,6 +451,269 @@ use:
 
 done:
   resume { ptr, i32 } %lp
+}
+
+; The constant lane is copyable, the lanes in the control equivalent blocks are
+; vectorized in the region entry.
+define void @const_lane_ce(ptr %p, ptr %q, i1 %c) {
+; CHECK-LABEL: define void @const_lane_ce(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load i32, ptr [[P3]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[A0:%.*]] = add i32 [[X0]], 1
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[SKIP:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP1]], <i32 2, i32 4>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 7, i32 poison>, i32 [[A0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SKIP]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i32> [ [[TMP6]], %[[THEN]] ]
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i32, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p3 = getelementptr inbounds i32, ptr %p, i64 3
+  %x3 = load i32, ptr %p3, align 4
+  br label %bb
+
+bb:
+  %a0 = add i32 %x0, 1
+  br i1 %c, label %then, label %skip
+
+then:
+  %a1 = add i32 %x1, 2
+  %a3 = add i32 %x3, 4
+  br label %exit
+
+skip:
+  br label %then
+
+exit:
+  %r0 = phi i32 [ %a0, %then ]
+  %r1 = phi i32 [ %a1, %then ]
+  %r2 = phi i32 [ 7, %then ]
+  %r3 = phi i32 [ %a3, %then ]
+  store i32 %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds i32, ptr %q, i64 1
+  store i32 %r1, ptr %q1, align 4
+  %q2 = getelementptr inbounds i32, ptr %q, i64 2
+  store i32 %r2, ptr %q2, align 4
+  %q3 = getelementptr inbounds i32, ptr %q, i64 3
+  store i32 %r3, ptr %q3, align 4
+  ret void
+}
+
+; The argument lane is copyable, the lanes in the control equivalent blocks are
+; vectorized in the region entry.
+define void @arg_lane_ce(ptr %p, ptr %q, i1 %c, i32 %y) {
+; CHECK-LABEL: define void @arg_lane_ce(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load i32, ptr [[P3]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[A0:%.*]] = mul i32 [[X0]], 3
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[SKIP:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i32> [[TMP1]], <i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[A0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Y]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 2, i32 5>
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SKIP]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ [[TMP7]], %[[THEN]] ]
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i32, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p3 = getelementptr inbounds i32, ptr %p, i64 3
+  %x3 = load i32, ptr %p3, align 4
+  br label %bb
+
+bb:
+  %a0 = mul i32 %x0, 3
+  br i1 %c, label %then, label %skip
+
+then:
+  %a1 = mul i32 %x1, 5
+  %a3 = mul i32 %x3, 7
+  br label %exit
+
+skip:
+  br label %then
+
+exit:
+  %r0 = phi i32 [ %a0, %then ]
+  %r1 = phi i32 [ %a1, %then ]
+  %r2 = phi i32 [ %y, %then ]
+  %r3 = phi i32 [ %a3, %then ]
+  store i32 %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds i32, ptr %q, i64 1
+  store i32 %r1, ptr %q1, align 4
+  %q2 = getelementptr inbounds i32, ptr %q, i64 2
+  store i32 %r2, ptr %q2, align 4
+  %q3 = getelementptr inbounds i32, ptr %q, i64 3
+  store i32 %r3, ptr %q3, align 4
+  ret void
+}
+
+; The FP argument lane may be a NaN, which the identity fadd quiets, so the
+; original value is blended into the result.
+define void @fp_arg_lane_ce(ptr %p, ptr %q, i1 %c, float %y) {
+; CHECK-LABEL: define void @fp_arg_lane_ce(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[P3]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[A0:%.*]] = fadd float [[X0]], 3.000000e+00
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[SKIP:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[X1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[X3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], <float 5.000000e+00, float 7.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[A0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Y]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 2, i32 5>
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SKIP]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[TMP6]], %[[THEN]] ]
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load float, ptr %p, align 4
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
+  %x1 = load float, ptr %p1, align 4
+  %p3 = getelementptr inbounds float, ptr %p, i64 3
+  %x3 = load float, ptr %p3, align 4
+  br label %bb
+
+bb:
+  %a0 = fadd float %x0, 3.0
+  br i1 %c, label %then, label %skip
+
+then:
+  %a1 = fadd float %x1, 5.0
+  %a3 = fadd float %x3, 7.0
+  br label %exit
+
+skip:
+  br label %then
+
+exit:
+  %r0 = phi float [ %a0, %then ]
+  %r1 = phi float [ %a1, %then ]
+  %r2 = phi float [ %y, %then ]
+  %r3 = phi float [ %a3, %then ]
+  store float %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds float, ptr %q, i64 1
+  store float %r1, ptr %q1, align 4
+  %q2 = getelementptr inbounds float, ptr %q, i64 2
+  store float %r2, ptr %q2, align 4
+  %q3 = getelementptr inbounds float, ptr %q, i64 3
+  store float %r3, ptr %q3, align 4
+  ret void
+}
+
+; The FP argument lane may be a subnormal, which the identity fmul flushes, so
+; the original value is blended into the result.
+define void @fp_arg_lane_preserve_sign_ce(ptr %p, ptr %q, i1 %c, float %y) denormal_fpenv(preservesign) {
+; CHECK-LABEL: define void @fp_arg_lane_preserve_sign_ce(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[P3]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[A0:%.*]] = fmul float [[X0]], 3.000000e+00
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[SKIP:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[X1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[X3]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 5.000000e+00, float 7.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[A0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Y]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 2, i32 5>
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SKIP]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[TMP6]], %[[THEN]] ]
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load float, ptr %p, align 4
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
+  %x1 = load float, ptr %p1, align 4
+  %p3 = getelementptr inbounds float, ptr %p, i64 3
+  %x3 = load float, ptr %p3, align 4
+  br label %bb
+
+bb:
+  %a0 = fmul float %x0, 3.0
+  br i1 %c, label %then, label %skip
+
+then:
+  %a1 = fmul float %x1, 5.0
+  %a3 = fmul float %x3, 7.0
+  br label %exit
+
+skip:
+  br label %then
+
+exit:
+  %r0 = phi float [ %a0, %then ]
+  %r1 = phi float [ %a1, %then ]
+  %r2 = phi float [ %y, %then ]
+  %r3 = phi float [ %a3, %then ]
+  store float %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds float, ptr %q, i64 1
+  store float %r1, ptr %q1, align 4
+  %q2 = getelementptr inbounds float, ptr %q, i64 2
+  store float %r2, ptr %q2, align 4
+  %q3 = getelementptr inbounds float, ptr %q, i64 3
+  store float %r3, ptr %q3, align 4
+  ret void
 }
 
 declare void @foo()

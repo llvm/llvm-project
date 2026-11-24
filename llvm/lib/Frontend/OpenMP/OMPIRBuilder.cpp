@@ -11436,67 +11436,6 @@ Error OpenMPIRBuilder::emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
   return Error::success();
 }
 
-bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
-    const LocationDescription &Loc, llvm::AtomicOrdering AO, AtomicKind AK) {
-  assert(!(AO == AtomicOrdering::NotAtomic ||
-           AO == llvm::AtomicOrdering::Unordered) &&
-         "Unexpected Atomic Ordering.");
-
-  bool Flush = false;
-  llvm::AtomicOrdering FlushAO = AtomicOrdering::Monotonic;
-
-  switch (AK) {
-  case Read:
-    if (AO == AtomicOrdering::Acquire || AO == AtomicOrdering::AcquireRelease ||
-        AO == AtomicOrdering::SequentiallyConsistent) {
-      FlushAO = AtomicOrdering::Acquire;
-      Flush = true;
-    }
-    break;
-  case Write:
-  case Compare:
-  case Update:
-    if (AO == AtomicOrdering::Release || AO == AtomicOrdering::AcquireRelease ||
-        AO == AtomicOrdering::SequentiallyConsistent) {
-      FlushAO = AtomicOrdering::Release;
-      Flush = true;
-    }
-    break;
-  case Capture:
-    switch (AO) {
-    case AtomicOrdering::Acquire:
-      FlushAO = AtomicOrdering::Acquire;
-      Flush = true;
-      break;
-    case AtomicOrdering::Release:
-      FlushAO = AtomicOrdering::Release;
-      Flush = true;
-      break;
-    case AtomicOrdering::AcquireRelease:
-    case AtomicOrdering::SequentiallyConsistent:
-      FlushAO = AtomicOrdering::AcquireRelease;
-      Flush = true;
-      break;
-    default:
-      // do nothing - leave silently.
-      break;
-    }
-  }
-
-  if (Flush) {
-    // Currently Flush RT call still doesn't take memory_ordering, so for when
-    // that happens, this tries to do the resolution of which atomic ordering
-    // to use with but issue the flush call
-    // TODO: pass `FlushAO` after memory ordering support is added
-    (void)FlushAO;
-    emitFlush(Loc);
-  }
-
-  // for AO == AtomicOrdering::Monotonic and  all other case combinations
-  // do nothing
-  return Flush;
-}
-
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
                                   AtomicOpValue &X, AtomicOpValue &V,
@@ -11544,7 +11483,6 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
       XRead = Builder.CreateIntToPtr(XLoad, XElemTy, "atomic.ptr.cast");
     }
   }
-  checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Read);
   Builder.CreateStore(XRead, V.Var, V.IsVolatile);
   return Builder.saveIP();
 }
@@ -11585,7 +11523,6 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
     XSt->setAtomic(AO);
   }
 
-  checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Write);
   return Builder.saveIP();
 }
 
@@ -11613,7 +11550,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
       IsXBinopExpr, IsIgnoreDenormalMode, IsFineGrainedMemory, IsRemoteMemory);
   if (!AtomicResult)
     return AtomicResult.takeError();
-  checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Update);
   return Builder.saveIP();
 }
 
@@ -11890,7 +11826,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
       (IsPostfixUpdate ? AtomicResult->first : AtomicResult->second);
   Builder.CreateStore(CapturedVal, V.Var, V.IsVolatile);
 
-  checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Capture);
   return Builder.saveIP();
 }
 
@@ -12250,8 +12185,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
     }
   }
-
-  checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Compare);
 
   return Builder.saveIP();
 }

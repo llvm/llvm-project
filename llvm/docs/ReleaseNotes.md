@@ -451,6 +451,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Windows Target
 
+* On 32-bit Arm, a trap now follows a noreturn call that would otherwise end
+  a function or funclet, so the unwinder finds the right frame.
+
 ### Changes to the X86 Backend
 
 * Added assembler and code generation support for the `AVX10_V2_AUX`
@@ -598,6 +601,11 @@ Makes programs 10x faster by doing Special New Thing.
   which is mostly useful on Windows where configuring the system to use UTF-8 is
   more involved than setting an environment variable.
 
+* `llvm-readobj --unwind` now decodes only the part of `.pdata` covered by the
+  exception directory for ARM and ARM64 PE images, instead of the whole
+  section. Previously, other data merged into `.pdata` was decoded as unwind
+  entries, which could cause a fatal error.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
@@ -607,6 +615,9 @@ Makes programs 10x faster by doing Special New Thing.
 * MiniDebugInfo (the ELF `.gnu_debugdata` section) is now decompressed by LLVM
   rather than by LLDB's own liblzma binding, and is enabled with
   `LLVM_ENABLE_LZMA` instead of the deprecated `LLDB_ENABLE_LZMA`.
+* The pre-DIL implementation of `frame variable` has been removed, together with
+  the `target.experimental.use-DIL` setting that selected it. Path expressions
+  are now always evaluated by the Data Inspection Language (DIL).
 
 #### SBAPI
 
