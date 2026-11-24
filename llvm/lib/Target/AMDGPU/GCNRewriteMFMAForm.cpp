@@ -608,20 +608,20 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   unsigned AGPRThreshold = MaxVectorRegs.second;
   unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
 
-  // Spills that have to be ArchVGPRs: an AV register, such as an MFMA source,
-  // may live in an AGPR for free, but GCNRegPressure counts it as an ArchVGPR.
-  auto SpillsWithoutAV = [&](GCNRegPressure &P) {
-    unsigned ArchOnly = P.getArchVGPRNum() - P.getAVGPRNum();
+  // The spills with the AV registers, such as MFMA sources, placed as the
+  // allocator does: in the ArchVGPR bank up to its limit, then in the AGPR
+  // bank.
+  auto BankedSpills = [&](const GCNRegPressure &P) {
+    auto [Arch, Acc] = P.getBankedVGPRNum(ArchVGPRThreshold, AGPRThreshold);
     unsigned ArchSpill =
-        ArchOnly > ArchVGPRThreshold ? ArchOnly - ArchVGPRThreshold : 0;
-    unsigned AGPRSpill =
-        P.getAGPRNum() > AGPRThreshold ? P.getAGPRNum() - AGPRThreshold : 0;
-    unsigned Unified = P.getVGPRNum(/*UnifiedVGPRFile=*/true);
+        Arch > ArchVGPRThreshold ? Arch - ArchVGPRThreshold : 0;
+    unsigned AGPRSpill = Acc > AGPRThreshold ? Acc - AGPRThreshold : 0;
+    unsigned Unified = GCNRegPressure::getBankedUnifiedVGPRNum(Arch, Acc);
     unsigned UnifiedSpill =
         Unified > CombinedThreshold ? Unified - CombinedThreshold : 0;
     return std::max(UnifiedSpill, ArchSpill + AGPRSpill);
   };
-  int64_t MostAVFreeSaving = 0;
+  int64_t MostBankedSaving = 0;
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     GCNRegPressure &PressureBefore = DAG.Pressure[Region];
@@ -638,9 +638,9 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
     MaxAGPRAfter = std::max(MaxAGPRAfter, PressureAfter.getAGPRNum());
     ArchPeak = std::max(ArchPeak, PressureAfter.getArchVGPRNum() -
                                       PressureAfter.getAVGPRNum());
-    MostAVFreeSaving =
-        std::max(MostAVFreeSaving, (int64_t)SpillsWithoutAV(PressureBefore) -
-                                       (int64_t)SpillsWithoutAV(PressureAfter));
+    MostBankedSaving =
+        std::max(MostBankedSaving, (int64_t)BankedSpills(PressureBefore) -
+                                       (int64_t)BankedSpills(PressureAfter));
 
     // Moving ArchVGPR overflow into the AGPRs only helps while both files hold
     // what the region needs; getVGPRSpills() cannot show that.
@@ -700,7 +700,7 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   // of that the plan only adds bridge copies. A kernel whose overflow is all AV
   // runs 10% slower converted: its loops stay over the limit and gain about 190
   // AGPR moves.
-  if (BestSpillCost < 0 && BestRegionSpillsAfter > 0 && MostAVFreeSaving <= 0)
+  if (BestSpillCost < 0 && BestRegionSpillsAfter > 0 && MostBankedSaving <= 0)
     return {std::numeric_limits<int64_t>::max() / 2};
 
   // Set the cost to the largest decrease in spill cost in order to not double
