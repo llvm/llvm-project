@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements support for context disambiguation of allocation calls for profile
-// guided heap optimization using memprof metadata. See implementation file for
-// details.
+// Implements support for context disambiguation of allocation calls for
+// profile-guided memory optimization (MemPGO) using memprof metadata. See
+// implementation file for details.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_IPO_MEMPROF_CONTEXT_DISAMBIGUATION_H
 #define LLVM_TRANSFORMS_IPO_MEMPROF_CONTEXT_DISAMBIGUATION_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -28,6 +30,13 @@ class GlobalValueSummary;
 class LLVMContext;
 class Module;
 class OptimizationRemarkEmitter;
+
+inline constexpr StringLiteral MemProfCloneSuffix = ".memprof.";
+
+/// Returns true if \p GV is a MemProf context-disambiguated clone.
+inline bool isMemProfClone(const GlobalValue &GV) {
+  return GV.getName().contains(MemProfCloneSuffix);
+}
 
 class MemProfContextDisambiguation
     : public OptionalPassInfoMixin<MemProfContextDisambiguation> {
@@ -93,6 +102,11 @@ class MemProfContextDisambiguation
   // the ThinLTO backend during applyImport.
   std::unique_ptr<InstrProfSymtab> Symtab;
   std::unique_ptr<ICallPromotionAnalysis> ICallAnalysis;
+  // Maps the aliasee GUID of each imported copy of an alias to that copy. Used
+  // by performICP to promote to an alias copy when the profiled target is its
+  // aliasee, which is not in the module. Lazily built on first use.
+  std::optional<DenseMap<GlobalValue::GUID, Function *>>
+      AliaseeGUIDToImportedAlias;
 
 public:
   LLVM_ABI

@@ -181,6 +181,11 @@ public:
     uint16_t rows = 0;
   };
 
+  /// Set the terminal window dimensions for the inferior's stdio.
+  ///
+  /// On Windows, an explicit size of 0x0 means that the inferior's stdio
+  /// should be redirected through anonymous pipes instead of a ConPTY (see
+  /// eLaunchFlagUsePipes and the QSetSTDIOWindowSize packet).
   void SetSTDIOWindowSize(uint16_t cols, uint16_t rows) {
     m_stdio_window_size.cols = cols;
     m_stdio_window_size.rows = rows;

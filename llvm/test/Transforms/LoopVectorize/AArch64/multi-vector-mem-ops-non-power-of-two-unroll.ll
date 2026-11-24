@@ -24,8 +24,8 @@ define void @mixed_i64_i32_accesses(ptr noalias %x, ptr noalias %y, i64 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP4]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP4]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i64>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i64>, ptr [[TMP7]], align 8
@@ -36,8 +36,8 @@ define void @mixed_i64_i32_accesses(ptr noalias %x, ptr noalias %y, i64 %n) {
 ; CHECK-NEXT:    store <vscale x 4 x i64> [[TMP9]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store <vscale x 4 x i64> [[TMP10]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP11]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP11]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x i32>, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x i32>, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 4 x i32>, ptr [[TMP13]], align 4

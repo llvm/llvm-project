@@ -130,10 +130,12 @@ def gather_commit_information(args: argparse.Namespace) -> dict:
         return commit
 
     # Only commits on the main branch get an ordinal so we can order them on time series. Other commits
-    # can exist, but they are not totally ordered with the rest.
+    # can exist, but they are not totally ordered with the rest. Also specify that the ordinals are for
+    # the `main` branch.
     ancestor = subprocess.run(['git', '-C', args.git_repo, 'merge-base', '--is-ancestor', sha, args.main_branch])
     if ancestor.returncode == 0:
         commit['ordinal'] = int(git(args.git_repo, 'rev-list', '--count', sha))
+        commit['branch'] = 'main'
     elif ancestor.returncode == 1:
         logging.info(f'{sha} is not on {args.main_branch}: not giving it an ordinal')
     else:
@@ -171,10 +173,16 @@ def main(argv: List[str]) -> int:
     ordinal = parser.add_mutually_exclusive_group()
     ordinal.add_argument('--main-branch', type=str, default='origin/main',
         help='The main branch of the repository. Only commits on that branch are given an ordinal, which is '
-             'computed from the history of that branch.')
+             'computed from the history of that branch. Commits on that branch are reported as being on the '
+             '`main` branch in LNT.')
     ordinal.add_argument('--no-ordinal', action='store_true',
         help='Never give the commit an ordinal. This is useful for results that are not meant to be part of a '
              'time series, and required when the repository does not have the full history (e.g. a shallow clone).')
+    parser.add_argument('--untracked-machine', action='store_true',
+        help='Mark the machine as not tracked, which keeps it out of the dashboards and the automatic machine '
+             'selection of LNT. This is useful for machines holding throwaway results, like A/B comparisons.')
+    parser.add_argument('--delete-after-inactive-days', type=common.at_least(1), default=None, metavar='DAYS',
+        help='Ask LNT to delete the machine and the commit after they have been inactive for that many days.')
     parser.add_argument('--measured-at', type=utc_timestamp, default=None, metavar='YYYY-MM-DDTHH:MM:SSZ',
         help='The UTC time at which the benchmarks were run. Defaults to the current time.')
     parser.add_argument('--run-parameter', type=common.key_value, action='append', default=[], metavar='KEY=VALUE',
@@ -219,10 +227,17 @@ def main(argv: List[str]) -> int:
     if args.lit_build_dir is not None:
         machine_fields.update(gather_lit_features(args.lit_build_dir, lit_options))
 
+    machine_settings = {}
+    if args.untracked_machine:
+        machine_settings['tracked'] = False
+    if args.delete_after_inactive_days is not None:
+        machine_settings['delete_after_inactive_days'] = args.delete_after_inactive_days
+        commit['delete_after_inactive_days'] = args.delete_after_inactive_days
+
     measured_at = args.measured_at or datetime.datetime.now(datetime.timezone.utc)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     common.write_lnt_report(args.output, args.machine, machine_fields, commit, tests, measured_at,
-                            run_parameters=dict(args.run_parameter))
+                            run_parameters=dict(args.run_parameter), machine_settings=machine_settings)
     logging.info(f'Report written to {args.output}')
     return 0
 

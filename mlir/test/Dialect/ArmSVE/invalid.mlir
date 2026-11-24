@@ -1,7 +1,19 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 //===----------------------------------------------------------------------===//
-// MMLA Ops
+// MMLA Ops (int)
+//===----------------------------------------------------------------------===//
+
+func.func @usmmla_not_rank_1(%a: vector<1x[16]xi8>,
+                             %b: vector<1x[16]xi8>,
+                             %c: vector<1x[4]xi32>) -> vector<1x[4]xi32> {
+  // expected-error@+1 {{op operand #0 must be scalable 1D vector of any non-token type values, but got 'vector<1x[16]xi8>'}}
+  %0 = "arm_sve.intr.usmmla"(%a, %b, %c) : (vector<1x[16]xi8>, vector<1x[16]xi8>, vector<1x[4]xi32> ) -> vector<1x[4]xi32>
+  return %0 : vector<1x[4]xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// MMLA Ops (fp)
 //===----------------------------------------------------------------------===//
 
 func.func @bfmmla_invalid_element_type_lhs_rhs(%acc: vector<[4]xf32>,
@@ -61,6 +73,8 @@ func.func @bfmmla_fixed_dimension_acc(%acc: vector<4xf32>,
   %0 = arm_sve.intr.bfmmla %acc, %lhs, %rhs : vector<[8]xbf16> to vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// TODO: Add an example with rank != 1
 
 // -----
 

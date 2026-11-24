@@ -23,6 +23,9 @@ entry:
   %fmt_float = alloca [20 x i8]
   store [20 x i8] c"Floats: %f, %e, %g\0A\00", ptr %fmt_float
 
+  %fmt_float_capital = alloca [20 x i8]
+  store [20 x i8] c"Floats: %F, %E, %G\0A\00", ptr %fmt_float_capital
+
   %fmt_n = alloca [15 x i8]
   store [15 x i8] c"Count: %nDone\0A\00", ptr %fmt_n
 
@@ -37,6 +40,7 @@ entry:
   call i32 (ptr, ...) @printf(ptr %fmt_str_ptr, ptr %dummy_str, ptr %dummy_str)
   call i32 (ptr, ...) @printf(ptr %fmt_pct, i32 100)
   call i32 (ptr, ...) @printf(ptr %fmt_float, double 3.14159, double 3.14159, double 3.14159)
+  call i32 (ptr, ...) @printf(ptr %fmt_float_capital, double +inf, double +inf, double +inf)
   call i32 (ptr, ...) @printf(ptr %fmt_n, ptr %n_count)
   %n_loaded = load i32, ptr %n_count
   call i32 (ptr, ...) @printf(ptr %fmt_n_out, i32 %n_loaded)
@@ -56,11 +60,13 @@ entry:
 ; CHECK-NEXT:   store [6 x i8] c"llubi\00", ptr %dummy_str, align 1
 ; CHECK-NEXT:   %fmt_float = alloca [20 x i8], align 1 => ptr 0x7B [fmt_float]
 ; CHECK-NEXT:   store [20 x i8] c"Floats: %f, %e, %g\0A\00", ptr %fmt_float, align 1
-; CHECK-NEXT:   %fmt_n = alloca [15 x i8], align 1 => ptr 0x90 [fmt_n]
+; CHECK-NEXT:   %fmt_float_capital = alloca [20 x i8], align 1 => ptr 0x90 [fmt_float_capital]
+; CHECK-NEXT:   store [20 x i8] c"Floats: %F, %E, %G\0A\00", ptr %fmt_float_capital, align 1
+; CHECK-NEXT:   %fmt_n = alloca [15 x i8], align 1 => ptr 0xA5 [fmt_n]
 ; CHECK-NEXT:   store [15 x i8] c"Count: %nDone\0A\00", ptr %fmt_n, align 1
-; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xA0 [fmt_n_out]
+; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xB5 [fmt_n_out]
 ; CHECK-NEXT:   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out, align 1
-; CHECK-NEXT:   %n_count = alloca i32, align 4 => ptr 0xA8 [n_count]
+; CHECK-NEXT:   %n_count = alloca i32, align 4 => ptr 0xBC [n_count]
 ; CHECK-NEXT:   store i32 0, ptr %n_count, align 4
 ; CHECK-NEXT: Ints: 42, -42, 255, 377, ff, FF, 00042
 ; CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr %fmt_int, i32 42, i32 -42, i32 255, i32 255, i32 255, i32 255, i32 42) => i32 39
@@ -72,10 +78,12 @@ entry:
 ; CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr %fmt_pct, i32 100) => i32 14
 ; CHECK-NEXT: Floats: 3.141590, 3.141590e+00, 3.14159
 ; CHECK-NEXT:   %4 = call i32 (ptr, ...) @printf(ptr %fmt_float, double 3.141590e+00, double 3.141590e+00, double 3.141590e+00) => i32 40
+; CHECK-NEXT: Floats: INF, INF, INF
+; CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr %fmt_float_capital, double +inf, double +inf, double +inf) => i32 22
 ; CHECK-NEXT: Count: Done
-; CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr %fmt_n, ptr %n_count) => i32 12
+; CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr %fmt_n, ptr %n_count) => i32 12
 ; CHECK-NEXT:   %n_loaded = load i32, ptr %n_count, align 4 => i32 7
 ; CHECK-NEXT: N=7
-; CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr %fmt_n_out, i32 %n_loaded) => i32 4
+; CHECK-NEXT:   %7 = call i32 (ptr, ...) @printf(ptr %fmt_n_out, i32 %n_loaded) => i32 4
 ; CHECK-NEXT:   ret i32 0
 ; CHECK-NEXT: Exiting function: main

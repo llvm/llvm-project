@@ -98,6 +98,15 @@ static bool isReadSrcMemref(Value operand) {
   return srcBuff && isa<MemRefType>(srcBuff.getType());
 }
 
+// Return true if any of the values is a masked or out-of-bounds transfer_read,
+// which can't be replaced by a load.
+static bool hasMaskedOrOutOfBoundsRead(ArrayRef<Value> values) {
+  return llvm::any_of(values, [](Value value) {
+    auto readOp = value.getDefiningOp<TransferReadOp>();
+    return readOp && (readOp.getMask() || readOp.hasOutOfBoundsDim());
+  });
+}
+
 // Check if a vector.contract operand reads whole VNNI groups: the memref's
 // static innermost dim is the VNNI factor and the read starts at its origin.
 static bool isVnniOperandRead(Value operand, int64_t vnni) {
@@ -901,16 +910,12 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
 //     - Shuffle them as we packed using vpunpack
 //     - Load C matrix and do arith.add with the shuffle
 //     - Store back into C matrix
-struct VectorContractToAMXDotProduct
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     unsigned int blockingFactor =
         contractOp.getLhsType().getElementType().isBF16() ? 2 : 4;
@@ -1008,6 +1013,11 @@ struct VectorContractToAMXDotProduct
       if (!isReadSrcMemref(contractOp.getAcc()))
         return rewriter.notifyMatchFailure(contractOp,
                                            "The ACC src is not a MemRef type.");
+
+      if (hasMaskedOrOutOfBoundsRead(
+              {contractOp.getLhs(), contractOp.getRhs(), contractOp.getAcc()}))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The reads should be unmasked and in bounds.");
 
       bool collapse = false;
       if (isVnni)
@@ -1300,6 +1310,11 @@ struct VectorContractToAMXDotProduct
                           "transfer_read for all contracts");
 
         Value accInit = getLoopNestInit(contract.getAcc(), loopLists);
+        if (hasMaskedOrOutOfBoundsRead(
+                {contract.getLhs(), contract.getRhs(), accInit}))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The reads of an associated contract operation "
+                          "should be unmasked and in bounds.");
         Operation *accInitOp = accInit.getDefiningOp();
         bool carried = !isa_and_present<TransferReadOp, LoadOp>(accInitOp) &&
                        !isZeroVectorConstant(accInitOp);
@@ -1815,7 +1830,6 @@ struct VectorContractToAMXDotProduct
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateVectorContractToAMXDotProductPatterns(

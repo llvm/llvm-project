@@ -245,10 +245,6 @@ public:
     ShouldSignExtI32Return = Val;
   }
 
-  /// Returns the size of the wchar_t type in bytes.
-  /// This queries the 'wchar_size' metadata.
-  LLVM_ABI unsigned getWCharSize(const Module &M) const;
-
   /// Returns the size of the size_t type in bits.
   LLVM_ABI unsigned getSizeTSize(const Module &M) const;
 
@@ -464,16 +460,9 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
-                                          bool &ShouldZExtBoolReturn,
-                                          const Triple &T) {
-    ShouldZExtBoolParam = ShouldZExtBoolReturn = false;
-
-    if (!T.isAArch64() && !T.isOSDarwin()) {
-      ShouldZExtBoolParam = true;
-      ShouldZExtBoolReturn = true;
-    }
-  }
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
   LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
                                                bool &ShouldExtI32Return,
@@ -566,11 +555,6 @@ public:
       if (auto AK = getExtAttrForI32Return(Signed))
         AL = AL.addRetAttribute(*C, AK);
     return AL;
-  }
-
-  /// \copydoc TargetLibraryInfoImpl::getWCharSize()
-  unsigned getWCharSize(const Module &M) const {
-    return Impl->getWCharSize(M);
   }
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()

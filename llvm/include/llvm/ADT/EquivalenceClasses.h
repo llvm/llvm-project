@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -59,7 +60,7 @@ namespace llvm {
 ///   4
 ///   5 1 2
 ///
-template <class ElemTy> class EquivalenceClasses {
+template <class ElemTy> class LLVM_ATTRIBUTE_WARN_UNUSED EquivalenceClasses {
 public:
   /// The EquivalenceClasses data structure is just a set of these.
   /// Each of these represents a relation for a value.  First it stores the

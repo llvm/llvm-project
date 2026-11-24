@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgpu9.00 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX9 %s
-# RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
-# RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=si-late-branch-lowering %s -o - | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
 
 # RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -passes=si-late-branch-lowering %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
 

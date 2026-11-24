@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MPI/IR/MPI.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::mpi;
@@ -26,16 +23,6 @@ void MPIDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/MPI/IR/MPIOps.cpp.inc"
-      >();
-
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/MPI/IR/MPITypesGen.cpp.inc"
-      >();
-
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/MPI/IR/MPIAttrDefs.cpp.inc"
       >();
 }
 

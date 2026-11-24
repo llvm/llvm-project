@@ -122,11 +122,12 @@
 ; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass
-; CHECK-NEXT:     live-debug-values<emit-debug-entry-values>
+; CHECK-NEXT:     live-debug-values
 ; CHECK-NEXT:     machine-sanmd
 ; CHECK-NEXT: MachineOutlinerPass
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
+; CHECK-NEXT:     cfi-fixup
 ; CHECK-NEXT:     stack-frame-layout
 ; CHECK-NEXT:     riscv-move-merge
 ; CHECK-NEXT:     riscv-push-pop-opt

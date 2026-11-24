@@ -9,6 +9,7 @@
 #include "RegisterInfoDynamic_riscv32.h"
 
 #include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
@@ -89,8 +90,7 @@ size_t RegisterInfoDynamic_riscv32::SetRegisterInfo(
 }
 
 const lldb_private::RegisterInfo *
-RegisterInfoDynamic_riscv32::GetRegisterInfo(
-    llvm::StringRef reg_name) const {
+RegisterInfoDynamic_riscv32::GetRegisterInfo(llvm::StringRef reg_name) const {
   return m_dyn_reg_infos.GetRegisterInfo(reg_name);
 }
 

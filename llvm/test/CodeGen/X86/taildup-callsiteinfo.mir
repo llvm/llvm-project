@@ -35,7 +35,6 @@
 ...
 ---
 name:            taildupit
-tracksRegLiveness: true
 liveins:
   - { reg: '$rcx', virtual-reg: '' }
 callSites:

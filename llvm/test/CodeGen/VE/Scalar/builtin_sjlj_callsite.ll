@@ -58,7 +58,7 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    lea %s0, -104(, %s9)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s0, 1, (0)1
-; CHECK-NEXT:    st %s0, -96(, %s9)
+; CHECK-NEXT:    stl %s0, -96(, %s9)
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    lea %s0, f@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -67,7 +67,7 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  .LBB0_2: # %try.cont
 ; CHECK-NEXT:    or %s0, -1, (0)1
-; CHECK-NEXT:    st %s0, -96(, %s9)
+; CHECK-NEXT:    stl %s0, -96(, %s9)
 ; CHECK-NEXT:    lea %s0, _Unwind_SjLj_Unregister@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s18, _Unwind_SjLj_Unregister@hi(, %s0)
@@ -179,7 +179,7 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; PIC-NEXT:    lea %s0, -104(, %s9)
 ; PIC-NEXT:    bsic %s10, (, %s12)
 ; PIC-NEXT:    or %s0, 1, (0)1
-; PIC-NEXT:    st %s0, -96(, %s9)
+; PIC-NEXT:    stl %s0, -96(, %s9)
 ; PIC-NEXT:  .Ltmp0:
 ; PIC-NEXT:    lea %s12, f@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0
@@ -189,7 +189,7 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; PIC-NEXT:  .Ltmp1:
 ; PIC-NEXT:  .LBB0_2: # %try.cont
 ; PIC-NEXT:    or %s0, -1, (0)1
-; PIC-NEXT:    st %s0, -96(, %s9)
+; PIC-NEXT:    stl %s0, -96(, %s9)
 ; PIC-NEXT:    lea %s18, _Unwind_SjLj_Unregister@plt_lo(-24)
 ; PIC-NEXT:    and %s18, %s18, (32)0
 ; PIC-NEXT:    sic %s16

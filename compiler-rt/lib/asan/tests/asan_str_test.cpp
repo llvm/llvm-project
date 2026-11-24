@@ -564,6 +564,17 @@ TEST(AddressSanitizer, MAYBE_StrArgsOverlapTest) {
   str[10] = '\0';
   EXPECT_DEATH(strncat(str + 5, str, 6), OverlapErrorMessage("strncat"));
   EXPECT_DEATH(strncat(str, str + 9, 10), OverlapErrorMessage("strncat"));
+  memset(str, 'z', size);
+  str[5] = '\0';
+  str[15] = '\0';
+  EXPECT_DEATH(strncat(str, str + 10, 10), OverlapErrorMessage("strncat"));
+  str[15] = 'z';
+  str[16] = '\0';
+  strncat(str, str + 11, 10);
+  str[5] = '\0';
+  str[10] = 'z';
+  EXPECT_DEATH(strncat(str + 5, str, 10), OverlapErrorMessage("strncat"));
+  strncat(str + 6, str, 10);
 
   free(str);
 }

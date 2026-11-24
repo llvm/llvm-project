@@ -43,7 +43,8 @@ end subroutine
 ! CHECK:             %[[VAL_21:.*]] = fir.call @_QPbug_145151_1(%[[VAL_20]], %[[VAL_14]], %[[VAL_19]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_23:.*]] = arith.constant false
 ! CHECK:             %[[VAL_24:.*]] = hlfir.as_expr %[[VAL_22]]#0 move %[[VAL_23]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
-! CHECK:             hlfir.yield_element %[[VAL_24]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:             hlfir.yield_element %[[VAL_24]] : !hlfir.expr<!fir.char<1,?>> cleanup {
+! CHECK-NEXT:          hlfir.destroy %[[VAL_24]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_15]] to %[[VAL_1]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           hlfir.destroy %[[VAL_15]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -93,7 +94,8 @@ end subroutine
 ! CHECK:             %[[VAL_18:.*]] = fir.call @_QPbug_145151_2(%[[VAL_17]], %[[VAL_12]], %[[VAL_16]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, f32) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_20:.*]] = arith.constant false
 ! CHECK:             %[[VAL_21:.*]] = hlfir.as_expr %[[VAL_19]]#0 move %[[VAL_20]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
-! CHECK:             hlfir.yield_element %[[VAL_21]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:             hlfir.yield_element %[[VAL_21]] : !hlfir.expr<!fir.char<1,?>> cleanup {
+! CHECK-NEXT:          hlfir.destroy %[[VAL_21]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_1]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           hlfir.destroy %[[VAL_13]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -161,7 +163,8 @@ end subroutine
 ! CHECK:             %[[VAL_29:.*]] = fir.call @_QPf_opt(%[[VAL_28]], %[[VAL_21]], %[[VAL_24]], %[[VAL_25]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<f32>, !fir.ref<f32>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_31:.*]] = arith.constant false
 ! CHECK:             %[[VAL_32:.*]] = hlfir.as_expr %[[VAL_30]]#0 move %[[VAL_31]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
-! CHECK:             hlfir.yield_element %[[VAL_32]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:             hlfir.yield_element %[[VAL_32]] : !hlfir.expr<!fir.char<1,?>> cleanup {
+! CHECK-NEXT:          hlfir.destroy %[[VAL_32]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_22]] to %[[VAL_2]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           hlfir.destroy %[[VAL_22]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -227,7 +230,8 @@ end subroutine
 ! CHECK:             %[[VAL_35:.*]] = fir.call @_QPf_poly(%[[VAL_34]], %[[VAL_29]], %[[VAL_32]], %[[VAL_33]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.class<!fir.type<_QFtest_polymorphicTt>>, !fir.class<!fir.type<_QFtest_polymorphicTt>>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_37:.*]] = arith.constant false
 ! CHECK:             %[[VAL_38:.*]] = hlfir.as_expr %[[VAL_36]]#0 move %[[VAL_37]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
-! CHECK:             hlfir.yield_element %[[VAL_38]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:             hlfir.yield_element %[[VAL_38]] : !hlfir.expr<!fir.char<1,?>> cleanup {
+! CHECK-NEXT:          hlfir.destroy %[[VAL_38]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_30]] to %[[VAL_3]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           hlfir.destroy %[[VAL_30]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -274,8 +278,10 @@ end subroutine
 ! CHECK:             %[[VAL_21:.*]] = fir.call @_QPf_value(%[[VAL_20]], %[[VAL_13]], %[[VAL_19]]#0) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_23:.*]] = arith.constant false
 ! CHECK:             %[[VAL_24:.*]] = hlfir.as_expr %[[VAL_22]]#0 move %[[VAL_23]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:             hlfir.yield_element %[[VAL_24]] : !hlfir.expr<!fir.char<1,?>> cleanup {
+! CHECK-NEXT:          hlfir.destroy %[[VAL_24]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.end_associate %[[VAL_19]]#1, %[[VAL_19]]#2 : !fir.ref<!fir.char<1,?>>, i1
-! CHECK:             hlfir.yield_element %[[VAL_24]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:             }
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_14]] to %[[VAL_1]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           hlfir.destroy %[[VAL_14]] : !hlfir.expr<?x!fir.char<1,?>>

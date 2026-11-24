@@ -122,6 +122,9 @@ LLVM_ABI ISD::CondCode getICmpCondCode(ICmpInst::Predicate Pred);
 /// corresponding to the given ISD integer condition code.
 LLVM_ABI ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
 
+/// Return the atomic node opcode for an atomicrmw operation.
+LLVM_ABI ISD::NodeType getAtomicRMWOpcode(AtomicRMWInst::BinOp Op);
+
 /// Test if the address of \p GV can be described in debug info as a plain
 /// reference to its symbol, so that a variable holding that address can be
 /// described for the whole of its scope rather than only from wherever the

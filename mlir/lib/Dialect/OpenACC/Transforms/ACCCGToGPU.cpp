@@ -96,7 +96,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -564,6 +565,9 @@ private:
   /// Privates with no recoverable name or compiler temps are skipped.
   void recordThreadPrivate(acc::PrivateLocalOp privateLocal);
 
+  /// Record \p privatizeOp as global memory storage, for the closing remark.
+  void recordGlobalMemory(acc::PrivatizeOp privatizeOp);
+
   /// Element size in bytes for \p elementType .
   int64_t getElementSizeInBytes(Location loc, Type elementType) const;
 
@@ -786,6 +790,7 @@ private:
   SharedMemoryBudget sharedMemBudget;
   SmallVector<std::string> sharedMemPrivateVarNames;
   SmallVector<std::string> threadPrivateVarNames;
+  SmallVector<std::string> globalMemVarNames;
   llvm::SmallVector<Operation *, 4> deferredBarrierSeqLoops;
 
   Value getThreadId(Location loc, gpu::Dimension dim) {
@@ -960,6 +965,16 @@ void ACCCGToGPULowering::recordThreadPrivate(acc::PrivateLocalOp privateLocal) {
     threadPrivateVarNames.push_back(varName);
 }
 
+void ACCCGToGPULowering::recordGlobalMemory(acc::PrivatizeOp privatizeOp) {
+  std::string varName = accSupport.getVariableName(privatizeOp.getResult());
+  // A name that could not be recovered, or a compiler temp are skipped.
+  if (varName.empty())
+    return;
+  // The same variable reaches this point once per acc.privatize it has.
+  if (!llvm::is_contained(globalMemVarNames, varName))
+    globalMemVarNames.push_back(varName);
+}
+
 FailureOr<arith::AtomicRMWKind>
 ACCCGToGPULowering::getReductionKind(acc::ReductionOperator redOp, Type type,
                                      Location loc) {
@@ -1063,6 +1078,10 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // blockDim=256x1x1
     accSupport.emitRemark(computeRegion, [&]() {
       auto getName = [&](Value val) -> std::string {
+        // A negative width leaves the size to the launch.
+        if (std::optional<int64_t> width = getConstantIntValue(val);
+            width && *width < 0)
+          return "(*)";
         std::string name = accSupport.getVariableName(val);
         return name.empty() ? "(*)" : name;
       };
@@ -1357,6 +1376,14 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     accSupport.emitRemark(computeRegion, [&]() {
       return (llvm::Twine("GPU shared memory used for ") +
               llvm::join(sharedMemPrivateVarNames, ","))
+          .str();
+    });
+  }
+
+  if (!globalMemVarNames.empty()) {
+    accSupport.emitRemark(computeRegion, [&]() {
+      return (llvm::Twine("GPU global memory used for ") +
+              llvm::join(globalMemVarNames, ","))
           .str();
     });
   }
@@ -1865,6 +1892,7 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
     (void)accSupport.emitNYI(
         loc,
         "per-row barrier to support worker parallelism on non-NVIDIA device");
+    return;
   }
 
   // Per-row barrier with fully runtime branching.
@@ -2889,6 +2917,11 @@ void ACCCGToGPULowering::processPredicateRegion(
         }
         if (failedReductionKind)
           return;
+        // A private destination has a copy per block (or finer), so no other
+        // block writes it and the store must stay a plain store.
+        if (blockReduceKind && getPrivateScopeForMemref(storeOp.getMemref()) !=
+                                   PrivateMemScope::None)
+          blockReduceKind.reset();
         if (blockReduceKind) {
           Value input = mapping.lookupOrDefault(storeOp.getValueToStore());
           Value memref = mapping.lookupOrDefault(storeOp.getMemref());
@@ -3056,6 +3089,7 @@ Value ACCCGToGPULowering::allocatePrivatizeHeapStorage(
   Location loc = privatize.getLoc();
   Value mem =
       memref::AllocOp::create(rewriter, loc, baseTy, mappedDynamicSizes);
+  recordGlobalMemory(privatize);
   OpBuilder::InsertionGuard guard(rewriter);
   Block *allocBlock = mem.getDefiningOp()->getBlock();
   if (allocBlock->mightHaveTerminator()) {
@@ -3212,6 +3246,7 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   rewriter.setInsertionPoint(thenBlock.getTerminator());
   auto mem = memref::AllocOp::create(rewriter, privatize->getLoc(), baseTy,
                                      mappedDynamicSizes);
+  recordGlobalMemory(privatize);
   // Shared memory allocation
   gpu::AddressSpaceAttr sharedMemoryAddressSpace = gpu::AddressSpaceAttr::get(
       computeRegion->getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());

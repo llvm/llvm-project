@@ -9,7 +9,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
@@ -27,7 +26,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.mremap
     libc.src.sys.mman.munmap
@@ -44,7 +42,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.signal
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.mprotect
@@ -61,7 +58,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.madvise
@@ -100,7 +96,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
@@ -118,7 +113,6 @@ add_libc_test(
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.unistd
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.madvise
@@ -140,7 +134,6 @@ add_libc_test(
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.unistd
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.madvise
@@ -151,9 +144,13 @@ add_libc_test(
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
     libc.hdr.sys_resource_macros
+    libc.hdr.types.struct_rlimit
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
     libc.src.unistd.getpagesize
+    libc.src.__support.CPP.scope
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -168,7 +165,6 @@ add_libc_test(
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.unistd
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.msync
@@ -197,7 +193,6 @@ else()
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
       libc.src.sys.mman.remap_file_pages
-      libc.src.errno.errno
       libc.src.sys.mman.mmap
       libc.src.sys.mman.munmap
       libc.src.fcntl.open
@@ -216,7 +211,6 @@ add_libc_test(
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.sys_syscall
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
@@ -242,7 +236,6 @@ add_libc_test(
     libc.include.llvm-libc-macros.file_seek_macros
     libc.include.sys_mman
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.sys.mman.memfd_create
     libc.src.unistd.close

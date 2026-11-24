@@ -328,8 +328,7 @@ def warn_attribute_no_decl : Warning<
   "attribute %0 ignored, because it is not attached to a declaration">,
   InGroup<IgnoredAttributes>;
 def err_late_attribute_param_in_template : Error<
-  "%0 attribute in a template cannot name "
-  "%select{pointee function parameter|later parameter}1 %2">;
+  "%0 attribute in a template cannot name pointee function parameter %1">;
 def err_ms_attributes_not_enabled : Error<
   "'__declspec' attributes are not enabled; use '-fdeclspec' or "
   "'-fms-extensions' to enable support for __declspec attributes">;
@@ -1625,11 +1624,6 @@ def err_pragma_pipeline_invalid_keyword : Error<
 
 // API notes.
 def err_type_unparsed : Error<"unparsed tokens following type">;
-
-// Pragma unroll support.
-def warn_pragma_unroll_cuda_value_in_parens : Warning<
-  "argument to '#pragma unroll' should not be in parentheses in CUDA C/C++">,
-  InGroup<CudaCompat>;
 
 def err_ptrauth_qualifier_bad_arg_count : Error<
   "'__ptrauth' qualifier must take between 1 and 3 arguments">;

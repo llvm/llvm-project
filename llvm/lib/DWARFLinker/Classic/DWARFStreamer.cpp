@@ -19,7 +19,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
@@ -61,7 +60,6 @@ Error DwarfStreamer::init(Triple TheTriple,
                              "no register info for target %s",
                              TripleName.c_str());
 
-  MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.AsmVerbose = true;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
@@ -368,7 +366,7 @@ void DwarfStreamer::emitDebugNames(DWARF5AccelTable &Table) {
                                           (uint64_t)UniqueIdToCuMap.size() - 1);
   /// llvm-dwarfutil doesn't support type units + .debug_names right now.
   // FIXME: add support for type units + .debug_names. For now the behavior is
-  // unsuported.
+  // unsupported.
   emitDWARF5AccelTable(
       Asm.get(), Table, CompUnits,
       [&](const DWARF5AccelTableData &Entry)
@@ -851,7 +849,8 @@ void DwarfStreamer::emitLineTableForUnit(
   Asm->OutStreamer->emitLabel(LineStartSym);
 
   // Emit prologue.
-  emitLineTablePrologue(LineTable.Prologue, DebugStrPool, DebugLineStrPool);
+  emitLineTablePrologue(LineTable.Prologue, Unit, DebugStrPool,
+                        DebugLineStrPool);
 
   // Emit rows.
   emitLineTableRows(LineTable, LineEndSym,
@@ -859,6 +858,7 @@ void DwarfStreamer::emitLineTableForUnit(
 }
 
 void DwarfStreamer::emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
+                                          const CompileUnit &Unit,
                                           OffsetsStringPool &DebugStrPool,
                                           OffsetsStringPool &DebugLineStrPool) {
   MCSymbol *PrologueStartSym = MC->createTempSymbol();
@@ -882,16 +882,16 @@ void DwarfStreamer::emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
                       LineSectionSize);
 
   Asm->OutStreamer->emitLabel(PrologueStartSym);
-  emitLineTableProloguePayload(P, DebugStrPool, DebugLineStrPool);
+  emitLineTableProloguePayload(P, Unit, DebugStrPool, DebugLineStrPool);
   Asm->OutStreamer->emitLabel(PrologueEndSym);
 }
 
 void DwarfStreamer::emitLineTablePrologueV2IncludeAndFileTable(
-    const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
-    OffsetsStringPool &DebugLineStrPool) {
+    const DWARFDebugLine::Prologue &P, const CompileUnit &Unit,
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
   // include_directories (sequence of path names).
   for (const DWARFFormValue &Include : P.IncludeDirectories)
-    emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool);
+    emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool, &Unit);
   // The last entry is followed by a single null byte.
   MS->emitInt8(0);
   LineSectionSize += 1;
@@ -900,7 +900,7 @@ void DwarfStreamer::emitLineTablePrologueV2IncludeAndFileTable(
   for (const DWARFDebugLine::FileNameEntry &File : P.FileNames) {
     // A null-terminated string containing the full or relative path name of a
     // source file.
-    emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
+    emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool, &Unit);
     // An unsigned LEB128 number representing the directory index of a directory
     // in the include_directories section.
     LineSectionSize += MS->emitULEB128IntValue(File.DirIdx);
@@ -917,8 +917,8 @@ void DwarfStreamer::emitLineTablePrologueV2IncludeAndFileTable(
 }
 
 void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
-    const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
-    OffsetsStringPool &DebugLineStrPool) {
+    const DWARFDebugLine::Prologue &P, const CompileUnit &Unit,
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
   if (P.IncludeDirectories.empty()) {
     // directory_entry_format_count(ubyte).
     MS->emitInt8(0);
@@ -938,7 +938,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
   LineSectionSize += MS->emitULEB128IntValue(P.IncludeDirectories.size());
   // directories (sequence of directory names).
   for (auto Include : P.IncludeDirectories)
-    emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool);
+    emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool, &Unit);
 
   bool HasChecksums = P.ContentTypes.HasMD5;
   bool HasInlineSources = P.ContentTypes.HasSource;
@@ -976,7 +976,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
 
   // file_names (sequence of file name entries).
   for (auto File : P.FileNames) {
-    emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
+    emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool, &Unit);
     LineSectionSize += MS->emitULEB128IntValue(File.DirIdx);
     if (HasChecksums) {
       MS->emitBinaryData(
@@ -992,11 +992,18 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
 void DwarfStreamer::emitLineTableString(const DWARFDebugLine::Prologue &P,
                                         const DWARFFormValue &String,
                                         OffsetsStringPool &DebugStrPool,
-                                        OffsetsStringPool &DebugLineStrPool) {
+                                        OffsetsStringPool &DebugLineStrPool,
+                                        const CompileUnit *PathUnit) {
   std::optional<const char *> StringVal = dwarf::toString(String);
   if (!StringVal) {
     warn("Cann't read string from line table.");
     return;
+  }
+
+  std::string RemappedPath;
+  if (PathUnit && PathUnit->getContainingFile().PrefixMap) {
+    RemappedPath = PathUnit->getContainingFile().remapPath(*StringVal);
+    StringVal = RemappedPath.c_str();
   }
 
   switch (String.getForm()) {
@@ -1022,8 +1029,8 @@ void DwarfStreamer::emitLineTableString(const DWARFDebugLine::Prologue &P,
 }
 
 void DwarfStreamer::emitLineTableProloguePayload(
-    const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
-    OffsetsStringPool &DebugLineStrPool) {
+    const DWARFDebugLine::Prologue &P, const CompileUnit &Unit,
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
   // minimum_instruction_length (ubyte).
   MS->emitInt8(P.MinInstLength);
   LineSectionSize += 1;
@@ -1052,10 +1059,10 @@ void DwarfStreamer::emitLineTableProloguePayload(
   }
 
   if (P.FormParams.Version < 5)
-    emitLineTablePrologueV2IncludeAndFileTable(P, DebugStrPool,
+    emitLineTablePrologueV2IncludeAndFileTable(P, Unit, DebugStrPool,
                                                DebugLineStrPool);
   else
-    emitLineTablePrologueV5IncludeAndFileTable(P, DebugStrPool,
+    emitLineTablePrologueV5IncludeAndFileTable(P, Unit, DebugStrPool,
                                                DebugLineStrPool);
 }
 

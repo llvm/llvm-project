@@ -7,7 +7,7 @@
 
 target triple = "aarch64-linux-gnu"
 
-define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
+define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) vscale_range(1,16) {
 ; CHECK-LABEL: define i32 @simple_csa_int_select(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

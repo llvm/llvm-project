@@ -52,7 +52,7 @@ exit:
   ret i32 %val
 }
 
-attributes #0 = { "target-cpu"="neoverse-v2" }
+attributes #0 = { "target-cpu"="neoverse-v2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.enable"}

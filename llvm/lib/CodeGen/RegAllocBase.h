@@ -69,7 +69,7 @@ protected:
   VirtRegMap *VRM = nullptr;
   LiveIntervals *LIS = nullptr;
   LiveRegMatrix *Matrix = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
 private:
   /// Private, callees should go through shouldAllocateRegister
@@ -89,7 +89,8 @@ protected:
   virtual ~RegAllocBase() = default;
 
   // A RegAlloc pass should call this before allocatePhysRegs.
-  void init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat);
+  void init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat,
+            RegisterClassInfo &rci);
 
   /// Get whether a given register should be allocated
   bool shouldAllocateRegister(Register Reg) {

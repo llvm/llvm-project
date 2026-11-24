@@ -138,6 +138,8 @@ struct Configuration {
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;
   bool emitChainedFixups = false;
+  bool noFixupChainsIgnored = false;
+  uint16_t chainedFixupsPointerFormat = 0;
   bool emitRelativeMethodLists = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;
@@ -257,6 +259,7 @@ struct Configuration {
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   llvm::cl::LibraryOptionsContext libraryOptions;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
+  llvm::SmallVector<llvm::StringRef, 0> passPluginArgs;
 
   bool zeroModTime = true;
   bool generateUuid = true;

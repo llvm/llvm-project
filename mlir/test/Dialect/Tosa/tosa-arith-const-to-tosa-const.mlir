@@ -85,8 +85,17 @@ func.func @rewrite_fp8_tensor() -> tensor<2xf8E4M3FN> {
 // -----
 
 // CHECK-LABEL: func.func @rewrite_mxint8_tensor
+// CHECK: %[[CST:.*]] = tosa.const values(dense<tensor<2xmxi8> : [0 : i8, 127 : i8]>) : () -> tensor<2xmxi8>
+func.func @rewrite_mxint8_tensor() -> tensor<2xmxi8> {
+  %c = arith.constant dense<tensor<2xmxi8> : [0 : i8, 127 : i8]>
+  return %c : tensor<2xmxi8>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @rewrite_legacy_mxint8_tensor
 // CHECK: %[[CST:.*]] = tosa.const values(dense<["0x00", "0x7F"]> : tensor<2x!tosa.mxint8>) : () -> tensor<2x!tosa.mxint8>
-func.func @rewrite_mxint8_tensor() -> tensor<2x!tosa.mxint8> {
+func.func @rewrite_legacy_mxint8_tensor() -> tensor<2x!tosa.mxint8> {
   %c = arith.constant dense<["0x00", "0x7F"]> : tensor<2x!tosa.mxint8>
   return %c : tensor<2x!tosa.mxint8>
 }

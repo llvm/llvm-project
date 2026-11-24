@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -std=hlsl202x -verify -Wconversion %s
 
+using namespace hlsl;
+
 groupshared uint SharedData;
 
 void fn1(inout uint Sh) {

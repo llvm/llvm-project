@@ -2,9 +2,11 @@
 ; RUN: llc < %s -mtriple=aarch64 --mattr=+complxnum,+neon,+fullfp16 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64 --mattr=+complxnum,+neon,+fullfp16,+sve -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64 --mattr=+complxnum,+neon,+fullfp16,+sve2 -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
-; RUN: llc < %s -mtriple=aarch64 --global-isel --global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
-; RUN: llc < %s -mtriple=aarch64 --global-isel --global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16,+sve -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
-; RUN: llc < %s -mtriple=aarch64 --global-isel --global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16,+sve2 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
+; RUN: llc < %s -mtriple=aarch64 --global-isel -global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
+; RUN: llc < %s -mtriple=aarch64 --global-isel -global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16,+sve -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
+; RUN: llc < %s -mtriple=aarch64 --global-isel -global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16,+sve2 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
+
+; CHECK-GI:       warning: Instruction selection used fallback path for complex_add_v32f16
 
 ; Expected to not transform
 define <2 x half> @complex_add_v2f16(<2 x half> %a, <2 x half> %b) {

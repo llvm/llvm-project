@@ -16,20 +16,15 @@
 #include "AnalysisOptions.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "pgo-icall-prom-analysis"
 
-namespace llvm {
-
-cl::opt<unsigned> MaxNumVTableAnnotations(
-    "icp-max-num-vtables", cl::init(6), cl::Hidden,
-    cl::desc("Max number of vtables annotated for a vtable load instruction."));
-
-} // end namespace llvm
+unsigned llvm::getMaxNumVTableAnnotations(const LLVMContext &C) {
+  return getAnalysisOptions(C).icp_max_num_vtables;
+}
 
 bool ICallPromotionAnalysis::isPromotionProfitable(const AnalysisOptions &Opts,
                                                    uint64_t Count,

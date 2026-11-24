@@ -397,6 +397,13 @@ def CIR_AnyFloatOrVecOfFloatType
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
 
+def CIR_AnyIntOrFloatOrVecOfFloatType
+    : AnyTypeOf<[CIR_AnyIntOrFloatType, CIR_VectorOfFloatType],
+        "integer, floating point or vector of floating point type">;
+
+def CIR_PtrToIntOrFloatOrVecOfFloatType
+    : CIR_PtrToType<CIR_AnyIntOrFloatOrVecOfFloatType>;
+
 // Types valid for bitwise ops (and/or/xor):
 // integer, boolean, or vector of bool or integer (no floating-point).
 def CIR_AnyBitwiseType
@@ -434,6 +441,12 @@ def CIR_AnyIntOrVecOrMatrixOfIntType
     let cppFunctionName = "isIntOrVectorOrMatrixOfIntType";
 }
 
+def CIR_AnyVectorOrMatrixType
+    : AnyTypeOf<[CIR_AnyVectorType, CIR_AnyMatrixType],
+        "vector or matrix type"> {
+    let cppFunctionName = "isVectorOrMatrixType";
+}
+
 def CIR_AnyFloatOrVecOrMatrixOfFloatType
     : AnyTypeOf<[CIR_AnyFloatType, CIR_VectorOfFloatType,
                  CIR_MatrixOfFloatType],
@@ -455,9 +468,7 @@ def CIR_AnyDataMemberType : CIR_TypeBase<"::cir::DataMemberType",
 def CIR_AnyVPtrType : CIR_TypeBase<"::cir::VPtrType", "vptr type">,
       BuildableType<"$_builder.getType<" # cppType # ">()">;
 
-def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>,
-      BuildableType<"$_builder.getType<" # cppType # ">("
-        "$_builder.getType<::cir::VPtrType>())">;
+def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
 
 //===----------------------------------------------------------------------===//
 // Scalar Type predicates
