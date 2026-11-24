@@ -939,8 +939,8 @@ static bool CheckCompoundLiteral(InterpState &S, CodePtr OpPC, const Block *B) {
       CLE->getType().isConstant(S.getASTContext()))
     return true;
 
-  S.FFDiag(S.Current->getLocation(OpPC),
-           diag::note_invalid_subexpr_in_const_expr)
+  S.FFDiag(S.Current->getSource(OpPC), diag::note_invalid_subexpr_in_const_expr,
+           1)
       << S.Current->getRange(OpPC);
   S.Note(CLE->getExprLoc(), diag::note_declared_at);
   return false;
