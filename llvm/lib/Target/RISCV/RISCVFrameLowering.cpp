@@ -502,10 +502,9 @@ void RISCVFrameLowering::resetCFIToInitialState(MachineBasicBlock &MBB) const {
 
   if (RVFI->getShadowStackKind(MF) ==
           RISCVMachineFunctionInfo::ShadowStackKind::Software &&
-      llvm::any_of(MF.getFrameInfo().getCalleeSavedInfo(),
-                   [&](const CalleeSavedInfo &CSR) {
-                     return CSR.getReg() == RAReg;
-                   })) {
+      llvm::any_of(
+          MF.getFrameInfo().getCalleeSavedInfo(),
+          [&](const CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; })) {
     CFIBuilder.buildSameValue(RISCVABI::getSCSPReg());
   }
 
