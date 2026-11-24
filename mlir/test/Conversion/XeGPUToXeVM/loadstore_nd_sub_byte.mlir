@@ -56,10 +56,13 @@ gpu.module @load_store_check {
     }
 
     // CHECK-LABEL: gpu.func @load_matrix_b_request_pack
-    gpu.func @load_matrix_b_request_pack(%src: memref<64x128xi4, 1>, %dst: memref<64x128xi4, 1>) kernel {
-        // CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
-        // CHECK: %[[C32_I32:.*]] = arith.constant 32 : i32
-        // CHECK: %[[C64_I32:.*]] = arith.constant 64 : i32
+    // CHECK-SAME: %[[ROW:[a-zA-Z0-9_]+]]: index)
+    gpu.func @load_matrix_b_request_pack(%src: memref<64x128xi4, 1>, %dst: memref<64x128xi4, 1>, %row: index) kernel {
+        // CHECK-DAG: %[[C16_I32:.*]] = arith.constant 16 : i32
+        // CHECK-DAG: %[[C32_I32:.*]] = arith.constant 32 : i32
+        // CHECK-DAG: %[[C64_I32:.*]] = arith.constant 64 : i32
+        // CHECK-DAG: %[[C16_I64:.*]] = arith.constant 16 : i64
+        // CHECK-DAG: %[[C64_I64:.*]] = arith.constant 64 : i64
         %srcce = memref.memory_space_cast %src : memref<64x128xi4, 1> to memref<64x128xi4>
         %dstte = memref.memory_space_cast %dst : memref<64x128xi4, 1> to memref<64x128xi4>
 
@@ -75,6 +78,26 @@ gpu.module @load_store_check {
         %c32 = arith.constant 32 : index
         %c0 = arith.constant 0 : index
         vector.store %loaded, %dstte[%c32, %c0] : memref<64x128xi4>, vector<64xi4>
+
+        // A one-row tile with one byte per lane is read with a 1D block read.
+        // The pitch (128 i4) and the column offset (32 i4) are scaled to bytes.
+        // CHECK: %[[ROW_BASE:.*]] = vector.extract %{{.*}}[0] : i64 from vector<4xi64>
+        // CHECK: %[[ROW_I32:.*]] = arith.index_cast %[[ROW]] : index to i32
+        // CHECK: %[[ROW_I64:.*]] = arith.extsi %[[ROW_I32]] : i32 to i64
+        // CHECK: %[[ROW_OFF:.*]] = arith.muli %[[ROW_I64]], %[[C64_I64]] : i64
+        // CHECK: %[[OFF:.*]] = arith.addi %[[ROW_OFF]], %[[C16_I64]] : i64
+        // CHECK: %[[ADDR:.*]] = arith.addi %[[ROW_BASE]], %[[OFF]] : i64
+        // CHECK: %[[PTR:.*]] = llvm.inttoptr %[[ADDR]] : i64 to !llvm.ptr<1>
+        // CHECK: %[[BYTE:.*]] = xevm.blockload %[[PTR]] <{
+        // CHECK-SAME:   cache_control = #xevm.load_cache_control<L1c_L2uc_L3c>}> : (!llvm.ptr<1>) -> i8
+        // CHECK: %[[VEC:.*]] = vector.broadcast %[[BYTE]] : i8 to vector<1xi8>
+        // CHECK: %[[ROW_LOADED:.*]] = vector.bitcast %[[VEC]] : vector<1xi8> to vector<2xi4>
+        // CHECK: vector.store %[[ROW_LOADED]], %{{.*}}[%[[ROW]], %{{.*}}]
+        %row_tdesc = xegpu.create_nd_tdesc %srcce : memref<64x128xi4>
+            -> !xegpu.tensor_desc<1x32xi4, #xegpu.block_tdesc_attr<boundary_check = false>>
+        %row_loaded = xegpu.load_nd %row_tdesc[%row, 32] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
+            : !xegpu.tensor_desc<1x32xi4, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<2xi4>
+        vector.store %row_loaded, %dstte[%row, %c0] : memref<64x128xi4>, vector<2xi4>
         gpu.return
     }
 }

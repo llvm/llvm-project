@@ -164,6 +164,33 @@ gpu.module @test_kernel {
 
 // -----
 
+// A one-row i4 tile with one byte per lane is lowered to a 1D block read. The
+// read has no boundary check, so a tile that asks for one is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @load_nd_row_one_byte_per_lane_boundary_check(%src: memref<32x512xi4>, %row: index) -> vector<2xi4> {
+    %t = xegpu.create_nd_tdesc %src : memref<32x512xi4> -> !xegpu.tensor_desc<1x32xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load_nd' that was explicitly marked illegal}}
+    %v = xegpu.load_nd %t[%row, 0] : !xegpu.tensor_desc<1x32xi4> -> vector<2xi4>
+    gpu.return %v : vector<2xi4>
+  }
+}
+
+// -----
+
+// The same row with more than one byte per lane is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @load_nd_row_two_bytes_per_lane(%src: memref<32x512xi4>, %row: index) -> vector<4xi4> {
+    %t = xegpu.create_nd_tdesc %src : memref<32x512xi4> -> !xegpu.tensor_desc<1x32xi4, #xegpu.block_tdesc_attr<boundary_check = false>>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load_nd' that was explicitly marked illegal}}
+    %v = xegpu.load_nd %t[%row, 0] : !xegpu.tensor_desc<1x32xi4, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<4xi4>
+    gpu.return %v : vector<4xi4>
+  }
+}
+
+// -----
+
 // A non-unit leading dim cannot be lowered to a 2D-block op.
 
 gpu.module @test_kernel {
