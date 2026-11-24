@@ -25,10 +25,9 @@
 void helper(void) {}
 #else
 void helper(void);
-
-#pragma section(".lprfn$B", read)
-#pragma section(".lprfn$N", read)
-#pragma section(".lprfn$Y", read)
+#  pragma section(".lprfn$B", read)
+#  pragma section(".lprfn$N", read)
+#  pragma section(".lprfn$Y", read)
 __declspec(allocate(".lprfn$B")) const char Before[3] = {0};
 __declspec(allocate(".lprfn$N")) const char Between[5] = {0};
 __declspec(allocate(".lprfn$Y")) const char After[7] = {0};
