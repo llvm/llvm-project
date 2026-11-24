@@ -1457,10 +1457,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 #### X86 Support
 
 - Support `AVX10_V2_AUX` ISA (`-mavx10v2aux`).
-- `__FLT_EVAL_METHOD__` is now 0 instead of 2 when neither SSE nor x87 is
-  available, for example with `-mno-sse -mno-x87`, `-mgeneral-regs-only` or
-  `-march=lakemont`, matching GCC. `-ffp-eval-method=source` no longer warns
-  in these configurations. (#GH198405)
+- `__FLT_EVAL_METHOD__` is now 0 instead of 2 when SSE is disabled and float
+  and double are not evaluated in x87 registers: when x87 is also disabled, for
+  example with `-mno-sse -mno-x87`, `-mgeneral-regs-only` or `-march=lakemont`,
+  matching GCC, or when the `soft-float` target feature is set. `-msoft-float`
+  does not set that feature on x86 and still gives 2. `-ffp-eval-method=source`
+  no longer warns in these configurations. (#GH198405)
 
 #### Arm and AArch64 Support
 
