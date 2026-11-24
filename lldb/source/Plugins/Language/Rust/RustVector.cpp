@@ -105,7 +105,7 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
   if (target_sp) {
     uint32_t ptr_byte_size = target_sp->GetArchitecture().GetAddressByteSize();
     uint32_t ptr_bit_size = ptr_byte_size * 8;
-    if (len >= llvm::maxUIntN(ptr_bit_size - 1)) {
+    if (len > llvm::maxUIntN(ptr_bit_size - 1)) {
       m_start = m_len = nullptr;
       return lldb::ChildCacheState::eRefetch;
     }
