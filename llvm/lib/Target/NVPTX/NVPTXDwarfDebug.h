@@ -76,12 +76,15 @@ public:
     StringRef Kind;
   };
 
+  /// Each entry pairs a file's index in the DWARF file table (its .file number)
+  /// with that file's source and IR kind.
+  using IntermediateFileVec =
+      SmallVector<std::pair<unsigned, IntermediateFileInfo>, 0>;
+
   /// Hand off the intermediate files collected during line emission. The
   /// caller emits them after the .file directives have been flushed, which is
   /// past the point where AsmPrinter::doFinalization destroys this object --
   /// hence the handoff rather than emitting from here.
-  using IntermediateFileVec =
-      SmallVector<std::pair<unsigned, IntermediateFileInfo>, 0>;
   [[nodiscard]] IntermediateFileVec takeIntermediateFiles();
 
 private:

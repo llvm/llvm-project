@@ -220,10 +220,10 @@ the file on disk:
 ```
 
 `.ir_name` comes from `DILayerLoc`'s `kind:` and `.sourceFileName` is the file
-number the `.code_block` describes. `ptxas` stores that text keyed by the
-secondary file's *name*, so the name must be unique per file rather than
-human-readable: the backend uses the `DIFile`'s checksum digest when it has one
-and a hash of the file's path otherwise.
+number the `.code_block` describes. The NVIDIA PTX assembler (`ptxas`) stores
+that text keyed by the secondary file's *name*, so the name must be unique per
+file rather than human-readable: the backend uses the `DIFile`'s checksum digest
+when it has one and a hash of the file's path otherwise.
 
 The text comes from the layer `DIFile`'s `source:` field, and a layer is only
 emitted when that field is present. A `.loc_intermediate` pointing at a file with

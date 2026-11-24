@@ -193,8 +193,8 @@ void NVPTXDwarfDebug::recordTargetSameSourceLine(const DebugLoc &DL,
 
 void NVPTXDwarfDebug::recordIntermediateLoc(const DebugLoc &DL, unsigned Flags,
                                             bool SkipIfUnchanged) {
-  // Intermediate-IR layers live on the frame that was outermost when the tile
-  // snapshot was taken; after later inlining that frame can sit anywhere in the
+  // Intermediate-IR layers live on the frame that was outermost when the
+  // producer attached them; later inlining can leave that frame anywhere in the
   // inlined-at chain. Walk outward from the head and use the first (innermost)
   // frame that carries layers: it is the most specific intermediate origin for
   // this PC -- the instruction actually being executed -- and for layer-less
