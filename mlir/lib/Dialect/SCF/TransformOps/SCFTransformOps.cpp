@@ -277,8 +277,12 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
     status = scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
   if (failed(status)) {
     DiagnosedSilenceableFailure diag = emitSilenceableError();
-    diag << (getPeelFront() ? "failed to peel the first iteration"
-                            : "failed to peel the last iteration");
+    if (getPeelFront())
+      diag << "failed to peel the first iteration";
+    else if (getPeelBack())
+      diag << "failed to peel the last iteration";
+    else
+      diag << "failed to peel the partial remainder";
     return diag;
   }
 

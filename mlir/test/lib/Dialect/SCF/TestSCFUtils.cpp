@@ -331,7 +331,6 @@ struct TestSplitForOpAtPointPass
     }
   }
 };
-
 } // namespace
 
 namespace mlir {
