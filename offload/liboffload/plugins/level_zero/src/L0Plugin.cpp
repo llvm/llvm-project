@@ -20,9 +20,8 @@
 
 #include "llvm/Object/OffloadBinary.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
-using namespace llvm::omp::target;
 using namespace error;
 
 Expected<int32_t> LevelZeroPluginTy::findDevices() {
@@ -249,10 +248,10 @@ LevelZeroPluginTy::createPluginContext(
   return Ctx;
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_level_zero() {
-  return new llvm::omp::target::plugin::LevelZeroPluginTy();
+llvm::offload::plugin::GenericPluginTy *createPlugin_level_zero() {
+  return new llvm::offload::plugin::LevelZeroPluginTy();
 }
 }

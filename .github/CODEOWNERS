@@ -64,6 +64,9 @@
 /lldb/ @JDevlieghere
 /lldb/**/*FreeBSD* @mchoo7
 
+# =============================================================================
+#  MLIR : begin
+# =============================================================================
 # MLIR core tablegen.
 /mlir/lib/TableGen @krzysz00
 /mlir/tools/mlir-tblgen @krzysz00
@@ -157,7 +160,6 @@
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
 /mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe
 
 # Presburger library in MLIR
@@ -177,13 +179,6 @@
 /mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
 /mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
 /mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
-
-# SPIR-V backend.
-/llvm/lib/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
-/llvm/test/CodeGen/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
-/llvm/unittests/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
-/llvm/lib/Target/SPIRV/SPIRVNonSemanticDebugHandler.* @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
-/llvm/test/CodeGen/SPIRV/debug-info/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
 
 # MLIR Sparsifier.
 # Emeritus owner: @yinying-lisa-li
@@ -223,6 +218,16 @@
 
 # MLIR IRDL-related
 /mlir/**/*IRDL* @moxinilian
+# =============================================================================
+#  MLIR : end
+# =============================================================================
+
+# SPIR-V backend.
+/llvm/lib/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/test/CodeGen/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/unittests/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/lib/Target/SPIRV/SPIRVNonSemanticDebugHandler.* @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
+/llvm/test/CodeGen/SPIRV/debug-info/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
 
 # BOLT
 # Emeritus owner: @yota9

@@ -1696,14 +1696,14 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, TM);
-  static constexpr AAKindSet Allowed = AAKindSet::get<
-      &AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID, &AAPotentialValues::ID,
-      &AAAMDFlatWorkGroupSize::ID, &AAAMDMaxNumWorkgroups::ID,
-      &AAAMDWavesPerEU::ID, &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID,
-      &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-      &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
-      &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID,
-      &AAAlign::ID>();
+  static constexpr AAKindSet Allowed =
+      AAKindSet::get<AAAMDAttributes, AAUniformWorkGroupSize, AAPotentialValues,
+                     AAAMDFlatWorkGroupSize, AAAMDMaxNumWorkgroups,
+                     AAAMDWavesPerEU, AAAMDGPUMinAGPRAlloc, AACallEdges,
+                     AAPointerInfo, AAPotentialConstantValues,
+                     AAUnderlyingObjects, AANoAliasAddrSpace, AAAddressSpace,
+                     AAIndirectCallInfo, AAAMDGPUClusterDims, AAAMDGPUNoLDSDMA,
+                     AAAlign>();
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;

@@ -3217,7 +3217,6 @@ public:
     case ISD::SADDO:
     case ISD::UADDO:
     case ISD::ADDC:
-    case ISD::ADDE:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
     case ISD::FMINNUM:

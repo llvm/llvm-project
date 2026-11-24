@@ -1,17 +1,33 @@
-//===-- Unittests for StringStream ----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unit tests for cpp::StringStream.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::cpp::span;
+using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::cpp::StringStream;
+
+constexpr bool test_constexpr_stringstream() {
+  char buf[16] = {};
+  StringStream ss(buf);
+  ss << "hi" << '!';
+  return !ss.overflow() && ss.str() == string_view("hi!");
+}
+
+static_assert(test_constexpr_stringstream());
 
 TEST(LlvmLibcStringStreamTest, Simple) {
   char buf[256];
@@ -46,4 +62,15 @@ TEST(LlvmLibcStringStreamTest, Overflow) {
   ss2 << StringStream::ENDS;
   ASSERT_TRUE(ss2.overflow());
   ASSERT_EQ(ss2.str().size(), BUFSIZE);
+}
+
+TEST(LlvmLibcStringStreamTest, EmptyBuffer) {
+  StringStream ss(span<char>{});
+  ASSERT_EQ(ss.bufsize(), size_t(0));
+  ASSERT_FALSE(ss.overflow());
+  ss << "";
+  ASSERT_FALSE(ss.overflow());
+  ss << 'x';
+  ASSERT_TRUE(ss.overflow());
+  ASSERT_EQ(ss.str().size(), size_t(0));
 }

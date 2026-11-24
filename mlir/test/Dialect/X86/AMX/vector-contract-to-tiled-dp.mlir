@@ -4135,6 +4135,192 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Contractions with masked or out-of-bounds reads are not lowered, as tile
+// loads read every element.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefAB = memref<32x32x4xi8>
+!memrefC = memref<32x32xi32>
+!bufAB = memref<64x64x4xi8>
+!subAB = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!subC = memref<16x32xi32>
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+func.func @negative_matmul_int8_masked_lhs(
+  %arg0: !memrefAB, %arg1: !memrefAB, %arg2: !memrefC, %mask: vector<16x16x4xi1>)
+{
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0 : i8
+  %pad32 = arith.constant 0 : i32
+  %lhs = vector.transfer_read %arg0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} : !memrefAB, !vecAB
+  %rhs = vector.transfer_read %arg1[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !memrefAB, !vecAB
+  %acc = vector.transfer_read %arg2[%c0, %c0], %pad32 {in_bounds = [true, true]} : !memrefC, !vecC
+  %res = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %lhs, %rhs, %acc : !vecAB, !vecAB into !vecC
+  vector.transfer_write %res, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_masked_lhs(
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+func.func @negative_matmul_int8_out_of_bounds_rhs(
+  %arg0: !memrefAB, %arg1: !memrefAB, %arg2: !memrefC, %i: index)
+{
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0 : i8
+  %pad32 = arith.constant 0 : i32
+  %lhs = vector.transfer_read %arg0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !memrefAB, !vecAB
+  %rhs = vector.transfer_read %arg1[%i, %c0, %c0], %pad {in_bounds = [false, true, true]} : !memrefAB, !vecAB
+  %acc = vector.transfer_read %arg2[%c0, %c0], %pad32 {in_bounds = [true, true]} : !memrefC, !vecC
+  %res = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %lhs, %rhs, %acc : !vecAB, !vecAB into !vecC
+  vector.transfer_write %res, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_out_of_bounds_rhs(
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+func.func @negative_matmul_int8_masked_acc(
+  %arg0: !memrefAB, %arg1: !memrefAB, %arg2: !memrefC, %mask: vector<16x16xi1>)
+{
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0 : i8
+  %pad32 = arith.constant 0 : i32
+  %lhs = vector.transfer_read %arg0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !memrefAB, !vecAB
+  %rhs = vector.transfer_read %arg1[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !memrefAB, !vecAB
+  %acc = vector.transfer_read %arg2[%c0, %c0], %pad32, %mask {in_bounds = [true, true]} : !memrefC, !vecC
+  %res = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %lhs, %rhs, %acc : !vecAB, !vecAB into !vecC
+  vector.transfer_write %res, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_masked_acc(
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+func.func @negative_matmul_int8_loop_out_of_bounds_lhs(
+  %arg0: !bufAB, %arg1: !bufAB, %arg2: !subC, %i: index)
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  %pad = arith.constant 0 : i8
+  %pad32 = arith.constant 0 : i32
+  %acc = vector.transfer_read %arg2[%c0, %c0], %pad32 {in_bounds = [true, true]} : !subC, !vecC
+  %loop = scf.for %k = %c0 to %c64 step %c16 iter_args(%iter = %acc) -> !vecC {
+    %subA = memref.subview %arg0[0, %k, 0] [16, 16, 4] [1, 1, 1] : !bufAB to !subAB
+    %subB = memref.subview %arg1[%k, 0, 0] [16, 16, 4] [1, 1, 1] : !bufAB to !subAB
+    %lhs = vector.transfer_read %subA[%i, %c0, %c0], %pad {in_bounds = [false, true, true]} : !subAB, !vecAB
+    %rhs = vector.transfer_read %subB[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !subAB, !vecAB
+    %res = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %lhs, %rhs, %iter : !vecAB, !vecAB into !vecC
+    scf.yield %res : !vecC
+  }
+  vector.transfer_write %loop, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !subC
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_loop_out_of_bounds_lhs(
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+func.func @negative_matmul_int8_loop_masked_rhs(
+  %arg0: !bufAB, %arg1: !bufAB, %arg2: !subC, %mask: vector<16x16x4xi1>)
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  %pad = arith.constant 0 : i8
+  %pad32 = arith.constant 0 : i32
+  %acc = vector.transfer_read %arg2[%c0, %c0], %pad32 {in_bounds = [true, true]} : !subC, !vecC
+  %loop = scf.for %k = %c0 to %c64 step %c16 iter_args(%iter = %acc) -> !vecC {
+    %subA = memref.subview %arg0[0, %k, 0] [16, 16, 4] [1, 1, 1] : !bufAB to !subAB
+    %subB = memref.subview %arg1[%k, 0, 0] [16, 16, 4] [1, 1, 1] : !bufAB to !subAB
+    %lhs = vector.transfer_read %subA[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !subAB, !vecAB
+    %rhs = vector.transfer_read %subB[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} : !subAB, !vecAB
+    %res = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %lhs, %rhs, %iter : !vecAB, !vecAB into !vecC
+    scf.yield %res : !vecC
+  }
+  vector.transfer_write %loop, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !subC
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_loop_masked_rhs(
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+func.func @negative_matmul_int8_loop_masked_acc(
+  %arg0: !bufAB, %arg1: !bufAB, %arg2: !subC, %mask: vector<16x16xi1>)
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  %pad = arith.constant 0 : i8
+  %pad32 = arith.constant 0 : i32
+  %acc0 = vector.transfer_read %arg2[%c0, %c0], %pad32 {in_bounds = [true, true]} : !subC, !vecC
+  %acc1 = vector.transfer_read %arg2[%c0, %c16], %pad32, %mask {in_bounds = [true, true]} : !subC, !vecC
+  %loop:2 = scf.for %k = %c0 to %c64 step %c16 iter_args(%iter0 = %acc0, %iter1 = %acc1) -> (!vecC, !vecC) {
+    %subA = memref.subview %arg0[0, %k, 0] [16, 16, 4] [1, 1, 1] : !bufAB to !subAB
+    %subB = memref.subview %arg1[%k, 0, 0] [16, 16, 4] [1, 1, 1] : !bufAB to !subAB
+    %lhs = vector.transfer_read %subA[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !subAB, !vecAB
+    %rhs = vector.transfer_read %subB[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : !subAB, !vecAB
+    %res0 = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %lhs, %rhs, %iter0 : !vecAB, !vecAB into !vecC
+    %res1 = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %lhs, %rhs, %iter1 : !vecAB, !vecAB into !vecC
+    scf.yield %res0, %res1 : !vecC, !vecC
+  }
+  vector.transfer_write %loop#0, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !subC
+  vector.transfer_write %loop#1, %arg2[%c0, %c16] {in_bounds = [true, true]} : !vecC, !subC
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_loop_masked_acc(
+// CHECK-NOT: x86.amx
+// CHECK-COUNT-2: vector.contract
+// CHECK-NOT: x86.amx
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // The zero initialized accumulation results are not written to memory.
 
 !vecAB = vector<16x16x4xi8>

@@ -66,6 +66,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
@@ -1845,6 +1846,11 @@ SDValue SelectionDAG::getConstantFP(const APFloat &V, const SDLoc &DL, EVT VT,
   return getConstantFP(*ConstantFP::get(*getContext(), V), DL, VT, isTarget);
 }
 
+SDValue SelectionDAG::getConstFP(std::optional<FPFoldResult> Result,
+                                 const SDLoc &DL, EVT VT, bool isTarget) {
+  return Result ? getConstantFP(Result->Value, DL, VT, isTarget) : SDValue();
+}
+
 SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
                                     EVT VT, bool isTarget) {
   assert(VT.isFloatingPoint() && "Cannot create integer FP constant!");
@@ -2758,7 +2764,11 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
   auto *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
 
   if (N1CFP && N2CFP) {
-    APFloat::cmpResult R = N1CFP->getValueAPF().compare(N2CFP->getValueAPF());
+    auto MaybeR = tryFoldFCmp(N1CFP->getValueAPF(), N2CFP->getValueAPF(),
+                              getDenormalMode(OpVT));
+    if (!MaybeR)
+      return SDValue();
+    APFloat::cmpResult R = *MaybeR;
     switch (Cond) {
     default: break;
     case ISD::SETEQ:  if (R==APFloat::cmpUnordered)
@@ -3952,10 +3962,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // If we have a known 1, its position is our upper bound.
-    unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-    unsigned LowBits = llvm::bit_width(PossibleLZ);
-    Known.Zero.setBitsFrom(LowBits);
+    Known = Known2.ctlz(/*ZeroIsPoison=*/false).zextOrTrunc(BitWidth);
     break;
   }
   case ISD::CTLS: {
@@ -5702,15 +5709,12 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   unsigned NumElts = DemandedElts.getBitWidth();
 
-  // Early out for FREEZE.
-  if (Opcode == ISD::FREEZE)
+  // Early out for FREEZE / constant.
+  if (Opcode == ISD::FREEZE || isIntOrFPConstant(Op))
     return true;
 
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
-
-  if (isIntOrFPConstant(Op))
-    return true;
 
   switch (Opcode) {
   case ISD::CONDCODE:
@@ -7930,6 +7934,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     // Constant fold unary operations with a floating point constant operand.
     if (auto *C = dyn_cast<ConstantFPSDNode>(N1)) {
       APFloat V = C->getValueAPF(); // make copy
+      DenormalMode DenormMode = getDenormalMode(N1.getValueType());
       switch (Opcode) {
       case ISD::FNEG:
         V.changeSign();
@@ -7938,21 +7943,21 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         V.clearSign();
         return getConstantFP(V, DL, VT);
       case ISD::FCEIL: {
-        APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardPositive);
-        if (fs == APFloat::opOK || fs == APFloat::opInexact)
-          return getConstantFP(V, DL, VT);
+        if (auto Res = tryFoldFP(FPOp::Ceil, {V}, DenormMode))
+          if (Res->Status == APFloat::opOK || Res->Status == APFloat::opInexact)
+            return getConstantFP(Res->Value, DL, VT);
         return SDValue();
       }
       case ISD::FTRUNC: {
-        APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardZero);
-        if (fs == APFloat::opOK || fs == APFloat::opInexact)
-          return getConstantFP(V, DL, VT);
+        if (auto Res = tryFoldFP(FPOp::Trunc, {V}, DenormMode))
+          if (Res->Status == APFloat::opOK || Res->Status == APFloat::opInexact)
+            return getConstantFP(Res->Value, DL, VT);
         return SDValue();
       }
       case ISD::FFLOOR: {
-        APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardNegative);
-        if (fs == APFloat::opOK || fs == APFloat::opInexact)
-          return getConstantFP(V, DL, VT);
+        if (auto Res = tryFoldFP(FPOp::Floor, {V}, DenormMode))
+          if (Res->Status == APFloat::opOK || Res->Status == APFloat::opInexact)
+            return getConstantFP(Res->Value, DL, VT);
         return SDValue();
       }
       case ISD::FP_EXTEND: {
@@ -8125,15 +8130,17 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     ConstantFPSDNode *C2 = dyn_cast<ConstantFPSDNode>(Ops[1]);
     ConstantFPSDNode *C3 = dyn_cast<ConstantFPSDNode>(Ops[2]);
     if (C1 && C2 && C3) {
+      DenormalMode DM = getDenormalMode(VT);
       APFloat V1 = C1->getValueAPF();
       const APFloat &V2 = C2->getValueAPF();
       const APFloat &V3 = C3->getValueAPF();
       if (Opcode == ISD::FMAD || Opcode == ISD::FMULADD) {
-        V1.multiply(V2, APFloat::rmNearestTiesToEven);
-        V1.add(V3, APFloat::rmNearestTiesToEven);
-      } else
-        V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
-      return getConstantFP(V1, DL, VT);
+        if (auto Product = tryFoldFP(FPOp::Mul, {V1, V2}, DM))
+          return getConstFP(tryFoldFP(FPOp::Add, {Product->Value, V3}, DM), DL,
+                            VT);
+        return SDValue();
+      }
+      return getConstFP(tryFoldFP(FPOp::FMA, {V1, V2, V3}, DM), DL, VT);
     }
   }
 
@@ -8484,39 +8491,35 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, /*AllowUndefs*/ false);
   ConstantFPSDNode *N2CFP = isConstOrConstSplatFP(N2, /*AllowUndefs*/ false);
   if (N1CFP && N2CFP) {
-    APFloat C1 = N1CFP->getValueAPF(); // make copy
+    APFloat C1 = N1CFP->getValueAPF();
     const APFloat &C2 = N2CFP->getValueAPF();
+    DenormalMode DM = getDenormalMode(VT);
     switch (Opcode) {
     case ISD::FADD:
-      C1.add(C2, APFloat::rmNearestTiesToEven);
-      return getConstantFP(C1, DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Add, {C1, C2}, DM), DL, VT);
     case ISD::FSUB:
-      C1.subtract(C2, APFloat::rmNearestTiesToEven);
-      return getConstantFP(C1, DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Sub, {C1, C2}, DM), DL, VT);
     case ISD::FMUL:
-      C1.multiply(C2, APFloat::rmNearestTiesToEven);
-      return getConstantFP(C1, DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Mul, {C1, C2}, DM), DL, VT);
     case ISD::FDIV:
-      C1.divide(C2, APFloat::rmNearestTiesToEven);
-      return getConstantFP(C1, DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Div, {C1, C2}, DM), DL, VT);
     case ISD::FREM:
-      C1.mod(C2);
-      return getConstantFP(C1, DL, VT);
+      return getConstFP(tryFoldFP(FPOp::FRem, {C1, C2}, DM), DL, VT);
     case ISD::FCOPYSIGN:
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);
     case ISD::FMINNUM:
-      return getConstantFP(minnum(C1, C2), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MinNum, {C1, C2}, DM), DL, VT);
     case ISD::FMAXNUM:
-      return getConstantFP(maxnum(C1, C2), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MaxNum, {C1, C2}, DM), DL, VT);
     case ISD::FMINIMUM:
-      return getConstantFP(minimum(C1, C2), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Minimum, {C1, C2}, DM), DL, VT);
     case ISD::FMAXIMUM:
-      return getConstantFP(maximum(C1, C2), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Maximum, {C1, C2}, DM), DL, VT);
     case ISD::FMINIMUMNUM:
-      return getConstantFP(minimumnum(C1, C2), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MinimumNum, {C1, C2}, DM), DL, VT);
     case ISD::FMAXIMUMNUM:
-      return getConstantFP(maximumnum(C1, C2), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MaximumNum, {C1, C2}, DM), DL, VT);
     default: break;
     }
   }
@@ -10428,10 +10431,16 @@ SDValue SelectionDAG::getMemcpy(
   // Then check to see if we should lower the memcpy with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemcpy(
         *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol,
-        AlwaysInline, DstPtrInfo, SrcPtrInfo);
-    if (Result.getNode())
+        AlwaysInline, IsTailCall, DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10565,10 +10574,16 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memmove with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemmove(
-        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, DstPtrInfo,
-        SrcPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, IsTailCall,
+        DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10681,9 +10696,16 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memset with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall =
+        isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/false) &&
+        !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemset(
-        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline, DstPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline,
+        IsTailCall, DstPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
