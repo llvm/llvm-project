@@ -1296,6 +1296,12 @@ LockedPtr<ObjectFile> Module::GetObjectFileLocked() {
   return LockedPtr<ObjectFile>(m_mutex, GetObjectFile());
 }
 
+Address Module::GetObjectFileEntryPointAddress() {
+  if (ObjectFile *object_file = GetObjectFile())
+    return object_file->GetEntryPointAddress();
+  return Address();
+}
+
 LockedPtr<SectionList> Module::GetSectionListLocked() {
   return LockedPtr<SectionList>(m_mutex, GetSectionList());
 }

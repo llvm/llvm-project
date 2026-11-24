@@ -20,6 +20,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -1113,10 +1114,18 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeStruct(
     MaxNumElements = MaxWordCount - 1;
   }
 
-  for (const auto &Elem : Ty->elements()) {
-    SPIRVTypeInst ElemTy = findSPIRVType(
-        toTypedPointer(Elem), MIRBuilder, AccQual,
-        /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
+  for (const auto &[Idx, Elem] : enumerate(Ty->elements())) {
+    SPIRVTypeInst ElemTy;
+    auto *PadTy = dyn_cast<TargetExtType>(Elem);
+    if (PadTy && PadTy->getName() == "spirv.Padding")
+      ElemTy = getOrCreatePaddingType(
+          MIRBuilder, PadTy->getIntParameter(0),
+          DL.getStructLayout(const_cast<StructType *>(Ty))
+              ->getElementOffset(Idx));
+    else
+      ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder, AccQual,
+                             /* ExplicitLayoutRequired= */ Decorator != nullptr,
+                             EmitIR);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
@@ -1381,7 +1390,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
 
   // TODO: We could end up with two SPIR-V types pointing to the same llvm type.
   // Is that a problem?
-  SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
+  // spirv.Padding lowers to a plain integer type shared with real members;
+  // keep that integer's IR type instead of remapping it to the target type.
+  auto *PadTy = dyn_cast<TargetExtType>(Ty);
+  if (!(PadTy && PadTy->getName() == "spirv.Padding"))
+    SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
       SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
@@ -1657,12 +1670,23 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
 }
 
 SPIRVTypeInst
-SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
-  auto Key = SPIRV::irhandle_padding();
+SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
+                                            uint64_t PaddingSizeInBytes,
+                                            uint64_t OffsetInBytes) {
+  // Member offsets are explicit, so the padding member only needs to be a
+  // valid integer that fits the gap. Use the widest of i32/i16/i8 whose size
+  // divides both the padding size and its offset (so the member is aligned):
+  // i8 members require the Int8 capability and, in Vulkan,
+  // uniformAndStorageBuffer8BitAccess.
+  assert(PaddingSizeInBytes != 0 && "spirv.Padding must not be empty");
+  uint64_t WidthInBytes =
+      std::min<uint64_t>(4, MinAlign(OffsetInBytes, PaddingSizeInBytes));
+  unsigned Width = WidthInBytes * 8;
+  auto Key = SPIRV::irhandle_padding(Width);
   if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
     return MI;
-  auto *T = Type::getInt8Ty(MIRBuilder.getContext());
-  SPIRVTypeInst R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  auto *T = Type::getIntNTy(MIRBuilder.getContext(), Width);
+  SPIRVTypeInst R = getOrCreateSPIRVIntegerType(Width, MIRBuilder);
   finishCreatingSPIRVType(T, R);
   add(Key, R);
   return R;
