@@ -233,6 +233,9 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Default shader model availability version for all types.
   // Use NoSM for no availability requirement.
   ShaderModel Availability = NoSM;
+
+  // When empty, the shader model availability applies to all stages.
+  list<string> Stages = [];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1404,6 +1407,7 @@ def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
   let ReturnType = BoolTy;
   let IsConvergent = 1;
   let Availability = SM6_0;
+  let Stages = ["compute", "amplification", "mesh", "pixel"];
 }
 
 // Reads the value from the lane across the X axis of the quad.
