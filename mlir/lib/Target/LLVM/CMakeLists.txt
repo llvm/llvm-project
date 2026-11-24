@@ -219,6 +219,36 @@ if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
   )
 endif()
 
+set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 0)
+set(MLIR_XEVM_L0_AVAILABLE 0)
+set(XEVM_L0_COMPONENTS)
+if (NOT LLVM_BUILD_LLVM_DYLIB)
+  find_package(ocloc)
+  if (OCLOC_FOUND)
+    set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 1)
+  else()
+    message(STATUS "ocloc not found, MLIRXeVMTarget will not be able to use ocloc for native binary compilation.")
+    find_package(LevelZeroRuntime)
+    if (LevelZeroRuntime_FOUND)
+      include(CheckCXXSymbolExists)
+      include(CMakePushCheckState)
+      cmake_push_check_state(RESET)
+      set(CMAKE_REQUIRED_INCLUDES ${LevelZeroRuntime_INCLUDE_DIRS})
+      set(CMAKE_REQUIRED_LIBRARIES "${LevelZeroRuntime_LIBRARY}")
+      check_cxx_symbol_exists(zeInitDrivers "level_zero/ze_api.h" MLIR_XEVM_L0_HAS_INIT_DRIVERS)
+      cmake_pop_check_state()
+      if (MLIR_XEVM_L0_HAS_INIT_DRIVERS)
+        set(MLIR_XEVM_L0_AVAILABLE 1)
+        set(XEVM_L0_COMPONENTS TargetParser)
+      else()
+        message(STATUS "Level Zero runtime lacks zeInitDrivers (requires >= 1.10), disabling Level Zero fallback for MLIRXeVMTarget.")
+      endif()
+    endif()
+  endif()
+else()
+  message(WARNING "Dynamic linking with ocloc is not currently supported.")
+endif()
+
 add_mlir_dialect_library(MLIRXeVMTarget
   XeVM/Target.cpp
 
@@ -226,6 +256,7 @@ add_mlir_dialect_library(MLIRXeVMTarget
 
   LINK_COMPONENTS
   ${SPIRV_LIBS}
+  ${XEVM_L0_COMPONENTS}
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -236,22 +267,16 @@ add_mlir_dialect_library(MLIRXeVMTarget
   MLIRXeVMToLLVMIRTranslation
 )
 
-if (NOT LLVM_BUILD_LLVM_DYLIB)
-  find_package(ocloc)
-  if (OCLOC_FOUND)
-    target_include_directories(MLIRXeVMTarget PRIVATE "${OCLOC_INCLUDE_DIR}")
-    target_link_libraries(MLIRXeVMTarget PRIVATE "${OCLOC_LIBRARY}")
-    set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 1)
-  else()
-    set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 0)
-    message(STATUS "ocloc not found, MLIRXeVMTarget will not be able to use ocloc for native binary compilation.")
-  endif()
-else()
-  set(MLIR_XEVM_OCLOC_LIB_AVAILABLE 0)
-  message(WARNING "Dynamic linking with ocloc is not currently supported.")
+if (MLIR_XEVM_OCLOC_LIB_AVAILABLE)
+  target_include_directories(MLIRXeVMTarget PRIVATE "${OCLOC_INCLUDE_DIR}")
+  target_link_libraries(MLIRXeVMTarget PRIVATE "${OCLOC_LIBRARY}")
+elseif (MLIR_XEVM_L0_AVAILABLE)
+  target_include_directories(obj.MLIRXeVMTarget PRIVATE ${LevelZeroRuntime_INCLUDE_DIRS})
+  target_link_libraries(MLIRXeVMTarget PRIVATE "${LevelZeroRuntime_LIBRARY}")
 endif()
 
 target_compile_definitions(obj.MLIRXeVMTarget
   PRIVATE
   MLIR_XEVM_OCLOC_LIB_AVAILABLE=${MLIR_XEVM_OCLOC_LIB_AVAILABLE}
+  MLIR_XEVM_L0_AVAILABLE=${MLIR_XEVM_L0_AVAILABLE}
 )
