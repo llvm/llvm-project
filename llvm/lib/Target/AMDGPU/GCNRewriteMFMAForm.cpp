@@ -31,8 +31,9 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
 /// What RewriteMFMAFormStage charges for one register it expects to spill: a
 /// scratch store plus a reload. Priced against a register-to-register copy,
 /// which is one VALU op, so that the cost model does not trade a spill for a
-/// handful of copies.
-static constexpr int64_t SpillCostPerReg = 20;
+/// handful of copies. With less than about 120 the rewrite of a kernel that
+/// fits only just is turned down, and it runs 12% faster when it is done.
+static constexpr int64_t SpillCostPerReg = 160;
 
 bool RewriteMFMAFormStage::isEnabled() {
   return !DisableRewriteMFMAFormSchedStage;
