@@ -1030,8 +1030,7 @@ KnownFPClass KnownFPClass::sinpi(const KnownFPClass &KnownSrc,
   if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
     Known.knownNot(fcNan);
 
-  // sinpi is subnormal if and only if x is subnormal, except for
-  // PPCDoubleDouble.
+  // sinpi is only subnormal if x is subnormal, except for PPCDoubleDouble.
   if (KnownSrc.isKnownNeverSubnormal() && !IsMultiUnitFPType)
     Known.knownNot(fcSubnormal);
 
