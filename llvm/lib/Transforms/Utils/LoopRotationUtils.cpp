@@ -32,8 +32,10 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-rotate"
@@ -74,7 +76,8 @@ public:
   bool processLoop(Loop *L);
 
 private:
-  bool rotateLoop(Loop *L, bool SimplifiedLatch);
+  bool rotateLoop(Loop *L, bool SimplifiedLatch,
+                  std::optional<unsigned> &EstimatedTripCount);
   bool simplifyLoopLatch(Loop *L);
 };
 } // end anonymous namespace
@@ -280,7 +283,8 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
 /// rotation. LoopRotate should be repeatable and converge to a canonical
 /// form. This property is satisfied because simplifying the loop latch can only
 /// happen once across multiple invocations of the LoopRotate pass.
-bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
+bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch,
+                            std::optional<unsigned> &EstimatedTripCount) {
   // If the loop has only one block then there is not much to rotate.
   if (L->getBlocks().size() == 1)
     return false;
@@ -690,6 +694,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       !isa<ConstantInt>(Cond) ||
       PHBI->getSuccessor(cast<ConstantInt>(Cond)->isZero()) != NewHeader;
 
+  // Infer the count only for single-exit loops. Keep explicit counts.
+  bool IsMultiExitLoop = !L->getExitingBlock();
+  if (!EstimatedTripCount &&
+      (!IsMultiExitLoop ||
+       getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)))
+    EstimatedTripCount = getLoopEstimatedTripCount(L);
+
   updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
 
   if (HasConditionalPreHeader) {
@@ -741,6 +752,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     if (MSSAU)
       MSSAU->removeEdge(OrigPreheader, Exit);
   }
+
+  // The first header test moved to the guard, so drop one trip.
+  if (EstimatedTripCount && *EstimatedTripCount != 0)
+    --*EstimatedTripCount;
 
   assert(L->getLoopPreheader() && "Invalid loop preheader after loop rotation");
   assert(L->getLoopLatch() && "Invalid loop latch after loop rotation");
@@ -882,6 +897,10 @@ bool LoopRotate::processLoop(Loop *L) {
   // Save the loop metadata.
   MDNode *LoopMD = L->getLoopID();
 
+  // Rotation moves the latch, so read an explicit trip count from the old one.
+  std::optional<unsigned> EstimatedTripCount =
+      getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount);
+
   bool SimplifiedLatch = false;
 
   // Simplify the loop latch before attempting to rotate the header
@@ -890,7 +909,7 @@ bool LoopRotate::processLoop(Loop *L) {
   if (!RotationOnly)
     SimplifiedLatch = simplifyLoopLatch(L);
 
-  bool MadeChange = rotateLoop(L, SimplifiedLatch);
+  bool MadeChange = rotateLoop(L, SimplifiedLatch, EstimatedTripCount);
   assert((!MadeChange || L->isLoopExiting(L->getLoopLatch())) &&
          "Loop latch should be exiting after loop-rotate.");
 
@@ -898,6 +917,10 @@ bool LoopRotate::processLoop(Loop *L) {
   // NB! We presume LoopRotation DOESN'T ADD its own metadata.
   if ((MadeChange || SimplifiedLatch) && LoopMD)
     L->setLoopID(LoopMD);
+
+  // Set the reduced trip count after the restore.
+  if (MadeChange && EstimatedTripCount)
+    setLoopEstimatedTripCount(L, *EstimatedTripCount);
 
   return MadeChange || SimplifiedLatch;
 }

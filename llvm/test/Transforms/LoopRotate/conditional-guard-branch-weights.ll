@@ -18,7 +18,7 @@ define void @test_conditional_guard_small_weights(ptr %p, i32 %n, i1 %c) !prof !
 ; CHECK-NEXT:    store volatile i32 [[IV2]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[IV2]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[BODY]], label %[[HEADER_EXIT_CRIT_EDGE:.*]], !prof [[PROF2]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[BODY]], label %[[HEADER_EXIT_CRIT_EDGE:.*]], !prof [[PROF2]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[HEADER_EXIT_CRIT_EDGE]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -56,4 +56,6 @@ ret:
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 2}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1}
 ; CHECK: [[PROF2]] = !{!"branch_weights", i32 100, i32 1}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
+; CHECK: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 100}
 ;.
