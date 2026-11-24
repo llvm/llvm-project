@@ -3525,7 +3525,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   if (Func != LibFunc_strlen)
     return nullptr;
 
-  if (isa<UndefValue>(Operands[0]))
+  if (isa<PoisonValue>(Operands[0]))
     return PoisonValue::get(Ty);
 
   if (uint64_t Len = GetStringLength(Operands[0]))
