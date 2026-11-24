@@ -721,6 +721,8 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
 }
 
 Value *SCEVExpander::expandDivisor(const SCEV *Divisor) {
+  // Use flags may not hold where the divisor is expanded, so drop them.
+  Divisor = Divisor->getCanonical();
   Value *V = expand(Divisor);
   if (!SafeDivisorMode)
     return V;
@@ -2481,8 +2483,9 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS()) ||
-          !SE.isGuaranteedNotToBePoison(D->getRHS())) {
+      // Divisors are expanded without use flags, see expandDivisor.
+      const SCEV *RHS = D->getRHS()->getCanonical();
+      if (!SE.isKnownNonZero(RHS) || !SE.isGuaranteedNotToBePoison(RHS)) {
         IsUnsafe = true;
         return false;
       }
