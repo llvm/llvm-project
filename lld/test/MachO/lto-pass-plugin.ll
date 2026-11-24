@@ -8,8 +8,9 @@
 
 ; RUN: not %lld -dylib -%loadnewpmbye --pass-plugin-arg=Bye,-last-words %t.o -o %t.err 2>&1 | FileCheck %s --check-prefix=ERR
 
-;; Errors from loading plugins are reported by the linker.
-; RUN: not %lld -dylib --load-pass-plugin=%t.dir/nonexistent.dylib %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOADERR
+;; Errors from loading plugins are reported by the linker, even without LTO.
+; RUN: llc %s -filetype=obj -o %t.native.o
+; RUN: not %lld -dylib --load-pass-plugin=%t.dir/nonexistent.dylib %t.native.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOADERR
 
 ; ERR: error: last words unsupported for binary output
 ; LOADERR: error: Could not load library {{.*}}nonexistent.dylib

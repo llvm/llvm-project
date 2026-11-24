@@ -13,8 +13,9 @@
 ; RUN: FileCheck %s --check-prefix=PARALLEL0 < %t.parallel.lto.s
 ; RUN: FileCheck %s --check-prefix=PARALLEL1 < %t.parallel.lto.1.s
 
-;; Errors from loading plugins are reported by the linker.
-; RUN: not ld.lld -shared --load-pass-plugin=%t.dir/nonexistent.so %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOADERR
+;; Errors from loading plugins are reported by the linker, even without LTO.
+; RUN: llc %s -filetype=obj -o %t.native.o
+; RUN: not ld.lld -shared --load-pass-plugin=%t.dir/nonexistent.so %t.native.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOADERR
 
 ; INACTIVE-NOT: Bye
 ; INACTIVE: f:
