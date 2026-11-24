@@ -629,3 +629,49 @@ define float @FtoItoFtoF_bf16_s16_f16_f32(bfloat %f) {
   %r = fpext half %x to float
   ret float %r
 }
+
+; Negative test: for uitofp (fptosi F), a negative F becomes a large unsigned
+; value, e.g. -1.0 becomes 65535, which overflows half to +inf.
+
+define float @FtoItoFtoF_bf16_su16_f16_f32(bfloat %f) {
+; CHECK-LABEL: @FtoItoFtoF_bf16_su16_f16_f32(
+; CHECK-NEXT:    [[I:%.*]] = fptosi bfloat [[F:%.*]] to i16
+; CHECK-NEXT:    [[R:%.*]] = uitofp i16 [[I]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = fptosi bfloat %f to i16
+  %x = uitofp i16 %i to half
+  %r = fpext half %x to float
+  ret float %r
+}
+
+; Negative test: -1.0 becomes 4294967295, which is rounded to float.
+
+define double @FtoItoFtoF_f16_su32_f32_f64(half %f) {
+; CHECK-LABEL: @FtoItoFtoF_f16_su32_f32_f64(
+; CHECK-NEXT:    [[I:%.*]] = fptosi half [[F:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[I]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %i = fptosi half %f to i32
+  %x = uitofp i32 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+; %s is a multiple of 256 in [-32768, 32512], which fits in half.
+
+define float @ItoFtoF_s32_f16_f32_sext_shl(i8 %a) {
+; CHECK-LABEL: @ItoFtoF_s32_f16_f32_sext_shl(
+; CHECK-NEXT:    [[E:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[S:%.*]] = shl nsw i32 [[E]], 8
+; CHECK-NEXT:    [[H:%.*]] = sitofp i32 [[S]] to half
+; CHECK-NEXT:    [[R:%.*]] = fpext half [[H]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e = sext i8 %a to i32
+  %s = shl nsw i32 %e, 8
+  %h = sitofp i32 %s to half
+  %r = fpext half %h to float
+  ret float %r
+}
