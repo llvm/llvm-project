@@ -13,7 +13,7 @@
 #include "mlir/Interfaces/Utils/MemorySlotUtils.h"
 #include "mlir/Parser/Parser.h"
 #include "gtest/gtest.h"
-#include <new>
+#include <new> // placement new in ReusePendingBlockAddress
 
 #include "../../test/lib/Dialect/Test/TestDialect.h"
 #include "../../test/lib/Dialect/Test/TestOps.h"
@@ -427,10 +427,11 @@ TEST_F(GreedyDeadnessTest, ReusePendingBlockAddress) {
   cache.scheduleAncestorInvalidation(owner);
   cache.scheduleAncestorInvalidation(owner->getParentOp());
 
-  // Reuse the same storage for two block lifetimes regardless of allocator.
   Block block;
   cache.scheduleBlockInvalidation(&block);
   cache.notifyBlockErased(&block);
+  // Construct the replacement at the cancelled block's address so the test
+  // exercises address reuse on every run.
   block.~Block();
   new (&block) Block;
 

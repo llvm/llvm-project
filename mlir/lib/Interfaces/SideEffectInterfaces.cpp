@@ -160,6 +160,8 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
 }
 
 void DeadnessCache::enqueue(Invalidation request) {
+  // A cancelled request stays in pending until compaction. If new IR reuses
+  // the same address, reactivate the matching request for the new IR.
   if (!pending.insert(request))
     cancelled.erase(request);
 }
@@ -222,7 +224,10 @@ void DeadnessCache::notifyOperationErased(Operation *op) {
 
 void DeadnessCache::flushInvalidations() {
   removeCancelled();
-  // Process newly appended requests in the same pass.
+  // Expand all requests first so a parent walk can skip every nested root.
+  // With a single loop, a later block request could schedule a subtree that
+  // its parent already walked. Erasing the same cache entries again is safe,
+  // but requires another walk.
   for (size_t i = 0; i < pending.size(); ++i) {
     Invalidation request = pending[i];
     if (auto *block = dyn_cast<Block *>(request)) {
@@ -232,18 +237,21 @@ void DeadnessCache::flushInvalidations() {
     }
     OpRequest opRequest = cast<OpRequest>(request);
     Operation *op = opRequest.getPointer();
+    // A clear subtree bit requests invalidation of this op and its ancestors.
+    // Erase the entry here so we stop queuing ancestors if the cache is empty.
     if (!opRequest.getInt())
       cache.erase(op);
     if (Operation *parent = op->getParentOp())
       scheduleAncestorInvalidation(parent);
   }
 
-  // Each operation request covers a subtree. Skip nested roots that have
-  // their own request so overlapping walks visit each body once.
+  // Walk only operation requests with the subtree bit set. Skip nested roots
+  // with their own subtree request so each body is visited once.
   for (Invalidation request : pending) {
     if (isa<Block *>(request))
       continue;
     OpRequest opRequest = cast<OpRequest>(request);
+    // The first loop handled requests with a clear subtree bit.
     if (!opRequest.getInt())
       continue;
     Operation *root = opRequest.getPointer();
