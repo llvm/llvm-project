@@ -4,9 +4,9 @@
 ; when a Phi depends on another Phi. In this case, they should occur in
 ; the same stage.
 
+; CHECK-DAG: loop0(.LBB0_[[LOOP:.]],[[REG2:(r[0-9]+)]])
+; CHECK-DAG: [[REG2]] = add([[REG4:(r[0-9]+)]],#-1)
 ; CHECK-DAG: [[REG3:(r[0-9]+)]] = add([[REG1:(r[0-9]+)]],#-1)
-; CHECK-DAG: [[REG2:(r[0-9]+)]] = add([[REG4:(r[0-9]+)]],#-1)
-; CHECK-DAG: loop0(.LBB0_[[LOOP:.]],[[REG2]])
 ; CHECK-NOT: = [[REG3]]
 ; CHECK-NOT: = [[REG2]]
 ; CHECK: .LBB0_[[LOOP]]:

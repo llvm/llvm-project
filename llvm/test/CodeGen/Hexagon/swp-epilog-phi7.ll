@@ -3,17 +3,18 @@
 ; For the Phis generated in the epilog, test that we generate the correct
 ; names for the values coming from the prolog stages. The test belows
 ; checks that the value loaded in the first prolog block gets propagated
-; through the first epilog to the use after the loop.
+; through the first epilog to the use after the loop. Each copy is either a
+; plain copy or the high half of a vcombine, depending on register assignment.
 
 ; CHECK: if ({{.*}}) jump
 ; CHECK: [[VREG:v([0-9]+)]]{{.*}} = {{.*}}vmem(r{{[0-9]+}}++#1)
 ; CHECK: if ({{.*}}) {{jump|jump:nt|jump:t}} [[EPLOG1:(.*)]]
 ; CHECK: if ({{.*}}) {{jump|jump:nt|jump:t}} [[EPLOG:(.*)]]
 ; CHECK: [[EPLOG]]:
-; CHECK: [[VREG1:v([0-9]+)]] = [[VREG]]
+; CHECK: v[[VREG1:[0-9]+]]{{(:[0-9]+)?}} = {{(vcombine\()?}}[[VREG]]{{(,.*)?$}}
 ; CHECK: [[EPLOG1]]:
-; CHECK: [[VREG2:v[0-9]+]] = [[VREG1]]
-; CHECK: = vlalign([[VREG1]],[[VREG2]],#1)
+; CHECK: v[[VREG2:[0-9]+]]{{(:[0-9]+)?}} = {{(vcombine\()?}}v[[VREG1]]{{(,.*)?$}}
+; CHECK: = vlalign(v[[VREG1]],v[[VREG2]],#1)
 
 ; Function Attrs: nounwind
 define void @f0(ptr noalias nocapture readonly %a0, i32 %a1, i32 %a2, ptr noalias nocapture readonly %a3, i32 %a4, ptr noalias nocapture %a5, i32 %a6) #0 {
