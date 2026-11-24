@@ -2425,8 +2425,9 @@ public:
   /// \p Offset bytes.
   /// The best way to understand this is to print `asm(""::"m"(x));` after
   /// finalize-isel. Example:
-  /// INLINEASM ... 262190 /* mem:m */, %stack.0.x.addr, 1, $noreg, 0, $noreg
-  /// we would add placeholders for:                     ^  ^       ^  ^
+  /// INLINEASM ... mem:m ops:5, %stack.0.x.addr, 1, $noreg, 0, $noreg
+  /// we would add placeholders for:              ^  ^       ^  ^
+  /// On X86, \p Offset goes in the displacement (the 0 above).
   virtual void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
                                      int FI, int64_t Offset) const {
     llvm_unreachable("unknown number of operands necessary");
