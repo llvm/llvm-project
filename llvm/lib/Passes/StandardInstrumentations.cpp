@@ -15,6 +15,7 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "PassesOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -28,6 +29,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -1305,6 +1307,57 @@ bool PreservedCFGCheckerInstrumentation::CFG::invalidate(
            PAC.preservedSet<CFGAnalyses>());
 }
 
+static hash_code hashCalleeSignatures(const Function &F) {
+  hash_code Hash = 0;
+  for (const BasicBlock &BB : F) {
+    for (const Instruction &I : BB) {
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
+        continue;
+      const Function *Callee = CB->getCalledFunction();
+      if (!Callee)
+        continue;
+      Hash = hash_combine(Hash, Callee->getFunctionType(),
+                          Callee->getAttributes().getRawPointer(),
+                          Callee->getCallingConv());
+    }
+  }
+  return Hash;
+}
+
+// Function analyses can depend on the function signature of direct callees. We
+// need to ensure that when a pass changes the signature of a function, we
+// invalidate analyses of its callers.
+struct PreservedCalleeSignatureAnalysis
+    : public AnalysisInfoMixin<PreservedCalleeSignatureAnalysis> {
+  static AnalysisKey Key;
+
+  struct CalleeSignatureHash {
+    hash_code Hash;
+  };
+
+  using Result = CalleeSignatureHash;
+
+  Result run(Function &F, FunctionAnalysisManager &FAM) {
+    return Result{hashCalleeSignatures(F)};
+  }
+};
+
+AnalysisKey PreservedCalleeSignatureAnalysis::Key;
+
+static void checkCalleeSignatures(Function &F, FunctionAnalysisManager &FAM,
+                                  StringRef P, bool Before) {
+  if (auto *CalleeSigBefore =
+          FAM.getCachedResult<PreservedCalleeSignatureAnalysis>(F)) {
+    if (CalleeSigBefore->Hash != hashCalleeSignatures(F)) {
+      report_fatal_error(
+          formatv("Callee of function @{0} changed signature {1} {2} without "
+                  "invalidating analyses",
+                  F.getName(), Before ? "before" : "by", P));
+    }
+  }
+}
+
 static SmallVector<Function *, 1> GetFunctions(IRUnitRef IR) {
   SmallVector<Function *, 1> Functions;
 
@@ -1342,14 +1395,17 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
     if (!Registered) {
       FAM.registerPass([&] { return PreservedCFGCheckerAnalysis(); });
       FAM.registerPass([&] { return PreservedFunctionHashAnalysis(); });
+      FAM.registerPass([&] { return PreservedCalleeSignatureAnalysis(); });
       MAM.registerPass([&] { return PreservedModuleHashAnalysis(); });
       Registered = true;
     }
 
     for (Function *F : GetFunctions(IR)) {
+      checkCalleeSignatures(*F, FAM, P, /*Before=*/true);
       // Make sure a fresh CFG snapshot is available before the pass.
       FAM.getResult<PreservedCFGCheckerAnalysis>(*F);
       FAM.getResult<PreservedFunctionHashAnalysis>(*F);
+      FAM.getResult<PreservedCalleeSignatureAnalysis>(*F);
     }
 
     if (const auto *MPtr = dyn_cast<Module>(IR)) {
@@ -1391,6 +1447,8 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
               F->getName(), P));
         }
       }
+
+      checkCalleeSignatures(*F, FAM, P, /*Before=*/false);
 
       auto CheckCFG = [](StringRef Pass, StringRef FuncName,
                          const CFG &GraphBefore, const CFG &GraphAfter) {
