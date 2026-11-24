@@ -47,26 +47,18 @@ entry:
 }
 
 define i32 @cmov32(i32 %a, i32 %b, i32 %x, ptr %y.ptr) {
-; NDD-LABEL: cmov32:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
-; NDD-NEXT:    cmoval %edi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x47,0xd7]
-; NDD-NEXT:    cmoval (%rcx), %edx # encoding: [0x0f,0x47,0x11]
-; NDD-NEXT:    addl %edx, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xd0]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; MEM-LABEL: cmov32:
-; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
-; MEM-NEXT:    movl %edx, %eax # encoding: [0x89,0xd0]
-; MEM-NEXT:    jbe .LBB2_2 # encoding: [0x76,A]
-; MEM-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
-; MEM-NEXT:  # %bb.1: # %entry
-; MEM-NEXT:    movl (%rcx), %eax # encoding: [0x8b,0x01]
-; MEM-NEXT:    movl %edi, %edx # encoding: [0x89,0xfa]
-; MEM-NEXT:  .LBB2_2: # %entry
-; MEM-NEXT:    addl %edx, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xd0]
-; MEM-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: cmov32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
+; CHECK-NEXT:    movl %edx, %eax # encoding: [0x89,0xd0]
+; CHECK-NEXT:    jbe .LBB2_2 # encoding: [0x76,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    movl (%rcx), %eax # encoding: [0x8b,0x01]
+; CHECK-NEXT:    movl %edi, %edx # encoding: [0x89,0xfa]
+; CHECK-NEXT:  .LBB2_2: # %entry
+; CHECK-NEXT:    addl %edx, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xd0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %cond = icmp ugt i32 %a, %b
   %y = load i32, ptr %y.ptr
@@ -77,26 +69,18 @@ entry:
 }
 
 define i64 @cmov64(i64 %a, i64 %b, i64 %x, ptr %y.ptr) {
-; NDD-LABEL: cmov64:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
-; NDD-NEXT:    cmovaq %rdi, %rdx, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x47,0xd7]
-; NDD-NEXT:    cmovaq (%rcx), %rdx # encoding: [0x48,0x0f,0x47,0x11]
-; NDD-NEXT:    addq %rdx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xd0]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; MEM-LABEL: cmov64:
-; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
-; MEM-NEXT:    movq %rdx, %rax # encoding: [0x48,0x89,0xd0]
-; MEM-NEXT:    jbe .LBB3_2 # encoding: [0x76,A]
-; MEM-NEXT:    # fixup A - offset: 1, value: .LBB3_2, kind: FK_PCRel_1
-; MEM-NEXT:  # %bb.1: # %entry
-; MEM-NEXT:    movq (%rcx), %rax # encoding: [0x48,0x8b,0x01]
-; MEM-NEXT:    movq %rdi, %rdx # encoding: [0x48,0x89,0xfa]
-; MEM-NEXT:  .LBB3_2: # %entry
-; MEM-NEXT:    addq %rdx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xd0]
-; MEM-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: cmov64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
+; CHECK-NEXT:    movq %rdx, %rax # encoding: [0x48,0x89,0xd0]
+; CHECK-NEXT:    jbe .LBB3_2 # encoding: [0x76,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB3_2, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    movq (%rcx), %rax # encoding: [0x48,0x8b,0x01]
+; CHECK-NEXT:    movq %rdi, %rdx # encoding: [0x48,0x89,0xfa]
+; CHECK-NEXT:  .LBB3_2: # %entry
+; CHECK-NEXT:    addq %rdx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xd0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %cond = icmp ugt i64 %a, %b
   %y = load i64, ptr %y.ptr
@@ -122,27 +106,19 @@ entry:
 }
 
 define i16 @cmov16rm_inv(i16 %a, i16 %x, ptr %y.ptr) {
-; NDD-LABEL: cmov16rm_inv:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NDD-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
-; NDD-NEXT:    cmovnsw (%rdx), %ax # encoding: [0x66,0x0f,0x49,0x02]
-; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; MEM-LABEL: cmov16rm_inv:
-; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
-; MEM-NEXT:    js .LBB5_1 # encoding: [0x78,A]
-; MEM-NEXT:    # fixup A - offset: 1, value: .LBB5_1, kind: FK_PCRel_1
-; MEM-NEXT:  # %bb.2: # %entry
-; MEM-NEXT:    movzwl (%rdx), %eax # encoding: [0x0f,0xb7,0x02]
-; MEM-NEXT:    # kill: def $ax killed $ax killed $eax
-; MEM-NEXT:    retq # encoding: [0xc3]
-; MEM-NEXT:  .LBB5_1:
-; MEM-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; MEM-NEXT:    # kill: def $ax killed $ax killed $eax
-; MEM-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: cmov16rm_inv:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
+; CHECK-NEXT:    js .LBB5_1 # encoding: [0x78,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    movzwl (%rdx), %eax # encoding: [0x0f,0xb7,0x02]
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq # encoding: [0xc3]
+; CHECK-NEXT:  .LBB5_1:
+; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %y = load i16, ptr %y.ptr
   %cmp = icmp slt i16 %a, 0
@@ -151,23 +127,16 @@ entry:
 }
 
 define i32 @cmov32rm_inv(i32 %a, i32 %x, ptr %y.ptr) {
-; NDD-LABEL: cmov32rm_inv:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NDD-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
-; NDD-NEXT:    cmovnsl (%rdx), %eax # encoding: [0x0f,0x49,0x02]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; MEM-LABEL: cmov32rm_inv:
-; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; MEM-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
-; MEM-NEXT:    js .LBB6_2 # encoding: [0x78,A]
-; MEM-NEXT:    # fixup A - offset: 1, value: .LBB6_2, kind: FK_PCRel_1
-; MEM-NEXT:  # %bb.1: # %entry
-; MEM-NEXT:    movl (%rdx), %eax # encoding: [0x8b,0x02]
-; MEM-NEXT:  .LBB6_2: # %entry
-; MEM-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: cmov32rm_inv:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; CHECK-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; CHECK-NEXT:    js .LBB6_2 # encoding: [0x78,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_2, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    movl (%rdx), %eax # encoding: [0x8b,0x02]
+; CHECK-NEXT:  .LBB6_2: # %entry
+; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %y = load i32, ptr %y.ptr
   %cmp = icmp slt i32 %a, 0
@@ -176,23 +145,16 @@ entry:
 }
 
 define i64 @cmov64rm_inv(i64 %a, i64 %x, ptr %y.ptr) {
-; NDD-LABEL: cmov64rm_inv:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; NDD-NEXT:    cmovnsq (%rdx), %rax # encoding: [0x48,0x0f,0x49,0x02]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; MEM-LABEL: cmov64rm_inv:
-; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; MEM-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; MEM-NEXT:    js .LBB7_2 # encoding: [0x78,A]
-; MEM-NEXT:    # fixup A - offset: 1, value: .LBB7_2, kind: FK_PCRel_1
-; MEM-NEXT:  # %bb.1: # %entry
-; MEM-NEXT:    movq (%rdx), %rax # encoding: [0x48,0x8b,0x02]
-; MEM-NEXT:  .LBB7_2: # %entry
-; MEM-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: cmov64rm_inv:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
+; CHECK-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
+; CHECK-NEXT:    js .LBB7_2 # encoding: [0x78,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB7_2, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    movq (%rdx), %rax # encoding: [0x48,0x8b,0x02]
+; CHECK-NEXT:  .LBB7_2: # %entry
+; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %y = load i64, ptr %y.ptr
   %cmp = icmp slt i64 %a, 0

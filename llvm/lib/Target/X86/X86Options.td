@@ -29,6 +29,8 @@ defm : BoolField<"x86-cmov-converter-force-mem-operand", "true",
   "Convert cmovs to branches whenever they have memory operands">;
 defm : ValueField<"x86-cmov-converter-threshold", "unsigned", "4",
   "Minimum gain per loop (in cycles) threshold">;
+defm : BoolField<"x86-cmov-converter-ndd-load", "true",
+  "Fold loads into NDD cmovs so they can be converted to branches">;
 
 // X86DomainReassignment.cpp
 defm : BoolField<"disable-x86-domain-reassignment", "false",

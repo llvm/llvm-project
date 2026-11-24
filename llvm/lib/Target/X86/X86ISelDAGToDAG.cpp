@@ -216,6 +216,9 @@ namespace {
                     bool HasNDDM = true);
     bool selectNDDAddr(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Scale,
                        SDValue &Index, SDValue &Disp, SDValue &Segment);
+    bool selectNDDCmovAddr(SDNode *Parent, SDValue N, SDValue &Base,
+                           SDValue &Scale, SDValue &Index, SDValue &Disp,
+                           SDValue &Segment);
     bool selectVectorAddr(MemSDNode *Parent, SDValue BasePtr, SDValue IndexOp,
                           SDValue ScaleOp, SDValue &Base, SDValue &Scale,
                           SDValue &Index, SDValue &Disp, SDValue &Segment);
@@ -3286,6 +3289,15 @@ bool X86DAGToDAGISel::selectNDDAddr(SDNode *Parent, SDValue N, SDValue &Base,
                                     SDValue &Disp, SDValue &Segment) {
   return selectAddr(Parent, N, Base, Scale, Index, Disp, Segment,
                     Subtarget->hasNDDM());
+}
+
+bool X86DAGToDAGISel::selectNDDCmovAddr(SDNode *Parent, SDValue N,
+                                        SDValue &Base, SDValue &Scale,
+                                        SDValue &Index, SDValue &Disp,
+                                        SDValue &Segment) {
+  return selectAddr(Parent, N, Base, Scale, Index, Disp, Segment,
+                    Subtarget->hasNDDM() ||
+                        X86::foldNDDCmovLoads(*Subtarget, TM));
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
