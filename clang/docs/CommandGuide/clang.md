@@ -101,9 +101,6 @@ Treat subsequent input files as having type language.
 :::{option} -std=<standard>
 Specify the language standard to compile for.
 
-Clang may still accept language extensions in the selected mode. Use
-{option}`-pedantic-errors` to report diagnosed language extensions as errors.
-
 Supported values for the C language are:
 
 > `c89`
