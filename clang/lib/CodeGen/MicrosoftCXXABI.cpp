@@ -1745,10 +1745,11 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   llvm::Value *Implicit =
       getCXXDestructorImplicitParam(CGF, DD, Type, ForVirtualBase,
                                     Delegating); // = nullptr
+  // Implicit and cleanup destructor calls do not have a call-site location.
   CGF.EmitCXXDestructorCall(
       GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy), ThisTy,
       /*ImplicitParam=*/Implicit,
-      /*ImplicitParamTy=*/QualType(), /*E=*/nullptr, /*Loc=*/SourceLocation{});
+      /*ImplicitParamTy=*/QualType(), /*E=*/nullptr, SourceLocation{});
   if (BaseDtorEndBB) {
     // Complete object handler should continue to be the remaining
     CGF.Builder.CreateBr(BaseDtorEndBB);
