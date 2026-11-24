@@ -125,9 +125,8 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
 
 // Returns the first occurrence of 'ch' within the first 'n' characters of
 // 'src'. If 'ch' is not found, returns nullptr.
-LIBC_ALWAYS_INLINE void *find_first_character(const unsigned char *src,
-                                              unsigned char ch,
-                                              size_t max_strlen) {
+LIBC_INLINE void *find_first_character(const unsigned char *src,
+                                       unsigned char ch, size_t max_strlen) {
   return const_cast<void *>(find_first_character_impl(src, ch, max_strlen));
 }
 
