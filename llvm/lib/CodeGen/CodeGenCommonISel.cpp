@@ -260,8 +260,7 @@ static MachineOperand *getSalvageOpsForFNeg(const MachineRegisterInfo &MRI,
 
   APInt SignMask = APInt::getSplat(
       Size.getFixedValue(), APInt::getSignMask(Ty.getScalarSizeInBits()));
-  Ops.append(
-      {dwarf::DW_OP_constu, SignMask.getZExtValue(), dwarf::DW_OP_xor});
+  Ops.append({dwarf::DW_OP_constu, SignMask.getZExtValue(), dwarf::DW_OP_xor});
   return &FNeg.getOperand(1);
 }
 
