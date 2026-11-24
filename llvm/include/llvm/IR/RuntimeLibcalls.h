@@ -87,6 +87,9 @@ private:
   unsigned WCharSize;
   LongDoubleFormat LongDoubleFmt;
 
+  /// Whether math library calls may write errno.
+  bool MathErrno = true;
+
   std::string ABIName;
 
   /// Lower a returned C struct of two \p EltTy values for the target ABI.
