@@ -32,6 +32,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -59,7 +60,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
+#include <limits>
 #include <tuple>
 #include <vector>
 
@@ -1273,8 +1276,6 @@ void RegAllocFastImpl::defineVirtReg(MachineInstr &MI, MachineOperand &MO,
   setPhysReg(MO, *LRI);
 }
 
-/// Place MO's value in its tied def's register, by taking the register over or
-/// copying into it. Return false if useVirtReg() should finish MO.
 /// Return true if the value that the use \p MO of \p MI reads can't live in
 /// the register of the def \p DefMO that MO is tied to, whichever register
 /// that is: MO reads a subregister, or DefMO is early-clobber and overwrites
@@ -1287,6 +1288,8 @@ static bool tiedUseMustCopy(const MachineInstr &MI, const MachineOperand &MO,
                             }));
 }
 
+/// Place MO's value in its tied def's register, by taking the register over or
+/// copying into it. Return false if useVirtReg() should finish MO.
 bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
                                     LiveReg &LR) {
   const MachineOperand &DefMO = getTiedOperand(MI, MO);
@@ -2303,8 +2306,10 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
       continue;
     }
 
-    // The slot holds the whole register, so a subregister operand isn't
-    // folded.
+    // A subregister def would write only part of the slot, and the fold
+    // stores the register there first only if the asm reads it, so its other
+    // lanes would be lost. A subregister use could be folded at its offset in
+    // the slot, as the greedy allocator does, but isn't yet.
     AsmOperandReg &R = Regs[findOrAddAsmOperandReg(Regs, Reg, *MRI)];
     R.Foldable &= MI.mayFoldInlineAsmRegOp(I) && !MO.getSubReg();
     if (MO.isUse()) {
