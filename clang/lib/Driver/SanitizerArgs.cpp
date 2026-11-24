@@ -369,7 +369,8 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 
   return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
                            NeverTrap, options::OPT_fsanitize_trap_EQ,
-                           options::OPT_fno_sanitize_trap_EQ);
+                           options::OPT_fno_sanitize_trap_EQ) &
+         TrappingSupported;
 }
 
 static SanitizerMaskCutoffs
