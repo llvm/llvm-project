@@ -245,6 +245,36 @@ cir.func private @sve_data_f80(!cir.vector<[1] x !cir.long_double<!cir.f80>, sve
 
 // -----
 
+// expected-error @below {{a NEON mfp8 vector must have 8 or 16 elements}}
+cir.func private @neon_mfp8_4(!cir.vector<4 x !cir.mfp8>)
+
+// -----
+
+// expected-error @below {{a NEON mfp8 vector must have 8 or 16 elements}}
+cir.func private @neon_mfp8_32(!cir.vector<32 x !cir.mfp8>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_scalable_8(!cir.vector<[8] x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_8(!cir.vector<8 x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_48(!cir.vector<48 x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_512(!cir.vector<512 x !cir.mfp8, sve_data>)
+
+// -----
+
 // expected-error @below {{an SVE predicate vector must have '!cir.int<u, 1>' elements}}
 cir.func private @sve_pred_u8(!cir.vector<[16] x !cir.int<u, 8>, sve_predicate>)
 
