@@ -114,6 +114,171 @@ entry:
   ret i32 %t
 }
 
+define void @with_dbg_switch(i32 %x, ptr %p) !dbg !8 {
+; CHECK-LABEL: define void @with_dbg_switch(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) comdat !dbg [[DBG8:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_.2) #[[ATTR1]], !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; CHECK-NEXT:      i32 0, label %[[BB0:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_.2, i64 4)) #[[ATTR1]], !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[DEFAULT]]
+; CHECK:       [[DEFAULT]]:
+; CHECK-NEXT:    ret void
+;
+; GATED-LABEL: define void @with_dbg_switch(
+; GATED-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) comdat !dbg [[DBG9:![0-9]+]] {
+; GATED-NEXT:  [[ENTRY:.*:]]
+; GATED-NEXT:    [[TMP0:%.*]] = load i64, ptr @__sancov_should_track, align 8, !nosanitize [[META5]]
+; GATED-NEXT:    %"sancov gate cmp" = icmp ne i64 [[TMP0]], 0
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB1:.*]], label %[[BB2:.*]], !prof [[PROF6]]
+; GATED:       [[BB1]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_.2) #[[ATTR1]], !dbg [[DBG10:![0-9]+]]
+; GATED-NEXT:    br label %[[BB2]]
+; GATED:       [[BB2]]:
+; GATED-NEXT:    [[TMP3:%.*]] = zext i32 [[X]] to i64, !dbg [[DBG11:![0-9]+]]
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF6]]
+; GATED:       [[BB4]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_switch(i64 [[TMP3]], ptr @__sancov_gen_cov_switch_values), !dbg [[DBG11]]
+; GATED-NEXT:    br label %[[BB5]]
+; GATED:       [[BB5]]:
+; GATED-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; GATED-NEXT:      i32 0, label %[[BB0:.*]]
+; GATED-NEXT:    ]
+; GATED:       [[BB0]]:
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF6]]
+; GATED:       [[BB6]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_.2, i64 4)) #[[ATTR1]], !dbg [[DBG11]]
+; GATED-NEXT:    br label %[[BB7]]
+; GATED:       [[BB7]]:
+; GATED-NEXT:    store i32 1, ptr [[P]], align 4
+; GATED-NEXT:    br label %[[DEFAULT]]
+; GATED:       [[DEFAULT]]:
+; GATED-NEXT:    ret void
+;
+entry:
+  switch i32 %x, label %default [
+  i32 0, label %case0
+  ]
+case0:
+  store i32 1, ptr %p, align 4
+  br label %default
+default:
+  ret void
+}
+
+define void @without_dbg_switch(i32 %x, ptr %p) {
+; CHECK-LABEL: define void @without_dbg_switch(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) comdat {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_.3) #[[ATTR1]]
+; CHECK-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; CHECK-NEXT:      i32 0, label %[[BB0:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_.3, i64 4)) #[[ATTR1]]
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[DEFAULT]]
+; CHECK:       [[DEFAULT]]:
+; CHECK-NEXT:    ret void
+;
+; GATED-LABEL: define void @without_dbg_switch(
+; GATED-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) comdat {
+; GATED-NEXT:  [[ENTRY:.*:]]
+; GATED-NEXT:    [[TMP0:%.*]] = load i64, ptr @__sancov_should_track, align 8, !nosanitize [[META5]]
+; GATED-NEXT:    %"sancov gate cmp" = icmp ne i64 [[TMP0]], 0
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB1:.*]], label %[[BB2:.*]], !prof [[PROF6]]
+; GATED:       [[BB1]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_.3) #[[ATTR1]]
+; GATED-NEXT:    br label %[[BB2]]
+; GATED:       [[BB2]]:
+; GATED-NEXT:    [[TMP3:%.*]] = zext i32 [[X]] to i64
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF6]]
+; GATED:       [[BB4]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_switch(i64 [[TMP3]], ptr @__sancov_gen_cov_switch_values.4)
+; GATED-NEXT:    br label %[[BB5]]
+; GATED:       [[BB5]]:
+; GATED-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; GATED-NEXT:      i32 0, label %[[BB0:.*]]
+; GATED-NEXT:    ]
+; GATED:       [[BB0]]:
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF6]]
+; GATED:       [[BB6]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_.3, i64 4)) #[[ATTR1]]
+; GATED-NEXT:    br label %[[BB7]]
+; GATED:       [[BB7]]:
+; GATED-NEXT:    store i32 1, ptr [[P]], align 4
+; GATED-NEXT:    br label %[[DEFAULT]]
+; GATED:       [[DEFAULT]]:
+; GATED-NEXT:    ret void
+;
+entry:
+  switch i32 %x, label %default [
+  i32 0, label %case0
+  ]
+case0:
+  store i32 1, ptr %p, align 4
+  br label %default
+default:
+  ret void
+}
+
+define i1 @with_existing_dbg(i1 %x, ptr %b) !dbg !9 {
+; CHECK-LABEL: define i1 @with_existing_dbg(
+; CHECK-SAME: i1 [[X:%.*]], ptr [[B:%.*]]) comdat !dbg [[DBG11:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_.4) #[[ATTR1]], !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[X]], true, !dbg [[DBG13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[END:.*]], !dbg [[DBG13]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_.4, i64 4)) #[[ATTR1]], !dbg [[DBG14:![0-9]+]]
+; CHECK-NEXT:    store i1 [[X]], ptr [[B]], align 1, !dbg [[DBG14]]
+; CHECK-NEXT:    br label %[[END]], !dbg [[DBG14]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret i1 [[CMP]], !dbg [[DBG15:![0-9]+]]
+;
+; GATED-LABEL: define i1 @with_existing_dbg(
+; GATED-SAME: i1 [[X:%.*]], ptr [[B:%.*]]) comdat !dbg [[DBG12:![0-9]+]] {
+; GATED-NEXT:  [[ENTRY:.*:]]
+; GATED-NEXT:    [[TMP0:%.*]] = load i64, ptr @__sancov_should_track, align 8, !dbg [[DBG13:![0-9]+]], !nosanitize [[META5]]
+; GATED-NEXT:    %"sancov gate cmp" = icmp ne i64 [[TMP0]], 0, !dbg [[DBG13]]
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB1:.*]], label %[[BB2:.*]], !dbg [[DBG13]], !prof [[PROF6]]
+; GATED:       [[BB1]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr @__sancov_gen_.5) #[[ATTR1]], !dbg [[DBG14:![0-9]+]]
+; GATED-NEXT:    br label %[[BB2]], !dbg [[DBG13]]
+; GATED:       [[BB2]]:
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB3:.*]], label %[[BB5:.*]], !dbg [[DBG13]], !prof [[PROF6]]
+; GATED:       [[BB3]]:
+; GATED-NEXT:    [[TMP4:%.*]] = sext i1 [[X]] to i8, !dbg [[DBG13]]
+; GATED-NEXT:    call void @__sanitizer_cov_trace_const_cmp1(i8 -1, i8 [[TMP4]]), !dbg [[DBG13]]
+; GATED-NEXT:    br label %[[BB5]], !dbg [[DBG13]]
+; GATED:       [[BB5]]:
+; GATED-NEXT:    [[CMP:%.*]] = icmp eq i1 [[X]], true, !dbg [[DBG13]]
+; GATED-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[END:.*]], !dbg [[DBG13]]
+; GATED:       [[THEN]]:
+; GATED-NEXT:    br i1 %"sancov gate cmp", label %[[BB6:.*]], label %[[BB7:.*]], !dbg [[DBG15:![0-9]+]], !prof [[PROF6]]
+; GATED:       [[BB6]]:
+; GATED-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds (i8, ptr @__sancov_gen_.5, i64 4)) #[[ATTR1]], !dbg [[DBG15]]
+; GATED-NEXT:    br label %[[BB7]], !dbg [[DBG15]]
+; GATED:       [[BB7]]:
+; GATED-NEXT:    store i1 [[X]], ptr [[B]], align 1, !dbg [[DBG15]]
+; GATED-NEXT:    br label %[[END]], !dbg [[DBG15]]
+; GATED:       [[END]]:
+; GATED-NEXT:    ret i1 [[CMP]], !dbg [[DBG16:![0-9]+]]
+;
+entry:
+  %cmp = icmp eq i1 %x, true, !dbg !10
+  br i1 %cmp, label %then, label %end, !dbg !10
+then:
+  store i1 %x, ptr %b, align 1, !dbg !11
+  br label %end, !dbg !11
+end:
+  ret i1 %cmp, !dbg !12
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
@@ -125,6 +290,11 @@ entry:
 !5 = !{}
 !6 = !DILocation(line: 192, scope: !3)
 !7 = !DILocation(line: 0, scope: !3)
+!8 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 200, type: !4, scopeLine: 202, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!9 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 210, type: !4, scopeLine: 212, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!10 = !DILocation(line: 213, scope: !9)
+!11 = !DILocation(line: 214, scope: !9)
+!12 = !DILocation(line: 215, scope: !9)
 
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C89, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
@@ -134,6 +304,14 @@ entry:
 ; CHECK: [[META5]] = !{}
 ; CHECK: [[DBG6]] = !DILocation(line: 192, scope: [[DBG3]])
 ; CHECK: [[DBG7]] = !DILocation(line: 0, scope: [[DBG3]])
+; CHECK: [[DBG8]] = distinct !DISubprogram(name: "bar", scope: [[META1]], file: [[META1]], line: 200, type: [[META4]], scopeLine: 202, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; CHECK: [[DBG9]] = !DILocation(line: 202, scope: [[DBG8]])
+; CHECK: [[DBG10]] = !DILocation(line: 0, scope: [[DBG8]])
+; CHECK: [[DBG11]] = distinct !DISubprogram(name: "baz", scope: [[META1]], file: [[META1]], line: 210, type: [[META4]], scopeLine: 212, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; CHECK: [[DBG12]] = !DILocation(line: 212, scope: [[DBG11]])
+; CHECK: [[DBG13]] = !DILocation(line: 213, scope: [[DBG11]])
+; CHECK: [[DBG14]] = !DILocation(line: 214, scope: [[DBG11]])
+; CHECK: [[DBG15]] = !DILocation(line: 215, scope: [[DBG11]])
 ;.
 ; GATED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C89, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
 ; GATED: [[META1]] = !DIFile(filename: "{{.*}}foo.c", directory: {{.*}})
@@ -143,4 +321,12 @@ entry:
 ; GATED: [[PROF6]] = !{!"branch_weights", i32 1, i32 100000}
 ; GATED: [[DBG7]] = !DILocation(line: 192, scope: [[DBG3]])
 ; GATED: [[DBG8]] = !DILocation(line: 0, scope: [[DBG3]])
+; GATED: [[DBG9]] = distinct !DISubprogram(name: "bar", scope: [[META1]], file: [[META1]], line: 200, type: [[META4]], scopeLine: 202, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; GATED: [[DBG10]] = !DILocation(line: 202, scope: [[DBG9]])
+; GATED: [[DBG11]] = !DILocation(line: 0, scope: [[DBG9]])
+; GATED: [[DBG12]] = distinct !DISubprogram(name: "baz", scope: [[META1]], file: [[META1]], line: 210, type: [[META4]], scopeLine: 212, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; GATED: [[DBG13]] = !DILocation(line: 213, scope: [[DBG12]])
+; GATED: [[DBG14]] = !DILocation(line: 212, scope: [[DBG12]])
+; GATED: [[DBG15]] = !DILocation(line: 214, scope: [[DBG12]])
+; GATED: [[DBG16]] = !DILocation(line: 215, scope: [[DBG12]])
 ;.
