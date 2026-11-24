@@ -66,12 +66,12 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Diagnostics
 
-- clang-tidy will now reports the presumed line location when running on 
+- {program}`clang-tidy` will now reports the presumed line location when running on 
   preprocessed files. This behaviour can be disabled using 
   `-fno-diagnostics-use-presumed-location`
 
-- Query-based custom clang-tidy checks can now be enabled with the
-  `Diagnostics.ClangTidy.ExperimentalCustomChecks` clangd configuration option.
+- Query-based custom {program}`clang-tidy` checks can now be enabled with the
+  `Diagnostics.ClangTidy.ExperimentalCustomChecks` {program}`clangd` configuration option.
   Custom checks are subject to `FastCheckFilter`, and therefore require
   `FastCheckFilter: Loose` or `None` to run.
 
