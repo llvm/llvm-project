@@ -126,7 +126,8 @@ public:
     bool Changed = false;
     for (Function &F : M) {
       Aliases.clear();
-      // TODO: Handle BAB atomics separately, preserving their full scalar width.
+      // TODO: Handle BAB atomics separately, preserving their full scalar
+      // width.
       SmallVector<IntrinsicInst *> Accesses;
       for (Instruction &I : instructions(F))
         if (auto *II = dyn_cast<IntrinsicInst>(&I))

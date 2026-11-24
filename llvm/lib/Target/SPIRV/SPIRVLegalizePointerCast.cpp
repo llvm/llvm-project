@@ -838,8 +838,8 @@ class SPIRVLegalizePointerCastImpl {
         return;
       // We still need to split long vectors into smaller parts
 
-      Type *ViewTy =
-          ArrayType::get(AccessTy->getElementType(), AccessTy->getNumElements());
+      Type *ViewTy = ArrayType::get(AccessTy->getElementType(),
+                                    AccessTy->getNumElements());
       IRBuilder<> ViewBuilder(II);
       OriginalOperand = buildIntrWithMD(
           Intrinsic::spv_ptrcast, {II->getType(), II->getType()},
