@@ -81,7 +81,7 @@
 ; AIX32-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; AIX32-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; AIX32-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; AIX32-NEXT: declare void @__clear_cache(ptr, ptr)
+; AIX32-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; AIX32-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -654,7 +654,7 @@
 ; AIX64-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
 ; AIX64-NEXT: declare void @__atomic_store_4(ptr captures(none), i32 zeroext, i32 signext) [[ATOMIC_ATTRS]]
 ; AIX64-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
-; AIX64-NEXT: declare void @__clear_cache(ptr, ptr)
+; AIX64-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; AIX64-NEXT: declare signext i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare signext i32 @__clzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare signext i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -1220,7 +1220,7 @@
 ; LINUX-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
 ; LINUX-NEXT: declare void @__atomic_store_4(ptr captures(none), i32 zeroext, i32 signext) [[ATOMIC_ATTRS]]
 ; LINUX-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
-; LINUX-NEXT: declare void @__clear_cache(ptr, ptr)
+; LINUX-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @__clzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @__clzti2(i128) [[NOMEM_ATTRS]]

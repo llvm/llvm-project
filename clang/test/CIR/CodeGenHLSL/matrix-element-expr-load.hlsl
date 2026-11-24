@@ -15,9 +15,9 @@ void matrix_element_expr() {
 // CIR: %[[MATRIX_ADDR:.*]] = cir.alloca "matrix" {{.*}} : !cir.ptr<!cir.matrix<4 x 4 x !s32i>>
 // CIR: %[[ELEMENT_ADDR:.*]] = cir.alloca "element" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[TMP_MATRIX:.*]] = cir.load {{.*}} %[[MATRIX_ADDR]] : !cir.ptr<!cir.matrix<4 x 4 x !s32i>>, !cir.matrix<4 x 4 x !s32i>
-// CIR: %[[ROW_IDX:.*]] = cir.const #cir.int<0> : !s64i
-// CIR: %[[COLUMN_IDX:.*]] = cir.const #cir.int<0> : !s64i
-// CIR: %[[EXTREACT:.*]] = cir.matrix.extract %[[TMP_MATRIX]][%[[ROW_IDX]] : !s64i] [%[[COLUMN_IDX]] : !s64i] : !cir.matrix<4 x 4 x !s32i>
+// CIR: %[[ROW_IDX:.*]] = cir.const #cir.int<0> : !u32i
+// CIR: %[[COLUMN_IDX:.*]] = cir.const #cir.int<0> : !u32i
+// CIR: %[[EXTREACT:.*]] = cir.matrix.extract %[[TMP_MATRIX]][%[[ROW_IDX]] : !u32i] [%[[COLUMN_IDX]] : !u32i] : !cir.matrix<4 x 4 x !s32i>
 // CIR: cir.store {{.*}} %[[EXTREACT]], %[[ELEMENT_ADDR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: %[[MATRIX_ADDR:.*]] = alloca [4 x <4 x i32>], align 4

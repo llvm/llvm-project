@@ -971,8 +971,15 @@ def : MipsInstAlias<"lapc $rd, $imm",
 //
 //===----------------------------------------------------------------------===//
 
+// An R6 FP compare that produces the cmp.cond.fmt mask (0 or -1) as an i32.
+// Scalar FP SETCC is lowered to (and R6FCmp, 1).
+def SDT_MipsR6FCmp : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisFP<1>,
+                                         SDTCisSameAs<1, 2>,
+                                         SDTCisVT<3, OtherVT>]>;
+def MipsR6FCmp : SDNode<"MipsISD::R6FCmp", SDT_MipsR6FCmp>;
+
 // CMP.S and CMP.D write 32-bit and 64-bit masks to FPRs, respectively, while
-// SETCC has an i32 result. Keep the full-width result in the ordinary FPR class
+// R6FCmp has an i32 result. Keep the full-width result in the ordinary FPR class
 // and expose its low word as i32. These copies can coalesce with FPR users.
 class CmpPat<ValueType VT, dag Pattern, dag Result>
     : MipsPat<(i32 Pattern), !if(!eq(VT, f64),
@@ -980,30 +987,30 @@ class CmpPat<ValueType VT, dag Pattern, dag Result>
                                 (COPY_TO_REGCLASS Result, FGR32))>, HARDFLOAT;
 
 multiclass Cmp_Pats<ValueType VT> {
-def : CmpPat<VT, (setuo VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETUO),
       (!cast<Instruction>("CMP_UN_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setoeq VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETOEQ),
       (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setueq VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETUEQ),
       (!cast<Instruction>("CMP_UEQ_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setolt VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETOLT),
       (!cast<Instruction>("CMP_LT_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setult VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETULT),
       (!cast<Instruction>("CMP_ULT_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setole VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETOLE),
       (!cast<Instruction>("CMP_LE_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setule VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETULE),
       (!cast<Instruction>("CMP_ULE_"#NAME) VT:$lhs, VT:$rhs)>;
 
-def : CmpPat<VT, (seteq VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETEQ),
       (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setgt VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETGT),
       (!cast<Instruction>("CMP_LE_"#NAME) VT:$rhs, VT:$lhs)>;
-def : CmpPat<VT, (setge VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETGE),
       (!cast<Instruction>("CMP_LT_"#NAME) VT:$rhs, VT:$lhs)>;
-def : CmpPat<VT, (setlt VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETLT),
       (!cast<Instruction>("CMP_LT_"#NAME) VT:$lhs, VT:$rhs)>;
-def : CmpPat<VT, (setle VT:$lhs, VT:$rhs),
+def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETLE),
       (!cast<Instruction>("CMP_LE_"#NAME) VT:$lhs, VT:$rhs)>;
 }
 
@@ -1012,17 +1019,16 @@ let AdditionalPredicates = [NotInMicroMips] in {
   defm D : Cmp_Pats<f64>, ISA_MIPS32R6;
 }
 
-// BRCOND normalizes FP comparison masks to 0/1 during type legalization.
+// FP compares are lowered to (and R6FCmp, 1), where R6FCmp is 0 or -1.
 // For a value known to be 0 or -1, a zero/nonzero test needs no normalization.
 def i32_zero_or_negative_one : PatLeaf<(i32 GPR32:$src), [{
   return CurDAG->ComputeNumSignBits(SDValue(N, 0)) == 32;
 }]>;
 
-// Match the condition without folding SETCC into the branch, so other users
-// can share the compare. Its i32 result is the low word of CMP.S or CMP.D.
+// Match the compare without folding it into the branch, so other users can
+// share it. Its i32 result is the low word of CMP.S or CMP.D.
 def r6_fp_condition : PatLeaf<(i32 GPR32:$src), [{
-  return N->getOpcode() == ISD::SETCC &&
-         N->getOperand(0).getValueType().isFloatingPoint();
+  return N->getOpcode() == MipsISD::R6FCmp;
 }]>;
 
 // BC1EQZ/BC1NEZ read only bit zero, so FGR32 covers both compare widths.
@@ -1032,6 +1038,13 @@ multiclass FPBrcondPats<Instruction EQZ, Instruction NEZ> {
     def : MipsPat<(brcond (and r6_fp_condition:$cond, 1), bb:$dst),
                   (NEZ (COPY_TO_REGCLASS i32:$cond, FGR32), bb:$dst)>, HARDFLOAT;
     def : MipsPat<(brcond (and (not r6_fp_condition:$cond), 1), bb:$dst),
+                  (EQZ (COPY_TO_REGCLASS i32:$cond, FGR32), bb:$dst)>, HARDFLOAT;
+    // The (and $cond, 1) result can also have other users.
+    def : MipsPat<(brcond (i32 (setne (and r6_fp_condition:$cond, 1), 0)),
+                          bb:$dst),
+                  (NEZ (COPY_TO_REGCLASS i32:$cond, FGR32), bb:$dst)>, HARDFLOAT;
+    def : MipsPat<(brcond (i32 (seteq (and r6_fp_condition:$cond, 1), 0)),
+                          bb:$dst),
                   (EQZ (COPY_TO_REGCLASS i32:$cond, FGR32), bb:$dst)>, HARDFLOAT;
   }
 }
@@ -1079,6 +1092,27 @@ def : MipsPat<(select (Opg (seteq RC:$cond, immz)), immz, RC:$f),
               (SELNEZOp RC:$f, RC:$cond)>;
 def : MipsPat<(select (Opg (setne RC:$cond, immz)), immz, RC:$f),
               (SELEQZOp RC:$f, RC:$cond)>;
+
+// FP compares are lowered to (and R6FCmp, 1). If $cond is 0 or -1, then
+// (and $cond, 1) is nonzero exactly when $cond is, so test $cond directly.
+def : MipsPat<(select (Opg (and i32_zero_or_negative_one:$cond, 1)),
+                      RC:$t, RC:$f),
+              (OROp (SELNEZOp RC:$t, RC:$cond), (SELEQZOp RC:$f, RC:$cond))>;
+def : MipsPat<(select (Opg (and i32_zero_or_negative_one:$cond, 1)),
+                      RC:$t, immz),
+              (SELNEZOp RC:$t, RC:$cond)>;
+def : MipsPat<(select (Opg (and i32_zero_or_negative_one:$cond, 1)),
+                      immz, RC:$f),
+              (SELEQZOp RC:$f, RC:$cond)>;
+def : MipsPat<(select (Opg (and (not i32_zero_or_negative_one:$cond), 1)),
+                      RC:$t, RC:$f),
+              (OROp (SELEQZOp RC:$t, RC:$cond), (SELNEZOp RC:$f, RC:$cond))>;
+def : MipsPat<(select (Opg (and (not i32_zero_or_negative_one:$cond), 1)),
+                      RC:$t, immz),
+              (SELEQZOp RC:$t, RC:$cond)>;
+def : MipsPat<(select (Opg (and (not i32_zero_or_negative_one:$cond), 1)),
+                      immz, RC:$f),
+              (SELNEZOp RC:$f, RC:$cond)>;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -1107,9 +1141,24 @@ class SEL_FP_PAT<RegisterOperand RC, Instruction Inst>
                         (COPY_TO_REGCLASS i32:$cond, FGR32)),
                     RC:$f, RC:$t)>, HARDFLOAT;
 
+// SEL reads only bit zero, so a condition masked to that bit can be used
+// directly, and an inverted one by swapping the operands. This covers FP
+// compares, which are lowered to (and R6FCmp, 1).
+multiclass SEL_FP_AND1_PATS<RegisterOperand RC, Instruction Inst> {
+  defvar Cond = !if(!eq(RC, FGR64Opnd),
+                    (INSERT_SUBREG (f64 (IMPLICIT_DEF)), i32:$cond, sub_lo),
+                    (COPY_TO_REGCLASS i32:$cond, FGR32));
+  def : MipsPat<(select (and i32:$cond, 1), RC:$t, RC:$f),
+                (Inst Cond, RC:$f, RC:$t)>, HARDFLOAT;
+  def : MipsPat<(select (and (not i32:$cond), 1), RC:$t, RC:$f),
+                (Inst Cond, RC:$t, RC:$f)>, HARDFLOAT;
+}
+
 let AdditionalPredicates = [NotInMicroMips] in {
   def : SEL_FP_PAT<FGR32Opnd, SEL_S>, ISA_MIPS32R6;
   def : SEL_FP_PAT<FGR64Opnd, SEL_D>, ISA_MIPS32R6;
+  defm : SEL_FP_AND1_PATS<FGR32Opnd, SEL_S>, ISA_MIPS32R6;
+  defm : SEL_FP_AND1_PATS<FGR64Opnd, SEL_D>, ISA_MIPS32R6;
 }
 
 // llvm.fmin/fmax operations.

@@ -956,7 +956,7 @@ llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   auto abbr =
       std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
   llvm::Error error = abbr->parse();
@@ -1369,7 +1369,7 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
   if (offset == DW_INVALID_OFFSET)
     return false;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   llvm::DWARFDebugLine::Prologue prologue;
   if (!ParseLLVMLineTablePrologue(m_context, prologue, offset,
                                   dwarf_cu.GetOffset()))
@@ -1419,7 +1419,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
                      "SymbolFileDWARF::GetTypeUnitSupportFiles failed to parse "
                      "the line table prologue: {0}");
     };
-    ElapsedTime elapsed(m_parse_time);
+    ElapsedTime elapsed(GetDebugInfoParseTimeRef());
     llvm::Error error = prologue.parse(data, &line_table_offset, report, ctx);
     if (error)
       report(std::move(error));
@@ -1517,7 +1517,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   if (offset == DW_INVALID_OFFSET)
     return false;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   llvm::DWARFDebugLine line;
   const llvm::DWARFDebugLine::LineTable *line_table =
       ParseLLVMLineTable(m_context, line, offset, dwarf_cu->GetOffset());
@@ -1547,7 +1547,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   if (iter != m_debug_macros_map.end())
     return iter->second;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   const DWARFDataExtractor &debug_macro_data = m_context.getOrLoadMacroData();
   if (debug_macro_data.GetByteSize() == 0)
     return DebugMacrosSP();

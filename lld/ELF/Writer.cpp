@@ -689,11 +689,11 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   bool isLarge = osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64;
 
   if (!isWrite && !isExec) {
-    // Among PROGBITS sections, place .lrodata further from .text.
-    // For -z lrodata-after-bss, place .lrodata after .lbss like GNU ld. This
-    // layout has one extra PT_LOAD, but alleviates relocation overflow
-    // pressure for absolute relocations referencing small data from -fno-pic
-    // relocatable files.
+    // By default, place large sections after .bss in the order
+    // .ltext/.lrodata/.ldata/.lbss, away from small sections and the ELF
+    // header. .ltext is first as small code may reference it with 32-bit
+    // relocations. -z nolrodata-after-bss places .ltext/.lrodata before .rodata
+    // instead.
     if (isLarge)
       rank |= ctx.arg.zLrodataAfterBss ? RF_LARGE_ALT : 0;
     else
@@ -718,6 +718,8 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     // keep writable and readonly segments separate.
     if (isLarge) {
       rank |= isWrite ? RF_LARGE_EXEC_WRITE : RF_LARGE_EXEC;
+      if (ctx.arg.zLrodataAfterBss)
+        rank |= RF_LARGE_ALT;
     } else {
       rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
     }
@@ -733,13 +735,8 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
       rank |= RF_NOT_RELRO;
     // Place .ldata and .lbss after .bss. Making .bss closer to .text
     // alleviates relocation overflow pressure.
-    // For -z lrodata-after-bss, place .lbss/.lrodata/.ldata after .bss.
-    // .bss/.lbss being adjacent reuses the NOBITS size optimization.
-    if (isLarge) {
-      rank |= ctx.arg.zLrodataAfterBss
-                  ? (osec.type == SHT_NOBITS ? 1 : RF_LARGE_ALT)
-                  : RF_LARGE;
-    }
+    if (isLarge)
+      rank |= ctx.arg.zLrodataAfterBss ? RF_LARGE_ALT : RF_LARGE;
   }
 
   // Within TLS sections, or within other RelRo sections, or within non-RelRo
@@ -865,17 +862,16 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   auto isLarge = [&ctx = ctx](OutputSection *osec) {
     return ctx.arg.emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
   };
-  for (auto &p : ctx.phdrs) {
-    if (p->p_type != PT_LOAD)
-      continue;
-    last = p.get();
-    if (!(p->p_flags & PF_W) && p->lastSec && !isLarge(p->lastSec))
-      lastRO = p->lastSec;
-  }
+  for (auto &p : ctx.phdrs)
+    if (p->p_type == PT_LOAD)
+      last = p.get();
+  for (OutputSection *os : ctx.outputSections)
+    if (os->ptLoad && !(os->ptLoad->p_flags & PF_W) && !isLarge(os))
+      lastRO = os;
 
   if (lastRO) {
-    // _etext is the first location after the last read-only loadable segment
-    // that does not contain large sections.
+    // _etext is the first location after the last non-large section in a
+    // read-only loadable segment. .text and .ltext may share a segment.
     if (ctx.sym.etext1)
       ctx.sym.etext1->section = lastRO;
     if (ctx.sym.etext2)
@@ -1118,32 +1114,45 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   for (StringRef s : ctx.arg.symbolOrderingFile)
     symbolOrder.insert({CachedHashStringRef(s), {priority++, false}});
 
-  // Build a map from sections to their priorities.
-  auto addSym = [&](Symbol &sym) {
-    auto it = symbolOrder.find(CachedHashStringRef(sym.getName()));
-    if (it == symbolOrder.end())
-      return;
-    SymbolOrderEntry &ent = it->second;
-    ent.present = true;
+  // We want both global and local symbols. We get the global ones from the
+  // symbol table (in chunks) and iterate the object files for the local ones.
+  // Looking up every symbol in symbolOrder is expensive, so do lookups in
+  // parallel and then process the matches serially.
+  using Matches = SmallVector<std::pair<Symbol *, SymbolOrderEntry *>, 0>;
+  std::vector<std::pair<ArrayRef<Symbol *>, Matches>> work;
+  const size_t chunkSize = 4096;
+  for (ArrayRef<Symbol *> syms = ctx.symtab->getSymbols(); !syms.empty();
+       syms = syms.drop_front(std::min(chunkSize, syms.size())))
+    work.emplace_back(syms.take_front(chunkSize), Matches());
+  for (ELFFileBase *file : ctx.objectFiles)
+    work.emplace_back(file->getLocalSymbols(), Matches());
 
-    maybeWarnUnorderableSymbol(ctx, &sym);
+  // The symbol table chunks from the getSymbols() loop above contain most of
+  // the work in the first few items. Use parallelForEachFineGrained() to
+  // split them over more than one or two threads.
+  parallelForEachFineGrained(work, [&](auto &pair) {
+    auto &[syms, matches] = pair;
+    for (Symbol *sym : syms) {
+      auto it = symbolOrder.find(CachedHashStringRef(sym->getName()));
+      if (it != symbolOrder.end())
+        matches.emplace_back(sym, &it->second);
+    }
+  });
 
-    if (auto *d = dyn_cast<Defined>(&sym)) {
-      if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section)) {
-        int &priority = sectionOrder[cast<InputSectionBase>(sec)];
-        priority = std::min(priority, ent.priority);
+  for (const auto &[syms, matches] : work) {
+    for (auto [sym, ent] : matches) {
+      ent->present = true;
+
+      maybeWarnUnorderableSymbol(ctx, sym);
+
+      if (auto *d = dyn_cast<Defined>(sym)) {
+        if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section)) {
+          int &priority = sectionOrder[cast<InputSectionBase>(sec)];
+          priority = std::min(priority, ent->priority);
+        }
       }
     }
-  };
-
-  // We want both global and local symbols. We get the global ones from the
-  // symbol table and iterate the object files for the local ones.
-  for (Symbol *sym : ctx.symtab->getSymbols())
-    addSym(*sym);
-
-  for (ELFFileBase *file : ctx.objectFiles)
-    for (Symbol *sym : file->getLocalSymbols())
-      addSym(*sym);
+  }
 
   if (ctx.arg.warnSymbolOrdering)
     for (auto orderEntry : symbolOrder)
