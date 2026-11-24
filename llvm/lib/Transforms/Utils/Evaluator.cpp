@@ -272,6 +272,7 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
 /// or null upon return. StrippedPointerCastsForAliasAnalysis is set to true if
 /// we looked through pointer casts to evaluate something.
 bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
+                              TargetLibraryInfo *TLI,
                               bool &StrippedPointerCastsForAliasAnalysis) {
   // This is the main evaluation loop.
   while (true) {
@@ -595,11 +596,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
 /// Evaluate a call to function F, returning true if successful, false if we
 /// can't evaluate it.  ActualArgs contains the formal arguments for the
 /// function.
-bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
-                                 const SmallVectorImpl<Constant*> &ActualArgs) {
-  SaveAndRestore<const TargetLibraryInfo *> SaveRestoreTLI(
-      TLI, GetTLI ? &GetTLI(*F) : nullptr);
-
+bool Evaluator::EvaluateFunction(
+    Function *F, Constant *&RetVal,
+    const SmallVectorImpl<Constant *> &ActualArgs) {
   assert(ActualArgs.size() == F->arg_size() && "wrong number of arguments");
 
   // Check to see if this function is already executing (recursion).  If so,
@@ -623,13 +622,15 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
 
   BasicBlock::iterator CurInst = CurBB->begin();
 
+  TargetLibraryInfo *TLI = GetTLI ? &GetTLI(*F) : nullptr;
   while (true) {
     BasicBlock *NextBB = nullptr; // Initialized to avoid compiler warnings.
     LLVM_DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
 
     bool StrippedPointerCastsForAliasAnalysis = false;
 
-    if (!EvaluateBlock(CurInst, NextBB, StrippedPointerCastsForAliasAnalysis))
+    if (!EvaluateBlock(CurInst, NextBB, TLI,
+                       StrippedPointerCastsForAliasAnalysis))
       return false;
 
     if (!NextBB) {

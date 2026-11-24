@@ -113,6 +113,7 @@ public:
 
 private:
   bool EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
+                     TargetLibraryInfo *TLI,
                      bool &StrippedPointerCastsForAliasAnalysis);
 
   Constant *getVal(Value *V) {
@@ -167,7 +168,6 @@ private:
   SmallPtrSet<Constant*, 8> SimpleConstants;
 
   const DataLayout &DL;
-  const TargetLibraryInfo *TLI = nullptr;
   function_ref<TargetLibraryInfo &(Function &)> GetTLI;
 };
 
