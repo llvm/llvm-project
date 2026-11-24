@@ -121,7 +121,6 @@ func.func @masked_write_dyn_subview(%v: vector<8x16xf32>, %w: vector<8x16xf32>, 
   return %r : vector<8x16xf32>
 }
 
-
 // -----
 
 // A dynamic subview of a static subview aliases the static subview's whole
@@ -246,39 +245,27 @@ func.func @expand_shape_dyn_subview(%v: vector<16xf32>, %m: index, %d: index,
   return %r : vector<8x2xf32>
 }
 
-
 // -----
 
-// A chain of reshapes casts the value at each step (8x16 -> 128 -> 64x2).
-// The read's mask, given in the final shape, selects the valid lanes; the
-// subview adds no extent mask.
-
-// CHECK-LABEL: func.func @collapse_then_expand_dyn_subview(
-// CHECK-SAME:      %[[V:[a-z0-9_]+]]: vector<8x16xf32>, %{{[a-z0-9_]+}}: index,
-// CHECK-SAME:      %[[D:[a-z0-9_]+]]: index, %[[PAD:[a-z0-9_]+]]: f32
+// A write through a collapsed dynamic subview is cast back to the parent shape.
+// Lanes outside the subview's runtime rows keep the previous value.
+// CHECK-LABEL: func.func @write_collapse_shape_dyn_subview(
+// CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[W:.*]]: vector<128xf32>, %[[N:.*]]: index
 // CHECK-NOT:     memref.alloca
 // CHECK-NOT:     memref.collapse_shape
-// CHECK-NOT:     memref.expand_shape
-// CHECK-NOT:     vector.mask
-// CHECK:         %[[M:.*]] = vector.create_mask %[[D]], %{{.*}} : vector<64x2xi1>
-// CHECK-NOT:     vector.create_mask
-// CHECK:         %[[F:.*]] = vector.shape_cast %[[V]] : vector<8x16xf32> to vector<128xf32>
-// CHECK:         %[[E:.*]] = vector.shape_cast %[[F]] : vector<128xf32> to vector<64x2xf32>
-// CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<64x2xf32>
-// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[E]], %[[PS]]
+// CHECK:         %[[SC:.*]] = vector.shape_cast %[[W]] : vector<128xf32> to vector<8x16xf32>
+// CHECK:         %[[M:.*]] = vector.create_mask %[[N]], %{{.*}} : vector<8x16xi1>
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[SC]], %[[V]]
 // CHECK:         return %[[SEL]]
-func.func @collapse_then_expand_dyn_subview(%v: vector<8x16xf32>, %n: index,
-                                            %d: index, %pad: f32) -> vector<64x2xf32> {
+func.func @write_collapse_shape_dyn_subview(%v: vector<8x16xf32>, %w: vector<128xf32>, %n: index, %pad: f32) -> vector<8x16xf32> {
   %c0 = arith.constant 0 : index
-  %c2 = arith.constant 2 : index
-  %m = vector.create_mask %d, %c2 : vector<64x2xi1>
   %a = memref.alloca() : memref<8x16xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
   %sv = memref.subview %a[0, 0] [%n, 16] [1, 1] : memref<8x16xf32> to memref<?x16xf32, strided<[16, 1]>>
-  %f = memref.collapse_shape %sv [[0, 1]] : memref<?x16xf32, strided<[16, 1]>> into memref<?xf32, strided<[1]>>
-  %e = memref.expand_shape %f [[0, 1]] output_shape [%d, 2] : memref<?xf32, strided<[1]>> into memref<?x2xf32>
-  %r = vector.mask %m { vector.transfer_read %e[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x2xf32>, vector<64x2xf32> } : vector<64x2xi1> -> vector<64x2xf32>
-  return %r : vector<64x2xf32>
+  %flat = memref.collapse_shape %sv [[0, 1]] : memref<?x16xf32, strided<[16, 1]>> into memref<?xf32, strided<[1]>>
+  vector.transfer_write %w, %flat[%c0] {in_bounds = [true]} : vector<128xf32>, memref<?xf32, strided<[1]>>
+  %r = vector.transfer_read %a[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
+  return %r : vector<8x16xf32>
 }
 
 // -----
@@ -352,35 +339,19 @@ func.func @negative_read_dyn_subview_static_offset_dyn_size(%v: vector<8x16xf32>
 
 // -----
 
-// Reject two dynamic dimensions in one group: the parent extent alone cannot
-// determine their individual extents or the resulting row stride.
-// CHECK-LABEL: func.func @neg_two_dynamic_dims_in_group(
-// CHECK:         memref.alloca
-// CHECK:         memref.expand_shape
-// CHECK:         vector.transfer_read
-func.func @neg_two_dynamic_dims_in_group(%v: vector<16xf32>, %m: index, %d0: index,
-                                         %d1: index, %pad: f32) -> vector<8x2xf32> {
-  %c0 = arith.constant 0 : index
-  %mask = vector.create_mask %d0, %d1 : vector<8x2xi1>
-  %a = memref.alloca() : memref<16xf32>
-  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<16xf32>, memref<16xf32>
-  %sv = memref.subview %a[0] [%m] [1] : memref<16xf32> to memref<?xf32, strided<[1]>>
-  %exp = memref.expand_shape %sv [[0, 1]] output_shape [%d0, %d1] : memref<?xf32, strided<[1]>> into memref<?x?xf32>
-  %r = vector.mask %mask { vector.transfer_read %exp[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<8x2xf32> } : vector<8x2xi1> -> vector<8x2xf32>
-  return %r : vector<8x2xf32>
-}
-
-// -----
-
+// A reassociation group of the form [non-unit, dynamic] changes the row stride
+// at runtime, so it cannot be modeled by `vector.shape_cast`. Checked for both
+// reshape ops.
+//
 // Reject expansion to 2x?: the memref's row stride is %m, whereas a 2x4 vector
 // has row stride 4. A mask cannot correct this difference in element positions.
-// CHECK-LABEL: func.func @neg_nonunit_dim_before_dynamic(
+// CHECK-LABEL: func.func @negative_expand_shape_nonunit_before_dyn(
 // CHECK:         memref.alloca
 // CHECK:         memref.subview
 // CHECK:         memref.expand_shape
 // CHECK:         vector.transfer_read
-func.func @neg_nonunit_dim_before_dynamic(%v: vector<8xf32>, %n: index, %m: index,
-                                          %pad: f32) -> vector<2x4xf32> {
+func.func @negative_expand_shape_nonunit_before_dyn(%v: vector<8xf32>, %n: index, %m: index,
+                                                    %pad: f32) -> vector<2x4xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %mask = vector.create_mask %c2, %m : vector<2x4xi1>
@@ -394,35 +365,18 @@ func.func @neg_nonunit_dim_before_dynamic(%v: vector<8xf32>, %n: index, %m: inde
 
 // -----
 
-// Reject a zero static extent without dividing by zero during shape inference.
-// CHECK-LABEL: func.func @neg_zero_extent_in_group(
-// CHECK:         memref.alloca
-// CHECK:         memref.subview
-// CHECK:         memref.expand_shape
-// CHECK:         vector.transfer_read
-func.func @neg_zero_extent_in_group(%v: vector<8x16xf32>, %n: index, %d: index,
-                                    %pad: f32) -> vector<8x16xf32> {
-  %c0 = arith.constant 0 : index
-  %c16 = arith.constant 16 : index
-  %m = vector.create_mask %c0, %c16 : vector<8x16xi1>
-  %a = memref.alloca() : memref<8x16xf32>
-  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
-  %sv = memref.subview %a[0, 0] [%n, 16] [1, 1] : memref<8x16xf32> to memref<?x16xf32, strided<[16, 1]>>
-  %e = memref.expand_shape %sv [[0, 1], [2]] output_shape [%d, 0, 16] : memref<?x16xf32, strided<[16, 1]>> into memref<?x0x16xf32, strided<[0, 16, 1]>>
-  %r = vector.mask %m { vector.transfer_read %e[%c0, %c0, %c0], %pad {in_bounds = [true, true]} : memref<?x0x16xf32, strided<[0, 16, 1]>>, vector<8x16xf32> } : vector<8x16xi1> -> vector<8x16xf32>
-  return %r : vector<8x16xf32>
-}
-
-// -----
-
+// A reassociation group of the form [non-unit, dynamic] changes the row stride
+// at runtime, so it cannot be modeled by `vector.shape_cast`. Checked for both
+// reshape ops.
+//
 // Reject collapsing 4x?: the subview's rows have stride 4, so they are not
 // guaranteed contiguous when the inner extent is %n.
-// CHECK-LABEL: func.func @neg_collapse_dyn_inner_dim(
+// CHECK-LABEL: func.func @negative_collapse_shape_nonunit_before_dyn(
 // CHECK:         memref.alloca
 // CHECK:         memref.collapse_shape
 // CHECK:         vector.transfer_read
-func.func @neg_collapse_dyn_inner_dim(%v: vector<4x4xf32>, %n: index,
-                                      %pad: f32) -> vector<16xf32> {
+func.func @negative_collapse_shape_nonunit_before_dyn(%v: vector<4x4xf32>, %n: index,
+                                                      %pad: f32) -> vector<16xf32> {
   %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
   %len = arith.muli %n, %c4 : index
@@ -437,24 +391,44 @@ func.func @neg_collapse_dyn_inner_dim(%v: vector<4x4xf32>, %n: index,
 
 // -----
 
-// Reject an expansion whose fully static group accounts for only 8 of the
-// parent dimension's 16 elements. The inferred alias shape would lose half
-// the parent vector's elements, violating the shape_cast element-count rule.
-// CHECK-LABEL: func.func @neg_static_group_narrowed_subview(
+// Reject a zero static extent without dividing by zero during shape inference.
+// CHECK-LABEL: func.func @negative_zero_extent_in_group(
 // CHECK:         memref.alloca
 // CHECK:         memref.subview
 // CHECK:         memref.expand_shape
 // CHECK:         vector.transfer_read
-func.func @neg_static_group_narrowed_subview(%v: vector<8x16xf32>, %n: index,
-                                             %d: index, %pad: f32) -> vector<8x2x8xf32> {
+func.func @negative_zero_extent_in_group(%v: vector<8x16xf32>, %n: index, %d: index,
+                                    %pad: f32) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %m = vector.create_mask %c0, %c16 : vector<8x16xi1>
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[0, 0] [%n, 16] [1, 1] : memref<8x16xf32> to memref<?x16xf32, strided<[16, 1]>>
+  %e = memref.expand_shape %sv [[0, 1], [2]] output_shape [%d, 0, 16] : memref<?x16xf32, strided<[16, 1]>> into memref<?x0x16xf32, strided<[0, 16, 1]>>
+  %r = vector.mask %m { vector.transfer_read %e[%c0, %c0, %c0], %pad {in_bounds = [true, true]} : memref<?x0x16xf32, strided<[0, 16, 1]>>, vector<8x16xf32> } : vector<8x16xi1> -> vector<8x16xf32>
+  return %r : vector<8x16xf32>
+}
+
+// -----
+
+// Reject: the dynamic subview leaves a gap (columns 8..15) in each row of the
+// 8x16 parent, which `vector.shape_cast` cannot skip.
+// CHECK-LABEL: func.func @negative_expand_shape_dyn_subview_row_gap(
+// CHECK:         memref.alloca
+// CHECK:         memref.subview
+// CHECK:         memref.expand_shape
+// CHECK:         vector.transfer_read
+func.func @negative_expand_shape_dyn_subview_row_gap(%v: vector<8x16xf32>, %n: index,
+                                                     %d: index, %pad: f32) -> vector<4x2x8xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c8 = arith.constant 8 : index
-  %m = vector.create_mask %d, %c2, %c8 : vector<8x2x8xi1>
+  %m = vector.create_mask %d, %c2, %c8 : vector<4x2x8xi1>
   %a = memref.alloca() : memref<8x16xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
   %sv = memref.subview %a[0, 0] [%n, 8] [1, 1] : memref<8x16xf32> to memref<?x8xf32, strided<[16, 1]>>
   %exp = memref.expand_shape %sv [[0, 1], [2]] output_shape [%d, 2, 8] : memref<?x8xf32, strided<[16, 1]>> into memref<?x2x8xf32, strided<[32, 16, 1]>>
-  %r = vector.mask %m { vector.transfer_read %exp[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : memref<?x2x8xf32, strided<[32, 16, 1]>>, vector<8x2x8xf32> } : vector<8x2x8xi1> -> vector<8x2x8xf32>
-  return %r : vector<8x2x8xf32>
+  %r = vector.mask %m { vector.transfer_read %exp[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : memref<?x2x8xf32, strided<[32, 16, 1]>>, vector<4x2x8xf32> } : vector<4x2x8xi1> -> vector<4x2x8xf32>
+  return %r : vector<4x2x8xf32>
 }
