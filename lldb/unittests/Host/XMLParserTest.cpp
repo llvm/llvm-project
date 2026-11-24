@@ -73,6 +73,21 @@ TEST(XMLParserTest, CharactersAreConcatenated) {
   EXPECT_EQ(collector.texts, (std::vector<std::string>{"a&b<c>dA", "f"}));
 }
 
+TEST(XMLParserTest, Attributes) {
+  // Mix values that refer to the input with values that need normalization.
+  EXPECT_THAT_EXPECTED(
+      ParseToString("<r a='1' b='&lt;' c='2' d='x\ty' e='' f='&amp;&amp;'/>"),
+      llvm::HasValue(
+          "<r a=\"1\" b=\"<\" c=\"2\" d=\"x y\" e=\"\" f=\"&&\"></r>"));
+
+  std::string many = "<r";
+  for (int i = 0; i < 40; ++i)
+    many += " a" + std::to_string(i) + "='&#" + std::to_string(48 + i) + ";'";
+  EXPECT_THAT_EXPECTED(ParseToString(many + "/>"), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(ParseToString(many + " a3='x'/>"), llvm::Failed());
+  EXPECT_THAT_EXPECTED(ParseToString(many + " a39='x'/>"), llvm::Failed());
+}
+
 TEST(XMLParserTest, DeepNesting) {
   const size_t depth = 1000000;
   std::string input;

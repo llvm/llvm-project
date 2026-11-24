@@ -8,8 +8,9 @@
 
 #include "lldb/Host/XMLParser.h"
 
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ConvertUTF.h"
 
@@ -28,11 +29,13 @@ private:
   llvm::Error ParseMisc(bool &found);
   llvm::Error ParseElement();
   llvm::Error ParseStartTag(bool &is_empty);
-  llvm::Error ParseAttValue(std::string &value);
+  llvm::Error ParseAttValue(llvm::StringRef &value, size_t &buffer_offset);
   llvm::Error ParseReference(std::string &out);
   llvm::Error ParseComment();
   llvm::Error ParsePI();
   llvm::Error ParseName(llvm::StringRef &name);
+  bool IsDuplicateAttribute(llvm::StringRef name);
+
   /// Character data is accumulated and reported in a single Characters call
   /// before the next start or end tag. When the data is a single contiguous
   /// slice of the input, no copy is made.
@@ -56,6 +59,10 @@ private:
   size_t m_pos = 0;
   std::vector<llvm::StringRef> m_open;
 
+  // Scratch buffers reused across elements to avoid per-element allocations.
+  llvm::SmallVector<Attribute, 8> m_attributes;
+  llvm::DenseSet<llvm::StringRef> m_attribute_names;
+  std::string m_attribute_buffer;
   llvm::StringRef m_pending_text;
   std::string m_text_buffer;
   bool m_text_in_buffer = false;
@@ -129,6 +136,10 @@ bool Parser::SkipSpace() {
 }
 
 uint32_t Parser::PeekCodePoint(unsigned &length) const {
+  if (!AtEnd() && static_cast<unsigned char>(m_text[m_pos]) < 0x80) {
+    length = 1;
+    return m_text[m_pos];
+  }
   const auto *start =
       reinterpret_cast<const llvm::UTF8 *>(m_text.data() + m_pos);
   const llvm::UTF8 *source = start;
@@ -153,13 +164,20 @@ llvm::Error Parser::Decode(llvm::StringRef input) {
   const auto *end = begin + input.size();
   while (source != end) {
     m_pos = source - begin;
+    if (*source < 0x80) {
+      if (*source < 0x20 && *source != '\t' && *source != '\n' &&
+          *source != '\r')
+        return MakeError("invalid character U+" + llvm::utohexstr(*source));
+      has_cr |= *source == '\r';
+      ++source;
+      continue;
+    }
     llvm::UTF32 c;
     if (llvm::convertUTF8Sequence(&source, end, &c, llvm::strictConversion) !=
         llvm::conversionOK)
       return MakeError("invalid UTF-8 input");
     if (!IsChar(c))
       return MakeError("invalid character U+" + llvm::utohexstr(c));
-    has_cr |= c == '\r';
   }
   m_pos = 0;
 
@@ -290,10 +308,28 @@ void Parser::FlushText() {
   m_text_in_buffer = false;
 }
 
-llvm::Error Parser::ParseAttValue(std::string &value) {
+llvm::Error Parser::ParseAttValue(llvm::StringRef &value,
+                                  size_t &buffer_offset) {
   if (AtEnd() || (m_text[m_pos] != '"' && m_text[m_pos] != '\''))
     return MakeError("expected a quoted attribute value");
   char quote = m_text[m_pos++];
+
+  // Most values need neither reference expansion nor whitespace
+  // normalization, so they can refer to the input directly.
+  size_t end = m_text.find(quote, m_pos);
+  if (end != llvm::StringRef::npos) {
+    llvm::StringRef raw = m_text.slice(m_pos, end);
+    if (raw.find_first_of("<&\t\n") == llvm::StringRef::npos) {
+      value = raw;
+      buffer_offset = llvm::StringRef::npos;
+      m_pos = end + 1;
+      return llvm::Error::success();
+    }
+  }
+
+  // Otherwise, append the normalized value to m_attribute_buffer. Only its
+  // offset is returned since the buffer may still grow.
+  buffer_offset = m_attribute_buffer.size();
   while (true) {
     if (AtEnd())
       return MakeError("unterminated attribute value");
@@ -306,21 +342,37 @@ llvm::Error Parser::ParseAttValue(std::string &value) {
       return MakeError("'<' in attribute value");
     if (c == '&') {
       ++m_pos;
-      if (llvm::Error error = ParseReference(value))
+      if (llvm::Error error = ParseReference(m_attribute_buffer))
         return error;
       continue;
     }
-    value.push_back(IsSpace(c) ? ' ' : c);
+    m_attribute_buffer.push_back(IsSpace(c) ? ' ' : c);
     ++m_pos;
   }
+}
+
+bool Parser::IsDuplicateAttribute(llvm::StringRef name) {
+  // A linear scan is cheapest for the handful of attributes elements usually
+  // have. Switch to a set for larger counts to avoid quadratic behavior.
+  const size_t linear_limit = 16;
+  if (m_attributes.size() < linear_limit)
+    return llvm::any_of(
+        m_attributes, [&](const Attribute &attr) { return attr.name == name; });
+  if (m_attribute_names.empty())
+    for (const Attribute &attr : m_attributes)
+      m_attribute_names.insert(attr.name);
+  return !m_attribute_names.insert(name).second;
 }
 
 llvm::Error Parser::ParseStartTag(bool &is_empty) {
   llvm::StringRef element;
   if (llvm::Error error = ParseName(element))
     return error;
-  std::vector<std::pair<llvm::StringRef, std::string>> attributes;
-  llvm::StringSet<> names;
+  m_attributes.clear();
+  m_attribute_names.clear();
+  m_attribute_buffer.clear();
+  // Attribute indices and m_attribute_buffer offsets of normalized values.
+  llvm::SmallVector<std::pair<size_t, size_t>, 4> buffered_values;
 
   while (true) {
     bool space = SkipSpace();
@@ -337,23 +389,33 @@ llvm::Error Parser::ParseStartTag(bool &is_empty) {
     llvm::StringRef name;
     if (llvm::Error error = ParseName(name))
       return error;
-    if (!names.insert(name).second)
+    if (IsDuplicateAttribute(name))
       return MakeError("duplicate attribute '" + name + "'");
     SkipSpace();
     if (llvm::Error error = Expect("="))
       return error;
     SkipSpace();
-    std::string value;
-    if (llvm::Error error = ParseAttValue(value))
+    llvm::StringRef value;
+    size_t buffer_offset;
+    if (llvm::Error error = ParseAttValue(value, buffer_offset))
       return error;
-    attributes.emplace_back(name, std::move(value));
+    if (buffer_offset != llvm::StringRef::npos)
+      buffered_values.emplace_back(m_attributes.size(), buffer_offset);
+    m_attributes.push_back({name, value});
   }
 
-  std::vector<Attribute> refs;
-  for (const auto &[attr_name, value] : attributes)
-    refs.push_back({attr_name, value});
+  // m_attribute_buffer is complete, so its values can now be referenced. Each
+  // value extends to the next buffered value, or to the end of the buffer.
+  for (size_t i = 0; i < buffered_values.size(); ++i) {
+    size_t end = i + 1 < buffered_values.size() ? buffered_values[i + 1].second
+                                                : m_attribute_buffer.size();
+    auto [index, begin] = buffered_values[i];
+    m_attributes[index].value =
+        llvm::StringRef(m_attribute_buffer).slice(begin, end);
+  }
+
   FlushText();
-  m_handler.StartElement(element, refs);
+  m_handler.StartElement(element, m_attributes);
   if (is_empty)
     m_handler.EndElement(element);
   else
