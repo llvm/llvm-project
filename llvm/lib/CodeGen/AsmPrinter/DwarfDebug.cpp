@@ -2925,10 +2925,13 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 
   // Under -gmlt, skip building the subprogram if there are no inlined
   // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram
-  // is still needed as we need its source location.
+  // is still needed as we need its source location. We also need the main
+  // subprogram so we can emit `DW_AT_main_subprogram`; we'll skip most of it
+  // under -gmlt.
   if (!TheCU.getCUNode()->getDebugInfoForProfiling() &&
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
-      LScopes.getAbstractScopesList().empty() && !IsDarwin) {
+      LScopes.getAbstractScopesList().empty() && !IsDarwin &&
+      !SP->isMainSubprogram()) {
     for (const auto &R : Asm->MBBSectionRanges)
       addArangeLabel(SymbolCU(&TheCU, R.second.BeginLabel));
 
