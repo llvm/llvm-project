@@ -22,6 +22,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
 
@@ -32,19 +33,18 @@ class Error;
 class Module;
 class Target;
 
-namespace vfs {
-class FileSystem;
-} // namespace vfs
-
 namespace lto {
 
-/// Runs middle-end LTO optimizations on \p Mod.
+/// Runs middle-end LTO optimizations on \p Mod. If \p FS is not nullptr, the
+/// optimization passes read their files (e.g., profiles) through it instead
+/// of the real file system.
 LLVM_ABI bool opt(const Config &Conf, TargetMachine *TM, unsigned Task,
                   Module &Mod, bool IsThinLTO,
                   ModuleSummaryIndex *ExportSummary,
                   const ModuleSummaryIndex *ImportSummary,
                   const std::vector<uint8_t> &CmdArgs,
-                  ArrayRef<StringRef> BitcodeLibFuncs);
+                  ArrayRef<StringRef> BitcodeLibFuncs,
+                  IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
 /// Runs a regular LTO backend. The regular LTO backend can also act as the
 /// regular LTO phase of ThinLTO, which may need to access the combined index.
@@ -62,7 +62,8 @@ LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
 /// the backend will skip optimization and only perform code generation. If
 /// \p IRAddStream is not nullptr, it will be called just before code generation
 /// to serialize the optimized IR. If \p FS is not nullptr, module files to be
-/// imported on demand are read through it instead of the real file system.
+/// imported on demand and the files read during optimization are read
+/// through it instead of the real file system.
 LLVM_ABI Error thinBackend(
     const Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
     const ModuleSummaryIndex &CombinedIndex,
@@ -71,7 +72,7 @@ LLVM_ABI Error thinBackend(
     MapVector<StringRef, BitcodeModule> *ModuleMap, bool CodeGenOnly,
     ArrayRef<StringRef> BitcodeLibFuncs, AddStreamFn IRAddStream = nullptr,
     const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>(),
-    vfs::FileSystem *FS = nullptr);
+    IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
 LLVM_ABI Error finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile);
 
