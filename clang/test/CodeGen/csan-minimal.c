@@ -11,14 +11,15 @@
 // CHECK-NEXT:    call void @__csan_delay(i32 0)
 // CHECK-NEXT:    [[CSAN_NEW:%.*]] = load volatile i32, ptr [[TMP0]], align 4, !nosanitize [[META2]]
 // CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = icmp ne i32 [[CSAN_OLD]], [[CSAN_NEW]]
-// CHECK-NEXT:    br i1 [[CSAN_CHANGED]], label %[[BB1:.*]], label %[[BB2:.*]]
+// CHECK-NEXT:    br i1 [[CSAN_CHANGED]], label %[[BB1:.*]], label %[[BB4:.*]]
 // CHECK:       [[BB1]]:
-// CHECK-NEXT:    call void @__csan_report_race(ptr [[TMP0]], i64 4, i32 0)
-// CHECK-NEXT:    br label %[[BB2]]
-// CHECK:       [[BB2]]:
-// CHECK-NEXT:    fence syncscope("singlethread") acq_rel
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    ret i32 [[TMP3]]
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[CSAN_OLD]] to i64
+// CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[CSAN_NEW]] to i64
+// CHECK-NEXT:    call void @__csan_report_race(ptr [[TMP0]], i64 4, i32 0, i64 [[TMP2]], i64 [[TMP3]])
+// CHECK-NEXT:    br label %[[BB4]]
+// CHECK:       [[BB4]]:
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP0]], align 4
+// CHECK-NEXT:    ret i32 [[TMP5]]
 //
 int instrumented(int *a) {
   return *a;
