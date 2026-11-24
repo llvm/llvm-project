@@ -3258,7 +3258,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
         Wrapper->setLinkage(llvm::Function::LinkOnceODRLinkage);
     }
 
-    CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Wrapper);
+    CGM.SetLLVMFunctionAttributesForDefinition(GlobalDecl(), Wrapper);
 
     // Mangle the name for the thread_local initialization function.
     SmallString<256> InitFnName;
@@ -4847,7 +4847,7 @@ static llvm::FunctionCallee getClangCallTerminateFn(CodeGenModule &CGM) {
       cast<llvm::Function>(fnRef.getCallee()->stripPointerCasts());
   if (fn->empty()) {
     CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, fn, /*IsThunk=*/false);
-    CGM.SetLLVMFunctionAttributesForDefinition(nullptr, fn);
+    CGM.SetLLVMFunctionAttributesForDefinition(GlobalDecl(), fn);
     fn->setDoesNotThrow();
     fn->setDoesNotReturn();
 

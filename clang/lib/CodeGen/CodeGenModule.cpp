@@ -3217,8 +3217,9 @@ CodeGenModule::getMostBaseClasses(const CXXRecordDecl *RD) {
   return MostBases.takeVector();
 }
 
-void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
+void CodeGenModule::SetLLVMFunctionAttributesForDefinition(GlobalDecl GD,
                                                            llvm::Function *F) {
+  const Decl *D = GD.getDecl();
   llvm::AttrBuilder B(F->getContext());
 
   if ((!D || !D->hasAttr<NoUwtableAttr>()) && CodeGenOpts.UnwindTables)
@@ -3246,8 +3247,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     // If we don't have a declaration to control inlining, the function isn't
     // explicitly marked as alwaysinline for semantic reasons, and inlining is
     // disabled, mark the function as noinline.
-    else if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline) &&
-             CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
+    else if (CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
     F->addFnAttrs(B);
@@ -3272,6 +3272,22 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       !CodeGenOpts.DisableO0ImplyOptNone && CodeGenOpts.OptimizationLevel == 0;
   // We can't add optnone in the following cases, it won't pass the verifier.
   ShouldAddOptNone &= !D->hasAttr<MinSizeAttr>();
+
+  bool AlwaysInline = false;
+  if (DeviceKernelAttr::isOpenCLSpelling(D->getAttr<DeviceKernelAttr>())) {
+    AlwaysInline = GD.getKernelReferenceKind() == KernelReferenceKind::Stub &&
+                   !D->hasAttr<NoInlineAttr>() &&
+                   !D->hasAttr<OptimizeNoneAttr>() && !ShouldAddOptNone;
+  } else if (getLangOpts().AppleKext && isa<CXXDestructorDecl>(D)) {
+    // -fapple-kext must inline any call to this dtor into the caller's body.
+    AlwaysInline = GD.getDtorType() == Dtor_Base ||
+                   (GD.getDtorType() == Dtor_Complete &&
+                    isa_and_nonnull<CXXTryStmt>(D->getBody()));
+  }
+
+  if (AlwaysInline)
+    B.addAttribute(llvm::Attribute::AlwaysInline);
+
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
   // Non-entry HLSL functions must always be inlined.
@@ -3279,7 +3295,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       !D->hasAttr<NoInlineAttr>()) {
     B.addAttribute(llvm::Attribute::AlwaysInline);
   } else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
-             !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
+             !AlwaysInline) {
     // Add optnone, but do so only if the function isn't always_inline.
     B.addAttribute(llvm::Attribute::OptimizeNone);
 
@@ -3300,8 +3316,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute(llvm::Attribute::NoInline);
   } else if (D->hasAttr<NoDuplicateAttr>()) {
     B.addAttribute(llvm::Attribute::NoDuplicate);
-  } else if (D->hasAttr<NoInlineAttr>() &&
-             !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
+  } else if (D->hasAttr<NoInlineAttr>() && !AlwaysInline) {
     // Add noinline if the function isn't always_inline.
     B.addAttribute(llvm::Attribute::NoInline);
   } else if (D->hasAttr<AlwaysInlineAttr>() &&
@@ -3311,7 +3326,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   } else if (CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
     // If we're not inlining, then force everything that isn't always_inline to
     // carry an explicit noinline attribute.
-    if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline))
+    if (!AlwaysInline)
       B.addAttribute(llvm::Attribute::NoInline);
   } else {
     // Otherwise, propagate the inline hint attribute and potentially use its
@@ -3333,8 +3348,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
         B.addAttribute(llvm::Attribute::InlineHint);
       } else if (CodeGenOpts.getInlining() ==
                      CodeGenOptions::OnlyHintInlining &&
-                 !FD->isInlined() &&
-                 !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
+                 !FD->isInlined() && !AlwaysInline) {
         B.addAttribute(llvm::Attribute::NoInline);
       }
     }
@@ -3693,9 +3707,8 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
 void CodeGenModule::SetInternalFunctionAttributes(GlobalDecl GD,
                                                   llvm::Function *F,
                                                   const CGFunctionInfo &FI) {
-  const Decl *D = GD.getDecl();
   SetLLVMFunctionAttributes(GD, FI, F, /*IsThunk=*/false);
-  SetLLVMFunctionAttributesForDefinition(D, F);
+  SetLLVMFunctionAttributesForDefinition(GD, F);
 
   F->setLinkage(llvm::Function::InternalLinkage);
 
@@ -7146,19 +7159,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   setNonAliasAttributes(GD, Fn);
 
-  bool ShouldAddOptNone = !CodeGenOpts.DisableO0ImplyOptNone &&
-                          (CodeGenOpts.OptimizationLevel == 0) &&
-                          !D->hasAttr<MinSizeAttr>();
-
-  if (DeviceKernelAttr::isOpenCLSpelling(D->getAttr<DeviceKernelAttr>())) {
-    if (GD.getKernelReferenceKind() == KernelReferenceKind::Stub &&
-        !D->hasAttr<NoInlineAttr>() && !D->hasAttr<OptimizeNoneAttr>() &&
-        !ShouldAddOptNone) {
-      Fn->addFnAttr(llvm::Attribute::AlwaysInline);
-    }
-  }
-
-  SetLLVMFunctionAttributesForDefinition(D, Fn);
+  SetLLVMFunctionAttributesForDefinition(GD, Fn);
 
   // EGPR (R16-R31) requires V3 unwind info on Windows x64 because V1/V2 cannot
   // encode extended register numbers. Check per-function so that `target`
@@ -9189,7 +9190,7 @@ CodeGenModule::getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD) {
         GlobalDecl(GlobOD),
         getTypes().arrangeGlobalDeclaration(GlobalDecl(GlobOD)), EmptyFn,
         /*IsThunk=*/false);
-    SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
+    SetLLVMFunctionAttributesForDefinition(GlobalDecl(GlobOD), EmptyFn);
     getTargetCodeGenInfo().setTargetAttributes(GlobOD, EmptyFn, *this);
     auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
     llvm::Function *TrapFn =
@@ -9265,7 +9266,8 @@ void CodeGenModule::emitGlobalDeleteForwardingBodies() {
         GlobalDecl(OperatorDeleteFD),
         getTypes().arrangeGlobalDeclaration(GlobalDecl(OperatorDeleteFD)),
         GlobDelFn, /*IsThunk=*/false);
-    SetLLVMFunctionAttributesForDefinition(OperatorDeleteFD, GlobDelFn);
+    SetLLVMFunctionAttributesForDefinition(GlobalDecl(OperatorDeleteFD),
+                                           GlobDelFn);
     getTargetCodeGenInfo().setTargetAttributes(OperatorDeleteFD, GlobDelFn,
                                                *this);
   }

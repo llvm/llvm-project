@@ -4516,7 +4516,7 @@ void CodeGenFunction::EmitCfiCheckStub() {
       llvm::FunctionType::get(VoidTy, {Int64Ty, VoidPtrTy, VoidPtrTy}, false),
       llvm::GlobalValue::WeakAnyLinkage, "__cfi_check", M);
   CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F, /*IsThunk=*/false);
-  CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
+  CGM.SetLLVMFunctionAttributesForDefinition(GlobalDecl(), F);
   F->setAlignment(llvm::Align(4096));
   CGM.setDSOLocal(F);
 
@@ -4561,7 +4561,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
       llvm::GlobalValue::WeakODRLinkage, "__cfi_check_fail", &CGM.getModule());
 
   CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F, /*IsThunk=*/false);
-  CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
+  CGM.SetLLVMFunctionAttributesForDefinition(GlobalDecl(), F);
   F->setVisibility(llvm::GlobalValue::HiddenVisibility);
 
   StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI, Args,
