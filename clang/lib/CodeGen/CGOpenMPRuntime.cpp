@@ -8778,12 +8778,15 @@ private:
     MapValuesArrayTy DimSizes{llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     llvm::Value *ElementTypeSize = nullptr;
 
-    // Components past an array shaping expression belong to the shaped pointer
-    // base, not to dimensions of the shaped array.
+    // The attach pointer or the array shaping expression and everything past
+    // it belong to the base, not to dimensions of the sectioned array.
     auto ArrayDimsEnd = llvm::find_if(
         Components,
-        [](const OMPClauseMappableExprCommon::MappableComponent &Component) {
-          return isa<OMPArrayShapingExpr>(Component.getAssociatedExpression());
+        [AttachPtrExpr](
+            const OMPClauseMappableExprCommon::MappableComponent &Component) {
+          const Expr *E = Component.getAssociatedExpression();
+          return (AttachPtrExpr && E == AttachPtrExpr) ||
+                 isa<OMPArrayShapingExpr>(E);
         });
     auto ArrayDimComponents =
         llvm::make_range(Components.begin(), ArrayDimsEnd);

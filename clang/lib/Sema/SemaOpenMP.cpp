@@ -28444,12 +28444,6 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
 
   // Perform default conversions.
   QualType OriginalTy = ArraySectionExpr::getBaseOriginalType(Base);
-  // The dimensions of the shape may depend on template parameters.
-  if (IsShapedBase && OriginalTy->isDependentType()) {
-    return new (Context) ArraySectionExpr(
-        Base, LowerBound, Length, Stride, Context.DependentTy, VK_LValue,
-        OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
-  }
   QualType ResultTy;
   if (OriginalTy->isAnyPointerType()) {
     ResultTy = OriginalTy->getPointeeType();
@@ -28606,6 +28600,7 @@ ExprResult SemaOpenMP::ActOnOMPArrayShapingExpr(
   if (!BaseTy->isPointerType() ||
       (!Base->isTypeDependent() &&
        (BaseTy->getPointeeType()->isIncompleteType() ||
+        BaseTy->getPointeeType()->isSizelessType() ||
         BaseTy->getPointeeType()->isFunctionType())))
     return ExprError(Diag(Base->getExprLoc(),
                           diag::err_omp_non_pointer_type_array_shaping_base)

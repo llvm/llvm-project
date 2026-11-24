@@ -5473,12 +5473,7 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
 }
 
 QualType ArraySectionExpr::getElementType() const {
-  QualType BaseTy = getBase()->IgnoreParenImpCasts()->getType();
-  // We only have to look into the array section exprs, else we will get the
-  // type of the base, which should already be valid.
-  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
-    BaseTy = ASE->getElementType();
-
+  QualType BaseTy = getBaseType();
   if (BaseTy->isAnyPointerType())
     return BaseTy->getPointeeType();
   if (BaseTy->isArrayType())
@@ -5491,12 +5486,15 @@ QualType ArraySectionExpr::getElementType() const {
 }
 
 QualType ArraySectionExpr::getBaseType() const {
+  const Expr *Base = getBase()->IgnoreParenImpCasts();
   // We only have to look into the array section exprs, else we will get the
   // type of the base, which should already be valid.
-  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+  if (const auto *ASE = dyn_cast<ArraySectionExpr>(Base))
     return ASE->getElementType();
+  if (const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(Base))
+    return OAShE->getShapedType();
 
-  return getBase()->IgnoreParenImpCasts()->getType();
+  return Base->getType();
 }
 
 RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,

@@ -350,4 +350,15 @@ void member_and_shaped(struct T t, int n, int m) {
 #pragma omp target update to(t.i, t.x, (([n][m])t.p)[0:n][1])
 }
 
+// A shaped array of pointers: the base pointer is 'pp', not a section of it.
+// CHECK-LABEL: define {{.*}}void @pointer_array(
+// CHECK:       store ptr %pp, ptr [[PA_PP_ADDR:%.+]],
+void pointer_array(double **pp, int n) {
+  // CHECK:      [[PA_BP:%.+]] = load ptr, ptr [[PA_PP_ADDR]],
+  // CHECK:      store ptr [[PA_BP]], ptr
+  // CHECK:      getelementptr inbounds [3 x %struct.descriptor_dim{{.*}}], ptr %{{.+}}, i64 0, i64 0
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
+#pragma omp target update to((([n])pp)[0:n][1])
+}
+
 #endif // HEADER
