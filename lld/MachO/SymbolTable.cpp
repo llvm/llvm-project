@@ -48,15 +48,13 @@ std::pair<Symbol *, bool> SymbolTable::insert(CachedHashStringRef name,
 
 namespace {
 struct DuplicateSymbolDiag {
-  // Pair containing source location and source file
-  const std::pair<std::string, std::string> src1;
-  const std::pair<std::string, std::string> src2;
+  const InputFile *file1;
+  const InputSection *isec1;
+  uint64_t value1;
+  const InputFile *file2;
+  const InputSection *isec2;
+  uint64_t value2;
   const Symbol *sym;
-
-  DuplicateSymbolDiag(const std::pair<std::string, std::string> src1,
-                      const std::pair<std::string, std::string> src2,
-                      const Symbol *sym)
-      : src1(src1), src2(src2), sym(sym) {}
 };
 SmallVector<DuplicateSymbolDiag> dupSymDiags;
 } // namespace
@@ -147,13 +145,8 @@ Defined *SymbolTable::addDefined(CachedHashStringRef hashedName,
                                       value);
         }
       } else {
-        std::string srcLoc1 = defined->getSourceLocation();
-        std::string srcLoc2 = isec ? isec->getSourceLocation(value) : "";
-        std::string srcFile1 = toString(defined->getFile());
-        std::string srcFile2 = toString(file);
-
-        dupSymDiags.push_back({make_pair(srcLoc1, srcFile1),
-                               make_pair(srcLoc2, srcFile2), defined});
+        dupSymDiags.push_back({defined->getFile(), defined->originalIsec,
+                               defined->value, file, isec, value, defined});
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -477,14 +470,23 @@ MapVector<const Undefined *, UndefinedDiag> undefs;
 void macho::reportPendingDuplicateSymbols() {
   for (const auto &duplicate : dupSymDiags) {
     if (!config->deadStripDuplicates || duplicate.sym->isLive()) {
+      StringRef name = duplicate.sym->getName();
+      std::string srcLoc1 =
+          duplicate.isec1
+              ? duplicate.isec1->getSourceLocation(duplicate.value1, name)
+              : "";
+      std::string srcLoc2 =
+          duplicate.isec2
+              ? duplicate.isec2->getSourceLocation(duplicate.value2, name)
+              : "";
       std::string message =
           "duplicate symbol: " + toString(*duplicate.sym) + "\n>>> defined in ";
-      if (!duplicate.src1.first.empty())
-        message += duplicate.src1.first + "\n>>>            ";
-      message += duplicate.src1.second + "\n>>> defined in ";
-      if (!duplicate.src2.first.empty())
-        message += duplicate.src2.first + "\n>>>            ";
-      error(message + duplicate.src2.second);
+      if (!srcLoc1.empty())
+        message += srcLoc1 + "\n>>>            ";
+      message += toString(duplicate.file1) + "\n>>> defined in ";
+      if (!srcLoc2.empty())
+        message += srcLoc2 + "\n>>>            ";
+      error(message + toString(duplicate.file2));
     }
   }
 }
