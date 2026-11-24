@@ -21,11 +21,11 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -48,45 +48,43 @@ class LowerByteAddressBuffer {
     uint64_t Size = DL.getTypeAllocSize(Ty).getFixedValue();
     if (!UseUntypedPointers && HandleFromBinding &&
         HandleFromBinding->getIntrinsicID() ==
-            Intrinsic::spv_resource_handlefrombinding &&
+            Intrinsic::spv_resource_handlefrombinding_mdname &&
         isPowerOf2_64(Size) && Alignment >= DL.getABITypeAlign(Ty)) {
       Value *&Alias = Aliases[{HandleFromBinding, Ty}];
       if (!Alias) {
-        StringRef Name;
-        if (getConstantStringInfo(HandleFromBinding->getArgOperand(4), Name)) {
-          auto *HandleTy = cast<TargetExtType>(Handle->getType());
-          auto *AliasTy = TargetExtType::get(
-              M.getContext(), "spirv.VulkanBuffer", {ArrayType::get(Ty, 0)},
-              {SPIRV::StorageClass::StorageBuffer,
-               HandleTy->getIntParameter(1)});
-          std::string TypeName;
-          raw_string_ostream OS(TypeName);
-          Ty->print(OS);
-          std::string AliasName =
-              (Twine(".resource.alias.") +
-               Twine(cast<ConstantInt>(HandleFromBinding->getArgOperand(0))
-                         ->getZExtValue()) +
-               "." +
-               Twine(cast<ConstantInt>(HandleFromBinding->getArgOperand(1))
-                         ->getZExtValue()) +
-               "." + TypeName + "." +
-               (HandleTy->getIntParameter(1) ? "rw." : "ro.") + Name)
-                  .str();
-          // TODO: If multiple views of this binding remain live, decorate all
-          // corresponding resource variables with Aliased.
-          IRBuilder<> AliasBuilder(HandleFromBinding);
-          Constant *NamePtr = AliasBuilder.CreateGlobalString(
-              AliasName, ".resource.alias.name");
-          SmallVector<Value *> Args(HandleFromBinding->args());
-          Args[4] = NamePtr;
-          Alias = AliasBuilder.CreateIntrinsic(
-              Intrinsic::spv_resource_handlefrombinding, {AliasTy}, Args);
-        }
+        LLVMContext &Ctx = M.getContext();
+        auto *NameMD = cast<MDNode>(
+            cast<MetadataAsValue>(HandleFromBinding->getArgOperand(4))
+                ->getMetadata());
+        StringRef Name = cast<MDString>(NameMD->getOperand(0))->getString();
+        auto *HandleTy = cast<TargetExtType>(Handle->getType());
+        auto *AliasTy = TargetExtType::get(
+            Ctx, "spirv.VulkanBuffer", {ArrayType::get(Ty, 0)},
+            {SPIRV::StorageClass::StorageBuffer, HandleTy->getIntParameter(1)});
+        std::string TypeName;
+        raw_string_ostream OS(TypeName);
+        Ty->print(OS);
+        std::string AliasName =
+            (Twine(".resource.alias.") +
+             Twine(cast<ConstantInt>(HandleFromBinding->getArgOperand(0))
+                       ->getZExtValue()) +
+             "." +
+             Twine(cast<ConstantInt>(HandleFromBinding->getArgOperand(1))
+                       ->getZExtValue()) +
+             "." + TypeName + "." +
+             (HandleTy->getIntParameter(1) ? "rw." : "ro.") + Name)
+                .str();
+        // TODO: If multiple views of this binding remain live, decorate all
+        // corresponding resource variables with Aliased.
+        IRBuilder<> AliasBuilder(HandleFromBinding);
+        SmallVector<Value *> Args(HandleFromBinding->args());
+        Args[4] = MetadataAsValue::get(
+            Ctx, MDNode::get(Ctx, MDString::get(Ctx, AliasName)));
+        Alias = AliasBuilder.CreateIntrinsic(
+            Intrinsic::spv_resource_handlefrombinding_mdname, {AliasTy}, Args);
       }
-      if (Alias) {
-        Handle = Alias;
-        Offset = B.CreateLShr(Offset, Log2_64(Size));
-      }
+      Handle = Alias;
+      Offset = B.CreateLShr(Offset, Log2_64(Size));
     }
     Type *PtrTy = PointerType::get(M.getContext(), 11);
     return B.CreateIntrinsic(Intrinsic::spv_resource_getpointer,

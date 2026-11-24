@@ -1,12 +1,15 @@
-; RUN: opt -S -mtriple=spirv1.6-unknown-vulkan1.3-library -passes=spirv-lower-byte-address-buffer,verify %s | FileCheck %s
+; RUN: opt -S -mtriple=spirv1.6-unknown-vulkan1.3-library -passes=spirv-lower-resource-names,spirv-lower-byte-address-buffer,verify %s | FileCheck %s
 
 @name = private unnamed_addr constant [4 x i8] c"buf\00"
 
-; CHECK: c".resource.alias.0.3.i32.rw.buf\00"
+; The byte address buffer lowering pass should transform these load/store intrinsics
+; into getpointer calls and llvm load/stores with appropriate alignment.
+; Assumes untyped pointers are not supported, which necessitates creating
+; aliasing reinterpretations (e.g. uint[]) of the original resource handle
 
 ; CHECK-LABEL: define i32 @scalar(i32 %offset)
 ; CHECK-DAG: %[[INDEX:.*]] = lshr i32 %offset, 2
-; CHECK-DAG: %[[H:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding
+; CHECK-DAG: %[[H:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.mdname
 ; CHECK: %[[P:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %[[H]], i32 %[[INDEX]])
 ; CHECK: %[[V:.*]] = load i32, ptr addrspace(11) %[[P]], align 4
 ; CHECK: store i32 %[[V]], ptr addrspace(11) %{{.*}}, align 4
@@ -19,7 +22,7 @@ define i32 @scalar(i32 %offset) {
 }
 
 ; CHECK-LABEL: define <8 x i32> @vector()
-; CHECK: call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding
+; CHECK: call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.mdname
 ; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}}({{.*}}, i32 1)
 ; CHECK-COUNT-8: load i32, ptr addrspace(11) %{{.*}}, align 4
 ; CHECK-COUNT-8: store i32 %{{.*}}, ptr addrspace(11) %{{.*}}, align 4
@@ -40,6 +43,9 @@ define <3 x float> @aligned_vec3() {
   ret <3 x float> %v
 }
 
+; alignment is only 1 so we shouldn't emit a i32 access with align 4, rather leave for
+; downstream legalization
+
 ; CHECK-LABEL: define i32 @weak_alignment()
 ; CHECK: %[[BYTEPTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}}(target("spirv.VulkanBuffer", [0 x i8], 12, 1) %h, i32 4)
 ; CHECK: load i32, ptr addrspace(11) %[[BYTEPTR]], align 1
@@ -49,22 +55,18 @@ define i32 @weak_alignment() {
   ret i32 %v
 }
 
-; The first access visited is in a branch. Insert the alias before the original
-; handle, where its dynamic descriptor index is available, so both branches can
-; reuse it. A second handle with a different descriptor index needs its own alias.
+; Insert new aliased handles before the original handle, so operands are available
+; and handle uses are dominated
 ; CHECK-LABEL: define i32 @reuse_across_blocks(i1 %condition, i32 %index)
 ; CHECK: %[[NEXTINDEX:.*]] = add i32 %index, 1
-; CHECK-NEXT: %[[ALIAS0:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding{{.*}}(i32 0, i32 3, i32 4, i32 %index,
-; CHECK-NEXT: %[[ALIAS1:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding{{.*}}(i32 0, i32 3, i32 4, i32 %[[NEXTINDEX]],
+; CHECK-NEXT: %[[ALIAS0:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.mdname{{.*}}(i32 0, i32 3, i32 4, i32 %index,
+; CHECK-NEXT: %[[ALIAS1:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.mdname{{.*}}(i32 0, i32 3, i32 4, i32 %[[NEXTINDEX]],
 ; CHECK-NEXT: br i1 %condition
 ; CHECK: left:
-; CHECK-NOT: @llvm.spv.resource.handlefrombinding
 ; CHECK: @llvm.spv.resource.getpointer{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %[[ALIAS0]], i32 0)
 ; CHECK: right:
-; CHECK-NOT: @llvm.spv.resource.handlefrombinding
 ; CHECK: @llvm.spv.resource.getpointer{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %[[ALIAS0]], i32 1)
 ; CHECK: join:
-; CHECK-NOT: @llvm.spv.resource.handlefrombinding
 ; CHECK: @llvm.spv.resource.getpointer{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %[[ALIAS1]], i32 0)
 ; CHECK: ret i32
 define i32 @reuse_across_blocks(i1 %condition, i32 %index) {
@@ -85,11 +87,10 @@ join:
   ret i32 %v
 }
 
-; Distinct accessed types rooted at the same handle need distinct aliases.
+; Distinct accessed types using the same handle need separate aliases
 ; CHECK-LABEL: define float @different_alias_types(i32 %index)
-; CHECK: %[[INTALIAS:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding
-; CHECK-NEXT: %[[FLOATALIAS:.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 1) @llvm.spv.resource.handlefrombinding
-; CHECK-NOT: @llvm.spv.resource.handlefrombinding
+; CHECK: %[[INTALIAS:.*]] = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.mdname
+; CHECK-NEXT: %[[FLOATALIAS:.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 1) @llvm.spv.resource.handlefrombinding.mdname
 ; CHECK: @llvm.spv.resource.getpointer{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %[[INTALIAS]], i32 0)
 ; CHECK: @llvm.spv.resource.getpointer{{.*}}(target("spirv.VulkanBuffer", [0 x float], 12, 1) %[[FLOATALIAS]], i32 1)
 ; CHECK: ret float
@@ -101,3 +102,5 @@ define float @different_alias_types(i32 %index) {
   %sum = fadd float %f, %converted
   ret float %sum
 }
+
+; CHECK: !{!".resource.alias.0.3.i32.rw.buf"}
