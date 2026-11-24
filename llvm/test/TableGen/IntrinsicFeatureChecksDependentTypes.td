@@ -22,7 +22,7 @@ let TargetPrefix = "test" in {
             [llvm_anyint_ty, LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i16_ty>],
             [LLVMExtendedType<0>, LLVMTruncatedType<0>]> {
-    let TargetGuards = [GuardedVariant<["example"], [[llvm_i32_ty]]>];
+    let TargetGuards = [GuardedVariant<[FeatureGuard<"example">], [[llvm_i32_ty]]>];
   }
 
   def int_test_dependent_vector
@@ -30,7 +30,7 @@ let TargetPrefix = "test" in {
             [LLVMVectorElementType<0>, LLVMOneNthElementsVectorType<0, 2>,
              LLVMSubdivide2VectorType<0>, LLVMSubdivide4VectorType<0>],
             [llvm_anyvector_ty, LLVMExtendedType<0>, LLVMTruncatedType<0>]> {
-    let TargetGuards = [GuardedVariant<["example"], [[llvm_v4i32_ty]]>];
+    let TargetGuards = [GuardedVariant<[FeatureGuard<"example">], [[llvm_v4i32_ty]]>];
   }
 
   def int_test_dependent_float
@@ -40,7 +40,7 @@ let TargetPrefix = "test" in {
              LLVMOneNthElementsVectorType<0, 2>,
              LLVMSubdivide2VectorType<0>],
             [llvm_anyvector_ty]> {
-    let TargetGuards = [GuardedVariant<["example"], [[llvm_v4f32_ty]]>];
+    let TargetGuards = [GuardedVariant<[FeatureGuard<"example">], [[llvm_v4f32_ty]]>];
   }
 
   def int_test_dependent_scalable
@@ -50,14 +50,14 @@ let TargetPrefix = "test" in {
              LLVMSubdivide2VectorType<0>],
             [llvm_anyvector_ty]> {
     let TargetGuards =
-        [GuardedVariant<["example"], [[llvm_test_nxv4f32_ty]]>];
+        [GuardedVariant<[FeatureGuard<"example">], [[llvm_test_nxv4f32_ty]]>];
   }
 
   def int_test_dependent_second_overload
       : GuardedDefaultIntrinsic<
             [llvm_anyvector_ty, LLVMVectorElementType<1>],
             [llvm_anyvector_ty, LLVMExtendedType<1>]> {
-    let TargetGuards = [GuardedVariant<["example"],
+    let TargetGuards = [GuardedVariant<[FeatureGuard<"example">],
                                        [[llvm_v2i64_ty, llvm_v4i32_ty]]>];
   }
 }

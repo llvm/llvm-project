@@ -13,5 +13,5 @@ let TargetPrefix = "test" in
 def int_test_guarded_with_target_features
     : GuardedDefaultIntrinsic<[], [], [IntrNoMem]> {
   let TargetFeatures = "example";
-  let TargetGuards = [GuardedVariant<["example"]>];
+  let TargetGuards = [GuardedVariant<[FeatureGuard<"example">]>];
 }

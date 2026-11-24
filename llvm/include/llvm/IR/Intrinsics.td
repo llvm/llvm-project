@@ -840,16 +840,24 @@ class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
                             intr_properties, name,
                             sd_properties, /*disable_default_attributes*/ 0> {}
 
-// A guarded variant pairs feature guards with the intrinsic overloads to which
-// they apply. Each target decides how many guard positions it uses and what
-// each position means. With no overload list, the guards apply to every valid
-// overload and this must be the intrinsic's only TargetGuards variant. A list
-// containing one empty type list matches an intrinsic with no overloaded types.
+// A guarded variant pairs alternative feature guards with the intrinsic
+// overloads to which they apply. With no overload list, the guards apply to
+// every valid overload and this must be the intrinsic's only TargetGuards
+// variant. A list containing one empty type list matches an intrinsic with no
+// overloaded types.
 // Guard expressions use ',' for AND and '|' for OR. Parentheses are required
 // when an expression uses both operators.
-class GuardedVariant<list<string> guards,
+// Predicate is evaluated with the target subtarget named ST. FeatureBits may
+// supply features implied by the active execution mode.
+class FeatureGuard<string features> {
+  string Features = features;
+  code Predicate = [{true}];
+  code FeatureBits = [{ST.getFeatureBits()}];
+}
+
+class GuardedVariant<list<FeatureGuard> guards,
                      list<list<LLVMType>> overloads = []> {
-  list<string> Guards = guards;
+  list<FeatureGuard> Guards = guards;
   list<list<LLVMType>> Overloads = overloads;
 }
 

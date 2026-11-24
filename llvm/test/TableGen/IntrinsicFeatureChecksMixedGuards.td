@@ -13,6 +13,6 @@ def FeatureExample : SubtargetFeature<"example", "Example", "true", "">;
 let TargetPrefix = "test" in
 def int_test_mixed
     : GuardedDefaultIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]> {
-  let TargetGuards = [GuardedVariant<["example"]>,
-                      GuardedVariant<["example"], [[]<LLVMType>]>];
+  let TargetGuards = [GuardedVariant<[FeatureGuard<"example">]>,
+                      GuardedVariant<[FeatureGuard<"example">], [[]<LLVMType>]>];
 }

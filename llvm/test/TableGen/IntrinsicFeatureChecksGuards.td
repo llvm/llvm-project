@@ -11,6 +11,7 @@
 // CHECK-NEXT: static constexpr FeatureBitset TestTargetIntrinsicFeatureClauses[] = {
 // CHECK-NEXT:   {TestTarget::FeatureExample},
 // CHECK-NEXT:   {TestTarget::FeatureOther},
+// CHECK-NEXT:   {TestTarget::FeatureOther},
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static constexpr MVT::SimpleValueType TestTargetIntrinsicOverloadTypes[] = {
@@ -24,17 +25,20 @@
 // CHECK-NEXT: static constexpr unsigned TestTargetIntrinsicGuardIndices[] = {
 // CHECK-NEXT:   0, // int_test_one_guard
 // CHECK-NEXT:   0, 1, // int_test_two_guards
-// CHECK-NEXT:   0, 1, // int_test_type_specific_guards
+// CHECK-NEXT:   0, 2, // int_test_type_specific_guards
 // CHECK-NEXT:   1, 0, // int_test_type_specific_guards
 // CHECK-NEXT:   0, // int_test_typed
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static constexpr IntrinsicFeatureGuard TestTargetIntrinsicFeatureGuards[] = {
-// CHECK-NEXT:   {0, 1, "example"},
-// CHECK-NEXT:   {1, 1, "other"},
+// CHECK-NEXT:   {0, 1, "example", 0},
+// CHECK-NEXT:   {1, 1, "other", 1},
+// CHECK-NEXT:   {2, 1, "other", 0},
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: static constexpr IntrinsicFeatureVariant TestTargetIntrinsicVariants[] = {
+// CHECK-NEXT: template <typename Subtarget>
+// CHECK-NEXT: {{\[\[maybe_unused\]\]}} static std::optional<FeatureBitset> getTestTargetIntrinsicGuardFeatures(
+// CHECK:      static constexpr IntrinsicFeatureVariant TestTargetIntrinsicVariants[] = {
 // CHECK-NEXT:   {0, 0, 0, 1}, // int_test_one_guard
 // CHECK-NEXT:   {0, 0, 1, 2}, // int_test_two_guards
 // CHECK-NEXT:   {0, 1, 3, 2}, // int_test_type_specific_guards
@@ -49,11 +53,12 @@
 // CHECK-NEXT:   {Intrinsic::test_typed, 4, 1},
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: {{\[\[maybe_unused\]\]}} static const GuardedIntrinsicInfo &getTestTargetGeneratedGuardedIntrinsicInfo() {
-// CHECK-NEXT:   static const GuardedIntrinsicInfo Info(
+// CHECK-NEXT: template <typename Subtarget>
+// CHECK-NEXT: {{\[\[maybe_unused\]\]}} static const GuardedIntrinsicInfo<Subtarget> &getTestTargetGeneratedGuardedIntrinsicInfo() {
+// CHECK-NEXT:   static const GuardedIntrinsicInfo<Subtarget> Info(
 // CHECK-NEXT:       TestTargetIntrinsicFeatureClauses, TestTargetIntrinsicOverloadTypes,
 // CHECK-NEXT:       TestTargetIntrinsicGuardIndices, TestTargetIntrinsicFeatureGuards,
-// CHECK-NEXT:       TestTargetIntrinsicVariants, TestTargetIntrinsicEntries);
+// CHECK-NEXT:       TestTargetIntrinsicVariants, TestTargetIntrinsicEntries, getTestTargetIntrinsicGuardFeatures<Subtarget>);
 // CHECK-NEXT:   return Info;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -65,30 +70,38 @@ include "llvm/Target/TargetSubtarget.td"
 def FeatureExample : SubtargetFeature<"example", "Example", "true", "">;
 def FeatureOther : SubtargetFeature<"other", "Other", "true", "">;
 
+class ConditionalGuard<string features> : FeatureGuard<features> {
+  let Predicate = [{ST.Enabled}];
+}
+
 let TargetPrefix = "test" in
 def int_test_one_guard
     : GuardedDefaultIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
                               [IntrNoMem]> {
-  let TargetGuards = [GuardedVariant<["example"]>];
+  let TargetGuards = [GuardedVariant<[FeatureGuard<"example">]>];
 }
 
 let TargetPrefix = "test" in
 def int_test_two_guards
     : GuardedDefaultIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
                               [IntrNoMem]> {
-  let TargetGuards = [GuardedVariant<["example", "other"]>];
+  let TargetGuards =
+      [GuardedVariant<[FeatureGuard<"example">, ConditionalGuard<"other">]>];
 }
 
 let TargetPrefix = "test" in
 def int_test_type_specific_guards
     : GuardedDefaultIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
                               [IntrNoMem]> {
-  let TargetGuards = [GuardedVariant<["example", "other"], [[llvm_i32_ty]]>,
-                      GuardedVariant<["other", "example"], [[llvm_i64_ty]]>];
+  let TargetGuards = [
+      GuardedVariant<[FeatureGuard<"example">, FeatureGuard<"other">],
+                     [[llvm_i32_ty]]>,
+      GuardedVariant<[ConditionalGuard<"other">, FeatureGuard<"example">],
+                     [[llvm_i64_ty]]>];
 }
 
 let TargetPrefix = "test" in
 def int_test_typed
     : GuardedDefaultIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]> {
-  let TargetGuards = [GuardedVariant<["example"], [[]<LLVMType>]>];
+  let TargetGuards = [GuardedVariant<[FeatureGuard<"example">], [[]<LLVMType>]>];
 }

@@ -39,8 +39,14 @@ constexpr ID test_type_specific_guards = 100003;
 
 namespace {
 
-static const GuardedIntrinsicInfo &getInfo() {
-  return getTestTargetGeneratedGuardedIntrinsicInfo();
+struct TestSubtarget {
+  FeatureBitset Bits;
+  bool Enabled;
+  const FeatureBitset &getFeatureBits() const { return Bits; }
+};
+
+static const GuardedIntrinsicInfo<TestSubtarget> &getInfo() {
+  return getTestTargetGeneratedGuardedIntrinsicInfo<TestSubtarget>();
 }
 
 TEST(IntrinsicFeatureEmitterTest, SingleGuard) {
@@ -88,6 +94,22 @@ TEST(IntrinsicFeatureEmitterTest, MultipleGuards) {
       getInfo().getAlternatives(Second);
   ASSERT_EQ(SecondAlternatives.size(), 1u);
   EXPECT_EQ(SecondAlternatives[0], FeatureBitset{TestTarget::FeatureOther});
+
+  TestSubtarget ST{{TestTarget::FeatureOther}, false};
+  EXPECT_EQ(getInfo().checkGuard(First, ST),
+            IntrinsicGuardCheckResult::MissingFeatures);
+  EXPECT_EQ(getInfo().checkGuard(Second, ST),
+            IntrinsicGuardCheckResult::Inactive);
+  EXPECT_FALSE(getInfo().isVariantAvailable(Variants[0], ST));
+  ST.Bits = {TestTarget::FeatureExample};
+  EXPECT_TRUE(getInfo().isVariantAvailable(Variants[0], ST));
+  ST.Bits = {TestTarget::FeatureOther};
+  ST.Enabled = true;
+  EXPECT_EQ(getInfo().checkGuard(Second, ST),
+            IntrinsicGuardCheckResult::Available);
+  EXPECT_FALSE(getInfo().isVariantAvailable(Variants[0], ST));
+  ST.Bits = {TestTarget::FeatureExample, TestTarget::FeatureOther};
+  EXPECT_TRUE(getInfo().isVariantAvailable(Variants[0], ST));
 }
 
 TEST(IntrinsicFeatureEmitterTest, TypeSpecificGuards) {
@@ -107,7 +129,9 @@ TEST(IntrinsicFeatureEmitterTest, TypeSpecificGuards) {
   EXPECT_STREQ(I32First.Expression, "example");
   EXPECT_STREQ(I32Second.Expression, "other");
   EXPECT_EQ(&I32First, &I64Second);
-  EXPECT_EQ(&I32Second, &I64First);
+  EXPECT_NE(&I32Second, &I64First);
+  EXPECT_EQ(I32First.Index, I32Second.Index);
+  EXPECT_NE(I32Second.Index, I64First.Index);
 
   ArrayRef<FeatureBitset> I32Alternatives = getInfo().getAlternatives(I32First);
   ArrayRef<FeatureBitset> I64Alternatives = getInfo().getAlternatives(I64First);

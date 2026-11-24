@@ -17,6 +17,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <map>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace llvm;
@@ -58,7 +59,7 @@ parseGuard(StringRef FeatureString,
   return Result;
 }
 
-// One unique feature guard expression. Its parsed clauses are alternatives:
+// One unique feature guard. Its parsed clauses are alternatives:
 // any clause can satisfy the guard, and each clause requires all its features.
 // For example, IntrinsicsAArch64.td has:
 //
@@ -66,11 +67,13 @@ parseGuard(StringRef FeatureString,
 //     ...
 //   }
 //
-// Here the first string maps to a GuardEntry with clauses requiring {sve, sve2}
-// or {sve, sme}; the second maps to a separate GuardEntry for "sme".
+// The first feature expression has clauses requiring {sve, sve2} or {sve,
+// sme}; the second has a clause requiring {sme}.
 // The generated guard table refers to these clauses by offset and count.
 struct GuardEntry {
   std::string RawGuardString;
+  std::string Predicate;
+  std::string FeatureBits;
   FeatureGuardAlternatives ParsedGuardClauses;
 };
 
@@ -86,24 +89,30 @@ struct VariantEntry {
 // Add a check for one TargetGuard variant. For overloaded variants, record the
 // overload types; otherwise the check applies to all types. Reuse
 // existing guards, parsing each new guard expression once.
-static void addVariant(std::vector<VariantEntry> &Entries,
-                       const Record *Intrinsic, const Record *Guard,
-                       const ListInit *Overload,
-                       const std::map<std::string, std::string> &Features,
-                       StringRef Prefix,
-                       std::map<std::string, GuardEntry> &GuardsByExpression,
-                       std::vector<const GuardEntry *> &GuardsInOrder) {
-  auto GuardStrings = Guard->getValueAsListOfStrings("Guards");
-  if (GuardStrings.empty())
+static void addVariant(
+    std::vector<VariantEntry> &Entries, const Record *Intrinsic,
+    const Record *Guard, const ListInit *Overload,
+    const std::map<std::string, std::string> &Features, StringRef Prefix,
+    std::map<std::tuple<std::string, std::string, std::string>, GuardEntry>
+        &GuardsByKey,
+    std::vector<const GuardEntry *> &GuardsInOrder) {
+  auto GuardRecords = Guard->getValueAsListOfDefs("Guards");
+  if (GuardRecords.empty())
     PrintFatalError(Guard, "intrinsic variant must have at least one guard");
 
-  // Parse the guard strings (or use previously parsed GuardEntry from cache).
+  // Keep guards with different predicates or feature bit sources distinct.
   VariantEntry Entry;
-  for (StringRef RawGuardString : GuardStrings) {
-    auto [It, Inserted] = GuardsByExpression.try_emplace(RawGuardString.str());
+  for (const Record *GuardRecord : GuardRecords) {
+    StringRef RawGuardString = GuardRecord->getValueAsString("Features");
+    std::string Predicate = GuardRecord->getValueAsString("Predicate").str();
+    std::string FeatureBits =
+        GuardRecord->getValueAsString("FeatureBits").str();
+    auto Key = std::make_tuple(RawGuardString.str(), Predicate, FeatureBits);
+    auto [It, Inserted] = GuardsByKey.try_emplace(std::move(Key));
     if (Inserted) {
-      It->second = {It->first,
-                    parseGuard(RawGuardString, Features, Guard, Prefix)};
+      It->second = {RawGuardString.str(), std::move(Predicate),
+                    std::move(FeatureBits),
+                    parseGuard(RawGuardString, Features, GuardRecord, Prefix)};
       GuardsInOrder.push_back(&It->second);
     }
     Entry.Guards.push_back(&It->second);
@@ -146,7 +155,8 @@ static void emitIntrinsicFeatureChecks(const RecordKeeper &Records,
   }
 
   // Map nodes keep GuardEntry pointers stable as new guards are inserted.
-  std::map<std::string, GuardEntry> GuardsByExpression;
+  std::map<std::tuple<std::string, std::string, std::string>, GuardEntry>
+      GuardsByKey;
   std::vector<const GuardEntry *> GuardsInOrder;
   std::map<std::string, std::vector<VariantEntry>> Intrinsics;
   for (const Record *Intrinsic :
@@ -169,7 +179,7 @@ static void emitIntrinsicFeatureChecks(const RecordKeeper &Records,
         PrintFatalError(Intrinsic, "type-independent TargetGuard must be the "
                                    "intrinsic's only TargetGuard variant");
       addVariant(Entries, Intrinsic, V.Guard, V.OverloadTypes, Features, Prefix,
-                 GuardsByExpression, GuardsInOrder);
+                 GuardsByKey, GuardsInOrder);
     }
   }
 
@@ -218,12 +228,36 @@ static void emitIntrinsicFeatureChecks(const RecordKeeper &Records,
   OS << "};\n\nstatic constexpr IntrinsicFeatureGuard " << Namespace
      << "IntrinsicFeatureGuards[] = {\n";
   unsigned FirstClauseIndex = 0;
+  // Feature expressions with the same predicate and feature bit source share
+  // one generated check, regardless of their required feature clauses.
+  std::map<std::pair<std::string, std::string>, unsigned> CheckIndices;
+  std::vector<const GuardEntry *> ChecksInOrder;
   for (const GuardEntry *G : GuardsInOrder) {
+    auto [It, Inserted] = CheckIndices.try_emplace(
+        std::make_pair(G->Predicate, G->FeatureBits), ChecksInOrder.size());
+    if (Inserted)
+      ChecksInOrder.push_back(G);
     OS << "  {" << FirstClauseIndex << ", " << G->ParsedGuardClauses.size()
-       << ", \"" << G->RawGuardString << "\"},\n";
+       << ", \"" << G->RawGuardString << "\", " << It->second << "},\n";
     FirstClauseIndex += G->ParsedGuardClauses.size();
   }
   OS << "};\n\n";
+
+  OS << "template <typename Subtarget>\n"
+     << "[[maybe_unused]] static std::optional<FeatureBitset> get" << Namespace
+     << "IntrinsicGuardFeatures(\n"
+     << "    const IntrinsicFeatureGuard &Guard, const Subtarget &ST) {\n"
+     << "  switch (Guard.Index) {\n";
+  for (unsigned I = 0; I < ChecksInOrder.size(); ++I) {
+    const GuardEntry *G = ChecksInOrder[I];
+    OS << "  case " << I << ":\n"
+       << "    if (!(" << G->Predicate << "))\n"
+       << "      return std::nullopt;\n"
+       << "    return " << G->FeatureBits << ";\n";
+  }
+  OS << "  default: return std::nullopt;\n"
+     << "  }\n"
+     << "}\n\n";
 
   OS << "static constexpr IntrinsicFeatureVariant " << Namespace
      << "IntrinsicVariants[] = {\n";
@@ -250,15 +284,17 @@ static void emitIntrinsicFeatureChecks(const RecordKeeper &Records,
   // Give each translation unit that includes the generated data its own
   // optional accessor. Targets can expose a single shared instance through
   // their own non-generated wrapper when needed.
-  OS << "[[maybe_unused]] static const GuardedIntrinsicInfo &get" << Namespace
-     << "GeneratedGuardedIntrinsicInfo() {\n"
-     << "  static const GuardedIntrinsicInfo Info(\n"
+  OS << "template <typename Subtarget>\n"
+     << "[[maybe_unused]] static const GuardedIntrinsicInfo<Subtarget> &get"
+     << Namespace << "GeneratedGuardedIntrinsicInfo() {\n"
+     << "  static const GuardedIntrinsicInfo<Subtarget> Info(\n"
      << "      " << Namespace << "IntrinsicFeatureClauses, " << Namespace
      << "IntrinsicOverloadTypes,\n"
      << "      " << Namespace << "IntrinsicGuardIndices, " << Namespace
      << "IntrinsicFeatureGuards,\n"
      << "      " << Namespace << "IntrinsicVariants, " << Namespace
-     << "IntrinsicEntries);\n"
+     << "IntrinsicEntries, get" << Namespace
+     << "IntrinsicGuardFeatures<Subtarget>);\n"
      << "  return Info;\n"
      << "}\n\n"
      << "} // namespace llvm\n";
