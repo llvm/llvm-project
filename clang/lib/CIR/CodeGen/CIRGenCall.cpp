@@ -263,7 +263,7 @@ static void addTrivialDefaultFunctionAttributes(
     //
     // no-trapping-math and stack-protector-buffer-size are TU-wide, so they
     // live in #cir.lowering_options and LowerToLLVM adds them to every
-    // function not marked as a runtime function.
+    // function definition not marked as a runtime function.
 
     // TODO(cir): other attributes here:
     // reciprocal estimates, prefer-vector-width, stackrealign, backchain,
@@ -522,7 +522,7 @@ void CIRGenModule::constructAttributeList(
     // Non-lazy-bind
     // 'sample-profile-suffix-elision-policy'.
 
-    if (targetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
+    if (!attrOnCallSite && targetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
       // A function "__attribute__((...))" overrides the command-line flag.
       auto kind =
           targetDecl->getAttr<ZeroCallUsedRegsAttr>()->getZeroCallUsedRegs();

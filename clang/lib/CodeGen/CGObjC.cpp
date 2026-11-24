@@ -797,6 +797,7 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
     }
     CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
+    CGM.addDefinitionFunctionAttributes(OMD, *Fn);
   } else {
     CGM.SetInternalFunctionAttributes(OMD, Fn, FI);
   }

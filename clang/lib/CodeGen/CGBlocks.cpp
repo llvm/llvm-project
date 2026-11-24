@@ -1911,6 +1911,7 @@ static void setBlockHelperAttributesVisibility(bool CapturesNonExternalType,
     Fn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
+    CGM.addDefinitionFunctionAttributes(GlobalDecl(), *Fn);
   }
 }
 /// Generate the copy-helper function for a block closure object:

@@ -1536,6 +1536,8 @@ public:
   /// for frontends that want to build on Clang's target-configuration logic.
   void addDefaultFunctionDefinitionAttributes(llvm::AttrBuilder &attrs);
 
+  void addDefinitionFunctionAttributes(GlobalDecl GD, llvm::Function &F);
+
   StringRef getMangledName(GlobalDecl GD);
   std::string getMangledNameIgnoringAsmLabel(GlobalDecl GD,
                                              const NamedDecl *ND);
