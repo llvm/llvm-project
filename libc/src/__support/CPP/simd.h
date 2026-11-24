@@ -216,7 +216,7 @@ from_bitmask(internal::get_as_integer_type_t<simd<bool, N>> bm) {
                 __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
     return cpp::bit_cast<simd<bool, N>>(bm);
   } else {
-    simd<bool, N> res;
+    simd<bool, N> res{};
     for (size_t i = 0; i < N; ++i)
       res[i] = (bm >> i) & 1;
     return res;
