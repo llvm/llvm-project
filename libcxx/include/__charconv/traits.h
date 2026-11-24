@@ -108,29 +108,36 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
   using typename __traits_base<_Tp>::type;
 
   // precondition: at least one non-zero character available
+  //
+  // Reads at most `digits` digits. On return __a + __b is the value of the digits read, where __b is the
+  // last digit when `digits` digits were read (the caller checks __a + __b for overflow), and 0 otherwise.
   static _LIBCPP_CONSTEXPR_SINCE_CXX23 char const* __read(char const* __p, char const* __ep, type& __a, type& __b) {
-    type __cprod[digits];
-    int __j = digits - 1;
-    int __i = digits;
+    type __x = 0;
+    int __n  = 0;
+#if defined(_LIBCPP_COMPILER_CLANG_BASED)
+    // Clang fully unrolls this loop (digits steps) by default, which makes 1-2 digit inputs slower; unroll by two.
+#  pragma clang loop unroll_count(2)
+#endif
     do {
-      if (*__p < '0' || *__p > '9')
+      unsigned __c = static_cast<unsigned char>(*__p) - '0';
+      if (__c > 9)
         break;
-      __cprod[--__i] = *__p++ - '0';
-    } while (__p != __ep && __i != 0);
-
-    __a = __inner_product(__cprod + __i + 1, __cprod + __j, __pow() + 1, __cprod[__i]);
-    auto __res = __checked_int<type>(__cprod[__j]) * __pow()[__j - __i];
-    __b        = __res.__value();
-    if (__res.__overflowed())
-      --__p;
+      if (__n == digits - 1) {
+        // On overflow make __a + __b overflow too, so the caller reports out of range. The returned
+        // pointer does not depend on the multiply: callers that chain parses through it would wait on
+        // the whole digit chain otherwise.
+        auto __res = __checked_int<type>(__x) * 10u;
+        __a        = __res.__overflowed() ? numeric_limits<type>::max() : __res.__value();
+        __b        = __res.__overflowed() ? numeric_limits<type>::max() : __c;
+        return __p + 1;
+      }
+      __x = __x * 10 + __c;
+      ++__p;
+      ++__n;
+    } while (__p != __ep);
+    __a = __x;
+    __b = 0;
     return __p;
-  }
-
-  template <typename _It1, typename _It2, class _Up>
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _Up __inner_product(_It1 __first1, _It1 __last1, _It2 __first2, _Up __init) {
-    for (; __first1 < __last1; ++__first1, ++__first2)
-      __init = __init + *__first1 * *__first2;
-    return __init;
   }
 };
 
