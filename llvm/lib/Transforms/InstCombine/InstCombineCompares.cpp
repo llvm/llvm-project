@@ -2328,9 +2328,16 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
     // This makes Q invertible in Z/2^N.
     const unsigned K = MulC->countr_zero();
 
+    const bool NeedsNoMask = K == 0 || Mul->hasNoUnsignedWrap();
+
     // If C is not divisable by 2^K, there are no solutions and
     // we fold the compare using KB elsewhere.
-    if (C.countr_zero() >= K) {
+    //
+    // Otherwise, we either don't need an extra mask and we can
+    // rewrite comparison without multiplication or we do need
+    // the mask and we do it if we can replace multiplication
+    // with it entirely.
+    if (C.countr_zero() >= K && (NeedsNoMask || Mul->hasOneUse())) {
       // We can rewrite our equation as follows:
       //
       //   X * MulC == C (mod 2^N) <=>
@@ -2359,15 +2366,14 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
       //
       // Because of this fact, applying Mask to X is a no-op and we
       // can skip it.
-      if (K == 0 || Mul->hasNoUnsignedWrap())
+      if (NeedsNoMask)
         return new ICmpInst(Pred, X, ConstantInt::get(MulTy, NewC));
 
       // (mul X, EvenC) eq/ne C --> (and X, Mask) eq/ne NewC
       //
       // We only do it when we can replace mul with and fully.
-      if (Mul->hasOneUse())
-        return new ICmpInst(Pred, Builder.CreateAnd(X, Mask),
-                            ConstantInt::get(MulTy, NewC));
+      return new ICmpInst(Pred, Builder.CreateAnd(X, Mask),
+                          ConstantInt::get(MulTy, NewC));
     }
   }
 
