@@ -1957,6 +1957,7 @@ void OmpStructureChecker::Enter(const parser::OmpBeginDirective &x) {
   switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_metadirective:
     // Delimited METADIRECTIVE
+    FindUnreachableMetadirectiveVariants(x.Clauses());
     EnterDirectiveNest(MetadirectiveNest);
     break;
   default:

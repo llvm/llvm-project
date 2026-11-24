@@ -737,10 +737,16 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   PushContextAndClauseSets(
       std::get<parser::OmpDirectiveName>(x.t).source, dirId);
 
+  // A replacement that can never be selected needs no loop, and neither do
+  // the loop transformations in its APPLY clause.
+  if (unreachableVariants_.contains(&x)) {
+    ++unreachableVariantDepth_;
+  }
+
   // Record each variant directive. A loop-associated one is later validated
   // against the loop nest that follows the metadirective.
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
-    if (InExecutionPart()) {
+    if (InExecutionPart() && unreachableVariantDepth_ == 0) {
       metadirectiveLoopVariants_.push_back(
           {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
     }
@@ -765,11 +771,51 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
   if (GetDirectiveNest(MetadirectiveNest) || GetDirectiveNest(ApplyNest)) {
+    if (unreachableVariants_.contains(&x)) {
+      --unreachableVariantDepth_;
+    }
     dirContext_.pop_back();
   }
 }
 
+// Find the replacements of a METADIRECTIVE that can never be selected in the
+// current construct context.
+void OmpStructureChecker::FindUnreachableMetadirectiveVariants(
+    const parser::OmpClauseList &clauses) {
+  unreachableVariants_.clear();
+  // The METADIRECTIVE itself is the innermost context. Inside the region of
+  // an enclosing METADIRECTIVE, the replacement selected there also belongs
+  // to the context. That is not modeled, so every replacement is kept.
+  if (!InExecutionPart() || !selectedRegions_.empty() ||
+      llvm::any_of(
+          llvm::drop_end(dirContext_), [](const DirectiveContext &context) {
+            return context.directive ==
+                llvm::omp::Directive::OMPD_metadirective;
+          })) {
+    return;
+  }
+  llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
+  for (const DirectiveContext &context : dirContext_) {
+    AppendDirectiveContextTraits(context.directive, constructTraits);
+  }
+  OmpVariantMatchContext matchContext{context_, constructTraits};
+  std::optional<MetadirectiveCandidateSet> candidateSet{
+      BuildMetadirectiveCandidateSet(clauses, context_, matchContext)};
+  if (!candidateSet) {
+    return;
+  }
+  llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4> reachable{
+      GetReachableMetadirectiveVariants(*candidateSet, matchContext, context_)};
+  for (const parser::OmpClause &clause : clauses.v) {
+    if (const auto *variant{GetDirectiveVariant(clause)};
+        variant && !llvm::is_contained(reachable, variant)) {
+      unreachableVariants_.insert(variant);
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
+  FindUnreachableMetadirectiveVariants(x.v.Clauses());
   EnterDirectiveNest(MetadirectiveNest);
 }
 
@@ -859,6 +905,14 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   }
   if (parser::Unwrap<parser::CompilerDirective>(x)) {
     return;
+  }
+  // The replacement selected by a standalone METADIRECTIVE encloses the
+  // construct that follows it.
+  if (llvm::any_of(metadirectiveLoopVariants_,
+          [](const MetadirectiveLoopVariant &variant) {
+            return variant.checkDefaultNoneInAssociatedLoop;
+          })) {
+    selectedRegions_.push_back(&x);
   }
   // This is the first construct after the metadirective. It consumes the
   // pending variants, whether or not it is a loop nest.
@@ -952,6 +1006,12 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
     } else if (assoc == llvm::omp::Association::LoopSequence) {
       (void)checkRootLoopCanonical(*spec, /*isSequence=*/true);
     }
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::ExecutionPartConstruct &x) {
+  if (!selectedRegions_.empty() && selectedRegions_.back() == &x) {
+    selectedRegions_.pop_back();
   }
 }
 

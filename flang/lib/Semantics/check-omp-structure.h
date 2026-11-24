@@ -20,6 +20,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -183,6 +184,7 @@ public:
   void Leave(const parser::OmpMetadirectiveDirective &);
 
   void Enter(const parser::ExecutionPartConstruct &);
+  void Leave(const parser::ExecutionPartConstruct &);
   void Leave(const parser::OmpClause::When &);
 
   void Enter(const parser::OmpContextSelector &);
@@ -333,6 +335,7 @@ private:
   void EndMetadirectiveVariantScope();
 
   // check-omp-variant.cpp
+  void FindUnreachableMetadirectiveVariants(const parser::OmpClauseList &);
   void CheckMetadirectiveVariantsWithoutLoop(std::size_t firstVariant = 0);
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
@@ -621,6 +624,15 @@ private:
   std::vector<std::size_t> metadirectiveVariantScopeStarts_;
   const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{
       nullptr};
+  // Replacements of the current METADIRECTIVE that can never be selected, and
+  // the nesting depth within one of them (an unreachable replacement also
+  // makes the loop transformations in its APPLY clause unreachable).
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 4>
+      unreachableVariants_;
+  int unreachableVariantDepth_{0};
+  // Constructs associated with a standalone METADIRECTIVE. Their selected
+  // replacement encloses them but is not part of dirContext_.
+  std::vector<const parser::ExecutionPartConstruct *> selectedRegions_;
 
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>
