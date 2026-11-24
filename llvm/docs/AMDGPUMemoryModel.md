@@ -112,6 +112,8 @@ The two relations *subscope* and *subscope instance* are transitive.
 A scope instance `X` *contains* a scope instance `Y` if `Y` is a subset of
 `X`. In particular, every scope instance contains itself.
 
+(amdgpu-inclusive-scopes)=
+
 ### Inclusive Scopes
 
 Two operations `X` and `Y` are said to have *inclusive scopes* if their common

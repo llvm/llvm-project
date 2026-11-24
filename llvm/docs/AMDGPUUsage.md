@@ -8787,7 +8787,7 @@ that:
 - `FR` is *program-ordered* before `A`.
 - `A` *barrier-executes-before* `W`.
 - `W` is *program-ordered* before `FA`.
-- The {ref}`synchronization scopes<amdgpu-memory-scopes>` of `FR` and `FA` overlap.
+- `FR` and `FA` have {ref}`inclusive scopes<amdgpu-inclusive-scopes>`.
 - Both fences include *AS* in their sets of synchronized address spaces.
 
 A fence that specifies a {ref}`one-as syncscope<amdgpu-one-as>` cannot be
