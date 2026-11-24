@@ -1886,7 +1886,8 @@ getValueOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
 }
 
 ValueLatticeElement
-LazyValueInfoImpl::getValueAtUse(const Use &U, bool AssumeFrozen) {
+LazyValueInfoImpl::getValueAtUse(const Use &U,
+                                 bool AssumeFrozen) {
   Value *V = U.get();
   auto *CtxI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CtxI->getParent(), CtxI);
@@ -2087,9 +2088,9 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CtxI,
   return Result.asConstantRange(V->getType(), UndefAllowed);
 }
 
-ConstantRange
-LazyValueInfo::getConstantRangeAtUse(const Use &U,
-                                     bool UndefAllowed, bool AssumeFrozen) {
+ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
+                                                   bool UndefAllowed,
+                                                   bool AssumeFrozen) {
   ValueLatticeElement Result = getOrCreateImpl().getValueAtUse(U, AssumeFrozen);
   return Result.asConstantRange(U->getType(), UndefAllowed);
 }
