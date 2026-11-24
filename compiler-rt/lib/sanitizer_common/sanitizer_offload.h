@@ -40,7 +40,10 @@ class Offload {
   void TrackExecutable(hsa_executable_t Exec);
   void UntrackExecutable(hsa_executable_t Exec);
   void UntrackImages();
+  bool GetMemoryPool(hsa_agent_t Agent, hsa_amd_memory_pool_t* Pool);
+  bool Allocate(hsa_amd_memory_pool_t Pool, uptr Bytes, void** Out);
   SymbolizedStack* Symbolize(uptr PC);
+  bool SymbolizeData(uptr Addr, DataInfo* Info);
 
  private:
   friend struct OffloadRpc;
@@ -102,6 +105,8 @@ class Offload {
   atomic_uint8_t Active{};
   LoaderApi Loader{};
 };
+
+void WarnIfHsaNotInterposed();
 
 }  // namespace __sanitizer
 

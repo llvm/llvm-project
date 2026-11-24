@@ -132,7 +132,8 @@ public:
     Address addr = getAtomicAddress();
     if (hasPadding())
       addr = cgf.getBuilder().createGetMember(loc, addr, /*name=*/"value",
-                                              /*index=*/0);
+                                              /*index=*/0,
+                                              cgf.cgm.getDataLayout());
 
     assert(!cir::MissingFeatures::opTBAA());
     return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo());
@@ -157,6 +158,48 @@ private:
                                bool cmpxchg = false);
 };
 } // namespace
+
+/// Attach the AMDGPU atomic metadata markers that the current atomic options
+/// call for. The "no.X" metadata is emitted when the corresponding option is
+/// off, since it asserts the absence of that memory kind. The clang::atomic
+/// attribute is what turns the options on and off.
+static void setAMDGPUAtomicMetadata(CIRGenFunction &cgf, mlir::Operation *op,
+                                    const AtomicExpr *expr) {
+  // TODO: AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata also calls
+  // CGF.AddAMDGPUAvailableVisibleMMRA on every atomic instruction; this is
+  // tied to the AMDGPUAvailableVisible statement attribute, which
+  // CIRGenStmt.cpp's emitAttributedStmt currently rejects via errorNYI.
+  assert(!cir::MissingFeatures::atomicAMDGPUAvailableVisibleMMRA());
+
+  const llvm::Triple &triple = cgf.cgm.getTriple();
+  bool isAMDGCN = triple.isAMDGCN();
+  bool isAMDSPIRV = triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD;
+  if (!isAMDGCN && !isAMDSPIRV)
+    return;
+
+  // Lowering keeps this only on a flat pointer.
+  mlir::UnitAttr unit = cgf.getBuilder().getUnitAttr();
+  if (isAMDGCN && expr->threadPrivateMemoryAtomicsAreUndefined())
+    op->setAttr(cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName(), unit);
+
+  // Only a read-modify-write instruction carries these; a plain load, store or
+  // cmpxchg does not.
+  if (!mlir::isa<cir::AtomicFetchOp, cir::AtomicXchgOp>(op))
+    return;
+
+  clang::AtomicOptions atomicOpts = cgf.cgm.getAtomicOpts();
+  if (!atomicOpts.getOption(clang::AtomicOptionKind::FineGrainedMemory))
+    op->setAttr(cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(), unit);
+  if (!atomicOpts.getOption(clang::AtomicOptionKind::RemoteMemory))
+    op->setAttr(cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName(), unit);
+  // Denormal flushing only matters for a float add.
+  auto fetchOp = mlir::dyn_cast<cir::AtomicFetchOp>(op);
+  if (fetchOp &&
+      atomicOpts.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      fetchOp.getBinop() == cir::AtomicFetchKind::Add &&
+      mlir::isa<cir::SingleType>(fetchOp.getVal().getType()))
+    op->setAttr(cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName(), unit);
+}
 
 // This function emits any expression (scalar, complex, or aggregate)
 // into a temporary alloca.
@@ -212,11 +255,11 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr,
         cgf.getContext().toCharUnitsFromBits(atomicSizeInBits).getQuantity();
     mlir::Value memSetSize = builder.getConstInt(loc, cgf.cgm.uInt64Ty, size);
     addr = addr.withElementType(builder, cgf.cgm.voidTy);
-    builder.createMemSet(loc, addr, zero, memSetSize);
-
     tmp = tmp.withElementType(builder, cgf.cgm.voidTy);
+    builder.createMemSet(loc, tmp, zero, memSetSize);
+
     builder.createMemCpy(
-        loc, tmp.getPointer(), addr.getPointer(),
+        loc, tmp, addr,
         builder.getConstInt(loc, cgf.cgm.uInt64Ty,
                             std::min(atomicSizeInBits, sourceSizeInBits) / 8));
     addr = tmp;
@@ -484,8 +527,8 @@ static void emitMemOrderCaseLabel(CIRGenBuilderTy &builder, mlir::Location loc,
 
 static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
                               Address dest, Address ptr, Address val1,
-                              Address val2, uint64_t size,
-                              cir::MemOrder successOrder,
+                              Address val2, Address expectedResult,
+                              uint64_t size, cir::MemOrder successOrder,
                               cir::MemOrder failureOrder,
                               cir::SyncScopeKind scope) {
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
@@ -504,19 +547,35 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
 
   cmpxchg.setIsVolatile(e->isVolatile());
   cmpxchg.setWeak(isWeak);
+  setAMDGPUAtomicMetadata(cgf, cmpxchg, e);
 
   mlir::Value failed = builder.createNot(cmpxchg.getSuccess());
-  cir::IfOp::create(builder, loc, failed, /*withElseRegion=*/false,
-                    [&](mlir::OpBuilder &, mlir::Location) {
-                      auto ptrTy = mlir::cast<cir::PointerType>(
-                          val1.getPointer().getType());
-                      if (val1.getElementType() != ptrTy.getPointee()) {
-                        val1 = val1.withPointer(builder.createPtrBitcast(
-                            val1.getPointer(), val1.getElementType()));
-                      }
-                      builder.createStore(loc, cmpxchg.getOld(), val1);
-                      builder.createYield(loc);
-                    });
+  cir::IfOp::create(
+      builder, loc, failed, /*withElseRegion=*/false,
+      [&](mlir::OpBuilder &, mlir::Location) {
+        uint64_t expectedSizeInBytes = cgf.cgm.getDataLayout().getTypeStoreSize(
+            expectedResult.getElementType());
+
+        if (expectedSizeInBytes == size) {
+          Address storeAddr = expectedResult.withElementType(
+              builder, cmpxchg.getOld().getType());
+          builder.createStore(loc, cmpxchg.getOld(), storeAddr);
+          assert(!MissingFeatures::generateDebugInfo());
+        } else {
+          Address oldTmp = cgf.createTempAlloca(
+              cmpxchg.getOld().getType(), ptr.getAlignment(), loc, "old.tmp");
+          builder.createStore(loc, cmpxchg.getOld(), oldTmp);
+          assert(!MissingFeatures::generateDebugInfo());
+
+          Address oldTmpVoid = oldTmp.withElementType(builder, cgf.cgm.voidTy);
+          Address expectedVoid =
+              expectedResult.withElementType(builder, cgf.cgm.voidTy);
+          builder.createMemCpy(
+              loc, expectedVoid, oldTmpVoid,
+              builder.getConstInt(loc, cgf.cgm.uInt64Ty, expectedSizeInBytes));
+        }
+        builder.createYield(loc);
+      });
 
   // Update the memory at Dest with Success's value.
   cgf.emitStoreOfScalar(cmpxchg.getSuccess(),
@@ -524,12 +583,10 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
                         /*isInit=*/false);
 }
 
-static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
-                                        bool isWeak, Address dest, Address ptr,
-                                        Address val1, Address val2,
-                                        Expr *failureOrderExpr, uint64_t size,
-                                        cir::MemOrder successOrder,
-                                        cir::SyncScopeKind scope) {
+static void emitAtomicCmpXchgFailureSet(
+    CIRGenFunction &cgf, AtomicExpr *e, bool isWeak, Address dest, Address ptr,
+    Address val1, Address val2, Address expectedResult, Expr *failureOrderExpr,
+    uint64_t size, cir::MemOrder successOrder, cir::SyncScopeKind scope) {
   Expr::EvalResult failureOrderEval;
   if (failureOrderExpr->EvaluateAsInt(failureOrderEval, cgf.getContext())) {
     uint64_t failureOrderInt = failureOrderEval.Val.getInt().getZExtValue();
@@ -560,8 +617,8 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
     // success argument". This condition has been lifted and the only
     // precondition is 31.7.2.18. Effectively treat this as a DR and skip
     // language version checks.
-    emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size, successOrder,
-                      failureOrder, scope);
+    emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, expectedResult,
+                      size, successOrder, failureOrder, scope);
     return;
   }
 
@@ -587,8 +644,8 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
         //  which seems reasonable.  Also, 'relaxed' being the default behavior
         //  is also probably the least harmful.
         emitDefaultCaseLabel(cgf.getBuilder(), atomicLoc);
-        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size,
-                          successOrder, cir::MemOrder::Relaxed, scope);
+        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, expectedResult,
+                          size, successOrder, cir::MemOrder::Relaxed, scope);
         cgf.getBuilder().createBreak(atomicLoc);
         cgf.getBuilder().setInsertionPointToEnd(switchBlock);
 
@@ -596,17 +653,17 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
         // case cir::MemOrder::Acquire:
         emitMemOrderCaseLabel(cgf.getBuilder(), loc, failureOrderVal.getType(),
                               {cir::MemOrder::Consume, cir::MemOrder::Acquire});
-        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size,
-                          successOrder, cir::MemOrder::Acquire, scope);
+        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, expectedResult,
+                          size, successOrder, cir::MemOrder::Acquire, scope);
         cgf.getBuilder().createBreak(atomicLoc);
         cgf.getBuilder().setInsertionPointToEnd(switchBlock);
 
         // case cir::MemOrder::SequentiallyConsistent:
         emitMemOrderCaseLabel(cgf.getBuilder(), loc, failureOrderVal.getType(),
                               {cir::MemOrder::SequentiallyConsistent});
-        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size,
-                          successOrder, cir::MemOrder::SequentiallyConsistent,
-                          scope);
+        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, expectedResult,
+                          size, successOrder,
+                          cir::MemOrder::SequentiallyConsistent, scope);
         cgf.getBuilder().createBreak(atomicLoc);
         cgf.getBuilder().setInsertionPointToEnd(switchBlock);
 
@@ -619,8 +676,9 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
 // emitAtomicCmpXchgFailureSet 2x).
 static void emitAtomicCmpXchgFailureSetCheckWeak(
     CIRGenFunction &cgf, AtomicExpr *e, Expr *isWeakExpr, Address dest,
-    Address ptr, Address val1, Address val2, Expr *failureOrderExpr,
-    uint64_t size, cir::MemOrder successOrder, cir::SyncScopeKind scope) {
+    Address ptr, Address val1, Address val2, Address expectedResult,
+    Expr *failureOrderExpr, uint64_t size, cir::MemOrder successOrder,
+    cir::SyncScopeKind scope) {
   mlir::Value isWeakVal = cgf.emitScalarExpr(isWeakExpr);
   // The AST seems to be inserting a 'bool' cast (even in C mode) here, so we'll
   // just emit it like a scalar.
@@ -634,21 +692,22 @@ static void emitAtomicCmpXchgFailureSetCheckWeak(
       cgf.getBuilder(), atomicLoc, isWeakVal, /*elseRegion=*/true,
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         emitAtomicCmpXchgFailureSet(cgf, e, /*isWeak=*/true, dest, ptr, val1,
-                                    val2, failureOrderExpr, size, successOrder,
-                                    scope);
+                                    val2, expectedResult, failureOrderExpr,
+                                    size, successOrder, scope);
         cgf.getBuilder().createYield(atomicLoc);
       },
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         emitAtomicCmpXchgFailureSet(cgf, e, /*isWeak=*/false, dest, ptr, val1,
-                                    val2, failureOrderExpr, size, successOrder,
-                                    scope);
+                                    val2, expectedResult, failureOrderExpr,
+                                    size, successOrder, scope);
         cgf.getBuilder().createYield(atomicLoc);
       });
 }
 
 static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
                          Address ptr, Address val1, Address val2,
-                         Expr *isWeakExpr, Expr *failureOrderExpr, int64_t size,
+                         Address expectedResult, Expr *isWeakExpr,
+                         Expr *failureOrderExpr, int64_t size,
                          cir::MemOrder order, cir::SyncScopeKind scope) {
   assert(!cir::MissingFeatures::atomicSyncScopeID());
   llvm::StringRef opName;
@@ -673,14 +732,16 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
     emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/false, dest, ptr, val1,
-                                val2, failureOrderExpr, size, order, scope);
+                                val2, expectedResult, failureOrderExpr, size,
+                                order, scope);
     return;
 
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
   case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
     emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/true, dest, ptr, val1,
-                                val2, failureOrderExpr, size, order, scope);
+                                val2, expectedResult, failureOrderExpr, size,
+                                order, scope);
     return;
 
   case AtomicExpr::AO__atomic_compare_exchange:
@@ -690,11 +751,12 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     bool isWeak = false;
     if (isWeakExpr->EvaluateAsBooleanCondition(isWeak, cgf.getContext())) {
       emitAtomicCmpXchgFailureSet(cgf, expr, isWeak, dest, ptr, val1, val2,
-                                  failureOrderExpr, size, order, scope);
+                                  expectedResult, failureOrderExpr, size, order,
+                                  scope);
     } else {
-      emitAtomicCmpXchgFailureSetCheckWeak(cgf, expr, isWeakExpr, dest, ptr,
-                                           val1, val2, failureOrderExpr, size,
-                                           order, scope);
+      emitAtomicCmpXchgFailureSetCheckWeak(
+          cgf, expr, isWeakExpr, dest, ptr, val1, val2, expectedResult,
+          failureOrderExpr, size, order, scope);
     }
     return;
   }
@@ -909,10 +971,13 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     rmwOp->setAttr("binop", fetchAttr);
   rmwOp->setAttr("mem_order", orderAttr);
   rmwOp->setAttr("sync_scope", scopeAttr);
+  rmwOp->setAttr("alignment", builder.getAlignmentAttr(ptr.getAlignment()));
   if (expr->isVolatile())
     rmwOp->setAttr("is_volatile", builder.getUnitAttr());
   if (fetchFirst && opName == cir::AtomicFetchOp::getOperationName())
     rmwOp->setAttr("fetch_first", builder.getUnitAttr());
+
+  setAMDGPUAtomicMetadata(cgf, rmwOp, expr);
 
   mlir::Value result = rmwOp->getResult(0);
 
@@ -921,7 +986,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
 // Map clang sync scope to CIR sync scope.
 static cir::SyncScopeKind convertSyncScopeToCIR(CIRGenFunction &cgf,
-                                                SourceRange range,
                                                 clang::SyncScope scope) {
   switch (scope) {
   case clang::SyncScope::SingleScope:
@@ -961,75 +1025,6 @@ static cir::SyncScopeKind convertSyncScopeToCIR(CIRGenFunction &cgf,
   }
 
   llvm_unreachable("unhandled sync scope");
-}
-
-static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
-                         Address ptr, Address val1, Address val2,
-                         Expr *isWeakExpr, Expr *failureOrderExpr, int64_t size,
-                         cir::MemOrder order,
-                         const std::optional<Expr::EvalResult> &scopeConst,
-                         mlir::Value scopeValue) {
-  std::unique_ptr<AtomicScopeModel> scopeModel = expr->getScopeModel();
-
-  if (!scopeModel) {
-    emitAtomicOp(cgf, expr, dest, ptr, val1, val2, isWeakExpr, failureOrderExpr,
-                 size, order, cir::SyncScopeKind::System);
-    return;
-  }
-
-  if (scopeConst.has_value()) {
-    cir::SyncScopeKind mappedScope = convertSyncScopeToCIR(
-        cgf, expr->getScope()->getSourceRange(),
-        scopeModel->map(scopeConst->Val.getInt().getZExtValue()));
-    emitAtomicOp(cgf, expr, dest, ptr, val1, val2, isWeakExpr, failureOrderExpr,
-                 size, order, mappedScope);
-    return;
-  }
-
-  // The sync scope is not a compile-time constant. Emit a switch statement to
-  // handle each possible value of the sync scope.
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location loc = cgf.getLoc(expr->getSourceRange());
-  llvm::ArrayRef<unsigned> allScopes = scopeModel->getRuntimeValues();
-  unsigned fallback = scopeModel->getFallBackValue();
-
-  cir::SwitchOp::create(
-      builder, loc, scopeValue,
-      [&](mlir::OpBuilder &, mlir::Location loc, mlir::OperationState &) {
-        mlir::Block *switchBlock = builder.getBlock();
-
-        // Default case -- use fallback scope
-        cir::SyncScopeKind fallbackScope = convertSyncScopeToCIR(
-            cgf, expr->getScope()->getSourceRange(), scopeModel->map(fallback));
-        emitDefaultCaseLabel(builder, loc);
-        emitAtomicOp(cgf, expr, dest, ptr, val1, val2, isWeakExpr,
-                     failureOrderExpr, size, order, fallbackScope);
-        builder.createBreak(loc);
-        builder.setInsertionPointToEnd(switchBlock);
-
-        // Emit a switch case for each non-fallback runtime scope value
-        for (unsigned scope : allScopes) {
-          if (scope == fallback)
-            continue;
-
-          cir::SyncScopeKind cirScope = convertSyncScopeToCIR(
-              cgf, expr->getScope()->getSourceRange(), scopeModel->map(scope));
-
-          mlir::ArrayAttr casesAttr = builder.getArrayAttr(
-              {cir::IntAttr::get(scopeValue.getType(), scope)});
-          mlir::OpBuilder::InsertPoint insertPoint;
-          cir::CaseOp::create(builder, loc, casesAttr, cir::CaseOpKind::Equal,
-                              insertPoint);
-
-          builder.restoreInsertionPoint(insertPoint);
-          emitAtomicOp(cgf, expr, dest, ptr, val1, val2, isWeakExpr,
-                       failureOrderExpr, size, order, cirScope);
-          builder.createBreak(loc);
-          builder.setInsertionPointToEnd(switchBlock);
-        }
-
-        builder.createYield(loc);
-      });
 }
 
 static std::optional<cir::MemOrder>
@@ -1121,13 +1116,55 @@ static void emitAtomicExprWithDynamicMemOrder(
       });
 }
 
+static void emitAtomicExprWithDynamicSyncScope(
+    CIRGenFunction &cgf, const AtomicScopeModel *scopeModel, mlir::Value scope,
+    llvm::function_ref<void(cir::SyncScopeKind)> emitAtomicOp) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  llvm::ArrayRef<unsigned> allScopes = scopeModel->getRuntimeValues();
+  unsigned fallback = scopeModel->getFallBackValue();
+
+  cir::SwitchOp::create(
+      builder, scope.getLoc(), scope,
+      [&](mlir::OpBuilder &, mlir::Location loc, mlir::OperationState &) {
+        mlir::Block *switchBlock = builder.getBlock();
+
+        // Default case -- use fallback scope
+        cir::SyncScopeKind fallbackScope =
+            convertSyncScopeToCIR(cgf, scopeModel->map(fallback));
+        emitDefaultCaseLabel(builder, loc);
+        emitAtomicOp(fallbackScope);
+        builder.createBreak(loc);
+        builder.setInsertionPointToEnd(switchBlock);
+
+        // Emit a switch case for each non-fallback runtime scope value
+        for (unsigned runtimeScopeValue : allScopes) {
+          if (runtimeScopeValue == fallback)
+            continue;
+
+          cir::SyncScopeKind cirScope =
+              convertSyncScopeToCIR(cgf, scopeModel->map(runtimeScopeValue));
+
+          mlir::ArrayAttr casesAttr = builder.getArrayAttr(
+              {cir::IntAttr::get(scope.getType(), runtimeScopeValue)});
+          mlir::OpBuilder::InsertPoint insertPoint;
+          cir::CaseOp::create(builder, loc, casesAttr, cir::CaseOpKind::Equal,
+                              insertPoint);
+
+          builder.restoreInsertionPoint(insertPoint);
+          emitAtomicOp(cirScope);
+          builder.createBreak(loc);
+          builder.setInsertionPointToEnd(switchBlock);
+        }
+
+        builder.createYield(loc);
+      });
+}
+
 void CIRGenFunction::emitAtomicExprWithMemOrder(
-    const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
+    const EmittedOrderOrScope &order, bool isStore, bool isLoad, bool isFence,
     llvm::function_ref<void(cir::MemOrder)> emitAtomicOpFn) {
-  // Emit the memory order operand, and try to evaluate it as a constant.
-  Expr::EvalResult eval;
-  if (memOrder->EvaluateAsInt(eval, getContext())) {
-    uint64_t constOrder = eval.Val.getInt().getZExtValue();
+  if (order.eval.has_value()) {
+    uint64_t constOrder = order.eval->Val.getInt().getZExtValue();
     // We should not ever get to a case where the ordering isn't a valid CABI
     // value, but it's hard to enforce that in general.
     if (!cir::isValidCIRAtomicOrderingCABI(constOrder))
@@ -1139,11 +1176,29 @@ void CIRGenFunction::emitAtomicExprWithMemOrder(
     return;
   }
 
-  // Otherwise, handle variable memory ordering. Emit `SwitchOp` to convert
-  // dynamic value to static value.
-  mlir::Value dynOrder = emitScalarExpr(memOrder);
-  emitAtomicExprWithDynamicMemOrder(*this, dynOrder, isStore, isLoad, isFence,
-                                    emitAtomicOpFn);
+  // Emit `SwitchOp` to convert dynamic value to static value.
+  emitAtomicExprWithDynamicMemOrder(*this, order.value, isStore, isLoad,
+                                    isFence, emitAtomicOpFn);
+}
+
+void CIRGenFunction::emitAtomicExprWithSyncScope(
+    const AtomicScopeModel *scopeModel, const EmittedOrderOrScope &scope,
+    llvm::function_ref<void(cir::SyncScopeKind)> emitAtomicOp) {
+  if (!scopeModel || !scope.value) {
+    emitAtomicOp(cir::SyncScopeKind::System);
+    return;
+  }
+
+  if (scope.eval.has_value()) {
+    cir::SyncScopeKind mappedScope = convertSyncScopeToCIR(
+        *this, scopeModel->map(scope.eval->Val.getInt().getZExtValue()));
+    emitAtomicOp(mappedScope);
+    return;
+  }
+
+  // Emit a switch op to match dynamic sync scope values to static sync scopes.
+  emitAtomicExprWithDynamicSyncScope(*this, scopeModel, scope.value,
+                                     emitAtomicOp);
 }
 
 static RValue emitAtomicLibCall(CIRGenFunction &cgf, llvm::StringRef funcName,
@@ -1161,11 +1216,10 @@ static RValue emitAtomicLibCall(CIRGenFunction &cgf, llvm::StringRef funcName,
                       /*isMustTail=*/false);
 }
 
-static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
-                                       Address atomicPtr, Address dest,
-                                       Address val1, Address val2,
-                                       uint64_t atomicTySize,
-                                       QualType resultTy) {
+static RValue emitLibCallForAtomicExpr(
+    CIRGenFunction &cgf, AtomicExpr *e, Address atomicPtr, Address dest,
+    Address val1, Address val2, uint64_t atomicTySize, QualType resultTy,
+    const CIRGenFunction::EmittedOrderOrScope &successOrder) {
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
   CallArgList args;
@@ -1189,7 +1243,7 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
                                               e->getPtr()->getType())),
            cgf.getContext().VoidPtrTy);
 
-  mlir::Value order = cgf.emitScalarExpr(e->getOrder());
+  mlir::Value order = successOrder.value;
 
   // The next 1-3 parameters are op-dependent.
   llvm::StringRef calleeName;
@@ -1403,13 +1457,10 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   TypeInfoChars typeInfo = getContext().getTypeInfoInChars(atomicTy);
   uint64_t size = typeInfo.Width.getQuantity();
 
-  // Emit the sync scope operand, and try to evaluate it as a constant.
-  mlir::Value scope =
-      e->getScopeModel() ? emitScalarExpr(e->getScope()) : nullptr;
-  std::optional<Expr::EvalResult> scopeConst;
-  if (Expr::EvalResult eval;
-      e->getScopeModel() && e->getScope()->EvaluateAsInt(eval, getContext()))
-    scopeConst.emplace(std::move(eval));
+  EmittedOrderOrScope order(*this, e->getOrder());
+  EmittedOrderOrScope scope;
+  if (e->getScopeModel())
+    scope = EmittedOrderOrScope(*this, e->getScope());
 
   switch (e->getOp()) {
   default:
@@ -1589,6 +1640,10 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   LValue atomicValue = makeAddrLValue(ptr, atomicTy);
   AtomicInfo atomics(*this, atomicValue, loc);
 
+  // Save val1's address before it is (possibly) converted to a temporary
+  // sized to the full atomic width below.
+  Address originalVal1 = val1;
+
   if (shouldCastToIntPtrTy) {
     ptr = atomics.castToAtomicIntPointer(ptr);
     if (val1.isValid())
@@ -1623,7 +1678,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   // See: https://llvm.org/docs/Atomics.html#libcalls-atomic
   if (useLibCall)
     return emitLibCallForAtomicExpr(*this, e, ptr, dest, val1, val2, size,
-                                    resultTy);
+                                    resultTy, order);
 
   bool isStore = e->getOp() == AtomicExpr::AO__c11_atomic_store ||
                  e->getOp() == AtomicExpr::AO__opencl_atomic_store ||
@@ -1641,12 +1696,15 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
                 e->getOp() == AtomicExpr::AO__scoped_atomic_load ||
                 e->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
 
-  auto emitAtomicOpCallBackFn = [&](cir::MemOrder memOrder) {
-    emitAtomicOp(*this, e, dest, ptr, val1, val2, isWeakExpr, orderFailExpr,
-                 size, memOrder, scopeConst, scope);
-  };
-  emitAtomicExprWithMemOrder(e->getOrder(), isStore, isLoad, /*isFence*/ false,
-                             emitAtomicOpCallBackFn);
+  emitAtomicExprWithMemOrder(
+      order, isStore, isLoad, /*isFence*/ false, [&](cir::MemOrder memOrder) {
+        std::unique_ptr<AtomicScopeModel> scopeModel = e->getScopeModel();
+        emitAtomicExprWithSyncScope(
+            scopeModel.get(), scope, [&](cir::SyncScopeKind scope) {
+              emitAtomicOp(*this, e, dest, ptr, val1, val2, originalVal1,
+                           isWeakExpr, orderFailExpr, size, memOrder, scope);
+            });
+      });
 
   if (resultTy->isVoidType())
     return RValue::get(nullptr);

@@ -1,0 +1,40 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @__gxx_personality_v0(...) -> !s32i
+  cir.func private @spir_callee(!s32i) -> !s32i cc(spir_function)
+  cir.func private @c_callee()
+
+  cir.func @direct(%arg0: !s32i) -> !s32i cc(spir_function) {
+    %0 = cir.call @spir_callee(%arg0) cc(spir_function) : (!s32i) -> !s32i
+    cir.call @c_callee() : () -> ()
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: llvm.func spir_funccc @direct(
+  // CHECK:   llvm.call spir_funccc @spir_callee(%{{.*}}) : (i32) -> i32
+  // CHECK:   llvm.call @c_callee() : () -> ()
+
+  cir.func @indirect(%fn: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %arg0: !s32i) -> !s32i {
+    %0 = cir.call %fn(%arg0) cc(spir_function) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: llvm.func @indirect(
+  // CHECK:   llvm.call spir_funccc %{{.*}}(%{{.*}}) : !llvm.ptr, (i32) -> i32
+
+  cir.func @try_call(%arg0: !s32i) personality(@__gxx_personality_v0) {
+    %0 = cir.try_call @spir_callee(%arg0) ^normal, ^unwind cc(spir_function) : (!s32i) -> !s32i
+  ^normal:
+    cir.return
+  ^unwind:
+    %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+    cir.return
+  }
+
+  // CHECK: llvm.func @try_call(
+  // CHECK:   llvm.invoke spir_funccc @spir_callee(%{{.*}}) to ^{{.*}} unwind ^{{.*}} : (i32) -> i32
+}

@@ -31,6 +31,7 @@ void runChecks(
                    "...\n"
                    "---\n"
                    "name: sizes\n"
+                   "tracksRegLiveness: false\n"
                    "constants:\n"
                    "  - id:        0\n"
                    "    value:     i32 12345678\n"
@@ -53,7 +54,7 @@ void runChecks(
   ASSERT_TRUE(M);
 
   M->setTargetTriple(TM->getTargetTriple());
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM);
   bool Res = MParser->parseMachineFunctions(*M, MMI);

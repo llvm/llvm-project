@@ -91,3 +91,74 @@ define <2 x i32> @sel_or_setcc_allones(<2 x i32> %a, <2 x i32> %b, <2 x i32> %x,
   %sel = select <2 x i1> %mask, <2 x i32> %x, <2 x i32> %y
   ret <2 x i32> %sel
 }
+
+define <2 x i32> @sel_and_setcc_v2i48(<2 x i48> %a, <2 x i48> %b, <2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: sel_and_setcc_v2i48:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,0,65535,65535,65535,0]
+; CHECK-NEXT:    pand %xmm4, %xmm1
+; CHECK-NEXT:    pand %xmm4, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
+; CHECK-NEXT:    pxor %xmm4, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm5
+; CHECK-NEXT:    pcmpgtd %xmm4, %xmm5
+; CHECK-NEXT:    pcmpeqd %xmm4, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pand %xmm5, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; CHECK-NEXT:    por %xmm0, %xmm5
+; CHECK-NEXT:    pxor %xmm4, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm4, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm4, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm5, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    pandn %xmm3, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %cmp0 = icmp ne <2 x i48> %a, zeroinitializer
+  %cmp1 = icmp ne <2 x i48> %b, zeroinitializer
+  %and = and <2 x i1> %cmp0, %cmp1
+  %sel = select <2 x i1> %and, <2 x i32> %x, <2 x i32> %y
+  ret <2 x i32> %sel
+}
+
+define <2 x i32> @sel_and_setcc_v2i48_v2i40(<2 x i48> %a, <2 x i40> %b, <2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: sel_and_setcc_v2i48_v2i40:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
+; CHECK-NEXT:    pxor %xmm4, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm5
+; CHECK-NEXT:    pcmpgtd %xmm4, %xmm5
+; CHECK-NEXT:    pcmpeqd %xmm4, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pand %xmm5, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; CHECK-NEXT:    por %xmm0, %xmm5
+; CHECK-NEXT:    pxor %xmm4, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm4, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm4, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm5, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    pandn %xmm3, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %cmp0 = icmp ne <2 x i48> %a, zeroinitializer
+  %cmp1 = icmp ne <2 x i40> %b, zeroinitializer
+  %and = and <2 x i1> %cmp0, %cmp1
+  %sel = select <2 x i1> %and, <2 x i32> %x, <2 x i32> %y
+  ret <2 x i32> %sel
+}

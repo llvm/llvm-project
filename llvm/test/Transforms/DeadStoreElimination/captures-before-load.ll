@@ -822,7 +822,7 @@ define void @test_test_not_captured_before_load(i1 %c.1) {
 ; CHECK-LABEL: @test_test_not_captured_before_load(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i32], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[TMP0]], i8 0, i32 4, i1 false)
 ; CHECK-NEXT:    [[LV_1:%.*]] = load ptr, ptr @global, align 8
 ; CHECK-NEXT:    [[GEP_LV:%.*]] = getelementptr inbounds [10 x i16], ptr [[LV_1]], i64 0, i32 1

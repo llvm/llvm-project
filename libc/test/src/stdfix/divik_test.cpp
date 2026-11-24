@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DiviFxTest.h"
+#include "test/src/stdfix/DiviFxTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/stdfix/divik.h"
 
 LIST_DIVIFX_TESTS(k, int, accum, LIBC_NAMESPACE::divik);

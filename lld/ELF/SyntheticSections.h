@@ -41,11 +41,6 @@ class Defined;
 struct PhdrEntry;
 class SymbolTableBaseSection;
 
-struct CieRecord {
-  EhSectionPiece *cie = nullptr;
-  SmallVector<EhSectionPiece *, 0> fdes;
-};
-
 // Section for .eh_frame.
 class EhFrameSection final : public SyntheticSection {
 public:
@@ -61,34 +56,14 @@ public:
 
   SmallVector<EhInputSection *, 0> sections;
   size_t numFdes = 0;
+  SmallVector<size_t, 0> firstFdes;
+  // FDE pointer encoding of each output CIE, keyed by its output offset.
+  llvm::DenseMap<uint32_t, uint8_t> fdeEncodings;
 
-  struct FdeData {
-    int64_t pcRel;
-    int64_t fdeVARel;
-  };
-
-  ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
-  template <class ELFT>
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
 
 private:
-  // This is used only when parsing EhInputSection. We keep it here to avoid
-  // allocating one for each EhInputSection.
-  llvm::DenseMap<size_t, CieRecord *> offsetToCie;
-
-  template <llvm::endianness E> void addRecords(EhInputSection *s);
-  template <class ELFT>
-  void iterateFDEWithLSDAAux(EhInputSection &sec,
-                             llvm::DenseSet<size_t> &ciesWithLSDA,
-                             llvm::function_ref<void(InputSection &)> fn);
-
-  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
   Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
-
-  SmallVector<CieRecord *, 0> cieRecords;
-
-  // CIE records are uniquified by their contents and personality functions.
-  llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
 };
 
 // .eh_frame_hdr contains a binary search table for .eh_frame FDEs. The section
@@ -103,11 +78,16 @@ public:
   void finalizeContents() override;
   bool updateAllocSize(Ctx &) override;
 
-  // Cached FDE data computed by updateAllocSize, used by
-  // EhFrameSection::writeTo.
-  SmallVector<EhFrameSection::FdeData, 0> fdes;
   bool large = false; // Whether to use sdata8 encoding.
   size_t size = 0;
+
+private:
+  struct FdeData {
+    int64_t pcRel;
+    int64_t fdeVARel;
+  };
+  template <class Fn> void forEachFde(Fn fn);
+  SmallVector<FdeData, 0> getFdeData();
 };
 
 class GotSection final : public SyntheticSection {
@@ -122,7 +102,7 @@ public:
   void addEntry(const Symbol &sym);
   void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
-  void addTlsDescAuthEntry();
+  void addTlsDescAuthEntry(const Symbol &sym);
   bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();
   uint32_t getTlsDescOffset(const Symbol &sym) const;
@@ -136,6 +116,8 @@ public:
   // Flag to force GOT to be in output if we have relocations
   // that relies on its address.
   std::atomic<bool> hasGotOffRel = false;
+  // Set if relaxOnce may add entries after removeUnusedSyntheticSections.
+  std::atomic<bool> hasDeferredEntries = false;
 
 protected:
   size_t numEntries = 0;
@@ -143,6 +125,7 @@ protected:
   struct AuthEntryInfo {
     size_t offset;
     bool isSymbolFunc;
+    bool isUndefinedNonPreemptible;
   };
   SmallVector<AuthEntryInfo, 0> authEntries;
 };
@@ -665,7 +648,7 @@ public:
   void addSymbol(Symbol *sym);
   void maybeAddSttFile();
   void markGlobalPart() { firstGlobalIdx = symbols.size(); }
-  unsigned getNumSymbols() const { return symbols.size() + 1; }
+  size_t getNumSymbols() const { return symbols.size() + 1; }
   size_t getSymbolIndex(const Symbol &sym);
   ArrayRef<SymbolTableEntry> getSymbols() const { return symbols; }
 

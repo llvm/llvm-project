@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 
@@ -73,7 +74,8 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
 
   Value *ExitCond =
       LoopBuilder.CreateICmp(CmpInst::ICMP_EQ, NextLoopIndex, LoopEnd);
-  LoopBuilder.CreateCondBr(ExitCond, PostLoopBB, LoopBB);
+  CondBrInst *Br = LoopBuilder.CreateCondBr(ExitCond, PostLoopBB, LoopBB);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
 
   Value *Res = NewVecs[0];
   if (StructRetTy) {

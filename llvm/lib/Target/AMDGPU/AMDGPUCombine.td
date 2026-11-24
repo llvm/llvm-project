@@ -162,6 +162,13 @@ def fold_fabs_fptrunc : GICombineRule<
          [{ return Helper.matchFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }]),
   (apply [{ Helper.applyFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }])>;
 
+// Utilize 24-bit v_mul instructions
+def mul24 : GICombineRule<
+  (defs root:$mul),
+  (match (G_MUL $dst, $src0, $src1):$mul,
+         [{ return matchCombine_mul24(*${mul}); }]),
+  (apply [{ applyCombine_mul24(*${mul}); }])>;
+
 // Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
 def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
@@ -222,14 +229,22 @@ def fmaximum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXIMUM>;
 def fminimum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINIMUM>;
 def fmax_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXNUM_IEEE>;
 def fmin_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINNUM_IEEE>;
+def fmaximumnum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXIMUMNUM>;
+def fminimumnum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINIMUMNUM>;
+
+def minmax_to_minmax3_combines : GICombineGroup<[
+  smax_to_minmax3, smin_to_minmax3, umax_to_minmax3, umin_to_minmax3,
+  fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3, fminimum_to_minmax3,
+  fmax_ieee_to_minmax3, fmin_ieee_to_minmax3, fmaximumnum_to_minmax3,
+  fminimumnum_to_minmax3
+]>;
 
 // (and/or i64:x, i64:y) -> i64:(merge (and/or lo_32(x), lo_32(y)), (and/or hi_32(x), hi_32(y)))
 // when either x or y is all ones in low or high parts
 class combine_binop_s64_with_s32_mask<Instruction opcode> : GICombineRule<
   (defs root:$dst),
   (match (opcode $dst, i64:$x, i64:$y):$dst,
-         [{ return Helper.matchConstantIs32BitMask(${x}.getReg()) ||
-                   Helper.matchConstantIs32BitMask(${y}.getReg()); }]),
+         [{ return Helper.matchBinopWith32BitMask(${x}.getReg(), ${y}.getReg()); }]),
   (apply (G_UNMERGE_VALUES i32:$x_lo, i32:$x_hi, $x),
          (G_UNMERGE_VALUES i32:$y_lo, i32:$y_hi, $y),
          (opcode i32:$lo, $x_lo, $y_lo),
@@ -284,6 +299,53 @@ def trunc_lshr16_to_unmerge : GICombineGroup<[
   trunc_lshr16_unmerge_bf16
 ]>;
 
+// Fold a conditional increment or decrement into an add/sub-with-carry. See
+// AMDGPUCombinerHelper::matchConditionalCarryOp for the matched forms.
+def conditional_carry_op_matchdata
+    : GIDefMatchData<"AMDGPUCombinerHelper::ConditionalCarryOp">;
+
+class fold_conditional_carry_op<dag pat> : GICombineRule<
+  (defs root:$root, conditional_carry_op_matchdata:$matchinfo),
+  (match pat:$root,
+         [{ return Helper.matchConditionalCarryOp(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyConditionalCarryOp(*${root}, ${matchinfo}); }])>;
+
+def fold_conditional_carry_ops : GICombineGroup<[
+  fold_conditional_carry_op<(G_ADD $dst, $a, $b)>,
+  fold_conditional_carry_op<(G_SUB $dst, $a, $b)>,
+  fold_conditional_carry_op<(G_SELECT $dst, $c, $t, $f)>
+]>;
+
+// (add x, (uadde y, 0, carry)) -> (uadde x, y, carry)
+//
+// This is not done if x is an extended carry that fold_conditional_carry_ops
+// can fold, because x would then have to be materialized.
+class fold_add_into_uadde<dag addPat> : GICombineRule<
+  (defs root:$dst),
+  (match (G_UADDE $sum, $sum_carry_out, $y, 0, $carry),
+         addPat,
+         [{ return MRI.hasOneNonDBGUse(${sum}.getReg()) &&
+                   MRI.use_nodbg_empty(${sum_carry_out}.getReg()) &&
+                   !Helper.isFoldableCarryExt(${x}.getReg()); }]),
+  (apply (G_UADDE $dst, GITypeOf<"$carry">:$carry_out, $x, $y, $carry))>;
+
+// (sub (usube x, 0, carry), y) -> (usube x, y, carry)
+def fold_sub_into_usube : GICombineRule<
+  (defs root:$dst),
+  (match (G_USUBE $diff, $diff_carry_out, $x, 0, $carry),
+         (G_SUB i32:$dst, $diff, $y),
+         [{ return MRI.hasOneNonDBGUse(${diff}.getReg()) &&
+                   MRI.use_nodbg_empty(${diff_carry_out}.getReg()) &&
+                   !Helper.isFoldableCarryExt(${y}.getReg()); }]),
+  (apply (G_USUBE $dst, GITypeOf<"$carry">:$carry_out, $x, $y, $carry))>;
+
+def fold_carry_into_addsub_combines : GICombineGroup<[
+  fold_conditional_carry_ops,
+  fold_add_into_uadde<(G_ADD i32:$dst, $x, $sum)>,
+  fold_add_into_uadde<(G_ADD i32:$dst, $sum, $x)>,
+  fold_sub_into_usube
+]>;
+
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
 // saves one instruction compared to the promotion.
@@ -315,7 +377,8 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
    foldable_fneg, fold_fabs_fptrunc, combine_shuffle_vector,
    combine_shuffle_vector_to_build_vector, trunc_lshr16_to_unmerge,
-   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32,
+   fold_conditional_carry_ops]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -325,7 +388,8 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
-   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32,
+   fold_carry_into_addsub_combines, simplify_demanded_bits]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -336,7 +400,6 @@ def AMDGPURegBankCombiner : GICombiner<
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
-   d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
-   umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
-   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+   d16_load, minmax_to_minmax3_combines, redundant_sext_inreg,
+   redundant_zext_sext_inreg, redundant_aext_sext_inreg, mul24]> {
 }

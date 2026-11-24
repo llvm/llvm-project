@@ -175,6 +175,10 @@ public:
 /// Context-sensitive CaptureAnalysis provider, which computes and caches the
 /// earliest common dominator closure of all captures. It provides a good
 /// approximation to a precise "captures before" analysis.
+///
+/// Users must call removeInstruction() and insertPotentialCapture() on IR
+/// changes. The CFG must not gain paths between existing blocks and blocks
+/// must not be renumbered.
 class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DominatorTree &DT;
   const LoopInfo *LI;
@@ -192,15 +196,32 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
+  /// Cached result of Function::callsFunctionThatReturnsTwice(), used to
+  /// account for longjmp re-entry paths not visible to the forward CFG.
+  std::optional<bool> CallsReturnsTwiceFn;
+
+  /// Cached reachability between block numbers.
+  DenseMap<std::pair<unsigned, unsigned>, bool> IsReachableCache;
+
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
+
+  /// Whether the function contains a call that may return twice (e.g., setjmp).
+  bool callsReturnsTwiceFn();
+
 public:
   EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
-                         const CycleInfo *CI = nullptr)
-      : DT(DT), LI(LI), CI(CI) {}
+                         const CycleInfo *CI = nullptr);
 
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
                                       bool OrAt, bool ReturnCaptures) override;
 
   void removeInstruction(Instruction *I);
+
+  /// Notify the analysis that \p I is about to be inserted or moved.
+  /// If \p I may capture a pointer, any cached earliest escape may no longer
+  /// precede all captures, so the whole cache is dropped.
+  void insertPotentialCapture(const Instruction *I);
 };
 
 /// Cache key for BasicAA results. It only includes the pointer and size from
@@ -298,6 +319,9 @@ public:
   /// Whether alias analysis is allowed to use the dominator tree, for use by
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
+
+  /// Whether ephemeral values should be allowed when checking assumes.
+  bool AllowEphemerals = true;
 
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
@@ -500,16 +524,6 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
                                     const Instruction *I2);
 
-  /// Return information about whether a particular call site modifies
-  /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock.
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc,
-                                DominatorTree *DT) {
-    SimpleAAQueryInfo AAQIP(*this);
-    return callCapturesBefore(I, MemLoc, DT, AAQIP);
-  }
-
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Higher level methods for querying mod/ref information.
@@ -592,9 +606,9 @@ private:
 
   const TargetLibraryInfo &TLI;
 
-  std::vector<std::unique_ptr<Concept>> AAs;
+  SmallVector<std::unique_ptr<Concept>, 4> AAs;
 
-  std::vector<AnalysisKey *> AADeps;
+  SmallVector<AnalysisKey *, 4> AADeps;
 
   friend class BatchAAResults;
 };

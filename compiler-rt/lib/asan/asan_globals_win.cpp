@@ -12,6 +12,7 @@
 
 #include "asan_interface_internal.h"
 #if SANITIZER_WINDOWS
+#  include "asan_win_common_runtime_thunk.h"
 #  include "sanitizer_common/sanitizer_win_defs.h"
 
 #  if defined(__GNUC__) && !defined(__clang__)
@@ -59,7 +60,6 @@ static void unregister_dso_globals() {
 
 // Register globals
 #  if !defined(__GNUC__) || defined(__clang__)
-#    pragma section(".CRT$XCU", long, read)
 #    pragma section(".CRT$XTX", long, read)
 #  endif
 extern "C" IN_SECTION(".CRT$XCU") void (*const __asan_dso_reg_hook)() =

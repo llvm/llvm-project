@@ -268,40 +268,6 @@ class SampleProfileWriterRawBinary : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 };
 
-const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
-    ExtBinaryHdrLayoutTable = {
-        // Note that SecFuncOffsetTable section is written after SecLBRProfile
-        // in the profile, but is put before SecLBRProfile in SectionHdrLayout.
-        // This is because sample reader follows the order in SectionHdrLayout
-        // to read each section. To read function profiles on demand, sample
-        // reader need to get the offset of each function profile first.
-        //
-        // DefaultLayout
-        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
-                                          {SecNameTable, 0, 0, 0, 0},
-                                          {SecCSNameTable, 0, 0, 0, 0},
-                                          {SecFuncOffsetTable, 0, 0, 0, 0},
-                                          {SecLBRProfile, 0, 0, 0, 0},
-                                          {SecProfileSymbolList, 0, 0, 0, 0},
-                                          {SecFuncMetadata, 0, 0, 0, 0}}),
-        // CtxSplitLayout
-        SmallVector<SecHdrTableEntry, 8>(
-            {{SecProfSummary, 0, 0, 0, 0},
-             {SecNameTable, 0, 0, 0, 0},
-             // profile with inlined functions
-             // for next two sections
-             {SecFuncOffsetTable, 0, 0, 0, 0},
-             {SecLBRProfile, 0, 0, 0, 0},
-             // profile without inlined functions
-             // for next two sections
-             {SecFuncOffsetTable,
-              static_cast<uint64_t>(SecCommonFlags::SecFlagFlat), 0, 0, 0},
-             {SecLBRProfile, static_cast<uint64_t>(SecCommonFlags::SecFlagFlat),
-              0, 0, 0},
-             {SecProfileSymbolList, 0, 0, 0, 0},
-             {SecFuncMetadata, 0, 0, 0, 0}}),
-};
-
 class LLVM_ABI SampleProfileWriterExtBinaryBase
     : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
@@ -331,7 +297,9 @@ public:
 
   void setProfileSymbolList(ProfileSymbolList *PSL) override {
     ProfSymList = PSL;
-  };
+    if (ProfSymList && ProfSymList->isMD5())
+      setUseMD5ProfileSymbolList();
+  }
 
   void setUseCtxSplitLayout() override {
     resetSecLayout(SectionLayout::CtxSplitLayout);
@@ -357,10 +325,13 @@ public:
     }
 #endif
     SecLayout = SL;
-    SectionHdrLayout = ExtBinaryHdrLayoutTable[SL];
+    SectionHdrLayout = getExtBinaryHdrLayout(SL);
   }
 
 protected:
+  static SmallVector<SecHdrTableEntry, 8>
+  getExtBinaryHdrLayout(SectionLayout SL);
+
   uint64_t markSectionStart(SecType Type, uint32_t LayoutIdx);
   std::error_code addNewSection(SecType Sec, uint32_t LayoutIdx,
                                 uint64_t SectionStart);
@@ -416,7 +387,7 @@ protected:
   // order in SectionHdrLayout. sample Reader will follow the order
   // in SectionHdrLayout to read each section.
   SmallVector<SecHdrTableEntry, 8> SectionHdrLayout =
-      ExtBinaryHdrLayoutTable[DefaultLayout];
+      getExtBinaryHdrLayout(DefaultLayout);
 
   // Save the start of SecLBRProfile so we can compute the offset to the
   // start of SecLBRProfile for each Function's Profile and will keep it

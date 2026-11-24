@@ -1375,8 +1375,9 @@ but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-1
 
 Several of the important data structures in LLVM are graphs: for example CFGs
 made out of LLVM {ref}`BasicBlocks <BasicBlock>`, CFGs made out of LLVM
-[MachineBasicBlocks](https://llvm.org/docs/CodeGenerator.html#machinebasicblock), and [Instruction Selection
-DAGs](https://llvm.org/docs/CodeGenerator.html#selectiondag).  In many cases, while debugging various parts of the
+[MachineBasicBlocks](CodeGenerator.md#the-machinebasicblock-class), and
+[Instruction Selection DAGs](CodeGenerator.md#introduction-to-selectiondags).
+In many cases, while debugging various parts of the
 compiler, it is nice to instantly visualize these graphs.
 
 LLVM provides several callbacks that are available in a debug build to do
@@ -1503,10 +1504,10 @@ construct those elements actually used).
 
 #### llvm/ADT/TinyPtrVector.h
 
-`TinyPtrVector<Type>` is a highly specialized collection class that is
-optimized to avoid allocation in the case when a vector has zero or one
-elements.  It has two major restrictions: 1) it can only hold values of pointer
-type, and 2) it cannot hold a null pointer.
+`TinyPtrVector<Type>` is a highly specialized collection class: it is
+basically equivalent to `SmallVector<Type, 1>`, except it uses less memory
+in the case where it doesn't allocate. In exchange, operations on it are
+slightly slower. It can only hold pointer-like types.
 
 Since this container is highly specialized, it is rarely used.
 
@@ -3925,7 +3926,7 @@ runtime).
   the resultant global variable will have internal linkage.  AppendingLinkage
   concatenates together all instances (in different translation units) of the
   variable into a single variable but is only applicable to arrays.  See the
-  [LLVM Language Reference](https://llvm.org/docs/LangRef.html#modulestructure) for further details
+  [LLVM Language Reference](LangRef.md#module-structure) for further details
   on linkage types.  Optionally an initializer, a name, and the module to put
   the variable into may be specified for the global variable as well.
 

@@ -316,6 +316,7 @@ void TemplFunc(T t) {
 
   // CHECK-NEXT: DeclStmt 
   // CHECK-NEXT: VarDecl
+  // CHECK-NEXT: value: Int 0
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral
   // CHECK-NEXT: VarDecl

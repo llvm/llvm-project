@@ -42,7 +42,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:      WIDEN ir<%select.cmp> = icmp slt ir<%a>, ir<%ld>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = freeze ir<%select.cmp>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = any-of vp<[[VP7]]>
-; CHECK-NEXT:      EMIT vp<[[VP9]]> = select vp<[[VP8]]>, ir<%select.cmp>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP9]]> = select vp<[[VP8]]>, vp<[[VP7]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10]]> = select vp<[[VP8]]>, ir<%ld>, ir<%data.phi>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -82,12 +82,14 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-TF-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-TF-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-TF-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-TF-NEXT:  Live-in ir<%N> = original trip-count
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<entry>:
 ; CHECK-TF-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  vector.ph:
+; CHECK-TF-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
+; CHECK-TF-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-TF-NEXT:  Successor(s): vector loop
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  <x1> vector loop: {
@@ -106,7 +108,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%select.cmp>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = freeze vp<[[VP11]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = any-of vp<[[VP12]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP13]]>, vp<[[VP11]]>, vp<[[VP6]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP13]]>, vp<[[VP12]]>, vp<[[VP6]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP15]]> = select vp<[[VP13]]>, ir<%ld>, ir<%data.phi>
 ; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -210,7 +212,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:    if.then.0:
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = freeze ir<%if.cond>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = any-of vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP10]]>, ir<%if.cond>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP10]]>, vp<[[VP9]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP10]]>, vp<[[VP8]]>, ir<%data.phi>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -247,12 +249,14 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-TF-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-TF-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-TF-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-TF-NEXT:  Live-in ir<%N> = original trip-count
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<entry>:
 ; CHECK-TF-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  vector.ph:
+; CHECK-TF-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
+; CHECK-TF-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-TF-NEXT:  Successor(s): vector loop
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  <x1> vector loop: {
@@ -274,7 +278,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = freeze vp<[[VP11]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = any-of vp<[[VP13]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP15]]> = select vp<[[VP14]]>, vp<[[VP11]]>, vp<[[VP6]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP15]]> = select vp<[[VP14]]>, vp<[[VP13]]>, vp<[[VP6]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP16]]> = select vp<[[VP14]]>, ir<%ld.b>, ir<%data.phi>
 ; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>

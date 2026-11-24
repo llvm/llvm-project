@@ -17,8 +17,8 @@
 #include "hdr/types/struct_passwd.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/dynamic_buffer.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/pwd/dynamic_buffer.h"
 #include "src/__support/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
 
@@ -86,6 +86,10 @@ ErrorOr<struct passwd *> read_next() {
   if (!res.value())
     return nullptr;
   return &pwd_entry;
+}
+
+ErrorOr<bool> read_next(struct passwd *pwd, cpp::span<char> buffer) {
+  return db.getnext(pwd, buffer);
 }
 
 namespace {

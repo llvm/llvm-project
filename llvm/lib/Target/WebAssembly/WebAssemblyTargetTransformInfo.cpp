@@ -56,7 +56,7 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
 InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   if (ST->hasSIMD128()) {
     static const CostTblEntry ArithCostTbl[]{
@@ -173,16 +173,30 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       // shuffle
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
-      {ISD::TRUNCATE, MVT::v4i16, MVT::v4i32, 2},
-      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 4},
       // narrow, and
-      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i32, 2},
+      {ISD::TRUNCATE, MVT::v4i16, MVT::v4i32, 2},
+      // 2x narrow, and
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 3},
+      // narrow, and
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i16, 2},
       {ISD::TRUNCATE, MVT::v8i8, MVT::v8i16, 2},
       // narrow, 2x and
+      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i32, 3},
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i16, 3},
+      // 2x narrow, 2x and
+      {ISD::TRUNCATE, MVT::v4i16, MVT::v4i64, 4},
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i32, 4},
+      // 3x narrow, 2x and
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i64, 5},
+      // 2x narrow, 4x and
+      {ISD::TRUNCATE, MVT::v16i16, MVT::v16i32, 6},
       // 3x narrow, 4x and
       {ISD::TRUNCATE, MVT::v8i16, MVT::v8i64, 7},
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 7},
+      // 4x narrow, 4x and
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i64, 8},
+      // 6x narrow, 8x and
+      {ISD::TRUNCATE, MVT::v16i16, MVT::v16i64, 14},
       // 7x narrow, 8x and
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i64, 15},
       // convert_i32x4
@@ -205,19 +219,20 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
-      /// trunc_sat, const, and, 3x narrow
-      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 6},
-      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 6},
-      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 6},
-      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 6},
-      /// trunc_sat, const, and, narrow
+      // trunc_sat, const, and, 2x narrow
+      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 5},
+      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 5},
+      // trunc_sat, const, and, 2x narrow
+      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 5},
+      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 5},
+      // trunc_sat, const, and, narrow
       {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f32, 4},
       {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f32, 4},
       {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 4},
       {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 4},
-      // 2x trunc_sat, const, 2x and, 3x narrow
-      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f32, 8},
-      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f32, 8},
+      // 2x trunc_sat, const, 2x and, 2x narrow
+      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f32, 7},
+      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f32, 7},
       // 2x trunc_sat, const, 2x and, narrow
       {ISD::FP_TO_SINT, MVT::v8i16, MVT::v8f32, 6},
       {ISD::FP_TO_UINT, MVT::v8i16, MVT::v8f32, 6},
@@ -302,8 +317,8 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args,
-    const Instruction *CxtI) const {
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   // Canonicalize the ShuffleKind in case optimizations didn't.
   //  Otherwise, we might end up with the wrong ShuffleKind to match against.
 
@@ -315,7 +330,7 @@ InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     return 1;
 
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
-                               Args, CxtI);
+                               Args, CtxI);
 }
 
 InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(

@@ -113,6 +113,11 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
     if (!I)
       return false;
 
+    // Instructions in unreachable blocks may be part of a cycle that contains
+    // no phi node, which the reduced expression graph cannot be ordered around.
+    if (!DT.isReachableFromEntry(I->getParent()))
+      return false;
+
     if (!Stack.empty() && Stack.back() == I) {
       // Already handled all instruction operands, can remove it from both the
       // Worklist and the Stack, and add it to the instruction info map.

@@ -83,7 +83,7 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BitVector Allocatable = RegInfo->getAllocatableSet(
         MF, RegInfo->getRegClass(ARM::hGPRRegClassID));
 
-    Register TmpReg = ARM::NoRegister;
+    Register TmpReg;
     // Prefer R12 as it is known to not be preserved anyway
     if (UsedRegs.available(ARM::R12) && Allocatable.test(ARM::R12)) {
       TmpReg = ARM::R12;
@@ -183,7 +183,7 @@ void Thumb1InstrInfo::expandLoadStackGuard(
          "TLS stack protector not supported for Thumb1 targets");
 
   unsigned Instr;
-  if (!GV->isDSOLocal())
+  if (!MF.getTarget().shouldAssumeDSOLocal(GV))
     Instr = ARM::tLDRLIT_ga_pcrel;
   else if (ST.genExecuteOnly() && ST.hasV8MBaselineOps())
     Instr = ARM::t2MOVi32imm;

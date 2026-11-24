@@ -196,20 +196,9 @@ static void collectNonLiveValues(DenseSet<Value> &nonLiveSet, ValueRange range,
   }
 }
 
-/// Drop the uses of the i-th result of `op` and then erase it iff toErase[i]
-/// is 1.
-static void dropUsesAndEraseResults(RewriterBase &rewriter, Operation *op,
-                                    BitVector toErase) {
-  assert(op->getNumResults() == toErase.size() &&
-         "expected the number of results in `op` and the size of `toErase` to "
-         "be the same");
-  for (auto idx : toErase.set_bits())
-    op->getResult(idx).dropAllUses();
-  rewriter.eraseOpResults(op, toErase);
-}
-
 /// Process a simple operation `op` using the liveness analysis `la`.
-/// If the operation has no memory effects and none of its results are live:
+/// If the operation has no memory effects, none of its results are live, and it
+/// is not a symbol with known users:
 ///   1. Add the operation to a list for future removal, and
 ///   2. Mark all its results as non-live values
 ///
@@ -222,8 +211,16 @@ static void dropUsesAndEraseResults(RewriterBase &rewriter, Operation *op,
 ///   - A region branch terminator
 ///   - Return-like
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
+                            const SymbolUserMap &symbolUserMap,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
+  if (isa<SymbolOpInterface>(op) && !symbolUserMap.useEmpty(op)) {
+    LDBG() << "Simple op is a symbol with known users, preserving it: "
+           << OpWithFlags(op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
+    return;
+  }
+
   // Operations that have dead operands can be erased regardless of their
   // side effects. The liveness analysis would not have marked an SSA value as
   // "dead" if it had a side-effecting user that is reachable.
@@ -259,7 +256,8 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 }
 
 /// Process a function-like operation `funcOp` using the liveness analysis `la`
-/// and `symbolUserMap`. If it is not public or external:
+/// and `symbolUserMap`. If it is not public or external and all users are
+/// visible:
 ///   (1) Adding its non-live arguments to a list for future removal.
 ///   (2) Marking their corresponding operands in its callers for removal.
 ///   (3) Identifying and enqueueing unnecessary terminator operands
@@ -275,8 +273,10 @@ static void processFuncOp(FunctionOpInterface funcOp,
   LDBG() << "Processing function op: "
          << OpWithFlags(funcOp,
                         OpPrintingFlags().skipRegions().printGenericOpForm());
-  if (funcOp.isPublic() || funcOp.isExternal()) {
-    LDBG() << "Function is public or external, skipping: "
+  // Preserve the signature if callers may exist outside the pass root.
+  if (funcOp.isPublic() || funcOp.isExternal() ||
+      !symbolUserMap.areAllUsesVisible(funcOp)) {
+    LDBG() << "Function is public, external, or has unknown users, skipping: "
            << funcOp.getOperation()->getName();
     return;
   }
@@ -649,9 +649,20 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       llvm::interleaveComma(f.nonLiveRets.set_bits(), os);
       os << "]";
     });
-    // Drop all uses of the dead arguments.
-    for (auto deadIdx : f.nonLiveArgs.set_bits())
-      f.funcOp.getArgument(deadIdx).dropAllUses();
+    // Replace remaining uses of the dead arguments with poison values. Simply
+    // dropping the uses would leave null operands behind in ops that survive
+    // the pass (e.g. a side-effecting op in an unreachable function, whose
+    // values are initialized as dead by the liveness analysis).
+    for (auto deadIdx : f.nonLiveArgs.set_bits()) {
+      BlockArgument arg = f.funcOp.getArgument(deadIdx);
+      // Avoid creating an unused poison value if there are no uses to replace.
+      if (arg.use_empty())
+        continue;
+      rewriter.setInsertionPointToStart(arg.getOwner());
+      Value poison =
+          ub::PoisonOp::create(rewriter, arg.getLoc(), arg.getType());
+      rewriter.replaceAllUsesWith(arg, poison);
+    }
     // Some functions may not allow erasing arguments or results. These calls
     // return failure in such cases without modifying the function, so it's okay
     // to proceed.
@@ -727,7 +738,18 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
          << OpWithFlags(r.op,
                         OpPrintingFlags().skipRegions().printGenericOpForm());
     });
-    dropUsesAndEraseResults(rewriter, r.op, r.nonLive);
+    // Replace remaining uses with poison before erasing the results. Dropping
+    // the uses would leave null operands in surviving ops, such as an scf.if
+    // whose condition is a dead call result in an unreachable function.
+    rewriter.setInsertionPoint(r.op);
+    for (auto deadIdx : r.nonLive.set_bits()) {
+      Value result = r.op->getResult(deadIdx);
+      if (result.use_empty())
+        continue;
+      rewriter.replaceAllUsesWith(result,
+                                  createPoisonedValue(rewriter, result));
+    }
+    rewriter.eraseOpResults(r.op, r.nonLive);
   }
 
   // 7. Operations
@@ -822,7 +844,7 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.
     } else {
-      processSimpleOp(op, la, deadVals, finalCleanupList);
+      processSimpleOp(op, la, symbolUserMap, deadVals, finalCleanupList);
     }
   });
 

@@ -907,11 +907,10 @@ define void @for_and_ind_indupdate_feeds_gep_index(ptr %dst, ptr %dst2, i64 %n) 
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 3
-; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[SMAX1]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 1
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[SMAX1]], 24
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP0]], 24
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], -16
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[DST2]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP3]]

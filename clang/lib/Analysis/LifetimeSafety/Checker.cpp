@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
@@ -24,8 +25,11 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <optional>
 
 namespace clang::lifetimes::internal {
 
@@ -60,6 +64,18 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
+  llvm::DenseMap<const FieldDecl *, const Expr *> FieldOriginEscapesMap;
+  struct CaptureByViolation {
+    /// The first written [[clang::lifetime_capture_by]] attribute.
+    const LifetimeCaptureByAttr *Attr;
+    /// The field, global or parameter it is captured by, if known.
+    const ValueDecl *CapturedBy;
+  };
+  /// Parameters captured by an entity their written
+  /// [[clang::lifetime_capture_by]] attributes do not name, keyed by the
+  /// parameter and the capturer index.
+  llvm::MapVector<std::pair<const ParmVarDecl *, int>, CaptureByViolation>
+      CaptureByViolations;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -105,10 +121,14 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
+    if (LSOpts.CheckFieldOriginEscape)
+      reportFieldOriginEscapes();
     if (LSOpts.CheckNoescapeViolations)
       reportNoescapeViolations();
     if (LSOpts.CheckLifetimeboundViolations)
       reportLifetimeboundViolations();
+    if (LSOpts.CheckCaptureByViolations)
+      reportCaptureByViolations();
     if (LSOpts.CheckMisplacedLifetimebound)
       reportMisplacedLifetimebound();
     if (LSOpts.CheckInapplicableLifetimebound)
@@ -121,8 +141,8 @@ public:
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
-  /// missing [[clang::lifetimebound]] annotation or a violation of
-  /// [[clang::noescape]].
+  /// missing [[clang::lifetimebound]] annotation, or a violation of
+  /// [[clang::noescape]] or [[clang::lifetime_capture_by]].
   void checkAnnotations(const OriginEscapesFact *OEF) {
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
@@ -135,17 +155,22 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
         if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
           NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
+        if (isa<ThisEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, cast<CXXMethodDecl>(FD));
         return;
       }
       // Skip annotation suggestion for moved loans, as ownership transfer
       // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
       if (IsMoved)
         return;
-      if (PVD->hasAttr<LifetimeBoundAttr>()) {
+      if (LSOpts.CheckCaptureByViolations)
+        checkCaptureBy(*PVD, *OEF);
+      if (paramIsLifetimeBound(*PVD)) {
         // Track that this lifetimebound parameter correctly escapes
-        // (via return or via field assignment in a constructor).
+        // (via return, or into the object in a constructor).
         if (isa<ReturnEscapeFact>(OEF) ||
-            (isa<FieldEscapeFact>(OEF) && isa<CXXConstructorDecl>(FD)))
+            (isa<FieldEscapeFact, ThisEscapeFact>(OEF) &&
+             isa<CXXConstructorDecl>(FD)))
           VerifiedLiftimeboundEscapes.insert(PVD);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
@@ -160,7 +185,7 @@ public:
             AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
         }
       }
-      // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
+      // TODO: Suggest lifetime_capture_by_this for parameter escaping to a
       // field!
     };
     auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
@@ -169,6 +194,24 @@ public:
           VerifiedLiftimeboundEscapes.insert(MD);
         else
           AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+      }
+    };
+    // Identifies methods whose return value derives from a field's origin
+    // rather than *this, e.g., Span::data() or Vector::data().
+    auto CheckField = [&](const FieldDecl *Field) {
+      if (!LSOpts.CheckFieldOriginEscape)
+        return;
+      // Lifetimebound marks the field as owned by *this (e.g., Vector::data()).
+      const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      if (MD && implicitObjectParamIsLifetimeBound(MD))
+        return;
+      if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF)) {
+        // Ignore field loans in inner origins, e.g., returning a reference to
+        // a view field borrows *this.
+        if (OriginList *RetList = FactMgr.getOriginMgr().getOrCreateList(
+                ReturnEsc->getReturnExpr());
+            RetList && RetList->getOuterOriginID() == EscapedOID)
+          FieldOriginEscapesMap.try_emplace(Field, ReturnEsc->getReturnExpr());
       }
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
@@ -181,7 +224,74 @@ public:
         CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
       else if (const auto *MD = PB->getImplicitThisParent())
         CheckImplicitThis(MD);
+      else if (const auto *Field = PB->getFieldDecl())
+        CheckField(Field);
     }
+  }
+
+  /// An entity that a parameter is captured by.
+  struct Capturer {
+    /// The index that a [[clang::lifetime_capture_by]] attribute uses for it.
+    int Index;
+    /// The field, global or parameter, if known.
+    const ValueDecl *CapturedBy;
+  };
+
+  /// Records \p PVD if it escapes through \p OEF into an entity that its
+  /// written [[clang::lifetime_capture_by]] attributes do not name. Inferred
+  /// attributes are not verified.
+  void checkCaptureBy(const ParmVarDecl &PVD, const OriginEscapesFact &OEF) {
+    std::optional<Capturer> C = getCapturer(OEF);
+    // A parameter cannot name itself as its capturer.
+    if (!C || C->CapturedBy == &PVD)
+      return;
+    // A lifetimebound constructor parameter is captured by the constructed
+    // object.
+    if (C->Index == LifetimeCaptureByAttr::This &&
+        isa<CXXConstructorDecl>(FD) && PVD.hasAttr<LifetimeBoundAttr>())
+      return;
+    const LifetimeCaptureByAttr *FirstWritten = nullptr;
+    for (const auto *A : PVD.specific_attrs<LifetimeCaptureByAttr>()) {
+      if (A->isImplicit())
+        continue;
+      if (!FirstWritten)
+        FirstWritten = A;
+      // FIXME: The capturers of a lambda's parameters are never resolved, so
+      // they stay invalid and are not verified.
+      if (llvm::any_of(A->params(), [&](int Idx) {
+            return Idx == C->Index || Idx == LifetimeCaptureByAttr::Unknown ||
+                   Idx == LifetimeCaptureByAttr::Invalid;
+          }))
+        return;
+    }
+    if (FirstWritten)
+      CaptureByViolations.try_emplace(
+          {&PVD, C->Index}, CaptureByViolation{FirstWritten, C->CapturedBy});
+  }
+
+  /// Returns the entity that a parameter escaping through \p OEF is captured
+  /// by, if a [[clang::lifetime_capture_by]] attribute can name it.
+  std::optional<Capturer> getCapturer(const OriginEscapesFact &OEF) const {
+    // Index 0 names `this` only with an implicit object parameter; otherwise
+    // it names the first parameter.
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    bool HasThis = MD && MD->isImplicitObjectMemberFunction();
+    if (isa<FieldEscapeFact, ThisEscapeFact>(OEF)) {
+      if (!HasThis)
+        return std::nullopt;
+      const auto *FieldEsc = dyn_cast<FieldEscapeFact>(&OEF);
+      return Capturer{LifetimeCaptureByAttr::This,
+                      FieldEsc ? FieldEsc->getFieldDecl() : nullptr};
+    }
+    if (const auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(&OEF))
+      return Capturer{LifetimeCaptureByAttr::Global, GlobalEsc->getGlobal()};
+    if (const auto *ParamEsc = dyn_cast<ParamEscapeFact>(&OEF)) {
+      const ParmVarDecl *Param = ParamEsc->getParam();
+      return Capturer{static_cast<int>(Param->getFunctionScopeIndex()) +
+                          (HasThis ? 1 : 0),
+                      Param};
+    }
+    return std::nullopt;
   }
 
   /// Checks for use-after-free & use-after-return errors when an access path
@@ -277,78 +387,101 @@ public:
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
-      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
+      if (const auto *UF = dyn_cast<const UseFact *>(CausingFact)) {
         llvm::SmallVector<const Expr *> ExprChain =
             getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg));
+        const UseSite &Use = UF->getUseSite();
         if (Warning.InvalidatedByExpr) {
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
-            SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
-                                                   Warning.InvalidatedByExpr,
-                                                   ExprChain);
+            SemaHelper->reportUseAfterInvalidation(
+                IssueExpr, Use, Warning.InvalidatedByExpr, ExprChain);
           else if (InvalidatedPVD)
             // Use-after-invalidation of a parameter.
             SemaHelper->reportUseAfterInvalidation(
-                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr,
-                ExprChain);
+                InvalidatedPVD, Use, Warning.InvalidatedByExpr, ExprChain);
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc, ExprChain);
+          SemaHelper->reportUseAfterScope(IssueExpr, Use, MovedExpr, ExpiryLoc,
+                                          ExprChain);
 
       } else if (const auto *OEF =
-                     CausingFact.dyn_cast<const OriginEscapesFact *>()) {
+                     dyn_cast<const OriginEscapesFact *>(CausingFact)) {
+        llvm::SmallVector<const Expr *> ExprChain =
+            getExprChain(LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
         if (Warning.InvalidatedByExpr) {
           if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
             // Invalidated object escapes to a field.
             if (IssueExpr)
               // Invalidated object on stack escapes to a field.
-              SemaHelper->reportInvalidatedField(IssueExpr,
-                                                 FieldEscape->getFieldDecl(),
-                                                 Warning.InvalidatedByExpr);
+              SemaHelper->reportInvalidatedField(
+                  IssueExpr, FieldEscape->getFieldDecl(),
+                  Warning.InvalidatedByExpr, ExprChain);
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to a field.
-              SemaHelper->reportInvalidatedField(InvalidatedPVD,
-                                                 FieldEscape->getFieldDecl(),
-                                                 Warning.InvalidatedByExpr);
+              SemaHelper->reportInvalidatedField(
+                  InvalidatedPVD, FieldEscape->getFieldDecl(),
+                  Warning.InvalidatedByExpr, ExprChain);
           } else if (const auto *GlobalEscape =
                          dyn_cast<GlobalEscapeFact>(OEF)) {
             // Invalidated object escapes to global or static storage.
             if (IssueExpr)
               // Invalidated object on stack escapes to global or static
               // storage.
-              SemaHelper->reportInvalidatedGlobal(IssueExpr,
-                                                  GlobalEscape->getGlobal(),
-                                                  Warning.InvalidatedByExpr);
+              SemaHelper->reportInvalidatedGlobal(
+                  IssueExpr, GlobalEscape->getGlobal(),
+                  Warning.InvalidatedByExpr, ExprChain);
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to global or static storage.
-              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
-                                                  GlobalEscape->getGlobal(),
-                                                  Warning.InvalidatedByExpr);
-          } else if (isa<ReturnEscapeFact>(OEF)) {
-            // FIXME: Diagnose invalidated return escapes separately.
+              SemaHelper->reportInvalidatedGlobal(
+                  InvalidatedPVD, GlobalEscape->getGlobal(),
+                  Warning.InvalidatedByExpr, ExprChain);
+          } else if (isa<ReturnEscapeFact, ThisEscapeFact>(OEF)) {
+            // An invalidated loan is returned, or is still held by the object
+            // at the method's exit.
+            const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF);
+            UseSite Use =
+                RetEscape ? UseSite::fromExpr(*RetEscape->getReturnExpr())
+                          : UseSite::at(cast<ThisEscapeFact>(OEF)->getLoc());
+            if (IssueExpr)
+              SemaHelper->reportUseAfterInvalidation(
+                  IssueExpr, Use, Warning.InvalidatedByExpr, ExprChain);
+            else if (InvalidatedPVD)
+              SemaHelper->reportUseAfterInvalidation(
+                  InvalidatedPVD, Use, Warning.InvalidatedByExpr, ExprChain);
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
-        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
+        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
-        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExprChain);
+        } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
           bool IsCapturedByLambda =
               FactMgr.isFieldCapturedByLambda(FieldEscape->getFieldDecl());
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr,
-              IsCapturedByLambda, ExpiryLoc);
+              IsCapturedByLambda, ExpiryLoc, ExprChain);
         } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
           bool IsMain = false;
           if (const auto *Func = dyn_cast_if_present<FunctionDecl>(FD))
             IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc, IsMain);
-        } else
+                                           MovedExpr, ExpiryLoc, ExprChain,
+                                           IsMain);
+        } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF))
+          // A borrow is still held by the object (e.g. captured via
+          // lifetime_capture_by_this) when the captured local goes out of
+          // scope; reuse the use-after-scope diagnostic at the capturing
+          // method.
+          SemaHelper->reportUseAfterScope(
+              IssueExpr, UseSite::at(ThisEscape->getLoc()), MovedExpr,
+              ExpiryLoc,
+              getExprChain(
+                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+        else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");
@@ -444,6 +577,17 @@ public:
     }
   }
 
+  void reportFieldOriginEscapes() {
+    if (!SemaHelper)
+      return;
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    if (!MD)
+      return;
+    llvm::TimeTraceScope TimeTrace("ReportFieldOriginEscapes");
+    for (auto [Field, EscapeExpr] : FieldOriginEscapesMap)
+      SemaHelper->reportFieldOriginEscape(MD, Field, EscapeExpr);
+  }
+
   void reportNoescapeViolations() {
     llvm::TimeTraceScope TimeTrace("ReportNoescapeViolations");
     for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
@@ -453,9 +597,19 @@ public:
         SemaHelper->reportNoescapeViolation(PVD, FD);
       else if (const auto *G = dyn_cast<const VarDecl *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, G);
+      else if (const auto *MD = dyn_cast<const CXXMethodDecl *>(EscapeTarget))
+        SemaHelper->reportNoescapeViolation(PVD, MD);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }
+  }
+
+  void reportCaptureByViolations() {
+    if (!SemaHelper)
+      return;
+    for (const auto &[Key, Violation] : CaptureByViolations)
+      SemaHelper->reportCaptureByViolation(Key.first, Violation.Attr,
+                                           Key.second, Violation.CapturedBy);
   }
 
   void reportLifetimeboundViolations() {

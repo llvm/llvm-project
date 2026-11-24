@@ -42,6 +42,7 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -54,7 +55,8 @@ using namespace lldb_private;
 const char *SBThread::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Thread::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Thread::GetStaticBroadcasterClass());
 }
 
 // Constructors
@@ -291,25 +293,40 @@ size_t SBThread::GetStopDescription(char *dst_or_null, size_t dst_len) {
   return thread_stop_desc.size() + 1; // Include the NULL byte for size
 }
 
+/// Get what the function the thread stepped out of returned or threw.
+static ThreadPlanReturnValue
+GetStopReturnValueImpl(const lldb::ExecutionContextRefSP &exe_ctx_ref_sp) {
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(exe_ctx_ref_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return {};
+  }
+
+  if (!exe_ctx->HasThreadScope())
+    return {};
+  StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
+  if (!stop_info_sp)
+    return {};
+  return StopInfo::GetReturnValue(stop_info_sp);
+}
+
 SBValue SBThread::GetStopReturnValue() {
   LLDB_INSTRUMENT_VA(this);
 
-  ValueObjectSP return_valobj_sp;
-  llvm::Expected<StoppedExecutionContext> exe_ctx =
-      GetStoppedExecutionContext(m_opaque_sp);
-  if (!exe_ctx) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
-    return SBValue();
-  }
+  ThreadPlanReturnValue return_value = GetStopReturnValueImpl(m_opaque_sp);
+  if (auto *returned = std::get_if<ReturnedValue>(&return_value))
+    return SBValue(returned->valobj_sp);
+  return SBValue();
+}
 
-  if (exe_ctx->HasThreadScope()) {
-    StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
-    if (stop_info_sp) {
-      return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
-    }
-  }
+SBValue SBThread::GetStopErrorValue() {
+  LLDB_INSTRUMENT_VA(this);
 
-  return SBValue(return_valobj_sp);
+  ThreadPlanReturnValue return_value = GetStopReturnValueImpl(m_opaque_sp);
+  if (auto *thrown = std::get_if<ThrownError>(&return_value))
+    return SBValue(thrown->valobj_sp);
+  return SBValue();
 }
 
 void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
@@ -361,7 +378,8 @@ const char *SBThread::GetName() const {
   if (!exe_ctx->HasThreadScope())
     return nullptr;
 
-  return ConstString(exe_ctx->GetThreadPtr()->GetName()).GetCString();
+  return GetDebuggerStringPool(exe_ctx->GetTargetRef())
+      .Intern(exe_ctx->GetThreadPtr()->GetName());
 }
 
 const char *SBThread::GetQueueName() const {
@@ -377,7 +395,8 @@ const char *SBThread::GetQueueName() const {
   if (!exe_ctx->HasThreadScope())
     return nullptr;
 
-  return ConstString(exe_ctx->GetThreadPtr()->GetQueueName()).GetCString();
+  return GetDebuggerStringPool(exe_ctx->GetTargetRef())
+      .Intern(exe_ctx->GetThreadPtr()->GetQueueName());
 }
 
 lldb::queue_id_t SBThread::GetQueueID() const {
@@ -833,7 +852,6 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
   LLDB_INSTRUMENT_VA(this, sb_frame, sb_file_spec, line);
 
   SBError sb_error;
-  char path[PATH_MAX];
 
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
@@ -843,7 +861,6 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
   StackFrameSP frame_sp(sb_frame.GetFrameSP());
 
   if (exe_ctx->HasThreadScope()) {
-    Target *target = exe_ctx->GetTargetPtr();
     Thread *thread = exe_ctx->GetThreadPtr();
 
     if (line == 0) {
@@ -892,56 +909,22 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       }
     }
 
-    // Grab the current function, then we will make sure the "until" address is
-    // within the function.  We discard addresses that are out of the current
-    // function, and then if there are no addresses remaining, give an
-    // appropriate error message.
-
-    bool all_in_function = true;
-
-    std::vector<addr_t> step_over_until_addrs;
     const bool abort_other_plans = false;
     const bool stop_other_threads = false;
-    // TODO: Handle SourceLocationSpec column information
-    SourceLocationSpec location_spec(
-        step_file_spec, line, /*column=*/std::nullopt, /*check_inlines=*/true,
-        /*exact_match=*/false);
+    llvm::Expected<std::vector<addr_t>> step_over_until_addrs =
+        GetStepUntilAddresses(*frame_sp, step_file_spec, {line}, {});
+    if (!step_over_until_addrs)
+      return Status::FromError(step_over_until_addrs.takeError());
 
-    SymbolContextList sc_list;
-    frame_sc.comp_unit->ResolveSymbolContext(location_spec,
-                                             eSymbolContextLineEntry, sc_list);
-    for (const SymbolContext &sc : sc_list) {
-      addr_t step_addr =
-          sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
-      if (step_addr != LLDB_INVALID_ADDRESS) {
-        AddressRange unused_range;
-        if (frame_sc.function->GetRangeContainingLoadAddress(step_addr, *target,
-                                                             unused_range))
-          step_over_until_addrs.push_back(step_addr);
-        else
-          all_in_function = false;
-      }
-    }
+    Status new_plan_status;
+    ThreadPlanSP new_plan_sp = thread->QueueThreadPlanForStepUntil(
+        abort_other_plans, *step_over_until_addrs, stop_other_threads,
+        frame_sp->GetFrameIndex(), new_plan_status);
 
-    if (step_over_until_addrs.empty()) {
-      if (all_in_function) {
-        step_file_spec.GetPath(path, sizeof(path));
-        sb_error = Status::FromErrorStringWithFormat(
-            "No line entries for %s:%u", path, line);
-      } else
-        sb_error = Status::FromErrorString(
-            "step until target not in current function");
-    } else {
-      Status new_plan_status;
-      ThreadPlanSP new_plan_sp = thread->QueueThreadPlanForStepUntil(
-          abort_other_plans, step_over_until_addrs, stop_other_threads,
-          frame_sp->GetFrameIndex(), new_plan_status);
-
-      if (new_plan_status.Success())
-        sb_error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());
-      else
-        sb_error = Status::FromErrorString(new_plan_status.AsCString());
-    }
+    if (new_plan_status.Success())
+      sb_error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());
+    else
+      sb_error = Status::FromErrorString(new_plan_status.AsCString());
   } else {
     sb_error = Status::FromErrorString("this SBThread object is invalid");
   }

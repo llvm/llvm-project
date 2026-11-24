@@ -32,11 +32,10 @@ bool ScriptedFrameProviderPythonInterface::AppliesToThread(
   // If there is any issue with this method, we will just assume it also applies
   // to this thread which is the default behavior.
   constexpr bool fail_value = true;
-  Status error;
-  StructuredData::ObjectSP obj =
-      CallStaticMethod(class_name, "applies_to_thread", error, thread_sp);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      CallStaticMethod(class_name, "applies_to_thread", thread_sp),
+      LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return fail_value;
 
   return obj->GetBooleanValue(fail_value);
@@ -55,11 +54,9 @@ ScriptedFrameProviderPythonInterface::CreatePluginObject(
 
 std::string ScriptedFrameProviderPythonInterface::GetDescription(
     llvm::StringRef class_name) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      CallStaticMethod(class_name, "get_description", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      CallStaticMethod(class_name, "get_description"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
   return obj->GetStringValue().str();
@@ -67,12 +64,9 @@ std::string ScriptedFrameProviderPythonInterface::GetDescription(
 
 std::optional<uint32_t>
 ScriptedFrameProviderPythonInterface::GetPriority(llvm::StringRef class_name) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      CallStaticMethod(class_name, "get_priority", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      CallStaticMethod(class_name, "get_priority"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return std::nullopt;
 
   // Try to extract as unsigned integer. Return nullopt if Python returned None
@@ -85,11 +79,9 @@ ScriptedFrameProviderPythonInterface::GetPriority(llvm::StringRef class_name) {
 
 StructuredData::ObjectSP
 ScriptedFrameProviderPythonInterface::GetFrameAtIndex(uint32_t index) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_frame_at_index", error, index);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("get_frame_at_index", index), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
   return obj;

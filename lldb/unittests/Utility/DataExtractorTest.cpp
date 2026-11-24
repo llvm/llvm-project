@@ -158,7 +158,7 @@ TEST(DataExtractorTest, PeekCStr) {
   EXPECT_EQ("", E.PeekCStr(4));
   EXPECT_EQ(std::nullopt, E.PeekCStr(5));
 
-  // The result is NULL terminated, so data() is a valid C string.
+  // The result is null-terminated, so data() is a valid C string.
   EXPECT_STREQ("foo", E.PeekCStr(1)->data());
 }
 
@@ -586,4 +586,23 @@ TEST(DataExtractorTest, GetU64ArrayOutOfBounds) {
   EXPECT_EQ(nullptr, data.GetU64(&offset, dest.data, 3));
   EXPECT_EQ(1U, offset);
   EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 0));
+}
+
+TEST(DataExtractorTest, GetLongDoubleOutOfRange) {
+  uint8_t buffer[] = {0x01};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  lldb::offset_t offset = 0;
+  EXPECT_EQ(0.0L, E.GetLongDouble(&offset));
+  EXPECT_EQ(0U, offset);
+}
+
+TEST(DataExtractorTest, CopyByteOrderedDataOutOfRange) {
+  uint8_t buffer[] = {0x01};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  uint16_t dst = 0xffff;
+  EXPECT_EQ(0U, E.CopyByteOrderedData(0, sizeof dst, &dst, sizeof dst,
+                                      lldb::eByteOrderLittle));
+  EXPECT_EQ(0xffff, dst);
 }

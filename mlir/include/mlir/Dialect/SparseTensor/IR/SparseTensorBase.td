@@ -88,10 +88,9 @@ def SparseTensor_Dialect : Dialect {
     PhD thesis, MIT, February, 2020.
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
   let hasConstantMaterializer = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 #endif // SPARSETENSOR_BASE

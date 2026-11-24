@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S '-passes=polly-custom<optree;delicm;opt-isl>' -polly-schedule-computeout=10000 -debug-only=polly-opt-isl < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly-custom<optree;delicm;opt-isl>' -plugin-arg=Polly,-polly-schedule-computeout=10000 -debug-only=polly-opt-isl < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Bailout if the computations of schedule compute exceeds the max scheduling quota.

@@ -5,7 +5,7 @@ LLVM Social.
 
 Before you start, it is essential to make sure that the meetup is as welcoming
 as any other event related to LLVM. Therefore you shall follow LLVM's
-[Code of Conduct](https://llvm.org/docs/CodeOfConduct.html).
+[Code of Conduct](CodeOfConduct.md).
 
 Other than that - your mileage may vary. Please adapt your social to what works
 best for your specific situation.

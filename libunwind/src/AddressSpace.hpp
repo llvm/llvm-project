@@ -453,8 +453,8 @@ static bool checkForUnwindInfoSegment(const Elf_Phdr *phdr, size_t image_base,
 #endif
 }
 
-static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
-                                    size_t pinfo_size, void *data) {
+static inline int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
+                                           size_t pinfo_size, void *data) {
   auto cbdata = static_cast<dl_iterate_cb_data *>(data);
   if (pinfo->dlpi_phnum == 0 || cbdata->targetAddr < pinfo->dlpi_addr)
     return 0;

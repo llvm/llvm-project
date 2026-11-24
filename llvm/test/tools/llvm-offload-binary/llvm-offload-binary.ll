@@ -136,3 +136,13 @@
 ; Test extracting inner OffloadBinary with --image filter.
 ; RUN: llvm-offload-binary %t7 --image=file=%t8,arch=nested,triple=x-y-z
 ; RUN: diff %t5 %t8
+
+; Test the OpenACC offload kind name round-trips through the binary format.
+; RUN: llvm-offload-binary -o %t.acc --image=file=%s,arch=abc,triple=x-y-z,kind=openacc
+; RUN: llvm-objdump --offloading %t.acc | FileCheck %s --check-prefix=ACC
+
+; ACC:      OFFLOADING IMAGE [0]:
+; ACC-NEXT: kind            <none>
+; ACC-NEXT: arch            abc
+; ACC-NEXT: triple          x-y-z
+; ACC-NEXT: producer        openacc

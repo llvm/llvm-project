@@ -14,7 +14,6 @@ include "mlir/IR/DialectBase.td"
 def AMDGPU_Dialect : Dialect {
   let name = "amdgpu";
   let cppNamespace = "::mlir::amdgpu";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let description = [{
     The `AMDGPU` dialect provides wrappers around AMD-specific functionality
     and LLVM intrinsics. These wrappers should be used in conjunction with
@@ -115,12 +114,8 @@ def AMDGPU_Dialect : Dialect {
     "arith::ArithDialect",
     "gpu::GPUDialect"
   ];
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
-  let extraClassDeclaration = [{
-    void registerAttributes();
-    void registerTypes();
-  }];
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUBASE_TD

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s %}
 // RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=i386-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s %}
 
 #include <immintrin.h>
 

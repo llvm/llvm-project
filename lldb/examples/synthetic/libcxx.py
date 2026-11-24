@@ -61,7 +61,7 @@ def stdstring_SummaryProvider(valobj, dict):
     else:
         data_ptr = l.GetChildAtIndex(2)
         size_vo = l.GetChildAtIndex(1)
-        # the NULL terminator must be accounted for
+        # the null terminator must be accounted for
         size = size_vo.GetValueAsUnsigned(0) + 1
         if size <= 1 or size is None:  # should never be the case
             return '""'

@@ -82,7 +82,6 @@ def GPU_Dialect : Dialect {
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -243,6 +242,7 @@ def GPU_AsyncOpInterface : OpInterface<"AsyncOpInterface"> {
 
 class GPU_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<GPU_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/GPU/IR/GPUBase.h"];
   let mnemonic = attrMnemonic;
 }
 

@@ -116,3 +116,24 @@ TEST(AllocationOrderTest, IsHintTest) {
   EXPECT_FALSE(I.isHint());
   EXPECT_EQ(V, 5U);
 }
+
+TEST(AllocationOrderTest, AntiHintCustomOrderOverridesOrder) {
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder = {1, 2, 5, 3, 4};
+  SmallVector<MCPhysReg, 16> Order = {3, 4, 5};
+  AllocationOrder O(std::move(HintsAndCustomOrder), 2, Order, false);
+  EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 5, 3, 4}), loadOrder(O));
+}
+
+TEST(AllocationOrderTest, EmptyAntiHintedCustomOrderFallsBackToOrder) {
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder = {1, 2};
+  SmallVector<MCPhysReg, 16> Order = {3, 4, 5};
+  AllocationOrder O(std::move(HintsAndCustomOrder), 2, Order, false);
+  EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5}), loadOrder(O));
+}
+
+TEST(AllocationOrderTest, HardHintsIgnoreAntiHintCustomOrder) {
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder = {1, 2, 5, 3, 4};
+  SmallVector<MCPhysReg, 16> Order = {3, 4, 5};
+  AllocationOrder O(std::move(HintsAndCustomOrder), 2, Order, true);
+  EXPECT_EQ((std::vector<MCPhysReg>{1, 2}), loadOrder(O));
+}

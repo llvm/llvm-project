@@ -108,10 +108,6 @@ private:
   }
 
 public:
-  /// The index of this \p Candidate's \p OutlinedFunction in the list of
-  /// \p OutlinedFunctions.
-  unsigned FunctionIdx = 0;
-
   /// Identifier denoting the instructions to emit to call an outlined function
   /// from this point. Defined by the target.
   unsigned CallConstructionID = 0;
@@ -202,9 +198,9 @@ public:
   Candidate(unsigned StartIdx, unsigned Len,
             MachineBasicBlock::iterator &FirstInst,
             MachineBasicBlock::iterator &LastInst, MachineBasicBlock *MBB,
-            unsigned FunctionIdx, unsigned Flags)
+            unsigned Flags)
       : StartIdx(StartIdx), Len(Len), FirstInst(FirstInst), LastInst(LastInst),
-        MBB(MBB), FunctionIdx(FunctionIdx), Flags(Flags) {}
+        MBB(MBB), Flags(Flags) {}
   Candidate() = delete;
 
   /// Used to ensure that \p Candidates are outlined in an order that

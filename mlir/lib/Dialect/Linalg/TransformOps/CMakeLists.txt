@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRLinalgTransformOps
   MLIRLinalgTransformEnumsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAffineDialect
   MLIRArithDialect
   MLIRBufferizationDialect

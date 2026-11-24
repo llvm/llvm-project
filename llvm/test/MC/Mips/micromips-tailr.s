@@ -10,7 +10,7 @@
 # CHECK-FIXUP: foo:
 # CHECK-FIXUP:   addiu $2, $zero, 1332
 # CHECK-FIXUP:         # encoding: [0x40,0x30,0x34,0x05]
-# CHECK-FIXUP:   j foo # encoding: [A,0xd4'A',A,0b000000AA]
+# CHECK-FIXUP:   j foo # encoding: [A,0b110101AA,A,A]
 # CHECK-FIXUP-NEXT:         #   fixup A - offset: 0, value: foo, kind: fixup_MICROMIPS_26_S1
 # CHECK-FIXUP-NEXT:   nop   # encoding: [0x00,0x0c]
 #------------------------------------------------------------------------------

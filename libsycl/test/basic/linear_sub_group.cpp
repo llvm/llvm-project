@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
@@ -5,6 +13,7 @@
 #include <sycl/sycl.hpp>
 
 #include <cassert>
+#include <cstdint>
 
 int main() {
   sycl::queue Q;
@@ -17,7 +26,7 @@ int main() {
   for (uint32_t I = 0; I < Size; ++I)
     Output[I] = -1;
 
-  Q.parallel_for<class linear_sub_group>(
+  Q.parallel_for<class LinearSubGroup>(
       sycl::nd_range<2>(sycl::range<2>(Outer, Inner),
                         sycl::range<2>(Outer, Inner)),
       [=](sycl::nd_item<2> It) {

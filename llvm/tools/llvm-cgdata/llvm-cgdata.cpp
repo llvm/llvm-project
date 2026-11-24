@@ -22,7 +22,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Driver.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -67,6 +67,7 @@ static std::string OutputFilename = "-";
 static std::string Filename;
 static bool ShowCGDataVersion;
 static bool SkipTrim;
+static bool LazyLoading;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
@@ -107,7 +108,8 @@ static int convert_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS);
+  auto ReaderOrErr = CodeGenDataReader::create(cl::LibraryOptionsContext(),
+                                               Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -205,7 +207,7 @@ static int merge_main(int argc, const char *argv[]) {
   if (!Result)
     exitWithError("failed to merge codegen data files.");
 
-  GlobalFunctionMapRecord.finalize(SkipTrim);
+  GlobalFunctionMapRecord.finalize(cl::LibraryOptionsContext(), SkipTrim);
 
   CodeGenDataWriter Writer;
   if (!GlobalOutlineRecord.empty())
@@ -239,7 +241,8 @@ static int show_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS);
+  auto ReaderOrErr = CodeGenDataReader::create(cl::LibraryOptionsContext(),
+                                               Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -350,8 +353,7 @@ static void parseArgs(int argc, char **argv) {
     llvm_unreachable("unrecognized action");
   }
 
-  IndexedCodeGenDataLazyLoading =
-      Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
+  LazyLoading = Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
 }
 
 int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {

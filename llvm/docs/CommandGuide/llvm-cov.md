@@ -107,7 +107,7 @@ an entire source file.
 :::
 
 :::{option} --help
-Display available options (--help-hidden for more).
+Display available options.
 :::
 
 :::{option} -l, --long-file-names
@@ -157,7 +157,7 @@ Include unconditional branches in the output for the --branch-probabilities
 option.
 :::
 
-:::{option} -version
+:::{option} --version
 Display the version of llvm-cov.
 :::
 

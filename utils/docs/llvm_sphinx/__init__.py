@@ -17,42 +17,21 @@ call to `common_conf`, they should be modified/appended to, as in:
 
 """
 
-import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
-from enum import Enum, auto
+
 from sphinx.util.tags import Tags
-from llvm_sphinx.help import venv_help
 
 _SHARED_STATIC_DIR = Path(__file__).parent / "_static"
 
 
-class Markdown(Enum):
-    ALWAYS = auto()
-    EXCEPT_MAN = auto()
-    NEVER = auto()
-
-
-def common_conf(tags: Tags, markdown=Markdown.ALWAYS) -> Dict[str, Any]:
+def common_conf(tags: Tags) -> Dict[str, Any]:
     # If your documentation needs a minimal Sphinx version, state it here.
     # needs_sphinx = '1.0'
     # The encoding of source files.
     # source_encoding = 'utf-8-sig'
-    extensions = ["llvm_sphinx.ext.mlir_pygments"]
-    source_suffix = {".rst": "restructuredtext"}
-    if markdown != Markdown.NEVER:
-        # When building man pages, we do not use the markdown pages,
-        # So, we can continue without the myst_parser dependencies.
-        # Doing so reduces dependencies of some packaged llvm distributions.
-        try:
-            import myst_parser
-        except ImportError as err:
-            if markdown == Markdown.ALWAYS or not tags.has("builder-man"):
-                print(venv_help(err), file=sys.stderr)
-                raise
-        else:
-            extensions.append("myst_parser")
-            source_suffix[".md"] = "markdown"
+    extensions = ["llvm_sphinx.ext.mlir_pygments", "myst_parser"]
+    source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
     myst_enable_extensions = ["substitution", "colon_fence"]
     myst_heading_anchors = 6
     myst_heading_slug_func = "llvm_sphinx.make_slug"

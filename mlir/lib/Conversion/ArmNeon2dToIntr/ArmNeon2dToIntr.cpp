@@ -26,7 +26,7 @@ namespace {
 
 class Sdot2dLoweringPattern : public OpRewritePattern<Sdot2dOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   /// Convert to 1-dimensional vector type to match the requirements of
   /// arm.neon.intr.sdot

@@ -195,6 +195,27 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
   // Handle attributes with arguments that require late parsing.
   LateParsedAttribute *LA =
       new LateParsedAttribute(this, *AttrName, AttrNameLoc);
+
+  // Keep the innermost prototype's parameters available for a late-parsed
+  // attribute that is parsed in that prototype's scope, such as one describing
+  // a call through a function pointer (unlike guarded_by, which describes the
+  // pointer itself). A function keeps its own parameters in scope, so skip it;
+  // a parameter of function type is adjusted to a pointer, so keep it.
+  if (D && IsAttributeArgsParsedInFunctionScope(*AttrName) &&
+      (!D->isFunctionDeclarator() || D->isPrototypeContext())) {
+    for (unsigned I = 0, E = D->getNumTypeObjects(); I != E; ++I) {
+      const DeclaratorChunk &Chunk = D->getTypeObject(I);
+      if (Chunk.Kind != DeclaratorChunk::Function)
+        continue;
+      const DeclaratorChunk::FunctionTypeInfo &FTI = Chunk.Fun;
+      for (unsigned P = 0, NumParams = FTI.NumParams; P != NumParams; ++P)
+        if (auto *Param = dyn_cast_or_null<ParmVarDecl>(FTI.Params[P].Param);
+            Param && Param->getIdentifier())
+          LA->ProtoParams.push_back(Param);
+      break;
+    }
+  }
+
   LateAttrs->push_back(LA);
 
   // Attributes in a class are parsed at the end of the class, along
@@ -1090,11 +1111,6 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
   SourceLocation AttrNameLoc = Tok.getLocation();
   Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                Tok.getKind());
-}
-
-bool Parser::isHLSLQualifier(const Token &Tok) const {
-  return Tok.is(tok::kw_groupshared) || Tok.is(tok::kw_row_major) ||
-         Tok.is(tok::kw_column_major);
 }
 
 void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
@@ -2139,7 +2155,6 @@ void Parser::SkipMalformedDecl() {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
-    case tok::annot_repl_input_end:
       return;
 
     default:
@@ -2171,6 +2186,11 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
        TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
   SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
+  // Save late-parsed attributes for now; they need to be parsed in the
+  // appropriate function scope after the function Decl has been constructed.
+  // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
+  LateParsedAttrList LateParsedAttrs(true);
+  D.setDeclarationLateAttrs(&LateParsedAttrs);
   ParseDeclarator(D);
 
   if (IsTemplateSpecOrInst)
@@ -2195,10 +2215,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     ParseTrailingRequiresClauseWithScope(D);
   }
 
-  // Save late-parsed attributes for now; they need to be parsed in the
-  // appropriate function scope after the function Decl has been constructed.
-  // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
-  LateParsedAttrList LateParsedAttrs(true);
   if (D.isFunctionDeclarator()) {
     MaybeParseGNUAttributes(D, &LateParsedAttrs);
 
@@ -2431,19 +2447,28 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     if (getLangOpts().MicrosoftExt)
       DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
 
+    // As for the first declarator, a function's parameters' late-parsed
+    // attributes are parsed once the function is declared.
+    D.setDeclarationLateAttrs(&LateParsedAttrs);
     ParseDeclarator(D);
 
     if (getLangOpts().HLSL)
       MaybeParseHLSLAnnotations(D);
 
-    if (!D.isInvalidType()) {
+    bool Declared = !D.isInvalidType();
+    Decl *ThisDecl = nullptr;
+    if (Declared) {
       // C++2a [dcl.decl]p1
       //    init-declarator:
       //	      declarator initializer[opt]
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires))
         ParseTrailingRequiresClauseWithScope(D);
-      Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
+      ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
+    }
+    if (LateParsedAttrs.size() > 0)
+      ParseLexedAttributeList(LateParsedAttrs, ThisDecl, true, false);
+    if (Declared) {
       D.complete(ThisDecl);
       if (ThisDecl)
         DeclsInGroup.push_back(ThisDecl);
@@ -2536,7 +2561,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   // If a '==' or '+=' is found, suggest a fixit to '='.
   if (isTokenEqualOrEqualTypo())
     TheInitKind = InitKind::Equal;
-  else if (Tok.is(tok::l_paren))
+  else if (getLangOpts().CPlusPlus && Tok.is(tok::l_paren))
     TheInitKind = InitKind::CXXDirect;
   else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace) &&
            (!CurParsedObjCImpl || !D.isFunctionDeclarator()))
@@ -2628,7 +2653,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus20;
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::Cxx29
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Cxx20
+                    : diag::DefaultableFunctionKinds::Default);
     } else {
       InitializerScopeRAII InitScope(*this, D, ThisDecl);
 
@@ -2753,12 +2782,17 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
 void Parser::ParseSpecifierQualifierList(
     DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-    AccessSpecifier AS, DeclSpecContext DSC) {
+    AccessSpecifier AS, DeclSpecContext DSC, LateParsedAttrList *LateAttrs) {
   ParsedTemplateInfo TemplateInfo;
+
+  assert((!LateAttrs ||
+          llvm::none_of(*LateAttrs, llvm::IsaPred<LateParsedTypeAttribute>)) &&
+         "caller's late-attribute list must not hold type attributes yet");
+
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
-  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, nullptr,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
                              AllowImplicitTypename);
 
   // Validate declspec for type-name.
@@ -4119,6 +4153,20 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+        auto IsTypedefName = [&](const Token &T) {
+          if (!T.is(tok::identifier))
+            return false;
+          IdentifierInfo *II = T.getIdentifierInfo();
+          if (!II)
+            return false;
+          // Suppress diagnostics; the real parse will emit them later.
+          LookupResult R(Actions, II, T.getLocation(),
+                         Sema::LookupOrdinaryName);
+          Actions.LookupName(R, getCurScope(),
+                             /*AllowBuiltinCreation=*/false);
+          R.suppressDiagnostics();
+          return R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
+        };
         auto MayBeTypeSpecifier = [&]() {
           // In pre-C23 C, auto can be used as a storage-class specifier.
           // C23 removes auto from the storage-class specifiers and repurposes
@@ -4131,6 +4179,15 @@ void Parser::ParseDeclarationSpecifiers(
           while (true) {
             const Token &T = GetLookAheadToken(I);
             if (isKnownToBeTypeSpecifier(T))
+              return true;
+
+            // C23: a bare identifier that names a typedef is a type
+            // specifier here, so `auto typedefName varName;` should be
+            // parsed with `auto` as the storage-class specifier — not as
+            // type inference. Without this check the parser would consume
+            // `auto` as type-inference and then error on the missing
+            // initializer for what it thinks is `typedefName`.
+            if (getLangOpts().C23 && IsTypedefName(T))
               return true;
 
             if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
@@ -4657,6 +4714,12 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_row_major:
     case tok::kw_column_major:
+    case tok::kw_nointerpolation:
+    case tok::kw_linear:
+    case tok::kw_centroid:
+    case tok::kw_noperspective:
+    case tok::kw_sample:
+    case tok::kw_center:
     case tok::kw_groupshared:
     case tok::kw_in:
     case tok::kw_inout:
@@ -4671,6 +4734,13 @@ void Parser::ParseDeclarationSpecifiers(
                                    DiagID, Policy);                            \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case tok::kw_##Name:                                                         \
+    isInvalid = DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec,        \
+                                   DiagID, Policy);                            \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 
     case tok::less:
       // GCC ObjC supports types like "<SomeProtocol>" as a synonym for
@@ -4851,11 +4921,7 @@ void Parser::ParseStructDeclaration(
 ParsedAttributes Parser::ParseLexedAttributeTokens(LateParsedAttribute &LPA) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LPA.Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), LPA.Toks.data());
   LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
@@ -4896,17 +4962,54 @@ void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
   OutAttrs.takeAllAppendingFrom(Attrs);
 }
 
+void Parser::CompleteLateParsedTypeAttributes(
+    SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs) {
+  for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
+    std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
+
+    BoundsAttributedType *BATy = LTA->Info.TypeToComplete;
+    if (!BATy || Actions.isLateParsedBoundsTypeRejected(BATy))
+      continue;
+
+    ArrayRef<Decl *> Fields = LTA->Decls;
+
+    AttributeFactory AF;
+    ParsedAttributes Attrs(AF);
+    ParseLexedTypeAttribute(*LTA, Attrs);
+
+    // An unparseable argument leaves no attribute behind; already diagnosed.
+    if (Attrs.empty())
+      continue;
+    assert(Attrs.size() == 1);
+
+    Expr *Arg = Attrs[0].getArgAsExpr(0);
+    assert(Arg);
+
+    bool Valid = true;
+    assert(!Fields.empty());
+    for (Decl *FD : Fields)
+      Valid &= Actions.ActOnLateParsedTypeAttrArgument(
+          BATy, cast<FieldDecl>(FD), Arg);
+
+    if (Valid)
+      Attrs[0].setUsedAsTypeAttr();
+    else
+      Attrs[0].setInvalid();
+  }
+  LateTypeAttrs.clear();
+}
+
 void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
   // Delegate to the Parser that created this attribute
   Self->ParseLexedTypeAttribute(*this, OutAttrs);
 }
 
-void Parser::TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
-                                        LateParsedAttrList &From) {
+void Parser::TakeLateParsedTypeAttrInfos(LateParsedTypeAttrInfoList &To,
+                                         LateParsedAttrList &From) {
   LateParsedAttrList::iterator It =
       llvm::remove_if(From, [&](LateParsedAttribute *LA) {
-        if (isa<LateParsedTypeAttribute>(LA)) {
-          To.push_back(LA);
+        if (auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA)) {
+          To.push_back(&LTA->Info);
           return true;
         }
         return false;
@@ -5172,8 +5275,15 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   bool CanBeBitfield =
       getCurScope()->isClassScope() && ScopedEnumKWLoc.isInvalid() && Name;
 
+  auto IsCXXTypeAhead = [this]() {
+    RevertingTentativeParsingAction PA(*this);
+    ConsumeToken();
+    return Parser::isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous);
+  };
+
   // Parse the fixed underlying type.
-  if (Tok.is(tok::colon)) {
+  if (Tok.is(tok::colon) &&
+      (!ParsingGenericAssociationType || IsCXXTypeAhead())) {
     // This might be an enum-base or part of some unrelated enclosing context.
     //
     // 'enum E : base' is permitted in two circumstances:
@@ -5614,6 +5724,8 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -5704,6 +5816,8 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -5771,6 +5885,12 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
     return true;
 
   // HLSL type qualifiers
+  case tok::kw_nointerpolation:
+  case tok::kw_linear:
+  case tok::kw_centroid:
+  case tok::kw_noperspective:
+  case tok::kw_sample:
+  case tok::kw_center:
   case tok::kw_groupshared:
   case tok::kw_in:
   case tok::kw_inout:
@@ -5792,12 +5912,13 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
   Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
-  if (!R.isUsable())
+  if (!R.isUsable()) {
     R = Actions.ActOnNullStmt(Tok.getLocation());
+    TLSD->setStmt(R.get());
+  }
 
-  if (Tok.is(tok::annot_repl_input_end) &&
-      Tok.getAnnotationValue() != nullptr) {
-    ConsumeAnnotationToken();
+  if (Tok.is(tok::eof) && Tok.getEofData()) {
+    ConsumeToken();
     TLSD->setSemiMissing();
   }
 
@@ -6050,11 +6171,19 @@ bool Parser::isDeclarationSpecifier(
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
 
   case tok::kw___funcref:
   case tok::kw_groupshared:
     return true;
 
+  case tok::kw_nointerpolation:
+  case tok::kw_linear:
+  case tok::kw_centroid:
+  case tok::kw_noperspective:
+  case tok::kw_sample:
+  case tok::kw_center:
   case tok::kw_row_major:
   case tok::kw_column_major:
     return getLangOpts().HLSL;
@@ -6216,7 +6345,8 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
-    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler) {
+    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler,
+    LateParsedAttrList *LateAttrs) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
       isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
@@ -6301,6 +6431,12 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw_in:
     case tok::kw_inout:
     case tok::kw_out:
+    case tok::kw_nointerpolation:
+    case tok::kw_linear:
+    case tok::kw_centroid:
+    case tok::kw_noperspective:
+    case tok::kw_sample:
+    case tok::kw_center:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
@@ -6378,7 +6514,7 @@ void Parser::ParseTypeQualifierListOpt(
       // recovery is graceful.
       if (AttrReqs & AR_GNUAttributesParsed ||
           AttrReqs & AR_GNUAttributesParsedAndRejected) {
-        ParseGNUAttributes(DS.getAttributes());
+        ParseGNUAttributes(DS.getAttributes(), LateAttrs);
         continue; // do *not* consume the next token!
       }
       // otherwise, FALL THROUGH!
@@ -6538,9 +6674,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     DeclSpec DS(AttrFactory);
     ParseTypeQualifierListOpt(DS);
 
-    D.AddTypeInfo(
-        DeclaratorChunk::getPipe(DS.getTypeQualifiers(), DS.getPipeLoc()),
-        std::move(DS.getAttributes()), SourceLocation());
+    D.AddTypeInfo(DeclaratorChunk::getPipe(DS.getTypeQualifiers(),
+                                           D.getDeclSpec().getPipeLoc()),
+                  std::move(DS.getAttributes()), SourceLocation());
   }
 
   // Not a pointer, C++ reference, or block.
@@ -7330,9 +7466,21 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     MaybeParseCXX11Attributes(FnAttrs);
     ProhibitAttributes(FnAttrs);
   } else {
-    if (Tok.isNot(tok::r_paren))
-      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc);
-    else if (RequiresArg)
+    if (Tok.isNot(tok::r_paren)) {
+      // In C++, the late-parsed attributes of a function's parameters join the
+      // function's own, which are parsed in its scope once it is declared.
+      // On an out-of-line declaration, whether the function is static isn't
+      // known until it is matched to its declaration. Those of a nested
+      // prototype, such as a callback's, belong to no function and are parsed
+      // in the clause.
+      LateParsedAttrList *FnLateAttrs = nullptr;
+      if (getLangOpts().CPlusPlus &&
+          D.isFunctionDeclaratorAFunctionDeclaration() &&
+          D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_typedef)
+        FnLateAttrs = D.getDeclarationLateAttrs();
+      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc,
+                                      FnLateAttrs);
+    } else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
     // OpenCL disallows functions without a prototype, but it doesn't enforce
@@ -7557,7 +7705,8 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration) {
+    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration,
+    LateParsedAttrList *OuterLateParamAttrs) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7587,6 +7736,17 @@ void Parser::ParseParameterDeclarationClause(
       IsACXXFunctionDeclaration) {
     AllowImplicitTypename = ImplicitTypenameContext::Yes;
   }
+
+  // An attribute on a parameter may name another parameter of the same
+  // prototype that is declared later, such as a callback parameter whose
+  // attribute names a lock passed after it. Defer those to the end of the
+  // clause, where every parameter is declared and the prototype scope is still
+  // open, so no scope need be re-entered. If the caller passes
+  // OuterLateParamAttrs, late-parse every late-parsed attribute, not just the
+  // experimental ones.
+  LateParsedAttrList LateParamAttrs(
+      /*PSoon=*/true,
+      /*LateAttrParseExperimentalExtOnly=*/!OuterLateParamAttrs);
 
   do {
     // FIXME: Issue a diagnostic if we parsed an attribute-specifier-seq
@@ -7645,7 +7805,7 @@ void Parser::ParseParameterDeclarationClause(
       ParmDeclarator.SetRangeBegin(ThisLoc);
 
     // Parse GNU attributes, if present.
-    MaybeParseGNUAttributes(ParmDeclarator);
+    MaybeParseGNUAttributes(ParmDeclarator, &LateParamAttrs);
     if (getLangOpts().HLSL)
       MaybeParseHLSLAnnotations(DS.getAttributes());
 
@@ -7725,6 +7885,8 @@ void Parser::ParseParameterDeclarationClause(
       // added to the current scope.
       Decl *Param =
           Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator, ThisLoc);
+      // Claim deferred attributes now, before the next parameter can.
+      DistributeCLateParsedAttrs(Param, &LateParamAttrs);
       // Parse the default argument, if any. We parse the default
       // arguments in all dialects; the semantic analysis in
       // ActOnParamDefaultArgument will reject the default argument in
@@ -7837,6 +7999,32 @@ void Parser::ParseParameterDeclarationClause(
 
     // If the next token is a comma, consume it and keep reading arguments.
   } while (TryConsumeToken(tok::comma));
+
+  // Split the attributes of the declared parameters into those with a decl,
+  // which go to the caller, and those without, which are parsed and diagnosed
+  // now.
+  if (OuterLateParamAttrs) {
+    unsigned Kept = 0;
+    for (LateParsedAttribute *LA : LateParamAttrs) {
+      if (LA->Decls.empty()) {
+        LateParamAttrs[Kept++] = LA;
+        continue;
+      }
+      OuterLateParamAttrs->push_back(LA);
+      // Attributes in a class are parsed at the end of the class, along
+      // with other late-parsed declarations.
+      if (!ClassStack.empty() && !OuterLateParamAttrs->parseSoon())
+        getCurrentClass().LateParsedDeclarations.push_back(LA);
+    }
+    LateParamAttrs.resize(Kept);
+  }
+
+  // Every parameter is declared and still in scope, so a deferred attribute can
+  // name any of them. One whose parameter was not declared has no decl, and is
+  // diagnosed.
+  if (!LateParamAttrs.empty())
+    ParseLexedAttributeList(LateParamAttrs, /*D=*/nullptr, /*EnterScope=*/false,
+                            /*OnDefinition=*/false);
 }
 
 void Parser::ParseBracketDeclarator(Declarator &D) {
@@ -8254,10 +8442,7 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
   // Replace the "eod" token with an "eof" token identifying the end of
   // the provided string.
   Token &EndToken = Tokens.back();
-  EndToken.startToken();
-  EndToken.setKind(tok::eof);
-  EndToken.setLocation(Tok.getLocation());
-  EndToken.setEofData(TypeStr.data());
+  EndToken = Token::createEof(Tok.getLocation(), TypeStr.data());
 
   // Add the current token back.
   Tokens.push_back(Tok);

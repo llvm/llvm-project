@@ -16,8 +16,10 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/expf_double_eval.h"
 #include "src/__support/math/expf_float_eval.h"
 #include "src/__support/math/expf_integer_eval.h"
@@ -62,6 +64,7 @@ public:
                      bool check_exception_and_errno = true) {
     constexpr float VALUES[] = {
         FPBits(0x7f7fffffU).get_val(),
+        FPBits(0x42b17218U).get_val(),
         FPBits(0x42cffff8U).get_val(),
         FPBits(0x42d00008U).get_val(),
     };
@@ -180,12 +183,17 @@ LIST_EXPF_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::expf,
 LIST_EXPF_TESTS(FloatEval, LIBC_NAMESPACE::math::float_eval::expf,
                 /*ulp_tolerance=*/1.5, /*all_rounding=*/false,
                 /*check_exception_and_errno=*/true, /*check_errno=*/true)
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+LIST_EXPF_TESTS(FloatEvalCrRn, LIBC_NAMESPACE::math::float_eval_cr_rn::expf,
+                /*ulp_tolerance=*/TOLERANCE + 0.5, /*all_rounding=*/false,
+                /*check_exception_and_errno=*/false, /*check_errno=*/false)
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 LIST_EXPF_TESTS(IntegerEval, LIBC_NAMESPACE::math::integer_eval::expf,
                 /*ulp_tolerance=*/0.5, /*all_rounding=*/false,
                 /*check_exception_and_errno=*/false, /*check_errno=*/false)
 
 static float expf_static_rounding(float x) {
-  return LIBC_NAMESPACE::shared::math::static_rounding::expf(
+  return LIBC_NAMESPACE::math::static_rounding::expf(
       x, LIBC_NAMESPACE::fputil::quick_get_round());
 }
 

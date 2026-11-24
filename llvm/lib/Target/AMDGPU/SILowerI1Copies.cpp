@@ -98,6 +98,8 @@ namespace AMDGPU {
 ///  - If an incoming block has no predecessors in this set, we can take the
 ///    incoming value as a scalar lane mask as-is.
 ///  -- A special case of this is when the def block has a self-loop.
+///  -- An edge from the def block to an incoming block does not count, since
+///     it starts a new trip around a loop through the def block.
 ///  - Otherwise, the incoming value needs to be merged with a previously
 ///    defined lane mask.
 ///  - If there is a path into the set of reachable blocks that does _not_ go
@@ -168,6 +170,18 @@ public:
     for (auto &[MBB, IsSource] : ReachableMap) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
+        // An edge from the def block starts a new trip around a cycle through
+        // the def block. Every lane that is active at the def block at the end
+        // of that trip was active at the end of MBB, since MBB's terminator
+        // cannot enable more lanes.
+        if (Pred == &DefBlock) {
+          assert(llvm::none_of(MBB->terminators(),
+                               [](const MachineInstr &MI) {
+                                 return MI.getOpcode() == AMDGPU::SI_ELSE;
+                               }) &&
+                 "SI_ELSE block in a cycle through the def block");
+          continue;
+        }
         if (ReachableMap.count(Pred)) {
           HaveReachablePred = true;
         } else {
@@ -573,10 +587,8 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
-    if (NewReg != DstReg) {
-      replaceDstReg(NewReg, DstReg, &MBB);
-      MI->eraseFromParent();
-    }
+    replaceDstReg(NewReg, DstReg, &MBB);
+    MI->eraseFromParent();
 
     Incomings.clear();
   }
@@ -665,7 +677,7 @@ bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
                                                    bool &Val) const {
   const MachineInstr *MI;
   for (;;) {
-    MI = MRI->getUniqueVRegDef(Reg);
+    MI = MRI->getVRegDef(Reg);
     if (MI->getOpcode() == AMDGPU::IMPLICIT_DEF)
       return true;
 
@@ -763,7 +775,7 @@ void Vreg1LoweringHelper::collectIncomingValuesFromPhi(
     assert(i + 1 < MI->getNumOperands());
     Register IncomingReg = MI->getOperand(i).getReg();
     MachineBasicBlock *IncomingMBB = MI->getOperand(i + 1).getMBB();
-    MachineInstr *IncomingDef = MRI->getUniqueVRegDef(IncomingReg);
+    MachineInstr *IncomingDef = MRI->getVRegDef(IncomingReg);
 
     if (IncomingDef->getOpcode() == AMDGPU::COPY) {
       IncomingReg = IncomingDef->getOperand(1).getReg();
@@ -802,7 +814,8 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     } else {
       BuildMI(MBB, I, DL, TII->get(LMC->XorOpc), DstReg)
           .addReg(LMC->ExecReg)
-          .addImm(-1);
+          .addImm(-1)
+          .setOperandDead(3);
     }
     return;
   }
@@ -816,7 +829,8 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       PrevMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
       BuildMI(MBB, I, DL, TII->get(LMC->AndN2Opc), PrevMaskedReg)
           .addReg(PrevReg)
-          .addReg(LMC->ExecReg);
+          .addReg(LMC->ExecReg)
+          .setOperandDead(3);
     }
   }
   if (!CurConstant) {
@@ -827,7 +841,8 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       CurMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
       BuildMI(MBB, I, DL, TII->get(LMC->AndOpc), CurMaskedReg)
           .addReg(CurReg)
-          .addReg(LMC->ExecReg);
+          .addReg(LMC->ExecReg)
+          .setOperandDead(3);
     }
   }
 
@@ -840,11 +855,13 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
   } else if (PrevConstant && PrevVal) {
     BuildMI(MBB, I, DL, TII->get(LMC->OrN2Opc), DstReg)
         .addReg(CurMaskedReg)
-        .addReg(LMC->ExecReg);
+        .addReg(LMC->ExecReg)
+        .setOperandDead(3);
   } else {
     BuildMI(MBB, I, DL, TII->get(LMC->OrOpc), DstReg)
         .addReg(PrevMaskedReg)
-        .addReg(CurMaskedReg ? CurMaskedReg : LMC->ExecReg);
+        .addReg(CurMaskedReg ? CurMaskedReg : LMC->ExecReg)
+        .setOperandDead(3);
   }
 }
 

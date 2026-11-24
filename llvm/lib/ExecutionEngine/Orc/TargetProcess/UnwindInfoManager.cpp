@@ -110,20 +110,13 @@ bool UnwindInfoManager::TryEnable() {
 
 void UnwindInfoManager::addBootstrapSymbols(StringMap<ExecutorAddr> &M) {
   Mangler Mangle{Triple(sys::getProcessTriple())};
-  M[Mangle.mangledCopy(rt_alt::UnwindInfoManagerRegisterActionName)] =
+  // Provide the symbols for the StandaloneMachOUnwindInfoRegistrar SPS
+  // interface in the ORC runtime.
+  const auto &SNs = rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
+  M[Mangle.mangledCopy(SNs.RegisterSectionsName)] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
-  M[Mangle.mangledCopy(rt_alt::UnwindInfoManagerDeregisterActionName)] =
+  M[Mangle.mangledCopy(SNs.DeregisterSectionsName)] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
-
-  {
-    // Also provide symbols defined by StandaloneMachOUnwindInfoRegistrar
-    // in the new ORC runtime.
-    const auto &SNs = rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
-    M[Mangle.mangledCopy(SNs.RegisterSectionsName)] =
-        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
-    M[Mangle.mangledCopy(SNs.DeregisterSectionsName)] =
-        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
-  }
 }
 
 Error UnwindInfoManager::registerSections(

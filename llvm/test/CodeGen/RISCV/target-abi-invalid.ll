@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=riscv32 -target-abi foo < %s 2>&1 \
+; RUN: not llc -mtriple=riscv32 -target-abi foo < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV32I-FOO %s
-; RUN: llc -mtriple=riscv32 -mattr=+f -target-abi ilp32foof < %s 2>&1 \
+; RUN: not llc -mtriple=riscv32 -mattr=+f -target-abi ilp32foof < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV32IF-ILP32FOOF %s
 
-; RV32I-FOO: note: 'foo' is not a recognized ABI for this target (ignoring target-abi)
-; RV32IF-ILP32FOOF: note: 'ilp32foof' is not a recognized ABI for this target (ignoring target-abi)
+; RV32I-FOO: error: 'foo' is not a recognized ABI for this target
+; RV32IF-ILP32FOOF: error: 'ilp32foof' is not a recognized ABI for this target
 
 ; RUN: llc -mtriple=riscv64 -target-abi ilp32 < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV64I-ILP32 %s

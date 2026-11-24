@@ -62,6 +62,16 @@ def immfour : RISCVOp {
 
 def tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
 
+def th_memidx_rs1 : RegisterOperand<GPR> {
+  let DecoderMethod = "decodeTHMemIdxRs1Operand";
+  let hasCompleteDecoder = false;
+}
+
+def th_mempair_rs1 : RegisterOperand<GPR> {
+  let DecoderMethod = "decodeTHMemPairRs1Operand";
+  let hasCompleteDecoder = false;
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -162,7 +172,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class THLoadPair<bits<5> funct5, string opcodestr, Operand consttype>
   : RVInstRBase<0b100, OPC_CUSTOM_0,
                 (outs GPR:$rd, GPR:$rs2),
-                (ins GPR:$rs1, uimm2:$uimm2, consttype:$const3or4),
+                (ins th_mempair_rs1:$rs1, uimm2:$uimm2, consttype:$const3or4),
                  opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
   bits<0> const3or4;
@@ -217,7 +227,7 @@ class THLoadIndexed<RegisterClass Ty, bits<5> funct5, string opcodestr>
 
 class THLoadUpdate<bits<5> funct5, string opcodestr>
     : RVInstIBase<0b100, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-                  (ins GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+                  (ins th_memidx_rs1:$rs1, simm5:$simm5, uimm2:$uimm2),
                   opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
   bits<5> simm5;
   bits<2> uimm2;

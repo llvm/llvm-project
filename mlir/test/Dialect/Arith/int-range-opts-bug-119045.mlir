@@ -15,7 +15,7 @@ func.func @blocks_prematurely_declared_dead_bug(%mem: memref<?xf16>) {
   %c0 = arith.constant 0 : index
   %c64 = arith.constant 64 : index
   %thread_id_x = gpu.thread_id  x upper_bound 64
-  %6 = test.with_bounds { smin = 16 : index, smax = 112 : index, umin = 16 : index, umax = 112 : index } : index
+  %6 = test.with_bounds < smin = 16 : index, smax = 112 : index, umin = 16 : index, umax = 112 : index > : index
   %8 = arith.divui %6, %c16 : index
   %9 = arith.muli %8, %c16 : index
   cf.br ^bb1(%c0 : index)

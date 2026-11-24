@@ -418,12 +418,6 @@ static int getArgumentStackToRestore(MachineFunction &MF,
   return ArgumentPopSize;
 }
 
-static bool needsWinCFI(const MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
-         F.needsUnwindTableEntry();
-}
-
 // Given a load or a store instruction, generate an appropriate unwinding SEH
 // code on Windows.
 static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
@@ -901,7 +895,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned NumBytes = MFI.getStackSize();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int FPCXTSaveSize = 0;
-  bool NeedsWinCFI = needsWinCFI(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
 
@@ -2733,7 +2727,9 @@ static bool canSpillOnFrameIndexAccess(const MachineFunction &MF,
 
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   for (const auto &MBB : MF)
-    for (const auto &MI : MBB)
+    for (const auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
       if (MI.getOpcode() == ARM::tSTRspi || MI.getOpcode() == ARM::tSTRi ||
           STI.genExecuteOnly())
         for (const auto &Op : MI.operands())
@@ -2743,6 +2739,7 @@ static bool canSpillOnFrameIndexAccess(const MachineFunction &MF,
             if (ARM::hGPRRegClass.contains(Reg) && Reg != ARM::SP)
               return true;
           }
+    }
   return false;
 }
 
@@ -3621,7 +3618,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the relevant DWARF information about the change in stack pointer as
   // well as where to find both r4 and r5 (the callee-save registers)
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (!MF.usesWindowsUnwindInfo()) {
     CFIInstBuilder CFIBuilder(PrevStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(8);
     CFIBuilder.buildOffset(ScratchReg1, -4);
@@ -3833,7 +3830,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the DWARF info about the change in stack as well as where to find the
   // previous link register
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (!MF.usesWindowsUnwindInfo()) {
     CFIInstBuilder CFIBuilder(AllocMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(12);
     CFIBuilder.buildOffset(ARM::LR, -12);
@@ -3893,7 +3890,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (!MF.usesWindowsUnwindInfo())
     CFIInstBuilder(AllocMBB, MachineInstr::NoFlags).buildDefCFAOffset(0);
 
   // Return from this function.
@@ -3916,7 +3913,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (!MF.usesWindowsUnwindInfo()) {
     CFIInstBuilder CFIBuilder(PostStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(0);
 

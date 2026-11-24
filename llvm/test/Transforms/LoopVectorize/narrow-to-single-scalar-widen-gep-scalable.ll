@@ -25,7 +25,7 @@ define void @widengep_narrow(ptr %in, ptr noalias %p) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP4]], <vscale x 2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr [[TMP4]], <vscale x 2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i32 [[TMP8]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP9]], 1

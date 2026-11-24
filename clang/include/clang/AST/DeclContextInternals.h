@@ -142,11 +142,11 @@ public:
   DeclsAndHasExternalTy getAsListAndHasExternal() const { return Data; }
 
   NamedDecl *getAsDecl() const {
-    return getAsListAndHasExternal().getPointer().dyn_cast<NamedDecl *>();
+    return dyn_cast<NamedDecl *>(getAsListAndHasExternal().getPointer());
   }
 
   DeclListNode *getAsList() const {
-    return getAsListAndHasExternal().getPointer().dyn_cast<DeclListNode*>();
+    return dyn_cast<DeclListNode *>(getAsListAndHasExternal().getPointer());
   }
 
   bool hasExternalDecls() const {
@@ -248,12 +248,12 @@ public:
     assert(!llvm::is_contained(getLookupResult(), D) && "Already exists!");
     // Determine if this declaration is actually a redeclaration.
     for (DeclListNode *N = getAsList(); /*return in loop*/;
-         N = N->Rest.dyn_cast<DeclListNode *>()) {
+         N = dyn_cast<DeclListNode *>(N->Rest)) {
       if (D->declarationReplaces(N->D, IsKnownNewer)) {
         N->D = D;
         return;
       }
-      if (auto *ND = N->Rest.dyn_cast<NamedDecl *>()) {
+      if (auto *ND = dyn_cast<NamedDecl *>(N->Rest)) {
         if (D->declarationReplaces(ND, IsKnownNewer)) {
           N->Rest = D;
           return;

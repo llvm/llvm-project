@@ -634,9 +634,10 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
-def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
+def LifetimeSafetyInvalidation
+    : DiagGroup<"lifetime-safety-experimental-invalidation"> {
   code Documentation = [{
-Warning to detect invalidation of references.
+Experimental. Warning to detect invalidation of references.
   }];
 }
 
@@ -681,8 +682,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyDanglingFieldMoved,
                                     LifetimeSafetyDanglingFieldLambdaCapture,
                                     LifetimeSafetyDanglingGlobalMoved,
-                                    LifetimeSafetyDanglingGlobalInMain,
-                                    LifetimeSafetyInvalidation]>;
+                                    LifetimeSafetyDanglingGlobalInMain]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
@@ -718,6 +718,18 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
+def LifetimeSafetyCaptureByViolation
+    : DiagGroup<"lifetime-safety-capture-by-violation"> {
+  code Documentation = [{
+Detects a parameter whose '[[clang::lifetime_capture_by]]' attributes name
+neither 'unknown' nor an entity that the function body captures the parameter
+by: the enclosing object (a store into a field of 'this', or a capture by 'this'
+in a call), global storage, or another reference parameter (a store into it, or
+a capture by it in a member call). Pointer parameters, stores into members of a
+reference parameter, and captures in calls to free functions are not verified.
+  }];
+}
+
 def LifetimeSafetyAnnotationPlacement
     : DiagGroup<"lifetime-safety-annotation-placement",
                 [LifetimeSafetyInapplicableLifetimebound,
@@ -730,7 +742,8 @@ Validates that lifetime annotations are placed on appropriate types and in appro
 def LifetimeSafetyAnnotationVerification
     : DiagGroup<"lifetime-safety-annotation-verification",
                 [LifetimeSafetyNoescape,
-                 LifetimeSafetyLifetimeboundViolation]> {
+                 LifetimeSafetyLifetimeboundViolation,
+                 LifetimeSafetyCaptureByViolation]> {
   code Documentation = [{
 Verifies that function implementations adhere to their lifetime annotation contracts through dataflow analysis.
   }];
@@ -741,6 +754,37 @@ def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
                                           LifetimeSafetyAnnotationVerification]> {
   code Documentation = [{
 Validates correct usage and adherence to lifetime safety annotations like [[clang::noescape]] and [[clang::lifetimebound]].
+  }];
+}
+
+def LifetimeSafetyFieldOriginEscape
+    : DiagGroup<"lifetime-safety-experimental-field-origin-escape"> {
+  code Documentation = [{
+Experimental. Detects member functions returning a value derived from a
+pointer, reference, or view field rather than from ``*this``. May report owned
+pointer fields (e.g., ``Vector::data()``), which can be silenced by marking the
+method ``[[clang::lifetimebound]]``.
+  }];
+}
+
+def LifetimeSafetyDestructorUse
+    : DiagGroup<"lifetime-safety-experimental-destructor-use"> {
+  code Documentation = [{
+Experimental. Treats a non-trivial destructor running at scope exit as a use of
+the borrows the object holds, since the analysis cannot see whether the
+destructor reads them. Detects objects destroyed after the storage they borrow
+from. May report destructors that never read the borrow (e.g. ``std::function``).
+  }];
+}
+
+def LifetimeSafetyExperimental
+    : DiagGroup<"lifetime-safety-experimental",
+                [LifetimeSafetyInvalidation,
+                 LifetimeSafetyFieldOriginEscape,
+                 LifetimeSafetyDestructorUse]> {
+  code Documentation = [{
+Experimental lifetime safety warnings. These may have known false positives and
+their behavior may change. Not enabled by -Wlifetime-safety-all.
   }];
 }
 
@@ -1129,7 +1173,8 @@ def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end
 def Varargs : DiagGroup<"varargs">;
 def XorUsedAsPow : DiagGroup<"xor-used-as-pow">;
 
-def Unsequenced : DiagGroup<"unsequenced">;
+def UnsequencedVolatile : DiagGroup<"unsequenced-volatile">;
+def Unsequenced : DiagGroup<"unsequenced", [UnsequencedVolatile]>;
 // GCC name for -Wunsequenced
 def : DiagGroup<"sequence-point", [Unsequenced]>;
 
@@ -1954,10 +1999,11 @@ def PedanticMacros : DiagGroup<"pedantic-macros",
 def BranchProtection : DiagGroup<"branch-protection">;
 
 // HLSL diagnostic groups
+def HLSL202x : DiagGroup<"hlsl-202x-extensions">;
 def HLSL202y : DiagGroup<"hlsl-202y-extensions">;
 
 // Warnings for HLSL Clang extensions
-def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
+def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202x, HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
@@ -1980,6 +2026,9 @@ def HLSLAvailability : DiagGroup<"hlsl-availability">;
 // Warnings specifically for DXC incompatabilities.
 def HLSLDXCCompat : DiagGroup<"hlsl-dxc-compatability">;
 
+// Warnings for semantics and their signatures.
+def HLSLSemanticSignatures : DiagGroup<"hlsl-semantic-signatures">;
+
 // Warnings for legacy binding behavior
 def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
 
@@ -1991,12 +2040,20 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
-def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
+def UnsafeBufferUsageInLibcCallNumericConversion : DiagGroup<"unsafe-buffer-usage-in-libc-call-numeric-conversion">;
+def UnsafeBufferUsageInLibcCallStringManipulation : DiagGroup<"unsafe-buffer-usage-in-libc-call-string-manipulation">;
+def UnsafeBufferUsageInLibcCallStringExamination : DiagGroup<"unsafe-buffer-usage-in-libc-call-string-examination">;
+def UnsafeBufferUsageInLibcCallMemory : DiagGroup<"unsafe-buffer-usage-in-libc-call-memory">;
+def UnsafeBufferUsageInLibcCallIO : DiagGroup<"unsafe-buffer-usage-in-libc-call-io">;
+def UnsafeBufferUsageInLibcCallPrintf : DiagGroup<"unsafe-buffer-usage-in-libc-call-printf">;
+def UnsafeBufferUsageInLibcCallScanf : DiagGroup<"unsafe-buffer-usage-in-libc-call-scanf">;
+def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call", [UnsafeBufferUsageInLibcCallNumericConversion, UnsafeBufferUsageInLibcCallStringManipulation, UnsafeBufferUsageInLibcCallStringExamination, UnsafeBufferUsageInLibcCallMemory, UnsafeBufferUsageInLibcCallIO, UnsafeBufferUsageInLibcCallPrintf, UnsafeBufferUsageInLibcCallScanf]>;
 def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
 def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
 def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
 def UnsafeBufferUsageInStringView : DiagGroup<"unsafe-buffer-usage-in-string-view">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView]>;
+def UnsafeBufferUsageMainArgv : DiagGroup<"unsafe-buffer-usage-main-argv">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView, UnsafeBufferUsageMainArgv]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
@@ -2032,3 +2089,5 @@ def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
 
 def DynamicDebugging : DiagGroup<"dynamic-debugging">;
+
+def BPFEnumNotRelocated : DiagGroup<"bpf-enum-not-relocated">;

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -78,7 +79,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // case Intrinsic::dx_wave_match:
   // case Intrinsic::dx_wavemulti.*:
   // case Intrinsic::dx_wavemulti.ballot:
-  // case Intrinsic::dx_quad.vote:
   switch (IID) {
   default:
     return false;
@@ -89,6 +89,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_all:
   case Intrinsic::dx_wave_readlane:
+  case Intrinsic::dx_wave_readlane_first:
   case Intrinsic::dx_wave_active_countbits:
   case Intrinsic::dx_wave_ballot:
   case Intrinsic::dx_wave_prefix_bit_count:
@@ -109,7 +110,16 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_bit_and:
+  case Intrinsic::dx_wave_multi_prefix_bit_or:
+  case Intrinsic::dx_wave_multi_prefix_bit_xor:
+  case Intrinsic::dx_wave_multi_prefix_bit_count:
+  case Intrinsic::dx_wave_multi_prefix_product:
+  case Intrinsic::dx_wave_multi_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_sum:
+  case Intrinsic::dx_wave_multi_prefix_usum:
     // Quad Op Variants
+  case Intrinsic::dx_quad_all:
   case Intrinsic::dx_quad_read_across_x:
   case Intrinsic::dx_quad_read_across_y:
   case Intrinsic::dx_quad_read_across_diagonal:
@@ -188,6 +198,15 @@ bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
   return false;
 }
 
+/// Returns true if the LOD clamp argument of \p II is neither constant zero
+/// nor undef.
+static bool hasLODClamp(const IntrinsicInst &II) {
+  const Value *Clamp = II.getArgOperand(II.arg_size() - 1);
+  if (const auto *C = dyn_cast<ConstantFP>(Clamp))
+    return !C->isZero();
+  return !isa<UndefValue>(Clamp);
+}
+
 /// Update the shader flags mask based on the given instruction.
 /// \param CSF Shader flags mask to update.
 /// \param I Instruction to check.
@@ -258,6 +277,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::dx_start_vertex_location:
+    case Intrinsic::dx_start_instance_location:
+      CSF.ExtendedCommandInfo = true;
+      break;
+    case Intrinsic::dx_view_id:
+      CSF.ViewID = true;
+      break;
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
 
@@ -289,12 +315,14 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
       }
       break;
     }
+    case Intrinsic::dx_resource_load_level:
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped() && RTI.isUAV())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
-      if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
+      if (II->getIntrinsicID() == Intrinsic::dx_resource_load_typedbuffer &&
+          !CSF.TiledResources && checkIfStatusIsExtracted(*II))
         CSF.TiledResources = true;
       break;
     }
@@ -303,7 +331,15 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         CSF.TiledResources = true;
       break;
     }
-    case Intrinsic::dx_resource_atomic_binop: {
+    case Intrinsic::dx_resource_sample_clamp:
+    case Intrinsic::dx_resource_samplebias_clamp:
+    case Intrinsic::dx_resource_samplegrad_clamp:
+      // DXIL validator 1.7 does not expect TiledResources for LOD clamps.
+      if (!CSF.TiledResources && MMDI.ValidatorVersion >= VersionTuple(1, 8))
+        CSF.TiledResources = hasLODClamp(*II);
+      break;
+    case Intrinsic::dx_resource_atomic_binop:
+    case Intrinsic::dx_resource_atomic_compare_exchange: {
       if (II->getType()->isIntegerTy(64)) {
         dxil::ResourceTypeInfo &RTI =
             DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
@@ -400,7 +436,8 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 /// Construct ModuleShaderFlags for module Module M
 void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                                    const DXILResourceMap &DRM,
-                                   const ModuleMetadataInfo &MMDI) {
+                                   const ModuleMetadataInfo &MMDI,
+                                   const ModuleSignatureInfo &Signatures) {
 
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
   // The command line option -res-may-alias will set the dx.resmayalias module
@@ -440,6 +477,38 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       for (const auto &BB : *F)
         for (const auto &I : BB)
           updateFunctionFlags(CSF, I, DRTM, MMDI);
+      // An unused signature element still contributes to the shader's type
+      // requirements even when no instruction uses that component type.
+      if (const EntrySignature *Sig = Signatures.get(F)) {
+        CSF.Barycentrics |= llvm::any_of(Sig->Inputs, [](const auto &E) {
+          return E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics;
+        });
+        // Unallocated elements do not occupy signature registers. Their type
+        // requirements come from the instructions that access them.
+        auto HasLowPrecision = [](const auto &Elements) {
+          return llvm::any_of(Elements, [](const auto &E) {
+            return E.isAllocated() && (E.CompType == ElementType::F16 ||
+                                       E.CompType == ElementType::I16 ||
+                                       E.CompType == ElementType::U16);
+          });
+        };
+        if (HasLowPrecision(Sig->Inputs) || HasLowPrecision(Sig->Outputs)) {
+          CSF.LowPrecisionPresent = true;
+          if (Sig->UseNative16Bit)
+            CSF.NativeLowPrecision = true;
+          else
+            CSF.MinimumPrecision = true;
+        }
+        // Declaring SV_ShadingRate in either signature requires the feature,
+        // regardless of whether it is accessed.
+        auto HasShadingRate = [](const auto &Elements) {
+          return llvm::any_of(Elements, [](const auto &E) {
+            return E.SemanticKind == dxbc::PSV::SemanticKind::ShadingRate;
+          });
+        };
+        if (HasShadingRate(Sig->Inputs) || HasShadingRate(Sig->Outputs))
+          CSF.ShadingRate = true;
+      }
       // Update combined shader flags mask for all functions in this SCC
       SCCSF.merge(CSF);
 
@@ -499,13 +568,13 @@ ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
   const ModuleMetadataInfo MMDI = AM.getResult<DXILMetadataAnalysis>(M);
 
   ModuleShaderFlags MSFI;
-  MSFI.initialize(M, DRTM, DRM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI, AM.getResult<SignatureAnalysis>(M));
 
   return MSFI;
 }
 
-PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
-                                                  ModuleAnalysisManager &AM) {
+PreservedAnalyses
+ShaderFlagsAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleShaderFlags &FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
   // Print description of combined shader flags for all module functions
   OS << "; Combined Shader Flags for Module\n";
@@ -534,7 +603,8 @@ bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   const ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  MSFI.initialize(M, DRTM, DRM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI,
+                  getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo());
   return false;
 }
 
@@ -543,6 +613,7 @@ void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
   AU.addRequiredTransitive<DXILResourceWrapperPass>();
   AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+  AU.addRequired<SignatureAnalysisWrapper>();
 }
 
 char ShaderFlagsAnalysisWrapper::ID = 0;
@@ -551,5 +622,6 @@ INITIALIZE_PASS_BEGIN(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                       "DXIL Shader Flag Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SignatureAnalysisWrapper)
 INITIALIZE_PASS_END(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                     "DXIL Shader Flag Analysis", true, true)

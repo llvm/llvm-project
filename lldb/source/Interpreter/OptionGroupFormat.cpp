@@ -116,7 +116,7 @@ Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
     }
 
     // We the first character of the "gdb_format_str" is not the
-    // NULL terminator, we didn't consume the entire string and
+    // null terminator, we didn't consume the entire string and
     // something is wrong. Also, if none of the format, size or count was
     // specified correctly, then abort.
     if (!gdb_format_str.empty() ||

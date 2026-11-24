@@ -16,6 +16,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Statistics.h"
@@ -23,7 +24,6 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/ProcessInfo.h"
-#include "lldb/Version/Version.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
@@ -66,6 +66,12 @@ bool DiagnosticsProperties::GetCollectBinaries() const {
 
 bool DiagnosticsProperties::SetCollectBinaries(bool collect) {
   return SetPropertyAtIndex(ePropertyCollectBinaries, collect);
+}
+
+bool DiagnosticsProperties::GetSuggestBugReport() const {
+  const uint32_t idx = ePropertySuggestBugReport;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_diagnostics_properties[idx].default_uint_value != 0);
 }
 
 DiagnosticsProperties &Diagnostics::GetGlobalProperties() {
@@ -237,6 +243,7 @@ static constexpr TriageCommand g_triage_commands[] = {
     {"image lookup -va $pc", Requires::Frame},
     {"register read", Requires::Frame},
     {"frame variable", Requires::Frame},
+    {"scripting extension list --instances", Requires::Always},
 };
 
 static bool Available(Requires requirement, const ExecutionContext &exe_ctx) {
@@ -271,7 +278,7 @@ Diagnostics::Collect(Debugger &debugger, const ExecutionContext &exe_ctx,
     CollectBinaries(exe_ctx, dir, report.attachments.files);
   CollectArtifactProviders(dir, report.attachments.files);
 
-  report.version = lldb_private::GetVersion();
+  report.version = Language::GetVersionWithLanguageInfo();
   report.os = GetHostDescription(exe_ctx);
   report.invocation = GetInvocation();
   return report;

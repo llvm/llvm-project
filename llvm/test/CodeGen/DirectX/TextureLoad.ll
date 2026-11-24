@@ -266,7 +266,7 @@ define void @load_rwtexture2d_float4_explicit_lod(<2 x i32> %coords) {
 define void @load_rwtexture2darray_float4(<3 x i32> %coords) {
   %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 7)
       @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_1_0_0_7t(
-          i32 0, i32 0, i32 1, i32 0, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords, i32 0
   ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords, i32 1
@@ -287,7 +287,7 @@ define void @load_rwtexture2darray_float4(<3 x i32> %coords) {
 define void @load_rwtexture2darray_scalarized_coords(i32 %x, i32 %y, i32 %z) {
   %texture = call target("dx.Texture", float, 1, 0, 0, 7)
       @llvm.dx.resource.handlefrombinding.tdx.Texture_f32_1_0_0_7t(
-          i32 0, i32 0, i32 1, i32 0, ptr null)
+          i32 0, i32 2, i32 1, i32 0, ptr null)
 
   %coords.0 = insertelement <3 x i32> poison, i32 %x, i32 0
   %coords.1 = insertelement <3 x i32> %coords.0, i32 %y, i32 1
@@ -302,5 +302,31 @@ define void @load_rwtexture2darray_scalarized_coords(i32 %x, i32 %y, i32 %z) {
 
   ; CHECK: extractvalue %dx.types.ResRet.f32 %[[LOAD]], 0
   call void @use_float(float %data)
+  ret void
+}
+
+; Leading literals are folded into the constant base of the insertelement
+; chain, so those offsets come from the base rather than an insert.
+; CHECK-LABEL: define void @load_texture2d_constant_base_offsets(
+define void @load_texture2d_constant_base_offsets(i32 %x, i32 %y, i32 %oy) {
+  %texture = call target("dx.Texture", <4 x float>, 0, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_0_0_0_2t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  %coords.0 = insertelement <2 x i32> poison, i32 %x, i32 0
+  %coords.1 = insertelement <2 x i32> %coords.0, i32 %y, i32 1
+  %offsets = insertelement <2 x i32> <i32 1, i32 poison>, i32 %oy, i32 1
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: %[[LOAD:.*]] = call %dx.types.ResRet.f32 @dx.op.textureLoad.f32(i32 66, %dx.types.Handle %{{.*}}, i32 0, i32 %x, i32 %y, i32 undef, i32 1, i32 %oy, i32 undef)
+  %data = call <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_0_0_0_2t.v2i32.i32.v2i32(
+      target("dx.Texture", <4 x float>, 0, 0, 0, 2) %texture,
+      <2 x i32> %coords.1, i32 0, <2 x i32> %offsets)
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: extractvalue %dx.types.ResRet.f32 %[[LOAD]], 0
+  call void @use_float4(<4 x float> %data)
   ret void
 }

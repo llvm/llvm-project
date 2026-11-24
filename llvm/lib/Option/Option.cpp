@@ -46,9 +46,11 @@ void Option::print(raw_ostream &O, bool AddNewLine) const {
     P(InputClass);
     P(UnknownClass);
     P(FlagClass);
+    P(FlagOrEqClass);
     P(JoinedClass);
     P(ValuesClass);
     P(SeparateClass);
+    P(SeparateOrEqClass);
     P(CommaJoinedClass);
     P(MultiArgClass);
     P(JoinedOrSeparateClass);
@@ -215,6 +217,23 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
            Args.getArgString(Index) != nullptr)
       A->getValues().push_back(Args.getArgString(Index++));
     return A;
+  }
+  case FlagOrEqClass:
+  case SeparateOrEqClass: {
+    const char *Rest = Args.getArgString(Index) + SpellingSize;
+    if (*Rest == '=')
+      return std::make_unique<Arg>(*this, CurArg, Index++, Rest + 1);
+    if (*Rest)
+      return nullptr;
+    if (getKind() == FlagOrEqClass)
+      return std::make_unique<Arg>(*this, CurArg, Index++);
+
+    Index += 2;
+    if (Index > Args.getNumInputArgStrings() ||
+        Args.getArgString(Index - 1) == nullptr)
+      return nullptr;
+    return std::make_unique<Arg>(*this, CurArg, Index - 2,
+                                 Args.getArgString(Index - 1));
   }
   case RemainingArgsJoinedClass: {
     auto A = std::make_unique<Arg>(*this, CurArg, Index);

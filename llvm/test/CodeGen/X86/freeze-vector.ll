@@ -761,7 +761,7 @@ define i32 @freeze_select_scalar_demanded(i1 %c, <2 x i32> %a, <2 x i32> %b, <2 
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jne .LBB27_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm1
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm1 # [2147483648,2147483648,u,u]
 ; X86-NEXT:    jmp .LBB27_3
 ; X86-NEXT:  .LBB27_1:
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1 # [2147483647,2147483647,u,u]
@@ -800,7 +800,7 @@ define <2 x i32> @freeze_vselect_high_demanded(<4 x i32> %csrc, <2 x i32> %a, <2
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm4[0,1,2,3],xmm0[4,5,6,7]
 ; X86-NEXT:    vpcmpgtd %xmm5, %xmm0, %xmm0
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2 # [2147483647,2147483647,u,u]
-; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3 # [2147483648,2147483648,u,u]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],mem[0]
 ; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
@@ -812,16 +812,10 @@ define <2 x i32> @freeze_vselect_high_demanded(<4 x i32> %csrc, <2 x i32> %a, <2
 ;
 ; X64-LABEL: freeze_vselect_high_demanded:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483647,2147483647,2147483647,2147483647]
-; X64-NEXT:    vpaddd %xmm5, %xmm0, %xmm6
-; X64-NEXT:    vpxor %xmm7, %xmm7, %xmm7
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm6[0,1],xmm0[2,3]
-; X64-NEXT:    vpcmpgtd %xmm7, %xmm0, %xmm0
-; X64-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    vpsubd %xmm5, %xmm4, %xmm4
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm4[0],xmm3[0]
+; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; X64-NEXT:    vmovddup {{.*#+}} xmm2 = xmm3[0,0]
 ; X64-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-NEXT:    retq
@@ -856,7 +850,7 @@ define i32 @freeze_vselect_demanded(<4 x i32> %csrc, <2 x i32> %a, <2 x i32> %b,
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm6[0]
 ; X86-NEXT:    vpcmpgtd %xmm5, %xmm0, %xmm0
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2 # [2147483647,2147483647,u,u]
-; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4, %xmm4
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4, %xmm4 # [2147483648,2147483648,u,u]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
 ; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm3, %xmm0
@@ -940,3 +934,184 @@ define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i
   %add = add <2 x i64> %ext, splat (i64 16)
   ret <2 x i64> %add
 }
+
+; A dynamic insert/extract that is legalized through a stack slot must freeze
+; the index before clamping it, or the clamp can be optimized away and the
+; store/load uses an unbounded offset.
+; https://github.com/llvm/llvm-project/issues/224200
+define void @freeze_dynamic_insertelement_wide_vector(ptr %vp, i32 %x, ptr %dst) nounwind {
+; X86-LABEL: freeze_dynamic_insertelement_wide_vector:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-32, %esp
+; X86-NEXT:    addl $-128, %esp
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    vmovaps (%ecx), %ymm0
+; X86-NEXT:    vmovaps 32(%ecx), %ymm1
+; X86-NEXT:    vmovaps 64(%ecx), %ymm2
+; X86-NEXT:    vmovaps 96(%ecx), %ymm3
+; X86-NEXT:    bsrl 12(%ebp), %ecx
+; X86-NEXT:    notl %ecx
+; X86-NEXT:    andl $31, %ecx
+; X86-NEXT:    vmovaps %ymm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovaps %ymm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovaps %ymm0, (%esp)
+; X86-NEXT:    movl $5, (%esp,%ecx,4)
+; X86-NEXT:    vmovaps (%esp), %ymm0
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm1
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm2
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm3
+; X86-NEXT:    vmovaps %ymm3, 64(%eax)
+; X86-NEXT:    vmovaps %ymm2, 96(%eax)
+; X86-NEXT:    vmovaps %ymm0, (%eax)
+; X86-NEXT:    vmovaps %ymm1, 32(%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_dynamic_insertelement_wide_vector:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    andq $-32, %rsp
+; X64-NEXT:    addq $-128, %rsp
+; X64-NEXT:    vmovaps (%rdi), %ymm0
+; X64-NEXT:    vmovaps 32(%rdi), %ymm1
+; X64-NEXT:    vmovaps 64(%rdi), %ymm2
+; X64-NEXT:    vmovaps 96(%rdi), %ymm3
+; X64-NEXT:    bsrl %esi, %eax
+; X64-NEXT:    notl %eax
+; X64-NEXT:    vmovaps %ymm3, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm2, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm0, (%rsp)
+; X64-NEXT:    andl $31, %eax
+; X64-NEXT:    movl $5, (%rsp,%rax,4)
+; X64-NEXT:    vmovaps (%rsp), %ymm0
+; X64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm1
+; X64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm2
+; X64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm3
+; X64-NEXT:    vmovaps %ymm2, 64(%rdx)
+; X64-NEXT:    vmovaps %ymm3, 96(%rdx)
+; X64-NEXT:    vmovaps %ymm0, (%rdx)
+; X64-NEXT:    vmovaps %ymm1, 32(%rdx)
+; X64-NEXT:    movq %rbp, %rsp
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %v = load <32 x i32>, ptr %vp
+  %idx = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %ins = insertelement <32 x i32> %v, i32 5, i32 %idx
+  store <32 x i32> %ins, ptr %dst
+  ret void
+}
+
+define i32 @freeze_dynamic_extractelement_wide_vector(ptr %vp, i32 %x) nounwind {
+; X86-LABEL: freeze_dynamic_extractelement_wide_vector:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    notl %ecx
+; X86-NEXT:    andl $31, %ecx
+; X86-NEXT:    movl (%eax,%ecx,4), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_dynamic_extractelement_wide_vector:
+; X64:       # %bb.0:
+; X64-NEXT:    bsrl %esi, %eax
+; X64-NEXT:    notl %eax
+; X64-NEXT:    andl $31, %eax
+; X64-NEXT:    movl (%rdi,%rax,4), %eax
+; X64-NEXT:    retq
+  %v = load <32 x i32>, ptr %vp
+  %idx = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %r = extractelement <32 x i32> %v, i32 %idx
+  ret i32 %r
+}
+
+define void @freeze_dynamic_insertelement_chain_wide_vector(ptr %vp, i32 %x, i32 %y, ptr %dst) nounwind {
+; X86-LABEL: freeze_dynamic_insertelement_chain_wide_vector:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-32, %esp
+; X86-NEXT:    addl $-128, %esp
+; X86-NEXT:    movl 20(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    vmovaps (%ecx), %ymm0
+; X86-NEXT:    vmovaps 32(%ecx), %ymm1
+; X86-NEXT:    vmovaps 64(%ecx), %ymm2
+; X86-NEXT:    vmovaps 96(%ecx), %ymm3
+; X86-NEXT:    bsrl 12(%ebp), %ecx
+; X86-NEXT:    notl %ecx
+; X86-NEXT:    andl $31, %ecx
+; X86-NEXT:    bsrl 16(%ebp), %edx
+; X86-NEXT:    notl %edx
+; X86-NEXT:    andl $31, %edx
+; X86-NEXT:    vmovaps %ymm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovaps %ymm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovaps %ymm0, (%esp)
+; X86-NEXT:    movl $5, (%esp,%ecx,4)
+; X86-NEXT:    movl $7, (%esp,%edx,4)
+; X86-NEXT:    vmovaps (%esp), %ymm0
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm1
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm2
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm3
+; X86-NEXT:    vmovaps %ymm3, 64(%eax)
+; X86-NEXT:    vmovaps %ymm2, 96(%eax)
+; X86-NEXT:    vmovaps %ymm0, (%eax)
+; X86-NEXT:    vmovaps %ymm1, 32(%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_dynamic_insertelement_chain_wide_vector:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    andq $-32, %rsp
+; X64-NEXT:    addq $-128, %rsp
+; X64-NEXT:    vmovaps (%rdi), %ymm0
+; X64-NEXT:    vmovaps 32(%rdi), %ymm1
+; X64-NEXT:    vmovaps 64(%rdi), %ymm2
+; X64-NEXT:    vmovaps 96(%rdi), %ymm3
+; X64-NEXT:    bsrl %esi, %eax
+; X64-NEXT:    notl %eax
+; X64-NEXT:    bsrl %edx, %edx
+; X64-NEXT:    notl %edx
+; X64-NEXT:    andl $31, %eax
+; X64-NEXT:    vmovaps %ymm3, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm2, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %ymm0, (%rsp)
+; X64-NEXT:    movl $5, (%rsp,%rax,4)
+; X64-NEXT:    andl $31, %edx
+; X64-NEXT:    movl $7, (%rsp,%rdx,4)
+; X64-NEXT:    vmovaps (%rsp), %ymm0
+; X64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm1
+; X64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm2
+; X64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm3
+; X64-NEXT:    vmovaps %ymm2, 64(%rcx)
+; X64-NEXT:    vmovaps %ymm3, 96(%rcx)
+; X64-NEXT:    vmovaps %ymm0, (%rcx)
+; X64-NEXT:    vmovaps %ymm1, 32(%rcx)
+; X64-NEXT:    movq %rbp, %rsp
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %v = load <32 x i32>, ptr %vp
+  %idx0 = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %idx1 = call i32 @llvm.ctlz.i32(i32 %y, i1 true)
+  %ins0 = insertelement <32 x i32> %v, i32 5, i32 %idx0
+  %ins1 = insertelement <32 x i32> %ins0, i32 7, i32 %idx1
+  store <32 x i32> %ins1, ptr %dst
+  ret void
+}
+
+declare i32 @llvm.ctlz.i32(i32, i1)

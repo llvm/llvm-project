@@ -600,9 +600,10 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: fneg_fadd_0_f64:
@@ -627,9 +628,10 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; VI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv double 1.000000e+00, %tmp6
@@ -667,9 +669,10 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: fneg_fadd_0_f64_nsz:
@@ -694,9 +697,10 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; VI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv double 1.000000e+00, %tmp6
@@ -731,9 +735,10 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: fneg_fadd_0_nsz_f64:
@@ -752,9 +757,10 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; VI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv afn double 1.000000e+00, %tmp6

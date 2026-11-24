@@ -14,7 +14,6 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -89,18 +88,5 @@ void FaultMaps::emitFunctionInfo(const MCSymbol *FnLabel,
     OS.emitInt32(Fault.Kind);
     OS.emitValue(Fault.FaultingOffsetExpr, 4);
     OS.emitValue(Fault.HandlerOffsetExpr, 4);
-  }
-}
-
-const char *FaultMaps::faultTypeToString(FaultMaps::FaultKind FT) {
-  switch (FT) {
-  default:
-    llvm_unreachable("unhandled fault type!");
-  case FaultMaps::FaultingLoad:
-    return "FaultingLoad";
-  case FaultMaps::FaultingLoadStore:
-    return "FaultingLoadStore";
-  case FaultMaps::FaultingStore:
-    return "FaultingStore";
   }
 }

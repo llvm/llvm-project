@@ -69,6 +69,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
@@ -275,6 +276,20 @@ static llvm::cl::opt<bool> initGlobalZero(
     "finit-global-zero",
     llvm::cl::desc("Zero initialize globals without default initialization"),
     llvm::cl::init(true));
+
+static llvm::cl::opt<std::string>
+    initLocalMode("finit-local",
+                  llvm::cl::desc("Initialize local variables without explicit "
+                                 "or default initialization. "
+                                 "Accepts: zero or 0x<hex-byte>."),
+                  llvm::cl::init(""));
+
+static llvm::cl::opt<bool> initLocalZero(
+    "finit-local-zero",
+    llvm::cl::desc(
+        "Zero-initialize local variables without explicit or default "
+        "initialization (alias for -finit-local=zero)"),
+    llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
     reallocateLHS("frealloc-lhs",
@@ -512,6 +527,36 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
+  // -finit-local= and -finit-local-zero: last occurrence on the command
+  // line wins. Determine the winner by position before validating so that
+  // sequences like "-finit-local=bogus -finit-local-zero" accept zero
+  // rather than failing on the overridden invalid value.
+  bool zeroWins = initLocalZero &&
+                  initLocalZero.getPosition() > initLocalMode.getPosition();
+  if (zeroWins) {
+    loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+  } else if (initLocalMode.getNumOccurrences() > 0) {
+    llvm::StringRef val = initLocalMode;
+    if (val.empty()) {
+      llvm::errs() << "bbc: invalid -finit-local= value: (empty)\n";
+      return mlir::failure();
+    }
+    if (val == "zero") {
+      loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+    } else if (val.starts_with("0x") || val.starts_with("0X")) {
+      unsigned long long hexVal = 0;
+      if (!val.drop_front(2).getAsInteger(16, hexVal) && hexVal <= 0xFF) {
+        loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Hex);
+        loweringOptions.setInitLocalPattern(static_cast<uint8_t>(hexVal));
+      } else {
+        llvm::errs() << "bbc: invalid -finit-local= value: " << val << "\n";
+        return mlir::failure();
+      }
+    } else {
+      llvm::errs() << "bbc: invalid -finit-local= value: " << val << "\n";
+      return mlir::failure();
+    }
+  }
   loweringOptions.setReallocateLHS(reallocateLHS);
   loweringOptions.setSplitSumExpressionTree(fpSumReassociation);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
@@ -525,12 +570,14 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setFPMaxminBehavior(fpMaxminBehavior.getValue());
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
+  targetOpts.cpu = targetMachine.getTargetCPU();
   Fortran::frontend::CodeGenOptions cgOpts;
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine, targetOpts, cgOpts);
+      semanticsContext.languageFeatures(),
+      targetMachine.getTargetFeatureString(), targetOpts, cgOpts);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
@@ -620,8 +667,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
-    if (enableOpenMPDevice)
-      config.EnableOpenMPIsTargetDevice = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
@@ -755,11 +800,13 @@ int main(int argc, char **argv) {
     llvm::errs() << "failed to create target machine: " << error << "\n";
     return mlir::failed(mlir::failure());
   }
+  semanticsContext.set_targetTriple(targetMachine->getTargetTriple().str())
+      .set_targetFeatures(targetMachine->getTargetFeatureString().str());
   std::string compilerVersion = Fortran::common::getFlangToolFullVersion("bbc");
   std::string compilerOptions = "";
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext.targetCharacteristics(), *targetMachine, {},
-      compilerVersion, compilerOptions);
+      semanticsContext.targetCharacteristics(),
+      targetMachine->getTargetTriple(), {}, compilerVersion, compilerOptions);
 
   return mlir::failed(
       convertFortranSourceToMLIR(inputFilename, options, programPrefix,

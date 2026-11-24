@@ -112,6 +112,10 @@ ErrorOr<void> close();
 // Reads the next entry from the password database.
 ErrorOr<struct passwd *> read_next();
 
+// Reads the next entry from the password database into a caller-supplied
+// buffer.
+ErrorOr<bool> read_next(struct passwd *pwd, cpp::span<char> buffer);
+
 // Searches for a password entry matching the given username using the
 // static process-global buffer.
 ErrorOr<struct passwd *> find_by_name(cpp::string_view name);

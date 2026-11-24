@@ -34,7 +34,7 @@ attributes #0 = { nounwind uwtable }
 
 !0 = !{!1, !3}
 !1 = !{!1, !2, !"some scope"}
-!2 = !{!2, !"some domain"}
+!2 = !{!2, i1 false, !"some domain"}
 !3 = !{!3, !2, !"some other scope"}
 !4 = !{!1}
 !5 = !{!3}

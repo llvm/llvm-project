@@ -56,8 +56,12 @@ add_entrypoint_object(
   HDRS
     ../openat.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.hdr.types.mode_t
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.openat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -83,6 +87,20 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.off64_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.posix_fadvise
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  posix_fallocate
+  SRCS
+    posix_fallocate.cpp
+  HDRS
+    ../posix_fallocate.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
     libc.src.__support.common
     libc.src.__support.macros.config
 )

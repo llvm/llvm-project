@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -22,7 +23,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,12 +41,6 @@ STATISTIC(NumNewPredsAdded, "Number of times a  single predecessor was added");
 STATISTIC(NumTopoInits,
           "Number of times the topological order has been recomputed");
 
-#ifndef NDEBUG
-static cl::opt<bool> StressSchedOpt(
-  "stress-sched", cl::Hidden, cl::init(false),
-  cl::desc("Stress test instruction scheduling"));
-#endif
-
 void SchedulingPriorityQueue::anchor() {}
 
 ScheduleDAG::ScheduleDAG(MachineFunction &mf)
@@ -54,7 +48,7 @@ ScheduleDAG::ScheduleDAG(MachineFunction &mf)
       TRI(mf.getSubtarget().getRegisterInfo()), MF(mf),
       MRI(mf.getRegInfo()) {
 #ifndef NDEBUG
-  StressSched = StressSchedOpt;
+  StressSched = getCodeGenOptions(mf).stress_sched;
 #endif
 }
 
@@ -336,6 +330,14 @@ void SUnit::biasCriticalPath() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+raw_ostream &llvm::operator<<(raw_ostream &OS, const SUnit &SU) {
+  assert(!SU.isBoundaryNode() &&
+         "use ScheduleDAG::dumpNodeName for boundary nodes");
+  return OS << "SU(" << SU.NodeNum << ")";
+}
+#endif
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {
   dbgs() << "  # preds left       : " << NumPredsLeft << "\n";
   dbgs() << "  # succs left       : " << NumSuccsLeft << "\n";
@@ -355,7 +357,7 @@ LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeName(const SUnit &SU) const {
   else if (&SU == &ExitSU)
     dbgs() << "ExitSU";
   else
-    dbgs() << "SU(" << SU.NodeNum << ")";
+    dbgs() << SU;
 }
 
 LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeAll(const SUnit &SU) const {
@@ -470,11 +472,12 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   Reachable.clear();
 
   unsigned DAGSize = SUnits.size();
-  std::vector<SUnit*> WorkList;
-  WorkList.reserve(DAGSize);
 
   Index2Node.resize(DAGSize);
   Node2Index.resize(DAGSize);
+
+  WorkList.reserve(DAGSize);
+  WorkList.clear();
 
   // Initialize the data structures.
   if (ExitSU)
@@ -495,7 +498,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
 
   int Id = DAGSize;
   while (!WorkList.empty()) {
-    SUnit *SU = WorkList.back();
+    const SUnit *SU = WorkList.back();
     WorkList.pop_back();
     if (SU->NodeNum < DAGSize)
       Allocate(SU->NodeNum, --Id);
@@ -572,8 +575,7 @@ void ScheduleDAGTopologicalSort::RemovePred(SUnit *M, SUnit *N) {
 
 void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
                                      bool &HasLoop) {
-  std::vector<const SUnit*> WorkList;
-  WorkList.reserve(SUnits.size());
+  WorkList.clear();
 
   WorkList.push_back(SU);
   do {
@@ -600,7 +602,6 @@ void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
 std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
                                                          const SUnit &TargetSU,
                                                          bool &Success) {
-  std::vector<const SUnit*> WorkList;
   int LowerBound = Node2Index[StartSU.NodeNum];
   int UpperBound = Node2Index[TargetSU.NodeNum];
   bool Found = false;
@@ -612,7 +613,7 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
     return Nodes;
   }
 
-  WorkList.reserve(SUnits.size());
+  WorkList.clear();
   Visited.reset();
 
   // Starting from StartSU, visit all successors up

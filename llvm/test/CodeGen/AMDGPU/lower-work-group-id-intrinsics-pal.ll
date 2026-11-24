@@ -180,6 +180,12 @@ define amdgpu_gfx void @workgroup_ids_gfx(ptr addrspace(1) %outx, ptr addrspace(
 ; GFX9-GISEL-LABEL: workgroup_ids_gfx:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GISEL-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GISEL-NEXT:    global_store_dword v[4:5], v0, off
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9ARCH-SDAG-LABEL: workgroup_ids_gfx:

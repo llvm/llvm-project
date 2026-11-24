@@ -20,7 +20,7 @@ func.func @local_alloca() {
 
 func.func @declared_variable() {
   %0 = fir.alloca f32
-  %1 = fir.declare %0 {uniq_name = "_QMmodFdeclared_variableEy", test.var_name} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %1 = fir.declare %0 uniq_name("_QMmodFdeclared_variableEy") {test.var_name} : (!fir.ref<f32>) -> !fir.ref<f32>
   return
 }
 
@@ -40,7 +40,7 @@ fir.global @_QMmodEglob : i32 {
 
 func.func @global_through_declare() {
   %0 = fir.address_of(@_QMmodEglob) : !fir.ref<i32>
-  %1 = fir.declare %0 {uniq_name = "_QMmodEglob", test.var_name} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("_QMmodEglob") {test.var_name} : (!fir.ref<i32>) -> !fir.ref<i32>
   return
 }
 

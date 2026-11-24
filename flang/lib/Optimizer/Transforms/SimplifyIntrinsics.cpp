@@ -34,7 +34,7 @@
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -418,8 +418,8 @@ static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
           loc, elementType, llvm::APFloat::getLargest(sem, /*Negative=*/true));
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t minInt = llvm::APInt::getSignedMinValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, elementType, minInt);
+    return builder.createIntegerConstant(loc, elementType,
+                                         llvm::APInt::getSignedMinValue(bits));
   };
 
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
@@ -667,9 +667,8 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
       return builder.createRealConstant(loc, elementType, limit);
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t initValue = (isMax ? llvm::APInt::getSignedMinValue(bits)
-                               : llvm::APInt::getSignedMaxValue(bits))
-                            .getSExtValue();
+    llvm::APInt initValue = isMax ? llvm::APInt::getSignedMinValue(bits)
+                                  : llvm::APInt::getSignedMaxValue(bits);
     return builder.createIntegerConstant(loc, elementType, initValue);
   };
 

@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinDialect.h"
+#include "AttributeDetail.h"
 #include "BuiltinDialectBytecode.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeRange.h"
 
@@ -103,9 +105,12 @@ private:
 } // namespace
 
 void BuiltinDialect::initialize() {
-  registerTypes();
-  registerAttributes();
-  registerLocationAttributes();
+  setVersion(BuiltinDialectVersion::getCurrentVersion());
+  // `DistinctAttr` is defined in C++, and the location attributes are generated
+  // into a separate file, so neither is registered by the generated
+  // constructor.
+  addAttributes<DistinctAttr>();
+  registerBuiltinLocationAttributes(this);
   addOperations<
 #define GET_OP_LIST
 #include "mlir/IR/BuiltinOps.cpp.inc"
@@ -133,6 +138,36 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
 ModuleOp ModuleOp::create(Location loc, std::optional<StringRef> name) {
   OpBuilder builder(loc->getContext());
   return ModuleOp::create(builder, loc, name);
+}
+
+LogicalResult ModuleOp::readProperties(DialectBytecodeReader &reader,
+                                       OperationState &state) {
+  auto &properties = state.getOrAddProperties<Properties>();
+  if (failed(reader.readOptionalAttribute(properties.sym_name)) ||
+      failed(reader.readOptionalAttribute(properties.sym_visibility)))
+    return failure();
+
+  FailureOr<const DialectVersion *> maybeVersion =
+      reader.getDialectVersion<BuiltinDialect>();
+  if (failed(maybeVersion) ||
+      static_cast<const BuiltinDialectVersion *>(*maybeVersion)->getVersion() <
+          1)
+    return success();
+  return reader.readOptionalAttribute(properties.dlti);
+}
+
+void ModuleOp::writeProperties(DialectBytecodeWriter &writer) {
+  Properties &properties = getProperties();
+  writer.writeOptionalAttribute(properties.sym_name);
+  writer.writeOptionalAttribute(properties.sym_visibility);
+
+  FailureOr<const DialectVersion *> maybeVersion =
+      writer.getDialectVersion<BuiltinDialect>();
+  if (succeeded(maybeVersion) &&
+      static_cast<const BuiltinDialectVersion *>(*maybeVersion)->getVersion() <
+          1)
+    return;
+  writer.writeOptionalAttribute(properties.dlti);
 }
 
 DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {

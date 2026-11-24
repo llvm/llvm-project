@@ -947,30 +947,30 @@ define <8 x i32> @partial_reduce_sumla_i16_v8i32(<8 x i32> %acc, <16 x i16> %a, 
 ; SSE2-NEXT:    pmuludq %xmm9, %xmm5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm8[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm8[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm10, %xmm8
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm8[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm10[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm9, %xmm8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,2,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm10[1,1,3,3]
-; SSE2-NEXT:    pmuludq %xmm5, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm9[0,2,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm8 = xmm8[0],xmm5[0],xmm8[1],xmm5[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm8[0],xmm5[1],xmm8[1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm7[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm4, %xmm7
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,2,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
-; SSE2-NEXT:    pmuludq %xmm5, %xmm4
+; SSE2-NEXT:    pmuludq %xmm8, %xmm4
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm4[0],xmm7[1],xmm4[1]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm4, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
-; SSE2-NEXT:    paddd %xmm5, %xmm0
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm3[0],xmm6[1],xmm3[1]
+; SSE2-NEXT:    paddd %xmm6, %xmm0
 ; SSE2-NEXT:    paddd %xmm7, %xmm0
-; SSE2-NEXT:    paddd %xmm8, %xmm1
+; SSE2-NEXT:    paddd %xmm5, %xmm1
 ; SSE2-NEXT:    paddd %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;

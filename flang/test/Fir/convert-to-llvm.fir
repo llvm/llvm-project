@@ -449,7 +449,7 @@ func.func @test_call_return_val() -> i32 {
 // result: (x + x') + i(y + y')
 
 func.func @fir_complex_add(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.addc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.addc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -474,7 +474,7 @@ func.func @fir_complex_add(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: (x - x') + i(y - y')
 
 func.func @fir_complex_sub(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.subc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.subc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -499,7 +499,7 @@ func.func @fir_complex_sub(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: (xx'-yy')+i(xy'+yx')
 
 func.func @fir_complex_mul(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.mulc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.mulc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -528,7 +528,7 @@ func.func @fir_complex_mul(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
 
 func.func @fir_complex_div(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.divc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.divc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -815,6 +815,42 @@ func.func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box
 // CHECK-NEXT:  "llvm.intr.memcpy"(%[[arg0]], %[[arg1]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT:  }
+
+// Test that an undefined box is lowered to descriptor storage so that copying
+// it is well defined.
+func.func @test_store_undefined_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>) {
+  %box = fir.undefined !fir.box<!fir.array<?x?xf32>>
+  fir.store %box to %array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
+  return
+}
+
+// CHECK-LABEL:  llvm.func @test_store_undefined_box
+// CHECK-SAME:  (%[[arg0:.*]]: !llvm.ptr) {
+// CHECK:       %[[one:.*]] = llvm.mlir.constant(1 : i32) : i32
+// GENERIC:     %[[storage:.*]] = llvm.alloca %[[one]] x !llvm.struct<(ptr, i{{.*}}, i32, i8, i8, i8, i8, array<2 x array<3 x i{{.*}}>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+// AMDGPU:      %[[alloca:.*]] = llvm.alloca %[[one]] x !llvm.struct<(ptr, i{{.*}}, i32, i8, i8, i8, i8, array<2 x array<3 x i{{.*}}>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
+// AMDGPU:      %[[storage:.*]] = llvm.addrspacecast %[[alloca]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK-NOT:   llvm.mlir.undef
+// CHECK:       "llvm.intr.memcpy"(%[[arg0]], %[[storage]], %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK-NEXT:  llvm.return
+
+// Test that the rank of an undefined assumed-rank box is set so that copying
+// it stays within its storage.
+func.func @test_store_undefined_assumed_rank_box(%array : !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  %box = fir.undefined !fir.box<!fir.array<*:f32>>
+  fir.store %box to %array : !fir.ref<!fir.box<!fir.array<*:f32>>>
+  return
+}
+
+// CHECK-LABEL:  llvm.func @test_store_undefined_assumed_rank_box
+// CHECK-SAME:  (%[[arg0:.*]]: !llvm.ptr) {
+// GENERIC:     %[[storage:.*]] = llvm.alloca %{{.*}} x !llvm.struct<(ptr, i{{.*}}, i32, i8, i8, i8, i8, array<15 x array<3 x i{{.*}}>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+// AMDGPU:      %[[alloca:.*]] = llvm.alloca %{{.*}} x !llvm.struct<(ptr, i{{.*}}, i32, i8, i8, i8, i8, array<15 x array<3 x i{{.*}}>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
+// AMDGPU:      %[[storage:.*]] = llvm.addrspacecast %[[alloca]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK:       %[[rank_addr:.*]] = llvm.getelementptr %[[storage]][0, 3]
+// CHECK:       %[[zero:.*]] = llvm.mlir.constant(0 : i8) : i8
+// CHECK:       llvm.store %[[zero]], %[[rank_addr]]
+// CHECK:       "llvm.intr.memcpy"(%[[arg0]], %[[storage]], %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
 
 func.func @store_unlimited_polymorphic_box(%arg0 : !fir.class<none>, %arg1 : !fir.class<!fir.array<?xnone>>, %arg2 : !fir.box<none>, %arg3 : !fir.box<!fir.array<?xnone>>, %arg0r : !fir.ref<!fir.class<none>>, %arg1r : !fir.ref<!fir.class<!fir.array<?xnone>>>, %arg2r : !fir.ref<!fir.box<none>>, %arg3r : !fir.ref<!fir.box<!fir.array<?xnone>>>) {
@@ -1112,6 +1148,55 @@ func.func @alloca_several() -> !fir.ref<i32> {
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[TOTAL]] x i32 : (i64) -> !llvm.ptr<5>
 // AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// Test fir.alloca with a requested alignment
+
+func.func @alloca_aligned() -> !fir.ref<!fir.array<10xf32>> {
+  %1 = fir.alloca !fir.array<10xf32> {alignment = 64 : i64}
+  return %1 : !fir.ref<!fir.array<10xf32>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_aligned() -> !llvm.ptr
+// CHECK: [[N:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: [[A:%.*]] = llvm.alloca [[N]] x !llvm.array<10 x f32> {alignment = 64 : i64}
+// AMDGPU: [[AA:%.*]] = llvm.alloca [[N]] x !llvm.array<10 x f32> {alignment = 64 : i64} : (i64) -> !llvm.ptr<5>
+// AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// A requested alignment below the ABI alignment of the type is raised to it.
+
+func.func @alloca_underaligned() -> !fir.ref<i32> {
+  %1 = fir.alloca i32 {alignment = 2 : i64}
+  return %1 : !fir.ref<i32>
+}
+
+// CHECK-LABEL: llvm.func @alloca_underaligned() -> !llvm.ptr
+// CHECK: [[N:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: [[A:%.*]] = llvm.alloca [[N]] x i32 {alignment = 4 : i64}
+// AMDGPU: [[AA:%.*]] = llvm.alloca [[N]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr<5>
+// AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// Test fir.global with a requested alignment
+
+fir.global @g_aligned {alignment = 64 : i64} : !fir.array<16xi32>
+
+// CHECK: llvm.mlir.global external @g_aligned() {{.*}}alignment = 64 : i64{{.*}} : !llvm.array<16 x i32>
+
+// -----
+
+// A requested global alignment below the ABI alignment of the type is raised
+// to it.
+
+fir.global @g_underaligned {alignment = 2 : i64} : i32
+
+// CHECK: llvm.mlir.global external @g_underaligned() {{.*}}alignment = 4 : i64{{.*}} : i32
 
 // -----
 
@@ -2366,6 +2451,20 @@ func.func @coordinate_ref_complex(%arg0: !fir.ref<complex<f128>>) {
 // CHECK-LABEL: llvm.func @coordinate_ref_complex
 // CHECK-SAME:  %[[ARG0:.*]]: !llvm.ptr
 // CHECK:    %{{.*}} = llvm.getelementptr %[[ARG0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(f128, f128)>
+// CHECK-NEXT:    llvm.return
+
+// -----
+
+// Complex type wrapped in `fir.ref`, with a part index that is not constant.
+// A struct index has to be constant, so the element type is indexed instead.
+func.func @coordinate_ref_complex_dynamic(%arg0: !fir.ref<complex<f128>>, %arg1: i32) {
+  %p = fir.coordinate_of %arg0, %arg1 : (!fir.ref<complex<f128>>, i32) -> !fir.ref<f32>
+  return
+}
+// CHECK-LABEL: llvm.func @coordinate_ref_complex_dynamic
+// CHECK-SAME:  %[[ARG0:.*]]: !llvm.ptr
+// CHECK-SAME:  %[[ARG1:.*]]: i32
+// CHECK:    %{{.*}} = llvm.getelementptr %[[ARG0]][%[[ARG1]]] : (!llvm.ptr, i32) -> !llvm.ptr, f128
 // CHECK-NEXT:    llvm.return
 
 // -----

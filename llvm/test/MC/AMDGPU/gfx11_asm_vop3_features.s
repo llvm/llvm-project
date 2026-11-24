@@ -75,3 +75,9 @@ v_dot2_bf16_bf16_e64_dpp v0.l, v1, s2, v3.l quad_perm:[0,1,2,3] row_mask:0x0 ban
 // Ensure bits 8-15 are not zeroed out and .h which should be present on src0 and dst are present.
 v_mul_f16_e64 v5.h, v1.h, v2.l
 // GFX11: v_mul_f16_e64 v5.h, v1.h, v2.l op_sel:[1,0,1] ; encoding: [0x05,0x48,0x35,0xd5,0x01,0x05,0x02,0x02]
+
+v_alignbit_b32 v5, v1, v2, 0.5
+// GFX11: v_alignbit_b32 v5, v1, v2, 0.5          ; encoding: [0x05,0x00,0x16,0xd6,0x01,0x05,0xc2,0x03]
+
+v_alignbyte_b32 v5, v1, v2, 0.5
+// GFX11: v_alignbyte_b32 v5, v1, v2, 0.5         ; encoding: [0x05,0x00,0x17,0xd6,0x01,0x05,0xc2,0x03]

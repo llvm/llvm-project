@@ -15,6 +15,7 @@
 
 #include "src/__support/common.h"
 
+#include "hdr/limits_macros.h"
 #include "hdr/sys_auxv_macros.h"
 #include "hdr/sys_resource_macros.h"
 #include "hdr/types/struct_rlimit.h"
@@ -149,6 +150,8 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
     return _POSIX_THREAD_SAFE_FUNCTIONS;
   case _SC_THREAD_SPORADIC_SERVER:
     return _POSIX_THREAD_SPORADIC_SERVER;
+  case _SC_THREAD_DESTRUCTOR_ITERATIONS:
+    return PTHREAD_DESTRUCTOR_ITERATIONS;
   case _SC_GETGR_R_SIZE_MAX:
     // No recommended buffer size for getgrgid_r/getgrnam_r, as they work
     // with any user-supplied buffer.

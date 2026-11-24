@@ -66,18 +66,19 @@ try.cont:                                         ; preds = %entry, %catch.start
 
 ; CHECK-LABEL: test1:
 ; In static linking, we load GCC_except_table as a constant directly.
-; NOPIC:      i[[PTR]].const  $push[[CONTEXT:.*]]=, {{[48]}}
+; NOPIC:                call  $push[[CONTEXT:.*]]=, _Unwind_GetWasmLPadContext
+; NOPIC-NEXT:      local.tee  $push[[CONTEXT_LOCAL:.*]]=, $1=, $pop[[CONTEXT]]
 ; NOPIC-NEXT: i[[PTR]].const  $push[[EXCEPT_TABLE:.*]]=, GCC_except_table1
-; NOPIC-NEXT: i[[PTR]].store  __wasm_lpad_context($pop[[CONTEXT]]), $pop[[EXCEPT_TABLE]]
+; NOPIC-NEXT: i[[PTR]].store  {{[48]}}($pop[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
 
 ; In case of PIC, we make GCC_except_table symbols a relative on based on
 ; __memory_base.
-; PIC:        global.get  $push[[CONTEXT:.*]]=, __wasm_lpad_context@GOT
-; PIC-NEXT:   local.tee  $push{{.*}}=, $[[CONTEXT_LOCAL:.*]]=, $pop[[CONTEXT]]
-; PIC:        global.get  $push[[MEMORY_BASE:.*]]=, __memory_base
+; PIC:        global.get  $[[MEMORY_BASE:.*]]=, __memory_base
+; PIC-NEXT:   call  $push[[CONTEXT:.*]]=, _Unwind_GetWasmLPadContext
+; PIC-NEXT:   local.tee  $push[[CONTEXT_LOCAL:.*]]=, $2=, $pop[[CONTEXT]]
 ; PIC-NEXT:   i[[PTR]].const  $push[[EXCEPT_TABLE_REL:.*]]=, GCC_except_table1@MBREL
-; PIC-NEXT:   i[[PTR]].add   $push[[EXCEPT_TABLE:.*]]=, $pop[[MEMORY_BASE]], $pop[[EXCEPT_TABLE_REL]]
-; PIC-NEXT:   i[[PTR]].store  {{[48]}}($[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
+; PIC-NEXT:   i[[PTR]].add   $push[[EXCEPT_TABLE:.*]]=, $[[MEMORY_BASE]], $pop[[EXCEPT_TABLE_REL]]
+; PIC-NEXT:   i[[PTR]].store  {{[48]}}($pop[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
 
 ; CHECK: .section  .rodata.gcc_except_table,"",@
 ; CHECK-NEXT:   .p2align  2

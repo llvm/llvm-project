@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILOpBuilder.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -574,14 +574,16 @@ public:
       for (int I = 0, E = N; I != E; ++I) {
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
-        Value *GEP = IRB.CreateInBoundsGEP(
-            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)});
+        Value *GEP = GetElementPtrInst::CreateInBounds(
+            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)}, "",
+            IRB.GetInsertPoint());
         IRB.CreateStore(Extracts[I], GEP);
       }
 
       for (ExtractElementInst *EEI : DynamicAccesses) {
-        Value *GEP = IRB.CreateInBoundsGEP(ArrayTy, Alloca,
-                                           {Zero, EEI->getIndexOperand()});
+        Value *GEP = GetElementPtrInst::CreateInBounds(
+            ArrayTy, Alloca, {Zero, EEI->getIndexOperand()}, "",
+            IRB.GetInsertPoint());
         Value *Load = IRB.CreateLoad(ElTy, GEP);
         EEI->replaceAllUsesWith(Load);
         EEI->eraseFromParent();
@@ -642,19 +644,26 @@ public:
 
   /// Recover the scalar components of `Vec` from the `insertelement` chain that
   /// built it. Since we run after the scalarizer, such a chain is usually just
-  /// a temporary gathered to pass the vector to a call.
+  /// a temporary gathered to pass the vector to a call. Components the chain
+  /// leaves unset are taken from its base when that base is a constant, which
+  /// is where constant folding puts leading literals.
   static void collectInsertedElements(Value *Vec,
                                       MutableArrayRef<Value *> Elements) {
     unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
     assert(NumElts <= Elements.size() && "Not enough room for the components");
 
     SmallVector<InsertElementInst *, 4> Chain;
-    for (auto *IEI = dyn_cast<InsertElementInst>(Vec); IEI;
-         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0))) {
+    Value *Base = Vec;
+    while (auto *IEI = dyn_cast<InsertElementInst>(Base)) {
       if (!isa<ConstantInt>(IEI->getOperand(2)))
         break; // This break should never happen below SM6.9.
       Chain.push_back(IEI);
+      Base = IEI->getOperand(0);
     }
+
+    if (auto *C = dyn_cast<Constant>(Base))
+      for (unsigned I = 0; I < NumElts; ++I)
+        Elements[I] = C->getAggregateElement(I);
 
     // Replay element insertion from the innermost first, so that a repeated
     // index ends up holding the live value.
@@ -949,6 +958,25 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerBarrierByMemoryHandle(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *SemanticFlags = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::BarrierByMemoryHandle, {Handle, SemanticFlags});
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -1160,6 +1188,44 @@ public:
                                   Coord1, Coord2, NewValue};
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           dxil::OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
+      if (Error E = OpCall.takeError()) {
+        // Preserve the DXIL op error text but attach it as a
+        // DiagnosticInfoUnsupported so we don't crash with a dangling call.
+        std::string Message(toString(std::move(E)));
+        CI->getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+        CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
+        CI->eraseFromParent();
+        return Error::success();
+      }
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerResourceAtomicCompareExchange(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      // Cast the target-extension typed handle to `%dx.types.Handle`, tracked
+      // via CleanupCasts so the pair is reconciled by `cleanupHandleCasts`.
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coord0 = CI->getArgOperand(1);
+      Value *Coord1 = CI->getArgOperand(2);
+      Value *Coord2 = CI->getArgOperand(3);
+      Value *CompareValue = CI->getArgOperand(4);
+      Value *NewValue = CI->getArgOperand(5);
+
+      std::array<Value *, 6> Args{Handle, Coord0,       Coord1,
+                                  Coord2, CompareValue, NewValue};
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(dxil::OpCode::AtomicCompareExchange, Args,
+                                CI->getName(), CI->getType());
       if (Error E = OpCall.takeError()) {
         // Preserve the DXIL op error text but attach it as a
         // DiagnosticInfoUnsupported so we don't crash with a dangling call.
@@ -1416,8 +1482,14 @@ public:
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
+      case Intrinsic::dx_barrier_by_memory_handle:
+        HasErrors |= lowerBarrierByMemoryHandle(F);
+        break;
       case Intrinsic::dx_resource_atomic_binop:
         HasErrors |= lowerResourceAtomicBinOp(F);
+        break;
+      case Intrinsic::dx_resource_atomic_compare_exchange:
+        HasErrors |= lowerResourceAtomicCompareExchange(F);
         break;
       case Intrinsic::dx_resource_getdimensions_x:
         HasErrors |= lowerGetDimensionsX(F);
@@ -1452,7 +1524,8 @@ public:
 };
 } // namespace
 
-PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
+PreservedAnalyses DXILOpLoweringPass::run(Module &M,
+                                          ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
@@ -1465,6 +1538,7 @@ PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
   PA.preserve<RootSignatureAnalysis>();
+  PA.preserve<SignatureAnalysis>();
   return PA;
 }
 
@@ -1493,6 +1567,7 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<SignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;

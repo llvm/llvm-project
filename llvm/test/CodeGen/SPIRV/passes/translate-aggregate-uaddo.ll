@@ -18,18 +18,18 @@
 ; Origin data type of the value.
 ; CHECK-IR-DAG: ![[#MD2]] = !{{[{]}}{{[{]}} i32, i1 {{[}]}} poison{{[}]}}
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=irtranslator 2>&1 | FileCheck %s  --check-prefix=CHECK-GMIR
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=ir-translator 2>&1 | FileCheck %s  --check-prefix=CHECK-GMIR
 ; Required info succeeded to get through IRTranslator.
-; CHECK-GMIR: %[[phires:.*]]:_(s32) = G_PHI
-; CHECK-GMIR: %[[math:.*]]:id(s32), %[[ov:.*]]:_(s1) = G_UADDO %[[phires]]:_, %[[#]]:_
+; CHECK-GMIR: %[[phires:.*]]:_(i32) = G_PHI
+; CHECK-GMIR: %[[math:.*]]:id(i32), %[[ov:.*]]:_(i1) = G_UADDO %[[phires]]:_, %[[#]]:_
 ; CHECK-GMIR: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.value.md), ![[MD1:]]
-; CHECK-GMIR: FAKE_USE %[[math]]:id(s32), %[[ov]]:_(s1)
+; CHECK-GMIR: FAKE_USE %[[math]]:id(i32), %[[ov]]:_(i1)
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-prelegalizer 2>&1 | FileCheck %s  --check-prefix=CHECK-PRE
 ; Internal service instructions are consumed.
 ; CHECK-PRE: G_UADDO
-; CHECK-PRE-NO: llvm.spv.value.md
-; CHECK-PRE-NO: FAKE_USE
+; CHECK-PRE-NOT: llvm.spv.value.md
+; CHECK-PRE-NOT: FAKE_USE
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=instruction-select 2>&1 | FileCheck %s  --check-prefix=CHECK-ISEL
 ; Names and types are restored and correctly encoded. Correct instruction selection is completed.

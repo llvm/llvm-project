@@ -956,6 +956,32 @@ define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_
   ret <16 x float> %res
 }
 
+define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_04_05_06_07_04_05_06_07(<4 x float> %a, <4 x float> %b) {
+; ALL-LABEL: mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_04_05_06_07_04_05_06_07:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  ret <16 x float> %shuffle
+}
+
+define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_04_05_06_07_04_05_06_07_00_01_02_03(<4 x float> %a, <4 x float> %b) {
+; ALL-LABEL: mask_shuffle_v4f32_v16f32_00_01_02_03_04_05_06_07_04_05_06_07_00_01_02_03:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm2
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+  ret <16 x float> %shuffle
+}
+
 %struct.foo = type { [4 x double], [3 x [4 x double]], [4 x double] }
 
 ; This test previously hung in shuffle combining. https://github.com/ispc/ispc/issues/1864
@@ -968,7 +994,7 @@ define void @ispc_1864(ptr %arg) {
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    .cfi_def_cfa_register %rbp
 ; ALL-NEXT:    andq $-64, %rsp
-; ALL-NEXT:    subq $4864, %rsp # imm = 0x1300
+; ALL-NEXT:    subq $4800, %rsp # imm = 0x12C0
 ; ALL-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0]
 ; ALL-NEXT:    vmulps 32(%rdi), %ymm0, %ymm0
 ; ALL-NEXT:    vcvtps2pd %ymm0, %zmm0

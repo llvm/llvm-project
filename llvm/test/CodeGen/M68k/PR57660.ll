@@ -45,13 +45,13 @@ define i32 @foo2(ptr noundef %0) {
 ; CHECK-NEXT:    cmpi.b #1, %d0
 ; CHECK-NEXT:    bgt .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if
-; CHECK-NEXT:    movem.w (4,%sp), %d1
 ; CHECK-NEXT:    movem.w (6,%sp), %d0
+; CHECK-NEXT:    movem.w (4,%sp), %d1
 ; CHECK-NEXT:    add.b %d1, %d0
 ; CHECK-NEXT:    bra .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: ; %else
-; CHECK-NEXT:    movem.w (6,%sp), %d1
 ; CHECK-NEXT:    movem.w (4,%sp), %d0
+; CHECK-NEXT:    movem.w (6,%sp), %d1
 ; CHECK-NEXT:    sub.b %d1, %d0
 ; CHECK-NEXT:  .LBB1_3: ; %cont
 ; CHECK-NEXT:    movem.w %d0, (2,%sp)

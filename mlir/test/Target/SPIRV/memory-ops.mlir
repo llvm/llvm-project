@@ -5,6 +5,21 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
+// Alignment decorations on function-local variables survive round-tripping,
+// including unsigned literals whose high bit is set.
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage], []> {
+  // CHECK-LABEL: spirv.func @aligned_variables()
+  spirv.func @aligned_variables() "None" {
+    // CHECK-NEXT: %{{.*}} = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+    // CHECK-NEXT: %{{.*}} = spirv.Variable {alignment = -2147483648 : i32} : !spirv.ptr<f32, Function>
+    %aligned = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+    %high_bit = spirv.Variable {alignment = 2147483648 : i32} : !spirv.ptr<f32, Function>
+    spirv.Return
+  }
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // CHECK-LABEL: spirv.func @load_store
   //  CHECK-SAME: ([[ARG1:%.*]]: !spirv.ptr<f32, Input>, [[ARG2:%.*]]: !spirv.ptr<f32, Output>)
@@ -130,6 +145,18 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
     // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 8], ["Aligned", 4] : f32
     spirv.CopyMemory "Function" %0, "Function" %1 ["Aligned", 8], ["Aligned", 4] : f32
 
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.4, [Addresses, Kernel, Linkage], []> {
+  spirv.func @ptr_compare(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) "None" {
+    // CHECK: spirv.PtrEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+    %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    // CHECK: spirv.PtrNotEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+    %1 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
     spirv.Return
   }
 }

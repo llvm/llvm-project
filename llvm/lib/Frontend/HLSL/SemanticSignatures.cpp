@@ -19,10 +19,12 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 #include <cassert>
 
 using namespace llvm;
 using namespace llvm::hlsl;
+using llvm::dxbc::PSV::InterpolationMode;
 
 namespace {
 
@@ -45,6 +47,77 @@ Expected<uint64_t> extractInt(const MDNode *Node, unsigned OpId) {
   return CI->getZExtValue();
 }
 } // namespace
+
+InterpolationModifier
+hlsl::getInterpolationSamplingLocation(InterpolationModifier Modifiers) {
+  return std::max({Modifiers & InterpolationModifier::Center,
+                   Modifiers & InterpolationModifier::Centroid,
+                   Modifiers & InterpolationModifier::Sample});
+}
+
+dxbc::PSV::InterpolationMode
+hlsl::getInterpolationMode(InterpolationModifier Modifiers) {
+  if (Modifiers == InterpolationModifier::None)
+    return InterpolationMode::Undefined;
+  if (any(Modifiers & InterpolationModifier::NoInterpolation))
+    return Modifiers == InterpolationModifier::NoInterpolation
+               ? InterpolationMode::Constant
+               : InterpolationMode::Invalid;
+
+  bool NoPerspective = any(Modifiers & InterpolationModifier::NoPerspective);
+  switch (getInterpolationSamplingLocation(Modifiers)) {
+  case InterpolationModifier::Sample:
+    return NoPerspective ? InterpolationMode::LinearNoperspectiveSample
+                         : InterpolationMode::LinearSample;
+  case InterpolationModifier::Centroid:
+    return NoPerspective ? InterpolationMode::LinearNoperspectiveCentroid
+                         : InterpolationMode::LinearCentroid;
+  case InterpolationModifier::Center:
+  case InterpolationModifier::None:
+    return NoPerspective ? InterpolationMode::LinearNoperspective
+                         : InterpolationMode::Linear;
+  default:
+    llvm_unreachable("invalid interpolation sampling location");
+  }
+}
+
+dxbc::PSV::InterpolationMode hlsl::normalizeInterpolationMode(
+    dxbc::PSV::InterpolationMode Mode, dxil::ElementType CompType,
+    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage, IOType IO) {
+  if (!((Stage == Triple::Pixel && IO == IOType::In) ||
+        (Stage == Triple::Vertex && IO == IOType::Out)))
+    return InterpolationMode::Undefined;
+
+  if (Mode == InterpolationMode::Undefined) {
+    switch (CompType) {
+    case dxil::ElementType::F16:
+    case dxil::ElementType::F32:
+    case dxil::ElementType::SNormF16:
+    case dxil::ElementType::UNormF16:
+    case dxil::ElementType::SNormF32:
+    case dxil::ElementType::UNormF32:
+      Mode = InterpolationMode::Linear;
+      break;
+    default:
+      Mode = InterpolationMode::Constant;
+      break;
+    }
+  }
+
+  if (Kind == dxbc::PSV::SemanticKind::Position) {
+    switch (Mode) {
+    case InterpolationMode::Linear:
+      return InterpolationMode::LinearNoperspective;
+    case InterpolationMode::LinearCentroid:
+      return InterpolationMode::LinearNoperspectiveCentroid;
+    case InterpolationMode::LinearSample:
+      return InterpolationMode::LinearNoperspectiveSample;
+    default:
+      break;
+    }
+  }
+  return Mode;
+}
 
 dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
   if (!SemanticName.consume_front_insensitive("SV_"))
@@ -95,10 +168,24 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
          SemanticInterpretation::NotAllocated},
         {Triple::Geometry, IOType::In, SemanticInterpretation::NotAllocated},
         {Triple::Pixel, IOType::In, SemanticInterpretation::NotAllocated},
-        {Triple::Mesh, InOrPatchConstant, SemanticInterpretation::NotAllocated},
-        {Triple::Amplification, IOType::In,
-         SemanticInterpretation::NotAllocated},
+        {Triple::Mesh, IOType::In, SemanticInterpretation::NotAllocated},
     };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::StartVertexLocation:
+  case dxbc::PSV::SemanticKind::StartInstanceLocation: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::SampleIndex: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::Barycentrics: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::Target: {
@@ -106,15 +193,32 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
         {Triple::Pixel, IOType::Out, SemanticInterpretation::Target}};
     return Stages;
   }
-  case dxbc::PSV::SemanticKind::VertexID: {
+  case dxbc::PSV::SemanticKind::VertexID:
+  case dxbc::PSV::SemanticKind::InstanceID: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Vertex, IOType::In, SemanticInterpretation::SV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::PrimitiveID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::IsFrontFace: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
         {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::ShadingRate: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+        {Triple::Mesh, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::SV}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::Position: {

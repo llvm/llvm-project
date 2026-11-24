@@ -248,3 +248,12 @@ _Alignas(void) char align_void_array[1]; // expected-error {{invalid application
 
 static_assert(!__builtin_is_aligned(&"", 4), ""); // expected-error {{not an integral constant expression}} \
                                                   // expected-note {{cannot constant evaluate whether run-time alignment is at least 4}}
+
+static_assert(__builtin_is_aligned((void *)0, 1), "");    // expected-warning {{checking whether a value is aligned to 1 byte is always true}}
+static_assert(__builtin_is_aligned((void *)0, 32), "");   
+
+// Zero-valued null pointers are already aligned and should remain unchanged.
+void *null_align_up_1 = __builtin_align_up((void *)0, 1);     // expected-warning {{aligning a value to 1 byte is a no-op}}
+void *null_align_up_32 = __builtin_align_up((void *)0, 32);
+void *null_align_down_1 = __builtin_align_down((void *)0, 1); // expected-warning {{aligning a value to 1 byte is a no-op}}
+void *null_align_down_32 = __builtin_align_down((void *)0, 32);

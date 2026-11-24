@@ -627,10 +627,6 @@ def PthreadLockChecker : Checker<"PthreadLock">,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
-def SimpleStreamChecker : Checker<"SimpleStream">,
-  HelpText<"Check for misuses of stream APIs">,
-  Documentation<HasDocumentation>;
-
 } // end "alpha.unix"
 
 //===----------------------------------------------------------------------===//
@@ -1786,6 +1782,10 @@ def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
   HelpText<"Check unretained call arguments.">,
   Documentation<HasDocumentation>;
 
+def UnborrowedCallArgsChecker : Checker<"UnborrowedCallArgsChecker">,
+  HelpText<"Check call arguments holding a loan on a CanBorrow object that is not guarded by const or a Borrow.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
   Documentation<HasDocumentation>;
@@ -1800,6 +1800,14 @@ def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
 
 def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def UnborrowedLocalVarsChecker : Checker<"UnborrowedLocalVarsChecker">,
+  HelpText<"Check local variables holding a loan on a CanBorrow object that is not guarded by const or a Borrow.">,
+  Documentation<HasDocumentation>;
+
+def UnborrowedLambdaCapturesChecker : Checker<"UnborrowedLambdaCapturesChecker">,
+  HelpText<"Check lambda captures holding a loan on a CanBorrow object that is not guarded by const or a Borrow.">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,

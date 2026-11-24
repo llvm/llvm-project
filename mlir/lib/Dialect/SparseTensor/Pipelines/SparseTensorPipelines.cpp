@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
@@ -95,7 +96,10 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   if (gpuCodegen) {
     GpuNVVMAttachTargetOptions nvvmTargetOptions;
     nvvmTargetOptions.triple = options.gpuTriple;
-    nvvmTargetOptions.chip = options.gpuChip;
+    // `gpu-chip` has no default here, so forwarding it unset would overwrite
+    // the pass default with the empty string, which `#nvvm.target` rejects.
+    if (options.gpuChip.hasValue())
+      nvvmTargetOptions.chip = options.gpuChip;
     nvvmTargetOptions.features = options.gpuFeatures;
     pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
     pm.addPass(createGpuToLLVMConversionPass());

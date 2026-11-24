@@ -172,6 +172,10 @@ private:
   /// defined by this instruction.
   unsigned DebugInstrNum;
 
+  /// One-based handle into the instruction table of the SlotIndexes analysis
+  /// numbering this function. 0 if the instruction is not indexed.
+  unsigned SlotIndexHandle = 0;
+
   /// Internal implementation detail class that provides out-of-line storage for
   /// extra info used by the machine instruction when this info cannot be stored
   /// in-line within the instruction itself.
@@ -352,6 +356,8 @@ private:
 
   // MachineInstrs are pool-allocated and owned by MachineFunction.
   friend class MachineFunction;
+
+  friend class SlotIndexes;
 
   void
   dumprImpl(const MachineRegisterInfo &MRI, unsigned Depth, unsigned MaxDepth,
@@ -1775,6 +1781,14 @@ public:
   /// operands for all registers in UsedRegs.
   LLVM_ABI void setPhysRegsDeadExcept(ArrayRef<Register> UsedRegs,
                                       const TargetRegisterInfo &TRI);
+
+  /// Mark the implicit physreg defs named by the instruction description as
+  /// dead.
+  void setImplicitPhysRegDefsDead() {
+    unsigned Idx = getNumExplicitOperands();
+    for (unsigned E = Idx + MCID->implicit_defs().size(); Idx != E; ++Idx)
+      getOperand(Idx).setIsDead();
+  }
 
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between

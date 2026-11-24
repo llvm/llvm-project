@@ -14,6 +14,11 @@ struct S {
   constexpr S(int x) : x{x} {}
 };
 
+struct AggregateWithDefaultInit {
+  int x;
+  int y = 0;
+};
+
 void g(int); // #g
 template <int n> constexpr int tg() { return n; }
 
@@ -31,6 +36,7 @@ void f1() {
   template for (int x : {1, 2, 3}) g(x);
   template for (S x : {1, 2, 3}) g(x.x);
   template for (constexpr S x : {1, 2, 3}) tg<x.x>();
+  template for (AggregateWithDefaultInit x : {AggregateWithDefaultInit(1)}) {}
 
   template for (int x : {"1", S(1), {1, 2}}) { // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type 'const char[2]'}} \
                                                   expected-error {{no viable conversion from 'S' to 'int'}} \
@@ -799,8 +805,8 @@ void not_constant_expression() {
                                              expected-note {{in instantiation of expansion statement requested here}} \
                                              old-interp-note {{read of variable '[__u0]' whose value is not known}} \
                                              old-interp-note {{declared here}} \
-                                             new-interp-note {{temporary created here}} \
-                                             new-interp-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+                                             new-interp-note {{declared here}} \
+                                             new-interp-note {{initializer of '[__u0]' is not a constant expression}}
     g(x);
   }
 }

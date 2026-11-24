@@ -685,7 +685,7 @@ public:
   /// accumulated even if the GEP is not "inbounds".
   ///
   /// If \p AllowInvariantGroup is true then this method also looks through
-  /// strip.invariant.group and launder.invariant.group intrinsics.
+  /// launder.invariant.group intrinsics.
   ///
   /// If \p ExternalAnalysis is provided it will be used to calculate a offset
   /// when a operand of GEP is not constant.

@@ -50,24 +50,6 @@ def CIR_CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
   }];
   let canHaveIllegalCXXABIType = 0;
 }
-def CIR_CUDABinaryHandleAttr : CIR_Attr<
-  "CUDABinaryHandle", "cu.binary_handle"
-> {
-  let summary = "Fat binary handle for device code.";
-  let description =
-  [{
-    This attribute is attached to the ModuleOp and records the binary file
-    name passed to host.
-
-    CUDA first compiles device-side code into a fat binary file. The file
-    name is then passed into host-side code, which is used to create a handle
-    and then generate various registration functions.
-  }];
-
-  let parameters = (ins "mlir::StringAttr":$name);
-  let assemblyFormat = "`<` $name `>`";
-}
-
 // No wrapper attribute: the kind is only ever printed by
 // CIR_CUDAVarRegistrationInfoAttr's own assembly format.
 def CIR_CUDADeviceVarKind : CIR_I32Enum<"CUDADeviceVarKind",
@@ -89,10 +71,37 @@ def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.va
     // handleVarRegistration via hasAttr<HIPManagedAttr>().
     "bool":$isExtern,
     "bool":$isConstant,
-    "bool":$isManaged
+    "bool":$isManaged,
+    "int32_t":$surfTexType,
+    "bool":$normalized
   );
 
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CUDAOffloadEntryAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDAOffloadEntryAttr : CIR_Attr<"CUDAOffloadEntry", "cu.offload_entry"> {
+  let summary = "Offloading entry for a kernel or device variable.";
+  let description = [{
+    A kernel or device variable that the host registers with the offloading
+    runtime. Translation to LLVM IR emits it into the offloading entries
+    section, which the linker wrapper walks to register each entry after
+    device linking. Used for -fgpu-rdc.
+  }];
+  let parameters = (ins
+    "uint16_t":$kind,
+    "mlir::FlatSymbolRefAttr":$addr,
+    "mlir::StringAttr":$name,
+    "uint64_t":$size,
+    "uint32_t":$flags,
+    "uint64_t":$data,
+    OptionalParameter<"mlir::FlatSymbolRefAttr">:$aux_addr
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRCUDAATTRS_TD

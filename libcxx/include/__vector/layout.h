@@ -19,6 +19,7 @@
 #include <__memory/uninitialized_algorithms.h>
 #include <__split_buffer>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__utility/assume.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -159,19 +160,27 @@ public:
   /// `__begin_ptr()` is not called `data()` because `vector::data()` returns `T*`, but `__begin_`
   /// is allowed to be a fancy pointer.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __begin_ptr() _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, std::__to_address(__begin_));
     return __begin_;
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __begin_ptr() const _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, std::__to_address(__begin_));
     return __begin_;
   }
 
   /// Returns a built-in pointer to the beginning of the buffer.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp* __data() _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, std::__to_address(__begin_));
     return std::__to_address(__begin_);
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const* __data() const _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, std::__to_address(__begin_));
     return std::__to_address(__begin_);
   }
 
@@ -322,25 +331,25 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
-  return __begin_ + __size_;
+  return __begin_ptr() + __size_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
-  return __begin_ + __size_;
+  return __begin_ptr() + __size_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
-  return __begin_ + __capacity_;
+  return __begin_ptr() + __capacity_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
-  return __begin_ + __capacity_;
+  return __begin_ptr() + __capacity_;
 }
 
 template <class _Tp, class _Alloc>
@@ -439,24 +448,32 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__end_));
   return __end_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__end_));
   return __end_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__capacity_));
   return __capacity_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__capacity_));
   return __capacity_;
 }
 

@@ -314,7 +314,6 @@ body:             |
     %134:sreg_32 = SI_IF %84, %bb.14, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.8
 ...
----
 
 
 # CHECK-GX-JSON:      {

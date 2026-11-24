@@ -11552,7 +11552,6 @@ define void @v_permlane16_half(ptr addrspace(1) %out, half %src0, i32 %src1, i32
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -11605,7 +11604,6 @@ define void @v_permlanex16_half(ptr addrspace(1) %out, half %src0, i32 %src1, i3
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -11658,7 +11656,6 @@ define void @v_permlane16_bfloat(ptr addrspace(1) %out, bfloat %src0, i32 %src1,
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -11711,7 +11708,6 @@ define void @v_permlanex16_bfloat(ptr addrspace(1) %out, bfloat %src0, i32 %src1
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -11764,7 +11760,6 @@ define void @v_permlane16_i16(ptr addrspace(1) %out, i16 %src0, i32 %src1, i32 %
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -11817,7 +11812,6 @@ define void @v_permlanex16_i16(ptr addrspace(1) %out, i16 %src0, i32 %src1, i32 
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -11870,7 +11864,6 @@ define void @v_permlane16_v2f16(ptr addrspace(1) %out, <2 x half> %src0, i32 %sr
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -11923,7 +11916,6 @@ define void @v_permlanex16_v2f16(ptr addrspace(1) %out, <2 x half> %src0, i32 %s
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v4
@@ -12016,7 +12008,6 @@ define void @v_permlane16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %s
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
@@ -12031,7 +12022,6 @@ define void @v_permlane16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %s
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
@@ -12125,7 +12115,6 @@ define void @v_permlanex16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
@@ -12140,7 +12129,6 @@ define void @v_permlanex16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
@@ -12274,7 +12262,6 @@ define void @v_permlane16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %src
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v10
@@ -12296,7 +12283,6 @@ define void @v_permlane16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %src
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v10
@@ -12437,7 +12423,6 @@ define void @v_permlanex16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %sr
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v10
@@ -12459,7 +12444,6 @@ define void @v_permlanex16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %sr
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v10
@@ -12572,7 +12556,6 @@ define void @v_permlane16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %src
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
@@ -12589,7 +12572,6 @@ define void @v_permlane16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %src
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
@@ -12697,7 +12679,6 @@ define void @v_permlanex16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %sr
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
@@ -12714,7 +12695,6 @@ define void @v_permlanex16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %sr
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
@@ -12822,7 +12802,6 @@ define void @v_permlane16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %src
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
@@ -12839,7 +12818,6 @@ define void @v_permlane16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %src
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
@@ -12969,7 +12947,6 @@ define void @v_permlane16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %src
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
@@ -12990,7 +12967,6 @@ define void @v_permlane16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %src
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
@@ -13136,7 +13112,6 @@ define void @v_permlane16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 %
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
@@ -13159,7 +13134,6 @@ define void @v_permlane16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 %
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
@@ -13367,7 +13341,6 @@ define void @v_permlane16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 %
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
@@ -13400,7 +13373,6 @@ define void @v_permlane16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 %
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v19
@@ -13524,7 +13496,6 @@ define void @v_permlanex16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %sr
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
@@ -13541,7 +13512,6 @@ define void @v_permlanex16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %sr
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
@@ -13671,7 +13641,6 @@ define void @v_permlanex16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %sr
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
@@ -13692,7 +13661,6 @@ define void @v_permlanex16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %sr
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
@@ -13838,7 +13806,6 @@ define void @v_permlanex16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
@@ -13861,7 +13828,6 @@ define void @v_permlanex16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
@@ -14069,7 +14035,6 @@ define void @v_permlanex16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
@@ -14102,7 +14067,6 @@ define void @v_permlanex16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s1, v19

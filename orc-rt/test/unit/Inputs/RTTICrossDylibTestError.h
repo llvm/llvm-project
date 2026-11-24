@@ -18,12 +18,12 @@
 
 #include "orc-rt/support/Error.h"
 
-namespace orc_rt_test {
+namespace orc_rt::test {
 
 class CrossDylibTestError
-    : public orc_rt::ErrorExtends<CrossDylibTestError, orc_rt::ErrorInfoBase> {
+    : public ErrorExtends<CrossDylibTestError, ErrorInfoBase> {
 public:
-  static constexpr const char *RTTIName = "orc_rt_test::CrossDylibTestError";
+  static constexpr const char *RTTIName = "orc_rt::test::CrossDylibTestError";
 
   explicit CrossDylibTestError(int Code) noexcept : Code(Code) {}
 
@@ -37,6 +37,6 @@ private:
   int Code;
 };
 
-} // namespace orc_rt_test
+} // namespace orc_rt::test
 
 #endif // ORC_RT_TEST_RTTICROSSDYLIBTESTERROR_H

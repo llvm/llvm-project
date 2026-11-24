@@ -12,21 +12,26 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_PROGRAM_MANAGER
-#define _LIBSYCL_PROGRAM_MANAGER
+#ifndef _LIBSYCL_SRC_DETAIL_PROGRAM_MANAGER_HPP
+#define _LIBSYCL_SRC_DETAIL_PROGRAM_MANAGER_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
 #include <detail/device_binary_structures.hpp>
 #include <detail/device_image_wrapper.hpp>
 #include <detail/device_kernel_info.hpp>
+#include <detail/suppress_extra_warnings.hpp>
 
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Object/OffloadBinary.h>
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 #include <OffloadAPI.h>
 
+#include <cstddef>
 #include <memory>
 #include <mutex>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -92,7 +97,10 @@ public:
                     const std::shared_ptr<ContextImpl> &Context,
                     DeviceImpl &Device);
 
+  /// This method is thread-safe.
   /// \return kernel info for the kernel with the specified name.
+  /// \throw sycl::exception with sycl::errc::runtime if no registered device
+  /// image provides a kernel with the specified name.
   DeviceKernelInfo &getDeviceKernelInfo(std::string_view KernelName);
 
   /// Release device image managers and corresponding resources.
@@ -147,4 +155,4 @@ protected:
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_PROGRAM_MANAGER
+#endif // _LIBSYCL_SRC_DETAIL_PROGRAM_MANAGER_HPP

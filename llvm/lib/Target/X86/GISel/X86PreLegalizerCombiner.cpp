@@ -184,7 +184,8 @@ X86PreLegalizerCombinerPass::run(MachineFunction &MF,
 
   auto &CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF);
   const Function &F = MF.getFunction();
-  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None &&
+                   !shouldSkipOptimizationForOptBisect(F);
   GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   CombinerInfo CInfo = createCombinerInfo(EnableOpt, F);

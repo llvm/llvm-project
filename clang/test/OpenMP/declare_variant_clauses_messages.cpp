@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 \
+// RUN: %clang_cc1 -verify=expected,cxx -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify=expected,cxx -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 \
 // RUN:  -DNO_INTEROP_T_DEF -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -x c -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-pc-windows-msvc -fms-compatibility \
+// RUN: %clang_cc1 -verify=expected,cxx -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify=expected,c -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -x c -o - %s
+// RUN: %clang_cc1 -verify=expected,c -triple x86_64-pc-windows-msvc -fms-compatibility \
 // RUN:  -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -DWIN -x c -o - %s
 
 #ifdef NO_INTEROP_T_DEF
@@ -15,7 +15,7 @@ void foo_v1(float *);
 #else
 typedef void *omp_interop_t;
 
-int Other;
+int Other; // cxx-note {{declared here}}
 
 #if _OPENMP >= 202011  // At least OpenMP 5.1
 #ifdef __cplusplus
@@ -135,7 +135,9 @@ void vararg_bar2(const char *fmt) { return; }
    adjust_args(need_device_addr:AAA)                         \
    match(construct={dispatch}, device={arch(x86,x86_64)})
 
-// expected-error@+2 {{expected reference to one of the parameters of function 'foo'}}
+// cxx-error@+4 {{expression is not an integral constant expression}}
+// cxx-note@+3 {{read of non-const variable 'Other' is not allowed in a constant expression}}
+// c-error@+2 {{expression is not an integer constant expression}}
 #pragma omp declare variant(foo_v3)                          \
    adjust_args(nothing:Other)                                \
    match(construct={dispatch}, device={arch(x86,x86_64)})

@@ -8,7 +8,7 @@
 ! CHECK-SAME: %{{.*}}: !fir.boxproc<() -> ()>{{.*}}) -> f32
 real function foo(bar)
   real :: bar, x
-  ! CHECK: %[[x:.*]] = fir.alloca f32 {{{.*}}uniq_name = "{{.*}}Ex"}
+  ! CHECK: %[[x:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "{{.*}}Ex"}>
   ! CHECK: %[[x_decl:.*]]:2 = hlfir.declare %[[x]]
   x = 42.
   ! CHECK: %[[funccast:.*]] = fir.box_addr %arg0 : (!fir.boxproc<() -> ()>) -> ((!fir.ref<f32>) -> f32)
@@ -49,7 +49,7 @@ end function
 ! CHECK-LABEL: func.func @_QPfoo_sub(
 ! CHECK-SAME: %{{.*}}: !fir.boxproc<() -> ()>{{.*}})
 subroutine foo_sub(bar_sub)
-  ! CHECK: %[[x:.*]] = fir.alloca f32 {{{.*}}uniq_name = "{{.*}}Ex"}
+  ! CHECK: %[[x:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "{{.*}}Ex"}>
   ! CHECK: %[[x_decl:.*]]:2 = hlfir.declare %[[x]]
   x = 42.
   ! CHECK: %[[funccast:.*]] = fir.box_addr %arg0 : (!fir.boxproc<() -> ()>) -> ((!fir.ref<f32>) -> ())

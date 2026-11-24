@@ -203,6 +203,11 @@ struct LateParsedAttribute : public LateParsedDeclaration {
   SourceLocation AttrNameLoc;
   SmallVector<Decl *, 2> Decls;
 
+  /// Parameters of the prototype the attribute was written on, kept because
+  /// late parsing runs after their scope is popped and the arguments may name
+  /// one: 'void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)'.
+  SmallVector<ParmVarDecl *, 4> ProtoParams;
+
 private:
   Kind K;
 
@@ -232,9 +237,12 @@ public:
 /// is replaced with a concrete type (e.g., CountAttributedType).
 struct LateParsedTypeAttribute : public LateParsedAttribute {
 
-  explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
-                                   SourceLocation Loc)
-      : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
+  /// What Sema reads and fills in during type construction.
+  LateParsedTypeAttrInfo Info;
+
+  LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name, SourceLocation Loc,
+                          ParsedAttr::Kind AttrKind)
+      : LateParsedAttribute(P, Name, Loc, Kind::Type), Info(AttrKind, Loc) {}
 
   void ParseLexedAttributes() override;
 
@@ -279,6 +287,7 @@ class Parser : public CodeCompletionHandler {
 
 public:
   friend class ColonProtectionRAIIObject;
+  friend class GenericAssociationTypeRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
@@ -813,8 +822,7 @@ private:
   bool isEofOrEom() {
     tok::TokenKind Kind = Tok.getKind();
     return Kind == tok::eof || Kind == tok::annot_module_begin ||
-           Kind == tok::annot_module_end || Kind == tok::annot_module_include ||
-           Kind == tok::annot_repl_input_end;
+           Kind == tok::annot_module_end || Kind == tok::annot_module_include;
   }
 
   static void setTypeAnnotation(Token &Tok, TypeResult T) {
@@ -1178,9 +1186,6 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
-  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
-  void DiagnoseInvalidCXXModuleImport();
-
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -1524,16 +1529,27 @@ private:
   void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                ParsedAttributes &OutAttrs);
 
+  /// Complete every late-parsed type attribute queued for the record whose body
+  /// just closed. Consumes and clears \p LateTypeAttrs.
+  void CompleteLateParsedTypeAttributes(
+      SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs);
+
   /// Parse cached tokens for a late-parsed attribute and return the parsed
   /// attributes. Shared implementation used by both ParseLexedAttribute and
   /// ParseLexedTypeAttribute.
   ParsedAttributes ParseLexedAttributeTokens(LateParsedAttribute &LPA);
+  /// Diagnose a late-parsed attribute naming a parameter that it cannot, and
+  /// return true if it must be dropped.
+  bool checkLateAttributeParamRefs(const LateParsedAttribute &LPA,
+                                   ArrayRef<const DeclRefExpr *> ParamRefs,
+                                   bool ReenteredProtoParams);
 
-  /// Helper function to move LateParsedTypeAttribute pointers from one list
-  /// to another. Filters type attributes from \p From and appends them to \p
-  /// To.
-  static void TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
-                                         LateParsedAttrList &From);
+  /// Moves the late-parsed type attributes out of \p From, appending a pointer
+  /// to each one's LateParsedTypeAttrInfo to \p To. \p To does not own the
+  /// LateParsedTypeAttribute objects: the caller must keep them alive while
+  /// \p To is in use (in a C record, CurRecordLateParsedTypeAttrs does).
+  static void TakeLateParsedTypeAttrInfos(LateParsedTypeAttrInfoList &To,
+                                          LateParsedAttrList &From);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
@@ -1938,10 +1954,12 @@ private:
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);
 
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal) {
-    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr) {
+    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC,
+                                LateAttrs);
   }
 
   /// ParseSpecifierQualifierList
@@ -1952,10 +1970,12 @@ private:
   /// [GNU]    attributes     specifier-qualifier-list[opt]
   /// \endverbatim
   ///
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS,
+                              ImplicitTypenameContext AllowImplicitTypename,
+                              AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseEnumSpecifier
   /// \verbatim
@@ -2379,7 +2399,6 @@ private:
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
   void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
   void ParseCUDAFunctionAttributes(ParsedAttributes &attrs);
-  bool isHLSLQualifier(const Token &Tok) const;
   void ParseHLSLQualifiers(ParsedAttributes &Attrs);
 
   /// Parse a version number.
@@ -2663,7 +2682,8 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      llvm::function_ref<void()> CodeCompletionHandler = {});
+      llvm::function_ref<void()> CodeCompletionHandler = {},
+      LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseDirectDeclarator
   /// \verbatim
@@ -2793,11 +2813,13 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc,
+      LateParsedAttrList *LateParamAttrs = nullptr) {
     return ParseParameterDeclarationClause(
         D.getContext(), attrs, ParamInfo, EllipsisLoc,
         D.getCXXScopeSpec().isSet() &&
-            D.isFunctionDeclaratorAFunctionDeclaration());
+            D.isFunctionDeclaratorAFunctionDeclaration(),
+        LateParamAttrs);
   }
 
   /// ParseParameterDeclarationClause - Parse a (possibly empty) parameter-list
@@ -2838,7 +2860,8 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false,
+      LateParsedAttrList *LateParamAttrs = nullptr);
 
   /// \verbatim
   /// [C90]   direct-declarator '[' constant-expression[opt] ']'
@@ -3875,8 +3898,9 @@ private:
   /// associated with the class's definition.
   void PopParsingClass(Sema::ParsingClassState);
 
-  ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
-                                          bool Unevaluated);
+  ExprResult
+  ParseStringLiteralExpression(bool AllowUserDefinedLiteral, bool Unevaluated,
+                               ConversionAction CA = CA_ToLiteralEncoding);
 
   /// This routine is called when the '@' is seen and consumed.
   /// Current token is an Identifier and is not a 'try'. This
@@ -4104,8 +4128,9 @@ private:
   /// suffix.
   bool isPostfixExpressionSuffixStart() {
     tok::TokenKind K = Tok.getKind();
-    return (K == tok::l_square || K == tok::l_paren || K == tok::period ||
-            K == tok::arrow || K == tok::plusplus || K == tok::minusminus);
+    return (K == tok::l_square || K == tok::l_paren || K == tok::lesslessless ||
+            K == tok::period || K == tok::arrow || K == tok::plusplus ||
+            K == tok::minusminus);
   }
 
   /// Once the leading part of a postfix-expression is parsed, this
@@ -4497,6 +4522,11 @@ private:
   /// safe in case statements and a few other things.  This is managed by the
   /// ColonProtectionRAIIObject RAII object.
   bool ColonIsSacred;
+
+  // ParsingGenericAssociationType - Currently parsing the typename in
+  // _Generic association. This is to consume the colon if what comes after it
+  // is a type.
+  bool ParsingGenericAssociationType;
 
   /// ParseCXXAmbiguousParenExpression - We have parsed the left paren of a
   /// parenthesized ambiguous type-id. This uses tentative parsing to
@@ -5039,10 +5069,15 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
+  /// \param AfterInitStmt Whether an init-statement has already been parsed
+  /// for this condition, so a null \p InitStmt means "the init-statement slot
+  /// is used up" rather than "no init-statement is permitted here".
+  ///
   /// \returns The parsed condition.
   Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
                                        Sema::ConditionKind CK, bool MissingOK,
-                                       ForRangeInfo *FRI = nullptr);
+                                       ForRangeInfo *FRI = nullptr,
+                                       bool AfterInitStmt = false);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -7071,10 +7106,22 @@ public:
   bool ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
                                   SemaOpenMP::OpenMPVarListDataTy &Data,
                                   const LangOptions &LangOpts);
+
+  /// Parses one bound of an OpenMP 6.0 'adjust_args' parameter range, which may
+  /// be 'omp_num_args' with an optional logical offset, or the whole
+  /// parameter-list item when no range colon follows it.
+  bool ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound);
+
+  /// Parses an OpenMP 6.0 'adjust_args' parameter list, whose items may be
+  /// parameter names, positions, or ranges with optional bounds.
+  /// Returns true on error.
+  bool ParseOpenMPAdjustArgsList(SmallVectorImpl<OMPAdjustArgsItem> &Items);
+
   /// Parses clauses with list.
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,
-                          SemaOpenMP::OpenMPVarListDataTy &Data);
+                          SemaOpenMP::OpenMPVarListDataTy &Data,
+                          SmallVectorImpl<OMPAdjustArgsItem> &AdjustArgsItems);
 
   /// Parses the mapper modifier in map, to, and from clauses.
   bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);

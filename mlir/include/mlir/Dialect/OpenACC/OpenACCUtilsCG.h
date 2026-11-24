@@ -118,6 +118,21 @@ bool hasGPUBlockRedundantAttr(Operation *op);
 /// Mark \p op with the `acc.gpu_block_redundant` attribute.
 void setGPUBlockRedundantAttr(Operation *op);
 
+/// Obtain the `acc.chunk_size` attribute carried by \p op, if any.
+ChunkSizeAttr getChunkSizeAttr(Operation *op);
+
+/// Return whether \p op carries an `acc.chunk_size` attribute.
+bool hasChunkSizeAttr(Operation *op);
+
+/// Set the `acc.chunk_size` attribute on \p op.
+void setChunkSizeAttr(Operation *op, ChunkSizeAttr attr);
+
+/// Set the `acc.chunk_size` attribute on \p op from a constant size.
+void setChunkSizeAttr(Operation *op, int64_t chunkSize);
+
+/// Return the chunk size carried by \p op, if any.
+std::optional<int64_t> getChunkSize(Operation *op);
+
 /// Create a gang dim 1 GPUParallelDimsAttr based on the mapping policy.
 inline GPUParallelDimsAttr
 getGangDim1ParDimsAttr(MLIRContext *ctx, ACCToGPUMappingPolicy &policy) {

@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: define hidden noundef i1 @
 // CHECK: %hlsl.isnan = call i1 @llvm.dx.isnan.f32(
 // CHECK: ret i1 %hlsl.isnan

@@ -8,6 +8,7 @@ add_mlir_library(MLIRDLTITestPasses
   MLIRTestDialect
   )
 mlir_target_link_libraries(MLIRDLTITestPasses PUBLIC
+  MLIRAnalysisBase
   MLIRDLTIDialect
   MLIRPass
   )

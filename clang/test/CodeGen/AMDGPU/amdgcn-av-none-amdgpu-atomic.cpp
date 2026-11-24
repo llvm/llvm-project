@@ -1,7 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 %s -verify -emit-llvm -O0 -o - \
-// RUN:   -triple=amdgcn-amd-amdhsa \
-// RUN:   -target-cpu gfx942
+// RUN:   -triple=amdgpu9.42-amd-amdhsa
 
 // Test that [[clang::amdgpu_av("none")]] on AMDGPU-specific atomic builtins
 // is rejected with a warning.

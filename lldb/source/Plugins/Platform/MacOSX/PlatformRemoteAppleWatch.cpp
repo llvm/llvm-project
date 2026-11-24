@@ -180,8 +180,9 @@ PlatformRemoteAppleWatch::GetSupportedArchitectures(const ArchSpec &host_info) {
   }
 }
 
-llvm::StringRef PlatformRemoteAppleWatch::GetDeviceSupportDirectoryName() {
-  return "watchOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformRemoteAppleWatch::GetDeviceSupportDirectoryNames() {
+  return {"watchOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformRemoteAppleWatch::GetPlatformName() {

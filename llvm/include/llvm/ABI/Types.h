@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
@@ -32,6 +33,7 @@ enum class TypeKind {
   Complex,
   Integer,
   Float,
+  OpaqueFloat8,
   Pointer,
   Array,
   Vector,
@@ -78,6 +80,19 @@ public:
     return SizeInBits.isFixed() ? SizeInBits.getFixedValue() : 0;
   }
 
+  /// Returns the size in bits that the source language gives this type,
+  /// including any padding.
+  ///
+  /// An integer is rounded up to whole bytes.  A _BitInt or a floating-point
+  /// type is rounded up further, to its alignment.  That alignment must be the
+  /// one its size is padded to, not one an aligned attribute raised or lowered.
+  /// A complex type is twice the ABI size of its element type.  A fixed-length
+  /// vector counts an integer element other than a _BitInt at its bit width and
+  /// every other element at its own ABI size, so a bool element takes one bit.
+  /// The total is rounded up to a power of two of at least 8 bits.  Any other
+  /// type returns the size it was created with, and a scalable type returns 0.
+  LLVM_ABI uint64_t getABISizeInBits() const;
+
   Align getAlignment() const { return ABIAlignment; }
 
   /// Alignment before record-level adjustments such as aligned attributes.
@@ -93,6 +108,7 @@ public:
   bool isAtomic() const { return Kind == TypeKind::Atomic; }
   bool isInteger() const { return Kind == TypeKind::Integer; }
   bool isFloat() const { return Kind == TypeKind::Float; }
+  bool isOpaqueFloat8() const { return Kind == TypeKind::OpaqueFloat8; }
   bool isPointer() const { return Kind == TypeKind::Pointer; }
   bool isArray() const { return Kind == TypeKind::Array; }
   bool isVector() const { return Kind == TypeKind::Vector; }
@@ -184,6 +200,20 @@ public:
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Float; }
 };
 
+/// An 8-bit floating-point format with no numeric semantics. This corresponds
+/// to the AArch64 __mfp8 type. A vector of this format uses an 8-bit integer
+/// element, so this type is not a valid vector element. If a similar type is
+/// needed for other targets this should be generalized.
+class OpaqueFloat8Type : public Type {
+public:
+  explicit OpaqueFloat8Type(Align ABIAlign)
+      : Type(TypeKind::OpaqueFloat8, TypeSize::getFixed(8), ABIAlign) {}
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::OpaqueFloat8;
+  }
+};
+
 class PointerLikeType : public Type {
 protected:
   unsigned AddrSpace;
@@ -201,10 +231,19 @@ public:
 };
 
 class PointerType : public PointerLikeType {
+  bool HasAddressSpaceQualifier;
+
 public:
-  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0)
+  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0,
+              bool HasAddressSpaceQualifier = false)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
-                        AddressSpace) {}
+                        AddressSpace),
+        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {
+    assert((HasAddressSpaceQualifier || AddressSpace == 0) &&
+           "an unqualified pointer is in address space 0");
+  }
+
+  bool hasAddressSpaceQualifier() const { return HasAddressSpaceQualifier; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
@@ -292,7 +331,10 @@ public:
              VectorKind VecKind = VectorKind::Generic)
       : Type(TypeKind::Vector, computeSizeInBits(ElementType, NumElements),
              ABIAlign),
-        ElementType(ElementType), NumElements(NumElements), VecKind(VecKind) {}
+        ElementType(ElementType), NumElements(NumElements), VecKind(VecKind) {
+    assert(!ElementType->isOpaqueFloat8() &&
+           "opaque 8-bit float is not a valid vector element type");
+  }
 
   const Type *getElementType() const { return ElementType; }
   ElementCount getNumElements() const { return NumElements; }
@@ -305,6 +347,11 @@ public:
   bool isSVEData() const { return VecKind == VectorKind::SVEData; }
   bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }
   bool isSVECount() const { return VecKind == VectorKind::SVECount; }
+
+  bool isFixedLengthSVEData() const { return isFixedLength() && isSVEData(); }
+  bool isFixedLengthSVEPredicate() const {
+    return isFixedLength() && isSVEPredicate();
+  }
 
   /// Returns true for any of the AArch64 SVE flavors.
   bool isSVEType() const { return VecKind != VectorKind::Generic; }
@@ -366,7 +413,12 @@ enum RecordFlags : unsigned {
   IsCXXRecord = 1 << 3,
   IsPolymorphic = 1 << 4,
   HasFlexibleArrayMember = 1 << 5,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ HasFlexibleArrayMember),
+  IsCXXEmpty = 1 << 6,
+  HasNonTrivialCopyAssignment = 1 << 7,
+  HasNonTrivialDestructor = 1 << 8,
+  HasNonTrivialDefaultConstructor = 1 << 9,
+  LLVM_MARK_AS_BITMASK_ENUM(
+      /* LargestValue = */ HasNonTrivialDefaultConstructor),
 };
 
 class RecordType : public Type {
@@ -403,6 +455,24 @@ public:
   bool hasFlexibleArrayMember() const {
     return static_cast<unsigned>(Flags & RecordFlags::HasFlexibleArrayMember) !=
            0;
+  }
+  /// True for a C++ class that is empty in the sense of std::is_empty. This
+  /// differs from isEmpty(), which applies the ABI rules for ignoring empty
+  /// records.
+  bool isCXXEmpty() const {
+    return static_cast<unsigned>(Flags & RecordFlags::IsCXXEmpty) != 0;
+  }
+  bool hasNonTrivialCopyAssignment() const {
+    return static_cast<unsigned>(Flags &
+                                 RecordFlags::HasNonTrivialCopyAssignment) != 0;
+  }
+  bool hasNonTrivialDestructor() const {
+    return static_cast<unsigned>(Flags &
+                                 RecordFlags::HasNonTrivialDestructor) != 0;
+  }
+  bool hasNonTrivialDefaultConstructor() const {
+    return static_cast<unsigned>(
+               Flags & RecordFlags::HasNonTrivialDefaultConstructor) != 0;
   }
   uint32_t getNumBaseClasses() const { return BaseClasses.size(); }
   uint32_t getNumVirtualBaseClasses() const {
@@ -467,10 +537,15 @@ public:
     return new (Allocator.Allocate<FloatType>()) FloatType(Semantics, Align);
   }
 
+  const OpaqueFloat8Type *getOpaqueFloat8Type(Align Align) {
+    return new (Allocator.Allocate<OpaqueFloat8Type>()) OpaqueFloat8Type(Align);
+  }
+
   const PointerType *getPointerType(uint64_t Size, Align Align,
-                                    unsigned Addrspace = 0) {
+                                    unsigned Addrspace = 0,
+                                    bool HasAddressSpaceQualifier = false) {
     return new (Allocator.Allocate<PointerType>())
-        PointerType(Size, Align, Addrspace);
+        PointerType(Size, Align, Addrspace, HasAddressSpaceQualifier);
   }
 
   const ArrayType *getArrayType(const Type *ElementType, uint64_t NumElements,
@@ -495,14 +570,17 @@ public:
     return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
   }
 
-  /// Creates the AArch64 __SVCount_t type. The type is opaque, so it is
-  /// modeled with the shape of svbool_t: a scalable vector of 16 one-bit
-  /// elements.
-  const VectorType *getSVECountType(Align ABIAlign) {
+  /// Creates a scalable predicate or count vector.
+  /// Note: The AArch64 __SVCount_t type is opaque, so it is modeled with the
+  /// shape of svbool_t: a scalable vector of 16 one-bit elements.
+  const VectorType *getScalablePredicateOrCountVectorType(Align ABIAlign,
+                                                          VectorKind Kind) {
+    assert((Kind == VectorKind::SVEPredicate || Kind == VectorKind::SVECount) &&
+           "expected predicate or count vector kind");
     const Type *PredicateBit =
         getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
     return getVectorType(PredicateBit, ElementCount::getScalable(16), ABIAlign,
-                         VectorKind::SVECount);
+                         Kind);
   }
 
   const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,

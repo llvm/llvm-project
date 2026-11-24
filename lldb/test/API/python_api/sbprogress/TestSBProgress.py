@@ -66,3 +66,17 @@ class SBProgressTestCase(TestBase):
         # Note even for progresses with a total, the total isn't
         # sent in the end message.
         self.assertIn("type = end", stream.GetData())
+
+    def test_progress_with_syntax(self) -> None:
+        """Test SBProgress works with Python's with syntax"""
+        listener = lldb.SBListener("Test listener")
+        broadcaster = self.dbg.GetBroadcaster()
+        broadcaster.AddListener(listener, lldb.eBroadcastBitExternalProgress)
+        event = lldb.SBEvent()
+        with lldb.SBProgress("Test SBProgress", "Testing", 42, self.dbg) as progress:
+            progress.Increment(1)
+
+        self.assertTrue(listener.WaitForEvent(5, event))
+        stream = lldb.SBStream()
+        event.GetDescription(stream)
+        self.assertIn("Testing", stream.GetData())

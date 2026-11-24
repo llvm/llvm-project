@@ -13,21 +13,13 @@ define <2 x half> @v_test_cvt_v2f32_v2f16(<2 x float> %src) {
 }
 
 define <3 x half> @v_test_cvt_v3f32_v3f16(<3 x float> %src) {
-; GFX950-SDAG-LABEL: v_test_cvt_v3f32_v3f16:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-GISEL-LABEL: v_test_cvt_v3f32_v3f16:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
-; GFX950-GISEL-NEXT:    v_lshl_or_b32 v1, s0, 16, v2
-; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-LABEL: v_test_cvt_v3f32_v3f16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-NEXT:    v_mov_b32_e32 v1, v2
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %res = fptrunc <3 x float> %src to <3 x half>
   ret <3 x half> %res
 }
@@ -412,10 +404,9 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v9, 7, v0
 ; GFX950-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v9
 ; GFX950-GISEL-NEXT:    v_cmp_lt_i32_e64 s[0:1], 5, v9
-; GFX950-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e64 v9, 0, 1, s[0:1]
-; GFX950-GISEL-NEXT:    v_add_u32_e32 v0, v0, v9
+; GFX950-GISEL-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v0, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_lt_i32_e32 vcc, 30, v4
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, 0x40f
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -450,10 +441,9 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v6, 7, v2
 ; GFX950-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v6
 ; GFX950-GISEL-NEXT:    v_cmp_lt_i32_e64 s[0:1], 5, v6
-; GFX950-GISEL-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 2, v2
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[0:1]
-; GFX950-GISEL-NEXT:    v_add_u32_e32 v2, v2, v6
+; GFX950-GISEL-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_lt_i32_e32 vcc, 30, v1
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v2, v2, v8, vcc

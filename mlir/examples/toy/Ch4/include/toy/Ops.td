@@ -228,7 +228,7 @@ def GenericCallOp : Toy_Op<"generic_call",
 
   // Specialize assembly printing and parsing using a declarative format.
   let assemblyFormat = [{
-    $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)
+    $callee `(` $inputs `)` prop-dict attr-dict `:` functional-type($inputs, results)
   }];
 
   // Add custom build methods for the generic call operation.

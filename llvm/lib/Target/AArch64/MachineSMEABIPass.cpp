@@ -277,8 +277,7 @@ getInstNeededZAState(const TargetRegisterInfo &TRI, MachineInstr &MI,
 struct MachineSMEABI : public MachineFunctionPass {
   inline static char ID = 0;
 
-  MachineSMEABI(CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
-      : MachineFunctionPass(ID), OptLevel(OptLevel) {}
+  MachineSMEABI() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -329,9 +328,6 @@ struct MachineSMEABI : public MachineFunctionPass {
                   bool ClearTPIDR2, bool On);
 
   // Emission routines for agnostic ZA functions.
-  void emitSetupFullZASave(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI,
-                           LiveRegs PhysLiveRegs);
   // Emit a "full" ZA save or restore. It is "full" in the sense that this
   // function will emit a call to __arm_sme_save or __arm_sme_restore, which
   // handles saving and restoring both ZA and ZT0.
@@ -401,8 +397,6 @@ struct MachineSMEABI : public MachineFunctionPass {
                          MachineBasicBlock::iterator MBBI, DebugLoc DL);
 
 private:
-  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
-
   MachineFunction *MF = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
@@ -412,7 +406,6 @@ private:
 
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  MachineLoopInfo *MLI = nullptr;
 };
 
 static LiveRegs getPhysLiveRegs(LiveRegUnits const &LiveUnits) {
@@ -767,7 +760,8 @@ PhysRegSave MachineSMEABI::createPhysRegSave(LiveRegs PhysLiveRegs,
     RegSave.StatusFlags = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS), RegSave.StatusFlags)
         .addImm(AArch64SysReg::NZCV)
-        .addReg(AArch64::NZCV, RegState::Implicit);
+        .addReg(AArch64::NZCV, RegState::Implicit)
+        .setOperandDead(2); // implicit-def $nzcv
   }
   // Note: Preserving X0 is "free" as this is before register allocation, so
   // the register allocator is still able to optimize these copies.
@@ -828,7 +822,8 @@ void MachineSMEABI::emitRestoreLazySave(EmitContext &Context,
       .addImm(1);
   // Get current TPIDR2_EL0.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS), TPIDR2EL0)
-      .addImm(AArch64SysReg::TPIDR2_EL0);
+      .addImm(AArch64SysReg::TPIDR2_EL0)
+      .setOperandDead(2); // implicit-def $nzcv
   // Get pointer to TPIDR2 block.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), TPIDR2)
       .addFrameIndex(Context.getTPIDR2Block(*MF))
@@ -885,8 +880,8 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
     // will always allocate the lazy save buffer (even if the function contains
     // no lazy saves). If we want to handle Windows here, we'll need to
     // implement something similar to LowerWindowsDYNAMIC_STACKALLOC.
-    assert(!Subtarget->isTargetWindows() &&
-           "Lazy ZA save is not yet supported on Windows");
+    assert(!Subtarget->isTargetWindowsOrUEFI() &&
+           "Lazy ZA save is not yet supported on Windows or UEFI");
     Buffer = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     // Get original stack pointer.
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), SP)
@@ -933,7 +928,8 @@ void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
     Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
         .addReg(TPIDR2EL0, RegState::Define)
-        .addImm(AArch64SysReg::TPIDR2_EL0);
+        .addImm(AArch64SysReg::TPIDR2_EL0)
+        .setOperandDead(2); // implicit-def $nzcv
     // If TPIDR2_EL0 is non-zero, commit the lazy save.
     // NOTE: Functions that only use ZT0 don't need to zero ZA.
     auto CommitZASave =
@@ -1239,6 +1235,4 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createMachineSMEABIPass(CodeGenOptLevel OptLevel) {
-  return new MachineSMEABI(OptLevel);
-}
+FunctionPass *llvm::createMachineSMEABIPass() { return new MachineSMEABI(); }

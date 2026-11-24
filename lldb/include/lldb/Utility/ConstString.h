@@ -53,7 +53,7 @@ public:
   /// exist, it is added to the string pool.
   ///
   /// \param[in] cstr
-  ///     A NULL terminated C string to add to the string pool.
+  ///     A null-terminated C string to add to the string pool.
   explicit ConstString(const char *cstr);
 
   /// Construct with C String value with max length
@@ -61,11 +61,11 @@ public:
   /// Constructs this object with a C string with a length. If \a max_cstr_len
   /// is greater than the actual length of the string, the string length will
   /// be truncated. This allows substrings to be created without the need to
-  /// NULL terminate the string as it is passed into this function.
+  /// null-terminate the string as it is passed into this function.
   ///
   /// \param[in] cstr
   ///     A pointer to the first character in the C string. The C
-  ///     string can be NULL terminated in a buffer that contains
+  ///     string can be null-terminated in a buffer that contains
   ///     more characters than the length of the string, or the
   ///     string can be part of another string and a new substring
   ///     can be created.
@@ -200,7 +200,7 @@ public:
 
   /// Get the string value as a C string.
   ///
-  /// Get the value of the contained string as a NULL terminated C string
+  /// Get the value of the contained string as a null-terminated C string
   /// value. Similar to the ConstString::AsCString() function, yet this
   /// function will always return nullptr if the string is not valid. So this
   /// function is a direct accessor to the string pointer value.
@@ -217,7 +217,7 @@ public:
   ///
   /// \return
   ///     Returns the number of bytes that this string occupies in
-  ///     memory, not including the NULL termination byte.
+  ///     memory, not including the null terminator.
   size_t GetLength() const;
 
   /// Clear this object's state.
@@ -315,7 +315,7 @@ public:
   /// added to the string pool.
   ///
   /// \param[in] cstr
-  ///     A NULL terminated C string to add to the string pool.
+  ///     A null-terminated C string to add to the string pool.
   void SetCString(const char *cstr);
 
   void SetString(llvm::StringRef s);
@@ -369,7 +369,7 @@ public:
   /// added to the string pool.
   ///
   /// \param[in] cstr
-  ///     A NULL terminated C string to add to the string pool.
+  ///     A null-terminated C string to add to the string pool.
   ///
   /// \param[in] cstr_len
   ///     The maximum length of the C string.
@@ -378,7 +378,7 @@ public:
   /// Set the C string value with the minimum length between \a fixed_cstr_len
   /// and the actual length of the C string. This can be used for data
   /// structures that have a fixed length to store a C string where the string
-  /// might not be NULL terminated if the string takes the entire buffer.
+  /// might not be null-terminated if the string takes the entire buffer.
   void SetTrimmedCStringWithLength(const char *cstr, size_t fixed_cstr_len);
 
   /// Get the memory cost of this object.

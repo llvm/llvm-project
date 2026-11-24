@@ -55,7 +55,7 @@ generic and non-generic). There are some exceptions to this but in general:
 
 - instead of immediates, they use a generic virtual register defined by an
   instruction that materializes the immediate value (see
-  {ref}`irtranslator-constants`). Typically this is a G_CONSTANT or a
+  {ref}`ir-translator-constants`). Typically this is a G_CONSTANT or a
   G_FCONSTANT. One example of an exception to this rule is G_SEXT_INREG where
   having an immediate is mandatory.
 - instead of physical register, they use a generic virtual register that is
@@ -208,7 +208,7 @@ scalar type is a nice simplification.
 [^abi-dependent]: This mapping is ABI dependent. Here we've assumed no additional padding is required.
 
 [^byte-as-integer]: The {ref}`byte type <t_byte>` `bN` is translated as the
-    equi-sized integer scalar `sN`. See {ref}`irtranslator-byte-type`.
+    equi-sized integer scalar `sN`. See {ref}`ir-translator-byte-type`.
 
 ## Generic Opcode Reference
 

@@ -17,11 +17,9 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::nvgpu;
@@ -29,14 +27,6 @@ using namespace mlir::nvgpu;
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
 
 void NVGPUDialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc"
-      >();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
@@ -539,7 +529,7 @@ LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
   if (typeA.isTF32() && typeD.isF32() && typeB.isTF32())
     return success();
   // s32 += i8 + i8
-  if (typeA.isInteger(16) && typeB.isInteger(16) && typeD.isInteger(32))
+  if (typeA.isInteger(8) && typeB.isInteger(8) && typeD.isInteger(32))
     return success();
   // s32 += i1 + i1
   if (typeA.isInteger(1) && typeB.isInteger(1) && typeD.isInteger(32))
