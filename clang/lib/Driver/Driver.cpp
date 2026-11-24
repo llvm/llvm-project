@@ -380,6 +380,8 @@ phases::ID Driver::getFinalPhase(const ArgList &Args,
   } else if ((PhaseArg = Args.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = Args.getLastArg(options::OPT_print_supported_cpus)) ||
              (PhaseArg =
+                  Args.getLastArg(options::OPT_print_supported_tune_cpus)) ||
+             (PhaseArg =
                   Args.getLastArg(options::OPT_print_enabled_extensions)) ||
              (PhaseArg = Args.getLastArg(options::OPT_module_file_info)) ||
              (PhaseArg = Args.getLastArg(options::OPT_verify_pch)) ||
@@ -1549,8 +1551,7 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   return false;
 }
 
-Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList,
-                                      bool CC1MainIsReusable) {
+Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   llvm::PrettyStackTraceString CrashInfo("Compilation construction");
 
   // FIXME: Handle environment options which affect driver behavior, somewhere
@@ -1883,7 +1884,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList,
 
   // The compilation takes ownership of Args.
   Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs,
-                                   ContainsError, CC1MainIsReusable);
+                                   ContainsError);
 
   if (!HandleImmediateArgs(*C))
     return C;
@@ -2724,6 +2725,7 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_v) ||
       C.getArgs().hasArg(options::OPT__HASH_HASH_HASH) ||
       C.getArgs().hasArg(options::OPT_print_supported_cpus) ||
+      C.getArgs().hasArg(options::OPT_print_supported_tune_cpus) ||
       C.getArgs().hasArg(options::OPT_print_supported_extensions) ||
       C.getArgs().hasArg(options::OPT_print_enabled_extensions)) {
     PrintVersion(C, llvm::errs());
@@ -3857,6 +3859,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   }
 
   for (auto Opt : {options::OPT_print_supported_cpus,
+                   options::OPT_print_supported_tune_cpus,
                    options::OPT_print_supported_extensions,
                    options::OPT_print_enabled_extensions}) {
     // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a
@@ -4755,10 +4758,9 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
 
-  // Unless the callback explicitly supports repeated invocation, use a
-  // separate process when there is more than one job. Process execution
-  // statistics always require a separate process.
-  if ((C.getJobs().size() > 1 && !C.isCC1MainReusable()) || CCPrintProcessStats)
+  // If we have more than one job, then disable integrated-cc1 for now. Do this
+  // also when we need to report process execution statistics.
+  if (C.getJobs().size() > 1 || CCPrintProcessStats)
     for (auto &J : C.getJobs())
       J.InProcess = false;
 
@@ -6678,10 +6680,8 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).starts_with("-cc1"))
     MarkEOLs = false;
 
-  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer, FS);
   ECtx.setMarkEOLs(MarkEOLs);
-  if (FS)
-    ECtx.setVFS(FS);
 
   if (llvm::Error Err = ECtx.expandResponseFiles(Args))
     return Err;

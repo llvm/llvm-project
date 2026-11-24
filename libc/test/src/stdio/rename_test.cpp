@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
-#include "include/llvm-libc-macros/linux/unistd-macros.h"
+#include "hdr/unistd_macros.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/rename.h"
 #include "src/unistd/access.h"

@@ -436,6 +436,9 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     return emitOMPTargetParallelGenericLoopDirective(
         cast<OMPTargetParallelGenericLoopDirective>(*s));
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
+    return emitOMPTargetGenericLoopDirective(
+        cast<OMPTargetGenericLoopDirective>(*s));
   case Stmt::OMPTargetParallelForSimdDirectiveClass:
     return emitOMPTargetParallelForSimdDirective(
         cast<OMPTargetParallelForSimdDirective>(*s));

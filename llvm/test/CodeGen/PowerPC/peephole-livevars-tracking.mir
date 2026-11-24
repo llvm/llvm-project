@@ -10,12 +10,6 @@
 name: test_xxpermdi_splat_multiple_uses
 alignment: 16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vrrc }
-  - { id: 28, class: vrrc }
-  - { id: 31, class: f8rc }
-  - { id: 34, class: vrrc }
-  - { id: 35, class: vrrc }
 body: |
   bb.0:
     liveins: $f1
@@ -41,18 +35,6 @@ alignment: 16
 tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
-registers:
-  - { id: 2, class: vrrc }
-  - { id: 3, class: gprc_and_gprc_nor0 }
-  - { id: 4, class: gprc }
-  - { id: 7, class: gprc }
-  - { id: 8, class: gprc }
-  - { id: 21, class: vsrc }
-  - { id: 22, class: g8rc_and_g8rc_nox0 }
-  - { id: 25, class: vsrc }
-  - { id: 26, class: vsrc }
-  - { id: 29, class: crrc }
-  - { id: 31, class: vsrc }
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_swap_isel_livevars

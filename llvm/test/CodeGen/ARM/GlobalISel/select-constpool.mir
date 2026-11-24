@@ -6,7 +6,6 @@ name:            get_const
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           i32 287454020

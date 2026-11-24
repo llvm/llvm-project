@@ -388,8 +388,8 @@ defm : OptionalBoolField<"do-counter-promotion",
   "Do counter register promotion">;
 defm : BoolField<"hash-based-counter-split", "true",
   "Rename counter variable of a comdat function based on cfg hash">;
-defm : BoolField<"instrprof-atomic-counter-update-all", "false",
-  "Make all profile counter updates atomic (for testing only)">;
+defm : OptionalBoolField<"instrprof-atomic-counter-update-all",
+  "Override whether all profile counter updates are atomic">;
 defm : BoolField<"iterative-counter-promotion", "true",
   "Allow counter promotion across the whole loop nest">;
 // A debug option.

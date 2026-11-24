@@ -1,4 +1,5 @@
-; REQUIRES: x86
+; REQUIRES: x86, asserts
+; Without assertions, LLD always disables bitcode verification (see #242663).
 
 ; RUN: llvm-as %s -o %t.o
 ; RUN: %lld -dylib %t.o -o %t2 --lto-debug-pass-manager 2>&1 | FileCheck %s --check-prefix=VERIFY

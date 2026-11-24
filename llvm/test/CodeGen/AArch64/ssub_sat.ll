@@ -103,10 +103,10 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-SD-LABEL: func3:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsl w9, w1, #28
+; CHECK-SD-NEXT:    sbfx w9, w1, #0, #4
 ; CHECK-SD-NEXT:    sbfx w10, w0, #0, #4
 ; CHECK-SD-NEXT:    mov w8, #7 // =0x7
-; CHECK-SD-NEXT:    sub w9, w10, w9, asr #28
+; CHECK-SD-NEXT:    sub w9, w10, w9
 ; CHECK-SD-NEXT:    cmp w9, #7
 ; CHECK-SD-NEXT:    csel w8, w9, w8, lt
 ; CHECK-SD-NEXT:    mov w9, #-8 // =0xfffffff8

@@ -11,12 +11,14 @@ extern void *memset(void *, int, size_t);
 extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
+extern void *memchr(const void *, int, size_t);
 
 } // namespace LIBC_NAMESPACE_DECL
 
 // List of implementations to test.
 
 using llvm::libc_benchmarks::BzeroConfiguration;
+using llvm::libc_benchmarks::MemchrConfiguration;
 using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;
 using llvm::libc_benchmarks::MemcpyConfiguration;
 using llvm::libc_benchmarks::MemmoveConfiguration;
@@ -51,4 +53,9 @@ llvm::ArrayRef<BzeroConfiguration> getBzeroConfigurations() {
   static constexpr BzeroConfiguration kBzeroConfigurations[] = {
       {LIBC_NAMESPACE::bzero, "LIBC_NAMESPACE::bzero"}};
   return llvm::ArrayRef(kBzeroConfigurations);
+}
+llvm::ArrayRef<MemchrConfiguration> getMemchrConfigurations() {
+  static constexpr MemchrConfiguration kMemchrConfigurations[] = {
+      {LIBC_NAMESPACE::memchr, "LIBC_NAMESPACE::memchr"}};
+  return llvm::ArrayRef(kMemchrConfigurations);
 }

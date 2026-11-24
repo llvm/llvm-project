@@ -13,9 +13,11 @@
 #ifndef LLVM_REMARKS_YAML_REMARK_PARSER_H
 #define LLVM_REMARKS_YAML_REMARK_PARSER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -88,13 +90,26 @@ protected:
   Expected<StringRef> parseKey(yaml::KeyValueNode &Node);
   /// Parse one value to a string.
   virtual Expected<StringRef> parseStr(yaml::KeyValueNode &Node);
-  /// Parse one value to an unsigned.
-  Expected<unsigned> parseUnsigned(yaml::KeyValueNode &Node);
+  /// Parse one value to an unsigned integer of the requested width.
+  template <typename T = unsigned>
+  Expected<T> parseUnsigned(yaml::KeyValueNode &Node);
   /// Parse a debug location.
   Expected<RemarkLocation> parseDebugLoc(yaml::KeyValueNode &Node);
   /// Parse an argument.
   Expected<Argument> parseArg(yaml::Node &Node);
 };
+
+template <typename T>
+Expected<T> YAMLRemarkParser::parseUnsigned(yaml::KeyValueNode &Node) {
+  SmallVector<char, 4> Tmp;
+  auto *Value = dyn_cast_if_present<yaml::ScalarNode>(Node.getValue());
+  if (!Value)
+    return error("expected a value of scalar type.", Node);
+  T UnsignedValue = 0;
+  if (Value->getValue(Tmp).getAsInteger(10, UnsignedValue))
+    return error("expected a value of integer type.", *Value);
+  return UnsignedValue;
+}
 
 Expected<std::unique_ptr<YAMLRemarkParser>> createYAMLParserFromMeta(
     StringRef Buf,

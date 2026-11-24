@@ -12,54 +12,50 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZInstrInfo.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "systemz-shorten-inst"
 
 namespace {
-class SystemZShortenInst : public MachineFunctionPass {
+class SystemZShortenInstLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZShortenInst();
+  SystemZShortenInstLegacy();
 
-  bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
-
-private:
-  bool shortenIIF(MachineInstr &MI, unsigned LLIxL, unsigned LLIxH);
-  bool shortenOn0(MachineInstr &MI, unsigned Opcode);
-  bool shortenOn01(MachineInstr &MI, unsigned Opcode);
-  bool shortenOn001(MachineInstr &MI, unsigned Opcode);
-  bool shortenOn001AddCC(MachineInstr &MI, unsigned Opcode);
-  bool shortenFPConv(MachineInstr &MI, unsigned Opcode);
-  bool shortenFusedFPOp(MachineInstr &MI, unsigned Opcode);
-
-  const SystemZInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  LiveRegUnits LiveRegs;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 
-char SystemZShortenInst::ID = 0;
+char SystemZShortenInstLegacy::ID = 0;
 } // end anonymous namespace
 
-INITIALIZE_PASS(SystemZShortenInst, DEBUG_TYPE,
+INITIALIZE_PASS(SystemZShortenInstLegacy, DEBUG_TYPE,
                 "SystemZ Instruction Shortening", false, false)
 
-FunctionPass *llvm::createSystemZShortenInstPass(SystemZTargetMachine &TM) {
-  return new SystemZShortenInst();
+FunctionPass *
+llvm::createSystemZShortenInstLegacyPass(SystemZTargetMachine &TM) {
+  return new SystemZShortenInstLegacy();
 }
 
-SystemZShortenInst::SystemZShortenInst()
-    : MachineFunctionPass(ID), TII(nullptr) {}
+SystemZShortenInstLegacy::SystemZShortenInstLegacy()
+    : MachineFunctionPass(ID) {}
 
 // Tie operands if MI has become a two-address instruction.
 static void tieOpsIfNeeded(MachineInstr &MI) {
@@ -71,8 +67,9 @@ static void tieOpsIfNeeded(MachineInstr &MI) {
 // MI loads one word of a GPR using an IIxF instruction and LLIxL and LLIxH
 // are the halfword immediate loads for the same word.  Try to use one of them
 // instead of IIxF.
-bool SystemZShortenInst::shortenIIF(MachineInstr &MI, unsigned LLIxL,
-                                    unsigned LLIxH) {
+static bool shortenIIF(MachineInstr &MI, unsigned LLIxL, unsigned LLIxH,
+                       const SystemZInstrInfo *TII,
+                       const TargetRegisterInfo *TRI, LiveRegUnits &LiveRegs) {
   Register Reg = MI.getOperand(0).getReg();
   // The new opcode will clear the other half of the GR64 reg, so
   // cancel if that is live.
@@ -104,7 +101,8 @@ bool SystemZShortenInst::shortenIIF(MachineInstr &MI, unsigned LLIxL,
 }
 
 // Change MI's opcode to Opcode if register operand 0 has a 4-bit encoding.
-bool SystemZShortenInst::shortenOn0(MachineInstr &MI, unsigned Opcode) {
+static bool shortenOn0(MachineInstr &MI, unsigned Opcode,
+                       const SystemZInstrInfo *TII) {
   if (SystemZMC::getFirstReg(MI.getOperand(0).getReg()) < 16) {
     MI.setDesc(TII->get(Opcode));
     return true;
@@ -114,7 +112,8 @@ bool SystemZShortenInst::shortenOn0(MachineInstr &MI, unsigned Opcode) {
 
 // Change MI's opcode to Opcode if register operands 0 and 1 have a
 // 4-bit encoding.
-bool SystemZShortenInst::shortenOn01(MachineInstr &MI, unsigned Opcode) {
+static bool shortenOn01(MachineInstr &MI, unsigned Opcode,
+                        const SystemZInstrInfo *TII) {
   if (SystemZMC::getFirstReg(MI.getOperand(0).getReg()) < 16 &&
       SystemZMC::getFirstReg(MI.getOperand(1).getReg()) < 16) {
     MI.setDesc(TII->get(Opcode));
@@ -126,7 +125,8 @@ bool SystemZShortenInst::shortenOn01(MachineInstr &MI, unsigned Opcode) {
 // Change MI's opcode to Opcode if register operands 0, 1 and 2 have a
 // 4-bit encoding and if operands 0 and 1 are tied. Also ties op 0
 // with op 1, if MI becomes 2-address.
-bool SystemZShortenInst::shortenOn001(MachineInstr &MI, unsigned Opcode) {
+static bool shortenOn001(MachineInstr &MI, unsigned Opcode,
+                         const SystemZInstrInfo *TII) {
   if (SystemZMC::getFirstReg(MI.getOperand(0).getReg()) < 16 &&
       MI.getOperand(1).getReg() == MI.getOperand(0).getReg() &&
       SystemZMC::getFirstReg(MI.getOperand(2).getReg()) < 16) {
@@ -139,8 +139,10 @@ bool SystemZShortenInst::shortenOn001(MachineInstr &MI, unsigned Opcode) {
 
 // Calls shortenOn001 if CCLive is false. CC def operand is added in
 // case of success.
-bool SystemZShortenInst::shortenOn001AddCC(MachineInstr &MI, unsigned Opcode) {
-  if (LiveRegs.available(SystemZ::CC) && shortenOn001(MI, Opcode)) {
+static bool shortenOn001AddCC(MachineInstr &MI, unsigned Opcode,
+                              const SystemZInstrInfo *TII,
+                              LiveRegUnits &LiveRegs) {
+  if (LiveRegs.available(SystemZ::CC) && shortenOn001(MI, Opcode, TII)) {
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
       .addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
     return true;
@@ -152,7 +154,8 @@ bool SystemZShortenInst::shortenOn001AddCC(MachineInstr &MI, unsigned Opcode) {
 // destination, source, exact-suppress, rounding-mode.  If both registers
 // have a 4-bit encoding then change it to Opcode, which has operand order:
 // destination, rouding-mode, source, exact-suppress.
-bool SystemZShortenInst::shortenFPConv(MachineInstr &MI, unsigned Opcode) {
+static bool shortenFPConv(MachineInstr &MI, unsigned Opcode,
+                          const SystemZInstrInfo *TII) {
   if (SystemZMC::getFirstReg(MI.getOperand(0).getReg()) < 16 &&
       SystemZMC::getFirstReg(MI.getOperand(1).getReg()) < 16) {
     MachineOperand Dest(MI.getOperand(0));
@@ -174,7 +177,8 @@ bool SystemZShortenInst::shortenFPConv(MachineInstr &MI, unsigned Opcode) {
   return false;
 }
 
-bool SystemZShortenInst::shortenFusedFPOp(MachineInstr &MI, unsigned Opcode) {
+static bool shortenFusedFPOp(MachineInstr &MI, unsigned Opcode,
+                             const SystemZInstrInfo *TII) {
   MachineOperand &DstMO = MI.getOperand(0);
   MachineOperand &LHSMO = MI.getOperand(1);
   MachineOperand &RHSMO = MI.getOperand(2);
@@ -201,7 +205,9 @@ bool SystemZShortenInst::shortenFusedFPOp(MachineInstr &MI, unsigned Opcode) {
 }
 
 // Process all instructions in MBB.  Return true if something changed.
-bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
+static bool processBlock(MachineBasicBlock &MBB, LiveRegUnits &LiveRegs,
+                         const SystemZInstrInfo *TII,
+                         const TargetRegisterInfo *TRI) {
   bool Changed = false;
 
   // Set up the set of live registers at the end of MBB (live out)
@@ -212,140 +218,142 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : llvm::reverse(MBB)) {
     switch (MI.getOpcode()) {
     case SystemZ::IILF:
-      Changed |= shortenIIF(MI, SystemZ::LLILL, SystemZ::LLILH);
+      Changed |=
+          shortenIIF(MI, SystemZ::LLILL, SystemZ::LLILH, TII, TRI, LiveRegs);
       break;
 
     case SystemZ::IIHF:
-      Changed |= shortenIIF(MI, SystemZ::LLIHL, SystemZ::LLIHH);
+      Changed |=
+          shortenIIF(MI, SystemZ::LLIHL, SystemZ::LLIHH, TII, TRI, LiveRegs);
       break;
 
     case SystemZ::WFADB:
-      Changed |= shortenOn001AddCC(MI, SystemZ::ADBR);
+      Changed |= shortenOn001AddCC(MI, SystemZ::ADBR, TII, LiveRegs);
       break;
 
     case SystemZ::WFASB:
-      Changed |= shortenOn001AddCC(MI, SystemZ::AEBR);
+      Changed |= shortenOn001AddCC(MI, SystemZ::AEBR, TII, LiveRegs);
       break;
 
     case SystemZ::WFDDB:
-      Changed |= shortenOn001(MI, SystemZ::DDBR);
+      Changed |= shortenOn001(MI, SystemZ::DDBR, TII);
       break;
 
     case SystemZ::WFDSB:
-      Changed |= shortenOn001(MI, SystemZ::DEBR);
+      Changed |= shortenOn001(MI, SystemZ::DEBR, TII);
       break;
 
     case SystemZ::WFIDB:
-      Changed |= shortenFPConv(MI, SystemZ::FIDBRA);
+      Changed |= shortenFPConv(MI, SystemZ::FIDBRA, TII);
       break;
 
     case SystemZ::WFISB:
-      Changed |= shortenFPConv(MI, SystemZ::FIEBRA);
+      Changed |= shortenFPConv(MI, SystemZ::FIEBRA, TII);
       break;
 
     case SystemZ::WLDEB:
-      Changed |= shortenOn01(MI, SystemZ::LDEBR);
+      Changed |= shortenOn01(MI, SystemZ::LDEBR, TII);
       break;
 
     case SystemZ::WLEDB:
-      Changed |= shortenFPConv(MI, SystemZ::LEDBRA);
+      Changed |= shortenFPConv(MI, SystemZ::LEDBRA, TII);
       break;
 
     case SystemZ::WFMDB:
-      Changed |= shortenOn001(MI, SystemZ::MDBR);
+      Changed |= shortenOn001(MI, SystemZ::MDBR, TII);
       break;
 
     case SystemZ::WFMSB:
-      Changed |= shortenOn001(MI, SystemZ::MEEBR);
+      Changed |= shortenOn001(MI, SystemZ::MEEBR, TII);
       break;
 
     case SystemZ::WFMADB:
-      Changed |= shortenFusedFPOp(MI, SystemZ::MADBR);
+      Changed |= shortenFusedFPOp(MI, SystemZ::MADBR, TII);
       break;
 
     case SystemZ::WFMASB:
-      Changed |= shortenFusedFPOp(MI, SystemZ::MAEBR);
+      Changed |= shortenFusedFPOp(MI, SystemZ::MAEBR, TII);
       break;
 
     case SystemZ::WFMSDB:
-      Changed |= shortenFusedFPOp(MI, SystemZ::MSDBR);
+      Changed |= shortenFusedFPOp(MI, SystemZ::MSDBR, TII);
       break;
 
     case SystemZ::WFMSSB:
-      Changed |= shortenFusedFPOp(MI, SystemZ::MSEBR);
+      Changed |= shortenFusedFPOp(MI, SystemZ::MSEBR, TII);
       break;
 
     case SystemZ::WFLCDB:
-      Changed |= shortenOn01(MI, SystemZ::LCDFR);
+      Changed |= shortenOn01(MI, SystemZ::LCDFR, TII);
       break;
 
     case SystemZ::WFLCSB:
-      Changed |= shortenOn01(MI, SystemZ::LCDFR_32);
+      Changed |= shortenOn01(MI, SystemZ::LCDFR_32, TII);
       break;
 
     case SystemZ::WFLNDB:
-      Changed |= shortenOn01(MI, SystemZ::LNDFR);
+      Changed |= shortenOn01(MI, SystemZ::LNDFR, TII);
       break;
 
     case SystemZ::WFLNSB:
-      Changed |= shortenOn01(MI, SystemZ::LNDFR_32);
+      Changed |= shortenOn01(MI, SystemZ::LNDFR_32, TII);
       break;
 
     case SystemZ::WFLPDB:
-      Changed |= shortenOn01(MI, SystemZ::LPDFR);
+      Changed |= shortenOn01(MI, SystemZ::LPDFR, TII);
       break;
 
     case SystemZ::WFLPSB:
-      Changed |= shortenOn01(MI, SystemZ::LPDFR_32);
+      Changed |= shortenOn01(MI, SystemZ::LPDFR_32, TII);
       break;
 
     case SystemZ::WFSQDB:
-      Changed |= shortenOn01(MI, SystemZ::SQDBR);
+      Changed |= shortenOn01(MI, SystemZ::SQDBR, TII);
       break;
 
     case SystemZ::WFSQSB:
-      Changed |= shortenOn01(MI, SystemZ::SQEBR);
+      Changed |= shortenOn01(MI, SystemZ::SQEBR, TII);
       break;
 
     case SystemZ::WFSDB:
-      Changed |= shortenOn001AddCC(MI, SystemZ::SDBR);
+      Changed |= shortenOn001AddCC(MI, SystemZ::SDBR, TII, LiveRegs);
       break;
 
     case SystemZ::WFSSB:
-      Changed |= shortenOn001AddCC(MI, SystemZ::SEBR);
+      Changed |= shortenOn001AddCC(MI, SystemZ::SEBR, TII, LiveRegs);
       break;
 
     case SystemZ::WFCDB:
-      Changed |= shortenOn01(MI, SystemZ::CDBR);
+      Changed |= shortenOn01(MI, SystemZ::CDBR, TII);
       break;
 
     case SystemZ::WFCSB:
-      Changed |= shortenOn01(MI, SystemZ::CEBR);
+      Changed |= shortenOn01(MI, SystemZ::CEBR, TII);
       break;
 
     case SystemZ::WFKDB:
-      Changed |= shortenOn01(MI, SystemZ::KDBR);
+      Changed |= shortenOn01(MI, SystemZ::KDBR, TII);
       break;
 
     case SystemZ::WFKSB:
-      Changed |= shortenOn01(MI, SystemZ::KEBR);
+      Changed |= shortenOn01(MI, SystemZ::KEBR, TII);
       break;
 
     case SystemZ::VL32:
       // For z13 we prefer LDE over LE to avoid partial register dependencies.
-      Changed |= shortenOn0(MI, SystemZ::LDE32);
+      Changed |= shortenOn0(MI, SystemZ::LDE32, TII);
       break;
 
     case SystemZ::VST32:
-      Changed |= shortenOn0(MI, SystemZ::STE);
+      Changed |= shortenOn0(MI, SystemZ::STE, TII);
       break;
 
     case SystemZ::VL64:
-      Changed |= shortenOn0(MI, SystemZ::LD);
+      Changed |= shortenOn0(MI, SystemZ::LD, TII);
       break;
 
     case SystemZ::VST64:
-      Changed |= shortenOn0(MI, SystemZ::STD);
+      Changed |= shortenOn0(MI, SystemZ::STD, TII);
       break;
 
     default: {
@@ -380,18 +388,30 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool SystemZShortenInst::runOnMachineFunction(MachineFunction &F) {
-  if (skipFunction(F.getFunction()))
-    return false;
-
+static bool shortenInstructionsInMF(MachineFunction &F) {
   const SystemZSubtarget &ST = F.getSubtarget<SystemZSubtarget>();
-  TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
+  const SystemZInstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  LiveRegUnits LiveRegs;
   LiveRegs.init(*TRI);
 
   bool Changed = false;
   for (auto &MBB : F)
-    Changed |= processBlock(MBB);
+    Changed |= processBlock(MBB, LiveRegs, TII, TRI);
 
   return Changed;
+}
+
+bool SystemZShortenInstLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return shortenInstructionsInMF(MF);
+}
+
+PreservedAnalyses
+SystemZShortenInstPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  return shortenInstructionsInMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                           .preserveSet<CFGAnalyses>()
+                                     : PreservedAnalyses::all();
 }

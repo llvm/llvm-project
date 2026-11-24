@@ -63,7 +63,7 @@ static unsigned singleLetterExtensionRank(char Ext) {
 
 // Get the rank for multi-letter extension, lower value meaning higher
 // priority/order in canonical order.
-static unsigned getExtensionRank(const std::string &ExtName) {
+static unsigned getExtensionRank(StringRef ExtName) {
   assert(ExtName.size() >= 1);
   switch (ExtName[0]) {
   case 's':
@@ -84,8 +84,7 @@ static unsigned getExtensionRank(const std::string &ExtName) {
 
 // Compare function for extension.
 // Only compare the extension name, ignore version comparison.
-bool llvm::RISCVISAUtils::compareExtension(const std::string &LHS,
-                                           const std::string &RHS) {
+bool llvm::RISCVISAUtils::compareExtension(StringRef LHS, StringRef RHS) {
   unsigned LHSRank = getExtensionRank(LHS);
   unsigned RHSRank = getExtensionRank(RHS);
 

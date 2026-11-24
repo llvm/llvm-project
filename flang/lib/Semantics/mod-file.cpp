@@ -481,17 +481,15 @@ void ModFileWriter::PutSymbols(
     PutUse(symbol);
   }
   PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
-  if (scope.symbol()->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
-    decls_ << "!$omp assumes no_openmp\n";
-  }
-  if (!scope.ompAssumesAbsent().empty()) {
-    decls_ << "!$omp assumes absent(";
-    llvm::interleaveComma(
-        scope.ompAssumesAbsent(), decls_, [&](llvm::omp::Directive directive) {
-          decls_ << llvm::omp::getOpenMPDirectiveName(
-              directive, context_.langOptions().getOpenMPVersion());
-        });
-    decls_ << ")\n";
+  if (const auto *decls{GetOmpDeclarative(DEREF(scope.symbol()))};
+      decls && context_.langOptions().getOpenMPVersion() < 60) {
+    if (const llvm::omp::Clauses &assumes{decls->ompAssumes()};
+        assumes.count()) {
+      decls_ << "!$omp assumes ";
+      decls->printClauseSet(
+          decls_, assumes, llvm::omp::Directive::OMPD_assumes);
+      decls_ << '\n';
+    }
   }
   PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
 
@@ -754,11 +752,10 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
           int ordinal{0};
           if (const auto &init{obj->init()}) {
             // The init may be a bare StructureConstructor or a
-            // Constant<SomeDerived> (after folding). Use
+            // Constant<Type<TypeCategory::Derived>> (after folding). Use
             // GetScalarConstantValue which handles both.
-            if (auto ctor{
-                    evaluate::GetScalarConstantValue<evaluate::SomeDerived>(
-                        *init)}) {
+            if (auto ctor{evaluate::GetScalarConstantValue<
+                    evaluate::Type<common::TypeCategory::Derived>>(*init)}) {
               for (const auto &[compRef, val] : *ctor) {
                 if (auto intVal{evaluate::ToInt64(val.value())}) {
                   ordinal = static_cast<int>(*intVal);

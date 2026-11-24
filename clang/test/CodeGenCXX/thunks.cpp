@@ -464,6 +464,69 @@ void Derived::g(int x, ...) {}
 // CHECK-TAIL-NEXT: load ptr, ptr %[[THIS]], align 8
 }
 
+// Like Test18, but the thunk is created while building the vtable for an
+// overaligned base B whose primary base is A. The vptr load should use the
+// alignment of the class that introduced the vtable slot (A), not of the class
+// whose vtable entry it overrode (B). StealA takes A as its primary base, so A
+// is not B's primary base in D.
+namespace Test19 {
+struct A { virtual int f(); };
+struct alignas(32) B : virtual A { int f() override; };
+struct C : virtual B { int f() override; };
+struct StealA : virtual A {};
+struct D : virtual StealA, C { int f() override; };
+int D::f() { return 0; }
+// CHECK-LABEL: define{{.*}} @_ZTv0_n24_N6Test191D1fEv(
+// CHECK: %[[THIS:.*]] = load ptr, ptr %{{.*}}, align 8
+// CHECK-NEXT: load ptr, ptr %[[THIS]], align 8
+// CHECK: ret i32
+}  // namespace Test19
+
+// Same, for a variadic thunk.
+namespace Test20 {
+struct A { virtual void f(const char *, ...); };
+struct alignas(32) B : virtual A { void f(const char *, ...) override; };
+struct C : virtual B { void f(const char *, ...) override; };
+struct StealA : virtual A {};
+struct D : virtual StealA, C { void f(const char *, ...) override; };
+void D::f(const char *, ...) {}
+// CHECK-CLONE-LABEL: define{{.*}} @_ZTv0_n24_N6Test201D1fEPKcz(ptr noundef %this,
+// CHECK-CLONE: load ptr, ptr %this, align 8
+// CHECK-CLONE: ret void
+// CHECK-TAIL-LABEL: define{{.*}} @_ZTv0_n24_N6Test201D1fEPKcz(
+// CHECK-TAIL: %[[THIS:.*]] = load ptr, ptr %{{.*}}, align 8
+// CHECK-TAIL-NEXT: load ptr, ptr %[[THIS]], align 8
+// CHECK-TAIL: musttail call
+}  // namespace Test20
+
+// A variadic thunk with a return adjustment is always emitted by cloning. The
+// clone should not inherit the callee's attributes on 'this' or on the
+// returned reference, which describe a Derived rather than a Base.
+namespace Test22 {
+struct V { virtual void v(); };
+struct Base { virtual Base &f(const char *, ...); };
+struct alignas(32) Derived : V, Base { Derived &f(const char *, ...) override; };
+Derived &Derived::f(const char *, ...) { return *this; }
+// CHECK-LABEL: define{{.*}} noundef nonnull align 32 dereferenceable(16) ptr @_ZN6Test227Derived1fEPKcz(ptr noundef nonnull align 32 dereferenceable(16) %this,
+// CHECK-LABEL: define{{.*}} noundef ptr @_ZTchn8_h8_N6Test227Derived1fEPKcz(ptr noundef %this,
+// WIN64-LABEL: define{{.*}} noundef ptr @"?f@Derived@Test22@@QEAAAEAUBase@2@PEBDZZ"(ptr noundef %this,
+}  // namespace Test22
+
+// If a declaration of the thunk with the wrong type already exists, we replace
+// it. The replacement should not get 'this' or reference-return attributes
+// that only hold for the target method.
+namespace Test21 {
+struct A { virtual int &f(); };
+struct alignas(32) B : virtual A { int &f() override; };
+void fake() __asm__("_ZTv0_n24_N6Test211B1fEv");
+void use() { fake(); }
+int &B::f() { static int n; return n; }
+// CHECK-LABEL: define{{.*}} noundef ptr @_ZTv0_n24_N6Test211B1fEv(ptr noundef %this)
+// CHECK: %[[THIS:.*]] = load ptr, ptr %{{.*}}, align 8
+// CHECK-NEXT: load ptr, ptr %[[THIS]], align 8
+// CHECK: ret ptr
+}  // namespace Test21
+
 // Varargs non-covariant thunk test.
 // PR18098
 namespace Test15 {

@@ -1583,7 +1583,6 @@ class KernelOperandInfo {
   MachineRegisterInfo &MRI;
   SmallVector<Register, 4> PhiDefaults;
   MachineOperand *Source;
-  MachineOperand *Target;
 
 public:
   KernelOperandInfo(MachineOperand *MO, MachineRegisterInfo &MRI,
@@ -1610,7 +1609,6 @@ public:
                                             : &MI->getOperand(3);
       PhiDefaults.push_back(Default);
     }
-    Target = MO;
   }
 
   bool operator==(const KernelOperandInfo &Other) const {

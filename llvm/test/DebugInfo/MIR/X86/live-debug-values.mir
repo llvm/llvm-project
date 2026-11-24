@@ -161,7 +161,6 @@
 name:            main
 alignment:       16
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:         
   - { reg: '$edi' }
   - { reg: '$rsi' }

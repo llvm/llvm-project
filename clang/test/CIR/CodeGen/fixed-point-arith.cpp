@@ -4,6 +4,12 @@
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM,OGCG
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fpadding-on-unsigned-fixed-point -fclangir -emit-cir %s -o %t-pad.cir
+// RUN: FileCheck --input-file=%t-pad.cir %s --check-prefix=PAD-CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fpadding-on-unsigned-fixed-point -fclangir -emit-llvm %s -o %t-pad-cir.ll
+// RUN: FileCheck --input-file=%t-pad-cir.ll %s --check-prefix=PAD-LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fpadding-on-unsigned-fixed-point -emit-llvm %s -o %t-pad.ll
+// RUN: FileCheck --input-file=%t-pad.ll %s --check-prefix=PAD-LLVM
 
 extern "C" {
 // CIR-LABEL: cir.func {{.*}}@add(
@@ -538,7 +544,7 @@ _Fract dec2(_Fract a) {
 // CIR-NEXT: %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT: %[[ADD:.*]] = cir.add sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
+// CIR-NEXT: %[[ADD:.*]] = cir.add.sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
 // CIR-NEXT: cir.store %[[ADD]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM-LABEL: define {{.*}}i32 @satAdd(
@@ -559,7 +565,7 @@ _Sat _Accum satAdd(_Sat _Accum a, _Accum b) {
 // CIR-NEXT: %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT: %[[SUB:.*]] = cir.sub sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
+// CIR-NEXT: %[[SUB:.*]] = cir.sub.sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
 // CIR-NEXT: cir.store %[[SUB]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM-LABEL: define {{.*}}i32 @satSub(
@@ -717,7 +723,7 @@ _Sat _Fract satShr2(_Sat _Fract f, int i) {
 // CIR-NEXT: %[[CMP:.*]] = cir.cmp lt %[[SELECT]], %[[MIN]] : !cir.int<s, 47>
 // CIR-NEXT: %[[SELECT2:.*]] = cir.select if %[[CMP]] then %[[MIN]] else %[[SELECT]] : (!cir.bool, !cir.int<s, 47>, !cir.int<s, 47>) -> !cir.int<s, 47>
 // CIR-NEXT: %[[TRUNC:.*]] = cir.cast integral %[[SELECT2]] : !cir.int<s, 47> -> !s32i
-// CIR-NEXT: %[[SUB:.*]] = cir.sub sat %[[LOAD_A]], %[[TRUNC]] : !s32i
+// CIR-NEXT: %[[SUB:.*]] = cir.sub.sat %[[LOAD_A]], %[[TRUNC]] : !s32i
 // CIR-NEXT: cir.store align(4) %[[SUB]], %[[A]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT: cir.store %[[SUB]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 
@@ -746,7 +752,7 @@ _Sat _Accum satInc(_Sat _Accum a) {
 // CIR-NEXT: %[[CMP:.*]] = cir.cmp lt %[[SELECT]], %[[MIN]] : !cir.int<s, 31>
 // CIR-NEXT: %[[SELECT2:.*]] = cir.select if %[[CMP]] then %[[MIN]] else %[[SELECT]] : (!cir.bool, !cir.int<s, 31>, !cir.int<s, 31>) -> !cir.int<s, 31>
 // CIR-NEXT: %[[TRUNC:.*]] = cir.cast integral %[[SELECT2]] : !cir.int<s, 31> -> !s16i
-// CIR-NEXT: %[[ADD:.*]] = cir.add sat %[[LOAD_F]], %[[TRUNC]] : !s16i
+// CIR-NEXT: %[[ADD:.*]] = cir.add.sat %[[LOAD_F]], %[[TRUNC]] : !s16i
 // CIR-NEXT: cir.store align(2) %[[ADD]], %[[F]] : !s16i, !cir.ptr<!s16i>
 // CIR-NEXT: cir.store %[[LOAD_F]], %[[RET]] : !s16i, !cir.ptr<!s16i>
 
@@ -776,7 +782,7 @@ _Sat _Fract satDec(_Sat _Fract f) {
 // CIR-NEXT: %[[CMP:.*]] = cir.cmp lt %[[SELECT]], %[[ZERO]] : !s32i
 // CIR-NEXT: %[[SELECT2:.*]] = cir.select if %[[CMP]] then %[[ZERO]] else %[[SELECT]] : (!cir.bool, !s32i, !s32i) -> !s32i
 // CIR-NEXT: %[[TRUNC:.*]] = cir.cast integral %[[SELECT2]] : !s32i -> !u16i
-// CIR-NEXT: %[[ADD:.*]] = cir.add sat %[[LOAD_A]], %[[TRUNC]] : !u16i
+// CIR-NEXT: %[[ADD:.*]] = cir.add.sat %[[LOAD_A]], %[[TRUNC]] : !u16i
 // CIR-NEXT: cir.store align(2) %[[ADD]], %[[A]] : !u16i, !cir.ptr<!u16i>
 // CIR-NEXT: cir.store %[[ADD]], %[[RET]] : !u16i, !cir.ptr<!u16i>
 
@@ -789,5 +795,127 @@ _Sat _Fract satDec(_Sat _Fract f) {
 // LLVM-NEXT: store i16 %[[ADD]], ptr %[[A]], align 2
 _Sat unsigned _Fract satIncUFract(_Sat unsigned _Fract a) {
   return ++a;
+}
+
+// With unsigned padding, saturating add/sub saturate as signed values like
+// classic codegen does, and subtraction clamps at 0 while still signed.
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padSatAddUAccum(
+// PAD-CIR:      %[[LHS:.*]] = cir.cast integral %{{.*}} : !u32i -> !s32i
+// PAD-CIR-NEXT: %[[RHS:.*]] = cir.cast integral %{{.*}} : !u32i -> !s32i
+// PAD-CIR-NEXT: %[[SUM:.*]] = cir.add.sat %[[LHS]], %[[RHS]] : !s32i
+// PAD-CIR-NEXT: %{{.*}} = cir.cast integral %[[SUM]] : !s32i -> !u32i
+
+// PAD-LLVM-LABEL: define {{.*}}i32 @padSatAddUAccum(
+// PAD-LLVM:      %[[SUM:.*]] = call i32 @llvm.sadd.sat.i32(i32 %{{.*}}, i32 %{{.*}})
+// PAD-LLVM-NEXT: %{{.*}} = trunc i32 %[[SUM]] to i31
+_Sat unsigned _Accum padSatAddUAccum(_Sat unsigned _Accum a,
+                                     _Sat unsigned _Accum b) {
+  return a + b;
+}
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padSatSubUAccum(
+// PAD-CIR:      %[[LHS:.*]] = cir.cast integral %{{.*}} : !u32i -> !s32i
+// PAD-CIR-NEXT: %[[RHS:.*]] = cir.cast integral %{{.*}} : !u32i -> !s32i
+// PAD-CIR-NEXT: %[[DIFF:.*]] = cir.sub.sat %[[LHS]], %[[RHS]] : !s32i
+// PAD-CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// PAD-CIR-NEXT: %[[NEG:.*]] = cir.cmp lt %[[DIFF]], %[[ZERO]] : !s32i
+// PAD-CIR-NEXT: %[[CLAMP:.*]] = cir.select if %[[NEG]] then %[[ZERO]] else %[[DIFF]]
+// PAD-CIR-NEXT: %{{.*}} = cir.cast integral %[[CLAMP]] : !s32i -> !u32i
+
+// PAD-LLVM-LABEL: define {{.*}}i32 @padSatSubUAccum(
+// PAD-LLVM:      %[[DIFF:.*]] = call i32 @llvm.ssub.sat.i32(i32 %{{.*}}, i32 %{{.*}})
+// PAD-LLVM-NEXT: %[[NEG:.*]] = icmp slt i32 %[[DIFF]], 0
+// PAD-LLVM-NEXT: %[[CLAMP:.*]] = select i1 %[[NEG]], i32 0, i32 %[[DIFF]]
+// PAD-LLVM-NEXT: %{{.*}} = trunc i32 %[[CLAMP]] to i31
+_Sat unsigned _Accum padSatSubUAccum(_Sat unsigned _Accum a,
+                                     _Sat unsigned _Accum b) {
+  return a - b;
+}
+
+// Unary minus on a saturating type is a saturating 0 - x, like classic codegen.
+
+// CIR-LABEL: cir.func {{.*}}@satNeg(
+// CIR:      %[[LOAD_A:.*]] = cir.load align(2) %{{.*}} : !cir.ptr<!s16i>, !s16i
+// CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s16i
+// CIR-NEXT: %{{.*}} = cir.sub.sat %[[ZERO]], %[[LOAD_A]] : !s16i
+
+// LLVM-LABEL: define {{.*}}i16 @satNeg(
+// LLVM:      %[[LOAD_A:.*]] = load i16, ptr %{{.*}}, align 2
+// LLVM-NEXT: %{{.*}} = call i16 @llvm.ssub.sat.i16(i16 0, i16 %[[LOAD_A]])
+_Sat short _Accum satNeg(_Sat short _Accum a) {
+  return -a;
+}
+
+// CIR-LABEL: cir.func {{.*}}@satNegU(
+// CIR:      %[[LOAD_A:.*]] = cir.load align(2) %{{.*}} : !cir.ptr<!u16i>, !u16i
+// CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u16i
+// CIR-NEXT: %{{.*}} = cir.sub.sat %[[ZERO]], %[[LOAD_A]] : !u16i
+
+// LLVM-LABEL: define {{.*}}i16 @satNegU(
+// LLVM:      %[[LOAD_A:.*]] = load i16, ptr %{{.*}}, align 2
+// LLVM-NEXT: %{{.*}} = call i16 @llvm.usub.sat.i16(i16 0, i16 %[[LOAD_A]])
+
+// PAD-CIR-LABEL: cir.func {{.*}}@satNegU(
+// PAD-CIR:      %[[ZERO:.*]] = cir.const #cir.int<0> : !s16i
+// PAD-CIR-NEXT: %[[A:.*]] = cir.cast integral %{{.*}} : !u16i -> !s16i
+// PAD-CIR-NEXT: %[[DIFF:.*]] = cir.sub.sat %[[ZERO]], %[[A]] : !s16i
+// PAD-CIR-NEXT: %[[ZERO2:.*]] = cir.const #cir.int<0> : !s16i
+// PAD-CIR-NEXT: %[[LT:.*]] = cir.cmp lt %[[DIFF]], %[[ZERO2]] : !s16i
+// PAD-CIR-NEXT: %{{.*}} = cir.select if %[[LT]] then %[[ZERO2]] else %[[DIFF]]
+
+// PAD-LLVM-LABEL: define {{.*}}i16 @satNegU(
+// PAD-LLVM:      %[[DIFF:.*]] = call i16 @llvm.ssub.sat.i16(i16 0, i16 %{{.*}})
+// PAD-LLVM-NEXT: %[[LT:.*]] = icmp slt i16 %[[DIFF]], 0
+// PAD-LLVM-NEXT: %{{.*}} = select i1 %[[LT]], i16 0, i16 %[[DIFF]]
+_Sat unsigned short _Accum satNegU(_Sat unsigned short _Accum a) {
+  return -a;
+}
+
+// With unsigned padding, float to fixed-point conversion is signed, and the
+// saturating form clamps negative values to 0.
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padFloatToSatU(
+// PAD-CIR:      %[[CONV:.*]] = cir.call_llvm_intrinsic "fptosi.sat" %{{.*}} : (!cir.float) -> !s16i
+// PAD-CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s16i
+// PAD-CIR-NEXT: %[[LT:.*]] = cir.cmp lt %[[CONV]], %[[ZERO]] : !s16i
+// PAD-CIR-NEXT: %[[CLAMP:.*]] = cir.select if %[[LT]] then %[[ZERO]] else %[[CONV]]
+// PAD-CIR-NEXT: %{{.*}} = cir.cast integral %[[CLAMP]] : !s16i -> !u16i
+
+// PAD-LLVM-LABEL: define {{.*}}i16 @padFloatToSatU(
+// PAD-LLVM:      %[[CONV:.*]] = call i16 @llvm.fptosi.sat.i16.f32(float %{{.*}})
+// PAD-LLVM-NEXT: %[[LT:.*]] = icmp slt i16 %[[CONV]], 0
+// PAD-LLVM-NEXT: %{{.*}} = select i1 %[[LT]], i16 0, i16 %[[CONV]]
+_Sat unsigned short _Accum padFloatToSatU(float f) {
+  return f;
+}
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padFloatToU(
+// PAD-CIR:      %[[CONV:.*]] = cir.cast float_to_int %{{.*}} : !cir.float -> !s16i
+// PAD-CIR-NEXT: %{{.*}} = cir.cast integral %[[CONV]] : !s16i -> !u16i
+
+// PAD-LLVM-LABEL: define {{.*}}i16 @padFloatToU(
+// PAD-LLVM:      %{{.*}} = fptosi float %{{.*}} to i16
+unsigned short _Accum padFloatToU(float f) {
+  return f;
+}
+
+// A saturating conversion that only changes signedness still yields a value of
+// the destination type.
+
+// PAD-CIR-LABEL: cir.func {{.*}}@padSatSignedToU(
+// PAD-CIR:      %[[LT:.*]] = cir.cmp lt %[[A:.*]], %[[ZERO:.*]] : !s16i
+// PAD-CIR-NEXT: %[[CLAMP:.*]] = cir.select if %[[LT]] then %[[ZERO]] else %[[A]]
+// PAD-CIR-NEXT: %[[CONV:.*]] = cir.cast integral %[[CLAMP]] : !s16i -> !u16i
+// PAD-CIR-NEXT: %[[B:.*]] = cir.load align(2) %{{.*}} : !cir.ptr<!u16i>, !u16i
+// PAD-CIR-NEXT: %{{.*}} = cir.cmp lt %[[CONV]], %[[B]] : !u16i
+
+// PAD-LLVM-LABEL: define {{.*}}i1 @padSatSignedToU(
+// PAD-LLVM:      %[[LT:.*]] = icmp slt i16 %[[A:.*]], 0
+// PAD-LLVM-NEXT: %[[CLAMP:.*]] = select i1 %[[LT]], i16 0, i16 %[[A]]
+// PAD-LLVM-NEXT: %[[B:.*]] = load i16, ptr %{{.*}}, align 2
+// PAD-LLVM-NEXT: %{{.*}} = icmp ult i16 %[[CLAMP]], %[[B]]
+bool padSatSignedToU(_Sat short _Accum a, _Sat unsigned short _Accum b) {
+  return (_Sat unsigned short _Accum)a < b;
 }
 }

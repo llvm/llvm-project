@@ -589,19 +589,24 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
 
 Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
                                        Type type) const {
-  // SPIR-V attributes are dictionaries so they do not have type.
-  if (type) {
-    parser.emitError(parser.getNameLoc(), "unexpected type");
-    return {};
-  }
-
   // Parse the kind keyword first.
   StringRef attrKind;
   Attribute attr;
   OptionalParseResult result =
       generatedAttributeParser(parser, &attrKind, type, attr);
-  if (result.has_value())
+  if (result.has_value()) {
+    if (type && attr && !isa<TypedAttr>(attr)) {
+      parser.emitError(parser.getNameLoc(), "unexpected type");
+      return {};
+    }
     return attr;
+  }
+
+  // The remaining SPIR-V attributes are dictionaries so they do not have type.
+  if (type) {
+    parser.emitError(parser.getNameLoc(), "unexpected type");
+    return {};
+  }
 
   if (attrKind == spirv::TargetEnvAttr::getKindName())
     return parseTargetEnvAttr(parser);

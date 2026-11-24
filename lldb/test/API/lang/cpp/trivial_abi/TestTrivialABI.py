@@ -15,9 +15,6 @@ class TestTrivialABI(TestBase):
 
     @skipUnlessSupportedTypeAttribute("trivial_abi")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd", "linux"], bugnumber="llvm.org/pr44161"
-    )
     def test_call_trivial(self):
         """Test that we can print a variable & call a function with a trivial ABI class."""
         self.build()
