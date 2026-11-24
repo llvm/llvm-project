@@ -1363,9 +1363,8 @@ public:
     // Branch with 2 boolean condition operands and 3 successors. If condition
     // 0 is true, branches to successor 0; if condition 1 is true, branches to
     // successor 1; otherwise branches to successor 2. Expanded after region
-    // dissolution into: (1) an OR of the two conditions branching to
-    // middle.split or successor 2, and (2) middle.split branching to successor
-    // 0 or successor 1 based on condition 0.
+    // dissolution into a branch on condition 0 to successor 0 or a new interim
+    // block, which branches on condition 1 to successor 1 or successor 2.
     BranchOnTwoConds,
     Broadcast,
     /// Creates a fixed-width vector containing all operands. The number of

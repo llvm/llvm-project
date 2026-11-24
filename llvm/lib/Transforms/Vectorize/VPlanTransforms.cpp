@@ -3257,7 +3257,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   //   EMIT vp<%4> = any-of ir<%freeze>
   //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
   //   EMIT branch-on-two-conds vp<%4>, vp<%5>
-  // Successor(s): middle.block, middle.block, for.body
+  // Successor(s): vector.early.exit, middle.block, for.body
   //
   // middle.block:
   // Successor(s): ir-bb<exit>, scalar.ph
@@ -3352,7 +3352,7 @@ struct EarlyExitInfo {
 ///   EMIT vp<%3> = any-of ir<%freeze>
 ///   EMIT ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<10000>
 ///   EMIT branch-on-two-conds vp<%3>, ir<%exitcond.not>
-/// Successor(s): middle.block, middle.block, for.body
+/// Successor(s): vector.early.exit, middle.block, for.body
 ///
 /// We currently expect LoopVectorizationLegality to ensure that:
 /// * There must also be a counted exit. We will need to support speculative
@@ -3371,6 +3371,10 @@ static bool handleUncountableExitsWithSideEffects(
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC) {
+  VPBasicBlock *VectorEarlyExitVPBB =
+      Plan.createVPBasicBlock("vector.early.exit");
+  LatchVPBB->setSuccessors({VectorEarlyExitVPBB, MiddleVPBB, HeaderVPBB});
+  VectorEarlyExitVPBB->setPredecessors({LatchVPBB});
 
   // Disconnect early exiting blocks from successors, remove branches.
   for (auto &Exit : Exits) {
@@ -3499,28 +3503,15 @@ static bool handleUncountableExitsWithSideEffects(
         cast<VPInstruction>(&R)->addMask(Mask);
       }
 
-  // Update middle block branch to compare (IV + however many lanes were active)
-  // against the full trip count, since we may be exiting the vector loop early.
-  // If we didn't take an early exit, we should get the equivalent of VF from
-  // the FirstActiveLane.
-  assert(match(MiddleVPBB->getTerminator(), m_BranchOnCond()) &&
-         "Expected BranchOnCond terminator for MiddleVPBB");
-  // The trip count may be wider than the IV; compute the exit IV in its type,
-  // as it may be one past the largest IV value.
-  VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
+  // The early exit resumes the scalar loop at the first exiting lane.
+  VPBuilder EarlyExitBuilder(VectorEarlyExitVPBB);
   Type *IVScalarTy = IV->getScalarType();
-  Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue *Zero = Plan.getZero(IVScalarTy);
-  VPValue *FirstActive = MiddleBuilder.createScalarZExtOrTrunc(
-      MiddleBuilder.createFirstActiveLane(Cond), TCTy, DebugLoc());
-  VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
-                                                 {Zero, IV}, DebugLoc());
-  VPValue *ExitIV = MiddleBuilder.createAdd(
-      MiddleBuilder.createScalarZExtOrTrunc(ScalarIV, TCTy, DebugLoc()),
-      FirstActive);
-  VPValue *FullTC =
-      MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
-  MiddleVPBB->getTerminator()->setOperand(0, FullTC);
+  VPValue *FirstActive = EarlyExitBuilder.createScalarZExtOrTrunc(
+      EarlyExitBuilder.createFirstActiveLane(Cond), IVScalarTy, DebugLoc());
+  VPValue *ScalarIV = EarlyExitBuilder.createNaryOp(VPInstruction::ExtractLane,
+                                                    {Zero, IV}, DebugLoc());
+  VPValue *ExitIV = EarlyExitBuilder.createAdd(ScalarIV, FirstActive);
 
   // Update resume phi in scalar.ph.
   VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
@@ -3540,8 +3531,12 @@ static bool handleUncountableExitsWithSideEffects(
       match(ContinueIV->getOperand(0),
             m_VPInstruction<VPInstruction::ExitingIVValue>(m_Specific(IV))) &&
       "Continuing from different IV");
-  ContinueIV->setOperand(
-      0, MiddleBuilder.createScalarZExtOrTrunc(ExitIV, IVScalarTy, DebugLoc()));
+  assert(ContinueIV->getNumIncoming() == 2 && "expected middle and entry");
+  ContinueIV->addIncoming(ContinueIV->getOperand(1));
+  ContinueIV->setOperand(1, ExitIV);
+  ScalarPH->getPredecessors().insert(
+      std::next(ScalarPH->getPredecessors().begin()), VectorEarlyExitVPBB);
+  VectorEarlyExitVPBB->setOneSuccessor(ScalarPH);
   return true;
 }
 
@@ -3707,16 +3702,10 @@ bool VPlanTransforms::handleUncountableEarlyExits(
                             {IsAnyExitTaken, IsLatchExitTaken}, LatchDL);
   LatchVPBB->clearSuccessors();
 
-  if (Style == UncountableExitStyle::MaskedHandleExitInScalarLoop) {
-    // If handling the exiting lane in the scalar loop, combine the exit
-    // conditions into a single BranchOnCond.
-    LatchVPBB->setSuccessors({MiddleVPBB, MiddleVPBB, HeaderVPBB});
-    MiddleVPBB->clearPredecessors();
-    MiddleVPBB->setPredecessors({LatchVPBB, LatchVPBB});
+  if (Style == UncountableExitStyle::MaskedHandleExitInScalarLoop)
     return handleUncountableExitsWithSideEffects(Plan, Exits, HeaderVPBB,
                                                  LatchVPBB, MiddleVPBB, ORE,
                                                  TheLoop, PSE, DT, AC);
-  }
 
   // Create the vector.early.exit blocks.
   SmallVector<VPBasicBlock *> VectorEarlyExitVPBBs(Exits.size());
