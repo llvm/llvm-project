@@ -1457,6 +1457,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 #### X86 Support
 
 - Support `AVX10_V2_AUX` ISA (`-mavx10v2aux`).
+- `__FLT_EVAL_METHOD__` is now 0 instead of 2 when neither SSE nor x87 is
+  available, for example with `-mno-sse -mno-x87`, `-mgeneral-regs-only` or
+  `-march=lakemont`, matching GCC. `-ffp-eval-method=source` no longer warns
+  in these configurations. (#GH198405)
 
 #### Arm and AArch64 Support
 
