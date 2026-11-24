@@ -723,6 +723,17 @@ void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
                  AMDGPUNumVGPRAttr(getASTContext(), AL, NumVGPR));
 }
 
+void SemaAMDGPU::handleAMDGPUInstPrefPadLinesAttr(Decl *D,
+                                                  const ParsedAttr &AL) {
+  uint32_t Lines = 0;
+  Expr *LinesExpr = AL.getArgAsExpr(0);
+  if (!SemaRef.checkUInt32Argument(AL, LinesExpr, Lines))
+    return;
+
+  D->addAttr(::new (getASTContext())
+                 AMDGPUInstPrefPadLinesAttr(getASTContext(), AL, Lines));
+}
+
 static bool
 checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
                                      Expr *ZExpr,

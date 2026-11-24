@@ -144,6 +144,20 @@ static void handleAMDGPUNumVGPRAttr(const FunctionDecl *fd, cir::FuncOp func,
   }
 }
 
+/// Handle amdgpu-inst-pref-pad-lines attribute.
+static void handleAMDGPUInstPrefPadLinesAttr(const FunctionDecl *fd,
+                                             cir::FuncOp func,
+                                             CIRGenModule &cgm,
+                                             CIRGenBuilderTy &builder) {
+  const auto *attr = fd->getAttr<AMDGPUInstPrefPadLinesAttr>();
+  if (!attr)
+    return;
+
+  // Emit 0 as well: an explicit zero overrides -amdgpu-inst-pref-pad-lines.
+  func->setAttr("cir.amdgpu-inst-pref-pad-lines",
+                builder.getStringAttr(llvm::utostr(attr->getLines())));
+}
+
 /// Handle amdgpu-max-num-workgroups attribute.
 static void handleAMDGPUMaxNumWorkGroupsAttr(const FunctionDecl *fd,
                                              cir::FuncOp func,
@@ -257,6 +271,7 @@ void clang::CIRGen::setAMDGPUTargetFunctionAttributes(const Decl *decl,
     handleAMDGPUWavesPerEUAttr(fd, func, cgm, builder, lbMinWaves);
     handleAMDGPUNumSGPRAttr(fd, func, cgm, builder);
     handleAMDGPUNumVGPRAttr(fd, func, cgm, builder);
+    handleAMDGPUInstPrefPadLinesAttr(fd, func, cgm, builder);
     handleAMDGPUMaxNumWorkGroupsAttr(fd, func, cgm, builder);
     handleAMDGPUClusterDimsAttr(fd, func, cgm, builder, isOpenCLKernel);
   }

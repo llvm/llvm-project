@@ -3763,6 +3763,23 @@ An error will be given if:
   }];
 }
 
+def AMDGPUInstPrefPadLinesDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+Clang supports the
+`__attribute__((amdgpu_inst_pref_pad_lines(<N>)))` attribute for the AMDGPU
+target. The attribute may be attached to a kernel function definition and
+lowers to the `"amdgpu-inst-pref-pad-lines"` LLVM function attribute.
+
+`<N>` is the number of extra instruction-cache lines added to
+`COMPUTE_PGM_RSRC3.INST_PREF_SIZE` beyond the kernel's code size. The kernel
+code itself is left unchanged. The value overrides the
+`-mllvm -amdgpu-inst-pref-pad-lines=<N>` option for that kernel, and an
+explicit `0` keeps the unpadded size. The backend clamps the resulting field
+to its width (255 lines on GFX12 and newer, 63 lines on GFX11).
+  }];
+}
+
 def AMDGPUMaxNumWorkGroupsDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{

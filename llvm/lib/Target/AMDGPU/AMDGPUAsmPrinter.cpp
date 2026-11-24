@@ -47,6 +47,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -54,6 +55,14 @@
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
+
+// Extra instruction-cache lines added to COMPUTE_PGM_RSRC3.INST_PREF_SIZE.
+// The per-kernel "amdgpu-inst-pref-pad-lines" attribute overrides this.
+static cl::opt<unsigned> InstPrefPadLines(
+    "amdgpu-inst-pref-pad-lines",
+    cl::desc("Pad COMPUTE_PGM_RSRC3.INST_PREF_SIZE by N instruction-cache "
+             "lines beyond the kernel code size"),
+    cl::init(0), cl::Hidden);
 
 // This should get the default rounding mode from the kernel. We just set the
 // default here, but this could change if the OpenCL rounding mode pragmas are
@@ -259,6 +268,23 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
 
     uint32_t Mask, Shift, Width, CacheLineSize;
     STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
+
+    // INST_PREF_SIZE = min(ceil(code_size / line_size) + N, field max).
+    // Adding N lines of bytes before the ceil is the same as adding N to the
+    // line count. evaluateInstPrefSize clamps to the field width. A kernel
+    // attribute overrides the global option, including an explicit 0.
+    uint64_t PadLines = MF->getFunction().getFnAttributeAsParsedInteger(
+        "amdgpu-inst-pref-pad-lines", InstPrefPadLines);
+    uint64_t MaxLines = (1ull << Width) - 1;
+    if (PadLines > MaxLines)
+      PadLines = MaxLines;
+    if (PadLines) {
+      const MCExpr *PadBytes = MCConstantExpr::create(
+          static_cast<int64_t>(PadLines * CacheLineSize), OutContext);
+      CodeSizeExpr =
+          MCBinaryExpr::createAdd(CodeSizeExpr, PadBytes, OutContext);
+    }
+
     const MCExpr *InstPrefSize =
         AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
     KD.compute_pgm_rsrc3 =

@@ -92,6 +92,17 @@ __attribute__((amdgpu_waves_per_eu(3)))
 __launch_bounds__(128, 4)
 __global__ void kernel_lb_override() {}
 
+// Test: Instruction-prefetch pad. Zero is emitted so it can override the flag.
+// CIR: cir.func{{.*}} @_Z15kernel_pref_padv(){{.*}}"cir.amdgpu-inst-pref-pad-lines" = "2"
+// LLVM: define{{.*}} void @_Z15kernel_pref_padv(){{.*}} #[[PREF_PAD_ATTR:[0-9]+]]
+__attribute__((amdgpu_inst_pref_pad_lines(2)))
+__global__ void kernel_pref_pad() {}
+
+// CIR: cir.func{{.*}} @_Z17kernel_pref_pad_0v(){{.*}}"cir.amdgpu-inst-pref-pad-lines" = "0"
+// LLVM: define{{.*}} void @_Z17kernel_pref_pad_0v(){{.*}} #[[PREF_PAD0_ATTR:[0-9]+]]
+__attribute__((amdgpu_inst_pref_pad_lines(0)))
+__global__ void kernel_pref_pad_0() {}
+
 // Test: Device function should NOT have kernel attributes
 // CIR: cir.func{{.*}} @_Z9device_fnv()
 // CIR-NOT: cir.amdgpu-flat-work-group-size
@@ -105,6 +116,8 @@ __device__ void device_fn() {}
 // LLVM-DAG: attributes #[[WAVES_MM_ATTR]] = {{.*}}"amdgpu-waves-per-eu"="2,4"
 // LLVM-DAG: attributes #[[SGPR_ATTR]] = {{.*}}"amdgpu-num-sgpr"="32"
 // LLVM-DAG: attributes #[[VGPR_ATTR]] = {{.*}}"amdgpu-num-vgpr"="64"
+// LLVM-DAG: attributes #[[PREF_PAD_ATTR]] = {{.*}}"amdgpu-inst-pref-pad-lines"="2"
+// LLVM-DAG: attributes #[[PREF_PAD0_ATTR]] = {{.*}}"amdgpu-inst-pref-pad-lines"="0"
 // LLVM-DAG: attributes #[[MAX_WG_ATTR]] = {{.*}}"amdgpu-max-num-workgroups"="8,4,2"
 // LLVM-DAG: attributes #[[LB_THREAD_ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="1,256"
 // LLVM-DAG: attributes #[[LB_WAVES_ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="1,128"{{.*}}"amdgpu-waves-per-eu"="4"
@@ -120,4 +133,6 @@ __device__ void device_fn() {}
 // PROF: cir.func{{.*}} @_Z15kernel_num_vgprv(){{.*}}"cir.amdgpu-expand-waitcnt-profiling"
 // PROF: cir.func{{.*}} @_Z22kernel_max_num_wgroupsv(){{.*}}"cir.amdgpu-expand-waitcnt-profiling"
 // PROF: cir.func{{.*}} @_Z15kernel_combinedv(){{.*}}"cir.amdgpu-expand-waitcnt-profiling"
+// PROF: cir.func{{.*}} @_Z15kernel_pref_padv(){{.*}}"cir.amdgpu-expand-waitcnt-profiling"
+// PROF: cir.func{{.*}} @_Z17kernel_pref_pad_0v(){{.*}}"cir.amdgpu-expand-waitcnt-profiling"
 // PROF: cir.func{{.*}} @_Z9device_fnv(){{.*}}"cir.amdgpu-expand-waitcnt-profiling"
