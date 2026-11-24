@@ -353,6 +353,25 @@ TEST_F(GreedyDeadnessTest, SubtreeInvalidationSurvivesAncestorRequest) {
   }
 }
 
+TEST_F(GreedyDeadnessTest, BlockInvalidationPromotesEarlierAncestorRequest) {
+  auto module = parseSourceString<ModuleOp>(region(effect), &context);
+  ASSERT_TRUE(module);
+  Block *block = module->getBody();
+  Operation *owner = &block->front();
+  Operation *leaf = &owner->getRegion(0).front().front();
+  Attribute effects = leaf->removeAttr("effects");
+  DeadnessCache cache;
+  ASSERT_TRUE(cache.isOpTriviallyDead(leaf));
+
+  // Expanding the block must invalidate the leaf even though the flush has
+  // already processed the ancestor request for its owner.
+  cache.scheduleAncestorInvalidation(owner);
+  leaf->setAttr("effects", effects);
+  cache.scheduleBlockInvalidation(block);
+  ASSERT_FALSE(isOpTriviallyDead(leaf));
+  EXPECT_FALSE(cache.isOpTriviallyDead(leaf));
+}
+
 TEST_F(GreedyDeadnessTest, EraseBlocksAndRegionOwnerBeforeDeadnessQuery) {
   auto module = parseSourceString<ModuleOp>(region(R"mlir(
         "test.two_region_op"() ({
