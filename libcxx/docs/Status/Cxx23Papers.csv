@@ -60,7 +60,7 @@
 "[P1642R11](https://wg21.link/P1642R11)","Freestanding `[utilities]`, `[ranges]`, and `[iterators]`","2022-07 (Virtual)","","","[#105197](https://github.com/llvm/llvm-project/issues/105197)",""
 "[P1899R3](https://wg21.link/P1899R3)","`stride_view`","2022-07 (Virtual)","{{Complete}}","23","[#105198](https://github.com/llvm/llvm-project/issues/105198)",""
 "[P2093R14](https://wg21.link/P2093R14)","Formatted output","2022-07 (Virtual)","{{Complete}}","18","[#105199](https://github.com/llvm/llvm-project/issues/105199)",""
-"[P2165R4](https://wg21.link/P2165R4)","Compatibility between `tuple`, `pair` and `tuple-like` objects","2022-07 (Virtual)","{{Partial}}","","[#105200](https://github.com/llvm/llvm-project/issues/105200)","Only the part for `zip_view` is implemented."
+"[P2165R4](https://wg21.link/P2165R4)","Compatibility between `tuple`, `pair` and `tuple-like` objects","2022-07 (Virtual)","{{Partial}}","","[#105200](https://github.com/llvm/llvm-project/issues/105200)","Only the parts for `zip_view` and `cartesian_product_view` are implemented."
 "[P2278R4](https://wg21.link/P2278R4)","`cbegin` should always return a constant iterator","2022-07 (Virtual)","","","[#105201](https://github.com/llvm/llvm-project/issues/105201)",""
 "[P2286R8](https://wg21.link/P2286R8)","Formatting Ranges","2022-07 (Virtual)","{{Complete}}","16","[#105202](https://github.com/llvm/llvm-project/issues/105202)",""
 "[P2291R3](https://wg21.link/P2291R3)","Add Constexpr Modifiers to Functions `to_chars` and `from_chars` for Integral Types in `<charconv>` Header","2022-07 (Virtual)","{{Complete}}","16","[#105204](https://github.com/llvm/llvm-project/issues/105204)",""
