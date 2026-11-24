@@ -45,6 +45,7 @@ struct AccessPattern {
 
 static bool analyzeLookupTableUse(AccessPattern &Pattern,
                                   LookupTableUse &UseInfo, User *Usr) {
+  // TODO: Allow multiple load users of GEP.
   UseInfo.GEP = dyn_cast<GetElementPtrInst>(Usr);
   if (!UseInfo.GEP || !UseInfo.GEP->hasOneUse())
     return false;
@@ -228,7 +229,7 @@ static GlobalVariable *createRelLookupTable(const LookupTableInfo &Info,
 }
 
 static void convertToRelLookupTable(const LookupTableInfo &Info,
-                                    const SmallVectorImpl<LookupTableUse> &Uses,
+                                    ArrayRef<LookupTableUse> Uses,
                                     GlobalVariable &LookupTable) {
   // Generate an array that consists of relative offsets.
   GlobalVariable *RelLookupTable =
