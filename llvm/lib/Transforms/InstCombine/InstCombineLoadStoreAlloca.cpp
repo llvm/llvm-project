@@ -39,10 +39,11 @@ STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 /// the uses.  If we see a memcpy/memmove that targets an unoffseted pointer to
 /// the alloca, and if the source pointer is a pointer to a constant memory
 /// location, we can optimize this.
-static bool isOnlyCopiedFromConstantMemory(
-    AAResults *AA, AllocaInst *V, MemTransferInst *&TheCopy,
-    SmallVectorImpl<Instruction *> &ToDelete, bool &HasAddrSpaceCast,
-    unsigned MaxUsers) {
+static bool
+isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
+                               MemTransferInst *&TheCopy,
+                               SmallVectorImpl<Instruction *> &ToDelete,
+                               bool &HasAddrSpaceCast, unsigned MaxUsers) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
   // ahead and replace the value with the memory location, this lets the caller
   // quickly eliminate the markers.
@@ -160,8 +161,7 @@ static bool isOnlyCopiedFromConstantMemory(
 static MemTransferInst *
 isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *AI,
                                SmallVectorImpl<Instruction *> &ToDelete,
-                               bool &HasAddrSpaceCast,
-                               unsigned MaxUsers) {
+                               bool &HasAddrSpaceCast, unsigned MaxUsers) {
   MemTransferInst *TheCopy = nullptr;
   if (isOnlyCopiedFromConstantMemory(AA, AI, TheCopy, ToDelete,
                                      HasAddrSpaceCast, MaxUsers))
