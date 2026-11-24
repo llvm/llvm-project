@@ -34,6 +34,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
        DestinationStyleOpInterface,
        LinalgStructuredInterface,
        ReifyRankedShapedTypeOpInterface], props)> {
+  let partition = Linalg_StructuredPartition;
   code structuredOpsBaseDecls = [{
     // Return whether the op accesses the iteration indices.
     bool hasIndexSemantics() {
