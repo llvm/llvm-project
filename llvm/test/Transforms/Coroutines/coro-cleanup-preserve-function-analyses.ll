@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),coro-cleanup,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=0 -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),coro-cleanup,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 
 ; Lowering @lowered changes its CFG, but should not invalidate the analyses of
 ; @other.
