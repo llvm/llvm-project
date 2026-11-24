@@ -1413,8 +1413,11 @@ Error WasmObjectFile::parseFunctionSection(ReadContext &Ctx) {
     if (Type >= NumTypes)
       return make_error<GenericBinaryError>("invalid function type",
                                             object_error::parse_failed);
-    wasm::WasmFunction F;
+    wasm::WasmFunction F{};
+    F.Index = NumImportedFunctions + Functions.size();
     F.SigIndex = Type;
+    // This will be set later when reading the linking metadata section.
+    F.Comdat = UINT32_MAX;
     Functions.push_back(F);
   }
   if (Ctx.Ptr != Ctx.End)
@@ -1715,7 +1718,6 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
     const uint8_t *FunctionEnd = Ctx.Ptr + Size;
 
     Function.CodeOffset = Ctx.Ptr - FunctionStart;
-    Function.Index = NumImportedFunctions + i;
     Function.CodeSectionOffset = FunctionStart - Ctx.Start;
     Function.Size = FunctionEnd - FunctionStart;
 
@@ -1735,8 +1737,6 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
                                             object_error::parse_failed);
     }
     Function.Body = ArrayRef<uint8_t>(Ctx.Ptr, BodySize);
-    // This will be set later when reading in the linking metadata section.
-    Function.Comdat = UINT32_MAX;
     Ctx.Ptr += BodySize;
     assert(Ctx.Ptr == FunctionEnd);
   }
