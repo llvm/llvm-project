@@ -371,25 +371,18 @@ Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
   Value *Base = Target.BasePtr;
   if (!Target.Index || !Base->hasUseList())
     return nullptr;
-  // Instructions incorporated into the address (rather than inputs) may have
-  // been pulled in from a later block and depend on CurBB's phis.
-  SmallPtrSet<Instruction *, 8> Incorporated;
-  SmallVector<Value *, 8> Stack = {Addr};
-  while (!Stack.empty()) {
-    auto *I = dyn_cast<Instruction>(Stack.pop_back_val());
-    if (I && !is_contained(InstInputs, I) && Incorporated.insert(I).second)
-      append_range(Stack, I->operands());
-  }
   if (auto *BaseI = dyn_cast<Instruction>(Base);
-      BaseI && (BaseI->getParent() == CurBB || Incorporated.contains(BaseI)))
+      BaseI && (BaseI->getParent() == CurBB ||
+                !DT->dominates(BaseI->getParent(), CurBB)))
+    return nullptr;
+  if (auto *IndexI = dyn_cast<Instruction>(Target.Index);
+      IndexI && IndexI->getParent() != CurBB &&
+      !DT->dominates(IndexI->getParent(), CurBB))
     return nullptr;
 
   // Translate the index along the edge and fold its constant addends into the
   // offset. GEP offset arithmetic wraps, so no-wrap flags are not required.
-  auto *IndexI = dyn_cast<Instruction>(Target.Index);
-  PHITransAddr IndexAddr = IndexI && Incorporated.contains(IndexI)
-                               ? *this
-                               : PHITransAddr(Target.Index, DL, AC);
+  PHITransAddr IndexAddr(Target.Index, DL, AC);
   Value *Index = IndexAddr.translateSubExpr(Target.Index, CurBB, PredBB, DT,
                                             Cond, CondVal);
   if (!Index)
