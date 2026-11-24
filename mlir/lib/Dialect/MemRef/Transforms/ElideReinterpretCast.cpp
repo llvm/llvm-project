@@ -536,9 +536,9 @@ getNonUnitDimMapping(memref::ReinterpretCastOp rc) {
 /// window at a static offset that reuses the identity-layout source strides.
 ///
 /// Example:
-///   memref.reinterpret_cast %src to offset: [20480], sizes: [1, 1, 40],
-///     strides: [20520, 40, 1] : memref<1x513x40xf32> to ...
-///   returns [0, 512, 0].
+///   memref.reinterpret_cast %src to offset: [90], sizes: [1, 4, 8],
+///     strides: [1320, 40, 1] : memref<1x33x40xf32> to ...
+///   returns [0, 2, 10].
 static std::optional<SmallVector<int64_t>>
 getWindowOffsets(memref::ReinterpretCastOp rc) {
   auto srcTy = cast<MemRefType>(rc.getSource().getType());
@@ -637,13 +637,17 @@ static SmallVector<Value> shiftWindowIndices(PatternRewriter &rewriter,
 ///
 /// Shape restriction gated by getNonUnitDimMapping() or getWindowOffsets().
 ///
-/// BEFORE (window, OFF = D * M + E)
-///   %view = memref.reinterpret_cast %src to offset: [OFF], sizes: [N, K],
-///     strides: [M, 1] : memref<PxMxf32> to memref<NxKxf32, ...>
-///   %v = memref.load %view[%i, %j]
+/// BEFORE (window with the identity strides of the source)
+///   %view = memref.reinterpret_cast %src
+///     to offset: [OFF], sizes: [1, K, L], strides: [M*N, N, 1]
+///     : memref<1xMxNxf32>
+///       to memref<1xKxLxf32, strided<[M*N, N, 1], offset: OFF>>
+///   %v = memref.load %view[%c0, %i, %j]
 ///
 /// AFTER
-///   %v = memref.load %src[%i + D, %j + E] : memref<PxMxf32>
+///   // Assuming OFF delinearizes to [0, OFF_1, OFF_2], i.e.
+///   // OFF = OFF_1 * N + OFF_2:
+///   %v = memref.load %src[%c0, %i + OFF_1, %j + OFF_2] : memref<1xMxNxf32>
 ///
 /// BEFORE (rank expansion)
 ///   %view = memref.reinterpret_cast %src
