@@ -280,5 +280,5 @@ let TargetPrefix = "riscv" in {
         RISCVVIntrinsic;
 
   // Xsfvfofp4min OFP4 to OFP8 conversion.
-  defm vfext_vf2 : RISCVConversion;
+  defm sf_vfext_vf2 : RISCVConversion;
 } // TargetPrefix = "riscv"

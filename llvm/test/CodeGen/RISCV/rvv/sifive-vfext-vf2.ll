@@ -4,11 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+xsfvfofp4min \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 
-declare <vscale x 2 x i8> @llvm.riscv.vfext.vf2.nxv2i8.nxv1i8(
-  <vscale x 2 x i8>,
-  <vscale x 1 x i8>,
-  iXLen);
-
 define <vscale x 2 x i8> @intrinsic_vfext_vf2_nxv2i8_nxv1i8(<vscale x 1 x i8> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfext_vf2_nxv2i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
@@ -17,18 +12,13 @@ define <vscale x 2 x i8> @intrinsic_vfext_vf2_nxv2i8_nxv1i8(<vscale x 1 x i8> %0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 2 x i8> @llvm.riscv.vfext.vf2.nxv2i8.nxv1i8(
+  %a = call <vscale x 2 x i8> @llvm.riscv.sf.vfext.vf2.nxv2i8.nxv1i8(
     <vscale x 2 x i8> poison,
     <vscale x 1 x i8> %0,
     iXLen %1)
 
   ret <vscale x 2 x i8> %a
 }
-
-declare <vscale x 4 x i8> @llvm.riscv.vfext.vf2.nxv4i8.nxv2i8(
-  <vscale x 4 x i8>,
-  <vscale x 2 x i8>,
-  iXLen);
 
 define <vscale x 4 x i8> @intrinsic_vfext_vf2_nxv4i8_nxv2i8(<vscale x 2 x i8> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfext_vf2_nxv4i8_nxv2i8:
@@ -38,18 +28,13 @@ define <vscale x 4 x i8> @intrinsic_vfext_vf2_nxv4i8_nxv2i8(<vscale x 2 x i8> %0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 4 x i8> @llvm.riscv.vfext.vf2.nxv4i8.nxv2i8(
+  %a = call <vscale x 4 x i8> @llvm.riscv.sf.vfext.vf2.nxv4i8.nxv2i8(
     <vscale x 4 x i8> poison,
     <vscale x 2 x i8> %0,
     iXLen %1)
 
   ret <vscale x 4 x i8> %a
 }
-
-declare <vscale x 8 x i8> @llvm.riscv.vfext.vf2.nxv8i8.nxv4i8(
-  <vscale x 8 x i8>,
-  <vscale x 4 x i8>,
-  iXLen);
 
 define <vscale x 8 x i8> @intrinsic_vfext_vf2_nxv8i8_nxv4i8(<vscale x 4 x i8> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfext_vf2_nxv8i8_nxv4i8:
@@ -59,18 +44,13 @@ define <vscale x 8 x i8> @intrinsic_vfext_vf2_nxv8i8_nxv4i8(<vscale x 4 x i8> %0
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 8 x i8> @llvm.riscv.vfext.vf2.nxv8i8.nxv4i8(
+  %a = call <vscale x 8 x i8> @llvm.riscv.sf.vfext.vf2.nxv8i8.nxv4i8(
     <vscale x 8 x i8> poison,
     <vscale x 4 x i8> %0,
     iXLen %1)
 
   ret <vscale x 8 x i8> %a
 }
-
-declare <vscale x 16 x i8> @llvm.riscv.vfext.vf2.nxv16i8.nxv8i8(
-  <vscale x 16 x i8>,
-  <vscale x 8 x i8>,
-  iXLen);
 
 define <vscale x 16 x i8> @intrinsic_vfext_vf2_nxv16i8_nxv8i8(<vscale x 8 x i8> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfext_vf2_nxv16i8_nxv8i8:
@@ -81,18 +61,13 @@ define <vscale x 16 x i8> @intrinsic_vfext_vf2_nxv16i8_nxv8i8(<vscale x 8 x i8> 
 ; CHECK-NEXT:    sf.vfext.vf2 v8, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 16 x i8> @llvm.riscv.vfext.vf2.nxv16i8.nxv8i8(
+  %a = call <vscale x 16 x i8> @llvm.riscv.sf.vfext.vf2.nxv16i8.nxv8i8(
     <vscale x 16 x i8> poison,
     <vscale x 8 x i8> %0,
     iXLen %1)
 
   ret <vscale x 16 x i8> %a
 }
-
-declare <vscale x 32 x i8> @llvm.riscv.vfext.vf2.nxv32i8.nxv16i8(
-  <vscale x 32 x i8>,
-  <vscale x 16 x i8>,
-  iXLen);
 
 define <vscale x 32 x i8> @intrinsic_vfext_vf2_nxv32i8_nxv16i8(<vscale x 16 x i8> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfext_vf2_nxv32i8_nxv16i8:
@@ -103,18 +78,13 @@ define <vscale x 32 x i8> @intrinsic_vfext_vf2_nxv32i8_nxv16i8(<vscale x 16 x i8
 ; CHECK-NEXT:    sf.vfext.vf2 v8, v12
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 32 x i8> @llvm.riscv.vfext.vf2.nxv32i8.nxv16i8(
+  %a = call <vscale x 32 x i8> @llvm.riscv.sf.vfext.vf2.nxv32i8.nxv16i8(
     <vscale x 32 x i8> poison,
     <vscale x 16 x i8> %0,
     iXLen %1)
 
   ret <vscale x 32 x i8> %a
 }
-
-declare <vscale x 64 x i8> @llvm.riscv.vfext.vf2.nxv64i8.nxv32i8(
-  <vscale x 64 x i8>,
-  <vscale x 32 x i8>,
-  iXLen);
 
 define <vscale x 64 x i8> @intrinsic_vfext_vf2_nxv64i8_nxv32i8(<vscale x 32 x i8> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfext_vf2_nxv64i8_nxv32i8:
@@ -125,7 +95,7 @@ define <vscale x 64 x i8> @intrinsic_vfext_vf2_nxv64i8_nxv32i8(<vscale x 32 x i8
 ; CHECK-NEXT:    sf.vfext.vf2 v8, v16
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 64 x i8> @llvm.riscv.vfext.vf2.nxv64i8.nxv32i8(
+  %a = call <vscale x 64 x i8> @llvm.riscv.sf.vfext.vf2.nxv64i8.nxv32i8(
     <vscale x 64 x i8> poison,
     <vscale x 32 x i8> %0,
     iXLen %1)

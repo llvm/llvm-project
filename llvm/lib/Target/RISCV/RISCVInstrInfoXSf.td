@@ -1001,17 +1001,14 @@ let Predicates = [HasVendorXSfvfexpa64e] in {
 // XSfvfofp4min extension instruction.
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVendorXSfvfofp4min], AltFmtType = IS_NOT_ALTFMT in
-  def VFEXT_VF2 : VEXT_MV_VS2<"sf.vfext.vf2", 0b010010, 0b10110>;
+  def SF_VFEXT_VF2 : VEXT_MV_VS2<"sf.vfext.vf2", 0b010010, 0b10110>;
 
-multiclass VPseudoVWCVTD_V_NoSched_XSfvfofp4min {
-  defvar Constraint = "@earlyclobber $rd";
+let Predicates = [HasVendorXSfvfofp4min], AltFmtType = IS_NOT_ALTFMT in {
   foreach m = MxListF in
-    defm _VF2 : VPseudoConversion<m.vrclass, m.f2vrclass, m, Constraint,
-                                  sew=8, TargetConstraintType=3>;
+    defm PseudoSF_VFEXT_VF2 : VPseudoConversion<m.vrclass, m.f2vrclass, m,
+                                                "@earlyclobber $rd", sew=8,
+                                                TargetConstraintType=3>;
 }
-
-let Predicates = [HasVendorXSfvfofp4min], AltFmtType = IS_NOT_ALTFMT in
-  defm PseudoVFEXT : VPseudoVWCVTD_V_NoSched_XSfvfofp4min;
 
 defset list<VTypeInfoToWide> AllWidenableOFP4ToOFP8Vectors = {
   def : VTypeInfoToWide<VI8MF8, VI8MF4>;
@@ -1022,18 +1019,14 @@ defset list<VTypeInfoToWide> AllWidenableOFP4ToOFP8Vectors = {
   def : VTypeInfoToWide<VI8M4, VI8M8>;
 }
 
-multiclass VPatConversionWF_XSfvfofp4min<string intrinsic, string instruction,
-                                         bit isSEWAware = 0> {
+let Predicates = [HasVendorXSfvfofp4min] in {
   foreach fvtiToFWti = AllWidenableOFP4ToOFP8Vectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = [HasVendorXSfvfofp4min] in
-      defm : VPatConversion<intrinsic, instruction, "VF2", fwti.Vector,
-                            fvti.Vector, fwti.Mask, fwti.Log2SEW, fwti.LMul,
-                            fwti.RegClass, fvti.RegClass, isSEWAware>;
+      defm : VPatConversion<"int_riscv_sf_vfext_vf2", "PseudoSF_VFEXT", "VF2",
+                            fwti.Vector, fvti.Vector, fwti.Mask, fwti.Log2SEW,
+                            fwti.LMul, fwti.RegClass, fvti.RegClass,
+                            isSEWAware=1>;
   }
 }
-
-let Predicates = [HasVendorXSfvfofp4min] in
-  defm : VPatConversionWF_XSfvfofp4min<"int_riscv_vfext_vf2", "PseudoVFEXT",
-                                       isSEWAware=1>;
