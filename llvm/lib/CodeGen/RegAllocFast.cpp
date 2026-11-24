@@ -2234,7 +2234,8 @@ static bool foldUntilFit(MutableArrayRef<AsmOperandReg> Regs,
 /// toward folding more than necessary rather than running out of registers.
 /// If folding can't make them fit by that estimate, only what they need if
 /// each register takes the fewest registers it can is folded, and if that
-/// can't make them fit either, nothing.
+/// can't make them fit either, every foldable register that the asm only
+/// reads, as choosing 'm' for an "rm" input did.
 void RegAllocFastImpl::selectInlineAsmRegsToFold(
     const MachineInstr &MI, SmallVectorImpl<Register> &ToFold) const {
   // Most inline asm has no foldable operand, so skip the analysis below.
@@ -2338,16 +2339,25 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
   // than they need can then keep them from fitting: this allocator assigns
   // them in order, without looking ahead. So start over, and fold only what
   // they need if each takes the fewest registers it can and the defs can take
-  // the physreg uses' registers. If even that can't make them fit, fold
-  // nothing, and leave allocation to report the error as it would without
-  // folding.
+  // the physreg uses' registers.
   for (AsmOperandReg &R : Regs)
     R.Folded = false;
 
   ToFold.clear();
-  if (!foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, *RegClassInfo,
-                    *TRI, ToFold))
-    ToFold.clear();
+  if (foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, *RegClassInfo,
+                   *TRI, ToFold))
+    return;
+
+  // Even that can find no fit when the estimate is wrong, e.g. it counts DL
+  // and DH as two registers of GR32 although they share EDX. Fold every
+  // foldable register that the asm only reads then, as choosing 'm' for its
+  // "rm" inputs did, so that what compiled that way still does. Folding a
+  // register the asm writes could take a register from another operand (see
+  // above), and wasn't done before.
+  ToFold.clear();
+  for (const AsmOperandReg &R : Regs)
+    if (R.Foldable && !R.InDefs)
+      ToFold.push_back(R.Reg);
 }
 
 /// Return the virtual register that \p Reg copies, if \p Reg is an input of
