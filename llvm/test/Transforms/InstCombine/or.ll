@@ -2392,9 +2392,7 @@ define i32 @signum_i32_or_wrong_ext(i32 %x) {
 
 define i32 @or_shl_pow2_neg(i32 %x) {
 ; CHECK-LABEL: @or_shl_pow2_neg(
-; CHECK-NEXT:    [[P:%.*]] = shl i32 2, [[X:%.*]]
-; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[P]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[P]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = shl i32 -2, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %p = shl i32 2, %x
@@ -2405,9 +2403,7 @@ define i32 @or_shl_pow2_neg(i32 %x) {
 
 define i32 @or_shl_pow2_neg_commuted(i32 %x) {
 ; CHECK-LABEL: @or_shl_pow2_neg_commuted(
-; CHECK-NEXT:    [[P:%.*]] = shl i32 8, [[X:%.*]]
-; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[P]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[P]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = shl i32 -8, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %p = shl i32 8, %x
@@ -2422,7 +2418,7 @@ define i32 @or_shl_pow2_neg_multiuse(i32 %x) {
 ; CHECK-NEXT:    call void @use(i32 [[P]])
 ; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[P]]
 ; CHECK-NEXT:    call void @use(i32 [[N]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[P]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = shl i32 -2, [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %p = shl i32 2, %x
@@ -2435,9 +2431,7 @@ define i32 @or_shl_pow2_neg_multiuse(i32 %x) {
 
 define <2 x i8> @or_shl_pow2_neg_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @or_shl_pow2_neg_splat(
-; CHECK-NEXT:    [[P:%.*]] = shl <2 x i8> splat (i8 4), [[X:%.*]]
-; CHECK-NEXT:    [[N:%.*]] = sub <2 x i8> zeroinitializer, [[P]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[P]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> splat (i8 -4), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %p = shl <2 x i8> <i8 4, i8 4>, %x
@@ -2448,9 +2442,7 @@ define <2 x i8> @or_shl_pow2_neg_splat(<2 x i8> %x) {
 
 define <2 x i8> @or_shl_pow2_neg_nonsplat(<2 x i8> %x) {
 ; CHECK-LABEL: @or_shl_pow2_neg_nonsplat(
-; CHECK-NEXT:    [[P:%.*]] = shl <2 x i8> <i8 2, i8 16>, [[X:%.*]]
-; CHECK-NEXT:    [[N:%.*]] = sub <2 x i8> zeroinitializer, [[P]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[P]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> <i8 -2, i8 -16>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %p = shl <2 x i8> <i8 2, i8 16>, %x
@@ -2461,9 +2453,7 @@ define <2 x i8> @or_shl_pow2_neg_nonsplat(<2 x i8> %x) {
 
 define <2 x i8> @or_shl_pow2_neg_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @or_shl_pow2_neg_poison(
-; CHECK-NEXT:    [[P:%.*]] = shl <2 x i8> <i8 2, i8 poison>, [[X:%.*]]
-; CHECK-NEXT:    [[N:%.*]] = sub <2 x i8> <i8 0, i8 poison>, [[P]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[P]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> <i8 -2, i8 poison>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %p = shl <2 x i8> <i8 2, i8 poison>, %x
