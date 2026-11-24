@@ -178,12 +178,200 @@ define i32 @local_stack_remote_write_and_read() norecurse {
   %r = call i32 @remote_write_and_read(ptr %a)
   ret i32 %r
 }
+
+; https://github.com/llvm/llvm-project/issues/242203
+; A write in a callee must not be skipped because the path from the least
+; dominating write to the call passes through the load itself (in a loop) or
+; through another write to the same location.
+
+define internal void @inc(ptr %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define {{[^@]+}}@inc
+; CHECK-SAME: (ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[N:%.*]] = add nsw i32 [[V]], 1
+; CHECK-NEXT:    store i32 [[N]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, ptr %p, align 4
+  %n = add nsw i32 %v, 1
+  store i32 %n, ptr %p, align 4
+  ret void
+}
+
+define i32 @count(i32 %n) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@count
+; TUNIT-SAME: (i32 [[N:%.*]]) #[[ATTR4:[0-9]+]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[I:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    store i32 0, ptr [[I]], align 4
+; TUNIT-NEXT:    br label [[COND:%.*]]
+; TUNIT:       cond:
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; TUNIT-NEXT:    [[C:%.*]] = icmp slt i32 [[V]], [[N]]
+; TUNIT-NEXT:    br i1 [[C]], label [[BODY:%.*]], label [[EXIT:%.*]]
+; TUNIT:       body:
+; TUNIT-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR6:[0-9]+]]
+; TUNIT-NEXT:    br label [[COND]]
+; TUNIT:       exit:
+; TUNIT-NEXT:    ret i32 [[V]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@count
+; CGSCC-SAME: (i32 [[N:%.*]]) #[[ATTR4:[0-9]+]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[I:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    store i32 0, ptr [[I]], align 4
+; CGSCC-NEXT:    br label [[COND:%.*]]
+; CGSCC:       cond:
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; CGSCC-NEXT:    [[C:%.*]] = icmp slt i32 [[V]], [[N]]
+; CGSCC-NEXT:    br i1 [[C]], label [[BODY:%.*]], label [[EXIT:%.*]]
+; CGSCC:       body:
+; CGSCC-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    br label [[COND]]
+; CGSCC:       exit:
+; CGSCC-NEXT:    ret i32 [[V]]
+;
+entry:
+  %i = alloca i32, align 4
+  store i32 0, ptr %i, align 4
+  br label %cond
+
+cond:
+  %v = load i32, ptr %i, align 4
+  %c = icmp slt i32 %v, %n
+  br i1 %c, label %body, label %exit
+
+body:
+  call void @inc(ptr %i)
+  br label %cond
+
+exit:
+  ret i32 %v
+}
+
+define i32 @count_overwrite(i32 %n) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@count_overwrite
+; TUNIT-SAME: (i32 [[N:%.*]]) #[[ATTR4]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[I:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    store i32 0, ptr [[I]], align 4
+; TUNIT-NEXT:    br label [[COND:%.*]]
+; TUNIT:       cond:
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; TUNIT-NEXT:    [[C:%.*]] = icmp slt i32 [[V]], [[N]]
+; TUNIT-NEXT:    br i1 [[C]], label [[BODY:%.*]], label [[EXIT:%.*]]
+; TUNIT:       body:
+; TUNIT-NEXT:    store i32 0, ptr [[I]], align 4
+; TUNIT-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR6]]
+; TUNIT-NEXT:    br label [[COND]]
+; TUNIT:       exit:
+; TUNIT-NEXT:    ret i32 [[V]]
+;
+; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@count_overwrite
+; CGSCC-SAME: (i32 [[N:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[I:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    store i32 0, ptr [[I]], align 4
+; CGSCC-NEXT:    br label [[COND:%.*]]
+; CGSCC:       cond:
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; CGSCC-NEXT:    [[C:%.*]] = icmp slt i32 [[V]], [[N]]
+; CGSCC-NEXT:    br i1 [[C]], label [[BODY:%.*]], label [[EXIT:%.*]]
+; CGSCC:       body:
+; CGSCC-NEXT:    store i32 0, ptr [[I]], align 4
+; CGSCC-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR6]]
+; CGSCC-NEXT:    br label [[COND]]
+; CGSCC:       exit:
+; CGSCC-NEXT:    ret i32 [[V]]
+;
+entry:
+  %i = alloca i32, align 4
+  store i32 0, ptr %i, align 4
+  br label %cond
+
+cond:
+  %v = load i32, ptr %i, align 4
+  %c = icmp slt i32 %v, %n
+  br i1 %c, label %body, label %exit
+
+body:
+  store i32 0, ptr %i, align 4
+  call void @inc(ptr %i)
+  br label %cond
+
+exit:
+  ret i32 %v
+}
+
+define i1 @callee_write_in_branch(i1 %c) {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@callee_write_in_branch
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR5:[0-9]+]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[I:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    store i32 0, ptr [[I]], align 4
+; TUNIT-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[JOIN:%.*]]
+; TUNIT:       then:
+; TUNIT-NEXT:    store i32 5, ptr [[I]], align 4
+; TUNIT-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR7:[0-9]+]]
+; TUNIT-NEXT:    br label [[JOIN]]
+; TUNIT:       join:
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; TUNIT-NEXT:    [[R:%.*]] = icmp eq i32 [[V]], 6
+; TUNIT-NEXT:    ret i1 [[R]]
+;
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@callee_write_in_branch
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR5:[0-9]+]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[I:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    store i32 0, ptr [[I]], align 4
+; CGSCC-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[JOIN:%.*]]
+; CGSCC:       then:
+; CGSCC-NEXT:    store i32 5, ptr [[I]], align 4
+; CGSCC-NEXT:    call void @inc(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[I]]) #[[ATTR7:[0-9]+]]
+; CGSCC-NEXT:    br label [[JOIN]]
+; CGSCC:       join:
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr [[I]], align 4
+; CGSCC-NEXT:    [[R:%.*]] = icmp eq i32 [[V]], 6
+; CGSCC-NEXT:    ret i1 [[R]]
+;
+entry:
+  %i = alloca i32, align 4
+  store i32 0, ptr %i, align 4
+  br i1 %c, label %then, label %join
+
+then:
+  store i32 5, ptr %i, align 4
+  call void @inc(ptr %i)
+  br label %join
+
+join:
+  %v = load i32, ptr %i, align 4
+  %r = icmp eq i32 %v, 6
+  ret i1 %r
+}
 ;.
 ; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback }
 ; TUNIT: attributes #[[ATTR1]] = { norecurse nosync }
 ; TUNIT: attributes #[[ATTR2]] = { norecurse }
+; TUNIT: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind memory(none) }
+; TUNIT: attributes #[[ATTR5]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR6]] = { nofree nosync nounwind }
+; TUNIT: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback }
 ; CGSCC: attributes #[[ATTR1]] = { norecurse nosync }
 ; CGSCC: attributes #[[ATTR2]] = { norecurse }
+; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR4]] = { nofree nosync nounwind memory(none) }
+; CGSCC: attributes #[[ATTR5]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR6]] = { nofree nounwind }
+; CGSCC: attributes #[[ATTR7]] = { nofree nounwind willreturn }
 ;.
