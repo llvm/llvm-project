@@ -131,6 +131,24 @@ constexpr bool test() {
     assert(v.end() == v.begin() + 3);
   }
 
+  { // non-const end() works when a trailing range is not const-iterable (e.g. filter_view)
+    std::array<int, 3> a{};
+    std::array b{1, 2, 3, 4};
+    auto f = b | std::views::filter([](int x) { return x % 2 == 0; }); // {2, 4}
+    static_assert(!std::ranges::range<const decltype(f)>);
+    std::ranges::cartesian_product_view v{a, f};
+    static_assert(!std::same_as<decltype(v.end()), std::default_sentinel_t>);
+    assert(std::ranges::distance(v.begin(), v.end()) == 6);
+  }
+
+  { // same, with the trailing range empty
+    std::array<int, 3> a{};
+    std::array b{1, 3};
+    auto f = b | std::views::filter([](int x) { return x % 2 == 0; }); // {}
+    std::ranges::cartesian_product_view v{a, f};
+    assert(v.begin() == v.end());
+  }
+
   return true;
 }
 

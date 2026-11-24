@@ -148,28 +148,19 @@ public:
 private:
   template <class _Self>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __end_impl(_Self& __self) {
-    const auto __ranges_to_iterators = [__end_is_empty = __self.__end_is_empty(),
-                                        &__b           = __self.__bases_]<size_t... _Ip>(index_sequence<_Ip...>) {
+    const bool __empty_tail = [&__b = __self.__bases_]<size_t... _Ip>(index_sequence<_Ip...>) {
+      return (ranges::empty(std::get<1 + _Ip>(__b)) || ...);
+    }(make_index_sequence<sizeof...(_Vs)>{});
+    const auto __ranges_to_iterators = [__empty_tail, &__b = __self.__bases_]<size_t... _Ip>(index_sequence<_Ip...>) {
       const auto __begin_or_first_end = []<class _IsFirst>(_IsFirst, auto& __rng, bool __empty) {
         if constexpr (_IsFirst::value)
           return __empty ? ranges::begin(__rng) : ranges::__cartesian_common_arg_end(__rng);
         return ranges::begin(__rng);
       };
-      return std::make_tuple(__begin_or_first_end(bool_constant<_Ip == 0>{}, std::get<_Ip>(__b), __end_is_empty)...);
+      return std::make_tuple(__begin_or_first_end(bool_constant<_Ip == 0>{}, std::get<_Ip>(__b), __empty_tail)...);
     };
     __iterator<is_const_v<_Self>> __it(__self, __ranges_to_iterators(make_index_sequence<1 + sizeof...(_Vs)>{}));
     return __it;
-  }
-
-  template <size_t _Np = 1>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __end_is_empty() const {
-    if constexpr (_Np == 1 + sizeof...(_Vs))
-      return false;
-    else {
-      if (const auto& __v = std::get<_Np>(__bases_); ranges::empty(__v))
-        return true;
-      return __end_is_empty<_Np + 1>();
-    }
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto __size_impl() const {
