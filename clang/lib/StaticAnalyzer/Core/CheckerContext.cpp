@@ -12,9 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/StringExtras.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 
 using namespace clang;
 using namespace ento;
@@ -48,97 +47,7 @@ StringRef CheckerContext::getDeclDescription(const Decl *D) {
 
 bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
                                         StringRef Name) {
-  CLibraryCallee C(FD);
-  return isCLibraryFunction(C, Name);
-}
-
-StringRef CheckerContext::CLibraryCallee::getBuiltinName() {
-  if (!BuiltinName)
-    BuiltinName = FD->getASTContext().BuiltinInfo.getName(BId);
-  return *BuiltinName;
-}
-
-bool CheckerContext::CLibraryCallee::isPredefinedLibFunction() {
-  if (!IsPredefinedLibFunction)
-    IsPredefinedLibFunction =
-        FD->getASTContext().BuiltinInfo.isPredefinedLibFunction(BId);
-  return *IsPredefinedLibFunction;
-}
-
-bool CheckerContext::CLibraryCallee::isCLibraryDecl() {
-  if (IsCLibraryDecl)
-    return *IsCLibraryDecl;
-
-  IsCLibraryDecl = false;
-  // If this is a special C++ name without IdentifierInfo, it can't be a
-  // C library function.
-  if (!FD->getIdentifier())
-    return false;
-
-  // C library functions are either declared directly within a TU (the common
-  // case) or they are accessed through the namespace `std` (when they are used
-  // in C++ via headers like <cstdlib>).
-  const DeclContext *DC = FD->getDeclContext()->getRedeclContext();
-  if (!(DC->isTranslationUnit() || DC->isStdNamespace()))
-    return false;
-
-  // If this function is not externally visible, it is not a C library function.
-  // Note that we make an exception for inline functions, which may be
-  // declared in header files without external linkage.
-  IsCLibraryDecl = FD->isInlined() || FD->isExternallyVisible();
-  return *IsCLibraryDecl;
-}
-
-bool CheckerContext::isCLibraryFunction(CLibraryCallee &C, StringRef Name) {
-  // To avoid false positives (Ex: finding user defined functions with
-  // similar names), only perform fuzzy name matching when it's a builtin.
-  // Using a string compare is slow, we might want to switch on BuiltinID here.
-  if (C.getBuiltinID() != 0) {
-    if (Name.empty())
-      return true;
-    // Accept exact match.
-    if (C.getBuiltinName() == Name)
-      return true;
-    // Only perform fuzzy name matching for non-library builtins (e.g.
-    // __builtin_memcpy, __builtin_memcpy_inline), not for distinct predefined
-    // library functions (e.g. objc_read_weak vs read, getlogin_r vs getlogin).
-    if (!C.isPredefinedLibFunction()) {
-      size_t start = C.getBuiltinName().find(Name);
-      if (start != StringRef::npos) {
-        //    v-- match starts here
-        // ...xxxxx...
-        //   _xxxxx_
-        //   ^     ^ lookbehind and lookahead characters
-
-        const auto MatchPredecessor = [&]() -> bool {
-          return start <= 0 || !llvm::isAlpha(C.getBuiltinName()[start - 1]);
-        };
-        const auto MatchSuccessor = [&]() -> bool {
-          std::size_t LookbehindPlace = start + Name.size();
-          return LookbehindPlace >= C.getBuiltinName().size() ||
-                 !llvm::isAlpha(C.getBuiltinName()[LookbehindPlace]);
-        };
-
-        if (MatchPredecessor() && MatchSuccessor())
-          return true;
-      }
-    }
-  }
-
-  if (!C.isCLibraryDecl())
-    return false;
-
-  if (Name.empty())
-    return true;
-
-  StringRef FName = C.getDecl()->getName();
-  if (FName == Name)
-    return true;
-
-  if (FName.starts_with("__inline") && FName.contains(Name))
-    return true;
-
-  return false;
+  return CLibraryFunctionInfo(FD).isCLibraryFunction(Name);
 }
 
 bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,

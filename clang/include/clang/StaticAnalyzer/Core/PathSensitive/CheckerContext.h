@@ -435,37 +435,6 @@ public:
   std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
-  // CallDescription matches a function against many names, so it computes the
-  // callee-dependent parts of isCLibraryFunction only once.
-  friend class CallDescription;
-
-  /// The properties of a function that isCLibraryFunction depends on, computed
-  /// on first use.
-  class CLibraryCallee {
-    const FunctionDecl *FD;
-    unsigned BId;
-    std::optional<std::string> BuiltinName;
-    std::optional<bool> IsPredefinedLibFunction;
-    std::optional<bool> IsCLibraryDecl;
-
-  public:
-    explicit CLibraryCallee(const FunctionDecl *FD)
-        : FD(FD), BId(FD->getBuiltinID()) {}
-
-    const FunctionDecl *getDecl() const { return FD; }
-    unsigned getBuiltinID() const { return BId; }
-    /// Must only be called if getBuiltinID() is not 0.
-    StringRef getBuiltinName();
-    /// Returns true if the builtin is a predefined library function (e.g.
-    /// getlogin_r). Must only be called if getBuiltinID() is not 0.
-    bool isPredefinedLibFunction();
-    /// Returns true if the function has an identifier, it is in the top-level
-    /// or the \c std namespace, and it is externally visible or inline.
-    bool isCLibraryDecl();
-  };
-
-  static bool isCLibraryFunction(CLibraryCallee &C, StringRef Name);
-
   ExplodedNode *addTransitionImpl(const ProgramStateRef &State, bool MarkAsSink,
                                   ExplodedNode *P, const ProgramPointTag *Tag) {
     Changed = true;

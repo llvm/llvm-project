@@ -13,9 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/StringExtras.h"
 #include <iterator>
 #include <optional>
 
@@ -71,18 +74,112 @@ ento::CallDescription::Callee::Callee(const CallExpr &CE) {
   IsMethod = isa<CXXMethodDecl>(FD);
 }
 
-bool ento::CallDescription::Callee::isCLibraryFunction(StringRef Name) const {
-  if (!CLib)
-    CLib.emplace(FD);
-  return CheckerContext::isCLibraryFunction(*CLib, Name);
+unsigned ento::CLibraryFunctionInfo::getBuiltinID() {
+  if (!BuiltinID)
+    BuiltinID = FD->getBuiltinID();
+  return *BuiltinID;
+}
+
+StringRef ento::CLibraryFunctionInfo::getBuiltinName() {
+  if (!BuiltinName)
+    BuiltinName = FD->getASTContext().BuiltinInfo.getName(getBuiltinID());
+  return *BuiltinName;
+}
+
+bool ento::CLibraryFunctionInfo::isPredefinedLibFunction() {
+  if (!IsPredefinedLibFunction)
+    IsPredefinedLibFunction =
+        FD->getASTContext().BuiltinInfo.isPredefinedLibFunction(getBuiltinID());
+  return *IsPredefinedLibFunction;
+}
+
+bool ento::CLibraryFunctionInfo::isCLibraryDecl() {
+  if (IsCLibraryDecl)
+    return *IsCLibraryDecl;
+
+  IsCLibraryDecl = false;
+  // If this is a special C++ name without IdentifierInfo, it can't be a
+  // C library function.
+  if (!FD->getIdentifier())
+    return false;
+
+  // C library functions are either declared directly within a TU (the common
+  // case) or they are accessed through the namespace `std` (when they are used
+  // in C++ via headers like <cstdlib>).
+  const DeclContext *DC = FD->getDeclContext()->getRedeclContext();
+  if (!(DC->isTranslationUnit() || DC->isStdNamespace()))
+    return false;
+
+  // If this function is not externally visible, it is not a C library function.
+  // Note that we make an exception for inline functions, which may be
+  // declared in header files without external linkage.
+  IsCLibraryDecl = FD->isInlined() || FD->isExternallyVisible();
+  return *IsCLibraryDecl;
+}
+
+bool ento::CLibraryFunctionInfo::isCLibraryFunction(StringRef Name) {
+  // To avoid false positives (Ex: finding user defined functions with
+  // similar names), only perform fuzzy name matching when it's a builtin.
+  // Using a string compare is slow, we might want to switch on BuiltinID here.
+  if (getBuiltinID() != 0) {
+    if (Name.empty())
+      return true;
+    StringRef BName = getBuiltinName();
+    // Accept exact match.
+    if (BName == Name)
+      return true;
+    // Only perform fuzzy name matching for non-library builtins (e.g.
+    // __builtin_memcpy, __builtin_memcpy_inline), not for distinct predefined
+    // library functions (e.g. objc_read_weak vs read, getlogin_r vs getlogin).
+    if (!isPredefinedLibFunction()) {
+      size_t start = BName.find(Name);
+      if (start != StringRef::npos) {
+        //    v-- match starts here
+        // ...xxxxx...
+        //   _xxxxx_
+        //   ^     ^ lookbehind and lookahead characters
+
+        const auto MatchPredecessor = [&]() -> bool {
+          return start <= 0 || !llvm::isAlpha(BName[start - 1]);
+        };
+        const auto MatchSuccessor = [&]() -> bool {
+          std::size_t LookbehindPlace = start + Name.size();
+          return LookbehindPlace >= BName.size() ||
+                 !llvm::isAlpha(BName[LookbehindPlace]);
+        };
+
+        if (MatchPredecessor() && MatchSuccessor())
+          return true;
+      }
+    }
+  }
+
+  if (!isCLibraryDecl())
+    return false;
+
+  if (Name.empty())
+    return true;
+
+  StringRef FName = FD->getName();
+  if (FName == Name)
+    return true;
+
+  if (FName.starts_with("__inline") && FName.contains(Name))
+    return true;
+
+  return false;
 }
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
-  return matchesImpl(Callee(Call));
+  Callee C(Call);
+  CLibraryFunctionInfo CLib(C.FD);
+  return matchesImpl(C, CLib);
 }
 
 bool ento::CallDescription::matchesAsWritten(const CallExpr &CE) const {
-  return matchesImpl(Callee(CE));
+  Callee C(CE);
+  CLibraryFunctionInfo CLib(C.FD);
+  return matchesImpl(C, CLib);
 }
 
 bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
@@ -157,7 +254,8 @@ bool ento::CallDescription::matchQualifiedNameParts(const Decl *D) const {
   return QualifierPartsIt == QualifierPartsEndIt;
 }
 
-bool ento::CallDescription::matchesImpl(const Callee &C) const {
+bool ento::CallDescription::matchesImpl(const Callee &C,
+                                        CLibraryFunctionInfo &CLib) const {
   const FunctionDecl *FD = C.FD;
   if (!FD)
     return false;
@@ -175,7 +273,7 @@ bool ento::CallDescription::matchesImpl(const Callee &C) const {
     // In addition to accepting FOO() with CLibrary rules, we also want to
     // accept calls to __FOO_chk() and __builtin___FOO_chk().
     if (CheckerContext::isHardenedVariantOf(FD, getFunctionName()) &&
-        C.isCLibraryFunction(StringRef())) {
+        CLib.isCLibraryFunction(StringRef())) {
       // Check that the actual argument/parameter counts are greater or equal
       // to the required counts. (Setting a requirement to std::nullopt matches
       // anything, so in that case value_or ensures that the value is compared
@@ -190,7 +288,7 @@ bool ento::CallDescription::matchesImpl(const Callee &C) const {
     return false;
 
   if (MatchAs == Mode::CLibrary || MatchAs == Mode::CLibraryMaybeHardened)
-    return C.isCLibraryFunction(getFunctionName());
+    return CLib.isCLibraryFunction(getFunctionName());
 
   if (!matchNameOnly(FD))
     return false;

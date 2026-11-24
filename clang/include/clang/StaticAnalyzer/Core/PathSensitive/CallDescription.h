@@ -16,7 +16,6 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CALLDESCRIPTION_H
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
@@ -28,6 +27,33 @@ class IdentifierInfo;
 
 namespace clang {
 namespace ento {
+/// The properties of a function declaration that determine whether it is a C
+/// library function with a given name. They are computed on first use, so
+/// matching a function against many names computes each at most once.
+class CLibraryFunctionInfo {
+  const FunctionDecl *FD;
+  std::optional<unsigned> BuiltinID;
+  std::optional<std::string> BuiltinName;
+  std::optional<bool> IsPredefinedLibFunction;
+  std::optional<bool> IsCLibraryDecl;
+
+  unsigned getBuiltinID();
+  /// Must only be called if getBuiltinID() is not 0.
+  StringRef getBuiltinName();
+  /// Returns true if the builtin is a predefined library function (e.g.
+  /// getlogin_r). Must only be called if getBuiltinID() is not 0.
+  bool isPredefinedLibFunction();
+  /// Returns true if the function has an identifier, it is in the top-level
+  /// or the \c std namespace, and it is externally visible or inline.
+  bool isCLibraryDecl();
+
+public:
+  explicit CLibraryFunctionInfo(const FunctionDecl *FD) : FD(FD) {}
+
+  /// Implements CheckerContext::isCLibraryFunction(FD, Name).
+  bool isCLibraryFunction(StringRef Name);
+};
+
 /// A `CallDescription` is a pattern that can be used to _match_ calls
 /// based on the qualified name and the argument/parameter counts.
 class CallDescription {
@@ -85,11 +111,7 @@ private:
 
   /// The properties of a call that are needed for matching it. They are
   /// computed once when a call is matched against many CallDescriptions.
-  class Callee {
-    /// Constructed on first use, as only C library entries need it.
-    mutable std::optional<CheckerContext::CLibraryCallee> CLib;
-
-  public:
+  struct Callee {
     const FunctionDecl *FD = nullptr;
     size_t ArgCount = 0;
     size_t ParamCount = 0;
@@ -97,9 +119,6 @@ private:
 
     explicit Callee(const CallEvent &Call);
     explicit Callee(const CallExpr &CE);
-
-    /// Equivalent to CheckerContext::isCLibraryFunction(FD, Name).
-    bool isCLibraryFunction(StringRef Name) const;
   };
 
 public:
@@ -204,7 +223,7 @@ public:
   /// @}
 
 private:
-  bool matchesImpl(const Callee &C) const;
+  bool matchesImpl(const Callee &C, CLibraryFunctionInfo &CLib) const;
 
   bool matchNameOnly(const NamedDecl *ND) const;
   bool matchQualifiedNameParts(const Decl *D) const;
@@ -266,10 +285,11 @@ private:
     if (!C.FD)
       return nullptr;
 
+    CLibraryFunctionInfo CLib(C.FD);
     // Slow path: linear lookup.
     // TODO: Implement some sort of fast path.
     for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (I.first.matchesImpl(C))
+      if (I.first.matchesImpl(C, CLib))
         return &I.second;
 
     return nullptr;
