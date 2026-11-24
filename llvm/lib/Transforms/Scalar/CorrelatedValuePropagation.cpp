@@ -694,7 +694,7 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
                                const ConstantRange &OtherRange) {
     ConstantRange FrozenRange = LVI->getConstantRangeAtUse(
         MM->getOperandUse(OpIdx),
-        /*UndefAllowed*/ false, /*DebugUsers*/ nullptr, /*AssumeFrozen*/ true);
+        /*UndefAllowed*/ false, /*AssumeFrozen*/ true);
     if (!FrozenRange.icmp(Pred, OtherRange))
       return false;
     Value *Op = MM->getOperand(OpIdx);
