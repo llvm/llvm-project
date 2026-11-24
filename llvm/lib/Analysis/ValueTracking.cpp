@@ -6645,11 +6645,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const ExtractValueInst *Extract = cast<ExtractValueInst>(Op);
     ArrayRef<unsigned> Indices = Extract->getIndices();
     const Value *Src = Extract->getAggregateOperand();
-    if (isa<StructType>(Src->getType()) && Indices.size() == 1 &&
-        Indices[0] == 0) {
+    if (isa<StructType>(Src->getType()) && Indices.size() == 1) {
       if (const auto *II = dyn_cast<IntrinsicInst>(Src)) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::frexp: {
+          if (Indices[0] != 0)
+            break;
+
           FPClassTest InterestedSrcs = InterestedClasses;
 
           // Positive subnormals and negative subnormals could become positive
@@ -6678,6 +6680,26 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           DenormalMode Mode =
               F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
           Known = KnownFPClass::frexp_mant(KnownSrc, Mode);
+          return;
+        }
+        case Intrinsic::sincospi: {
+          FPClassTest InterestedSrcs = InterestedClasses;
+
+          // Infinite inputs become NaN.
+          if (InterestedClasses & fcNan)
+            InterestedSrcs |= fcInf;
+
+          KnownFPClass KnownSrc;
+          computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                              InterestedSrcs, KnownSrc, Q, Depth + 1);
+
+          const bool IsMultiUnitFPType =
+              V->getType()->getScalarType()->isMultiUnitFPType();
+
+          if (Indices[0] == 0)
+            Known = KnownFPClass::sinpi(KnownSrc, IsMultiUnitFPType);
+          else if (Indices[0] == 1)
+            Known = KnownFPClass::cospi(KnownSrc, IsMultiUnitFPType);
           return;
         }
         default:
