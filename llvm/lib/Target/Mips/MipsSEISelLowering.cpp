@@ -2102,9 +2102,11 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::mips_flog2_d:
     return DAG.getNode(ISD::FLOG2, DL, Op->getValueType(0), Op->getOperand(1));
   case Intrinsic::mips_fmadd_w:
-  case Intrinsic::mips_fmadd_d:
+  case Intrinsic::mips_fmadd_d: {
+    // The mips intrinsics compute `a + b*c`, which is `fma(b, c, a)`.
     return DAG.getNode(ISD::FMA, SDLoc(Op), Op->getValueType(0),
-                       Op->getOperand(1), Op->getOperand(2), Op->getOperand(3));
+                       Op->getOperand(2), Op->getOperand(3), Op->getOperand(1));
+  }
   case Intrinsic::mips_fmul_w:
   case Intrinsic::mips_fmul_d:
     return DAG.getNode(ISD::FMUL, DL, Op->getValueType(0), Op->getOperand(1),

@@ -536,12 +536,13 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
     }
+    ToolChain::RuntimeLibType RLT = HTC.GetRuntimeLibType(Args);
     if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-      if (HTC.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
+      if (RLT == ToolChain::RLT_CompilerRT)
         CmdArgs.push_back("-lclang_rt.builtins");
-      else
+      else if (RLT == ToolChain::RLT_Libgcc)
         CmdArgs.push_back("-lgcc");
-    } else {
+    } else if (RLT != ToolChain::RLT_None) {
       CmdArgs.push_back("-lgcc");
     }
 

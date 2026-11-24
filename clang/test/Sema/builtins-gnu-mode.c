@@ -21,3 +21,7 @@ int explicit_bzero;
 int fread_unlocked;
 int fwrite_unlocked;
 int fgets_unlocked;
+int getlogin_r;
+int ttyname_r;
+int ptsname_r;
+int confstr;

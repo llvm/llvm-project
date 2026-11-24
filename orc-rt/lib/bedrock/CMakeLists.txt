@@ -18,6 +18,7 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/NativeDylibManagerSPSCI.cpp
   sps/SessionSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
+  sys/posix/DlfcnLoaderAdapter.cpp
   )
 
 # Host implementations are composed, not merely selected: a target gets one
