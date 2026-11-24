@@ -1,4 +1,4 @@
-# REQUIRES: host-supports-nvptx
+# REQUIRES: nvptx-registered-target
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *

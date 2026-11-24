@@ -1,5 +1,5 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
-// RUN: %if has_llc_binary && host-supports-nvptx %{ mlir-translate --mlir-to-llvmir %s | %llc-verify -march=nvptx64 -mcpu=sm_90 -mattr=+ptx94 %}
+// RUN: %if has_llc_binary && nvptx-registered-target %{ mlir-translate --mlir-to-llvmir %s | %llc-verify -march=nvptx64 -mcpu=sm_90 -mattr=+ptx94 %}
 
 // CHECK-LABEL: define void @prefetch_generic(
 // CHECK-SAME: ptr %[[ADDR:[0-9]+]])
