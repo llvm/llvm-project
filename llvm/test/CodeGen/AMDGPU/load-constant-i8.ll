@@ -5306,7 +5306,7 @@ define amdgpu_kernel void @constant_sextload_i8_to_i64(ptr addrspace(1) %out, pt
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_load_d16_i8 v0, v2, s[2:3]
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX12-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX12-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -5319,7 +5319,7 @@ define amdgpu_kernel void @constant_sextload_i8_to_i64(ptr addrspace(1) %out, pt
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    global_load_i8 v0, v2, s[2:3]
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX12-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX12-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -5490,7 +5490,7 @@ define amdgpu_kernel void @constant_sextload_v1i8_to_v1i64(ptr addrspace(1) %out
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_load_d16_i8 v0, v2, s[2:3]
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX12-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX12-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -5503,7 +5503,7 @@ define amdgpu_kernel void @constant_sextload_v1i8_to_v1i64(ptr addrspace(1) %out
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    global_load_i8 v0, v2, s[2:3]
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX12-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX12-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

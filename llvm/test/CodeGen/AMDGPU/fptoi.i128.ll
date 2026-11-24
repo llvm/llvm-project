@@ -727,19 +727,19 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_ashrrev_i16_e32 v0, 15, v4
 ; SDAG-NEXT:    v_bfe_i32 v7, v0, 0, 16
 ; SDAG-NEXT:    v_and_b32_e32 v0, 0x7f, v4
-; SDAG-NEXT:    s_movk_i32 s5, 0x85
-; SDAG-NEXT:    s_mov_b32 s4, 0
+; SDAG-NEXT:    s_movk_i32 s4, 0x85
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v6, 31, v7
 ; SDAG-NEXT:    v_or_b32_e32 v5, 1, v7
 ; SDAG-NEXT:    v_or_b32_e32 v4, 0x80, v0
-; SDAG-NEXT:    v_cmp_lt_u16_e32 vcc, s5, v8
+; SDAG-NEXT:    v_cmp_lt_u16_e32 vcc, s4, v8
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[8:9]
+; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB6_3
 ; SDAG-NEXT:  ; %bb.2: ; %fp-to-i-if-exp.large
 ; SDAG-NEXT:    v_add_u16_e32 v10, 0xff7a, v8
+; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v4
 ; SDAG-NEXT:    v_mov_b32_e32 v1, s4
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 64, v10
