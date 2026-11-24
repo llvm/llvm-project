@@ -1,3 +1,5 @@
+// REQUIRES: x86-registered-target
+
 // A link.exe-style host linker has no GNU '-l' or '-L' options. Dash-prefixed
 // MSVC linker options that start with 'l' or 'L' must be forwarded verbatim
 // to the host linker rather than being misparsed as '-l <lib>' or '-L <dir>'.
@@ -53,3 +55,14 @@
 
 // GNU-LONG-EQ: error: unable to find library -lfoo
 // GNU-LONG-S: error: unable to find library -lbar
+
+// '--help' only lists the GNU library options for GNU-style host linkers.
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --help \
+// RUN:   | FileCheck %s --check-prefix=MSVC-HELP
+// RUN: clang-linker-wrapper --host-triple=x86_64-w64-windows-gnu --help \
+// RUN:   | FileCheck %s --check-prefix=GNU-HELP
+
+// MSVC-HELP-NOT: -L <dir>
+// MSVC-HELP-NOT: -l <libname>
+// GNU-HELP: -L <dir>
+// GNU-HELP: -l <libname>

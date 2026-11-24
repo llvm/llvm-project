@@ -213,21 +213,31 @@ bool isMSVCHost(ArrayRef<const char *> ArgStrings) {
       .isWindowsMSVCEnvironment();
 }
 
-/// Parse the wrapper's command line. Expanded response file strings are owned
-/// by \p Saver, which must outlive the returned list.
-InputArgList parseWrapperArgs(int Argc, char **Argv, StringSaver &Saver) {
-  SmallVector<const char *, 0> ArgStrings;
-  cl::expandResponseFiles(Argc, Argv, /*EnvVar=*/nullptr, Saver, ArgStrings);
-
-  // MSVC linkers have no -l or -L. Hide those options so that MSVC options
-  // such as -link and -LTCG are not misread as "-l ink" and "-L TCG".
+/// Return the options visible for this host. MSVC linkers have no -l or -L, so
+/// hide those options to keep MSVC options such as -link and -LTCG from being
+/// misread as "-l ink" and "-L TCG".
+Visibility getWrapperVisibility(ArrayRef<const char *> ArgStrings) {
   unsigned VisibilityMask = DefaultVis;
   if (!isMSVCHost(ArgStrings))
     VisibilityMask |= GNULinkerVis;
+  return Visibility(VisibilityMask);
+}
+
+/// Parse the wrapper's command line. Expanded response file strings are owned
+/// by \p Saver, which must outlive the returned list. If \p VisibilityOut is
+/// set, it receives the visibility mask used for parsing.
+InputArgList parseWrapperArgs(int Argc, char **Argv, StringSaver &Saver,
+                              Visibility *VisibilityOut = nullptr) {
+  SmallVector<const char *, 0> ArgStrings;
+  cl::expandResponseFiles(Argc, Argv, /*EnvVar=*/nullptr, Saver, ArgStrings);
+
+  Visibility VisibilityMask = getWrapperVisibility(ArgStrings);
+  if (VisibilityOut)
+    *VisibilityOut = VisibilityMask;
 
   unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args = getOptTable().ParseArgs(
-      ArgStrings, MissingArgIndex, MissingArgCount, Visibility(VisibilityMask));
+  InputArgList Args = getOptTable().ParseArgs(ArgStrings, MissingArgIndex,
+                                              MissingArgCount, VisibilityMask);
   if (MissingArgCount)
     reportError(createStringError(Twine(Args.getArgString(MissingArgIndex)) +
                                   ": missing argument"));
@@ -1568,7 +1578,8 @@ int main(int Argc, char **Argv) {
   const OptTable &Tbl = getOptTable();
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
-  auto Args = parseWrapperArgs(Argc, Argv, Saver);
+  Visibility VisibilityMask;
+  auto Args = parseWrapperArgs(Argc, Argv, Saver, &VisibilityMask);
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
@@ -1578,7 +1589,8 @@ int main(int Argc, char **Argv) {
         "for sections that require additional processing prior to linking.\n"
         "It will then transparently pass all arguments and input to the\n"
         "specified host linker to create the final binary.\n",
-        Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden));
+        Args.hasArg(OPT_help_hidden), Args.hasArg(OPT_help_hidden),
+        VisibilityMask);
     return EXIT_SUCCESS;
   }
   if (Args.hasArg(OPT_version)) {
