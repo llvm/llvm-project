@@ -2431,8 +2431,9 @@ define void @f() "no-sse" { ... }
 
 `alwaysuniform`
 :   Setting this attribute on a function means that a call to it always returns
-    a uniform result regardless of the uniformity of the inputs. Even when given
-    inputs that are divergent, the call is guaranteed to return a uniform result.
+    a {ref}`uniform <convergence-uniformity>` result regardless of the uniformity
+    of the inputs.  If a call to a function with this attribute returns a value
+    that is not uniform, the behavior is undefined.
 
 `noduplicate`
 :   This attribute indicates that calls to the function cannot be
