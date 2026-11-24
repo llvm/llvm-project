@@ -500,8 +500,8 @@ body: |
 ...
 ---
 # The memoperands of an instruction describe all of its memory accesses, so
-# the stack slot's isn't added to an asm that accesses other memory without
-# memoperands, here through an "=m" output.
+# an asm that accesses other memory without memoperands, here through an "=m"
+# output, gets one for any memory along with the stack slot's.
 #
 #   void rm_and_m(long a, long b, long c, long d, long e, long f, long g) {
 #     long x;
