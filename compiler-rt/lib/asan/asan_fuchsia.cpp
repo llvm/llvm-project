@@ -37,13 +37,19 @@ void InitializeShadowMemory() {
   // are used.
   InitShadowBounds();
 
+  CHECK_NE(__sanitizer::ShadowBounds.memory_limit, 0);
+
+  // `shadow_limit` is the end of the shadow reservation (`shadow_offset +
+  // (memory_limit >> ASAN_SHADOW_SCALE)`), whereas `shadow_base` is the start
+  // of the mapped shadow VMO above the unmapped shadow gap.
+  uptr full_shadow_size =
+      __sanitizer::ShadowBounds.memory_limit >> ASAN_SHADOW_SCALE;
+  CHECK_GE(__sanitizer::ShadowBounds.shadow_limit, full_shadow_size);
+  __asan_shadow_memory_dynamic_address =
+      __sanitizer::ShadowBounds.shadow_limit - full_shadow_size;
+
   if (Verbosity())
     PrintAddressSpaceLayout();
-
-  // TODO(https://fxbug.dev/42085278): Shadow on Fuchsia starts as zero for now.
-  // __asan_shadow_memory_dynamic_address is an uninitialized global that's
-  // zero. This is temporary and will be changed to a non-zero value in the
-  // future.
 
   CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
   CHECK_EQ(kHighMemEnd, __sanitizer::ShadowBounds.memory_limit - 1);
