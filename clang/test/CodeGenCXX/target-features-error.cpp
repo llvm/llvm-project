@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -verify -o - -DTEST2
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -verify -o - -DTEST3
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -verify -o - -DTEST4
+// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc -emit-llvm-only -verify -DTEST4
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm-only -verify -DTEST5
 // RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc -emit-llvm-only -verify -DTEST5
 

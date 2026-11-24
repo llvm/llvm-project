@@ -1998,7 +1998,8 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
     Callee = CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
 
   CGF.EmitCXXDestructorCall(GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy),
-                            ThisTy, VTT, VTTTy, nullptr, SourceLocation{});
+                            ThisTy, VTT, VTTTy, nullptr,
+                            /*Loc=*/SourceLocation{});
 }
 
 // Check if any non-inline method has the specified attribute.

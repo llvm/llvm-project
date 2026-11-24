@@ -1748,7 +1748,7 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   CGF.EmitCXXDestructorCall(
       GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy), ThisTy,
       /*ImplicitParam=*/Implicit,
-      /*ImplicitParamTy=*/QualType(), /*E=*/nullptr, SourceLocation{});
+      /*ImplicitParamTy=*/QualType(), /*E=*/nullptr, /*Loc=*/SourceLocation{});
   if (BaseDtorEndBB) {
     // Complete object handler should continue to be the remaining
     CGF.Builder.CreateBr(BaseDtorEndBB);
