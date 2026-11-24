@@ -77,6 +77,8 @@ DTLS *DTLS_Get();
 void DTLS_Destroy();  // Make sure to call this before the thread is destroyed.
 // Returns true if DTLS of suspended thread is in destruction process.
 bool DTLSInDestruction(DTLS *dtls);
+// Returns true if a custom __sanitizer_get_dtls_size override has been used.
+bool DTLSUsesCustomGetSize();
 
 }  // namespace __sanitizer
 

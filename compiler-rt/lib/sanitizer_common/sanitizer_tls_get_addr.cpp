@@ -112,8 +112,13 @@ SANITIZER_WEAK_ATTRIBUTE
 const void *__sanitizer_get_allocated_begin(const void *p);
 }
 
+static atomic_uint8_t default_get_dtls_size_called;
+static atomic_uint8_t custom_get_dtls_size_used;
+
 SANITIZER_INTERFACE_WEAK_DEF(uptr, __sanitizer_get_dtls_size,
                              const void *tls_begin) {
+  if (!atomic_load_relaxed(&default_get_dtls_size_called))
+    atomic_store_relaxed(&default_get_dtls_size_called, 1);
   const void *start = __sanitizer_get_allocated_begin(tls_begin);
   if (!start)
     return 0;
@@ -127,6 +132,16 @@ SANITIZER_INTERFACE_WEAK_DEF(uptr, __sanitizer_get_dtls_size,
   return tls_size - offset;
 }
 
+// Clear size before updating beg so a thread stopped by StopTheWorld between
+// stores never observes the new beg with the old size.
+static void DTLS_SetDTV(DTLS::DTV* dtv, uptr beg, uptr size) {
+  dtv->size = 0;
+  atomic_signal_fence(memory_order_seq_cst);
+  dtv->beg = beg;
+  atomic_signal_fence(memory_order_seq_cst);
+  dtv->size = size;
+}
+
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
                                 uptr static_tls_begin, uptr static_tls_end) {
   if (!common_flags()->intercept_tls_get_addr) return 0;
@@ -135,14 +150,17 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   DTLS::DTV *dtv = DTLS_Find(dso_id);
   if (!dtv)
     return nullptr;
-  CHECK_LE(static_tls_begin, static_tls_end);
   uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
-
   // Return early if the start address is the same. Note that we could have a
   // previous, different start address set in dtv if a module was previously
   // loaded and unloaded for the same dso_id.
+  // FIXME: The allocator may return the same address for the new DTLS block
+  // after dlclose(). Then dtv->size can be stale and the new block is not
+  // initialized (e.g. MSan shadow stays poisoned). Clearing the entry when the
+  // old block is freed would fix this.
   if (dtv->beg == tls_beg)
     return nullptr;
+  CHECK_LE(static_tls_begin, static_tls_end);
   VReport(2,
           "__tls_get_addr: %p {0x%zx,0x%zx} => %p; tls_beg: %p; sp: %p "
           "num_live_dtls %zd\n",
@@ -153,14 +171,15 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     // This is the static TLS block which was initialized / unpoisoned at thread
     // creation.
     VReport(2, "__tls_get_addr: static tls: %p\n", (void *)tls_beg);
-    dtv->beg = tls_beg;
-    dtv->size = 0;
+    DTLS_SetDTV(dtv, tls_beg, 0);
     return nullptr;
   }
   if (uptr tls_size =
           __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg))) {
-    dtv->beg = tls_beg;
-    dtv->size = tls_size;
+    if (!atomic_load_relaxed(&default_get_dtls_size_called) &&
+        !atomic_load_relaxed(&custom_get_dtls_size_used))
+      atomic_store(&custom_get_dtls_size_used, 1, memory_order_release);
+    DTLS_SetDTV(dtv, tls_beg, tls_size);
     return dtv;
   }
   VReport(2, "__tls_get_addr: Can't guess glibc version\n");
@@ -173,8 +192,7 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   // If the block is static TLS, possible reason of failed detection is nullptr
   // in `static_tls_begin`. Regardless of reasons, the future handling of static
   // TLS is still '{tls_beg, 0}'.
-  dtv->beg = tls_beg;
-  dtv->size = 0;
+  DTLS_SetDTV(dtv, tls_beg, 0);
   return nullptr;
 }
 
@@ -183,6 +201,10 @@ DTLS *DTLS_Get() { return &dtls; }
 bool DTLSInDestruction(DTLS *dtls) {
   return atomic_load(&dtls->dtv_block, memory_order_relaxed) ==
          kDestroyedThread;
+}
+
+bool DTLSUsesCustomGetSize() {
+  return atomic_load(&custom_get_dtls_size_used, memory_order_acquire) != 0;
 }
 
 #else
@@ -196,6 +218,7 @@ void DTLS_Destroy() {}
 bool DTLSInDestruction(DTLS *dtls) {
   UNREACHABLE("dtls is unsupported on this platform!");
 }
+bool DTLSUsesCustomGetSize() { return false; }
 
 #endif  // SANITIZER_INTERCEPT_TLS_GET_ADDR
 

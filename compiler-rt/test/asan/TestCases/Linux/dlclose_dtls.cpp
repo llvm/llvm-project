@@ -15,6 +15,11 @@
 // RUN:   LSAN_OPTIONS=log_threads=1:leak_check_at_exit=1 \
 // RUN:   %run %t %t-dso1a.so %t-dso1b.so %t-dso2.so %t-dso3.so %t-dso4.so \
 // RUN:   2>&1 | FileCheck %s
+// RUN: %clangxx_asan -DCUSTOM_GET_DTLS_SIZE %s -ldl -pthread -o %t-custom
+// RUN: %env_asan_opts=detect_leaks=1:quarantine_size_mb=0 \
+// RUN:   LSAN_OPTIONS=log_threads=1:leak_check_at_exit=1 \
+// RUN:   %run %t-custom %t-dso1a.so %t-dso1b.so %t-dso2.so %t-dso3.so \
+// RUN:   %t-dso4.so 2>&1 | FileCheck %s --check-prefixes=CHECK,CUSTOM
 
 #if defined(DSO1)
 // Exceeds glibc static TLS surplus so dynamic TLS is used; 16 MiB also forces
@@ -50,8 +55,27 @@ extern "C" void touch_dso4() { anchor_tls_buf[0] = 5; }
 #else
 #  include <assert.h>
 #  include <dlfcn.h>
+#  include <stdint.h>
 #  include <stdio.h>
 #  include <stdlib.h>
+
+#  if defined(CUSTOM_GET_DTLS_SIZE)
+#    include <sanitizer/allocator_interface.h>
+
+// Exercise LSan's MemoryMappingLayout fallback when a custom
+// __sanitizer_get_dtls_size override is used.
+extern "C" size_t __sanitizer_get_dtls_size(const void *tls_begin)
+    __attribute__((disable_sanitizer_instrumentation)) {
+  const void *start = __sanitizer_get_allocated_begin(tls_begin);
+  if (!start)
+    return 0;
+  size_t tls_size = __sanitizer_get_allocated_size(start);
+  size_t offset = reinterpret_cast<uintptr_t>(tls_begin) -
+                  reinterpret_cast<uintptr_t>(start);
+  fprintf(stderr, "CUSTOM_GET_DTLS_SIZE=%p\n", tls_begin);
+  return tls_size - offset;
+}
+#  endif
 
 typedef void (*touch_fn)();
 typedef void (*set_fn)(void *);
@@ -125,6 +149,7 @@ int main(int argc, char **argv) {
 }
 #endif
 
+// CUSTOM: CUSTOM_GET_DTLS_SIZE=
 // CHECK: DSO2_DTLS=[[DSO2:0x[0-9a-f]+]]
 // CHECK-DAG: DTLS {{[0-9]+}} at [[DSO2]]-0x{{[0-9a-f]+}}.
 // CHECK-DAG: DTLS {{[0-9]+}} at {{.*}} is not accessible.
