@@ -2710,6 +2710,25 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     const Register Reg = MO->getReg();
     if (!Reg)
       return;
+
+    // Check that an early-clobber def does not clobber any untied input in the
+    // instruction. Skip those checks for physical registers, as it might be
+    // expected for the register to be clobbered. E.g. because the vreg was
+    // marked with undef/poison before regalloc.
+    if (Reg.isVirtual() && MO->isEarlyClobber()) {
+      for (const MachineOperand &UseMO : MI->all_uses()) {
+        if (!UseMO.readsReg() || UseMO.getReg() != Reg)
+          continue;
+        unsigned UseIdx = MI->getOperandNo(&UseMO);
+        if (MO->isTied() && MI->findTiedOperandIdx(MONum) == UseIdx)
+          continue;
+        if (!TRI->checkSubRegInterference(Reg, MO->getSubReg(), Reg,
+                                          UseMO.getSubReg()))
+          continue;
+        report("Early-clobber def overlaps an untied input", &UseMO, UseIdx);
+      }
+    }
+
     if (MRI->tracksLiveness() && !MI->isDebugInstr())
       checkLiveness(MO, MONum);
 

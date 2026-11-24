@@ -164,10 +164,6 @@ void LiveIntervalCalc::extendToUses(LiveRange &LR, Register Reg,
     } else {
       UseIdx = Indexes->getInstructionIndex(*MI).getRegSlot(
           MO.isEarlyClobberDefOrUse());
-      // A non-SSA register can be read and redefined early without a tie.
-      if (!MRI->isSSA())
-        if (VNInfo *DefVNI = LR.Query(UseIdx).valueDefined())
-          UseIdx = DefVNI->def;
     }
 
     // MI is reading Reg. We may have visited MI before if it happens to be
