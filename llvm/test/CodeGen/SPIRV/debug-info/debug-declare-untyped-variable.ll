@@ -14,6 +14,7 @@
 ; CHECK-DAG: [[LV:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[X]]
 ; CHECK-DAG: [[EXPR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugExpression{{ *$}}
 ; CHECK: [[VAR:%[0-9]+]] = OpUntypedVariableKHR {{%[0-9]+}} Function
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition
 ; CHECK-ON: OpExtInst [[VOID]] [[EXT]] DebugDeclare [[LV]] [[VAR]] [[EXPR]]
 
 ; VAL-ON: error: {{.*}}NonSemantic.Shader.DebugInfo.100 DebugDeclare: expected operand Variable must be a result id of OpVariable or OpFunctionParameter
