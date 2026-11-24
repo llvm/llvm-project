@@ -17,14 +17,6 @@ define i64 @fold_strlen() {
   ret i64 %n
 }
 
-define i64 @fold_strlen_undef() {
-; CHECK-LABEL: define i64 @fold_strlen_undef() {
-; CHECK-NEXT:    ret i64 poison
-;
-  %n = call i64 @strlen(ptr undef)
-  ret i64 %n
-}
-
 define i64 @fold_strlen_poison() {
 ; CHECK-LABEL: define i64 @fold_strlen_poison() {
 ; CHECK-NEXT:    ret i64 poison
