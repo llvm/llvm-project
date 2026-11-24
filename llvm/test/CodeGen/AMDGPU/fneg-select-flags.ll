@@ -14,8 +14,7 @@ define float @fadd_select_fneg_min(float %a, float %x, float %y) {
 ; GFX9-LABEL: fadd_select_fneg_min:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, v1, v2
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX9-NEXT:    v_min_f32_e32 v1, v1, v2
 ; GFX9-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp olt float %x, %y
@@ -30,8 +29,7 @@ define float @fadd_select_fneg_max(float %a, float %x, float %y) {
 ; GFX9-LABEL: fadd_select_fneg_max:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, v1, v2
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX9-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ogt float %x, %y

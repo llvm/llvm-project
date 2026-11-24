@@ -8323,7 +8323,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     }
 
     Cost = std::min(CostLHS, CostRHS);
-    return DAG.getSelect(DL, VT, Op.getOperand(0), NegLHS, NegRHS);
+    return DAG.getSelect(DL, VT, Op.getOperand(0), NegLHS, NegRHS, Flags);
   }
   }
 
