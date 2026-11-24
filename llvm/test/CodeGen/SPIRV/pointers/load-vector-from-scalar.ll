@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-vulkan1.3 %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3 %s -o - -filetype=obj | spirv-val %}
 
 ; Optimizations such as VectorCombine may widen the load of a scalar into the
 ; load of a vector when only the first element is used. SPIR-V cannot
@@ -11,14 +12,19 @@
 ; CHECK-DAG: %[[#v4f:]] = OpTypeVector %[[#float]] 4
 ; CHECK-DAG: %[[#v2f:]] = OpTypeVector %[[#float]] 2
 ; CHECK-DAG: %[[#v4i:]] = OpTypeVector %[[#int]] 4
+; CHECK-DAG: %[[#char:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#v4c:]] = OpTypeVector %[[#char]] 4
 ; CHECK-DAG: %[[#float_pp:]] = OpTypePointer Private %[[#float]]
 ; CHECK-DAG: %[[#int_pp:]] = OpTypePointer Private %[[#int]]
+; CHECK-DAG: %[[#char_pp:]] = OpTypePointer Private %[[#char]]
 ; CHECK-DAG: %[[#undef_v4f:]] = OpUndef %[[#v4f]]
 ; CHECK-DAG: %[[#undef_v2f:]] = OpUndef %[[#v2f]]
 ; CHECK-DAG: %[[#undef_v4i:]] = OpUndef %[[#v4i]]
+; CHECK-DAG: %[[#undef_v4c:]] = OpUndef %[[#v4c]]
 
 %S = type { <4 x float>, float, float, i32 }
 %F = type { float, float }
+%C = type { i32, i8, i8, i8, i8, i32 }
 
 ; A float struct member at index 1 loaded as a float4.
 define internal spir_func <4 x float> @struct_member_v4f(ptr addrspace(10) %a) {
@@ -31,7 +37,7 @@ define internal spir_func <4 x float> @struct_member_v4f(ptr addrspace(10) %a) {
 ; CHECK: OpReturnValue %[[#res]]
 }
 
-; A float struct member at index 1 loaded as a float2.
+; A float struct member at index 2 loaded as a float2.
 define internal spir_func <2 x float> @struct_member_v2f(ptr addrspace(10) %a) {
   %1 = getelementptr inbounds %S, ptr addrspace(10) %a, i32 0, i32 2
 ; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#float_pp]] %[[#]] %[[#]]
@@ -42,7 +48,7 @@ define internal spir_func <2 x float> @struct_member_v2f(ptr addrspace(10) %a) {
 ; CHECK: OpReturnValue %[[#res]]
 }
 
-; An integer struct member at index 1 loaded as an int4.
+; An integer struct member at index 3 loaded as an int4.
 define internal spir_func <4 x i32> @struct_member_v4i(ptr addrspace(10) %a) {
   %1 = getelementptr inbounds %S, ptr addrspace(10) %a, i32 0, i32 3
 ; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#int_pp]] %[[#]] %[[#]]
@@ -61,6 +67,17 @@ define internal spir_func <4 x float> @array_element_v4f(ptr addrspace(10) %a) {
 ; CHECK: %[[#val:]] = OpLoad %[[#float]] %[[#ptr]]
 ; CHECK: %[[#res:]] = OpCompositeInsert %[[#v4f]] %[[#val]] %[[#undef_v4f]] 0
   ret <4 x float> %2
+; CHECK: OpReturnValue %[[#res]]
+}
+
+; An i8 struct member at index 2 loaded as a <4 x i8>.
+define internal spir_func <4 x i8> @struct_member_v4c(ptr addrspace(10) %a) {
+  %1 = getelementptr inbounds %C, ptr addrspace(10) %a, i32 0, i32 2
+; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#char_pp]] %[[#]] %[[#]]
+  %2 = load <4 x i8>, ptr addrspace(10) %1, align 1
+; CHECK: %[[#val:]] = OpLoad %[[#char]] %[[#ptr]]
+; CHECK: %[[#res:]] = OpCompositeInsert %[[#v4c]] %[[#val]] %[[#undef_v4c]] 0
+  ret <4 x i8> %2
 ; CHECK: OpReturnValue %[[#res]]
 }
 

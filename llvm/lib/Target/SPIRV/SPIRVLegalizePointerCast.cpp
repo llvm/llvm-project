@@ -180,8 +180,7 @@ class SPIRVLegalizePointerCastImpl {
       return true;
     // If AllowScalarWidening is set, a scalar FromTy is also
     // compatible with a vector ToTy of that scalar type.
-    if (AllowScalarWidening && DVT && DVT->getElementType() == FromTy &&
-        !FromTy->isIntegerTy(8))
+    if (AllowScalarWidening && DVT && DVT->getElementType() == FromTy)
       return true;
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     if (SAT && DVT) {
@@ -459,20 +458,62 @@ class SPIRVLegalizePointerCastImpl {
     return true;
   }
 
+  // Returns either the extractelement or spv.extractelt() Instruction if valid
+  // nullptr otherwise.
+  Instruction *getExtractElement(Value *V) {
+    if (auto *II = dyn_cast<IntrinsicInst>(V))
+      if (II->getIntrinsicID() == Intrinsic::spv_extractelt)
+        return II;
+
+    return dyn_cast<ExtractElementInst>(V);
+
+  }
+
   // Loads the scalar pointed to by |Source| and places it in element 0 of a
   // vector of type |TargetType| leaving the other elements as undefs.
   // This can result from optimizations such as
   // VectorCombine that widen the load of a scalar to a vector load when only
   // element 0 is used. The other elements would be populated using whatever
   // was loaded past the scalar. Valid SPIR-V cannot have such a change in type
-  // at load.
+  // at load. Produces an error when elements beyond 0 are used.
   Value *loadVectorFromScalar(IRBuilder<> &B, FixedVectorType *TargetType,
-                              Value *Source, Align OriginalAlign) {
+                              Value *Source, LoadInst *OriginalLoad) {
+    // Verify supported usage of loaded vector or produce errors.
+
+    // Reject if load is not simple (atomic or volatile).
+    if (!OriginalLoad->isSimple())
+      report_fatal_error("Cannot lower vector loaded"
+                         " from scalar with volatile or atomic load.",
+                         false);
+
+    // Reject if any elements but the first could be used by supported ops.
+    for (User *U : OriginalLoad->users()) {
+      if (auto EE = getExtractElement(U)) {
+        if (auto *Idx = dyn_cast<ConstantInt>(EE->getOperand(1)))
+          if (!Idx->isZero())
+            report_fatal_error("Cannot lower vector loaded"
+                               " from scalar location with extract element "
+                               "usage of any but the first"
+                               " element.",
+                               false);
+      } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(U)) {
+        for (int M : SVI->getShuffleMask())
+          if (M != PoisonMaskElem && M != 0)
+            report_fatal_error("Cannot lower vector loaded"
+                               " from scalar location with shufflevector usage "
+                               "of any but index 0"
+                               " or poison.",
+                               false);
+      }
+    }
+
+    Align OriginalAlign = OriginalLoad->getAlign();
     Type *ScalarTy = TargetType->getElementType();
     LoadInst *Load = B.CreateLoad(ScalarTy, Source);
     Load->setAlignment(OriginalAlign);
     buildAssignType(B, ScalarTy, Load);
 
+    // If target is vec1, use utility function to only emit vector if supported.
     SmallVector<Value *, 4> LoadedElements{Load};
     if (TargetType->getNumElements() == 1)
       return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
@@ -522,7 +563,7 @@ class SPIRVLegalizePointerCastImpl {
     if (SVT && DVT)
       return loadVectorFromVector(B, SVT, DVT, GEP, IllegalLoad->getAlign());
     if (DVT && CurrentTy == DVT->getElementType())
-      return loadVectorFromScalar(B, DVT, GEP, IllegalLoad->getAlign());
+      return loadVectorFromScalar(B, DVT, GEP, IllegalLoad);
     if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
       return loadVectorFromArray(B, DVT, GEP, IllegalLoad->getAlign());
     if (MAT && DVT && MAT->getElementType() == DVT->getElementType())
