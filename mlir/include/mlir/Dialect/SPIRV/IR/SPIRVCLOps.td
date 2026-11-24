@@ -1103,6 +1103,54 @@ def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
 
 // -----
 
+def SPIRV_CLSAddSatOp : SPIRV_CLBinaryArithmeticOp<"s_add_sat", 143, SPIRV_Integer> {
+  let summary = "Saturating addition of two signed integer operands";
+
+  let description = [{
+    Returns the saturated value of x + y, where x and y are treated as
+    signed integers.
+
+    Result Type, x and y must be integer or vector(2,3,4,8,16) of integer
+    values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.s_add_sat %0, %1 : i32
+    %3 = spirv.CL.s_add_sat %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLUAddSatOp : SPIRV_CLBinaryArithmeticOp<"u_add_sat", 144, SPIRV_Integer> {
+  let summary = "Saturating addition of two unsigned integer operands";
+
+  let description = [{
+    Returns the saturated value of x + y, where x and y are treated as
+    unsigned integers.
+
+    Result Type, x and y must be integer or vector(2,3,4,8,16) of integer
+    values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.u_add_sat %0, %1 : i32
+    %3 = spirv.CL.u_add_sat %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLSClampOp : SPIRV_CLTernaryArithmeticOp<"s_clamp", 149, SPIRV_Integer> {
   let summary = "Clamp x between min and max values.";
 
@@ -1237,6 +1285,54 @@ def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
     ```mlir
     %2 = spirv.CL.s_min %0, %1 : i32
     %3 = spirv.CL.s_min %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSSubSatOp : SPIRV_CLBinaryArithmeticOp<"s_sub_sat", 162, SPIRV_Integer> {
+  let summary = "Saturating subtraction of two signed integer operands";
+
+  let description = [{
+    Returns the saturated value of x - y, where x and y are treated as
+    signed integers.
+
+    Result Type, x and y must be integer or vector(2,3,4,8,16) of integer
+    values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.s_sub_sat %0, %1 : i32
+    %3 = spirv.CL.s_sub_sat %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLUSubSatOp : SPIRV_CLBinaryArithmeticOp<"u_sub_sat", 163, SPIRV_Integer> {
+  let summary = "Saturating subtraction of two unsigned integer operands";
+
+  let description = [{
+    Returns the saturated value of x - y, where x and y are treated as
+    unsigned integers.
+
+    Result Type, x and y must be integer or vector(2,3,4,8,16) of integer
+    values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.u_sub_sat %0, %1 : i32
+    %3 = spirv.CL.u_sub_sat %0, %1 : vector<3xi16>
     ```
   }];
 }

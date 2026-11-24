@@ -603,6 +603,44 @@ func.func @iminmax(%arg0: i32, %arg1: i32) {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.{s_|u_}{add|sub}_sat
+//===----------------------------------------------------------------------===//
+
+func.func @addsubsat(%arg0: i32, %arg1: i32) {
+  // CHECK: spirv.CL.s_add_sat {{%.*}}, {{%.*}} : i32
+  %1 = spirv.CL.s_add_sat %arg0, %arg1 : i32
+  // CHECK: spirv.CL.u_add_sat {{%.*}}, {{%.*}} : i32
+  %2 = spirv.CL.u_add_sat %arg0, %arg1 : i32
+  // CHECK: spirv.CL.s_sub_sat {{%.*}}, {{%.*}} : i32
+  %3 = spirv.CL.s_sub_sat %arg0, %arg1 : i32
+  // CHECK: spirv.CL.u_sub_sat {{%.*}}, {{%.*}} : i32
+  %4 = spirv.CL.u_sub_sat %arg0, %arg1 : i32
+  return
+}
+
+func.func @addsubsatvec(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
+  // CHECK: spirv.CL.s_add_sat {{%.*}}, {{%.*}} : vector<3xi16>
+  %1 = spirv.CL.s_add_sat %arg0, %arg1 : vector<3xi16>
+  // CHECK: spirv.CL.u_add_sat {{%.*}}, {{%.*}} : vector<3xi16>
+  %2 = spirv.CL.u_add_sat %arg0, %arg1 : vector<3xi16>
+  // CHECK: spirv.CL.s_sub_sat {{%.*}}, {{%.*}} : vector<3xi16>
+  %3 = spirv.CL.s_sub_sat %arg0, %arg1 : vector<3xi16>
+  // CHECK: spirv.CL.u_sub_sat {{%.*}}, {{%.*}} : vector<3xi16>
+  %4 = spirv.CL.u_sub_sat %arg0, %arg1 : vector<3xi16>
+  return
+}
+
+// -----
+
+func.func @addsat(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values}}
+  %0 = spirv.CL.s_add_sat %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.rint
 //===----------------------------------------------------------------------===//
 

@@ -152,4 +152,16 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %2 = spirv.CL.u_clamp %arg1, %arg2, %arg2 : i32
     spirv.Return
   }
+
+  spirv.func @addsubsat(%arg0 : i32, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.CL.s_add_sat {{%.*}}, {{%.*}} : i32
+    %0 = spirv.CL.s_add_sat %arg0, %arg1 : i32
+    // CHECK: {{%.*}} = spirv.CL.u_add_sat {{%.*}}, {{%.*}} : i32
+    %1 = spirv.CL.u_add_sat %arg0, %arg1 : i32
+    // CHECK: {{%.*}} = spirv.CL.s_sub_sat {{%.*}}, {{%.*}} : i32
+    %2 = spirv.CL.s_sub_sat %arg0, %arg1 : i32
+    // CHECK: {{%.*}} = spirv.CL.u_sub_sat {{%.*}}, {{%.*}} : i32
+    %3 = spirv.CL.u_sub_sat %arg0, %arg1 : i32
+    spirv.Return
+  }
 }
