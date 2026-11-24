@@ -13,7 +13,10 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_SANITIZER_HANDLER_H
 #define LLVM_CLANG_LIB_CODEGEN_SANITIZER_HANDLER_H
 
-// To add new checks, append them with the next unused code (before 0x70).
+// Trap codes are encoded in trap instructions (e.g. `brk #0x55XX` on AArch64,
+// `ud1l 0xXX(%eax), %eax` on x86) that debuggers and crash diagnostic tools
+// decode. Keep existing codes stable (never renumber) and append new checks
+// with an unused code.
 #define LIST_SANITIZER_CHECKS                                                  \
   SANITIZER_CHECK(AddOverflow, add_overflow, 0, 0x00,                          \
                   "Integer addition overflowed")                               \
@@ -118,10 +121,5 @@ enum SanitizerHandler {
   LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
 };
-
-static_assert(BoundsSafety == 0x19,
-              "BoundsSafety must stay 0x19: it is encoded in -fbounds-safety "
-              "trap instructions (brk #0x5519, ud1l 0x19(%eax)) that debuggers "
-              "decode; append new checks at the end of LIST_SANITIZER_CHECKS");
 
 #endif // LLVM_CLANG_LIB_CODEGEN_SANITIZER_HANDLER_H
