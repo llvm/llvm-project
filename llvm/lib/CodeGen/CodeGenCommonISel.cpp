@@ -253,16 +253,15 @@ static MachineOperand *getSalvageOpsForFNeg(const MachineRegisterInfo &MRI,
   assert(FNeg.getOpcode() == TargetOpcode::G_FNEG && "Must be a G_FNEG");
 
   const LLT Ty = MRI.getType(FNeg.getOperand(0).getReg());
-  if (!Ty.isScalar())
+  TypeSize Size = Ty.getSizeInBits();
+  // Values wider than 64 bits cannot be represented within a DIExpression.
+  if (Size.isScalable() || Size.getFixedValue() > 64)
     return nullptr;
 
-  // Flipping the sign bit must fit in the address-sized DWARF generic type.
-  unsigned Size = Ty.getSizeInBits();
-  if (Size > FNeg.getMF()->getDataLayout().getPointerSizeInBits())
-    return nullptr;
-
+  APInt SignMask = APInt::getSplat(
+      Size.getFixedValue(), APInt::getSignMask(Ty.getScalarSizeInBits()));
   Ops.append(
-      {dwarf::DW_OP_constu, uint64_t(1) << (Size - 1), dwarf::DW_OP_xor});
+      {dwarf::DW_OP_constu, SignMask.getZExtValue(), dwarf::DW_OP_xor});
   return &FNeg.getOperand(1);
 }
 
