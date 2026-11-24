@@ -23,6 +23,17 @@ define <4 x float> @test2(<4 x float> %v1) {
   ret <4 x float> %v2
 }
 
+; The shuffle mask bounds check must not overflow when doubling the number of
+; input elements. See PR241498.
+define <2 x i8> @large_unary_shuffle(<1073741824 x i8> %a) {
+; CHECK-LABEL: @large_unary_shuffle(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1073741824 x i8> [[A:%.*]], <1073741824 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    ret <2 x i8> [[S]]
+;
+  %s = shufflevector <1073741824 x i8> %a, <1073741824 x i8> %a, <2 x i32> <i32 0, i32 1>
+  ret <2 x i8> %s
+}
+
 define float @test3(<4 x float> %A, <4 x float> %B, float %f) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    ret float [[F:%.*]]
