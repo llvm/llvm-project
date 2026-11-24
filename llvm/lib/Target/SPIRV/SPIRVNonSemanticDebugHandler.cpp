@@ -2231,8 +2231,8 @@ void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
   // A #dbg_declare reaches Machine IR as an indirect DBG_VALUE. Its storage is
   // an OpVariable (or OpUntypedVariableKHR) in the entry block, so it is in the
   // output by the time any record naming it is reached.
-  if (std::optional<Register> LocReg = getDebugDeclareStorageReg(
-          MI, AllowDebugDeclareUntypedVariable)) {
+  if (std::optional<Register> LocReg =
+          getDebugDeclareStorageReg(MI, AllowDebugDeclareUntypedVariable)) {
     MCRegister StorageReg = MAI.getRegisterAlias(&MF, *LocReg);
     if (StorageReg.isValid())
       placeRecord(SPIRV::NonSemanticExtInst::DebugDeclare, MI, StorageReg,
