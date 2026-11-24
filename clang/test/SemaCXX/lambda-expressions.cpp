@@ -822,6 +822,26 @@ void test_lambda_return_type() {
 }
 }
 
+namespace GH22203 {
+#if __cplusplus >= 201103L
+// The block-scope declaration looks up 'g' while its type is still undeduced.
+auto g = [] { void g(); }; // expected-error {{redefinition of 'g' as different kind of symbol}}
+                           // expected-note@-1 {{previous definition is here}}
+
+// Local variables have no linkage, so the inner 'g' is a different entity...
+void local() {
+  auto a = [] { void a(); };
+  static auto b = [] { void b(); };
+}
+
+// ...unless they are given internal linkage.
+void internal_linkage_local() {
+  [[clang::internal_linkage]] static auto c = [] { void c(); }; // expected-error {{redefinition of 'c' as different kind of symbol}}
+                                                               // expected-note@-1 {{previous definition is here}}
+}
+#endif
+} // namespace GH22203
+
 namespace GH26540 {
 #if __cplusplus >= 201703L
 #define CONSTEXPR17 constexpr

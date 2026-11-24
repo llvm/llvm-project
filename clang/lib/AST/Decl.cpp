@@ -1084,6 +1084,15 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
 void NamedDecl::anchor() {}
 
+Linkage VarDecl::getLinkageIgnoringType() const {
+  assert(getType()->isUndeducedType() &&
+         "the type is known; use getLinkageInternal() instead");
+  return LinkageComputer{}
+      .computeLVForDecl(this, LVComputationKind::forLinkageOnly(),
+                        /*IgnoreVarTypeLinkage=*/true)
+      .getLinkage();
+}
+
 bool NamedDecl::isLinkageValid() const {
   if (!hasCachedLinkage())
     return true;
@@ -1156,8 +1165,11 @@ NamedDecl::isReserved(const LangOptions &LangOpts) const {
     const DeclContext *DC = getDeclContext()->getRedeclContext();
     if (DC->isTranslationUnit())
       return Status;
+    // Check the context first to avoid computing the linkage of a variable
+    // whose type is not deduced yet.
     if (auto *VD = dyn_cast<VarDecl>(this))
-      if (VD->isExternC())
+      if ((!LangOpts.CPlusPlus || isFirstInExternCContext(VD)) &&
+          VD->isExternC())
         return ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
     if (auto *FD = dyn_cast<FunctionDecl>(this))
       if (FD->isExternC())
