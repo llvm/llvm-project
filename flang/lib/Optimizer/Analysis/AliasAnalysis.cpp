@@ -862,7 +862,6 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     }
   }
 
-  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
@@ -873,8 +872,15 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   if (noAliasBasedOnType(lhs, rhs))
     return AliasResult::NoAlias;
 
-  // A null address aliases nothing. Same-value pairs already returned
-  // MustAlias above.
+  return aliasSources(std::move(lhsSrc), std::move(rhsSrc), lhs, rhs);
+}
+
+AliasResult AliasAnalysis::aliasSources(Source lhsSrc, Source rhsSrc,
+                                        mlir::Value lhs, mlir::Value rhs) {
+  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
+
+  // A null address aliases nothing. alias() returns MustAlias for a pair of
+  // the same values before getting here.
   if (lhsSrc.kind == SourceKind::Null || rhsSrc.kind == SourceKind::Null) {
     LLVM_DEBUG(llvm::dbgs() << "  no alias: null address\n");
     return AliasResult::NoAlias;
@@ -1249,6 +1255,45 @@ bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
   return false;
 }
 
+bool AliasAnalysis::mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                             const Source &varSrc) {
+  // getSource() does not see that a pointer reachable from arg, e.g. a
+  // pointer component, may be associated with var.
+  if (varSrc.isTargetOrPointer())
+    return true;
+  if (!alias(arg, var).isNo())
+    return true;
+  if (!fir::isBoxAddress(arg.getType()))
+    return false;
+  // The callee may also access the data that the descriptor describes, e.g.
+  // through an allocatable or pointer dummy. Build the source of this data as
+  // getSource() does for a fir.box_addr of a fir.load of arg: the source of
+  // the descriptor followed by a dereference. Compare it with the source of
+  // var through aliasSources(): alias() would decide from the type of arg, a
+  // descriptor address, that it does not alias data.
+  Source dataSrc = getSource(arg, /*getLastInstantiationPoint=*/false,
+                             /*collectScopedOrigins=*/false);
+  auto boxTy = mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(arg.getType()));
+  bool isPointerBox = mlir::isa<fir::PointerType>(boxTy.getEleTy());
+  if (isPointerBox)
+    dataSrc.attributes.set(Attribute::Pointer);
+  Source::PathStep derefStep;
+  derefStep.kind = isPointerBox ? Source::PathStep::Kind::PointerDeref
+                                : Source::PathStep::Kind::AllocDeref;
+  dataSrc.accessPath.steps.push_back(derefStep);
+  dataSrc.origin.isData = true;
+  // Compare with a source of var built like dataSrc.
+  Source fullVarSrc = getSource(var, /*getLastInstantiationPoint=*/false,
+                                /*collectScopedOrigins=*/false);
+  LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::mayAccessThroughArgument\n";
+             llvm::dbgs() << "  arg: " << arg << "\n";
+             llvm::dbgs() << "  described data: " << dataSrc << "\n";
+             llvm::dbgs() << "  var: " << var << "\n";
+             llvm::dbgs() << "  varSrc: " << fullVarSrc << "\n";);
+  return !aliasSources(std::move(dataSrc), std::move(fullVarSrc), arg, var)
+              .isNo();
+}
+
 ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   auto call = dyn_cast<fir::CallOp>(op);
   if (!call)
@@ -1305,13 +1350,14 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         !isSavedLocal(varSrc) || !callCannotReachSavedLocal(call, varSrc))
       return ModRefResult::getModAndRef();
   }
-  // 2. Check if the variable is passed via the arguments. A dummy with a
-  // declared intent is a read, a write, or both. intent(out) is a write for
-  // a trivial non-pointer, non-allocatable dummy, and a read and a write
-  // otherwise. An argument with no visible intent stays ModAndRef. The
-  // callee is resolved through the cached symbol table. Intent is a
-  // signature attribute, so a declaration is enough and the callee body is
-  // not inspected.
+  // 2. Check if the variable is passed via the arguments. An argument that
+  // is the address of a descriptor also passes the data that the descriptor
+  // describes. A dummy with a declared intent is a read, a write, or both.
+  // intent(out) is a write for a trivial non-pointer, non-allocatable dummy,
+  // and a read and a write otherwise. An argument with no visible intent
+  // stays ModAndRef. The callee is resolved through the cached symbol table.
+  // Intent is a signature attribute, so a declaration is enough and the
+  // callee body is not inspected.
   mlir::func::FuncOp callee;
   if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
     if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
@@ -1323,7 +1369,8 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
       callee && args.size() == callee.getNumArguments();
   ModRefResult modRef = ModRefResult::getNoModRef();
   for (auto [idx, arg] : llvm::enumerate(args)) {
-    if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
+    if (!fir::conformsWithPassByRef(arg.getType()) ||
+        !mayAccessThroughArgument(arg, var, varSrc))
       continue;
     if (!intentsAvailable)
       return ModRefResult::getModAndRef();
