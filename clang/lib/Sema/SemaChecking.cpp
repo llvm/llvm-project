@@ -3395,6 +3395,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig:
     if (BuiltinUnorderedCompare(TheCall, BuiltinID))
       return ExprError();
     break;
