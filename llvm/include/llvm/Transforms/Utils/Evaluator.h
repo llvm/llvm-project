@@ -112,8 +112,8 @@ public:
   }
 
 private:
-  bool EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
-                     TargetLibraryInfo *TLI,
+  bool EvaluateBlock(BasicBlock::iterator CurInst, TargetLibraryInfo *TLI,
+                     BasicBlock *&NextBB,
                      bool &StrippedPointerCastsForAliasAnalysis);
 
   Constant *getVal(Value *V) {

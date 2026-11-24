@@ -270,8 +270,8 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
 /// if we can't evaluate it.  NewBB returns the next BB that control flows into,
 /// or null upon return. StrippedPointerCastsForAliasAnalysis is set to true if
 /// we looked through pointer casts to evaluate something.
-bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
-                              TargetLibraryInfo *TLI,
+bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
+                              TargetLibraryInfo *TLI, BasicBlock *&NextBB,
                               bool &StrippedPointerCastsForAliasAnalysis) {
   // This is the main evaluation loop.
   while (true) {
@@ -628,7 +628,7 @@ bool Evaluator::EvaluateFunction(
 
     bool StrippedPointerCastsForAliasAnalysis = false;
 
-    if (!EvaluateBlock(CurInst, NextBB, TLI,
+    if (!EvaluateBlock(CurInst, TLI, NextBB,
                        StrippedPointerCastsForAliasAnalysis))
       return false;
 
