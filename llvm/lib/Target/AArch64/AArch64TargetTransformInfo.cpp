@@ -5005,7 +5005,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
 
     // Check if the extract index is from lane 0 or lane equivalent to 0 for a
     // certain scalar type and a certain vector register width.
-    auto IsExtractLaneEquivalentToZero = [&](unsigned Idx, unsigned EltSz) {
+    auto IsExtractLaneEquivalentToZero = [&](uint64_t Idx, unsigned EltSz) {
       auto RegWidth =
           getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
               .getFixedValue();
@@ -5015,7 +5015,8 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // Check if this ExtractElement will extract from lane 0.
     auto IsLaneZeroExtract = [&](const ExtractElementInst *EE) {
       const auto *IdxOp = dyn_cast<ConstantInt>(EE->getIndexOperand());
-      if (!IdxOp)
+      // Index operand must be a constant that fits in an i64
+      if (!IdxOp || !IdxOp->getValue().isIntN(64))
         return false;
       return IsExtractLaneEquivalentToZero(
           IdxOp->getValue().getZExtValue(),
