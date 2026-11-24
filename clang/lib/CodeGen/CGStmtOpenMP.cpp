@@ -6274,18 +6274,39 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
 }
 
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
-  llvm::AtomicOrdering AO = S.getSingleClause<OMPFlushClause>()
-                                ? llvm::AtomicOrdering::NotAtomic
-                                : llvm::AtomicOrdering::AcquireRelease;
-  CGM.getOpenMPRuntime().emitFlush(
-      *this,
-      [&S]() -> ArrayRef<const Expr *> {
-        if (const auto *FlushClause = S.getSingleClause<OMPFlushClause>())
-          return llvm::ArrayRef(FlushClause->varlist_begin(),
-                                FlushClause->varlist_end());
-        return {};
-      }(),
-      S.getBeginLoc(), AO);
+  llvm::AtomicOrdering AO = llvm::AtomicOrdering::AcquireRelease;
+  // OpenMP 5.0 (2.17.8): a flush with no list and no memory order clause
+  // behaves as acq_rel.
+  // OpenMP 5.1 (2.19.8): same, but seq_cst.
+  if (CGM.getLangOpts().OpenMP >= 51)
+    AO = llvm::AtomicOrdering::SequentiallyConsistent;
+  ArrayRef<const Expr *> List;
+  for (const OMPClause *C : S.clauses()) {
+    switch (C->getClauseKind()) {
+    case OMPC_flush: {
+      // A flush with a list is a strong flush.
+      const auto *FC = cast<OMPFlushClause>(C);
+      List = llvm::ArrayRef(FC->varlist_begin(), FC->varlist_end());
+      AO = llvm::AtomicOrdering::NotAtomic;
+      break;
+    }
+    case OMPC_acq_rel:
+      AO = llvm::AtomicOrdering::AcquireRelease;
+      break;
+    case OMPC_acquire:
+      AO = llvm::AtomicOrdering::Acquire;
+      break;
+    case OMPC_release:
+      AO = llvm::AtomicOrdering::Release;
+      break;
+    case OMPC_seq_cst:
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    default:
+      llvm_unreachable("unexpected clause on flush");
+    }
+  }
+  CGM.getOpenMPRuntime().emitFlush(*this, List, S.getBeginLoc(), AO);
 }
 
 void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
@@ -6974,6 +6995,10 @@ void CodeGenFunction::emitOMPSimpleStore(LValue LVal, RValue RVal,
   }
 }
 
+// TODO: For atomic ops, OpenMP describes the release flush as being placed
+// before the op and the acquire flush being placed after the op (OpenMP 6.0,
+// "17.8.5 atomic Construct").
+
 static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
                                   const Expr *X, const Expr *V,
                                   SourceLocation Loc) {
@@ -6991,8 +7016,13 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                         llvm::AtomicOrdering::Acquire);
+    // NOTE: Previously, all flushes used __kmpc_flush, which uses
+    // sequentially-consistent ordering.  The unconditional use of
+    // SequentiallyConsistent here rather than passing AO through
+    // is to maintain that behaviour now that emitFlush honours its atomic
+    // ordering argument.
+    CGF.CGM.getOpenMPRuntime().emitFlush(
+        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
     break;
   case llvm::AtomicOrdering::Monotonic:
   case llvm::AtomicOrdering::Release:
@@ -7020,8 +7050,9 @@ static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::Release:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                         llvm::AtomicOrdering::Release);
+    // NOTE: see note in emitOMPAtomicReadExpr above.
+    CGF.CGM.getOpenMPRuntime().emitFlush(
+        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
     break;
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::Monotonic:
@@ -7210,8 +7241,9 @@ static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::Release:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                         llvm::AtomicOrdering::Release);
+    // NOTE: See note in emitOMPAtomicReadExpr above.
+    CGF.CGM.getOpenMPRuntime().emitFlush(
+        CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
     break;
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::Monotonic:
@@ -7325,17 +7357,12 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
     // operation is also an acquire flush.
     switch (AO) {
     case llvm::AtomicOrdering::Release:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                           llvm::AtomicOrdering::Release);
-      break;
     case llvm::AtomicOrdering::Acquire:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                           llvm::AtomicOrdering::Acquire);
-      break;
     case llvm::AtomicOrdering::AcquireRelease:
     case llvm::AtomicOrdering::SequentiallyConsistent:
+      // NOTE: See note in emitOMPAtomicReadExpr above.
       CGF.CGM.getOpenMPRuntime().emitFlush(
-          CGF, {}, Loc, llvm::AtomicOrdering::AcquireRelease);
+          CGF, {}, Loc, llvm::AtomicOrdering::SequentiallyConsistent);
       break;
     case llvm::AtomicOrdering::Monotonic:
       break;
