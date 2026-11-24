@@ -4781,44 +4781,52 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
   CanQualType ClassType = Context.getCanonicalTagType(ClassDecl);
 
   SourceRange InitRange = Init->getSourceRange();
-  // Initialize the object.
-  InitializedEntity DelegationEntity =
-      InitializedEntity::InitializeDelegation(ClassType);
-  InitializationKind Kind =
-      InitList ? InitializationKind::CreateDirectList(
-                     NameLoc, Init->getBeginLoc(), Init->getEndLoc())
-               : InitializationKind::CreateDirect(NameLoc, InitRange.getBegin(),
-                                                  InitRange.getEnd());
-  InitializationSequence InitSeq(*this, DelegationEntity, Kind, Args);
-  ExprResult DelegationInit = InitSeq.Perform(*this, DelegationEntity, Kind,
-                                              Args, nullptr);
-  if (!DelegationInit.isInvalid()) {
-    assert((DelegationInit.get()->containsErrors() ||
-            cast<CXXConstructExpr>(DelegationInit.get())->getConstructor()) &&
-           "Delegating constructor with no target?");
-
-    // C++11 [class.base.init]p7:
-    //   The initialization of each base and member constitutes a
-    //   full-expression.
-    DelegationInit = ActOnFinishFullExpr(
-        DelegationInit.get(), InitRange.getBegin(), /*DiscardedValue*/ false);
-  }
-
-  if (DelegationInit.isInvalid()) {
-    DelegationInit = CreateRecoveryExpr(InitRange.getBegin(),
-                                        InitRange.getEnd(), Args, ClassType);
-    if (DelegationInit.isInvalid())
-      return true;
+  ExprResult DelegationInit = Init;
+  if (CurContext->isDependentContext() &&
+      (ClassDecl->isDependentContext() || Init->isTypeDependent() ||
+       Init->containsUnexpandedParameterPack())) {
+    DiscardCleanupsInEvaluationContext();
   } else {
-    // If we are in a dependent context, template instantiation will
-    // perform this type-checking again. Just save the arguments that we
-    // received in a ParenListExpr.
-    // FIXME: This isn't quite ideal, since our ASTs don't capture all
-    // of the information that we have about the base
-    // initializer. However, deconstructing the ASTs is a dicey process,
-    // and this approach is far more likely to get the corner cases right.
-    if (CurContext->isDependentContext())
-      DelegationInit = Init;
+    // Initialize the object.
+    InitializedEntity DelegationEntity =
+        InitializedEntity::InitializeDelegation(ClassType);
+    InitializationKind Kind =
+        InitList
+            ? InitializationKind::CreateDirectList(NameLoc, Init->getBeginLoc(),
+                                                   Init->getEndLoc())
+            : InitializationKind::CreateDirect(NameLoc, InitRange.getBegin(),
+                                               InitRange.getEnd());
+    InitializationSequence InitSeq(*this, DelegationEntity, Kind, Args);
+    DelegationInit =
+        InitSeq.Perform(*this, DelegationEntity, Kind, Args, nullptr);
+    if (!DelegationInit.isInvalid()) {
+      assert((DelegationInit.get()->containsErrors() ||
+              cast<CXXConstructExpr>(DelegationInit.get())->getConstructor()) &&
+             "Delegating constructor with no target?");
+
+      // C++11 [class.base.init]p7:
+      //   The initialization of each base and member constitutes a
+      //   full-expression.
+      DelegationInit = ActOnFinishFullExpr(
+          DelegationInit.get(), InitRange.getBegin(), /*DiscardedValue*/ false);
+    }
+
+    if (DelegationInit.isInvalid()) {
+      DelegationInit = CreateRecoveryExpr(InitRange.getBegin(),
+                                          InitRange.getEnd(), Args, ClassType);
+      if (DelegationInit.isInvalid())
+        return true;
+    } else {
+      // If we are in a dependent context, template instantiation will
+      // perform this type-checking again. Just save the arguments that we
+      // received in a ParenListExpr.
+      // FIXME: This isn't quite ideal, since our ASTs don't capture all
+      // of the information that we have about the base
+      // initializer. However, deconstructing the ASTs is a dicey process,
+      // and this approach is far more likely to get the corner cases right.
+      if (CurContext->isDependentContext())
+        DelegationInit = Init;
+    }
   }
 
   return new (Context) CXXCtorInitializer(Context, TInfo, InitRange.getBegin(),
@@ -4867,13 +4875,13 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
       return true;
   }
 
+  if (declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
+    return BuildDelegatingInitializer(BaseTInfo, Init, ClassDecl);
+
   // Check for direct and virtual base classes.
   const CXXBaseSpecifier *DirectBaseSpec = nullptr;
   const CXXBaseSpecifier *VirtualBaseSpec = nullptr;
   if (!Dependent) {
-    if (declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
-      return BuildDelegatingInitializer(BaseTInfo, Init, ClassDecl);
-
     FindBaseInitializer(*this, ClassDecl, BaseType, DirectBaseSpec,
                         VirtualBaseSpec);
 
@@ -5409,9 +5417,11 @@ Sema::SetDelegatingInitializer(CXXConstructorDecl *Constructor,
   memcpy(initializer, &Initializer, sizeof (CXXCtorInitializer*));
   Constructor->setCtorInitializers(initializer);
 
-  if (CXXDestructorDecl *Dtor = LookupDestructor(Constructor->getParent())) {
-    MarkFunctionReferenced(Initializer->getSourceLocation(), Dtor);
-    DiagnoseUseOfDecl(Dtor, Initializer->getSourceLocation());
+  if (!Constructor->getParent()->isDependentContext()) {
+    if (CXXDestructorDecl *Dtor = LookupDestructor(Constructor->getParent())) {
+      MarkFunctionReferenced(Initializer->getSourceLocation(), Dtor);
+      DiagnoseUseOfDecl(Dtor, Initializer->getSourceLocation());
+    }
   }
 
   DelegatingCtorDecls.push_back(Constructor);
@@ -5810,15 +5820,15 @@ static void DiagnoseBaseOrMemInitializerOrder(
     // scanned past it on a previous iteration.  That can only
     // happen if we're out of order;  emit a warning.
     if (IdealIndex == NumIdealInits && InitIndex) {
-      WarnIndexes.push_back(InitIndex);
-
       // Move back to the initializer's location in the ideal list.
       for (IdealIndex = 0; IdealIndex != NumIdealInits; ++IdealIndex)
         if (InitKey == IdealInitKeys[IdealIndex])
           break;
 
-      assert(IdealIndex < NumIdealInits &&
-             "initializer not found in initializer list");
+      if (IdealIndex == NumIdealInits)
+        continue;
+
+      WarnIndexes.push_back(InitIndex);
     }
     CorrelatedInitOrder.emplace_back(IdealIndex, InitIndex);
   }
