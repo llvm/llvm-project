@@ -200,16 +200,6 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-static ArrayRef<PassPlugin *> getPassPlugins(const Config &Conf) {
-  // lto::LTO::run() loads the deprecated PassPluginFilenames. Direct callers
-  // must pass plugins pre-loaded.
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-  assert(Conf.PassPluginFilenames.empty() &&
-         "Pass-plugins must be loaded before running LTO backends");
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
-  return Conf.LoadedPassPlugins;
-}
-
 // Call pass builder registration callbacks for all pass-plugins
 static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
   // Static built-in plugins
@@ -219,7 +209,7 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 #undef HANDLE_EXTENSION
 
   // Dynamic plugins
-  for (const PassPlugin *Plugin : getPassPlugins(Conf))
+  for (const PassPlugin *Plugin : Conf.LoadedPassPlugins)
     Plugin->registerPassBuilderCallbacks(PB);
 }
 
@@ -489,7 +479,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
       !isEmptyModule(Mod) ? &CombinedIndex : nullptr;
 
   // Allow plugins to handle or even take over code generation entirely.
-  for (const PassPlugin *Plugin : getPassPlugins(Conf)) {
+  for (const PassPlugin *Plugin : Conf.LoadedPassPlugins) {
     if (Plugin->invokePreCodeGenCallback(
             *TM, Mod, *Stream->OS, DwoOut ? &DwoOut->os() : nullptr,
             Conf.CGFileType, /*DisableVerify=*/true,

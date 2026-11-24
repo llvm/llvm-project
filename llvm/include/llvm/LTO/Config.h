@@ -59,20 +59,6 @@ struct Config {
   // must outlive the lto::LTO object. Clients should load plugins before they
   // parse -mllvm options, so that options registered by plugins are available.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
-  // Deprecated: clients should load plugins themselves and pass them in
-  // LoadedPassPlugins. During the transition, lto::LTO::run() still loads the
-  // files listed here. lto::backend(), lto::thinBackend() and lto::opt() ignore
-  // them.
-  [[deprecated("Preload plugins and pass them in LoadedPassPlugins")]]
-  std::vector<std::string> PassPluginFilenames;
-  // Implicitly-defined special members would trigger deprecation warnings in
-  // every client, so we define them explicitly in a suppression region.
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-  Config() = default;
-  Config(Config &&) = default;
-  Config &operator=(Config &&) = default;
-  ~Config() = default;
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;

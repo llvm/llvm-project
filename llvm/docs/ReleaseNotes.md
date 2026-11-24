@@ -190,10 +190,21 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed `mc::RegisterMCTargetOptionsFlags` and `codegen::RegisterCodeGenFlags`.
   A tool that created either now passes `mc::getToolOptions()` or `codegen::getToolOptions()` to `cl::parseCommandLineOptions`.
 
-* `lto::Config::PassPluginFilenames` is deprecated. LTO clients should load
-  pass plugins themselves and pass them in `lto::Config::LoadedPassPlugins`.
-  `lto::LTO::run()` still loads the listed files during the transition, but
-  `lto::backend()`, `lto::thinBackend()` and `lto::opt()` no longer do.
+* Removed `lto::Config::PassPluginFilenames`. LTO clients load pass plugins
+  themselves and pass them in `lto::Config::LoadedPassPlugins`. The plugins
+  must outlive the `lto::LTO` object:
+
+  ```cpp
+  SmallVector<PassPlugin, 0> Plugins;
+  for (const std::string &Path : PluginPaths) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(Path);
+    if (!Plugin)
+      return Plugin.takeError();
+    Plugins.push_back(std::move(*Plugin));
+  }
+  for (PassPlugin &Plugin : Plugins)
+    Conf.LoadedPassPlugins.push_back(&Plugin);
+  ```
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.

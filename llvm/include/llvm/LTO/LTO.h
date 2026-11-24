@@ -41,7 +41,6 @@ class IRMover;
 class LLVMContext;
 class MemoryBufferRef;
 class Module;
-class PassPlugin;
 class raw_pwrite_stream;
 class ToolOutputFile;
 
@@ -669,13 +668,6 @@ private:
 
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
-
-  // Pass-plugins that we loaded from the provided configuration. Remove
-  // together with Config::PassPluginFilenames.
-  SmallVector<std::unique_ptr<PassPlugin>, 0> PassPlugins;
-
-  // Load pass-plugins from the provided configuration.
-  Error setupPassPlugins();
 
   // LibFuncs that were implemented in bitcode but were not extracted
   // from their libraries. Such functions cannot safely be called, since
