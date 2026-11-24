@@ -443,6 +443,20 @@ spirv.func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.Dot
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @dot
+//  CHECK-SAME: %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>
+spirv.func @dot(%a: vector<4xf32>, %b: vector<4xf32>) "None" {
+  // CHECK: %[[MUL:.*]] = llvm.fmul %[[A]], %[[B]] : vector<4xf32>
+  // CHECK: %[[START:.*]] = llvm.mlir.constant(-0.000000e+00 : f32) : f32
+  // CHECK: llvm.intr.vector.reduce.fadd(%[[START]], %[[MUL]]) : (f32, vector<4xf32>) -> f32
+  %0 = spirv.Dot %a, %b : vector<4xf32> -> f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.SNegate
 //===----------------------------------------------------------------------===//
 
@@ -459,5 +473,21 @@ spirv.func @snegate_vector(%arg0: vector<4xi32>) "None" {
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
   // CHECK: llvm.sub %[[ZERO]], %{{.*}} : vector<4xi32>
   %0 = spirv.SNegate %arg0 : vector<4xi32>
+  spirv.Return
+}
+
+// CHECK-LABEL: @snegate_signed_scalar
+spirv.func @snegate_signed_scalar(%arg0: si32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : i32
+  %0 = spirv.SNegate %arg0 : si32
+  spirv.Return
+}
+
+// CHECK-LABEL: @snegate_unsigned_vector
+spirv.func @snegate_unsigned_vector(%arg0: vector<4xui32>) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : vector<4xi32>
+  %0 = spirv.SNegate %arg0 : vector<4xui32>
   spirv.Return
 }

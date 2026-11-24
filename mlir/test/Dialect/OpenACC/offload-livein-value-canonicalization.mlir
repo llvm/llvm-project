@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -offload-livein-value-canonicalization -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(offload-livein-value-canonicalization))' -split-input-file | FileCheck %s
 
 // -----
 

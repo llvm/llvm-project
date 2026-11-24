@@ -37,7 +37,7 @@ VoidTask silly_task() {
 }
 
 // CIR: cir.func coroutine {{.*}} @_Z10silly_taskv() attributes
-// CIR-NEXT: %[[VoidTaskAddr:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[VoidTask]]>
+// CIR-NEXT: %[[VoidTaskAddr:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<![[VoidTask]]>
 // CIR-NEXT: %[[SavedFrameAddr:.*]] = cir.alloca "__coro_frame_addr" {{.*}} : !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT: %[[VoidPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} : !cir.ptr<![[VoidPromisse]]>
 // CIR-NEXT: %[[SuspendAlwaysAddr:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[SuspendAlways]]>
@@ -477,7 +477,7 @@ folly::coro::Task<int> byRef(const std::string& s) {
 }
 
 // CIR:  cir.func coroutine {{.*}} @_Z5byRefRKSt6string(%[[ARG:.*]]: !cir.ptr<![[StdString]]> {{.*}}) attributes
-// CIR:    %[[IntTaskAddr:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[IntTask]]>
+// CIR:    %[[IntTaskAddr:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<![[IntTask]]>
 // CIR:    %[[AllocaParam:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<![[StdString]]>>
 // CIR:    %[[SavedFrameAddr:.*]]  = cir.alloca "__coro_frame_addr" {{.*}} : !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[AllocaFnUse:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<![[StdString]]>>
@@ -651,7 +651,7 @@ folly::coro::Task<void> yield1() {
 // CIR: cir.func coroutine {{.*}} @_Z6yield1v() attributes
 
 // Prologue allocas (still present in output)
-// CIR-DAG: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[VoidTask]]>
+// CIR-DAG: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<![[VoidTask]]>
 // CIR-DAG: %[[FRAME:.*]] = cir.alloca "__coro_frame_addr" {{.*}} : !cir.ptr<!cir.ptr<!void>>
 // CIR-DAG: %[[PROMISE:.*]] = cir.alloca "__promise" {{.*}} : !cir.ptr<![[VoidPromisse]]>
 // CIR-DAG: %[[SUSP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[SuspendAlways]]>

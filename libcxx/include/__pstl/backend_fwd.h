@@ -416,6 +416,12 @@ struct __reverse_copy;
 //                       _ForwardIterator __result) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __rotate;
+// template <class _Policy, class _ForwardIterator>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __rotate_copy;
 // template <class _Policy, class _ForwardIterator, class _ForwardOutIterator>
 // optional<_ForwardOutIterator>

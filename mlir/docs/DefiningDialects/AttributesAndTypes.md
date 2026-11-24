@@ -1234,22 +1234,43 @@ generates an `getAlias` implementation using the Attribute or Type's mnemonic.
 ### Registering with the Dialect
 
 Once the attributes and types have been defined, they must then be registered
-with the parent `Dialect`. This is done via the `addAttributes` and `addTypes`
-methods. Note that when registering, the full definition of the storage classes
-must be visible.
+with the parent `Dialect`. A dialect defining attributes (or types) in ODS
+should set its `hasAttributes` (or `hasTypes`) field:
+
+```tablegen
+def MyDialect : Dialect {
+  ...
+  let hasAttributes = 1;
+  let hasTypes = 1;
+}
+```
+
+The generated declarations then declare `register<DialectClass>Attributes` (or
+`register<DialectClass>Types`), which registers all attributes (or types) of the
+generated file. It is defined alongside the attribute (or type) classes in the
+generated definitions and called by the dialect constructor by default.
+
+`hasAttributes` (or `hasTypes`) defaults to `0` and provides the default of
+`useDefaultAttributeRegistration` (or `useDefaultTypeRegistration`), which
+controls the above, and of `useDefaultAttributePrinterParser` (or
+`useDefaultTypePrinterParser`). A dialect whose
+`useDefaultAttributeRegistration` (or `useDefaultTypeRegistration`) is `0` gets
+no hook and must register its attributes (or types) itself, e.g. if registering
+them requires more than their definitions:
 
 ```c++
 void MyDialect::initialize() {
-    /// Add the defined attributes to the dialect.
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "MyDialect/Attributes.cpp.inc"
-  >();
-
-    /// Add the defined types to the dialect.
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "MyDialect/Types.cpp.inc"
-  >();
+      >();
 }
 ```
+
+If the attributes (or types) of a dialect are generated into more than one
+file, e.g. by dialect extensions, each file must name its hook differently to
+avoid multiple definitions. `-attrdefs-registration-name=<Name>` (or
+`-typedefs-registration-name=<Name>`) names the hook
+`register<Name>Attributes` (or `register<Name>Types`). The option must be
+passed to both the declaration and the definition generator. Hooks with a
+custom name are never called by the generated dialect constructor.

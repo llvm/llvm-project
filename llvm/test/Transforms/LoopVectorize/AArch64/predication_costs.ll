@@ -101,9 +101,11 @@ for.end:
 ; CHECK: Found scalar instruction:   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Found scalar instruction:   %addr.next = getelementptr inbounds i32, ptr %addr, i64 1
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %addr, align 4
-; CHECK: Cost of 0 for VF 2: forced scalar   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
 ; CHECK: Precomputed costs for VF 2: 4
+; CHECK: Cost of 1 for VF 2: vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<{{.+}}> * ir<4>
+; CHECK: Cost of 1 for VF 2: vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<4>, vp<{{.+}}>
+; CHECK: Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%a>, vp<[[STEPS]]>
 ; CHECK: Cost of 4 for VF 2: BRANCH-ON-MASK ir<%c>
 ;
 define void @predicated_store_phi(ptr %a, i1 %c, i32 %x, i64 %n) {
