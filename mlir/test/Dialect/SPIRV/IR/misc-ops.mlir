@@ -96,3 +96,26 @@ func.func @expect_float_invalid(%val : f32, %expected : f32) -> f32 {
   %0 = "spirv.KHR.Expect"(%val, %expected) : (f32, f32) -> f32
   spirv.ReturnValue %0 : f32
 }
+
+// -----
+
+// CHECK-LABEL: func @derivatives
+func.func @derivatives(%s : f32, %v : vector<4xf32>) {
+  // CHECK: spirv.DPdxFine %{{.*}} : f32
+  %0 = spirv.DPdxFine %s : f32
+  // CHECK: spirv.DPdyFine %{{.*}} : vector<4xf32>
+  %1 = spirv.DPdyFine %v : vector<4xf32>
+  // CHECK: spirv.DPdxCoarse %{{.*}} : f32
+  %2 = spirv.DPdxCoarse %s : f32
+  // CHECK: spirv.DPdyCoarse %{{.*}} : vector<4xf32>
+  %3 = spirv.DPdyCoarse %v : vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @derivative_invalid_type(%arg : f16) {
+  // expected-error @+1 {{op operand #0 must be Float32 or fixed-length vector of Float32 values}}
+  %0 = spirv.DPdxFine %arg : f16
+  return
+}
