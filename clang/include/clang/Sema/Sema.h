@@ -16135,17 +16135,17 @@ public:
                      QualType T);
 
   /// Returns the raw destructor kind.
-  Destructibility GetKind() const;
+  Destructibility getKind() const;
 
   /// Returns true if, and only if, the type is destructible.
-  bool IsDestructible() const;
+  bool isDestructible() const;
 
   /// Returns true if, and only if, the type is trivially-destructible.
-  bool IsTriviallyDestructible() const;
+  bool isTriviallyDestructible() const;
 
   /// Returns true if, and only if, the type is destructible, and the chosen
   /// destructor is non-throwing.
-  bool IsNoThrowDestructible(Sema &S, const ASTContext &C);
+  bool isNoThrowDestructible(Sema &S, const ASTContext &C);
 
 private:
   SourceLocation Loc;

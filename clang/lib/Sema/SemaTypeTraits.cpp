@@ -715,15 +715,15 @@ DestructibleTraits::Destructibility DestructibleTraits::GetKind() const {
   return Kind;
 }
 
-bool DestructibleTraits::IsDestructible() const {
+bool DestructibleTraits::isDestructible() const {
   return Kind != Destructibility::NotAvailable;
 }
 
-bool DestructibleTraits::IsTriviallyDestructible() const {
+bool DestructibleTraits::isTriviallyDestructible() const {
   return Kind == Destructibility::TriviallyDestructible;
 }
 
-bool DestructibleTraits::IsNoThrowDestructible(Sema &S, const ASTContext &C) {
+bool DestructibleTraits::isNoThrowDestructible(Sema &S, const ASTContext &C) {
   if (!IsDestructible())
     return false;
 
@@ -968,12 +968,12 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
              !RD->hasNonTrivialCopyAssignment();
     return false;
   case UTT_IsDestructible:
-    return DestructibleTraits(Self, C, KeyLoc, T).IsDestructible();
+    return DestructibleTraits(Self, C, KeyLoc, T).isDestructible();
   case UTT_IsTriviallyDestructible:
-    return DestructibleTraits(Self, C, KeyLoc, T).IsTriviallyDestructible();
+    return DestructibleTraits(Self, C, KeyLoc, T).isTriviallyDestructible();
   case UTT_IsNothrowDestructible:
     return DestructibleTraits(Self, C, KeyLoc, T)
-        .IsNoThrowDestructible(Self, C);
+        .isNoThrowDestructible(Self, C);
 
   case UTT_HasTrivialDestructor:
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html
