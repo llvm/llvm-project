@@ -12669,8 +12669,7 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
   // An out-of-range index only makes the vector operation return poison, but
   // a load/store through the pointer computed below would be immediate UB, so
   // freeze the index before clamping it into range.
-  if (!DAG.isGuaranteedNotToBePoison(Index))
-    Index = DAG.getFreeze(Index);
+  Index = DAG.getFreeze(Index, UndefPoisonKind::PoisonOnly);
 
   EVT IdxVT = Index.getValueType();
   if (SubVecVT.isScalableVector())
