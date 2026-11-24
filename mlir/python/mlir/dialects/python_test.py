@@ -10,3 +10,9 @@ def register_python_test_dialect(registry):
     from .._mlir_libs import _mlirPythonTestNanobind
 
     _mlirPythonTestNanobind.register_dialect(registry)
+
+
+def register_rendezvous_pass():
+    from .._mlir_libs import _mlirPythonTestNanobind
+
+    _mlirPythonTestNanobind.register_rendezvous_pass()

@@ -169,8 +169,7 @@ define { [2 x i32] } @freeze_const_struct_of_array_poison_member() {
 ; A ConstantExpr member is handled conservatively.
 define { i64, i32 } @freeze_const_struct_constexpr_member() {
 ; CHECK-LABEL: define { i64, i32 } @freeze_const_struct_constexpr_member() {
-; CHECK-NEXT:    [[F:%.*]] = freeze { i64, i32 } { i64 ptrtoint (ptr @gv to i64), i32 3 }
-; CHECK-NEXT:    ret { i64, i32 } [[F]]
+; CHECK-NEXT:    ret { i64, i32 } { i64 ptrtoint (ptr @gv to i64), i32 3 }
 ;
   %f = freeze { i64, i32 } { i64 ptrtoint (ptr @gv to i64), i32 3 }
   ret { i64, i32 } %f
@@ -268,8 +267,7 @@ define [2 x <2 x i32>] @freeze_const_array_of_vector_poison_member() {
 ; A ConstantExpr member is handled conservatively.
 define [2 x i64] @freeze_const_array_constexpr_member() {
 ; CHECK-LABEL: define [2 x i64] @freeze_const_array_constexpr_member() {
-; CHECK-NEXT:    [[F:%.*]] = freeze [2 x i64] [i64 ptrtoint (ptr @gv to i64), i64 3]
-; CHECK-NEXT:    ret [2 x i64] [[F]]
+; CHECK-NEXT:    ret [2 x i64] [i64 ptrtoint (ptr @gv to i64), i64 3]
 ;
   %f = freeze [2 x i64] [i64 ptrtoint (ptr @gv to i64), i64 3]
   ret [2 x i64] %f

@@ -23,6 +23,7 @@ static_library("CPlusPlus") {
     "CommandObjectCPlusPlus.cpp",
     "CommonABIRuntime.cpp",
     "ItaniumABIRuntime.cpp",
+    "MicrosoftABIRuntime.cpp",
     "VerboseTrapFrameRecognizer.cpp",
   ]
 }

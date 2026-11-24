@@ -39,6 +39,7 @@ namespace llvm {
 class AddrLabelMap;
 class AsmPrinterHandler;
 class BasicBlock;
+class BasicBlockSectionsProfileReader;
 class BlockAddress;
 class Constant;
 class ConstantArray;
@@ -48,7 +49,6 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
-class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -56,7 +56,10 @@ class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
+class MachineBlockFrequencyInfo;
+class MachineBlockHashInfoResult;
 class MachineConstantPoolValue;
+class MachineBranchProbabilityInfo;
 class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
@@ -180,6 +183,12 @@ public:
   std::function<MachineOptimizationRemarkEmitter *(MachineFunction &)> GetORE;
   std::function<MachineDominatorTree *(MachineFunction &)> GetMDT;
   std::function<MachineLoopInfo *(MachineFunction &)> GetMLI;
+  std::function<MachineBranchProbabilityInfo *(MachineFunction &)> GetMBPI;
+  std::function<MachineBlockFrequencyInfo *(MachineFunction &)> GetMBFI;
+  std::function<MachineBlockHashInfoResult *(MachineFunction &)> GetMBHI;
+  /// Returns the basic block sections profile reader if available, nullptr
+  /// otherwise.
+  std::function<BasicBlockSectionsProfileReader *(MachineFunction &)> GetBBSPR;
   std::function<void(Module &)> BeginGCAssembly;
   std::function<void(Module &)> FinishGCAssembly;
   std::function<void(Module &)> EmitStackMaps;
@@ -228,7 +237,7 @@ private:
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
   /// List of symbols to be inserted into PC sections.
-  DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
+  MapVector<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
 
   static char ID;
 
@@ -239,7 +248,7 @@ protected:
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
   /// A handle to the EH info emitter (if present).
-  SmallVector<std::unique_ptr<EHStreamer>, 1> EHHandlers;
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
 
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the
@@ -266,6 +275,9 @@ private:
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
 
+  /// The exception model for the current module.
+  ExceptionHandling ModuleExceptionModel = ExceptionHandling::None;
+
   /// True if the module contains split-stack functions. This is used to
   /// emit .note.GNU-split-stack section as required by the linker for
   /// special handling split-stack function calling no-split-stack function.
@@ -280,6 +292,11 @@ private:
   bool DbgInfoAvailable = false;
 
 protected:
+  /// The attribute used for a pointer type's DWARF address space. Targets that
+  /// describe address spaces with a target-specific attribute set this in their
+  /// constructor.
+  dwarf::Attribute TypeAddressSpaceAttribute = dwarf::DW_AT_address_class;
+
   AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
              char &ID = AsmPrinter::ID);
 
@@ -288,6 +305,10 @@ protected:
   virtual DwarfDebug *createDwarfDebug();
 
 public:
+  dwarf::Attribute getTypeAddressSpaceAttribute() const {
+    return TypeAddressSpaceAttribute;
+  }
+
   ~AsmPrinter() override;
 
   DwarfDebug *getDwarfDebug() { return DD; }
@@ -514,15 +535,18 @@ public:
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
+  /// Get the exception model resolved for the current module.
+  ExceptionHandling getModuleExceptionModel() const {
+    return ModuleExceptionModel;
+  }
+
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
 
-  bool needsSEHMoves();
-
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
-  /// information for other purposes (debugging, sanitizers, ...) when
-  /// `MCAsmInfo::ExceptionsType == ExceptionHandling::None`.
+  /// information for other purposes (debugging, sanitizers, ...) when the
+  /// module's exception model is `ExceptionHandling::None`.
   bool usesCFIWithoutEH() const;
 
   /// Print to the current output stream assembly representations of the

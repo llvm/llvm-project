@@ -353,28 +353,14 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask(<16 x i8> %a, <16 x 
 ;
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4_nonconst_first_mask:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s4, w0
-; CHECK-GI-NEXT:    mov w8, #255 // =0xff
+; CHECK-GI-NEXT:    dup.8b v4, w0
+; CHECK-GI-NEXT:    movi d5, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    mov.b v4[1], w0
-; CHECK-GI-NEXT:    mov.b v4[2], w0
-; CHECK-GI-NEXT:    mov.b v4[3], w0
-; CHECK-GI-NEXT:    mov.b v4[4], w0
-; CHECK-GI-NEXT:    mov.b v4[5], w0
-; CHECK-GI-NEXT:    mov.b v4[6], w0
-; CHECK-GI-NEXT:    mov.b v4[7], w0
-; CHECK-GI-NEXT:    mov.b v4[8], w8
-; CHECK-GI-NEXT:    mov.b v4[9], w8
-; CHECK-GI-NEXT:    mov.b v4[10], w8
-; CHECK-GI-NEXT:    mov.b v4[11], w8
-; CHECK-GI-NEXT:    mov.b v4[12], w8
-; CHECK-GI-NEXT:    mov.b v4[13], w8
-; CHECK-GI-NEXT:    mov.b v4[14], w8
-; CHECK-GI-NEXT:    mov.b v4[15], w8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI10_1
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
+; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
+; CHECK-GI-NEXT:    mov.d v4[1], v5[0]
 ; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI10_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v4
@@ -607,32 +593,18 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask(<16 x i8> %a, <16 x
 ;
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4_nonconst_second_mask:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s4, w0
-; CHECK-GI-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-NEXT:    adrp x9, .LCPI12_1
+; CHECK-GI-NEXT:    movi d4, #0xffffffffffffffff
+; CHECK-GI-NEXT:    dup.8b v5, w0
+; CHECK-GI-NEXT:    adrp x8, .LCPI12_1
 ; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    ldr q5, [x9, :lo12:.LCPI12_1]
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    mov.b v4[1], w0
-; CHECK-GI-NEXT:    tbl.16b v2, { v2, v3 }, v5
-; CHECK-GI-NEXT:    mov.b v4[2], w0
-; CHECK-GI-NEXT:    mov.b v4[3], w0
-; CHECK-GI-NEXT:    mov.b v4[4], w0
-; CHECK-GI-NEXT:    mov.b v4[5], w0
-; CHECK-GI-NEXT:    mov.b v4[6], w0
-; CHECK-GI-NEXT:    mov.b v4[7], w0
-; CHECK-GI-NEXT:    mov.b v4[8], w8
-; CHECK-GI-NEXT:    mov.b v4[9], w8
-; CHECK-GI-NEXT:    mov.b v4[10], w8
-; CHECK-GI-NEXT:    mov.b v4[11], w8
-; CHECK-GI-NEXT:    mov.b v4[12], w8
-; CHECK-GI-NEXT:    mov.b v4[13], w8
-; CHECK-GI-NEXT:    mov.b v4[14], w8
-; CHECK-GI-NEXT:    mov.b v4[15], w8
+; CHECK-GI-NEXT:    mov.d v5[1], v4[0]
+; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI12_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
-; CHECK-GI-NEXT:    tbl.16b v3, { v0, v1 }, v4
+; CHECK-GI-NEXT:    tbl.16b v2, { v2, v3 }, v4
+; CHECK-GI-NEXT:    tbl.16b v3, { v0, v1 }, v5
 ; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI12_0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v2, v3 }, v0
 ; CHECK-GI-NEXT:    ret

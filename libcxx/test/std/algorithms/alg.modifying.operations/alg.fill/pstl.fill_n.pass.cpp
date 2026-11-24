@@ -34,9 +34,15 @@ template <class Iter>
 struct Test {
   template <class Policy>
   void operator()(Policy&& policy) {
+    { // check the return type
+      int a[]  = {0};
+      auto res = std::fill_n(policy, Iter(std::begin(a)), 0, 0);
+      static_assert(std::is_same_v<decltype(res), Iter>);
+    }
     { // simple test
       int a[4];
-      std::fill_n(policy, Iter(std::begin(a)), std::size(a), 33);
+      auto res = std::fill_n(policy, Iter(std::begin(a)), std::size(a), 33);
+      assert(res == Iter(std::end(a)));
       assert(std::all_of(std::begin(a), std::end(a), [](int i) { return i == 33; }));
     }
     { // check that an empty range works

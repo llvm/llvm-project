@@ -2,8 +2,7 @@
 
 // Verify the -gen-amdgpu-target-def backend's handling of SubArchSpelling.
 
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];

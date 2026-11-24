@@ -22,9 +22,9 @@ exports_files(["cmake/config.h.cmake.in"])
 cc_library(
     name = "LibcSharedHeaders",
     hdrs = [
-        "//libc:shared/rpc.h",
-        "//libc:shared/rpc_dispatch.h",
-        "//libc:shared/rpc_util.h",
+        "//libc/shared:rpc.h",
+        "//libc/shared:rpc_dispatch.h",
+        "//libc/shared:rpc_util.h",
     ],
     strip_include_prefix = "/libc",
 )

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -stop-after=virtregrewriter,2 < %s \
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -stop-after=virt-reg-rewriter,2 < %s \
 ; RUN:   | FileCheck %s --implicit-check-not=DBG_VALUE
 
 ; Check that each variable gets one DBG_VALUE per location it occupies and no

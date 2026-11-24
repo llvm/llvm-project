@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // InterlockedExchange is provided as a set of address-space-qualified
 // overloads (groupshared/device, {int,uint,int64_t,uint64_t,float}). It always
 // reports the previous value, so there is no 2-argument form. Only 32-bit
@@ -49,8 +51,14 @@ void struct_dest(int v) {
 
 void mismatched_orig_type(int v) {
   uint orig;
-  InterlockedExchange(gs_i32, v, orig); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 10 {{candidate function}}
+  InterlockedExchange(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'int' to 'uint'}}
+}
+
+void float_orig_type(int v) {
+  float orig;
+  InterlockedExchange(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion from 'int' to 'float' may lose precision}}
 }
 
 void direct_too_few() {

@@ -20,6 +20,10 @@
 // XFAIL: target={{sparc.*-.*-linux.*}}
 
 // UNSUPPORTED: ios
+// Waiting for https://github.com/llvm/llvm-project/pull/236879: libunwind skips
+// CFI instructions at the faulting PC in signal frames, causing SIGILL on
+// AArch64 PAC-RET prologues under FEAT_FPAC.
+// UNSUPPORTED: android && aarch64-target-arch
 
 #include <assert.h>
 #include <stdlib.h>

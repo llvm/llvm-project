@@ -17,6 +17,10 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
 
+#include <atomic>
+#include <thread>
+#include <vector>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -92,6 +96,42 @@ TEST_F(PlatformAppleSimulatorTest, TestPlatformSelectionOrder) {
     auto platform_sp = list.GetOrCreate(arch, {}, nullptr, error);
     EXPECT_TRUE(platform_sp);
     EXPECT_TRUE(platform_sp->GetName().contains("simulator"));
+  }
+}
+
+namespace {
+class TestSimulatorPlatform : public PlatformAppleSimulator {
+public:
+  TestSimulatorPlatform()
+      : PlatformAppleSimulator(
+            "TestSimulatorPlatform", "test", ConstString("test-simulator"),
+            llvm::Triple::IOS, {}, "iPhoneSimulator.Internal.sdk",
+            "iPhoneSimulator.sdk", XcodeSDK::Type::iPhoneSimulator,
+            CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone) {}
+
+  using PlatformAppleSimulator::GetSDKFilepath;
+};
+} // namespace
+
+TEST_F(PlatformAppleSimulatorTest, TestConcurrentGetSDKFilepath) {
+  constexpr size_t num_threads = 16;
+  for (size_t iteration = 0; iteration < 100; ++iteration) {
+    TestSimulatorPlatform platform;
+    std::atomic<bool> start = false;
+    std::vector<std::string> sdks(num_threads);
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < num_threads; ++i)
+      threads.emplace_back([&, i]() {
+        while (!start)
+          ;
+        sdks[i] = platform.GetSDKFilepath().str();
+      });
+    start = true;
+    for (std::thread &thread : threads)
+      thread.join();
+
+    for (const std::string &sdk : sdks)
+      EXPECT_EQ(sdk, sdks.front());
   }
 }
 

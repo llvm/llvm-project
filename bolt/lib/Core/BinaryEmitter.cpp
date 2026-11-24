@@ -365,6 +365,8 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   // Emit CFI start
   if (NeedsFDE) {
     Streamer.emitCFIStartProc(/*IsSimple=*/false);
+    if (Function.isSignalFrame())
+      Streamer.emitCFISignalFrame();
     if (Function.getPersonalityFunction() != nullptr)
       Streamer.emitCFIPersonality(Function.getPersonalityFunction(),
                                   Function.getPersonalityEncoding());
@@ -447,8 +449,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
   for (BinaryBasicBlock *const BB : FF) {
-    if ((BC.AlignBlocks || BC.PreserveBlocksAlignment) &&
-        BB->getAlignment() > 1)
+    if (BC.shouldEmitBlockAlignment(*BB))
       Streamer.emitCodeAlignment(BB->getAlign(), *BC.STI,
                                  BB->getAlignmentMaxBytes());
     Streamer.emitLabel(BB->getLabel());
@@ -494,6 +495,12 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         if (InstrLabel)
           Streamer.emitLabel(InstrLabel);
       }
+
+      // RISC-V PCREL_LO12 fixups refer to labels on their AUIPC instructions.
+      // Size estimation needs those labels too, even when omitting metadata.
+      if (BC.isRISCV() && EmitCodeOnly)
+        if (MCSymbol *InstrLabel = BC.MIB->getInstLabel(Instr))
+          Streamer.emitLabel(InstrLabel);
 
       // Emit sized NOPs via MCAsmBackend::writeNopData() interface on x86.
       // This is a workaround for invalid NOPs handling by asm/disasm layer.
@@ -581,6 +588,8 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
       if (FunctionOffset >= EndOffset)
         return;
 
+      const RelocationHandler &RH = BC.getRelocationHandler();
+
       for (auto It = Islands.Relocations.lower_bound(FunctionOffset);
            It != Islands.Relocations.end(); ++It) {
         if (It->first >= EndOffset)
@@ -593,13 +602,13 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
           FunctionOffset = Relocation.Offset;
         }
 
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: emitting constant island relocation"
-                   << " for " << BF << " at offset 0x"
-                   << Twine::utohexstr(Relocation.Offset) << " with size "
-                   << Relocation::getSizeForType(Relocation.Type) << '\n');
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitting constant island relocation"
+                          << " for " << BF << " at offset 0x"
+                          << Twine::utohexstr(Relocation.Offset)
+                          << " with size " << RH.getSizeForType(Relocation.Type)
+                          << '\n');
 
-        FunctionOffset += Relocation.emit(&Streamer);
+        FunctionOffset += Relocation.emit(&Streamer, RH);
       }
 
       assert(FunctionOffset <= EndOffset && "overflow error");

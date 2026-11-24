@@ -1147,4 +1147,217 @@ define <vscale x 4 x double> @pr_nx4xdouble(<vscale x 4 x double> %in, <vscale x
   ret <vscale x 4 x double> %res
 }
 
+; Test combining with a multiply.
+
+define <4 x i32> @pr_mla_4xi32(<4 x i32> %acc, <4 x i32> %lhs, <4 x i32> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_mla_4xi32:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    mla v0.4s, v1.4s, v2.4s
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_mla_4xi32:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    mla v0.4s, v1.4s, v2.4s
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_mla_4xi32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    mla v0.4s, v1.4s, v2.4s
+; SVE-NEXT:    ret
+  %mul = mul <4 x i32> %lhs, %rhs
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <4 x i32> %mul)
+  ret <4 x i32> %res
+}
+
+define <vscale x 2 x double> @pr_fma_nx2xdouble(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx2xdouble:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    ptrue p0.d
+; NEON-NOBF16-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx2xdouble:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    ptrue p0.d
+; NEON-BF16-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx2xdouble:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 2 x double> %lhs, %rhs
+  %res = call contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 4 x float> @pr_fma_nx4xfloat(<vscale x 4 x float> %acc, <vscale x 4 x float> %lhs, <vscale x 4 x float> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx4xfloat:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    ptrue p0.s
+; NEON-NOBF16-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx4xfloat:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    ptrue p0.s
+; NEON-BF16-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx4xfloat:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 4 x float> %lhs, %rhs
+  %res = call contract <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 4 x float> %fmul)
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 8 x half> @pr_fma_nx8xhalf(<vscale x 8 x half> %acc, <vscale x 8 x half> %lhs, <vscale x 8 x half> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx8xhalf:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    ptrue p0.h
+; NEON-NOBF16-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx8xhalf:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    ptrue p0.h
+; NEON-BF16-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx8xhalf:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ptrue p0.h
+; SVE-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 8 x half> %lhs, %rhs
+  %res = call contract <vscale x 8 x half> @llvm.vector.partial.reduce.fadd(<vscale x 8 x half> %acc, <vscale x 8 x half> %fmul)
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 8 x bfloat> @pr_fma_nx8xbfloat(<vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %lhs, <vscale x 8 x bfloat> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx8xbfloat:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    ptrue p0.h
+; NEON-NOBF16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx8xbfloat:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    ptrue p0.h
+; NEON-BF16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx8xbfloat:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ptrue p0.h
+; SVE-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 8 x bfloat> %lhs, %rhs
+  %res = call contract <vscale x 8 x bfloat> @llvm.vector.partial.reduce.fadd(<vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %fmul)
+  ret <vscale x 8 x bfloat> %res
+}
+
+define <vscale x 2 x double> @pr_fma_nx2xdouble_contract_fmul_only(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx2xdouble_contract_fmul_only:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-NOBF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx2xdouble_contract_fmul_only:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-BF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx2xdouble_contract_fmul_only:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fmul z1.d, z1.d, z2.d
+; SVE-NEXT:    fadd z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 2 x double> %lhs, %rhs
+  %res = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @pr_fma_nx2xdouble_non_contract(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx2xdouble_non_contract:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-NOBF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx2xdouble_non_contract:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-BF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx2xdouble_non_contract:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fmul z1.d, z1.d, z2.d
+; SVE-NEXT:    fadd z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %lhs, %rhs
+  %res = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 4 x float> @pr_fma_nx4xfloat_wider_input(<vscale x 4 x float> %acc, <vscale x 8 x float> %lhs, <vscale x 8 x float> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx4xfloat_wider_input:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    ptrue p0.s
+; NEON-NOBF16-NEXT:    fmla z0.s, p0/m, z1.s, z3.s
+; NEON-NOBF16-NEXT:    fmla z0.s, p0/m, z2.s, z4.s
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx4xfloat_wider_input:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    ptrue p0.s
+; NEON-BF16-NEXT:    fmla z0.s, p0/m, z1.s, z3.s
+; NEON-BF16-NEXT:    fmla z0.s, p0/m, z2.s, z4.s
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx4xfloat_wider_input:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    fmla z0.s, p0/m, z1.s, z3.s
+; SVE-NEXT:    fmla z0.s, p0/m, z2.s, z4.s
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 8 x float> %lhs, %rhs
+  %res = call contract <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %fmul)
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x double> @pr_fma_nx2xdouble_second_use(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx2xdouble_second_use:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-NOBF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    fmul z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx2xdouble_second_use:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-BF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    fmul z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx2xdouble_second_use:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fmul z1.d, z1.d, z2.d
+; SVE-NEXT:    fadd z0.d, z0.d, z1.d
+; SVE-NEXT:    fmul z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 2 x double> %lhs, %rhs
+  %pr.fadd = call contract <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
+  %res = fmul <vscale x 2 x double> %pr.fadd, %fmul
+  ret <vscale x 2 x double> %res
+}
+
 attributes #0 = { nounwind "target-features"="+sve2,+bf16,+sve-b16b16" vscale_range(1,16) }

@@ -1,0 +1,216 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -split-input-file -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_Rec = !cir.struct<"Rec" {data !s32i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.global "private" external @_ZTIPi : !cir.ptr<!u8i>
+cir.global "private" external @_ZTIP3Rec : !cir.ptr<!u8i>
+cir.global "private" external @_ZTIDn : !cir.ptr<!u8i>
+cir.global "private" external @_ZTIPU7_Atomic3Rec : !cir.ptr<!u8i>
+
+cir.func private @_Z8mayThrowv()
+
+// Reference to a pointer to a record: bound to an exn.byref.tmp temporary.
+cir.func @ref_to_record_ptr() personality(@__gxx_personality_v0) {
+  %0 = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%2: !cir.eh_token):
+  cir.eh.dispatch %2 : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIP3Rec> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%3: !cir.eh_token):
+  %catch_token, %exn_ptr = cir.begin_catch %3 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.init_catch_param reference_to_record_pointer %exn_ptr to %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.br ^bb5
+^bb5:
+  cir.return
+^bb6(%4: !cir.eh_token):
+  cir.resume %4 : !cir.eh_token
+}
+
+// CHECK-LABEL: cir.func @ref_to_record_ptr()
+// CHECK:         %[[TMP:.*]] = cir.alloca "exn.byref.tmp" align(8) : !cir.ptr<!cir.ptr<!rec_Rec>>
+// CHECK:         %[[P:.*]] = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+// CHECK:         cir.brcond %{{[0-9]+}} ^[[CATCH:bb[0-9]+]](
+// CHECK:       ^[[CATCH]](%[[EXN_ARG:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK-NEXT:    %[[EXN:.*]] = cir.call @__cxa_begin_catch(%[[EXN_ARG]]) : (!cir.ptr<!void>) -> !cir.ptr<!u8i>
+// CHECK-NEXT:    %[[EXN_VOID:.*]] = cir.cast bitcast %[[EXN]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK-NEXT:    %[[ADJUSTED:.*]] = cir.cast bitcast %[[EXN_VOID]] : !cir.ptr<!void> -> !cir.ptr<!rec_Rec>
+// CHECK-NEXT:    cir.store %[[ADJUSTED]], %[[TMP]] : !cir.ptr<!rec_Rec>, !cir.ptr<!cir.ptr<!rec_Rec>>
+// CHECK-NEXT:    cir.store %[[TMP]], %[[P]] : !cir.ptr<!cir.ptr<!rec_Rec>>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+// CHECK-NEXT:    cir.call @__cxa_end_catch()
+
+// Reference to a pointer to a non-record: bound before __cxa_begin_catch.
+cir.func @ref_to_int_ptr() personality(@__gxx_personality_v0) {
+  %0 = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%2: !cir.eh_token):
+  cir.eh.dispatch %2 : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIPi> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%3: !cir.eh_token):
+  cir.construct_catch_param reference_to_pointer %3 to %0 using : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  %catch_token, %exn_ptr = cir.begin_catch %3 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.init_catch_param reference_to_pointer %exn_ptr to %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.br ^bb5
+^bb5:
+  cir.return
+^bb6(%4: !cir.eh_token):
+  cir.resume %4 : !cir.eh_token
+}
+
+// CHECK-LABEL: cir.func @ref_to_int_ptr()
+// CHECK-NOT:     exn.byref.tmp
+// CHECK:         %[[P:.*]] = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CHECK:         cir.brcond %{{[0-9]+}} ^[[CATCH:bb[0-9]+]](
+// CHECK:       ^[[CATCH]](%[[EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK-NEXT:    %[[HEADER:.*]] = cir.const #cir.int<32> : !u32i
+// CHECK-NEXT:    %[[OBJ:.*]] = cir.ptr_stride %[[EXN]], %[[HEADER]] : (!cir.ptr<!void>, !u32i) -> !cir.ptr<!void>
+// CHECK-NEXT:    %[[OBJ_CAST:.*]] = cir.cast bitcast %[[OBJ]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT:    cir.store %[[OBJ_CAST]], %[[P]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CHECK-NEXT:    %[[ADJUSTED:.*]] = cir.call @__cxa_begin_catch(%[[EXN]]) : (!cir.ptr<!void>) -> !cir.ptr<!u8i>
+// CHECK-NEXT:    cir.cast bitcast %[[ADJUSTED]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK-NEXT:    cir.call @__cxa_end_catch()
+
+// Reference to an _Atomic(Rec) pointer: bound before __cxa_begin_catch.
+cir.func @ref_to_ptr_record_shaped() personality(@__gxx_personality_v0) {
+  %0 = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%2: !cir.eh_token):
+  cir.eh.dispatch %2 : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIPU7_Atomic3Rec> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%3: !cir.eh_token):
+  cir.construct_catch_param reference_to_pointer %3 to %0 using : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+  %catch_token, %exn_ptr = cir.begin_catch %3 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.init_catch_param reference_to_pointer %exn_ptr to %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.br ^bb5
+^bb5:
+  cir.return
+^bb6(%4: !cir.eh_token):
+  cir.resume %4 : !cir.eh_token
+}
+
+// CHECK-LABEL: cir.func @ref_to_ptr_record_shaped()
+// CHECK-NOT:     exn.byref.tmp
+// CHECK:         %[[P:.*]] = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+// CHECK:         cir.brcond %{{[0-9]+}} ^[[CATCH:bb[0-9]+]](
+// CHECK:       ^[[CATCH]](%[[EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK-NEXT:    %[[HEADER:.*]] = cir.const #cir.int<32> : !u32i
+// CHECK-NEXT:    %[[OBJ:.*]] = cir.ptr_stride %[[EXN]], %[[HEADER]] : (!cir.ptr<!void>, !u32i) -> !cir.ptr<!void>
+// CHECK-NEXT:    %[[OBJ_CAST:.*]] = cir.cast bitcast %[[OBJ]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!rec_Rec>>
+// CHECK-NEXT:    cir.store %[[OBJ_CAST]], %[[P]] : !cir.ptr<!cir.ptr<!rec_Rec>>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+// CHECK-NEXT:    %[[ADJUSTED:.*]] = cir.call @__cxa_begin_catch(%[[EXN]]) : (!cir.ptr<!void>) -> !cir.ptr<!u8i>
+// CHECK-NEXT:    cir.cast bitcast %[[ADJUSTED]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK-NEXT:    cir.call @__cxa_end_catch()
+
+// Reference to std::nullptr_t: bound to the __cxa_begin_catch result.
+cir.func @ref_to_nullptr() personality(@__gxx_personality_v0) {
+  %0 = cir.alloca "n" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%2: !cir.eh_token):
+  cir.eh.dispatch %2 : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIDn> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%3: !cir.eh_token):
+  %catch_token, %exn_ptr = cir.begin_catch %3 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.init_catch_param reference %exn_ptr to %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.br ^bb5
+^bb5:
+  cir.return
+^bb6(%4: !cir.eh_token):
+  cir.resume %4 : !cir.eh_token
+}
+
+// CHECK-LABEL: cir.func @ref_to_nullptr()
+// CHECK-NOT:     exn.byref.tmp
+// CHECK:         %[[N:.*]] = cir.alloca "n" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+// CHECK:         cir.brcond %{{[0-9]+}} ^[[CATCH:bb[0-9]+]](
+// CHECK:       ^[[CATCH]](%[[EXN_ARG:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK-NEXT:    %[[EXN:.*]] = cir.call @__cxa_begin_catch(%[[EXN_ARG]]) : (!cir.ptr<!void>) -> !cir.ptr<!u8i>
+// CHECK-NEXT:    %[[EXN_VOID:.*]] = cir.cast bitcast %[[EXN]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK-NEXT:    %[[EXN_CAST:.*]] = cir.cast bitcast %[[EXN_VOID]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
+// CHECK-NEXT:    cir.store %[[EXN_CAST]], %[[N]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+// CHECK-NEXT:    cir.call @__cxa_end_catch()
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_Rec = !cir.struct<"Rec" {data !s32i}>
+
+module attributes {cir.triple = "i386-unknown-linux-gnu",
+                   dlti.dl_spec = #dlti.dl_spec<
+                     #dlti.dl_entry<!cir.ptr<!cir.void>,
+                                    #cir.ptr_spec<size = 32, abi = 32,
+                                                  preferred = 32, index = 32>>>} {
+
+cir.global "private" external @_ZTIP3Rec : !cir.ptr<!u8i>
+
+cir.func private @_Z8mayThrowv()
+
+// The exn.byref.tmp temporary takes the target's pointer alignment.
+cir.func @ref_to_record_ptr_32() personality(@__gxx_personality_v0) {
+  %0 = cir.alloca "p" align(4) : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%2: !cir.eh_token):
+  cir.eh.dispatch %2 : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIP3Rec> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%3: !cir.eh_token):
+  %catch_token, %exn_ptr = cir.begin_catch %3 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.init_catch_param reference_to_record_pointer %exn_ptr to %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Rec>>>
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.br ^bb5
+^bb5:
+  cir.return
+^bb6(%4: !cir.eh_token):
+  cir.resume %4 : !cir.eh_token
+}
+
+// CHECK-LABEL: cir.func @ref_to_record_ptr_32()
+// CHECK:         cir.alloca "exn.byref.tmp" align(4) : !cir.ptr<!cir.ptr<!rec_Rec>>
+
+}

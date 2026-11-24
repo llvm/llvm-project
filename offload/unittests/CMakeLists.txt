@@ -143,7 +143,12 @@ function(add_offload_unittest test_dirname)
     ${CMAKE_CURRENT_SOURCE_DIR}/common/Environment.cpp
     ${files})
   add_dependencies(${target_name} ${PLUGINS_TEST_COMMON} offload_device_binaries)
-  target_compile_definitions(${target_name} PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")
+  # Define the TARGET_NAME and DEBUG_PREFIX used by the debug macros, so that
+  # messages are attributed to the test suite emitting them.
+  target_compile_definitions(${target_name} PRIVATE
+    DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}"
+    TARGET_NAME=${target_name}
+    DEBUG_PREFIX="${target_name}")
   target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON})
   target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
   set_target_properties(${target_name} PROPERTIES BUILD_RPATH "${LIBOMPTARGET_LIBRARY_DIR}")

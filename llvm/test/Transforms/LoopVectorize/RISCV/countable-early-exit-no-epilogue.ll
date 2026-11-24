@@ -117,7 +117,7 @@ define i32 @countable_early_exit_tc_vf_plus_one(ptr noalias %b) {
 ; EPILOGUE:       [[VECTOR_BODY]]:
 ; EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
-; EPILOGUE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 2
+; EPILOGUE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; EPILOGUE-NEXT:    store <2 x i32> splat (i32 1), ptr [[TMP0]], align 4
 ; EPILOGUE-NEXT:    store <2 x i32> splat (i32 1), ptr [[TMP1]], align 4
 ; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

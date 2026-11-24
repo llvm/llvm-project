@@ -19,11 +19,6 @@ enum class AArch64MemoryHint {
   SHUH_PH = 5,
 };
 
-template <typename Int> inline bool isValidAArch64MemoryHintValue(Int I) {
-  return (Int)AArch64MemoryHint::STSHH_KEEP <= I &&
-         I <= (Int)AArch64MemoryHint::SHUH_PH;
-}
-
 template <typename Int> inline AArch64MemoryHint toAArch64MemoryHint(Int I) {
   switch (I) {
   case 0:

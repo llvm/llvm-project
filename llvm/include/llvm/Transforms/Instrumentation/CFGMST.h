@@ -186,8 +186,7 @@ template <class Edge, class BBInfo> class CFGMST {
             }
           }
 
-          auto *TargetTI = TargetBB->getTerminator();
-          if (TargetTI && !TargetTI->getNumSuccessors()) {
+          if (!TargetBB->getTerminator()->getNumSuccessors()) {
             if (Weight > MaxExitInWeight) {
               MaxExitInWeight = Weight;
               ExitIncoming = E;

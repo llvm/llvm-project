@@ -131,6 +131,8 @@ static DecodeStatus DecodeSingleRegister(MCInst &Inst,
 
 constexpr auto DecodeGPRRegisterClass =
     DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
+constexpr auto DecodeYGPRRegisterClass =
+    DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>;
 
 template <auto DecodeFn, auto PredicateFn>
 static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
@@ -148,6 +150,8 @@ constexpr bool PredX1OrX5(uint32_t RegNo) { return RegNo == 1 || RegNo == 5; }
 
 constexpr auto DecodeGPRNoX0RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX0>;
+constexpr auto DecodeYGPRNoX0RegisterClass =
+    DecodeFilteredRegisterClass<DecodeYGPRRegisterClass, PredNoX0>;
 constexpr auto DecodeGPRNoX2RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX2>;
 constexpr auto DecodeGPRNoX31RegisterClass =
@@ -218,8 +222,10 @@ static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
 
 static DecodeStatus DecodeGPRS07RegisterClass(MCInst &Inst, uint32_t RegNo,
                                               uint64_t Address,
-                                              const void *Decoder) {
-  if (RegNo >= 8)
+                                              const MCDisassembler *Decoder) {
+  // Only s0 and s1 exist on RVE, so sreg values above 1 are reserved.
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (RegNo >= 8 || (IsRVE && RegNo > 1))
     return MCDisassembler::Fail;
 
   MCRegister Reg = (RegNo < 2) ? (RegNo + RISCV::X8) : (RegNo - 2 + RISCV::X18);
@@ -487,6 +493,18 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   if (Imm < RISCVZC::RA_S0)
     return MCDisassembler::Fail;
   return decodeZcmpRlist(Inst, Imm, Address, Decoder);
+}
+
+static DecodeStatus decodeMvsa01Rs2Operand(MCInst &Inst, uint32_t RegNo,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  const DecodeStatus Result =
+      DecodeGPRS07RegisterClass(Inst, RegNo, Address, Decoder);
+  if (Result != MCDisassembler::Success)
+    return Result;
+  if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
+    return MCDisassembler::Fail;
+  return MCDisassembler::Success;
 }
 
 #include "RISCVGenDisassemblerTables.inc"

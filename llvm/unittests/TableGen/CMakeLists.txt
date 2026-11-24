@@ -5,8 +5,8 @@ set(LLVM_LINK_COMPONENTS
 
 set(LLVM_TARGET_DEFINITIONS Automata.td)
 
-tablegen(LLVM AutomataTables.inc -gen-searchable-tables)
-tablegen(LLVM AutomataAutomata.inc -gen-automata)
+llvm_tablegen(AutomataTables.inc -gen-searchable-tables)
+llvm_tablegen(AutomataAutomata.inc -gen-automata)
 add_public_tablegen_target(AutomataTestTableGen)
 
 add_llvm_unittest(TableGenTests

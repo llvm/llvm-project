@@ -1124,7 +1124,8 @@ static Value *CheckAndCreateOffsetAdd(Value *X, unsigned ScaleX, Value *Y,
   } else if (YElType && !XElType) {
     FixSummands(YElType, X);
     XElType = cast<FixedVectorType>(X->getType());
-  }
+  } else if (!XElType && !YElType)
+    return nullptr;
   assert(XElType && YElType && "Unknown vector types");
   // Check that the summands are of compatible types
   if (XElType != YElType) {

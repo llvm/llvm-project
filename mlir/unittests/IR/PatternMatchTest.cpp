@@ -12,8 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "../../test/lib/Dialect/Test/TestDialect.h"
-#include "../../test/lib/Dialect/Test/TestOps.h"
+#include "TestOpsPatterns.h"
 
 using namespace mlir;
 

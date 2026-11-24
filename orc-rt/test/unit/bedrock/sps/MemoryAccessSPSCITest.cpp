@@ -25,7 +25,7 @@ static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
 
 TEST(MemoryAccessSPSCITest, Registration) {
   SimpleSymbolTable CI;
-  ASSERT_THAT_ERROR(sps_ci::addMemoryAccess(CI), Succeeded());
+  ASSERT_THAT_ERROR(sps::ci::addMemoryAccess(CI), Succeeded());
 
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint8s")));
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint16s")));

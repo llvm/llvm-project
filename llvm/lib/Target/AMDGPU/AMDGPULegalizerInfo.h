@@ -25,6 +25,7 @@ class GCNSubtarget;
 class MachineIRBuilder;
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 class AMDGPULegalizerInfo final : public LegalizerInfo {
@@ -43,6 +44,7 @@ public:
 
   bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
+  bool legalizeFrameIndexVGPR(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFroundeven(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &B) const;
   bool legalizeFceil(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -130,6 +132,9 @@ public:
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+  bool
+  legalizeClusterWorkGroupValue(MachineInstr &MI, MachineIRBuilder &B,
+                                AMDGPUFunctionArgInfo::PreloadedValue PV) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
@@ -198,12 +203,6 @@ public:
   bool legalizeImplicitArgPtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
-  bool getLDSKernelId(Register DstReg, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &B) const;
-
-  bool legalizeLDSKernelId(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
@@ -216,11 +215,11 @@ public:
                               bool IsFormat) const;
 
   bool legalizeBufferStore(MachineInstr &MI, LegalizerHelper &Helper,
-                           bool IsTyped, bool IsFormat) const;
+                           const AMDGPU::BufferIntrinsicInfo &Info) const;
   bool legalizeBufferLoad(MachineInstr &MI, LegalizerHelper &Helper,
-                          bool IsFormat, bool IsTyped) const;
+                          const AMDGPU::BufferIntrinsicInfo &Info) const;
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
-                            Intrinsic::ID IID) const;
+                            const AMDGPU::BufferIntrinsicInfo &Info) const;
 
   bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
                                         MachineIRBuilder &B) const;
@@ -255,8 +254,7 @@ public:
   bool legalizeTrapEndpgm(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
-  bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
-                       MachineIRBuilder &B) const;
+  bool legalizeTrapHsa(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 

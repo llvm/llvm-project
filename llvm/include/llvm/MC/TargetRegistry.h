@@ -565,7 +565,7 @@ public:
   MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) const {
     if (NullTargetStreamerCtorFn)
       return NullTargetStreamerCtorFn(S);
-    return nullptr;
+    reportFatalUsageError("target did not implement null MCTargetStreamer");
   }
 
   MCLFIRewriter *

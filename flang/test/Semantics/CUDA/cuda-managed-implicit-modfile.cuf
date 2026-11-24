@@ -86,5 +86,5 @@ subroutine writes_the_qualifier()
   real, allocatable, managed(implicit) :: a(:)
 end subroutine
 
-! NOTFORUSERS: user_written.cuf:{{[0-9]+}}:{{[0-9]+}}: error: expected entity declarations
+! NOTFORUSERS: user_written.cuf:{{[0-9]+}}:{{[0-9]+}}: error: expected '::'
 ! NOTFORUSERS-NEXT: real, allocatable, managed(implicit) :: a(:)

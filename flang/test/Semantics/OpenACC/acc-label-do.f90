@@ -53,3 +53,85 @@ subroutine missing_label(a, n)
     do 60 i = 1, n
 60    a(i) = 0.
 end
+
+subroutine simple_collapse(a, n, m)
+  integer :: n, m, jk, jl
+  real :: a(n,m)
+  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+  !$ACC LOOP GANG VECTOR COLLAPSE(2)
+  DO 214 jk=1,m
+    DO 213 jl=1,n
+      a(jl,jk) = 1.0
+213 END DO
+214 END DO
+  !$ACC END PARALLEL
+end subroutine
+
+subroutine simple_label(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop present(c)
+  do 100 n = 1, np
+     c(n) = 0
+100 enddo
+end subroutine
+
+subroutine shared_end_do(a, n, m)
+  integer :: n, m, i, j
+  real :: a(n, m)
+
+  !$acc parallel loop collapse(2)
+  do 100 j = 1, m
+    do 100 i = 1, n
+      a(i, j) = 1.0
+100 end do
+end subroutine
+
+subroutine goto_end_do(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop
+  do 100 n = 1, np
+    if (c(n) > 0) goto 100
+    c(n) = 0
+100 end do
+end subroutine
+
+subroutine end_directives(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop
+  do 100 n = 1, np
+    c(n) = 0
+100 end do
+  !$acc end parallel loop
+  !$acc parallel
+  !$acc loop
+  do 200 n = 1, np
+    c(n) = 1
+200 end do
+  !$acc end loop
+  !$acc end parallel
+end subroutine
+
+subroutine kernels_serial(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc kernels loop
+  do 100 n = 1, np
+    c(n) = 0
+100 end do
+  !$acc serial loop
+  do 200 n = 1, np
+    c(n) = 1
+200 end do
+end subroutine
+
+subroutine named_label_do(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop
+  foo: do 100 n = 1, np
+    c(n) = 0
+100 end do foo
+end subroutine

@@ -607,3 +607,27 @@ namespace InvalidRecordDecl {
   } b;
   a c = __builtin_bit_cast(a, b);
 }
+
+namespace StringInDoBitCast {
+  template <class C, class I> constexpr bool foo(const I &i) {
+    return __builtin_bit_cast(I, reinterpret_cast<const float &>("")) == i; // both-note {{reinterpret_cast is not allowed in a constant expression}}
+  }
+  typedef bool b32 __attribute__((ext_vector_type(32)));
+  static_assert(foo<b32>(0x42), ""); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
+}
+
+namespace nullptrToArray {
+  typedef decltype(__builtin_bit_cast(unsigned char[sizeof(nullptr)], nullptr)) footype;
+  static_assert(__builtin_bit_cast(footype, nullptr) == nullptr); // both-error {{failed due to requirement}}
+  static_assert(__builtin_bit_cast(footype, nullptr)[0] == 0); // both-error {{not an integral constant expression}} \
+                                                               // both-note {{read of uninitialized object}} \
+                                                               // both-note {{temporary created here}}
+}
+
+namespace BitInt20 {
+  constexpr _BitInt(32) BI = ~0;
+  constexpr unsigned int I = __builtin_bit_cast(unsigned int, BI);
+  constexpr _BitInt(32) IB = __builtin_bit_cast(_BitInt(20), I); // both-error {{must be initialized by a constant expression}} \
+                                                                 // ref-note {{constexpr bit cast involving type '_BitInt(20)' is not yet supported}}
+}

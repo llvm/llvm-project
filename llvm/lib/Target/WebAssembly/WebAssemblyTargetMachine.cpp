@@ -128,40 +128,11 @@ using WebAssembly::WasmDisableExplicitLocals;
 using WebAssembly::WasmEnableEmSjLj;
 using WebAssembly::WasmEnableSjLj;
 
-static void basicCheckForEHAndSjLj(TargetMachine *TM) {
-
-  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
-
+static void basicCheckForEHAndSjLj() {
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
-    report_fatal_error(
+    reportFatalUsageError(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
-  // You can't mix Emscripten EH with Wasm SjLj.
-  if (EnableEmEH && WasmEnableSjLj)
-    report_fatal_error(
-        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
-
-  if (TM->Options.ExceptionModel == ExceptionHandling::Default) {
-    // FIXME: This flag should be removed in favor of directly using the
-    // generically configured ExceptionsType.
-    if (WebAssembly::WasmEnableSjLj)
-      TM->Options.ExceptionModel = ExceptionHandling::Wasm;
-  }
-
-  // Basic Correctness checking related to -exception-model
-  if (TM->Options.ExceptionModel != ExceptionHandling::Default &&
-      TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
-      TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
-    report_fatal_error(
-        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
-  if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error(
-        "-wasm-enable-sjlj only allowed with -exception-model=wasm");
-
-  // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
-  // measure, but some code will error out at compile time in this combination.
-  // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
 }
 
 /// Create an WebAssembly architecture model.
@@ -190,8 +161,12 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  basicCheckForEHAndSjLj(this);
+  basicCheckForEHAndSjLj();
   initAsmInfo();
+
+  // WebAssembly does not run RegAllocFast; tied operands must be lowered by
+  // TwoAddressInstructionPass.
+  setEnableTiedFastRegAlloc(false);
 
   LLT::setUseExtended(true);
 
@@ -215,13 +190,26 @@ WebAssemblyTargetMachine::getSubtargetImpl(StringRef CPU, StringRef FS,
 
 const WebAssemblySubtarget *
 WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
-  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.ABIName = getTargetABIName(*M);
 
-  return getSubtargetImpl(CPU, FS, getTargetABIName(*F.getParent()));
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : TargetCPU;
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : TargetFS;
+
+  const WebAssemblySubtarget *ST = getSubtargetImpl(CPU, FS, Attrs.ABIName);
+  LastSubtarget.set(FnAttrs, M, Attrs, ST);
+  return ST;
 }
 
 namespace {
@@ -236,8 +224,6 @@ public:
     return getTM<WebAssemblyTargetMachine>();
   }
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
-
   void addIRPasses() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
@@ -246,12 +232,6 @@ public:
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
   bool addPreISel() override;
-
-  // No reg alloc
-  bool addRegAssignAndRewriteFast() override { return false; }
-
-  // No reg alloc
-  bool addRegAssignAndRewriteOptimized() override { return false; }
 
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -279,10 +259,6 @@ WebAssemblyTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new WebAssemblyPassConfig(*this, PM);
 }
 
-FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr; // No reg alloc
-}
-
 //===----------------------------------------------------------------------===//
 // The following functions are called from lib/CodeGen/Passes.cpp to modify
 // the CodeGen pass sequence.
@@ -303,30 +279,12 @@ void WebAssemblyPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturnedLegacyPass());
 
-  // If exception handling is not enabled and setjmp/longjmp handling is
-  // enabled, we lower invokes into calls and delete unreachable landingpad
-  // blocks. Lowering invokes when there is no EH support is done in
-  // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
-  // passes and Emscripten SjLj handling expects all invokes to be lowered
-  // before.
-  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
-  bool EnableWasmEH = TM->Options.ExceptionModel == ExceptionHandling::Wasm;
-  if (!EnableEmEH && !EnableWasmEH) {
-    addPass(createLowerInvokePass());
-    // The lower invoke pass may create unreachable code. Remove it in order not
-    // to process dead blocks in setjmp/longjmp handling.
-    addPass(createUnreachableBlockEliminationPass());
-  }
-
-  // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
-  // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
-  // transformation algorithms with Emscripten SjLj, so we run
-  // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
+  // Wasm SjLj shares Emscripten SjLj's transformation, so it is handled here.
+  // Without Wasm or Emscripten EH, this also lowers invokes.
+  addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass());
 
   // Expand indirectbr instructions to switches.
-  addPass(createIndirectBrExpandPass());
+  addPass(createIndirectBrExpandPass(getOptLevel()));
 
   // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
   addPass(createWebAssemblyReduceToAnyAllTrueLegacyPass(
@@ -336,9 +294,6 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {
-  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    addPass(createWasmEHPass());
-
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
   addPass(createWebAssemblyRefTypeMem2LocalLegacyPass());
@@ -389,21 +344,6 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
-  // TODO: The following CodeGen passes don't currently support code containing
-  // virtual registers. Consider removing their restrictions and re-enabling
-  // them.
-
-  // These functions all require the NoVRegs property.
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
-
   // This pass hurts code size for wasm because it can generate irreducible
   // control flow.
   disablePass(&MachineBlockPlacementID);
@@ -426,8 +366,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    addPass(createWebAssemblyLateEHPrepareLegacyPass());
+  addPass(createWebAssemblyLateEHPrepareLegacyPass());
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,

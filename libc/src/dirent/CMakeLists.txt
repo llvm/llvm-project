@@ -85,9 +85,10 @@ add_entrypoint_object(
     scandir.h
   DEPENDS
     libc.hdr.types.struct_dirent
-    libc.src.__support.common
     libc.src.__support.File.dir
     libc.src.__support.File.platform_dir
-    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
     libc.src.errno.errno
 )

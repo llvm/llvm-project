@@ -258,6 +258,26 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// Specialize linalg generic to reduce op.
+//===----------------------------------------------------------------------===//
+
+// Specialize a `linalg.generic` that is semantically a reduction into a
+// `linalg.reduce`, moving the generic's payload into the reduce's combiner.
+static FailureOr<LinalgOp>
+specializeLinalgReductions(RewriterBase &rewriter, GenericOp genericOp,
+                           ArrayRef<int64_t> reductionDims) {
+  auto reduceOp = ReduceOp::create(
+      rewriter, genericOp.getLoc(), genericOp.getDpsInputs(),
+      genericOp.getDpsInits(), reductionDims, /*bodyBuild=*/nullptr);
+
+  // Move the generic's payload region into the reduce's combiner.
+  rewriter.inlineRegionBefore(genericOp.getRegion(), reduceOp.getCombiner(),
+                              reduceOp.getCombiner().end());
+  rewriter.replaceOp(genericOp, reduceOp);
+  return cast<LinalgOp>(reduceOp.getOperation());
+}
+
+//===----------------------------------------------------------------------===//
 // Specialize linalg generic to matmul variants.
 //===----------------------------------------------------------------------===//
 /// Identifies linalg.generic that is essentially named op of the form:
@@ -438,20 +458,6 @@ static FailureOr<LinalgOp> specializeLinalgMmt4D(RewriterBase &rewriter,
                                            namedOpMaps);
 }
 
-static bool isSupportedContractionPair(Operation *first, Operation *second) {
-  if (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second))
-    return true;
-  if (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second))
-    return true;
-  if (isa<complex::MulOp>(first) && isa<complex::AddOp>(second))
-    return true;
-  if (isa<arith::AndIOp>(first) && isa<arith::OrIOp>(second) &&
-      first->getResult(0).getType().isInteger(1))
-    return true;
-
-  return false;
-}
-
 // Attempts to specialize `genericOp` to a specific named matmul variant
 // (`matmul`, `batch_matmul`, or `mmt4d`). Returns failure without modifying the
 // IR if no named variant matches. `castTy` is the cast type inferred for the
@@ -564,21 +570,10 @@ specializeToNamedContraction(RewriterBase &rewriter, GenericOp genericOp,
 static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                                                         GenericOp genericOp,
                                                         bool emitCategoryOp) {
-  if (genericOp.getNumDpsInputs() != 2 || genericOp.getNumDpsInits() != 1)
-    return failure();
-
   // Early exit if not projected permutations.
   auto mapRange = genericOp.getIndexingMapsArray();
   if (llvm::any_of(mapRange,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
-    return failure();
-
-  // Only contractions that can be represented by named linalg ops are
-  // eligible for specialization:
-  //   - mul + add    (floating-point, integer, complex)
-  //   - and + or     (bool)
-  if (!mlir::linalg::detail::isContractionBody(*genericOp.getBlock(),
-                                               isSupportedContractionPair))
     return failure();
 
   // Determine the cast type for the named matmul op, or bail out if casts
@@ -762,6 +757,12 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
         permutation);
     return namedOp;
+  }
+
+  // Reduction - e.g. linalg.reduce
+  if (std::optional<SmallVector<int64_t>> reductionDims =
+          isaReductionOpInterface(genericOp)) {
+    return specializeLinalgReductions(rewriter, genericOp, *reductionDims);
   }
 
   // Convolution - e.g. *conv/pooling*

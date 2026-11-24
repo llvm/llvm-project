@@ -8,9 +8,10 @@
 
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 
-#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -276,9 +277,6 @@ public:
 
   void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override {}
-
-private:
-  std::mutex M;
 };
 
 LazyReexportsManager::Listener::~Listener() = default;
@@ -332,6 +330,17 @@ void LazyReexportsManager::handleTransferResources(JITDylib &JD,
   }
 }
 
+// Spec for the call-controller handler that the ORC runtime calls to
+// resolve lazy reexports.
+namespace lazy_reexports_sps_handlers {
+struct Resolve
+    : sps::HandlerSpec<shared::SPSExpected<shared::SPSExecutorSymbolDef>(
+          shared::SPSExecutorAddr)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_resolve_tag");
+};
+} // namespace lazy_reexports_sps_handlers
+
 LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
                                            RedirectableSymbolManager &RSMgr,
                                            JITDylib &PlatformJD, Listener *L,
@@ -341,11 +350,10 @@ LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
 
   using namespace shared;
   ErrorAsOutParameter _(&Err);
-  using ResolveSPSSig = SPSExpected<SPSExecutorSymbolDef>(SPSExecutorAddr);
   Err = ES.registerCallControllerHandlers(
-      PlatformJD, bindCallControllerHandlerSPS<ResolveSPSSig>(
-                      SymbolNameSpec::c("__orc_rt_resolve_tag"), this,
-                      &LazyReexportsManager::resolve));
+      PlatformJD,
+      bindCallControllerHandler<lazy_reexports_sps_handlers::Resolve>(
+          this, &LazyReexportsManager::resolve));
 }
 
 std::unique_ptr<MaterializationUnit>

@@ -18,7 +18,7 @@ namespace lldb_dap {
 class Breakpoint : public BreakpointBase {
 public:
   Breakpoint(DAP &d, const std::optional<std::string> &condition,
-             const std::optional<std::string> &hit_condition)
+             const std::string &hit_condition)
       : BreakpointBase(d, condition, hit_condition) {}
   Breakpoint(DAP &d, lldb::SBBreakpoint bp) : BreakpointBase(d), m_bp(bp) {}
 

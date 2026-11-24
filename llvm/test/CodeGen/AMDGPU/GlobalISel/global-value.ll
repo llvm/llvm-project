@@ -17,7 +17,7 @@ define ptr addrspace(4) @external_constant_got() {
 
   ; GCN-LABEL: name: external_constant_got
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant, target-flags(amdgpu-gotprel32-hi) @external_constant, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant, target-flags(amdgpu-gotprel32-hi) @external_constant, implicit-def dead $scc
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[SI_PC_ADD_REL_OFFSET]](p4)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p4) = G_LOAD [[COPY]](p4) :: (dereferenceable invariant load (p4) from got, addrspace 4)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](p4)
@@ -42,7 +42,7 @@ define ptr addrspace(1) @external_global_got() {
 
   ; GCN-LABEL: name: external_global_got
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_global, target-flags(amdgpu-gotprel32-hi) @external_global, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_global, target-flags(amdgpu-gotprel32-hi) @external_global, implicit-def dead $scc
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[SI_PC_ADD_REL_OFFSET]](p4)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[COPY]](p4) :: (dereferenceable invariant load (p1) from got, addrspace 4)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](p1)
@@ -67,7 +67,7 @@ define ptr addrspace(999) @external_other_got() {
 
   ; GCN-LABEL: name: external_other_got
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_other, target-flags(amdgpu-gotprel32-hi) @external_other, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_other, target-flags(amdgpu-gotprel32-hi) @external_other, implicit-def dead $scc
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[SI_PC_ADD_REL_OFFSET]](p4)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p999) = G_LOAD [[COPY]](p4) :: (dereferenceable invariant load (p999) from got, addrspace 4)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](p999)
@@ -92,7 +92,7 @@ define ptr addrspace(4) @internal_constant_pcrel() {
 
   ; GCN-LABEL: name: internal_constant_pcrel
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_constant, target-flags(amdgpu-rel32-hi) @internal_constant, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_constant, target-flags(amdgpu-rel32-hi) @internal_constant, implicit-def dead $scc
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[SI_PC_ADD_REL_OFFSET]](p4)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](p4)
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -116,7 +116,7 @@ define ptr addrspace(1) @internal_global_pcrel() {
 
   ; GCN-LABEL: name: internal_global_pcrel
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p1) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_global, target-flags(amdgpu-rel32-hi) @internal_global, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p1) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_global, target-flags(amdgpu-rel32-hi) @internal_global, implicit-def dead $scc
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(p1) = COPY [[SI_PC_ADD_REL_OFFSET]](p1)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](p1)
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -140,7 +140,7 @@ define ptr addrspace(999) @internal_other_pcrel() {
 
   ; GCN-LABEL: name: internal_other_pcrel
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p999) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_other, target-flags(amdgpu-rel32-hi) @internal_other, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p999) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_other, target-flags(amdgpu-rel32-hi) @internal_other, implicit-def dead $scc
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(p999) = COPY [[SI_PC_ADD_REL_OFFSET]](p999)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](p999)
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -164,7 +164,7 @@ define ptr addrspace(6) @external_constant32_got() {
 
   ; GCN-LABEL: name: external_constant32_got
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant32, target-flags(amdgpu-gotprel32-hi) @external_constant32, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant32, target-flags(amdgpu-gotprel32-hi) @external_constant32, implicit-def dead $scc
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[SI_PC_ADD_REL_OFFSET]](p4)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p4) = G_LOAD [[COPY]](p4) :: (dereferenceable invariant load (p4) from got, addrspace 4)
   ; GCN-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[LOAD]](p4)
@@ -186,7 +186,7 @@ define ptr addrspace(6) @internal_constant32_pcrel() {
 
   ; GCN-LABEL: name: internal_constant32_pcrel
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_constant32, target-flags(amdgpu-rel32-hi) @internal_constant32, implicit-def $scc
+  ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_constant32, target-flags(amdgpu-rel32-hi) @internal_constant32, implicit-def dead $scc
   ; GCN-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[SI_PC_ADD_REL_OFFSET]](p4)
   ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[PTRTOINT]](i64)
   ; GCN-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p6) = G_INTTOPTR [[TRUNC]](i32)

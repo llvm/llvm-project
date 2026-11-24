@@ -203,7 +203,7 @@ bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
     if (access != Access::Stream) {
       if (!endfileRecordNumber) {
         // Fake it so that we can backspace relative from the end
-        endfileRecordNumber = std::numeric_limits<std::int64_t>::max() - 2;
+        endfileRecordNumber = common::numeric_limits<std::int64_t>::max() - 2;
       }
       currentRecordNumber = *endfileRecordNumber;
     }
@@ -321,10 +321,8 @@ void ExternalFileUnit::CloseAll(IoErrorHandler &handler) {
     unitMap->CloseAll(handler);
     FreeMemoryAndNullify(unitMap);
   }
-  if (executionEnvironment.convertUnits) {
-    std::free(executionEnvironment.convertUnits);
-    executionEnvironment.convertUnits = nullptr;
-  }
+  // Do not free(executionEnvironment.convertUnits)
+  // OPENs can happen after ExternalFileUnit::CloseAll() has been called.
   defaultOutput = nullptr;
   defaultInput = nullptr;
   errorOutput = nullptr;

@@ -98,8 +98,8 @@ define void @test_memcpy_args(ptr %Storage) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq 8(%rdi), %rsi
-; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    movl $1024, %edx # imm = 0x400
+; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    callq __llvm_memcpy_element_unordered_atomic_4@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -212,8 +212,8 @@ define void @test_memmove_args(ptr %Storage) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    movq 8(%rdi), %rsi
-; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    movl $1024, %edx # imm = 0x400
+; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    callq __llvm_memmove_element_unordered_atomic_4@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -910,8 +910,8 @@ define ptr @test_memset16_64_zero(ptr %P) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    movl $64, %edx
+; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    callq __llvm_memset_element_unordered_atomic_16@PLT
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx

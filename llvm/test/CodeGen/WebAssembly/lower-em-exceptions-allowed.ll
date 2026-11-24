@@ -39,7 +39,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store i32 0, ptr
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void(ptr @foo)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void(ptr @foo)
 
 invoke.cont:                                      ; preds = %entry
   br label %try.cont

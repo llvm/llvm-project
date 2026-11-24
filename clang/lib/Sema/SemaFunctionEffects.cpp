@@ -200,6 +200,16 @@ static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
   case Builtin::ID::BIvsnprintf:
   case Builtin::ID::BIvsprintf:
 
+  // Fortified printf family, used by _FORTIFY_SOURCE wrappers
+  case Builtin::ID::BI__builtin___fprintf_chk:
+  case Builtin::ID::BI__builtin___printf_chk:
+  case Builtin::ID::BI__builtin___snprintf_chk:
+  case Builtin::ID::BI__builtin___sprintf_chk:
+  case Builtin::ID::BI__builtin___vfprintf_chk:
+  case Builtin::ID::BI__builtin___vprintf_chk:
+  case Builtin::ID::BI__builtin___vsnprintf_chk:
+  case Builtin::ID::BI__builtin___vsprintf_chk:
+
   // stdio.h: scanf family.
   case Builtin::ID::BIscanf:
   case Builtin::ID::BIfscanf:

@@ -1,7 +1,7 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
-; Check that the new slices of an alloca and memset intructions get dbg.assign
+; Check that the new slices of an alloca and memset instructions get dbg.assign
 ; intrinsics with the correct fragment info. Ensure that only the
 ; value-expression gets fragment info; that the address-expression remains
 ; untouched.

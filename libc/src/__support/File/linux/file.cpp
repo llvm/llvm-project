@@ -1,13 +1,19 @@
-//===--- Implementation of the Linux specialization of File ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of the Linux specialization of File.
+///
+//===----------------------------------------------------------------------===//
 
 #include "file.h"
 #include "file_flags.h"
+#include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/sys_stat_macros.h" // For S_IS*, S_IF*, and S_IR* flags.
 #include "hdr/types/off_t.h"
@@ -21,8 +27,6 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
-#include "src/__support/alloc-checker.h"
-#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -50,20 +54,22 @@ ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
   return linux_syscalls::lseek(lf->get_fd(), offset, whence);
 }
 
+int LinuxFile::close_fd() {
+  if (fd < 0)
+    return EBADF;
+  // Linux closes the file descriptor early in the syscall, so we assume it's
+  // always closed after the call. That means callers should also delete the
+  // file object on error.
+  auto result = linux_syscalls::close(fd);
+  if (!result)
+    return result.error();
+  return 0;
+}
+
 int linux_file_close(File *f) {
   File::remove_file(f);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int retval = 0;
-  if (lf->get_fd() >= 0) {
-    // Linux closes the file descriptor early in the syscall, so we assume it's
-    // always closed after the call. That means we should also delete the
-    // LinuxFile on error.
-    auto result = linux_syscalls::close(lf->get_fd());
-    if (!result)
-      retval = result.error();
-  } else {
-    retval = EBADF;
-  }
+  int retval = lf->close_fd();
   delete lf;
   return retval;
 }
@@ -111,20 +117,11 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   if (!fd)
     return Error(fd.error());
 
-  uint8_t *buffer;
-  {
-    AllocChecker ac;
-    buffer = new (ac) uint8_t[File::DEFAULT_BUFFER_SIZE];
-    if (!ac)
-      return Error(ENOMEM);
-  }
-  AllocChecker ac;
-  auto *file = new (ac) LinuxFile(fd.value(), buffer, File::DEFAULT_BUFFER_SIZE,
-                                  _IOFBF, true, file_mode);
-  if (!ac)
-    return Error(ENOMEM);
-  File::add_file(file);
-  return file;
+  ErrorOr<LinuxFile *> file = LinuxFile::create_buffered(fd.value(), file_mode);
+  if (!file)
+    return Error(file.error());
+  File::add_file(file.value());
+  return file.value();
 }
 
 static ErrorOr<int> set_close_on_exec(int fd) {
@@ -172,20 +169,10 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
     }
   }
 
-  uint8_t *buffer;
-  {
-    AllocChecker ac;
-    buffer = new (ac) uint8_t[File::DEFAULT_BUFFER_SIZE];
-    if (!ac) {
-      return Error(ENOMEM);
-    }
-  }
-  AllocChecker ac;
-  auto *file = new (ac)
-      LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, file_mode);
-  if (!ac) {
-    return Error(ENOMEM);
-  }
+  ErrorOr<LinuxFile *> new_file = LinuxFile::create_buffered(fd, file_mode);
+  if (!new_file)
+    return Error(new_file.error());
+  LinuxFile *file = new_file.value();
   File::add_file(file);
   if (do_seek) {
     result = file->seek(0, SEEK_END);
@@ -309,9 +296,26 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
   return 0;
 }
 
-int get_fileno(File *f) {
+bool is_linux_file(const File *f) {
+  // Any LinuxFile (including subtypes like the popen stream, which only swaps
+  // the close callback) registers at least one of these linux_file_* callbacks,
+  // and no non-Linux File (CookieFile/MemoryFile) uses any of them. So a match
+  // on any single callback positively identifies a LinuxFile that has an fd.
+  return f->get_read_func() == &linux_file_read ||
+         f->get_write_func() == &linux_file_write ||
+         f->get_seek_func() == &linux_file_seek ||
+         f->get_close_func() == &linux_file_close;
+}
+
+ErrorOr<int> get_fileno(File *f) {
+  if (!is_linux_file(f))
+    return Error(EBADF);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  return lf->get_fd();
+  int fd = lf->get_fd();
+  // freopen can fail and leave an otherwise-normal LinuxFile with fd == -1.
+  if (fd == -1)
+    return Error(EBADF);
+  return fd;
 }
 
 int reopenfile(File *f, const char *path, const char *mode) {

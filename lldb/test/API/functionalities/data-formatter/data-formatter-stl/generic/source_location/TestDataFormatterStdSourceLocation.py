@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 class StdSourceLocationTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
-    TEST_WITH_PDB_DEBUG_INFO = True
 
     def do_test(self):
         lldbutil.run_to_source_breakpoint(

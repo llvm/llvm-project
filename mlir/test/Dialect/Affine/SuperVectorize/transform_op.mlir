@@ -9,7 +9,7 @@ func.func @vec1d_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    %N = memref.dim %A, %c1 : memref<?x?xf32>
    %P = memref.dim %B, %c2 : memref<?x?x?xf32>
 
-// CHECK:   %{{.*}} = vector.transfer_read {{.*}} : memref<?x?xf32>, vector<128xf32>
+// CHECK:   %{{.*}} = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<?x?xf32>, vector<128xf32> }
    affine.for %i8 = 0 to %M { // vectorized
      affine.for %i9 = 0 to %N {
        %a9 = affine.load %A[%i9, %i8 + %i9] : memref<?x?xf32>
@@ -35,17 +35,17 @@ func.func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg
   %M = memref.dim %arg0, %c0 : memref<?x?xf32>
   %K = memref.dim %arg0, %c1 : memref<?x?xf32>
   %N = memref.dim %arg2, %c1 : memref<?x?xf32>
-  // CHECK:     vector.transfer_write {{.*}} : vector<4x8xf32>, memref<?x?xf32>
+  // CHECK:     vector.mask %{{.*}} { vector.transfer_write {{.*}} : vector<4x8xf32>, memref<?x?xf32> }
   affine.for %i0 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
     affine.for %i1 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
       %cst = arith.constant 0.000000e+00 : f32
       affine.store %cst, %arg2[%i0, %i1] : memref<?x?xf32>
     }
   }
-  //      CHECK:        %{{.*}} = vector.transfer_read {{.*}} : memref<?x?xf32>, vector<4x8xf32>
-  //      CHECK:        %{{.*}} = vector.transfer_read {{.*}} : memref<?x?xf32>, vector<4x8xf32>
-  //      CHECK:        %{{.*}} = vector.transfer_read {{.*}} : memref<?x?xf32>, vector<4x8xf32>
-  //      CHECK:        vector.transfer_write %{{.*}} : vector<4x8xf32>, memref<?x?xf32>
+  //      CHECK:        %{{.*}} = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<?x?xf32>, vector<4x8xf32> }
+  //      CHECK:        %{{.*}} = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<?x?xf32>, vector<4x8xf32> }
+  //      CHECK:        %{{.*}} = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<?x?xf32>, vector<4x8xf32> }
+  //      CHECK:        vector.mask %{{.*}} { vector.transfer_write %{{.*}} : vector<4x8xf32>, memref<?x?xf32> }
   affine.for %i2 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
     affine.for %i3 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
       affine.for %i4 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%K) {
@@ -78,7 +78,7 @@ func.func @vec3d(%A : memref<?x?x?xf32>) {
   %0 = memref.dim %A, %c0 : memref<?x?x?xf32>
   %1 = memref.dim %A, %c1 : memref<?x?x?xf32>
   %2 = memref.dim %A, %c2 : memref<?x?x?xf32>
-  // CHECK:           %{{.*}} = vector.transfer_read {{.*}} : memref<?x?x?xf32>, vector<32x64x256xf32>
+  // CHECK:           %{{.*}} = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<?x?x?xf32>, vector<32x64x256xf32> }
   affine.for %t0 = 0 to %0 {
     affine.for %t1 = 0 to %0 {
       affine.for %i0 = 0 to %0 {
@@ -117,7 +117,7 @@ func.func @vecdim_reduction_minf(%in: memref<256x512xf32>, %out: memref<256xf32>
 }
 
 // CHECK-LABEL: @vecdim_reduction_minf
-// CHECK:           %{{.*}} = vector.transfer_read {{.*}} : memref<256x512xf32>, vector<128xf32>
+// CHECK:           %{{.*}} = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<256x512xf32>, vector<128xf32> }
 // CHECK:         %{{.*}} = vector.reduction <minimumf>, {{.*}} : vector<128xf32> into f32
 
 module attributes {transform.with_named_sequence} {

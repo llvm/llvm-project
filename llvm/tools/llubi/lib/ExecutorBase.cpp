@@ -11,6 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExecutorBase.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <cstring>
 
 namespace llvm::ubi {
 Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
@@ -72,8 +76,10 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   // undefined behavior.
   if (IsStore ? MO->getState() != MemoryObjectState::Alive
               : MO->getState() == MemoryObjectState::Freed) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Try to access a dead memory object at address 0x"
-                        << Twine::utohexstr(Address.getZExtValue()) << ".";
+                        << AddrStr << ".";
     return {};
   }
 
@@ -84,16 +90,18 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   }
 
   if (Address.countr_zero() < Log2(Alignment)) {
-    reportImmediateUB() << "Misaligned memory access. Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
+    reportImmediateUB() << "Misaligned memory access. Address: 0x" << AddrStr
                         << ", Required alignment: " << Alignment.value() << ".";
     return {};
   }
 
   if (AccessSize > MO->getSize() || Address.ult(MO->getAddress())) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
-                        << AccessSize << ", Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+                        << AccessSize << ", Address: 0x" << AddrStr
                         << ", Object base: 0x"
                         << Twine::utohexstr(MO->getAddress())
                         << ", Object size: " << MO->getSize() << ".";
@@ -103,9 +111,10 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   APInt Offset = Address - MO->getAddress();
 
   if (Offset.ugt(MO->getSize() - AccessSize)) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
-                        << AccessSize << ", Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+                        << AccessSize << ", Address: 0x" << AddrStr
                         << ", Object base: 0x"
                         << Twine::utohexstr(MO->getAddress())
                         << ", Object size: " << MO->getSize() << ".";
@@ -148,6 +157,105 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
           /*IsStore=*/true);
       MO)
     Ctx.store(*MO, Offset, Val, ValTy);
+}
+
+void ExecutorBase::executeMemTransfer(const AnyValue &Dest, const AnyValue &Src,
+                                      const AnyValue &Length, Intrinsic::ID IID,
+                                      bool IsLibCall) {
+  assert((IID == Intrinsic::memcpy || IID == Intrinsic::memcpy_inline ||
+          IID == Intrinsic::memmove) &&
+         "Unexpected memory transfer intrinsic");
+  const bool IsMemMove = IID == Intrinsic::memmove;
+  const StringRef Name = IsMemMove ? "memmove" : "memcpy";
+
+  if (Length.isPoison()) {
+    reportImmediateUB() << Name << " called with poison length.";
+    return;
+  }
+
+  const std::optional<uint64_t> LenOpt = Length.asInteger().tryZExtValue();
+  if (!LenOpt) {
+    reportImmediateUB() << Name << " called with length overflows uint64_t.";
+    return;
+  }
+  const uint64_t Len = *LenOpt;
+  if (Len == 0)
+    return;
+
+  if (Dest.isPoison()) {
+    reportImmediateUB() << Name << " called with poison destination pointer.";
+    return;
+  }
+
+  if (Src.isPoison()) {
+    reportImmediateUB() << Name << " called with poison source pointer.";
+    return;
+  }
+
+  const Pointer &DstPtr = Dest.asPointer();
+  const Pointer &SrcPtr = Src.asPointer();
+
+  // Alignment attributes have already been handled at the call site.
+  auto [SrcMO, SrcOffset] =
+      verifyMemAccess(SrcPtr, Len, Align(1), /*IsStore=*/false);
+  if (!SrcMO)
+    return;
+
+  auto [DstMO, DstOffset] =
+      verifyMemAccess(DstPtr, Len, Align(1), /*IsStore=*/true);
+  if (!DstMO)
+    return;
+
+  if (!IsMemMove && SrcMO == DstMO) {
+    const uint64_t SrcEnd = SrcOffset + Len;
+    const uint64_t DstEnd = DstOffset + Len;
+    // Unlike the LLVM intrinsic, the C memcpy function also considers equal
+    // source and destination ranges to overlap.
+    if (SrcOffset < DstEnd && DstOffset < SrcEnd &&
+        (IsLibCall || SrcOffset != DstOffset)) {
+      reportImmediateUB() << "memcpy with overlapping source and destination.";
+      return;
+    }
+  }
+
+  MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
+  ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
+  std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
+}
+
+void ExecutorBase::executeMemSet(const AnyValue &Dest, const AnyValue &Val,
+                                 const AnyValue &Length) {
+  if (Length.isPoison()) {
+    reportImmediateUB() << "memset called with poison length.";
+    return;
+  }
+
+  const std::optional<uint64_t> LenOpt = Length.asInteger().tryZExtValue();
+  if (!LenOpt) {
+    reportImmediateUB() << "memset called with length overflows uint64_t.";
+    return;
+  }
+  const uint64_t Len = *LenOpt;
+  if (Len == 0)
+    return;
+
+  if (Dest.isPoison()) {
+    reportImmediateUB() << "memset called with poison destination pointer.";
+    return;
+  }
+
+  const Pointer &DstPtr = Dest.asPointer();
+
+  // Alignment attributes have already been handled at the call site.
+  auto [DstMO, DstOffset] =
+      verifyMemAccess(DstPtr, Len, Align(1), /*IsStore=*/true);
+  if (!DstMO)
+    return;
+
+  Byte FillByte = Val.isPoison()
+                      ? Byte::poison()
+                      : Byte::concrete(Val.asInteger().getZExtValue());
+  fill(DstMO->getBytes().slice(DstOffset, Len), FillByte);
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,

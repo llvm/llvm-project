@@ -11,8 +11,8 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
+#include "Register/Arch/RegisterContext_x86.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 

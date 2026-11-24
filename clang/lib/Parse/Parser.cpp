@@ -354,7 +354,6 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
-    case tok::annot_repl_input_end:
       // Stop before we change submodules. They generally indicate a "good"
       // place to pick up parsing again (except in the special case where
       // we're trying to skip to EOF).
@@ -690,7 +689,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     return false;
 
   case tok::eof:
-  case tok::annot_repl_input_end:
     // Check whether -fmax-tokens= was reached.
     if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
       PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
@@ -1377,7 +1375,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   D.getMutableDeclSpec().abort();
 
   if (BodyKind != Sema::FnBodyKind::Other) {
-    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage);
+    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage,
+                                getCurScope());
     Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
     Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
     return Res;
@@ -1568,8 +1567,11 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
 
   ExprResult AsmString;
+  bool IsConstexpr = false;
   if (isTokenStringLiteral()) {
-    AsmString = ParseStringLiteralExpression();
+    AsmString = ParseStringLiteralExpression(/*AllowUserDefinedLiteral=*/false,
+                                             /*Unevaluated=*/false,
+                                             CA_ToLiteralEncodingForAsm);
     if (AsmString.isInvalid())
       return AsmString;
 
@@ -1581,6 +1583,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     }
   } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
              Tok.is(tok::l_paren)) {
+    IsConstexpr = true;
     ParenParseOption ExprType = ParenParseOption::SimpleExpr;
     SourceLocation RParenLoc;
     ParsedType CastTy;
@@ -1600,7 +1603,8 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
         (getLangOpts().CPlusPlus11 && !ForAsmLabel) ? 0 : 1);
   }
 
-  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel);
+  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel,
+                                       IsConstexpr);
 }
 
 ExprResult Parser::ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc) {

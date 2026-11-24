@@ -279,3 +279,53 @@ void f7() {
     }
   }
 }
+
+/// https://github.com/llvm/llvm-project/issues/184060
+// CHECK-LABEL: define {{.*}} void @f8()
+// CHECK: entry:
+// CHECK:   %tmp = alloca i32, align 4
+// CHECK:   br label %l1
+// CHECK: l1:
+// CHECK:   br label %for.cond
+// CHECK: for.cond:
+// CHECK:   br label %for.end
+// CHECK: 0:
+// CHECK:   store i32 1, ptr %tmp, align 4
+// CHECK:   %1 = load i32, ptr %tmp, align 4
+// CHECK:   switch i32 %1, label %sw.epilog [
+// CHECK:   ]
+// CHECK: sw.epilog:
+// CHECK:   call {{.*}} i1 @g1()
+// CHECK:   br label %for.cond
+// CHECK: for.end:
+// CHECK:   ret void
+void f8() {
+l1: for (;;) {
+    switch (({ break l1; 1; })) {}
+    g1();
+  }
+}
+
+/// https://github.com/llvm/llvm-project/issues/184060
+// CHECK-LABEL: define {{.*}} void @f9()
+// CHECK: entry:
+// CHECK:   %tmp = alloca i32, align 4
+// CHECK:   br label %l1
+// CHECK: l1:
+// CHECK:   br label %for.cond
+// CHECK: for.cond:
+// CHECK:   br label %for.cond
+// CHECK: 0:
+// CHECK:   store i32 1, ptr %tmp, align 4
+// CHECK:   %1 = load i32, ptr %tmp, align 4
+// CHECK:   switch i32 %1, label %sw.epilog [
+// CHECK:   ]
+// CHECK: sw.epilog:
+// CHECK:   call {{.*}} i1 @g1()
+// CHECK:   br label %for.cond
+void f9() {
+l1: for (;;) {
+    switch (({ continue l1; 1; })) {}
+    g1();
+  }
+}

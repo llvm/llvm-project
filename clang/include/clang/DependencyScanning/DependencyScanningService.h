@@ -94,11 +94,15 @@ struct DependencyScanningServiceOptions {
   bool AsyncScanModules = false;
   /// The build session timestamp for validate-once-per-build-session logic.
   std::time_t BuildSessionTimestamp; // = std::chrono::system_clock::now();
-  /// Whether to automatically flush the module cache from memory to disk at the
-  /// end of the service lifetime.
+  /// Whether to automatically flush the module cache from memory to disk. PCMs
+  /// get flushed on a background thread as soon as they're built.
   bool FlushModuleCache = true;
   /// Whether the caching VFS should cache missing filesystem entries.
   bool CacheNegativeStats = shouldCacheNegativeStatsDefault();
+  /// Whether scanning modules validate their directory deps against paths
+  /// reported via \c DependencyScanningService::addInvalidatedPath instead of
+  /// the filesystem.
+  bool ValidateAgainstInvalidatedPaths = false;
   /// The path to a log file, which logs timing of actions performed by
   /// the dependency scanner.
   std::string LogPath;
@@ -109,11 +113,19 @@ struct DependencyScanningServiceOptions {
 class DependencyScanningService {
 public:
   explicit DependencyScanningService(DependencyScanningServiceOptions Opts)
-      : Opts(std::move(Opts)), Logger(this->Opts.LogPath) {}
+      : Opts(std::move(Opts)), Logger(this->Opts.LogPath) {
+    ModCacheEntries.ValidateAgainstInvalidatedPaths =
+        this->Opts.ValidateAgainstInvalidatedPaths;
+    if (this->Opts.FlushModuleCache)
+      ModCacheEntries.startBackgroundFlushing(Logger);
+  }
 
   ~DependencyScanningService() {
-    if (Opts.FlushModuleCache)
-      ModCacheEntries.flush();
+    if (Opts.FlushModuleCache) {
+      ModCacheEntries.stopBackgroundFlushing();
+      // TODO: Consider allowing clients to skip this to terminate ASAP.
+      ModCacheEntries.flushLeftovers(Logger);
+    }
   }
 
   const DependencyScanningServiceOptions &getOpts() const { return Opts; }
@@ -123,6 +135,21 @@ public:
   }
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
+
+  /// Add a path that changed since the previous scan, so that cached scanning
+  /// modules depending on it are rebuilt. Requires
+  /// \c ValidateAgainstInvalidatedPaths.
+  ///
+  /// Only directories are currently checked. \p Path is compared textually
+  /// against \c ModuleDeps::DirectoryDeps, so it must be spelled the same way:
+  /// absolute, with dots removed, and without resolving symlinks. It is never
+  /// accessed on disk. Modules built since \c BuildSessionTimestamp are
+  /// considered up to date with it.
+  void addInvalidatedPath(StringRef Path) {
+    assert(Opts.ValidateAgainstInvalidatedPaths &&
+           "invalidated paths are only checked when validating against them");
+    ModCacheEntries.addInvalidatedPath(Path);
+  }
 
   AtomicLineLogger &getLogger() { return Logger; }
 

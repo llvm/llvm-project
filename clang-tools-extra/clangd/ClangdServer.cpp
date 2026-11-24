@@ -219,7 +219,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      ? new FileIndex(Opts.EnableOutgoingCalls)
                      : nullptr),
       ModulesManager(Opts.ModulesManager),
-      ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
@@ -314,7 +313,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
-  Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
   Inputs.ModulesManager = ModulesManager;
   adjustParseInputs(Inputs, File);
@@ -1157,7 +1155,8 @@ ClangdServer::blockUntilIdleForTest(std::optional<double> TimeoutSeconds) {
 
 #if defined(__has_feature) &&                                                  \
     (__has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
-     __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer))
+     __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer) ||     \
+     __has_feature(undefined_behavior_sanitizer))
   if (TimeoutSeconds.has_value())
     (*TimeoutSeconds) *= 10;
 #endif
@@ -1220,7 +1219,18 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
                                     : Context::current().clone());
     return ModulesManager->hasRequiredModules(File);
   };
-  Inputs.Opts.SkipPreambleBuild = SkipPreambleBuild || HasRequiredModules();
+
+  Inputs.Opts.SkipPreambleBuild = [&]() {
+    switch (SkipPreambleBuild) {
+    case SkipPreambleBuildPolicy::Never:
+      return false;
+    case SkipPreambleBuildPolicy::Modules:
+      return HasRequiredModules();
+    case SkipPreambleBuildPolicy::Always:
+      return true;
+    }
+    llvm_unreachable("fully covered switch");
+  }();
 }
 
 } // namespace clangd

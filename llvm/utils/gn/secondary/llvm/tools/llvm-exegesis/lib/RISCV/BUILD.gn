@@ -17,6 +17,7 @@ static_library("RISCV") {
     # depend on these Target/RISCV-internal build targets.
     "//llvm/lib/Target/RISCV:RISCVGenMacroFusion",
     "//llvm/lib/Target/RISCV:RISCVGenRegisterBank",
+    "//llvm/lib/Target/RISCV:RISCVOptions",
     "//llvm/lib/Target/RISCV/MCTargetDesc",
   ]
   sources = [

@@ -21,6 +21,7 @@ void cs_group_index_out(out uint GI : SV_GroupIndex) { GI = 0; }
 [shader("pixel")]
 float4 ps_overlap(out float4 Color : SV_Target) : SV_Target {
 // expected-error@-1 {{semantic index overlap SV_Target0}}
+// expected-note@-2 {{previous use is here}}
   Color = 0;
   return 0;
 }

@@ -289,3 +289,97 @@ module attributes {transform.with_named_sequence} {
     return
   }
 }
+
+// -----
+
+// Hoisting must stay within the operation targeted by the transform.
+// CHECK-LABEL: func @buffer_loop_hoisting_while_scope(
+//  CHECK-NOT: memref.alloc
+//      CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+//      CHECK: scf.condition{{.*}} %[[ALLOC]]
+//      CHECK: memref.load %[[LAST]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.while"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_loop_hoisting %loop : !transform.any_op
+    transform.yield
+  }
+  func.func @buffer_loop_hoisting_while_scope(%condition: i1) -> index {
+    %c0 = arith.constant 0 : index
+    %last = scf.while () : () -> memref<1xindex> {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %c0, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition) %buffer : memref<1xindex>
+    } do {
+    ^bb0(%current: memref<1xindex>):
+      scf.yield
+    }
+    %result = memref.load %last[%c0] : memref<1xindex>
+    return %result : index
+  }
+}
+
+// -----
+
+// Targeting the enclosing function permits hoisting before the loop.
+// CHECK-LABEL: func @buffer_loop_hoisting_function_scope(
+// CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_loop_hoisting %func : !transform.any_op
+    transform.yield
+  }
+  func.func @buffer_loop_hoisting_function_scope(%condition: i1) -> index {
+    %c0 = arith.constant 0 : index
+    %last = scf.while () : () -> memref<1xindex> {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %c0, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition) %buffer : memref<1xindex>
+    } do {
+    ^bb0(%current: memref<1xindex>):
+      scf.yield
+    }
+    %result = memref.load %last[%c0] : memref<1xindex>
+    return %result : index
+  }
+}
+
+// -----
+
+// Targeting the module still keeps the allocation inside the non-isolated
+// function, even when the allocation size is captured from outside it.
+// CHECK-LABEL: module attributes
+// CHECK: %[[SIZE:.*]] = arith.constant 4 : index
+// CHECK-NOT: memref.alloc
+// CHECK: test.conversion_func_op @buffer_loop_hoisting_nonisolated_function(
+// CHECK: %[[ALLOC:.*]] = memref.alloc(%[[SIZE]])
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    transform.bufferization.buffer_loop_hoisting %root : !transform.any_op
+    transform.yield
+  }
+  %size = arith.constant 4 : index
+  test.conversion_func_op @buffer_loop_hoisting_nonisolated_function(%condition: i1) {
+    %c0 = arith.constant 0 : index
+    %last = scf.while () : () -> memref<?xindex> {
+      %buffer = memref.alloc(%size) : memref<?xindex>
+      memref.store %c0, %buffer[%c0] : memref<?xindex>
+      scf.condition(%condition) %buffer : memref<?xindex>
+    } do {
+    ^bb0(%current: memref<?xindex>):
+      scf.yield
+    }
+    %result = memref.load %last[%c0] : memref<?xindex>
+    "test.return"() : () -> ()
+  }
+}

@@ -83,10 +83,42 @@ enum regnums {
   t4,
   t5,
   t6,
-  pc
+  pc = riscv_dwarf::dwarf_gpr_pc,
+  ft0 = riscv_dwarf::dwarf_fpr_f0,
+  ft1,
+  ft2,
+  ft3,
+  ft4,
+  ft5,
+  ft6,
+  ft7,
+  fs0,
+  fs1,
+  fa0,
+  fa1,
+  fa2,
+  fa3,
+  fa4,
+  fa5,
+  fa6,
+  fa7,
+  fs2,
+  fs3,
+  fs4,
+  fs5,
+  fs6,
+  fs7,
+  fs8,
+  fs9,
+  fs10,
+  fs11,
+  ft8,
+  ft9,
+  ft10,
+  ft11
 };
 
-static const std::array<RegisterInfo, 33> g_register_infos = {
+static const std::array<RegisterInfo, 65> g_register_infos = {
     {DEFINE_REGISTER_STUB(zero, nullptr),
      DEFINE_GENERIC_REGISTER_STUB(ra, nullptr, LLDB_REGNUM_GENERIC_RA),
      DEFINE_GENERIC_REGISTER_STUB(sp, nullptr, LLDB_REGNUM_GENERIC_SP),
@@ -119,7 +151,39 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
      DEFINE_REGISTER_STUB(t4, nullptr),
      DEFINE_REGISTER_STUB(t5, nullptr),
      DEFINE_REGISTER_STUB(t6, nullptr),
-     DEFINE_GENERIC_REGISTER_STUB(pc, nullptr, LLDB_REGNUM_GENERIC_PC)}};
+     DEFINE_GENERIC_REGISTER_STUB(pc, nullptr, LLDB_REGNUM_GENERIC_PC),
+     DEFINE_REGISTER_STUB(ft0, nullptr),
+     DEFINE_REGISTER_STUB(ft1, nullptr),
+     DEFINE_REGISTER_STUB(ft2, nullptr),
+     DEFINE_REGISTER_STUB(ft3, nullptr),
+     DEFINE_REGISTER_STUB(ft4, nullptr),
+     DEFINE_REGISTER_STUB(ft5, nullptr),
+     DEFINE_REGISTER_STUB(ft6, nullptr),
+     DEFINE_REGISTER_STUB(ft7, nullptr),
+     DEFINE_REGISTER_STUB(fs0, nullptr),
+     DEFINE_REGISTER_STUB(fs1, nullptr),
+     DEFINE_REGISTER_STUB(fa0, nullptr),
+     DEFINE_REGISTER_STUB(fa1, nullptr),
+     DEFINE_REGISTER_STUB(fa2, nullptr),
+     DEFINE_REGISTER_STUB(fa3, nullptr),
+     DEFINE_REGISTER_STUB(fa4, nullptr),
+     DEFINE_REGISTER_STUB(fa5, nullptr),
+     DEFINE_REGISTER_STUB(fa6, nullptr),
+     DEFINE_REGISTER_STUB(fa7, nullptr),
+     DEFINE_REGISTER_STUB(fs2, nullptr),
+     DEFINE_REGISTER_STUB(fs3, nullptr),
+     DEFINE_REGISTER_STUB(fs4, nullptr),
+     DEFINE_REGISTER_STUB(fs5, nullptr),
+     DEFINE_REGISTER_STUB(fs6, nullptr),
+     DEFINE_REGISTER_STUB(fs7, nullptr),
+     DEFINE_REGISTER_STUB(fs8, nullptr),
+     DEFINE_REGISTER_STUB(fs9, nullptr),
+     DEFINE_REGISTER_STUB(fs10, nullptr),
+     DEFINE_REGISTER_STUB(fs11, nullptr),
+     DEFINE_REGISTER_STUB(ft8, nullptr),
+     DEFINE_REGISTER_STUB(ft9, nullptr),
+     DEFINE_REGISTER_STUB(ft10, nullptr),
+     DEFINE_REGISTER_STUB(ft11, nullptr)}};
 } // namespace dwarf
 } // namespace
 
@@ -840,74 +904,74 @@ void ABISysV_riscv::AugmentRegisterInfo(
   for (auto it : llvm::enumerate(regs)) {
     // Set alt name for certain registers for convenience
     if (it.value().name == "zero")
-      it.value().alt_name.SetCString("x0");
+      it.value().alt_name = "x0";
     else if (it.value().name == "ra")
-      it.value().alt_name.SetCString("x1");
+      it.value().alt_name = "x1";
     else if (it.value().name == "sp")
-      it.value().alt_name.SetCString("x2");
+      it.value().alt_name = "x2";
     else if (it.value().name == "gp")
-      it.value().alt_name.SetCString("x3");
+      it.value().alt_name = "x3";
     else if (it.value().name == "fp") {
-      it.value().name.SetCString("s0");
-      it.value().alt_name.SetCString("x8");
+      it.value().name = "s0";
+      it.value().alt_name = "x8";
     } else if (it.value().name == "tp")
-      it.value().alt_name.SetCString("x4");
+      it.value().alt_name = "x4";
     else if (it.value().name == "s0")
-      it.value().alt_name.SetCString("x8");
+      it.value().alt_name = "x8";
     else if (it.value().name == "s1")
-      it.value().alt_name.SetCString("x9");
+      it.value().alt_name = "x9";
     else if (it.value().name == "t0")
-      it.value().alt_name.SetCString("x5");
+      it.value().alt_name = "x5";
     else if (it.value().name == "t1")
-      it.value().alt_name.SetCString("x6");
+      it.value().alt_name = "x6";
     else if (it.value().name == "t2")
-      it.value().alt_name.SetCString("x7");
+      it.value().alt_name = "x7";
     else if (it.value().name == "a0")
-      it.value().alt_name.SetCString("x10");
+      it.value().alt_name = "x10";
     else if (it.value().name == "a1")
-      it.value().alt_name.SetCString("x11");
+      it.value().alt_name = "x11";
     else if (it.value().name == "a2")
-      it.value().alt_name.SetCString("x12");
+      it.value().alt_name = "x12";
     else if (it.value().name == "a3")
-      it.value().alt_name.SetCString("x13");
+      it.value().alt_name = "x13";
     else if (it.value().name == "a4")
-      it.value().alt_name.SetCString("x14");
+      it.value().alt_name = "x14";
     else if (it.value().name == "a5")
-      it.value().alt_name.SetCString("x15");
+      it.value().alt_name = "x15";
     else if (it.value().name == "a6")
-      it.value().alt_name.SetCString("x16");
+      it.value().alt_name = "x16";
     else if (it.value().name == "a7")
-      it.value().alt_name.SetCString("x17");
+      it.value().alt_name = "x17";
     else if (it.value().name == "s2")
-      it.value().alt_name.SetCString("x18");
+      it.value().alt_name = "x18";
     else if (it.value().name == "s3")
-      it.value().alt_name.SetCString("x19");
+      it.value().alt_name = "x19";
     else if (it.value().name == "s4")
-      it.value().alt_name.SetCString("x20");
+      it.value().alt_name = "x20";
     else if (it.value().name == "s5")
-      it.value().alt_name.SetCString("x21");
+      it.value().alt_name = "x21";
     else if (it.value().name == "s6")
-      it.value().alt_name.SetCString("x22");
+      it.value().alt_name = "x22";
     else if (it.value().name == "s7")
-      it.value().alt_name.SetCString("x23");
+      it.value().alt_name = "x23";
     else if (it.value().name == "s8")
-      it.value().alt_name.SetCString("x24");
+      it.value().alt_name = "x24";
     else if (it.value().name == "s9")
-      it.value().alt_name.SetCString("x25");
+      it.value().alt_name = "x25";
     else if (it.value().name == "s10")
-      it.value().alt_name.SetCString("x26");
+      it.value().alt_name = "x26";
     else if (it.value().name == "s11")
-      it.value().alt_name.SetCString("x27");
+      it.value().alt_name = "x27";
     else if (it.value().name == "t3")
-      it.value().alt_name.SetCString("x28");
+      it.value().alt_name = "x28";
     else if (it.value().name == "t4")
-      it.value().alt_name.SetCString("x29");
+      it.value().alt_name = "x29";
     else if (it.value().name == "t5")
-      it.value().alt_name.SetCString("x30");
+      it.value().alt_name = "x30";
     else if (it.value().name == "t6")
-      it.value().alt_name.SetCString("x31");
+      it.value().alt_name = "x31";
 
     // Set generic regnum so lldb knows what the PC, etc is
-    it.value().regnum_generic = GetGenericNum(it.value().name.GetStringRef());
+    it.value().regnum_generic = GetGenericNum(it.value().name);
   }
 }

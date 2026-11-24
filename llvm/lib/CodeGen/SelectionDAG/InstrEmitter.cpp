@@ -283,41 +283,12 @@ Register InstrEmitter::getVR(SDValue Op, VRBaseMapType &VRBaseMap) {
   return I->second;
 }
 
-static bool isConvergenceCtrlMachineOp(SDValue Op) {
-  if (Op->isMachineOpcode()) {
-    switch (Op->getMachineOpcode()) {
-    case TargetOpcode::CONVERGENCECTRL_ANCHOR:
-    case TargetOpcode::CONVERGENCECTRL_ENTRY:
-    case TargetOpcode::CONVERGENCECTRL_LOOP:
-    case TargetOpcode::CONVERGENCECTRL_GLUE:
-      return true;
-    }
-    return false;
-  }
-
-  // We can reach here when CopyFromReg is encountered. But rather than making a
-  // special case for that, we just make sure we don't reach here in some
-  // surprising way.
-  switch (Op->getOpcode()) {
-  case ISD::CONVERGENCECTRL_ANCHOR:
-  case ISD::CONVERGENCECTRL_ENTRY:
-  case ISD::CONVERGENCECTRL_LOOP:
-  case ISD::CONVERGENCECTRL_GLUE:
-    llvm_unreachable("Convergence control should have been selected by now.");
-  }
-  return false;
-}
-
 /// AddRegisterOperand - Add the specified register as an operand to the
 /// specified machine instr. Insert register copies if the register is
 /// not in the required register class.
-void
-InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
-                                 SDValue Op,
-                                 unsigned IIOpNum,
-                                 const MCInstrDesc *II,
-                                 VRBaseMapType &VRBaseMap,
-                                 bool IsDebug, bool IsClone, bool IsCloned) {
+void InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB, SDValue Op,
+                                      unsigned IIOpNum, const MCInstrDesc *II,
+                                      VRBaseMapType &VRBaseMap, bool IsDebug) {
   assert(Op.getValueType() != MVT::Other &&
          Op.getValueType() != MVT::Glue &&
          "Chain and glue operands should occur at end of operand list!");
@@ -362,33 +333,7 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
     }
   }
 
-  // If this value has only one use, that use is a kill. This is a
-  // conservative approximation. InstrEmitter does trivial coalescing
-  // with CopyFromReg nodes, so don't emit kill flags for them.
-  // Avoid kill flags on Schedule cloned nodes, since there will be
-  // multiple uses.
-  // Tied operands are never killed, so we need to check that. And that
-  // means we need to determine the index of the operand.
-  // Don't kill convergence control tokens. Initially they are only used in glue
-  // nodes, and the InstrEmitter later adds implicit uses on the users of the
-  // glue node. This can sometimes make it seem like there is only one use,
-  // which is the glue node itself.
-  bool isKill = Op.hasOneUse() && !isConvergenceCtrlMachineOp(Op) &&
-                Op.getNode()->getOpcode() != ISD::CopyFromReg && !IsDebug &&
-                !(IsClone || IsCloned);
-  if (isKill) {
-    unsigned Idx = MIB->getNumOperands();
-    while (Idx > 0 &&
-           MIB->getOperand(Idx-1).isReg() &&
-           MIB->getOperand(Idx-1).isImplicit())
-      --Idx;
-    bool isTied = MCID.getOperandConstraint(Idx, MCOI::TIED_TO) != -1;
-    if (isTied)
-      isKill = false;
-  }
-
-  MIB.addReg(VReg, getDefRegState(isOptDef) | getKillRegState(isKill) |
-             getDebugRegState(IsDebug));
+  MIB.addReg(VReg, getDefRegState(isOptDef) | getDebugRegState(IsDebug));
 }
 
 /// AddOperand - Add the specified operand to the specified machine instr.  II
@@ -399,8 +344,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
                               VRBaseMapType &VRBaseMap, bool IsDebug,
                               bool IsClone, bool IsCloned) {
   if (Op.isMachineOpcode()) {
-    AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
-                       IsDebug, IsClone, IsCloned);
+    AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap, IsDebug);
   } else if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
     if (C->getAPIntValue().getSignificantBits() <= 64) {
       MIB.addImm(C->getSExtValue());
@@ -469,8 +413,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
     assert(Op.getValueType() != MVT::Other &&
            Op.getValueType() != MVT::Glue &&
            "Chain and glue operands should occur at end of operand list!");
-    AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
-                       IsDebug, IsClone, IsCloned);
+    AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap, IsDebug);
   }
 }
 
@@ -550,8 +493,8 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
       // r1026 = copy r1024
       VRBase = MRI->createVirtualRegister(TRC);
       BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), VRBase).addReg(SrcReg);
-      MRI->clearKillFlags(SrcReg);
+              TII->get(TargetOpcode::COPY), VRBase)
+          .addReg(SrcReg);
     } else {
       // Reg may not support a SubIdx sub-register, and we may need to
       // constrain its register class or issue a COPY to a compatible register
@@ -1377,16 +1320,36 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     // Remember registers that are part of early-clobber defs.
     SmallVector<Register, 8> ECRegs;
 
+    SmallVector<Register, 4> OutputDefs;
+    for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
+      const InlineAsm::Flag F(Node->getConstantOperandVal(i));
+      const unsigned NumVals = F.getNumOperandRegisters();
+      if (F.isRegDefKind() || F.isRegDefEarlyClobberKind()) {
+        for (unsigned j = 1; j <= NumVals; ++j) {
+          Register Reg =
+              cast<RegisterSDNode>(Node->getOperand(i + j))->getReg();
+          if (Reg.isPhysical())
+            OutputDefs.push_back(Reg);
+        }
+      }
+
+      i += NumVals + 1;
+    }
+
     // A glued CopyFromReg may read a clobbered register, e.g. a flag output
-    // like X86 "={@ccz}" reads EFLAGS defined only by "~{flags}".
+    // like X86 "={@ccz}" reads EFLAGS defined only by "~{flags}". A read fully
+    // covered by an output def does not keep an overlapping clobber live.
     SmallVector<Register, 2> GluedUses;
     if (Node->getValueType(Node->getNumValues() - 1) == MVT::Glue) {
       for (SDNode *G = Node->getGluedUser(); G; G = G->getGluedUser()) {
         if (G->getOpcode() != ISD::CopyFromReg)
           continue;
         Register Reg = cast<RegisterSDNode>(G->getOperand(1))->getReg();
-        if (Reg.isPhysical())
-          GluedUses.push_back(Reg);
+        if (!Reg.isPhysical() || any_of(OutputDefs, [&](Register Def) {
+              return TRI->isSubRegisterEq(Def, Reg);
+            }))
+          continue;
+        GluedUses.push_back(Reg);
       }
     }
 
@@ -1414,10 +1377,10 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       case InlineAsm::Kind::Clobber:
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-          bool IsDead =
-              F.isClobberKind() && none_of(GluedUses, [&](Register U) {
-                return TRI->regsOverlap(U, Reg);
-              });
+          bool IsDead = F.isClobberKind() && !is_contained(OutputDefs, Reg) &&
+                        none_of(GluedUses, [&](Register U) {
+                          return TRI->regsOverlap(U, Reg);
+                        });
           MIB.addReg(Reg, RegState::Define | RegState::EarlyClobber |
                               getDeadRegState(IsDead) |
                               getImplRegState(Reg.isPhysical()));

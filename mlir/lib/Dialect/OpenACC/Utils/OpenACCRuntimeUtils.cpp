@@ -8,6 +8,9 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeUtils.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -91,6 +94,17 @@ LLVM::LLVMStructType acc::getDataDescriptorType(MLIRContext *ctx,
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeDescriptors.def"
   }
   llvm_unreachable("unknown ACC data descriptor");
+}
+
+LLVM::LLVMStructType acc::getKernelArgumentType(MLIRContext *ctx) {
+  Type Int32 = IntegerType::get(ctx, 32);
+  Type Int64 = IntegerType::get(ctx, 64);
+  Type Ptr = LLVM::LLVMPointerType::get(ctx);
+  Type Int64x3 = LLVM::LLVMArrayType::get(Int64, 3);
+  SmallVector<Type> fields;
+#define ACC_KERNEL_ARG_FIELD(Field, TypeToken) fields.push_back(TypeToken);
+#include "mlir/Dialect/OpenACC/OpenACCRuntimeKernelArgs.def"
+  return LLVM::LLVMStructType::getLiteral(ctx, fields);
 }
 
 void ACCRuntimeCallConfig::setName(RuntimeFunction fn, StringRef name) {
@@ -196,6 +210,19 @@ Value ACCRuntimeCallConfig::createDeclareBinaryDescriptor(
     Location loc, OpBuilder &builder) const {
   if (declareBinaryDescriptorFn)
     return declareBinaryDescriptorFn(loc, builder);
+  return LLVM::ZeroOp::create(builder, loc,
+                              LLVM::LLVMPointerType::get(builder.getContext()));
+}
+
+void ACCRuntimeCallConfig::setKernelBinaryDescriptorFn(
+    KernelBinaryDescriptorFn fn) {
+  kernelBinaryDescriptorFn = std::move(fn);
+}
+
+Value ACCRuntimeCallConfig::createKernelBinaryDescriptor(
+    Location loc, OpBuilder &builder) const {
+  if (kernelBinaryDescriptorFn)
+    return kernelBinaryDescriptorFn(loc, builder);
   return LLVM::ZeroOp::create(builder, loc,
                               LLVM::LLVMPointerType::get(builder.getContext()));
 }

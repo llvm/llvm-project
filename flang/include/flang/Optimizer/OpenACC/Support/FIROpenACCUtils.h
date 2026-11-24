@@ -111,7 +111,8 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 
 /// Returns true if \p val may be used from OpenACC region \p region without
 /// further implicit data mapping.
-bool isValidValueUse(mlir::Value val, mlir::Region &region);
+bool isValidValueUse(mlir::Value val, mlir::Region &region,
+                     mlir::SymbolTableCollection *symbolTables = nullptr);
 
 } // namespace acc
 } // namespace fir

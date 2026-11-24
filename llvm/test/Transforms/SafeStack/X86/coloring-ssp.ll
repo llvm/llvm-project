@@ -6,21 +6,21 @@ define void @f() safestack sspreq {
 ; CHECK-LABEL: define void @f
 entry:
 ; CHECK:  %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-; CHECK:   getelementptr i8, ptr %[[USP]], i32 -16
+; CHECK:   getelementptr i8, ptr %[[USP]], i64 -16
 
-; CHECK:  %[[A:.*]] = getelementptr i8, ptr %[[USP]], i32 -8
+; CHECK:  %[[A:.*]] = getelementptr i8, ptr %[[USP]], i64 -8
 ; CHECK:  store ptr %{{.*}}, ptr %[[A]]
 
   %x = alloca i64, align 8
   %y = alloca i64, align 8
 
   call void @llvm.lifetime.start.p0(ptr %x)
-; CHECK:  getelementptr i8, ptr %[[USP]], i32 -16
+; CHECK:  getelementptr i8, ptr %[[USP]], i64 -16
   call void @capture64(ptr %x)
   call void @llvm.lifetime.end.p0(ptr %x)
 
   call void @llvm.lifetime.start.p0(ptr %y)
-; CHECK:  getelementptr i8, ptr %[[USP]], i32 -16
+; CHECK:  getelementptr i8, ptr %[[USP]], i64 -16
   call void @capture64(ptr %y)
   call void @llvm.lifetime.end.p0(ptr %y)
 

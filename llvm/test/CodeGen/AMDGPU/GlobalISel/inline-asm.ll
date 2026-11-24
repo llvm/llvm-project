@@ -53,12 +53,12 @@ define i32 @test_sgpr_to_vgpr_move_reg_class_constraint() nounwind {
 ; CHECK-NEXT:    s_mov_b32 s4, 7
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_mov_b32 v0, s4
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %asm0 = tail call i32 asm "s_mov_b32 $0, 7", "=s"() nounwind
-  %asm1 = tail call i32 asm "v_mov_b32 $0, $1", "=v,s"(i32 %asm0) nounwind
+  %asm1 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,s"(i32 %asm0) nounwind
   ret i32 %asm1
 }
 
@@ -71,12 +71,12 @@ define i32 @test_sgpr_to_vgpr_move_matching_constraint() nounwind {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_mov_b32 v0, v0
+; CHECK-NEXT:    v_mov_b32_e32 v0, v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %asm0 = tail call i32 asm "s_mov_b32 $0, 7", "=s"() nounwind
-  %asm1 = tail call i32 asm "v_mov_b32 $0, $1", "=v,0"(i32 %asm0) nounwind
+  %asm1 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,0"(i32 %asm0) nounwind
   ret i32 %asm1
 }
 
