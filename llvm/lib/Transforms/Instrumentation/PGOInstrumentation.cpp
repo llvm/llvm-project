@@ -2061,6 +2061,46 @@ static void verifyFuncBFI(const InstrumentationOptions &Opts, PGOUseFunc &Func,
     });
 }
 
+// Annotate functions whose profile record lookup failed due to zero-count hash
+// mismatch or missing profile data (when opted in via -pgo-use-missing-func).
+static void annotateOnLookupFailure(const InstrumentationOptions &Opts,
+                                    Function &F,
+                                    PGOUseFunc::RecordLookupState LookupState,
+                                    uint64_t ProgramMaxCount, bool IsCS,
+                                    std::vector<Function *> &ColdFunctions) {
+  auto MarkCold = [&]() {
+    if ((IsCS && F.getEntryCount()) || F.hasFnAttribute(Attribute::Hot))
+      return;
+    F.setEntryCount(0);
+    if (ProgramMaxCount != 0)
+      ColdFunctions.push_back(&F);
+  };
+
+  if (LookupState == PGOUseFunc::RecordLookupState::ZeroCountHashMismatch) {
+    if (Opts.pgo_use_treat_zero_mismatch_as_cold)
+      MarkCold();
+    return;
+  }
+
+  if (LookupState != PGOUseFunc::RecordLookupState::UnknownFunction)
+    return;
+
+  if (ProgramMaxCount == 0 || F.getEntryCount() || skipPGOGen(Opts, F))
+    return;
+
+  switch (Opts.pgo_use_missing_func) {
+  case PGOMissingFuncBehavior::None:
+    return;
+  case PGOMissingFuncBehavior::Cold:
+    MarkCold();
+    return;
+  case PGOMissingFuncBehavior::Hot:
+    if (!F.hasFnAttribute(Attribute::Cold))
+      F.addFnAttr(Attribute::Hot);
+    return;
+  }
+}
+
 static bool annotateAllFunctions(
     const InstrumentationOptions &Opts, Module &M, StringRef ProfileFileName,
     StringRef ProfileRemappingFileName, vfs::FileSystem &FS,
@@ -2144,20 +2184,9 @@ static bool annotateAllFunctions(
                     HasSingleByteCoverage);
     PGOUseFunc::RecordLookupState LookupState = Func.getRecord(PGOReader.get());
     if (LookupState != PGOUseFunc::RecordLookupState::Matched) {
-      uint64_t MaxCount = PGOReader->getMaximumFunctionCount(IsCS);
-      bool ShouldMarkCold =
-          (LookupState ==
-               PGOUseFunc::RecordLookupState::ZeroCountHashMismatch &&
-           Opts.pgo_use_treat_zero_mismatch_as_cold) ||
-          (LookupState == PGOUseFunc::RecordLookupState::UnknownFunction &&
-           Opts.pgo_use_treat_unknown_as_cold && MaxCount != 0 &&
-           !F.getEntryCount() && !skipPGOGen(Opts, F));
-      if (ShouldMarkCold && (!IsCS || !F.getEntryCount()) &&
-          !F.hasFnAttribute(Attribute::Hot)) {
-        F.setEntryCount(0);
-        if (MaxCount != 0)
-          ColdFunctions.push_back(&F);
-      }
+      annotateOnLookupFailure(Opts, F, LookupState,
+                              PGOReader->getMaximumFunctionCount(IsCS), IsCS,
+                              ColdFunctions);
       continue;
     }
     if (HasSingleByteCoverage) {
