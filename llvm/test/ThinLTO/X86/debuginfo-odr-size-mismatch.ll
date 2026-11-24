@@ -19,6 +19,21 @@
 ; RUN:   -r %t/large.bc,eval_large,pl
 ; RUN: llvm-dis < %t/out1.1.3.import.bc | FileCheck %s --check-prefix=IMPORT
 
+; Case 1b: Same as Case 1 with lazy metadata loading enabled
+; (--bitcode-mdindex-threshold=0), verifying SizeInBits is resolved before
+; ODR uniquing rather than compared as an unresolved placeholder.
+; RUN: opt --bitcode-mdindex-threshold=0 -module-summary -module-hash %t/small.ll -o %t/small.lazy.bc
+; RUN: opt --bitcode-mdindex-threshold=0 -module-summary -module-hash %t/large.ll -o %t/large.lazy.bc
+; RUN: opt --bitcode-mdindex-threshold=0 -module-summary -module-hash %t/main.ll -o %t/main.lazy.bc
+; RUN: llvm-lto2 run -disable-auto-upgrade-debug-info -save-temps \
+; RUN:   %t/main.lazy.bc %t/small.lazy.bc %t/large.lazy.bc -o %t/out1_lazy \
+; RUN:   -r %t/main.lazy.bc,run,plx \
+; RUN:   -r %t/main.lazy.bc,eval_small,l \
+; RUN:   -r %t/main.lazy.bc,eval_large,l \
+; RUN:   -r %t/small.lazy.bc,eval_small,pl \
+; RUN:   -r %t/large.lazy.bc,eval_large,pl
+; RUN: llvm-dis < %t/out1_lazy.1.3.import.bc | FileCheck %s --check-prefix=IMPORT
+
 ; Case 2: DestModule itself defines ProdEval with the smaller size (192) and
 ; imports eval_large (size: 320, with a fragment at [192, 256)).
 ; RUN: llvm-lto2 run -disable-auto-upgrade-debug-info -save-temps \

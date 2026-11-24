@@ -289,6 +289,22 @@ TEST(DebugTypeODRUniquingTest, sizeConflict) {
                 nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
   EXPECT_FALSE(SizedFwdCT.isForwardDecl());
   EXPECT_EQ(192u, SizedFwdCT.getSizeInBits());
+
+  // Unresolved placeholders and temporary forward-reference nodes
+  // conservatively reject ODR uniquing against a sized type so mismatched
+  // sizes cannot be silently collapsed.
+  DistinctMDOperandPlaceholder Placeholder(0);
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, &Placeholder, 0, nullptr, nullptr, 0,
+      DINode::FlagFwdDecl, nullptr, 0, std::nullopt, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  TempMDTuple TempSize = MDNode::getTemporary(Context, {});
+  EXPECT_FALSE(DICompositeType::buildODRType(
+      Context, FwdUUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0,
+      nullptr, nullptr, TempSize.get(), 0, nullptr, nullptr, 0,
+      DINode::FlagFwdDecl, nullptr, 0, std::nullopt, nullptr, nullptr, nullptr,
+      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
 }
 
 } // end namespace
