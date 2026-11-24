@@ -1071,7 +1071,7 @@ void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
     // be spilled, e.g. one that MI clobbers, available.
     if (Cost == spillImpossible)
       continue;
-    
+
     if (PhysReg == Hint0 || PhysReg == Hint1)
       Cost -= spillPrefBonus;
 
