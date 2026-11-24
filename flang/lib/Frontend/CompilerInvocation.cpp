@@ -1166,7 +1166,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // SystemClockStrict warning check
-  // Fortran 2023 introduced restrictions to the arguements of SYSTEM_CLOCK.
+  // Fortran 2023 introduced restrictions to the arguments of SYSTEM_CLOCK.
   // Since violations of these restrictions can cause unexpected or incorrect
   // runtime results, violations should be reported to users at compile time
   // by default. However, since these restrictions are not in Fortran 2018,
@@ -1182,8 +1182,8 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   //    `-W{no-}system-clock-strict` appear, then the last dictates whether
   //    or not the warnings are enabled. In this case, whatever is set below
   //    is overwritten by the last of those flags.
-  // Note: `-pedantic` does not enable this warning, if it is otherwise
-  // disabled.
+  // Note: `-pedantic` has no effect on this warning, because the setting
+  // below always overrides it. '-w' still disables it.
   const bool enableWarning = res.getLangOpts().getFortranStandard() !=
                              Fortran::common::LangOptions::Fortran2018;
   res.getFrontendOpts().features.EnableWarning(

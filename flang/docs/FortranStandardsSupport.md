@@ -22,6 +22,16 @@ There is no distinction made between support in the Parser/Semantics and the MLI
 
 Note: The two major missing features in Flang at present are coarrays and parameterized derived types (PDTs) with length type parameters.
 
+Note: While the `-std=` flag accepts `f2018`, `f2023`, and `f2028` as
+arugments, these standard flags are not strict, and do not disable any
+features.  These standard flags will, on a best-effort basis, issue warnings
+when features not in the specified standard are used.  For example, the first
+implemented difference between the standard flags is that `-std=f2018` will
+disable warnings about `SYSTEM_CLOCK` argument restrictions. These restrictions
+were introduced in F2023 and are not present in F2018.  These warnings are on
+by default and there are other ways to disable them other than using
+`-std=f2018`.  (Namely, `-Wno-strict-system-clock` will disable the only the
+warnings for violations of the `SYSTEM_CLOCK` argument restrictions.)
 
 ## Fortran 2023
 See [document](F202X.md) for a brief discussion about the new features in Fortran 2023. The following table summarizes the
@@ -37,7 +47,7 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Intrinsics for extracting tokens from a string             | Y      | |
 | Intrinsics for Trig functions that work in degrees         | Y      | |
 | Intrinsics for Trig functions that work in half revolutions| Y      | |
-| Changes to system_clock                                    | N      | |
+| Changes to system_clock                                    | Y      | |
 | Changes for conformance with the new IEEE standard         | Y      | |
 | Additional named constants to specify kinds                | Y      | |
 | Extensions for c_f_pointer intrinsic                       | Y      | |

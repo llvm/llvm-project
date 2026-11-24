@@ -187,6 +187,15 @@ page](https://llvm.org/releases/).
   
 - Added `-b <arg>` on AIX, which passes `-b <arg>` to the linker.
 
+- While not new, the `-std=` flag now accepts `f2023` and `f2028` in addition
+  to the already accepted `f2018` flag. These standard flags are not strict,
+  and do not disable any features. These standard flags will, on a best-effort
+  basis, issue warnings when features not in the specified standard are used.
+  The first implemented difference between the standard flags is that
+  `-std=f2018` will disable warnings about `SYSTEM_CLOCK` argument
+  restrictions, which were introduced in F2023 and are not present in F2018.
+  (See below for more details on `SYSTEM_CLOCK` arugment restrictions.)
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang
@@ -225,6 +234,17 @@ page](https://llvm.org/releases/).
     function with either name now requires an EXTERNAL declaration or an
     explicit interface.  A CALL to an external subroutine with either name is
     unaffected.
+
+- Arugments to the `SYSTEM_CLOCK` intrinsic function have two new restrictions
+  matching F2023 16.9.202:
+  - All integer arguments must have a kind parameter no smaller than that of the
+    default integer (F2023 16.9.202 p3).
+  - In a single `SYSTEM_CLOCK` call, all integer arguments must have the same
+    kind (F2023 16.9.202 p4).
+  By default, violoations of the above restrictions will issue warnings but
+  otherwise the code will be accepted. `-Werror` will, of course, cause these
+  warnings to become errors.  `-w`, `-std=f2018`, and `-Wno-system-clock-strict`
+  will disable these warnings.
 
 ## Build System Changes
 

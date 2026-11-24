@@ -26,6 +26,11 @@
 ! RUN: %flang_fc1 -fsyntax-only -Wno-system-clock-strict -pedantic %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
 ! RUN: %flang_fc1 -fsyntax-only -pedantic -std=f2018 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
 
+! RUN: %flang_fc1 -fsyntax-only -w %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: not %flang_fc1 -fsyntax-only -Werror %s 2>&1 | FileCheck --check-prefixes=STRICT,WERROR %s
+
+! WERROR: error: Semantic errors in
+
 ! Tests for SYSTEM_CLOCK argument warnings
 
 program test_system_clock
@@ -80,7 +85,7 @@ program test_system_clock
   !CLEAN-NOT: Integer argument to SYSTEM_CLOCK should be an integer with kind >= 8.
   call system_clock(count=count4, count_rate=rate4, count_max=max4)
 
-  !STRICT: Integer arguments to SYSTEM_CLOCK should have the same kind.
+  !STRICT: warning: Integer arguments to SYSTEM_CLOCK should have the same kind. Given 4 and 8. [-Wsystem-clock-strict]
   !CLEAN-NOT: Integer arguments to SYSTEM_CLOCK should have the same kind.
   !STRICT-8: Integer argument to SYSTEM_CLOCK should be an integer with kind >= 8.
   !CLEAN-NOT: Integer argument to SYSTEM_CLOCK should be an integer with kind >= 8.
