@@ -154,3 +154,10 @@ RustLanguage::GetFormatterLanguages(lldb::LanguageType language) const {
             lldb::eLanguageTypeObjC};
   return {};
 }
+
+bool RustLanguage::IsCategoryApplicable(
+    lldb::LanguageType category_language,
+    lldb::LanguageType valobj_language) const {
+  return Language::LanguageIsC(valobj_language) ||
+         valobj_language == lldb::eLanguageTypeRust;
+}

@@ -49,6 +49,9 @@ public:
   std::vector<lldb::LanguageType>
   GetFormatterLanguages(lldb::LanguageType language) const override;
 
+  bool IsCategoryApplicable(lldb::LanguageType category_language,
+                            lldb::LanguageType valobj_language) const override;
+
   // Static Functions
   static void Initialize();
 
