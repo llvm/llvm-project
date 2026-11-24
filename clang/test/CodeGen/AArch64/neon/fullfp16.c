@@ -137,7 +137,7 @@ float16_t test_vminnmh_f16(float16_t a, float16_t b) {
 // ALL-LABEL: test_vceqzh_f16
 uint16_t test_vceqzh_f16(float16_t a) {
 // CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
-// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.f16
+// CIR:   [[CMP:%.*]] = cir.fcmp oeq %{{.*}}, [[C_0]] : !cir.f16
 // CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
 

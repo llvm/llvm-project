@@ -1804,7 +1804,7 @@ int64_t test_vceqzd_u64(int64_t a) {
 // CIR-LABEL: @vceqzs_f32(
 uint32_t test_vceqzs_f32(float32_t a) {
 // CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
-// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.float
+// CIR:   [[CMP:%.*]] = cir.fcmp oeq %{{.*}}, [[C_0]] : !cir.float
 // CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u32i
 
@@ -1819,7 +1819,7 @@ uint32_t test_vceqzs_f32(float32_t a) {
 // CIR-LABEL: @vceqzd_f64(
 uint64_t test_vceqzd_f64(float64_t a) {
 // CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
-// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.double
+// CIR:   [[CMP:%.*]] = cir.fcmp oeq %{{.*}}, [[C_0]] : !cir.double
 // CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
 
