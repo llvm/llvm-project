@@ -17,13 +17,25 @@
 // supplies SME. An empty guard makes that mode unavailable.
 // NonStreamingVariant and StreamingVariant take one guard for intrinsics
 // available in only one mode.
+// Both predicates are active for streaming-compatible functions, so the
+// intrinsic must satisfy both mode guards.
 // Each inner type list is an independent overload in intrinsic overload-index
 // order. Dependent and fixed result and operand types are inferred by TableGen.
 defvar Invalid = "";
 
+class NonStreamingGuard<string features> : FeatureGuard<features> {
+  let Predicate = [{!ST.isStreaming() || ST.isStreamingCompatible()}];
+}
+
+class StreamingGuard<string features> : FeatureGuard<features> {
+  let Predicate = [{ST.isStreaming() || ST.isStreamingCompatible()}];
+  let FeatureBits = [{getAArch64StreamingFeatureBits(ST)}];
+}
+
 class Variant<string nonStreamingGuard, string streamingGuard,
               list<list<LLVMType>> overloads>
-    : GuardedVariant<[nonStreamingGuard, streamingGuard], overloads>;
+    : GuardedVariant<[NonStreamingGuard<nonStreamingGuard>,
+                      StreamingGuard<streamingGuard>], overloads>;
 
 class NonStreamingVariant<string nonStreamingGuard,
                           list<list<LLVMType>> overloads>

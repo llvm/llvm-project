@@ -5,6 +5,14 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -filetype=null %t/sme-zero-zt-both-modes.ll
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=null %t/st2-pointers.ll
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=null %t/fadd-compatible.ll
+; A single-mode function needs only its active guard. The other guard may be unavailable.
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=null %t/ldnf-nonstreaming.ll
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -filetype=null %t/sme-load-streaming.ll
+; A streaming-compatible function needs both mode guards.
+; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=null %t/ldnf-compatible.ll 2>&1 | FileCheck %s --check-prefix=LDNF-COMPATIBLE
+; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sme -filetype=null %t/sme-load-compatible.ll 2>&1 | FileCheck %s --check-prefix=SME-LOAD-COMPATIBLE
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve,+sve-b16b16,+sme2 -force-streaming-compatible -filetype=null %t/fadd-bf16.ll
+; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve,+sve-b16b16 -force-streaming-compatible -filetype=null %t/fadd-bf16.ll 2>&1 | FileCheck %s --check-prefix=BF16-COMPATIBLE
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=null %t/add-supported.ll
 ; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=null %t/add-unsupported.ll 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-TYPES
 ; RUN: not llc -mtriple=aarch64-linux-gnu -filetype=null %t/sme-zero-compatible.ll 2>&1 | FileCheck %s --check-prefix=SME-FEATURE
@@ -15,7 +23,6 @@
 ; RUN: not llc -mtriple=aarch64-linux-gnu -filetype=null %t/st2-pointers.ll 2>&1 | FileCheck %s --check-prefix=POINTER-VECTOR
 ; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sme -filetype=null %t/ldnf-streaming.ll 2>&1 | FileCheck %s --check-prefix=BAD-MODE
 ; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=null %t/fadd-bf16.ll 2>&1 | FileCheck %s --check-prefix=BF16
-; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve,+sve-b16b16 -force-streaming-compatible -filetype=null %t/fadd-bf16.ll 2>&1 | FileCheck %s --check-prefix=COMPATIBLE-EXT
 ; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sme -filetype=null %t/sme-load-nonstreaming.ll 2>&1 | FileCheck %s --check-prefix=SME-MODE
 ; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sme2,+sve-b16b16 -filetype=null %t/bfclamp-nonstreaming.ll 2>&1 | FileCheck %s --check-prefix=BFCLAMP-MODE
 ; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sme2p1 -filetype=null %t/fmaxnmqv-nonstreaming.ll 2>&1 | FileCheck %s --check-prefix=SME2P1-NO-SVE
@@ -24,8 +31,10 @@
 ; STREAMING-SME: streaming SVE functions require SME
 ; POINTER-VECTOR: AArch64 intrinsic 'llvm.aarch64.sve.st2.nxv2p0.p0' in function 'st2_pointers' requires sve in non-streaming mode
 ; BAD-MODE: AArch64 intrinsic 'llvm.aarch64.sve.ldnf1.nxv4f32.p0' in function 'ldnf_streaming' is unavailable in streaming mode
+; LDNF-COMPATIBLE: AArch64 intrinsic 'llvm.aarch64.sve.ldnf1.nxv4f32.p0' in function 'ldnf_compatible' is unavailable in streaming mode
+; SME-LOAD-COMPATIBLE: AArch64 intrinsic 'llvm.aarch64.sme.ld1b.horiz.p0' in function 'sme_load_compatible' is unavailable in non-streaming mode
 ; BF16: AArch64 intrinsic 'llvm.aarch64.sve.fadd.nxv8bf16' in function 'fadd_bf16' requires sve,sve-b16b16 in non-streaming mode
-; COMPATIBLE-EXT: AArch64 intrinsic 'llvm.aarch64.sve.fadd.nxv8bf16' in function 'fadd_bf16' requires sme2,sve-b16b16 in streaming mode
+; BF16-COMPATIBLE: AArch64 intrinsic 'llvm.aarch64.sve.fadd.nxv8bf16' in function 'fadd_bf16' requires sme2,sve-b16b16 in streaming mode
 ; SME-FEATURE: AArch64 intrinsic 'llvm.aarch64.sme.zero' in function 'sme_zero_nonstreaming' requires sme in non-streaming mode
 ; ZT-NEEDS-SME2: AArch64 intrinsic 'llvm.aarch64.sme.zero.zt' in function 'zero_zt_nonstreaming' requires sme2 in non-streaming mode
 ; SME-MODE: AArch64 intrinsic 'llvm.aarch64.sme.ld1b.horiz.p0' in function 'sme_load_nonstreaming' is unavailable in non-streaming mode
@@ -73,6 +82,14 @@ define <vscale x 4 x float> @ldnf_streaming(<vscale x 4 x i1> %pg, ptr %p) "aarc
   ret <vscale x 4 x float> %result
 }
 
+;--- ldnf-nonstreaming.ll
+declare <vscale x 4 x float> @llvm.aarch64.sve.ldnf1.nxv4f32(<vscale x 4 x i1>, ptr)
+
+define <vscale x 4 x float> @ldnf_nonstreaming(<vscale x 4 x i1> %pg, ptr %p) {
+  %result = call <vscale x 4 x float> @llvm.aarch64.sve.ldnf1.nxv4f32(<vscale x 4 x i1> %pg, ptr %p)
+  ret <vscale x 4 x float> %result
+}
+
 ;--- fadd-bf16.ll
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fadd.nxv8bf16(<vscale x 8 x i1>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 
@@ -86,6 +103,14 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1>, <
 
 define <vscale x 4 x float> @fadd_compatible(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) "aarch64_pstate_sm_compatible" {
   %result = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %result
+}
+
+;--- ldnf-compatible.ll
+declare <vscale x 4 x float> @llvm.aarch64.sve.ldnf1.nxv4f32(<vscale x 4 x i1>, ptr)
+
+define <vscale x 4 x float> @ldnf_compatible(<vscale x 4 x i1> %pg, ptr %p) "aarch64_pstate_sm_compatible" {
+  %result = call <vscale x 4 x float> @llvm.aarch64.sve.ldnf1.nxv4f32(<vscale x 4 x i1> %pg, ptr %p)
   ret <vscale x 4 x float> %result
 }
 
@@ -122,6 +147,22 @@ define void @st2_pointers(<vscale x 2 x ptr> %a, <vscale x 2 x ptr> %b, <vscale 
 declare void @llvm.aarch64.sme.ld1b.horiz(<vscale x 16 x i1>, ptr, i32, i32)
 
 define void @sme_load_nonstreaming(<vscale x 16 x i1> %pg, ptr %p) {
+  call void @llvm.aarch64.sme.ld1b.horiz(<vscale x 16 x i1> %pg, ptr %p, i32 0, i32 0)
+  ret void
+}
+
+;--- sme-load-streaming.ll
+declare void @llvm.aarch64.sme.ld1b.horiz(<vscale x 16 x i1>, ptr, i32, i32)
+
+define void @sme_load_streaming(<vscale x 16 x i1> %pg, ptr %p) "aarch64_pstate_sm_enabled" {
+  call void @llvm.aarch64.sme.ld1b.horiz(<vscale x 16 x i1> %pg, ptr %p, i32 0, i32 0)
+  ret void
+}
+
+;--- sme-load-compatible.ll
+declare void @llvm.aarch64.sme.ld1b.horiz(<vscale x 16 x i1>, ptr, i32, i32)
+
+define void @sme_load_compatible(<vscale x 16 x i1> %pg, ptr %p) "aarch64_pstate_sm_compatible" {
   call void @llvm.aarch64.sme.ld1b.horiz(<vscale x 16 x i1> %pg, ptr %p, i32 0, i32 0)
   ret void
 }

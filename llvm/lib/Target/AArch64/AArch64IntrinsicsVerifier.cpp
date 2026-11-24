@@ -33,12 +33,6 @@ using namespace llvm;
 
 namespace {
 
-// A streaming-compatible function can enter streaming mode with SME. These
-// features are the minimum implied by SME and are available in that mode.
-static constexpr FeatureBitset AArch64StreamingModeFeatures = {
-    AArch64::FeatureBF16, AArch64::FeatureFPARMv8, AArch64::FeatureFullFP16,
-    AArch64::FeatureNEON, AArch64::FeatureSME};
-
 static bool matchesType(Type *Actual, Type *Expected, const DataLayout &DL) {
   if (Actual == Expected)
     return true;
@@ -87,16 +81,6 @@ static bool matchesSignature(const IntrinsicInst &Call,
   return true;
 }
 
-static bool hasFeatures(const IntrinsicFeatureGuard &Guard,
-                        const FeatureBitset &Available) {
-  for (const FeatureBitset &Required :
-       getAArch64GuardedIntrinsicInfo().getAlternatives(Guard)) {
-    if ((Available & Required) == Required)
-      return true;
-  }
-  return false;
-}
-
 struct IntrinsicCheckResult {
   bool HasGuards = false;
   bool FoundSignature = false;
@@ -108,43 +92,32 @@ struct IntrinsicCheckResult {
 static IntrinsicCheckResult checkIntrinsic(const IntrinsicInst &II,
                                            const AArch64Subtarget &ST) {
   IntrinsicCheckResult Result;
-  const GuardedIntrinsicInfo &Info = getAArch64GuardedIntrinsicInfo();
+  Result.FailedMode = ST.isStreaming() ? "streaming" : "non-streaming";
+  const AArch64GuardedIntrinsicInfo &Info = getAArch64GuardedIntrinsicInfo();
   ArrayRef<IntrinsicFeatureVariant> Variants =
       Info.getVariants(II.getIntrinsicID());
   if (Variants.empty())
     return Result;
   Result.HasGuards = true;
 
-  const FeatureBitset &Available = ST.getFeatureBits();
-  const bool Streaming = ST.isStreaming();
-  const bool BothModes = ST.isStreamingCompatible() && !Streaming;
-  // A streaming-compatible function can enter streaming mode with SME.
-  const FeatureBitset StreamingAvailable =
-      BothModes ? Available | AArch64StreamingModeFeatures : Available;
-
   for (const IntrinsicFeatureVariant &V : Variants) {
-    assert(V.NumGuards == 2 && "AArch64 variants need two mode guards");
     if (!matchesSignature(II, V))
       continue;
     Result.FoundSignature = true;
-    // AArch64 uses guard 0 for non-streaming mode and guard 1 for
-    // streaming mode.
-    const IntrinsicFeatureGuard &NonStreamingGuard = Info.getGuard(V, 0);
-    const IntrinsicFeatureGuard &StreamingGuard = Info.getGuard(V, 1);
-    if ((!Streaming || BothModes) &&
-        !hasFeatures(NonStreamingGuard, Available)) {
-      Result.Failed = &NonStreamingGuard;
-      Result.FailedMode = "non-streaming";
-      continue;
+    // The guard predicates select one mode normally and both modes for a
+    // streaming-compatible function. Every active guard must pass.
+    if (Info.isVariantAvailable(V, ST)) {
+      Result.Valid = true;
+      break;
     }
-    if ((Streaming || BothModes) &&
-        !hasFeatures(StreamingGuard, StreamingAvailable)) {
-      Result.Failed = &StreamingGuard;
-      Result.FailedMode = "streaming";
-      continue;
+    for (unsigned I = 0; I < V.NumGuards; ++I) {
+      const IntrinsicFeatureGuard &Guard = Info.getGuard(V, I);
+      IntrinsicGuardCheckResult Check = Info.checkGuard(Guard, ST);
+      if (Check == IntrinsicGuardCheckResult::MissingFeatures) {
+        Result.Failed = &Guard;
+        Result.FailedMode = I == 0 ? "non-streaming" : "streaming";
+      }
     }
-    Result.Valid = true;
-    break;
   }
   return Result;
 }
@@ -181,7 +154,8 @@ public:
                             "' in function '" + F.getName().str() + "' ";
       if (!Result.FoundSignature)
         Message += "has an unsupported type signature";
-      else if (!Result.Failed->NumClauses)
+      else if (!Result.Failed || !Result.Failed->NumClauses)
+        // No predicate matched, or the active guard has no feature path.
         Message += "is unavailable in " + Result.FailedMode.str() + " mode";
       else
         Message += "requires " + std::string(Result.Failed->Expression) +

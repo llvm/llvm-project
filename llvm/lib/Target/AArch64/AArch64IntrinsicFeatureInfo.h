@@ -9,12 +9,16 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64INTRINSICFEATUREINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64INTRINSICFEATUREINFO_H
 
+#include "llvm/IR/GuardedIntrinsicInfo.h"
+
 namespace llvm {
 
-class GuardedIntrinsicInfo;
+class AArch64Subtarget;
+using AArch64GuardedIntrinsicInfo = GuardedIntrinsicInfo<AArch64Subtarget>;
 
 /// Return the AArch64 intrinsic feature table shared by backend passes.
-const GuardedIntrinsicInfo &getAArch64GuardedIntrinsicInfo();
+const AArch64GuardedIntrinsicInfo &getAArch64GuardedIntrinsicInfo();
+FeatureBitset getAArch64StreamingFeatureBits(const AArch64Subtarget &ST);
 
 } // namespace llvm
 

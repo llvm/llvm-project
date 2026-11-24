@@ -1747,6 +1747,18 @@ static std::string baseVectorVT(const SVEType &T) {
   return "nxv" + std::to_string(T.getNumElements()) + Element;
 }
 
+static std::array<StringRef, 2>
+getAArch64IntrinsicGuards(const Record *Variant) {
+  auto Guards = Variant->getValueAsListOfDefs("Guards");
+  if (Guards.size() != 2 || !Guards[0]->isSubClassOf("NonStreamingGuard") ||
+      !Guards[1]->isSubClassOf("StreamingGuard"))
+    PrintFatalError(Variant,
+                    "AArch64 intrinsic variant must have a non-streaming "
+                    "guard followed by a streaming guard");
+  return {Guards[0]->getValueAsString("Features"),
+          Guards[1]->getValueAsString("Features")};
+}
+
 // Return the variants of the LLVM IR intrinsic that are relevant to the types
 // used for the current builtin \p Def. Reports an error if no intrinsic
 // variants match the types of the builtin.
@@ -1762,10 +1774,7 @@ SVEEmitter::collectIntrinsicVariantsForBuiltin(const Record *IRIntrinsicRecord,
                     "intrinsic has no target guard variants");
 
   for (const GuardedIntrinsicVariant &V : Variants)
-    if (V.Guard->getValueAsListOfStrings("Guards").size() != 2)
-      PrintFatalError(V.Guard,
-                      "AArch64 intrinsic variant must have two guards, one "
-                      "for non-streaming mode and one for streaming mode.");
+    getAArch64IntrinsicGuards(V.Guard);
 
   std::string BaseVT = baseVectorVT(Def.getBaseType());
   bool BuiltinIsOverloadNone =
@@ -1819,7 +1828,7 @@ static bool matchBuiltinToVariants(const Record *IRIntrinsicRecord,
                                    StringRef SVEGuard, StringRef SMEGuard,
                                    ArrayRef<GuardedIntrinsicVariant> Variants) {
   return llvm::any_of(Variants, [&](const GuardedIntrinsicVariant &V) {
-    auto IRGuards = V.Guard->getValueAsListOfStrings("Guards");
+    auto IRGuards = getAArch64IntrinsicGuards(V.Guard);
     auto ReportGuardError = [&](const Twine &Message) {
       PrintFatalError(IRIntrinsicRecord, Message);
     };
@@ -1882,7 +1891,7 @@ void SVEEmitter::verifyLLVMIntrinsicGuards(
     std::string LLVMGuards;
     std::set<std::string> SeenLLVMGuards;
     for (const GuardedIntrinsicVariant &V : Variants) {
-      auto IRGuards = V.Guard->getValueAsListOfStrings("Guards");
+      auto IRGuards = getAArch64IntrinsicGuards(V.Guard);
       std::string GuardPair =
           ("['" + IRGuards[0] + "', '" + IRGuards[1] + "']").str();
       if (SeenLLVMGuards.insert(GuardPair).second) {
