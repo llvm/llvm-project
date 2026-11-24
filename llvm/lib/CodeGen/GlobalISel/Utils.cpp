@@ -1762,9 +1762,9 @@ bool llvm::matchUnaryPredicate(
   return true;
 }
 
-bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
-                          bool IsFP) {
-  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val,
+                          bool IsVector) {
+  switch (TLI.getBooleanContents(IsVector)) {
   case TargetLowering::UndefinedBooleanContent:
     return Val & 0x1;
   case TargetLowering::ZeroOrOneBooleanContent:
@@ -1776,8 +1776,8 @@ bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
 }
 
 bool llvm::isConstFalseVal(const TargetLowering &TLI, int64_t Val,
-                           bool IsVector, bool IsFP) {
-  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+                           bool IsVector) {
+  switch (TLI.getBooleanContents(IsVector)) {
   case TargetLowering::UndefinedBooleanContent:
     return ~Val & 0x1;
   case TargetLowering::ZeroOrOneBooleanContent:
@@ -1787,9 +1787,8 @@ bool llvm::isConstFalseVal(const TargetLowering &TLI, int64_t Val,
   llvm_unreachable("Invalid boolean contents");
 }
 
-int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
-                             bool IsFP) {
-  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector) {
+  switch (TLI.getBooleanContents(IsVector)) {
   case TargetLowering::UndefinedBooleanContent:
   case TargetLowering::ZeroOrOneBooleanContent:
     return 1;
