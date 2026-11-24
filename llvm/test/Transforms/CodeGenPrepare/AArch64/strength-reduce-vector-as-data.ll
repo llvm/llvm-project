@@ -70,19 +70,22 @@ define void @init_array_of_ptrs_to_structs_nonzero_start(ptr noalias %arc_ptrs, 
 ; CHECK-NEXT:    [[START_INDEX_INSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[START_INDEX]], i64 0
 ; CHECK-NEXT:    [[START_INDEX_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[START_INDEX_INSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[OFFSET_START:%.*]] = add <vscale x 2 x i64> [[TMP0]], [[START_INDEX_SPLAT]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[STEP]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <vscale x 2 x i64> [[OFFSET_START]], splat (i64 72)
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[ARC_NEW]], <vscale x 2 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[STEP]], 72
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[OFFSET_START]], %[[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds nuw [72 x i8], ptr [[ARC_NEW]], <vscale x 2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = phi <vscale x 2 x ptr> [ [[TMP6]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds nuw [72 x i8], ptr [[ARC_NEW]], <vscale x 2 x i64> poison
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARC_PTRS]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[WIDE_GEP]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7]] = getelementptr i8, <vscale x 2 x ptr> [[WIDE_GEP]], <vscale x 2 x i64> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
