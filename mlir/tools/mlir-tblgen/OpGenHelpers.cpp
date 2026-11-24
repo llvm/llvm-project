@@ -56,7 +56,9 @@ static std::string getOperationName(const Record &def) {
   return std::string(formatv("{0}.{1}", prefix, opName));
 }
 
-StringRef mlir::tblgen::getOpRegistrationName() { return opRegistrationName; }
+StringRef mlir::tblgen::getOpRegistrationNameOverride() {
+  return opRegistrationName;
+}
 
 std::vector<const Record *> mlir::tblgen::getRequestedOpDefinitions(
     const RecordKeeper &records,

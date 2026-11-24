@@ -38,6 +38,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -4802,11 +4803,12 @@ getOpRegistrationParts(const Dialect &dialect, ArrayRef<const Record *> defs,
     return llvm::to_vector_of<std::string>(
         getAllOpPartitions(dialect, defs, otherPartitionDefs));
 
-  SmallVector<std::string> shards;
-  if (unsigned shardCount = getOpShardCount(); shardCount > 1)
-    for (unsigned i : llvm::seq(shardCount))
-      shards.push_back(std::to_string(i));
-  return shards;
+  unsigned shardCount = getOpShardCount();
+  if (shardCount <= 1)
+    return {};
+
+  return llvm::map_to_vector(llvm::seq(shardCount),
+                             [](unsigned i) { return std::to_string(i); });
 }
 
 /// Returns the dialects with ops in `defs` that use the default op
@@ -4832,7 +4834,8 @@ emitOpRegistrationHookDecls(ArrayRef<const Record *> defs,
   for (const Dialect &dialect : getOpDialectsWithRegistrationHook(defs)) {
     DialectNamespaceEmitter ns(os, dialect);
     emitRegistrationHookDecls(
-        os, dialect, RegistrationKind::Operation, getOpRegistrationName(),
+        os, dialect, RegistrationKind::Operation,
+        getOpRegistrationNameOverride(),
         getOpRegistrationParts(dialect, defs, otherPartitionDefs),
         partsDescription);
   }
@@ -4860,7 +4863,8 @@ static void emitOpRegistrationHookDefs(
 
     DialectNamespaceEmitter ns(os, dialect);
     emitRegistrationHookDefs(
-        os, dialect, RegistrationKind::Operation, getOpRegistrationName(), part,
+        os, dialect, RegistrationKind::Operation,
+        getOpRegistrationNameOverride(), part,
         getOpRegistrationParts(dialect, defs, otherPartitionDefs),
         opsToRegister);
   }
