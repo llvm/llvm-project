@@ -209,8 +209,7 @@ static bool profitableToRotateLoopExitingLatch(Loop *L, ScalarEvolution *SE) {
 }
 
 static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
-                                bool HasConditionalPreHeader,
-                                bool SuccsSwapped) {
+                                bool KeepClonedWeights, bool SuccsSwapped) {
   MDNode *WeightMD = getBranchWeightMDNode(PreHeaderBI);
   if (WeightMD == nullptr)
     return;
@@ -237,7 +236,7 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   //                             Exit
   //
   // This preserves block frequencies.
-  if (HasConditionalPreHeader)
+  if (KeepClonedWeights)
     return;
 
   SmallVector<uint32_t, 2> Weights;
@@ -701,7 +700,9 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch,
        getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)))
     EstimatedTripCount = getLoopEstimatedTripCount(L);
 
-  updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
+  // Side exits would be counted as backedges, so keep the cloned weights.
+  bool KeepClonedWeights = HasConditionalPreHeader || IsMultiExitLoop;
+  updateBranchWeights(*PHBI, *BI, KeepClonedWeights, BISuccsSwapped);
 
   if (HasConditionalPreHeader) {
     // The conditional branch can't be folded, handle the general case.

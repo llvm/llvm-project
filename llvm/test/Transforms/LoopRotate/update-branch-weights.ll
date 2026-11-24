@@ -446,7 +446,7 @@ loop_exit:
   ret void
 }
 
-; A multi-exit loop gets no inferred count.
+; A multi-exit loop gets no inferred count and keeps its latch weights.
 define void @test_multi_exit_no_inferred_trip_count(ptr %p) {
 ; IR-LABEL: define void @test_multi_exit_no_inferred_trip_count(
 ; IR-SAME: ptr [[P:%.*]]) {
@@ -455,7 +455,7 @@ define void @test_multi_exit_no_inferred_trip_count(ptr %p) {
 ; IR:       [[LOOP_HEADER:.*]]:
 ; IR-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[LOOP_BODY]] ]
 ; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], 10
-; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_EXIT:.*]], !prof [[PROF4]]
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_EXIT:.*]], !prof [[PROF24]]
 ; IR:       [[LOOP_BODY]]:
 ; IR-NEXT:    [[I1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP_HEADER]] ]
 ; IR-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P]], align 4
