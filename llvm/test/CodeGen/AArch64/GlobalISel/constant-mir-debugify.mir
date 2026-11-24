@@ -6,7 +6,6 @@
 ---
 name:            fconstant_to_constant_s32
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

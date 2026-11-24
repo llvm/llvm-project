@@ -5,6 +5,8 @@
 // RUN:   -triple spirv-unknown-vulkan-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s --check-prefix=SPIRV
 
+using namespace hlsl;
+
 // CHECK: define hidden noundef i32 @_Z11test_scalarf(float noundef nofpclass(nan inf) %p0) #0 {
 // CHECK: %hlsl.f32tof16 = call i32 @llvm.dx.legacyf32tof16.f32(float %[[#]])
 // CHECK: ret i32 %hlsl.f32tof16

@@ -4,7 +4,6 @@
 ...
 ---
 name:            smulo_to_saddo
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -26,7 +25,6 @@ body:             |
 ...
 ---
 name:            umulo_to_uaddo
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -48,7 +46,6 @@ body:             |
 ...
 ---
 name:            vector
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -71,7 +68,6 @@ body:             |
 ...
 ---
 name:            dont_combine_wrong_cst
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -94,7 +90,6 @@ body:             |
 ...
 ---
 name:            dont_combine_not_cst
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -117,7 +112,6 @@ body:             |
 ...
 ---
 name:            umulo_i128
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -143,7 +137,6 @@ body:             |
 ...
 ---
 name:            smulo_i128
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1

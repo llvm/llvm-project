@@ -699,7 +699,7 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
 
-    auto addend = rs.getAddend<ELFT>(rel, type);
+    auto addend = rs.getAddend(rel, type);
     if (expr == RE_MIPS_GOTREL && sym.isLocal()) {
       addend += sec.getFile<ELFT>()->mipsGp0;
     } else if (!RelTy::HasAddend) {

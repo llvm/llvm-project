@@ -24,11 +24,61 @@ func.func @test_array_read_and_write() {
   return
 }
 
+// The remaining copy is moved in front of the converted copyin in the data
+// operands. The copy owns the mapping when the two name the same memory, so
+// the copyout still copies it back. The operations themselves stay in place.
 // CHECK-LABEL: func.func @test_array_read_and_write
 // CHECK: %[[R:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xi32>>) implicit(true) name("readonly")
 // CHECK: %[[W:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xi32>>) dataClause(acc_copy) implicit(true) name("written")
+// CHECK: acc.parallel dataOperands(%[[W]], %[[R]] :
 // CHECK: acc.copyout accPtr(%[[W]] : !fir.ref<!fir.array<10xi32>>) to varPtr(%{{.*}} : !fir.ref<!fir.array<10xi32>>) dataClause(acc_copy) implicit(true) name("written")
 // CHECK: acc.delete accPtr(%[[R]] : !fir.ref<!fir.array<10xi32>>) dataClause(acc_copyin) implicit(true) name("readonly")
+
+// -----
+
+// Fortran does not allow an intent(in) dummy to alias an intent(out) dummy,
+// so alias analysis treats x and y as unmodified and their implicit copies
+// become copyins. A caller can still pass one actual for both, as in
+// "call apply(x, y, x)". Moving the copies in front of the first converted
+// copyin leaves result, which stays a copy, as the first data operand. That
+// copy creates the mapping, so the
+// result is still copied back. The operations themselves stay in place.
+func.func @test_dummy_copyin_ordering(
+    %arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "x"},
+    %arg1: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "y"},
+    %arg2: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "result"}) {
+  %c1 = arith.constant 1 : index
+  %scope = fir.dummy_scope : !fir.dscope
+  %x = fir.declare %arg0 dummy_scope %scope uniq_name("_QFapplyEx") fortran_attrs<intent_in> : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> !fir.box<!fir.array<?xf64>>
+  %y = fir.declare %arg1 dummy_scope %scope uniq_name("_QFapplyEy") fortran_attrs<intent_in> : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> !fir.box<!fir.array<?xf64>>
+  %result = fir.declare %arg2 dummy_scope %scope uniq_name("_QFapplyEresult") fortran_attrs<intent_out> : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> !fir.box<!fir.array<?xf64>>
+  %xc = acc.copyin var(%x : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("x") -> !fir.box<!fir.array<?xf64>>
+  %yc = acc.copyin var(%y : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("y") -> !fir.box<!fir.array<?xf64>>
+  %rc = acc.copyin var(%result : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("result") -> !fir.box<!fir.array<?xf64>>
+  acc.parallel dataOperands(%xc, %yc, %rc : !fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>) {
+    %xelem = fir.array_coor %xc %c1 : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+    %xval = fir.load %xelem : !fir.ref<f64>
+    %yelem = fir.array_coor %yc %c1 : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+    %yval = fir.load %yelem : !fir.ref<f64>
+    %sum = arith.addf %xval, %yval : f64
+    %relem = fir.array_coor %rc %c1 : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+    fir.store %sum to %relem : !fir.ref<f64>
+    acc.yield
+  }
+  acc.copyout accVar(%rc : !fir.box<!fir.array<?xf64>>) to var(%result : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("result")
+  acc.copyout accVar(%yc : !fir.box<!fir.array<?xf64>>) to var(%y : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("y")
+  acc.copyout accVar(%xc : !fir.box<!fir.array<?xf64>>) to var(%x : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("x")
+  return
+}
+
+// CHECK-LABEL: func.func @test_dummy_copyin_ordering
+// CHECK: %[[X:.*]] = acc.copyin var(%{{.*}} : !fir.box<!fir.array<?xf64>>) implicit(true) name("x")
+// CHECK: %[[Y:.*]] = acc.copyin var(%{{.*}} : !fir.box<!fir.array<?xf64>>) implicit(true) name("y")
+// CHECK: %[[RESULT:.*]] = acc.copyin var(%{{.*}} : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("result")
+// CHECK: acc.parallel dataOperands(%[[RESULT]], %[[X]], %[[Y]] :
+// CHECK: acc.copyout accVar(%[[RESULT]] : !fir.box<!fir.array<?xf64>>) to var(%{{.*}} : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) implicit(true) name("result")
+// CHECK: acc.delete accVar(%[[Y]] : !fir.box<!fir.array<?xf64>>) dataClause(acc_copyin) implicit(true) name("y")
+// CHECK: acc.delete accVar(%[[X]] : !fir.box<!fir.array<?xf64>>) dataClause(acc_copyin) implicit(true) name("x")
 
 // -----
 
@@ -63,7 +113,7 @@ func.func @test_allocatable_data_write() {
 // CHECK: %[[R:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) implicit(true) name("readonly")
 // CHECK: %[[W:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) dataClause(acc_copy) implicit(true) name("written")
 // CHECK-NOT: fir.box_addr
-// CHECK: acc.parallel
+// CHECK: acc.parallel dataOperands(%[[W]], %[[R]] :
 // CHECK: acc.copyout accPtr(%[[W]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) to varPtr(%{{.*}}) dataClause(acc_copy) implicit(true) name("written")
 // CHECK: acc.delete accPtr(%[[R]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) dataClause(acc_copyin) implicit(true) name("readonly")
 
@@ -215,3 +265,32 @@ func.func @test_multiple_owners() {
 // CHECK: %[[P:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) implicit(true) name("param")
 // CHECK: acc.delete accPtr(%[[P]] : !fir.ref<i32>) dataClause(acc_copyin) implicit(true) name("param")
 // CHECK: acc.copyout accPtr(%[[R]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("readonly")
+
+// -----
+
+// The copy of a is moved in front of the converted copyin of idx and the
+// present of idx. The present still follows the copyin that creates its data.
+func.func @test_copy_moved_before_present() {
+  %ia = fir.alloca i32 {bindc_name = "idx"}
+  %idx = fir.declare %ia uniq_name("_QFEidx") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %aa = fir.alloca i32 {bindc_name = "a"}
+  %a = fir.declare %aa uniq_name("_QFEa") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %ic = acc.copyin varPtr(%idx : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("idx") -> !fir.ref<i32>
+  %ip = acc.present varPtr(%idx : !fir.ref<i32>) implicit(true) name("idx") -> !fir.ref<i32>
+  %ac = acc.copyin varPtr(%a : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("a") -> !fir.ref<i32>
+  acc.parallel dataOperands(%ic, %ip, %ac : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
+    %v = fir.load %ip : !fir.ref<i32>
+    fir.store %v to %ac : !fir.ref<i32>
+    acc.yield
+  }
+  acc.copyout accPtr(%ac : !fir.ref<i32>) to varPtr(%a : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("a")
+  acc.copyout accPtr(%ic : !fir.ref<i32>) to varPtr(%idx : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("idx")
+  return
+}
+
+// CHECK-LABEL: func.func @test_copy_moved_before_present
+// CHECK: %[[IC:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) implicit(true) name("idx")
+// CHECK: %[[IP:.*]] = acc.present varPtr(%{{.*}} : !fir.ref<i32>) implicit(true) name("idx")
+// CHECK: %[[AC:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("a")
+// CHECK: acc.parallel dataOperands(%[[AC]], %[[IC]], %[[IP]] :
+// CHECK: acc.delete accPtr(%[[IC]] : !fir.ref<i32>) dataClause(acc_copyin) implicit(true) name("idx")

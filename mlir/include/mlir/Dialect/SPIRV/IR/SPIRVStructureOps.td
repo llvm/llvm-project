@@ -106,6 +106,7 @@ def SPIRV_ConstantOp : SPIRV_Op<"Constant",
     %0 = spirv.Constant true
     %1 = spirv.Constant dense<[2.0, 3.0]> : vector<2xf32>
     %2 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.array<1xvector<2xf32>>
+    %3 = spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
     ```
 
     TODO: support constant structs

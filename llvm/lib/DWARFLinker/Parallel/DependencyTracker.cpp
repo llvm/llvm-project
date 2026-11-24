@@ -118,10 +118,18 @@ static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
   }
 }
 
-bool DependencyTracker::resolveDependenciesAndMarkLiveness(
-    bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
+void DependencyTracker::collectLiveRoots() {
   RootEntriesWorkList.clear();
 
+  // Search for live root DIEs.
+  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(CU.getDebugInfoEntry(0));
+  CUInfo.setPlacement(CompileUnit::PlainDwarf);
+  collectRootsToKeep(UnitEntryPairTy{&CU, CU.getDebugInfoEntry(0)},
+                     std::nullopt, false);
+}
+
+bool DependencyTracker::resolveDependenciesAndMarkLiveness(
+    bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
   // The recorded subtrees are walked after marking, and need to resolve
   // references the same way marking did. A unit whose references could not all
   // be resolved is reset to its loaded stage and marked again from scratch, so
@@ -130,12 +138,6 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
           InterCUProcessingWasStarted == InterCUProcessingStarted) &&
          "recorded subtrees would be walked in a different resolution mode");
   InterCUProcessingWasStarted = InterCUProcessingStarted;
-
-  // Search for live root DIEs.
-  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(CU.getDebugInfoEntry(0));
-  CUInfo.setPlacement(CompileUnit::PlainDwarf);
-  collectRootsToKeep(UnitEntryPairTy{&CU, CU.getDebugInfoEntry(0)},
-                     std::nullopt, false);
 
   // Mark live DIEs as kept.
   return markCollectedLiveRootsAsKept(InterCUProcessingStarted,
@@ -456,6 +458,20 @@ bool isAlreadyMarked(const UnitEntryPairTy &Entry,
   return isAlreadyMarked(Entry.CU->getDIEInfo(Entry.DieEntry), NewPlacement);
 }
 
+void DependencyTracker::keepWithParent(const UnitEntryPairTy &RootEntry,
+                                       const UnitEntryPairTy &Child,
+                                       TreeWalkKindTy Kind) {
+  if (recordsDepsOnly(Kind) ||
+      !Child.CU->getDIEInfo(Child.DieEntry).getKeepWithParent())
+    return;
+
+  // The variable cannot go to the type table. As a root that the walked root
+  // depends on, it takes that root out of the type table too, which leaves it
+  // under the DIE the instances of its function refer to.
+  addActionToRootEntriesWorkList(LiveRootWorklistActionTy::MarkLiveEntryRec,
+                                 Child, RootEntry);
+}
+
 void DependencyTracker::markParentsAsKeepingChildren(
     const UnitEntryPairTy &Entry) {
   if (Entry.DieEntry->getAbbreviationDeclarationPtr() == nullptr)
@@ -689,8 +705,11 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
       case dwarf::DW_TAG_constant:
       case dwarf::DW_TAG_subprogram:
       case dwarf::DW_TAG_label: {
-        if (ChildInfo.getHasAnAddress())
+        if (ChildInfo.getHasAnAddress()) {
+          keepWithParent(FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
+                         Kind);
           continue;
+        }
       } break;
 
       // Entries having following tags could not be removed from the subprogram.
@@ -743,8 +762,11 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
     case dwarf::DW_TAG_constant:
     case dwarf::DW_TAG_subprogram:
     case dwarf::DW_TAG_label: {
-      if (ChildInfo.getHasAnAddress())
+      if (ChildInfo.getHasAnAddress()) {
+        keepWithParent(FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
+                       Kind);
         continue;
+      }
     } break;
     default:
       break; // Nothing to do.
@@ -889,6 +911,8 @@ bool DependencyTracker::maybeAddReferencedRoots(
     assert((Entry.CU->getUniqueID() == RefDie->CU->getUniqueID() ||
             InterCUProcessingStarted) &&
            "Inter-CU reference while inter-CU processing is not started");
+    assert(RefDie->CU->getStage() >= CompileUnit::Stage::LiveRootsCollected &&
+           "Referenced unit has not found its live roots");
 
     CompileUnit::DIEInfo &RefInfo = RefDie->CU->getDIEInfo(RefDie->DieEntry);
     if (!RefInfo.getODRAvailable())
@@ -998,8 +1022,10 @@ bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
         return false;
 
       if (!IsLiveParent && Info.getIsInFunctionScope() &&
-          !Entry.CU->getGlobalData().getOptions().KeepFunctionForStatic)
+          !Entry.CU->getGlobalData().getOptions().KeepFunctionForStatic) {
+        Info.setKeepWithParent();
         return false;
+      }
     }
   }
   Info.setHasAnAddress();

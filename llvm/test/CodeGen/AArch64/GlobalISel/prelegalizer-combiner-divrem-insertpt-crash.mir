@@ -5,7 +5,6 @@
 ---
 name:            divrem_use_before_def
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |

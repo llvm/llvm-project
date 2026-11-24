@@ -5815,7 +5815,6 @@ body:             |
     $sgpr0 = COPY %2064
     SI_RETURN_TO_EPILOG killed $sgpr0
 ...
----
 
 # CHECK-GX-JSON:      {
 # CHECK-GX-JSON-NEXT:  "next-use-analysis": {

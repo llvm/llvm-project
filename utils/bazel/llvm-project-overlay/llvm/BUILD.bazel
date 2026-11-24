@@ -566,7 +566,7 @@ cc_library(
         # provides the configuration define unless lzma is enabled, in which
         # case it also links the system liblzma.
         "//third-party:lzma",
-        "//libc:shared_math_headers_for_apfloat",
+        "//libc/shared:math_headers_for_apfloat",
     ],
 )
 
@@ -2587,6 +2587,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "CodeGenToolOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenToolOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "SelectionDAGOptionsTableGen",
     strip_include_prefix = "lib/CodeGen/SelectionDAG",
     tbl_outs = {"lib/CodeGen/SelectionDAG/SelectionDAGOptions.inc": ["-gen-opt-parser-defs"]},
@@ -2666,6 +2675,7 @@ cc_library(
         ":CFGuard",
         ":CGData",
         ":CodeGenOptionsTableGen",
+        ":CodeGenToolOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -3667,13 +3677,17 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SPIRV/SPIRVGenMCCodeEmitter.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/SPIRV/SPIRVGenGlobalISel.inc",
             ),
             (
                 [
                     "-gen-global-isel-combiner",
                     "-combiners=SPIRVPreLegalizerCombiner",
+                    "-gisel-extended-llt",
                 ],
                 "lib/Target/SPIRV/SPIRVGenPreLegalizeGICombiner.inc",
             ),
@@ -3769,6 +3783,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":SystemZOptionsTableGen",
         ],
     },
     {
@@ -4313,6 +4330,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "SystemZOptionsTableGen",
+    strip_include_prefix = "lib/Target/SystemZ",
+    tbl_outs = {"lib/Target/SystemZ/SystemZOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SystemZ/SystemZOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "X86MCOptionsTableGen",
     strip_include_prefix = "lib/Target/X86",
     tbl_outs = {"lib/Target/X86/X86MCOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4752,7 +4778,6 @@ cc_library(
         ":Core",
         ":LTO",
         ":Object",
-        ":Passes",
         ":Support",
     ],
 )
@@ -5438,6 +5463,7 @@ cc_library(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -5939,6 +5965,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
