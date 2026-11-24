@@ -27,7 +27,10 @@ def Ampere1BModel : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     SMEUnsupported.F,
                                                     PAUnsupported.F,
-                                                    [HasMOPS, HasMOPS_GO]);
+                                                    [HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = Ampere1BModel in {

@@ -41,7 +41,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    add x27, x27, LJTI0_0@PAGEOFF
 ; CHECK-NEXT:    mov w28, #1 ; =0x1
 ; CHECK-NEXT:    ; implicit-def: $w8
-; CHECK-NEXT:    str x8, [sp, #40] ; 8-byte Spill
+; CHECK-NEXT:    ; kill: killed $x8
 ; CHECK-NEXT:    b LBB0_2
 ; CHECK-NEXT:  LBB0_1: ; %bb10
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1

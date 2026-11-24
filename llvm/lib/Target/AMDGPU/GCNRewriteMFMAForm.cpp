@@ -17,16 +17,11 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "machine-scheduler"
 
 using namespace llvm;
-
-static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
-    "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
 /// What RewriteMFMAFormStage charges for one register it expects to spill: a
 /// scratch store plus a reload. Priced against a register-to-register copy,
@@ -34,10 +29,6 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
 /// handful of copies. With less than about 120 the rewrite of a kernel that
 /// fits only just is turned down, and it runs 12% faster when it is done.
 static constexpr int64_t SpillCostPerReg = 160;
-
-bool RewriteMFMAFormStage::isEnabled() {
-  return !DisableRewriteMFMAFormSchedStage;
-}
 
 void RewriteMFMAFormStage::findReachingDefs(
     Register Reg, const MachineInstr &UseMI, const LiveIntervals *LIS,
@@ -576,7 +567,7 @@ RewriteMFMAFormStage::measure(const MFMARewritePlan &Plan) {
               Step -= R->Sub;
             Step += R->Add;
           }
-          Pressure = max(Pressure, Step);
+          Pressure = maxPerRegFile(Pressure, Step);
         }
       }
     }

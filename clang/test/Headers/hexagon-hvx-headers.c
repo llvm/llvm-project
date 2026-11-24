@@ -4,21 +4,25 @@
 // RUN:   -target-cpu hexagonv68 -triple hexagon-unknown-elf \
 // RUN:   -target-feature +hvx-length128b -target-feature +hvxv68 \
 // RUN:   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -internal-isystem %S/../../lib/Headers/   -target-cpu hexagonv68 -triple hexagon-unknown-elf   -target-feature +hvx-length128b -target-feature +hvxv68   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s %}
 
 // RUN: %clang_cc1 -O0 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -target-cpu hexagonv68 -triple hexagon-unknown-elf -DDIRECT \
 // RUN:   -target-feature +hvx-length128b -target-feature +hvxv68 \
 // RUN:   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -internal-isystem %S/../../lib/Headers/   -target-cpu hexagonv68 -triple hexagon-unknown-elf -DDIRECT   -target-feature +hvx-length128b -target-feature +hvxv68   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s %}
 
 // RUN: %clang_cc1 -O0 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -target-cpu hexagonv68 -triple hexagon-unknown-elf -x c++ \
 // RUN:   -target-feature +hvx-length128b -target-feature +hvxv68 \
 // RUN:   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -internal-isystem %S/../../lib/Headers/   -target-cpu hexagonv68 -triple hexagon-unknown-elf -x c++   -target-feature +hvx-length128b -target-feature +hvxv68   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK %s %}
 
 // RUN: %clang_cc1 -O0 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -target-cpu hexagonv68 -triple hexagon-unknown-elf \
 // RUN:   -target-feature +hvx-length64b -target-feature +hvxv68 \
 // RUN:   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-64 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -internal-isystem %S/../../lib/Headers/   -target-cpu hexagonv68 -triple hexagon-unknown-elf   -target-feature +hvx-length64b -target-feature +hvxv68   -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-64 %s %}
 
 #ifdef DIRECT
 #include <hvx_hexagon_protos.h>

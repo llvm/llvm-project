@@ -175,7 +175,6 @@
 ---
 name:            test
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $p0, $x0, $x1, $x2, $x10, $x11, $x12, $x13

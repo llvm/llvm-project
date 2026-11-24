@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
 # Two MFMAs define %x in one block: the first's result is read by a VALU
 # (AGPR->VGPR copy), the second's by a tied FMAC after the loop (restore into

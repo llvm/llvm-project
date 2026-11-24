@@ -12,9 +12,10 @@
 // f8E5M2) format and a bf16 source and destination, at the SPIR-V vector
 // lengths other than 16, which xevm_truncf_extf_roundtrip_bf16.mlir covers.
 //
-// A bf16 operand is converted through f32 and f16 rather than directly, so this
-// exercises __builtin_IB_bftof_N and convert_halfN on the way down, and
-// convert_floatN and __builtin_IB_ftobf_N on the way back up, at each length.
+// A bf16 operand takes the bf16 form of the conversion wrappers, which pass the
+// bits as shortN and route through f32 and f16 inside IGC, so this exercises
+// __builtin_spirv_ConvertBF16ToE5M2EXT on the way down and
+// __builtin_spirv_ConvertE5M2ToBF16EXT on the way back up, at each length.
 //
 // Each of the 16 lanes owns one row of 32 bf16 values and converts four slices
 // of it, of 2, 3, 4 and 8 elements. Every value used is exactly representable in

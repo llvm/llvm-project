@@ -74,13 +74,14 @@ public:
   void run(raw_ostream &O);
 
 private:
-  int getVariableBit(const std::string &VarName, const BitsInit *BI, int Bit);
+  int getVariableBit(const std::string &VarName,
+                     ArrayRef<const Init *> InstBits, int Bit);
   std::pair<std::string, std::string> getInstructionCases(const Record *R);
   void addInstructionCasesForEncoding(const Record *R,
                                       const Record *EncodingDef,
                                       std::string &Case,
                                       std::string &BitOffsetCase);
-  bool addCodeToMergeInOperand(const Record *R, const BitsInit *BI,
+  bool addCodeToMergeInOperand(const Record *R, ArrayRef<const Init *> InstBits,
                                const std::string &VarName, std::string &Case,
                                std::string &BitOffsetCase);
 
@@ -102,12 +103,12 @@ private:
 // If the VarBitInit at position 'bit' matches the specified variable then
 // return the variable bit position.  Otherwise return -1.
 int CodeEmitterGen::getVariableBit(const std::string &VarName,
-                                   const BitsInit *BI, int Bit) {
-  if (const VarBitInit *VBI = dyn_cast<VarBitInit>(BI->getBit(Bit))) {
+                                   ArrayRef<const Init *> InstBits, int Bit) {
+  if (const VarBitInit *VBI = dyn_cast<VarBitInit>(InstBits[Bit])) {
     if (const VarInit *VI = dyn_cast<VarInit>(VBI->getBitVar()))
       if (VI->getName() == VarName)
         return VBI->getBitNum();
-  } else if (const VarInit *VI = dyn_cast<VarInit>(BI->getBit(Bit))) {
+  } else if (const VarInit *VI = dyn_cast<VarInit>(InstBits[Bit])) {
     if (VI->getName() == VarName)
       return 0;
   }
@@ -117,18 +118,18 @@ int CodeEmitterGen::getVariableBit(const std::string &VarName,
 
 // Returns true if it succeeds, false if an error.
 bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
-                                             const BitsInit *BI,
+                                             ArrayRef<const Init *> InstBits,
                                              const std::string &VarName,
                                              std::string &Case,
                                              std::string &BitOffsetCase) {
   const CodeGenInstruction &CGI = Target.getInstruction(R);
 
   // Determine if VarName actually contributes to the Inst encoding.
-  int Bit = BI->getNumBits() - 1;
+  int Bit = InstBits.size() - 1;
 
   // Scan for a bit that this contributed to.
   for (; Bit >= 0;) {
-    if (getVariableBit(VarName, BI, Bit) != -1)
+    if (getVariableBit(VarName, InstBits, Bit) != -1)
       break;
 
     --Bit;
@@ -184,7 +185,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
 
   unsigned BitOffset = -1;
   for (; Bit >= 0;) {
-    int VarBit = getVariableBit(VarName, BI, Bit);
+    int VarBit = getVariableBit(VarName, InstBits, Bit);
 
     // If this bit isn't from a variable, skip it.
     if (VarBit == -1) {
@@ -198,7 +199,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
     int BeginVarBit = VarBit;
     int N = 1;
     for (--Bit; Bit >= 0;) {
-      VarBit = getVariableBit(VarName, BI, Bit);
+      VarBit = getVariableBit(VarName, InstBits, Bit);
       if (VarBit == -1 || VarBit != (BeginVarBit - N))
         break;
       ++N;
@@ -339,7 +340,8 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
 void CodeEmitterGen::addInstructionCasesForEncoding(
     const Record *R, const Record *EncodingDef, std::string &Case,
     std::string &BitOffsetCase) {
-  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  ArrayRef<const Init *> InstBits =
+      Target.getInstructionEncodingBits(EncodingDef);
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
@@ -353,8 +355,8 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
     if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
-    Success &=
-        addCodeToMergeInOperand(R, BI, RV.getName().str(), Case, BitOffsetCase);
+    Success &= addCodeToMergeInOperand(R, InstBits, RV.getName().str(), Case,
+                                       BitOffsetCase);
   }
   // Avoid empty switches.
   if (BitOffsetCase.size() == BitOffsetCaseSizeBeforeLoop)
@@ -397,10 +399,11 @@ APInt CodeEmitterGen::getInstructionBaseValue(const CodeGenInstruction *CGI,
     EncodingDef = EBM.get(HwMode);
   }
 
-  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  ArrayRef<const Init *> InstBits =
+      Target.getInstructionEncodingBits(EncodingDef);
   APInt Value(BitWidth, 0);
-  for (unsigned I = 0, E = BI->getNumBits(); I != E; ++I) {
-    if (const auto *B = dyn_cast<BitInit>(BI->getBit(I)); B && B->getValue())
+  for (auto [I, Bit] : enumerate(InstBits)) {
+    if (const auto *B = dyn_cast<BitInit>(Bit); B && B->getValue())
       Value.setBit(I);
   }
   return Value;
@@ -490,10 +493,7 @@ void CodeEmitterGen::emitInstructionBaseValues(
 }
 
 CodeEmitterGen::CodeEmitterGen(const RecordKeeper &RK)
-    : RK(RK), Target(RK), CGH(Target.getHwModes()) {
-  // For little-endian instruction bit encodings, reverse the bit order.
-  Target.reverseBitsForLittleEndianEncoding();
-}
+    : RK(RK), Target(RK), CGH(Target.getHwModes()) {}
 
 void CodeEmitterGen::run(raw_ostream &O) {
   emitSourceFileHeader("Machine Code Emitter", O);
@@ -513,14 +513,14 @@ void CodeEmitterGen::run(raw_ostream &O) {
     if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, CGH);
       for (const auto &[Key, Value] : EBM) {
-        const BitsInit *BI = Value->getValueAsBitsInit("Inst");
-        BitWidth = std::max(BitWidth, BI->getNumBits());
+        BitWidth = std::max<unsigned>(
+            BitWidth, Target.getInstructionEncodingBits(Value).size());
         HwModes.insert(Key);
       }
       continue;
     }
-    const BitsInit *BI = R->getValueAsBitsInit("Inst");
-    BitWidth = std::max(BitWidth, BI->getNumBits());
+    BitWidth = std::max<unsigned>(BitWidth,
+                                  Target.getInstructionEncodingBits(R).size());
   }
   UseAPInt = BitWidth > 64;
   if (UseAPInt)

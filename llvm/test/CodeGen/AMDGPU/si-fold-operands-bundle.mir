@@ -5,15 +5,14 @@
 # must also update the BUNDLE header's matching implicit operand.
 # Without it, for example after folding %5.sub1 into the bundle
 #
-#   %8:vgpr_32 = COPY killed %5.sub1:vreg_128
-#   BUNDLE implicit killed %8:vgpr_32, ... {
+#   %8:vgpr_32 = COPY %5.sub1:vreg_128
+#   BUNDLE implicit %8:vgpr_32, ... {
 #     DS_GWS_INIT %5.sub1:vreg_128, ...
 #   }
 #
-# the header still uses %8, so the COPY can't be deleted. Its `killed %5.sub1`
-# is now stale and MachineVerifier reports "Using a killed virtual register".
-# Updating the header's implicit operand from %8 to %5.sub1 lets the dead-COPY
-# cleanup remove the COPY and its stale kill flag.
+# the header still uses %8, so the COPY can't be deleted. Updating the
+# header's implicit operand from %8 to %5.sub1 lets the dead-COPY cleanup
+# remove the COPY.
 
 
 ---

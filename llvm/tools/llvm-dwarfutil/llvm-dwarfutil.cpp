@@ -8,10 +8,10 @@
 
 #include "DebugInfoLinker.h"
 #include "Error.h"
+#include "ObjectFile.h"
 #include "Options.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/ObjCopy.h"
@@ -20,6 +20,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include <type_traits>
 
 using namespace llvm;
 using namespace object;
@@ -53,8 +55,6 @@ namespace llvm {
 namespace dwarfutil {
 
 std::string ToolName;
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
   auto UnknownArgs = Args.filtered(OPT_UNKNOWN);
@@ -130,6 +130,29 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
       return createStringError(
           std::errc::invalid_argument,
           formatv("unknown build-accelerator value: '{0}'", S).str().c_str());
+  }
+
+  if (opt::Arg *Compression = Args.getLastArg(OPT_compress_debug_sections)) {
+    StringRef S = Compression->getValue();
+
+    if (S == "none")
+      Options.CompressionType = DebugCompressionType::None;
+    else if (S == "zlib")
+      Options.CompressionType = DebugCompressionType::Zlib;
+    else if (S == "zstd")
+      Options.CompressionType = DebugCompressionType::Zstd;
+    else
+      return createStringError(
+          std::errc::invalid_argument,
+          formatv("unknown compress-debug-sections value: '{0}'", S)
+              .str()
+              .c_str());
+
+    if (*Options.CompressionType != DebugCompressionType::None) {
+      if (const char *Reason = compression::getReasonIfUnsupported(
+              compression::formatFor(*Options.CompressionType)))
+        return createStringError(std::errc::invalid_argument, Reason);
+    }
   }
 
   if (Options.Verbose) {
@@ -238,6 +261,101 @@ protected:
   uint64_t current_pos() const override { return OS.tell(); }
 };
 
+// Returns the compression type for the linked debug sections. Unless it is
+// specified explicitly, the linked debug sections are compressed using the
+// same format as the input debug sections.
+static Expected<DebugCompressionType>
+getLinkedDebugInfoCompressionType(const Options &Opts, ObjectFile &InputFile) {
+  if (Opts.CompressionType)
+    return *Opts.CompressionType;
+
+  for (SectionRef Sec : InputFile.sections()) {
+    if (!Sec.isCompressed())
+      continue;
+
+    Expected<StringRef> SecName = Sec.getName();
+    if (!SecName)
+      return SecName.takeError();
+    if (!isDebugSection(*SecName))
+      continue;
+
+    Expected<StringRef> SecData = Sec.getContents();
+    if (!SecData)
+      return SecData.takeError();
+    // ch_type is a 32-bit field at offset 0 of both Elf32_Chdr and Elf64_Chdr.
+    if (SecData->size() < sizeof(uint32_t))
+      continue;
+    uint32_t ChType = InputFile.isLittleEndian()
+                          ? support::endian::read32le(SecData->data())
+                          : support::endian::read32be(SecData->data());
+
+    DebugCompressionType CompressionType;
+    switch (ChType) {
+    case ELF::ELFCOMPRESS_ZLIB:
+      CompressionType = DebugCompressionType::Zlib;
+      break;
+    case ELF::ELFCOMPRESS_ZSTD:
+      CompressionType = DebugCompressionType::Zstd;
+      break;
+    default:
+      continue;
+    }
+
+    if (compression::getReasonIfUnsupported(
+            compression::formatFor(CompressionType)))
+      continue;
+
+    return CompressionType;
+  }
+
+  return DebugCompressionType::None;
+}
+
+// Executes objcopy. The debug sections copied from the input file are
+// (de)compressed by objcopy as requested by --[no-]compress-debug-sections, or
+// copied as is if the option is not specified. The linked debug sections
+// (Config.AddSection) are compressed using the compression type returned by
+// getLinkedDebugInfoCompressionType().
+static Error executeObjcopyAndCompress(objcopy::ConfigManager &Config,
+                                       const Options &Opts,
+                                       ObjectFile &InputFile,
+                                       raw_ostream &OutFile) {
+  if (Opts.CompressionType == DebugCompressionType::None)
+    Config.Common.DecompressDebugSections = true;
+  else if (Opts.CompressionType)
+    Config.Common.CompressionType = *Opts.CompressionType;
+
+  if (Config.Common.AddSection.empty())
+    return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+
+  Expected<DebugCompressionType> CompressionType =
+      getLinkedDebugInfoCompressionType(Opts, InputFile);
+  if (!CompressionType)
+    return CompressionType.takeError();
+  if (*CompressionType == DebugCompressionType::None)
+    return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+
+  // objcopy compresses debug sections before adding new ones, thus the linked
+  // debug sections would be left uncompressed. Compress them by running
+  // objcopy on the intermediate result.
+  SmallString<0> Buffer;
+  raw_svector_ostream BufferStream(Buffer);
+  if (Error Err =
+          objcopy::executeObjcopyOnBinary(Config, InputFile, BufferStream))
+    return Err;
+
+  Expected<std::unique_ptr<ObjectFile>> Obj = ObjectFile::createObjectFile(
+      MemoryBufferRef(Buffer, Config.Common.OutputFilename));
+  if (!Obj)
+    return Obj.takeError();
+
+  objcopy::ConfigManager CompressConfig;
+  CompressConfig.Common.InputFilename = Config.Common.OutputFilename;
+  CompressConfig.Common.OutputFilename = Config.Common.OutputFilename;
+  CompressConfig.Common.CompressionType = *CompressionType;
+  return objcopy::executeObjcopyOnBinary(CompressConfig, **Obj, OutFile);
+}
+
 static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
                                                 ObjectFile &InputFile) {
   objcopy::ConfigManager Config;
@@ -250,8 +368,8 @@ static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
             raw_crc_ostream CRCBuffer(OutFile);
-            if (Error Err = objcopy::executeObjcopyOnBinary(Config, InputFile,
-                                                            CRCBuffer))
+            if (Error Err = executeObjcopyAndCompress(Config, Opts, InputFile,
+                                                      CRCBuffer))
               return Err;
 
             WrittenFileCRC32 = CRCBuffer.getCRC32();
@@ -304,43 +422,14 @@ using DebugInfoBits = SmallString<10000>;
 static Error addSectionsFromLinkedData(objcopy::ConfigManager &Config,
                                        ObjectFile &InputFile,
                                        DebugInfoBits &LinkedDebugInfoBits) {
-  if (isa<ELFObjectFile<ELF32LE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF32LE>> MemFile = ELFObjectFile<ELF32LE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
+  return dispatchObject(InputFile, [&](auto &File) -> Error {
+    using FileType = std::decay_t<decltype(File)>;
+    Expected<FileType> MemFile =
+        FileType::create(MemoryBufferRef(LinkedDebugInfoBits, ""));
     if (!MemFile)
       return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else if (isa<ELFObjectFile<ELF64LE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF64LE>> MemFile = ELFObjectFile<ELF64LE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
-    if (!MemFile)
-      return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else if (isa<ELFObjectFile<ELF32BE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF32BE>> MemFile = ELFObjectFile<ELF32BE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
-    if (!MemFile)
-      return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else if (isa<ELFObjectFile<ELF64BE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF64BE>> MemFile = ELFObjectFile<ELF64BE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
-    if (!MemFile)
-      return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else
-    return createStringError(std::errc::invalid_argument,
-                             "unsupported file format");
-
-  return Error::success();
+    return setConfigToAddNewDebugSections(Config, *MemFile);
+  });
 }
 
 static Expected<uint32_t>
@@ -362,8 +451,8 @@ saveSeparateLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
             raw_crc_ostream CRCBuffer(OutFile);
 
-            if (Error Err = objcopy::executeObjcopyOnBinary(Config, InputFile,
-                                                            CRCBuffer))
+            if (Error Err = executeObjcopyAndCompress(Config, Opts, InputFile,
+                                                      CRCBuffer))
               return Err;
 
             WrittenFileCRC32 = CRCBuffer.getCRC32();
@@ -388,7 +477,7 @@ static Error saveSingleLinkedDebugInfo(const Options &Opts,
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+            return executeObjcopyAndCompress(Config, Opts, InputFile, OutFile);
           }))
     return Err;
 
@@ -424,7 +513,7 @@ static Error saveCopyOfFile(const Options &Opts, ObjectFile &InputFile) {
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+            return executeObjcopyAndCompress(Config, Opts, InputFile, OutFile);
           }))
     return Err;
 
@@ -505,17 +594,21 @@ int main(int Argc, char const *Argv[]) {
   if (!BinOrErr)
     error(createFileError(Opts.InputFileName, BinOrErr.takeError()));
 
+  if (!(*BinOrErr)->isObject())
+    error(createFileError(Opts.InputFileName,
+                          createError("unsupported input file")));
+  ObjectFile &InputFile = *cast<ObjectFile>((*BinOrErr).get());
+
+  if (Error Err = dispatchObject(
+          InputFile, [](auto &) -> Error { return Error::success(); }))
+    error(createFileError(Opts.InputFileName, std::move(Err)));
+
   Expected<FilePermissionsApplier> PermsApplierOrErr =
       FilePermissionsApplier::create(Opts.InputFileName);
   if (!PermsApplierOrErr)
     error(createFileError(Opts.InputFileName, PermsApplierOrErr.takeError()));
 
-  if (!(*BinOrErr)->isObject())
-    error(createFileError(Opts.InputFileName,
-                          createError("unsupported input file")));
-
-  if (Error Err =
-          applyCLOptions(Opts, *static_cast<ObjectFile *>((*BinOrErr).get())))
+  if (Error Err = applyCLOptions(Opts, InputFile))
     error(createFileError(Opts.InputFileName, std::move(Err)));
 
   BinOrErr->reset();

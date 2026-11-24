@@ -234,6 +234,39 @@ default:
   ret void
 }
 
+define void @test5_prof(i8 %a) !prof !1 {
+; CHECK-LABEL: define void @test5_prof(
+; CHECK-SAME: i8 [[A:%.*]]) !prof [[PROF1:![0-9]+]] {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[A]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TRUE:%.*]], label [[FALSE:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       true:
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       false:
+; CHECK-NEXT:    call void @foo(i32 3)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %cmp = icmp ult i8 %a, 2
+  call void @llvm.assume(i1 %cmp)
+  switch i8 %a, label %default [
+  i8 1, label %true
+  i8 0, label %false
+  ], !prof !2
+true:
+  call void @foo(i32 1)
+  ret void
+false:
+  call void @foo(i32 3)
+  ret void
+default:
+  call void @foo(i32 2)
+  ret void
+}
+
 ;; All but one bit known one
 define void @test6(i8 %a) {
 ; CHECK-LABEL: define void @test6(
@@ -343,6 +376,10 @@ lor.end:                                          ; preds = %entry, %entry, %ent
 }
 
 !0 = !{!"branch_weights", i32 8, i32 4, i32 2, i32 1}
+!1 = !{!"function_entry_count", i32 62163}
+!2 = !{!"unknown", !"jump-table-to-switch"}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 0, i32 4, i32 2, i32 1, i32 8}
+; CHECK: [[PROF1]] = !{!"function_entry_count", i32 62163}
+; CHECK: [[PROF2]] = !{!"unknown", !"simplifycfg"}
 ;.

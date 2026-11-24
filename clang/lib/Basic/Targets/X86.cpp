@@ -1852,6 +1852,7 @@ void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 }
 
 void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.emplace_back("generic");
   llvm::X86::fillValidTuneCPUList(Values);
 }
 

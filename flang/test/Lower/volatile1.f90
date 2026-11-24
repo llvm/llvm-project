@@ -66,7 +66,7 @@ end program
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func private @_QFPnot_declared_volatile_in_this_scope(
-! CHECK-SAME:                                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "v"}) attributes {{.+}} {
+! CHECK-SAME:                                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "v", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) attributes {{.+}} {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {{.+}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -75,8 +75,8 @@ end program
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func private @_QFPdeclared_volatile_in_this_scope(
-! CHECK-SAME:                                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "v"},
-! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n", fir.read_only}) attributes {{.+}} {
+! CHECK-SAME:                                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "v", fir.fortran_attrs = #fir.var_attrs<intent_inout>},
+! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) attributes {{.+}} {
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope

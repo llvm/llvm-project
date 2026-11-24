@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -48,7 +49,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -63,34 +63,6 @@ STATISTIC(NumColdRegionsFound, "Number of cold regions found.");
 STATISTIC(NumColdRegionsOutlined, "Number of cold regions outlined.");
 
 using namespace llvm;
-
-static cl::opt<bool> EnableStaticAnalysis("hot-cold-static-analysis",
-                                          cl::init(true), cl::Hidden);
-
-static cl::opt<int>
-    SplittingThreshold("hotcoldsplit-threshold", cl::init(2), cl::Hidden,
-                       cl::desc("Base penalty for splitting cold code (as a "
-                                "multiple of TCC_Basic)"));
-
-static cl::opt<bool> EnableColdSection(
-    "enable-cold-section", cl::init(false), cl::Hidden,
-    cl::desc("Enable placement of extracted cold functions"
-             " into a separate section after hot-cold splitting."));
-
-static cl::opt<std::string>
-    ColdSectionName("hotcoldsplit-cold-section-name", cl::init("__llvm_cold"),
-                    cl::Hidden,
-                    cl::desc("Name for the section containing cold functions "
-                             "extracted by hot-cold splitting."));
-
-static cl::opt<int> MaxParametersForSplit(
-    "hotcoldsplit-max-params", cl::init(4), cl::Hidden,
-    cl::desc("Maximum number of parameters for a split function"));
-
-static cl::opt<int> ColdBranchProbDenom(
-    "hotcoldsplit-cold-probability-denom", cl::init(100), cl::Hidden,
-    cl::desc("Divisor of cold branch probability."
-             "BranchProbability = 1/ColdBranchProbDenom"));
 
 namespace {
 // Same as blockEndsInUnreachable in CodeGen/BranchFolding.cpp. Do not modify
@@ -246,7 +218,7 @@ bool HotColdSplitting::isBasicBlockCold(
       return true;
   }
 
-  if (EnableStaticAnalysis && unlikelyExecuted(*BB))
+  if (Opts.hot_cold_static_analysis && unlikelyExecuted(*BB))
     return true;
 
   return false;
@@ -258,7 +230,7 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   if (F.hasFnAttribute(Attribute::AlwaysInline))
     return false;
 
-  if (F.hasFnAttribute(Attribute::NoInline))
+  if (F.isNoInline())
     return false;
 
   // A function marked `noreturn` may contain unreachable terminators: these
@@ -269,6 +241,7 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
       F.hasFnAttribute(Attribute::SanitizeThread) ||
+      F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
       F.hasFnAttribute(Attribute::SanitizeMemory))
     return false;
 
@@ -296,14 +269,15 @@ static InstructionCost getOutliningBenefit(ArrayRef<BasicBlock *> Region,
 }
 
 /// Get the penalty score for outlining \p Region.
-static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
+static int getOutliningPenalty(const IPOOptions &Opts,
+                               ArrayRef<BasicBlock *> Region,
                                unsigned NumInputs, unsigned NumOutputs) {
-  int Penalty = SplittingThreshold;
+  int Penalty = Opts.hotcoldsplit_threshold;
   LLVM_DEBUG(dbgs() << "Applying penalty for splitting: " << Penalty << "\n");
 
   // If the splitting threshold is set at or below zero, skip the usual
   // profitability check.
-  if (SplittingThreshold <= 0)
+  if (Opts.hotcoldsplit_threshold <= 0)
     return Penalty;
 
   // Find the number of distinct exit blocks for the region. Use a conservative
@@ -351,10 +325,10 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
   // materializing all of the parameters.
   int NumOutputsAndSplitPhis = NumOutputs + NumSplitExitPhis;
   int NumParams = NumInputs + NumOutputsAndSplitPhis;
-  if (NumParams > MaxParametersForSplit) {
+  if (NumParams > Opts.hotcoldsplit_max_params) {
     LLVM_DEBUG(dbgs() << NumInputs << " inputs and " << NumOutputsAndSplitPhis
                       << " outputs exceeds parameter limit ("
-                      << MaxParametersForSplit << ")\n");
+                      << Opts.hotcoldsplit_max_params << ")\n");
     return std::numeric_limits<int>::max();
   }
   const int CostForArgMaterialization = 2 * TargetTransformInfo::TCC_Basic;
@@ -398,7 +372,7 @@ bool HotColdSplitting::isSplittingBeneficial(CodeExtractor &CE,
   CE.findInputsOutputs(Inputs, Outputs, Sinks);
   InstructionCost OutliningBenefit = getOutliningBenefit(Region, TTI);
   int OutliningPenalty =
-      getOutliningPenalty(Region, Inputs.size(), Outputs.size());
+      getOutliningPenalty(Opts, Region, Inputs.size(), Outputs.size());
   LLVM_DEBUG(dbgs() << "Split profitability: benefit = " << OutliningBenefit
                     << ", penalty = " << OutliningPenalty << "\n");
   if (!OutliningBenefit.isValid() || OutliningBenefit <= OutliningPenalty)
@@ -424,8 +398,8 @@ Function *HotColdSplitting::extractColdRegion(
     }
     CI->setIsNoInline();
 
-    if (EnableColdSection)
-      OutF->setSection(ColdSectionName);
+    if (Opts.enable_cold_section)
+      OutF->setSection(Opts.hotcoldsplit_cold_section_name);
     else {
       if (OrigF->hasSection())
         OutF->setSection(OrigF->getSection());
@@ -671,8 +645,9 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   AssumptionCache *AC = LookupAC(F);
   auto ColdProbThresh = TTI.getPredictableBranchThreshold().getCompl();
 
-  if (ColdBranchProbDenom.getNumOccurrences())
-    ColdProbThresh = BranchProbability(1, ColdBranchProbDenom.getValue());
+  if (Opts.hotcoldsplit_cold_probability_denom)
+    ColdProbThresh =
+        BranchProbability(1, *Opts.hotcoldsplit_cold_probability_denom);
 
   unsigned OutlinedFunctionID = 1;
   // Find all cold regions.
@@ -828,7 +803,8 @@ HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (HotColdSplitting(PSI, GBFI, GTTI, &GetORE, LookupAC).run(M))
+  if (HotColdSplitting(getIPOOptions(M), PSI, GBFI, GTTI, &GetORE, LookupAC)
+          .run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }

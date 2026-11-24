@@ -171,17 +171,17 @@ define void @test_trunc64(double %in, ptr %addr) nounwind {
 }
 
 define i64 @test_fptosi_i64(ptr %p) nounwind {
-; SPARC32-LABEL: test_fptosi_i64:
-; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    lduh [%i0], %o0
-; SPARC32-NEXT:    st %f0, [%fp+-4]
-; SPARC32-NEXT:    call __fixsfdi
-; SPARC32-NEXT:    ld [%fp+-4], %o0
-; SPARC32-NEXT:    mov %o0, %i0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore %g0, %o1, %o1
+; V9-LABEL: test_fptosi_i64:
+; V9:       ! %bb.0:
+; V9-NEXT:    save %sp, -96, %sp
+; V9-NEXT:    call __extendhfsf2
+; V9-NEXT:    lduh [%i0], %o0
+; V9-NEXT:    fstoi %f0, %f0
+; V9-NEXT:    st %f0, [%fp+-4]
+; V9-NEXT:    ld [%fp+-4], %i1
+; V9-NEXT:    sra %i1, 31, %i0
+; V9-NEXT:    ret
+; V9-NEXT:    restore
 ;
 ; SPARC64-LABEL: test_fptosi_i64:
 ; SPARC64:       ! %bb.0:
@@ -228,17 +228,16 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 }
 
 define i64 @test_fptoui_i64(ptr %p) nounwind {
-; SPARC32-LABEL: test_fptoui_i64:
-; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    lduh [%i0], %o0
-; SPARC32-NEXT:    st %f0, [%fp+-4]
-; SPARC32-NEXT:    call __fixunssfdi
-; SPARC32-NEXT:    ld [%fp+-4], %o0
-; SPARC32-NEXT:    mov %o0, %i0
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore %g0, %o1, %o1
+; V9-LABEL: test_fptoui_i64:
+; V9:       ! %bb.0:
+; V9-NEXT:    save %sp, -96, %sp
+; V9-NEXT:    call __extendhfsf2
+; V9-NEXT:    lduh [%i0], %o0
+; V9-NEXT:    fstoi %f0, %f0
+; V9-NEXT:    st %f0, [%fp+-4]
+; V9-NEXT:    ld [%fp+-4], %i1
+; V9-NEXT:    ret
+; V9-NEXT:    restore %g0, %g0, %o0
 ;
 ; SPARC64-LABEL: test_fptoui_i64:
 ; SPARC64:       ! %bb.0:
@@ -387,8 +386,8 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; SPARC32-NEXT:    std %f0, [%i1+8]
 ; SPARC32-NEXT:    ldd [%fp+-24], %f0 ! 8-byte Folded Reload
 ; SPARC32-NEXT:    std %f0, [%i1]
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    jmp %i7+12
+; SPARC32-NEXT:    restore %g0, %i1, %o0
 ;
 ; SPARC64-LABEL: test_extend64_vec4:
 ; SPARC64:       ! %bb.0:

@@ -28,10 +28,13 @@
     ret i32 %a
   }
 
+  define i32 @generic(i32 %a) {
+    ret i32 %a
+  }
+
 ...
 ---
 name:            bar
-tracksRegLiveness: true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
@@ -64,7 +67,6 @@ body: |
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 # CHECK: name: foo
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
@@ -94,6 +96,29 @@ body: |
 
   bb.2.exit:
     ; CHECK: $eax = COPY %0
+    $eax = COPY %2
+    RET64 $eax
+...
+---
+name:            generic
+# CHECK: name: generic
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 2, class: gr32, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0:
+    liveins: $edi
+    ; CHECK:      %0:_(s32) = COPY $edi
+    ; CHECK-NEXT: %1:gpr(s32) = G_ADD %0, %0
+    ; CHECK-NEXT: %2:gr32 = COPY %1(s32)
+    %0(s32) = COPY $edi
+    %1(s32) = G_ADD %0, %0
+    %2:gr32 = COPY %1
     $eax = COPY %2
     RET64 $eax
 ...

@@ -489,9 +489,9 @@ public:
   /// WithOffset == false.
   /// \return an item representing the same information as the object holds but
   /// also includes the offset set to 0.
-  template <bool HasOffset = WithOffset,
-            std::enable_if_t<HasOffset == false, bool> = true>
-  operator item<Dimensions, true>() const noexcept {
+  template <bool HasOffset = WithOffset>
+  operator std::enable_if_t<HasOffset == false, item<Dimensions, true>>()
+      const noexcept {
     return item<Dimensions, true>(MRange, MId, id<Dimensions>{});
   }
 
@@ -539,6 +539,10 @@ private:
   std::conditional_t<WithOffset, id<Dimensions>, std::monostate> MOffset;
 
   friend class detail::Builder;
+
+  // The conversion to an item with an offset builds an item of another
+  // specialization from its protected constructor.
+  template <int, bool> friend class item;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL

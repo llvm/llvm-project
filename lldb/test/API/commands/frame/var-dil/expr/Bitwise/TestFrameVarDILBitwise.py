@@ -17,8 +17,6 @@ class TestFrameVarDILBitwise(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Check unary negation
         self.expect_var_path("~(-1)", value="0")
         self.expect_var_path("~~0", value="0")

@@ -151,11 +151,20 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: fir.global external @_QMtestEmanx.managed.ptr <{section = "__nv_managed_data__"}> : !fir.llvm_ptr<i8>
 // CHECK:   fir.zero_bits !fir.llvm_ptr<i8>
 
-// Constructor should register with CUFRegisterManagedVariable then init module.
+// The constructor registers with CUFRegisterManagedVariable. The module is
+// initialized by a second constructor, which runs after the registration
+// constructors of all the units.
 // CHECK: llvm.func internal @__cudaFortranConstructor()
 // CHECK: fir.address_of(@_QMtestEmanx.managed.ptr) : !fir.ref<!fir.llvm_ptr<i8>>
 // CHECK: fir.call @_FortranACUFRegisterManagedVariable
+// CHECK-NOT: fir.call @_FortranACUFInitModule
+// CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr
+// CHECK: llvm.return
+// CHECK: llvm.func internal @__cudaFortranInitConstructor()
+// CHECK: llvm.load
 // CHECK: fir.call @_FortranACUFInitModule
+// CHECK: llvm.return
+// CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor, @__cudaFortranInitConstructor], priorities = [0 : i32, 1 : i32]
 
 // -----
 

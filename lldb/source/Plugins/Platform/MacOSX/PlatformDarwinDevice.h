@@ -11,6 +11,7 @@
 
 #include "PlatformDarwin.h"
 
+#include "lldb/Utility/Locked.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -73,7 +74,9 @@ protected:
 
 private:
   std::string m_device_support_directory;
-  std::string m_device_support_directory_for_os_version;
+  /// Dependent modules are loaded in parallel, so more than one thread can
+  /// fill this at the same time.
+  Guarded<std::string, std::mutex> m_device_support_directory_for_os_version;
 };
 } // namespace lldb_private
 

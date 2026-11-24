@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -o - %s | FileCheck %s
 
 # %20 is the head of the MFMA chain and its result is read by a V_ADD_U32,
 # which is neither an MFMA nor a COPY. That use does not forbid the AGPR form,

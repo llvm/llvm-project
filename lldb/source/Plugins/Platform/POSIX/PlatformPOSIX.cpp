@@ -493,9 +493,9 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
 #ifndef _WIN32 // TODO: Implement on Windows
-    int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
-    if (pty_fd != PseudoTerminal::invalid_fd) {
-      process_sp->SetSTDIOFileDescriptor(pty_fd);
+    if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+        PseudoTerminal::invalid_fd) {
+      process_sp->SetSTDIOPseudoTerminal(launch_info.GetPTY());
       LLDB_LOG(log, "hooked up STDIO pty to process");
     } else
       LLDB_LOG(log, "not using process STDIO pty");
@@ -510,7 +510,7 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
 }
 
 void PlatformPOSIX::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 Status PlatformPOSIX::EvaluateLibdlExpression(

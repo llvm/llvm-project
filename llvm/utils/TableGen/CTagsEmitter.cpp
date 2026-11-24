@@ -69,18 +69,18 @@ SMLoc CTagsEmitter::locate(const Record *R) {
 }
 
 void CTagsEmitter::run(raw_ostream &OS) {
-  const auto &Classes = Records.getClasses();
-  const auto &Defs = Records.getDefs();
+  ArrayRef<const Record *> Classes = Records.getClasses();
+  ArrayRef<const Record *> Defs = Records.getDefs();
   std::vector<Tag> Tags;
   // Collect tags.
   Tags.reserve(Classes.size() + Defs.size());
-  for (const auto &C : Classes) {
-    Tags.push_back(Tag(C.first, locate(C.second.get())));
-    for (SMLoc FwdLoc : C.second->getForwardDeclarationLocs())
-      Tags.push_back(Tag(C.first, FwdLoc));
+  for (const Record *C : Classes) {
+    Tags.push_back(Tag(C->getName(), locate(C)));
+    for (SMLoc FwdLoc : C->getForwardDeclarationLocs())
+      Tags.push_back(Tag(C->getName(), FwdLoc));
   }
-  for (const auto &D : Defs)
-    Tags.push_back(Tag(D.first, locate(D.second.get())));
+  for (const Record *D : Defs)
+    Tags.push_back(Tag(D->getName(), locate(D)));
   // Emit tags.
   llvm::sort(Tags);
   OS << "!_TAG_FILE_FORMAT\t1\t/original ctags format/\n";

@@ -196,6 +196,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_6A";
   case llvm::ARM::ArchKind::ARMV9_7A:
     return "9_7A";
+  case llvm::ARM::ArchKind::ARMV9_8A:
+    return "9_8A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -369,14 +371,16 @@ bool ARMTargetInfo::isBranchProtectionSupportedArch(StringRef Arch) const {
   return a.isArmT32() && (Profile == llvm::ARM::ProfileKind::M);
 }
 
-bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
+bool ARMTargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
                                              BranchProtectionInfo &BPI,
                                              const LangOptions &LO,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple()))
+  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
+                                        getTriple()))
     return false;
 
+  StringRef Arch = Attr.CPU.empty() ? getTargetOpts().CPU : Attr.CPU;
   if (!isBranchProtectionSupportedArch(Arch))
     return false;
 
@@ -643,6 +647,7 @@ bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
 }
 
 void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.emplace_back("generic");
   llvm::ARM::fillValidCPUArchList(Values);
 }
 
@@ -869,6 +874,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
   case llvm::ARM::ArchKind::ARMV9_7A:
+  case llvm::ARM::ArchKind::ARMV9_8A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -944,8 +950,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                         "0x" + Twine::utohexstr(getARMCDECoprocMask()));
   }
 
-  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
-                      Twine(Opts.WCharSize ? Opts.WCharSize : 4));
+  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T", Twine(getWCharWidth() / 8));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
@@ -1040,6 +1045,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
   case llvm::ARM::ArchKind::ARMV9_7A:
+  case llvm::ARM::ArchKind::ARMV9_8A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }
@@ -1457,6 +1463,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86ThisCall:
   case CC_X86FastCall:
   case CC_X86VectorCall:
+  case CC_AAPCS_VFP:
     return CCCR_Ignore;
   case CC_C:
   case CC_DeviceKernel:

@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.cpp.inc"
 
 void cuf::CUFDialect::initialize() {
-  registerAttributes();
   addOperations<
 #define GET_OP_LIST
 #include "flang/Optimizer/Dialect/CUF/CUFOps.cpp.inc"

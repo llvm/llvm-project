@@ -6,10 +6,18 @@ tablegen("SystemZGenAsmMatcher") {
   td_file = "../SystemZ.td"
 }
 
+tablegen("SystemZGenInsnMatchTable") {
+  visibility = [ ":AsmParser" ]
+  args = [ "-gen-insn-directive-match-table" ]
+  td_file = "../SystemZ.td"
+}
+
+
 static_library("AsmParser") {
   output_name = "LLVMSystemZAsmParser"
   deps = [
     ":SystemZGenAsmMatcher",
+    ":SystemZGenInsnMatchTable",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",

@@ -27,14 +27,10 @@ int scopes() {
 // CHECK:   %[[RV:.*]] = alloca i32, align 4
 // CHECK:   br label %[[LABEL1:.*]]
 // CHECK: [[LABEL1]]:
-// CHECK:   br label %[[LABEL2:.*]]
-// CHECK: [[LABEL2]]:
 // CHECK:   store i32 99, ptr %[[RV]], align 4
 // CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
 // CHECK:   ret i32 %[[R]]
 // CHECK: [[LABEL3:.*]]:
-// CHECK:   br label %[[LABEL4:.*]]
-// CHECK: [[LABEL4]]:
 // CHECK:   call void @llvm.trap()
 // CHECK:   unreachable
 // CHECK: }

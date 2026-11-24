@@ -26,7 +26,7 @@ constexpr unsigned SPIRVAddrSpaceMap[] = {
     6, // GlobalHost
 };
 
-class SPIRVTargetLoweringInfo : public TargetLoweringInfo {
+class CommonSPIRTargetLoweringInfo : public TargetLoweringInfo {
 public:
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
       cir::LangAddressSpace addrSpace) const override {
@@ -40,7 +40,19 @@ public:
   }
 };
 
+class SPIRVTargetLoweringInfo : public CommonSPIRTargetLoweringInfo {
+public:
+  cir::SyncScopeKind
+  convertSyncScope(cir::SyncScopeKind syncScope) const override {
+    return syncScope;
+  }
+};
+
 } // namespace
+
+std::unique_ptr<TargetLoweringInfo> createCommonSPIRTargetLoweringInfo() {
+  return std::make_unique<CommonSPIRTargetLoweringInfo>();
+}
 
 std::unique_ptr<TargetLoweringInfo> createSPIRVTargetLoweringInfo() {
   return std::make_unique<SPIRVTargetLoweringInfo>();

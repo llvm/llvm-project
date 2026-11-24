@@ -19,7 +19,7 @@ define void @move_up_dec_loop_zext(i16 %n, ptr %p) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP3]], 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[SCEVGEP1]], i64 [[TMP7]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[SCEVGEP1]], i64 range(i64 0, 32769) [[TMP7]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[N]], %[[ENTRY]] ]
@@ -61,7 +61,7 @@ define void @move_down_inc_loop_zext(i16 %n, ptr %p) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[SCEVGEP]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[SCEVGEP]], i64 range(i64 0, 32767) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 1, %[[ENTRY]] ]
@@ -111,7 +111,7 @@ define void @move_up_dec_loop_sext(i16 %n, ptr %p) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP3]], 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[SCEVGEP1]], i64 [[TMP7]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[SCEVGEP1]], i64 range(i64 0, 32769) [[TMP7]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[N]], %[[ENTRY]] ]
@@ -153,7 +153,7 @@ define void @move_down_inc_loop_sext(i16 %n, ptr %p) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[SCEVGEP]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[SCEVGEP]], i64 range(i64 0, 32767) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 1, %[[ENTRY]] ]

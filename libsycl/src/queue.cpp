@@ -41,6 +41,10 @@ device queue::get_device() const {
 
 bool queue::is_in_order() const { return impl->isInOrder(); }
 
+const property_list &queue::getPropertyList() const noexcept {
+  return impl->getPropList();
+}
+
 void queue::wait() { impl->wait(); }
 
 void queue::wait_and_throw() { impl->waitAndThrow(); }
@@ -55,7 +59,7 @@ event queue::memcpy(void *dest, const void *src, std::size_t numBytes,
   return detail::createSyclObjFromImpl<event>(Event);
 }
 
-event queue::prefetch(void *ptr, std::size_t numBytes,
+event queue::prefetch(const void *ptr, std::size_t numBytes,
                       const std::vector<event> &depEvents) {
   detail::EventImplPtr Event =
       impl->prefetch(ptr, numBytes, detail::getSyclObjImpls(depEvents));

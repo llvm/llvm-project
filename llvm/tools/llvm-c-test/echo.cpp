@@ -15,9 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c-test.h"
-#include "llvm-c/DebugInfo.h"
 #include "llvm-c/ErrorHandling.h"
-#include "llvm-c/Target.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
@@ -495,8 +493,7 @@ struct FunCloner {
     if (!LLVMIsAInstruction(Src))
       report_fatal_error("Expected an instruction");
 
-    auto Ctx = LLVMGetModuleContext(M);
-    auto Builder = LLVMCreateBuilderInContext(Ctx);
+    auto Builder = LLVMCreateBuilderForModule(M);
     auto BB = DeclareBB(LLVMGetInstructionParent(Src));
     LLVMPositionBuilderAtEnd(Builder, BB);
     auto Dst = CloneInstruction(Src, Builder);
@@ -1148,8 +1145,7 @@ struct FunCloner {
       return BB;
     }
 
-    auto Ctx = LLVMGetModuleContext(M);
-    LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
+    LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
     LLVMPositionBuilderAtEnd(Builder, BB);
 
     LLVMValueRef Cur = First;
@@ -1263,6 +1259,7 @@ FunDecl:
     LLVMTypeRef Ty = TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur));
 
     auto F = LLVMAddFunction(M, Name, Ty);
+    LLVMSetDSOLocal(F, LLVMIsDSOLocal(Cur));
 
     // Copy attributes
     for (int i = LLVMAttributeFunctionIndex, c = LLVMCountParams(F);
@@ -1432,6 +1429,7 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     LLVMSetSection(G, LLVMGetSection(Cur));
     LLVMSetVisibility(G, LLVMGetVisibility(Cur));
     LLVMSetUnnamedAddress(G, LLVMGetUnnamedAddress(Cur));
+    LLVMSetDSOLocal(G, LLVMIsDSOLocal(Cur));
     LLVMSetAlignment(G, LLVMGetAlignment(Cur));
 
     Next = LLVMGetNextGlobal(Cur);
@@ -1534,6 +1532,7 @@ AliasClone:
 
     LLVMSetLinkage(Alias, LLVMGetLinkage(Cur));
     LLVMSetUnnamedAddress(Alias, LLVMGetUnnamedAddress(Cur));
+    LLVMSetDSOLocal(Alias, LLVMIsDSOLocal(Cur));
 
     Next = LLVMGetNextGlobalAlias(Cur);
     if (Next == nullptr) {

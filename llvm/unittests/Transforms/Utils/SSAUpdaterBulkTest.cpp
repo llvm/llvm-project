@@ -23,7 +23,7 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   SSAUpdaterBulk Updater;
   LLVMContext C;
   Module M("SSAUpdaterTest", C);
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   Type *I32Ty = B.getInt32Ty();
   auto *F = Function::Create(FunctionType::get(B.getVoidTy(), {I32Ty}, false),
                              GlobalValue::ExternalLinkage, "F", &M);
@@ -112,7 +112,7 @@ TEST(SSAUpdaterBulk, Irreducible) {
   SSAUpdaterBulk Updater;
   LLVMContext C;
   Module M("SSAUpdaterTest", C);
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   Type *I32Ty = B.getInt32Ty();
   auto *F = Function::Create(FunctionType::get(B.getVoidTy(), {I32Ty}, false),
                              GlobalValue::ExternalLinkage, "F", &M);

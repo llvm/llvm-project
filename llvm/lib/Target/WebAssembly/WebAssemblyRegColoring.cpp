@@ -18,6 +18,7 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
@@ -269,6 +270,11 @@ static bool regColoring(MachineFunction &MF, LiveIntervals *Liveness,
     return *LHS < *RHS;
   });
 
+  // ABI contract: the async context must always be available in local 0.
+  // Another value in the same register would make WebAssemblyExplicitLocals
+  // copy the argument to another local.
+  Register SwiftAsyncReg = WebAssembly::getSwiftAsyncArgReg(MF);
+
   LLVM_DEBUG(dbgs() << "Coloring register intervals:\n");
   SmallVector<unsigned, 16> SlotMapping(SortedIntervals.size(), -1u);
   SmallVector<SmallVector<LiveInterval *, 4>, 16> Assignments(
@@ -282,9 +288,10 @@ static bool regColoring(MachineFunction &MF, LiveIntervals *Liveness,
     const TargetRegisterClass *RC = MRI->getRegClass(Old);
 
     // Check if it's possible to reuse any of the used colors.
-    if (!MRI->isLiveIn(Old))
+    if (!MRI->isLiveIn(Old) && Old != SwiftAsyncReg)
       for (unsigned C : UsedColors.set_bits()) {
-        if (MRI->getRegClass(SortedIntervals[C]->reg()) != RC)
+        if (MRI->getRegClass(SortedIntervals[C]->reg()) != RC ||
+            SortedIntervals[C]->reg() == SwiftAsyncReg)
           continue;
         for (LiveInterval *OtherLI : Assignments[C])
           if (!OtherLI->empty() && OtherLI->overlaps(*LI))

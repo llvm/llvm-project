@@ -28,7 +28,10 @@ def OlympusModel : SchedMachineModel {
                                                     [HasSVE2p1, HasSVEB16B16,
                                                      HasSVEBFSCALE,
                                                      HasCPA, HasCSSC,
-                                                     HasMatMulFP64, HasMOPS, HasMOPS_GO]);
+                                                     HasMatMulFP64, HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

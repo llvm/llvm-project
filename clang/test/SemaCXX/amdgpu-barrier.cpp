@@ -84,5 +84,5 @@ class TemplatedWrapperImplNoStandardLayout : public CRTPWrapperBase<TemplatedWra
   int k = 0;
 };
 
-static_assert(sizeof(__amdgpu_named_workgroup_barrier_t) == 16, "wrong size");
-static_assert(alignof(__amdgpu_named_workgroup_barrier_t) == 4, "wrong alignment");
+static_assert(sizeof(__amdgpu_named_workgroup_barrier_t) == 1, "wrong size");
+static_assert(alignof(__amdgpu_named_workgroup_barrier_t) == 1, "wrong alignment");

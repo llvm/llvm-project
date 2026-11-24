@@ -38,7 +38,6 @@
 ...
 
 name: f0
-tracksRegLiveness: true
 fixedStack:
 - { id: 0, offset: 0, size: 1504, alignment: 8, isImmutable: true, isAliased: false }
 body: |

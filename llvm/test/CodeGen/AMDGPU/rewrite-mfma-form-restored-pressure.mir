@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
 # %x is restored after its last MFMA, so it stays a VGPR next to the AGPR the
 # MFMA writes; counting it as an AGPR alone would overstate the saving. Where
@@ -7,7 +7,7 @@
 # past the loop (region 2).
 
 # CHECK: region 0: ArchVGPR 294 -> 290, AGPR 0 -> 4, spills 38 -> 34
-# CHECK: region 1: ArchVGPR 298 -> 294, AGPR 0 -> 8, spills 42 -> 38
+# CHECK: region 1: ArchVGPR 294 -> 294, AGPR 0 -> 8, spills 38 -> 38
 # CHECK: region 2: ArchVGPR 294 -> 294, AGPR 0 -> 0, spills 38 -> 38
 
 --- |

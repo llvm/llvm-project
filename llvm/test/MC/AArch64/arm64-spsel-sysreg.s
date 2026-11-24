@@ -19,6 +19,6 @@ mrs x0, ESR_EL1
 msr DAIFSet, x0
 msr ESR_EL1, #0
 mrs x0, DAIFSet
-// CHECK-ERRORS: error: immediate must be an integer in range [0, 15]
+// CHECK-ERRORS: error: invalid operand for instruction
 // CHECK-ERRORS: error: invalid operand for instruction
 // CHECK-ERRORS: error: expected readable system register

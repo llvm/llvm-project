@@ -14,7 +14,6 @@
 ;
 ; CLEANUP: Identified and initialized 0 abstract attributes.
 ; CLEANUP: Delete/replace at least 0 functions
-; CLEANUP: Call site callback failed for {{ *}}call void @b()
 ; CLEANUP: Deleted 3 functions after manifest.
 ; CLEANUP: source_filename =
 ;

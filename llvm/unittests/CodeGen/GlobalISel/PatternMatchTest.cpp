@@ -38,6 +38,12 @@ TEST_F(AArch64GISelMITest, MatchIntConstant) {
   bool match = mi_match(MIBCst.getReg(0), *MRI, m_ICst(Cst));
   EXPECT_TRUE(match);
   EXPECT_EQ(Cst, 42);
+
+  APInt Value = APInt::getSignedMinValue(129) + 42;
+  auto WideConstant = B.buildConstant(LLT::scalar(129), Value);
+  APInt Result = APInt::getAllOnes(256);
+  EXPECT_TRUE(mi_match(WideConstant.getReg(0), *MRI, m_ICst(Result)));
+  EXPECT_EQ(Result, Value);
 }
 
 TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
@@ -74,6 +80,17 @@ TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
   auto SmallSplat = B.buildBuildVector(v2s64, {ICst, ICst}).getReg(0);
   auto LargeSplat = B.buildConcatVectors(v4s64, {SmallSplat, SmallSplat});
   EXPECT_TRUE(mi_match(LargeSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
+
+  LLT WideTy = LLT::scalar(129);
+  APInt Value = APInt::getSignedMinValue(129) + 42;
+  auto WideConstant = B.buildConstant(WideTy, Value);
+  auto WideSplat =
+      B.buildSplatBuildVector(LLT::fixed_vector(2, WideTy), WideConstant);
+  APInt Result = APInt::getAllOnes(256);
+  EXPECT_TRUE(mi_match(WideSplat.getReg(0), *MRI, m_ICstOrSplat(Result)));
+  EXPECT_EQ(Result, Value);
+  EXPECT_TRUE(mi_match(WideConstant.getReg(0), *MRI, m_ICstOrSplat(Result)));
+  EXPECT_EQ(Result, Value);
 }
 
 TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {
@@ -610,19 +627,25 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   // Only one use of Reg.
   B.buildCast(LLT::pointer(0, 32), MIBAdd);
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
-  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
 
   // Add multiple debug uses of Reg.
   B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
   B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
 
-  EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
-  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
+  EXPECT_FALSE(MRI->hasOneUse(Reg));
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
 
   // Multiple non-debug uses of Reg.
   B.buildCast(LLT::pointer(1, 32), MIBAdd);
   EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
-  EXPECT_FALSE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
+
+  // A value with only a debug use has no ordinary uses.
+  auto DebugOnlyAdd = B.buildAdd(s64, Copies[0], Copies[1]);
+  Register DebugOnlyReg = DebugOnlyAdd.getReg(0);
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {DebugOnlyReg});
+  EXPECT_TRUE(MRI->hasOneUse(DebugOnlyReg));
+  EXPECT_FALSE(
+      mi_match(DebugOnlyReg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
@@ -653,6 +676,16 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
   // No constant on the LHS.
   EXPECT_FALSE(mi_match(MIBAdd.getReg(1), *MRI, m_SpecificICst(42)));
   EXPECT_FALSE(mi_match(MIBAdd.getReg(1), *MRI, m_SpecificICst(APInt(64, 42))));
+
+  for (unsigned Width : {1u, 8u, 128u}) {
+    APInt AllOnes = APInt::getAllOnes(Width);
+    auto Constant = B.buildConstant(LLT::scalar(Width), AllOnes);
+    EXPECT_TRUE(mi_match(Constant.getReg(0), *MRI, m_SpecificICst(-1)));
+    EXPECT_TRUE(mi_match(Constant.getReg(0), *MRI,
+                         m_SpecificICst(APInt::getAllOnes(256))));
+    EXPECT_FALSE(mi_match(Constant.getReg(0), *MRI,
+                          m_SpecificICst(AllOnes.zext(Width + 1))));
+  }
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
@@ -746,6 +779,20 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
   EXPECT_TRUE(mi_match(Add.getReg(2), *MRI, m_SpecificICstOrSplat(42)));
   EXPECT_TRUE(
       mi_match(Add.getReg(2), *MRI, m_SpecificICstOrSplat(APInt(64, 42))));
+
+  for (unsigned Width : {1u, 8u, 128u}) {
+    LLT Ty = LLT::scalar(Width);
+    APInt AllOnes = APInt::getAllOnes(Width);
+    auto Constant = B.buildConstant(Ty, AllOnes);
+    auto Splat = B.buildSplatBuildVector(LLT::fixed_vector(2, Ty), Constant);
+    for (Register Reg : {Constant.getReg(0), Splat.getReg(0)}) {
+      EXPECT_TRUE(mi_match(Reg, *MRI, m_SpecificICstOrSplat(-1)));
+      EXPECT_TRUE(
+          mi_match(Reg, *MRI, m_SpecificICstOrSplat(APInt::getAllOnes(256))));
+      EXPECT_FALSE(
+          mi_match(Reg, *MRI, m_SpecificICstOrSplat(AllOnes.zext(Width + 1))));
+    }
+  }
 }
 
 TEST_F(AArch64GISelMITest, MatchZeroInt) {

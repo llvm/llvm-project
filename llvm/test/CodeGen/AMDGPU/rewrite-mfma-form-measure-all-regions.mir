@@ -1,10 +1,10 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
 # The rewrite is measured in every region, not only those over the ArchVGPR
 # limit: bb.2 is under it, but the second chain still moves into AGPRs there.
 
-# CHECK: region 2: ArchVGPR 10 -> 2, AGPR 0 -> 8, spills 0 -> 0
+# CHECK: region 2: ArchVGPR 6 -> 2, AGPR 0 -> 4, spills 0 -> 0
 # CHECK: probe 2/2 chains
 
 --- |

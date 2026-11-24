@@ -322,13 +322,14 @@ llvm::Expected<llvm::SmallVector<Diagnostic>>
 diagnoseFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
                  DiagnosisCallbacks<AnalysisT, Diagnostic> Diagnoser,
                  std::int64_t MaxSATIterations = kDefaultMaxSATIterations,
-                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
+                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits,
+                 DataflowAnalysisContext::Options ContextOptions = {}) {
   llvm::Expected<AdornedCFG> Context = AdornedCFG::build(FuncDecl);
   if (!Context)
     return Context.takeError();
 
   auto Solver = std::make_unique<WatchedLiteralsSolver>(MaxSATIterations);
-  DataflowAnalysisContext AnalysisContext(*Solver);
+  DataflowAnalysisContext AnalysisContext(*Solver, ContextOptions);
   Environment Env(AnalysisContext, FuncDecl);
   AnalysisT Analysis = createAnalysis<AnalysisT>(ASTCtx, Env);
   llvm::SmallVector<Diagnostic> Diagnostics;
@@ -383,10 +384,11 @@ llvm::Expected<llvm::SmallVector<Diagnostic>>
 diagnoseFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
                  DiagnosisCallback<AnalysisT, Diagnostic> Diagnoser,
                  std::int64_t MaxSATIterations = kDefaultMaxSATIterations,
-                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
+                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits,
+                 DataflowAnalysisContext::Options ContextOptions = {}) {
   DiagnosisCallbacks<AnalysisT, Diagnostic> Callbacks = {nullptr, Diagnoser};
   return diagnoseFunction(FuncDecl, ASTCtx, Callbacks, MaxSATIterations,
-                          MaxBlockVisits);
+                          MaxBlockVisits, ContextOptions);
 }
 
 /// Abstract base class for dataflow "models": reusable analysis components that

@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +pclmul -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +pclmul -emit-llvm -o - | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +pclmul -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +pclmul -emit-llvm -o - -std=c++11 | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +pclmul -emit-llvm -o - -std=c++11 -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +pclmul -emit-llvm -o - -std=c++11 -fexperimental-new-constant-interpreter | FileCheck %s %}
 
 #include <wmmintrin.h>
 #include "builtin_test_helpers.h"

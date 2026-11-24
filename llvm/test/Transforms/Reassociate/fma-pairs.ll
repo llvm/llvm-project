@@ -480,3 +480,57 @@ define float @multi_use_fmul_addend(float %a, float %c, float %d, float %e, floa
   %r = fadd fast float %t1, %t2
   ret float %r
 }
+
+define float @shared_addend_chain(float %b, float %c) {
+; CHECK-LABEL: define float @shared_addend_chain(
+; CHECK-SAME: float [[B:%.*]], float [[C:%.*]]) {
+; CHECK-NEXT:    [[CC:%.*]] = fmul fast float [[C]], [[C]]
+; CHECK-NEXT:    [[BB:%.*]] = fmul fast float [[B]], [[B]]
+; CHECK-NEXT:    [[B_CC:%.*]] = fadd fast float [[BB]], [[B]]
+; CHECK-NEXT:    [[SUM0:%.*]] = fadd fast float [[B_CC]], [[C]]
+; CHECK-NEXT:    [[SUM:%.*]] = fadd fast float [[SUM0]], [[CC]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %cc = fmul fast float %c, %c
+  %b.cc = fadd fast float %b, %cc
+  %bb = fmul fast float %b, %b
+  %sum0 = fadd fast float %b.cc, %bb
+  %sum = fadd fast float %sum0, %c
+  ret float %sum
+}
+
+define float @shared_addend_pairs(float %b, float %c) {
+; CHECK-LABEL: define float @shared_addend_pairs(
+; CHECK-SAME: float [[B:%.*]], float [[C:%.*]]) {
+; CHECK-NEXT:    [[BB:%.*]] = fmul fast float [[B]], [[B]]
+; CHECK-NEXT:    [[CC:%.*]] = fmul fast float [[C]], [[C]]
+; CHECK-NEXT:    [[B_CC:%.*]] = fadd fast float [[BB]], [[B]]
+; CHECK-NEXT:    [[C_BB:%.*]] = fadd fast float [[B_CC]], [[C]]
+; CHECK-NEXT:    [[SUM:%.*]] = fadd fast float [[C_BB]], [[CC]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %bb = fmul fast float %b, %b
+  %cc = fmul fast float %c, %c
+  %b.cc = fadd fast float %b, %cc
+  %c.bb = fadd fast float %c, %bb
+  %sum = fadd fast float %b.cc, %c.bb
+  ret float %sum
+}
+
+define float @shared_addend_non_square(float %b, float %c, float %d, float %e) {
+; CHECK-LABEL: define float @shared_addend_non_square(
+; CHECK-SAME: float [[B:%.*]], float [[C:%.*]], float [[D:%.*]], float [[E:%.*]]) {
+; CHECK-NEXT:    [[CD:%.*]] = fmul fast float [[D]], [[C]]
+; CHECK-NEXT:    [[BE:%.*]] = fmul fast float [[E]], [[B]]
+; CHECK-NEXT:    [[B_CD:%.*]] = fadd fast float [[C]], [[B]]
+; CHECK-NEXT:    [[SUM0:%.*]] = fadd fast float [[B_CD]], [[CD]]
+; CHECK-NEXT:    [[SUM:%.*]] = fadd fast float [[SUM0]], [[BE]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %cd = fmul fast float %c, %d
+  %b.cd = fadd fast float %b, %cd
+  %be = fmul fast float %b, %e
+  %sum0 = fadd fast float %b.cd, %be
+  %sum = fadd fast float %sum0, %c
+  ret float %sum
+}

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=x86_64-pc-win32 -std=c++98| FileCheck -check-prefix X64 %s
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=x86_64-uefi -std=c++98| FileCheck -check-prefix X64 %s
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=aarch64-pc-win32 -std=c++98 -DARM | FileCheck -check-prefixes=X64,ARM %s
+// RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=aarch64-uefi -std=c++98 -DARM | FileCheck -check-prefixes=X64,ARM %s
 
 int a;
 // CHECK-DAG: @"?a@@3HA"

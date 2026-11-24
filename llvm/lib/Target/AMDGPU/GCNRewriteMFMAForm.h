@@ -152,9 +152,6 @@ private:
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
 public:
-  /// \returns false if the stage is switched off on the command line.
-  static bool isEnabled();
-
   bool initGCNSchedStage() override;
 
   RewriteMFMAFormStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)

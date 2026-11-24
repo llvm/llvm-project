@@ -12,4 +12,12 @@
 #define OPTIONS_STRUCT_DECL
 #include "InstCombineCLOptions.inc"
 
+namespace llvm {
+
+class Function;
+
+const InstCombineCLOptions &getInstCombineCLOptions(const Function &F);
+
+} // namespace llvm
+
 #endif // LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINECLOPTIONS_H

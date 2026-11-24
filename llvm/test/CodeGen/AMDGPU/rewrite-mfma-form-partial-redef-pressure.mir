@@ -1,12 +1,12 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
 # The MFMA's dst is restored because of a partial redef. The redef's value is
 # bridged for the chain but also read by the store, the multiply and the KILL,
 # so its VGPR stays live to the last of them.
 
 # CHECK: region 0: ArchVGPR 295 -> 295, AGPR 0 -> 4, spills 39 -> 39
-# CHECK: region 1: ArchVGPR 303 -> 295, AGPR 0 -> 12, spills 47 -> 39
+# CHECK: region 1: ArchVGPR 299 -> 295, AGPR 0 -> 8, spills 43 -> 39
 # CHECK: region 2: ArchVGPR 297 -> 293, AGPR 0 -> 8, spills 41 -> 37
 
 --- |

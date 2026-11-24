@@ -58,6 +58,7 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   Options.cpp
   Property.cpp
   ScriptInterpreter.cpp
+  ScriptedInstanceRegistry.cpp
 
   ADDITIONAL_HEADER_DIRS
     ${LLDB_INCLUDE_DIR}/lldb/Interpreter

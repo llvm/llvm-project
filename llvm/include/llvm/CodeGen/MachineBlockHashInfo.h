@@ -146,6 +146,8 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
+
+  MachineBlockHashInfoResult &getMBHI() { return Result; }
 };
 
 } // end namespace llvm

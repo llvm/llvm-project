@@ -17,7 +17,6 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -40,14 +39,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
@@ -96,33 +92,36 @@ int llvm::compileModuleWithNewPM(
     const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
     ArrayRef<PassPlugin> PassPlugins, CodeGenFileType FileType) {
 
-  if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
-    WithColor::error(errs(), Arg0)
-        << "--passes cannot be used with "
-        << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
-    return 1;
-  }
 
   raw_pwrite_stream *OS = &Out->os();
 
   std::unique_ptr<buffer_ostream> BOS;
-  if (codegen::getFileType() != CodeGenFileType::AssemblyFile &&
+  if (codegen::getFileType(Context.getLibraryOptions()) !=
+          CodeGenFileType::AssemblyFile &&
       !Out->os().supportsSeeking()) {
     BOS = std::make_unique<buffer_ostream>(Out->os());
     OS = BOS.get();
   }
 
   // Fetch options from TargetPassConfig
-  CGPassBuilderOption Opt = getCGPassBuilderOption();
+  CGPassBuilderOption Opt = getCGPassBuilderOption(*Target);
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
+  if (VK == VerifierKind::EachPass)
+    Opt.VerifyMachineCode = MachineVerifierMode::Each;
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
   MachineModuleInfo MMI(Target.get());
 
-  Target->getObjFileLowering()->Initialize(MMI.getContext(), *Target);
-
   PassInstrumentationCallbacks PIC;
+  if (!PassPipeline.empty()) {
+    auto Info = ExitOnErr(TargetPassConfig::getStartStopInfo(*Target, PIC));
+    if (Info.isLimited()) {
+      WithColor::error(errs(), Arg0)
+          << "--passes cannot be used with " << Info.getLimitReason() << ".\n";
+      return 1;
+    }
+  }
   StandardInstrumentations SI(Context, Opt.DebugPM,
                               VK == VerifierKind::EachPass);
   registerCodeGenCallback(PIC, *Target);
@@ -142,7 +141,7 @@ int llvm::compileModuleWithNewPM(
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
-  PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
+  PassBuilder PB(Context, Target.get(), std::nullopt, std::nullopt, &PIC);
   for (auto &PassPlugin : PassPlugins)
     PassPlugin.registerPassBuilderCallbacks(PB);
   PB.registerModuleAnalyses(MAM);
@@ -154,7 +153,6 @@ int llvm::compileModuleWithNewPM(
   SI.registerCallbacks(PIC, &MAM);
 
   ModulePassManager MPM;
-  FunctionPassManager FPM;
 
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction
@@ -167,13 +165,10 @@ int llvm::compileModuleWithNewPM(
 
     // FIXME: verify that there are no IR passes.
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
-    MPM.addPass(PrintMIRPreparePass(*OS));
-    MachineFunctionPassManager MFPM;
-    if (VK == VerifierKind::InputOutput)
-      MFPM.addPass(MachineVerifierPass());
-    MFPM.addPass(PrintMIRPass(*OS));
-    FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    if (Opt.VerifyMachineCode == MachineVerifierMode::End)
+      MPM.addPass(createModuleToFunctionPassAdaptor(
+          createFunctionToMachineFunctionPassAdaptor(MachineVerifierPass())));
+    MPM.addPass(PrintMIRPass(*OS));
 
   } else {
     ExitOnErr(Target->buildCodeGenPipeline(
@@ -182,14 +177,15 @@ int llvm::compileModuleWithNewPM(
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.
-  if (PrintPipelinePasses) {
+  if (std::optional<PrintPipelinePassesFormat> Format =
+          PB.getPrintPipelinePasses()) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    printFormattedPipelinePasses(outs(), PipelineStr, *Format);
     outs() << '\n';
     return 0;
   }

@@ -1,9 +1,9 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
 # Moving ArchVGPR overflow into the AGPRs only helps while both files hold what
 # the region needs. Eight accumulators are restored after the loop, so each
-# stays a VGPR next to its AGPR. The functions differ by one filler register: in
+# stays a VGPR next to its AGPR. The functions differ by a few filler registers: in
 # the first all eight chains fit the combined file, in the second only five.
 
 # CHECK: RewriteMFMAForm: best 8/8 chains
@@ -159,6 +159,7 @@ body: |
     %p11:vreg_1024 = IMPLICIT_DEF
     %p12:vreg_1024 = IMPLICIT_DEF
     %p13:vreg_1024 = IMPLICIT_DEF
+    %p14:vreg_128 = IMPLICIT_DEF
     %srca:vgpr_32 = IMPLICIT_DEF
     %srcb:vgpr_32 = IMPLICIT_DEF
     %init:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec
@@ -244,7 +245,7 @@ body: |
     %x5.sub0:vreg_128_align2 = nofpexcept V_FMAC_F32_e32 %srca, %srcb, %x5.sub0, implicit $mode, implicit $exec
     %x6.sub0:vreg_128_align2 = nofpexcept V_FMAC_F32_e32 %srca, %srcb, %x6.sub0, implicit $mode, implicit $exec
     %x7.sub0:vreg_128_align2 = nofpexcept V_FMAC_F32_e32 %srca, %srcb, %x7.sub0, implicit $mode, implicit $exec
-    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8, %p9, %p10, %p11, %p12, %p13
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8, %p9, %p10, %p11, %p12, %p13, %p14
     KILL %x0
     KILL %x1
     KILL %x2

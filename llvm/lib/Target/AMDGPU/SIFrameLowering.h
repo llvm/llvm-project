@@ -11,6 +11,7 @@
 
 #include "AMDGPUFrameLowering.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/SparseBitVector.h"
 
 namespace llvm {
 
@@ -25,6 +26,9 @@ public:
 
   void emitEntryFunctionPrologue(MachineFunction &MF,
                                  MachineBasicBlock &MBB) const;
+  void emitEntryFunctionEpilogue(MachineFunction &MF,
+                                 MachineBasicBlock &MBB) const;
+
   void emitPrologue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF,
@@ -173,11 +177,17 @@ public:
                                            MachineBasicBlock::iterator MBBI,
                                            const DebugLoc &DL, MCRegister VGPR,
                                            int64_t Offset) const;
-  MachineInstr *buildCFIForRegToSGPRPairSpill(MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator MBBI,
-                                              const DebugLoc &DL,
-                                              MCRegister Reg,
-                                              MCRegister SGPRPair) const;
+  void buildCFIForSRegToSRegSpill(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, MCRegister Reg,
+                                  MCRegister CopyReg) const;
+  /// Create a CFI index describing a copy of the 32-bit \p SGPR to \p VCCHalf
+  /// (vcc_lo or vcc_hi) in wave64 and build a MachineInstr around it.
+  MachineInstr *buildCFIForSGPRToVCCHalfCopy(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI,
+                                             const DebugLoc &DL,
+                                             MCRegister SGPR,
+                                             MCRegister VCCHalf) const;
   MachineInstr *buildCFIForSameValue(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      const DebugLoc &DL, MCRegister Reg) const;

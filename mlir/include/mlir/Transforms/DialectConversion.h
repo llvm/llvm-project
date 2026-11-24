@@ -907,6 +907,7 @@ public:
   /// "true". The conversion driver will try to reconcile all type mismatches
   /// that still exist at the end of the conversion with materializations.
   /// This function supports both 1:1 and 1:N replacements.
+  /// Returns whether any uses were replaced.
   ///
   /// Note: The functor is also applied to builtin.unrealized_conversion_cast
   /// ops that may have been inserted by the conversion driver. Some uses may
@@ -915,12 +916,12 @@ public:
   /// Note: This function is not supported in rollback mode. Calling it in
   /// rollback mode will trigger an assertion. Furthermore, the
   /// `allUsesReplaced` flag is not supported yet.
-  void replaceUsesWithIf(Value from, Value to,
+  bool replaceUsesWithIf(Value from, Value to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr) override {
-    replaceUsesWithIf(from, ValueRange{to}, functor, allUsesReplaced);
+    return replaceUsesWithIf(from, ValueRange{to}, functor, allUsesReplaced);
   }
-  void replaceUsesWithIf(Value from, ValueRange to,
+  bool replaceUsesWithIf(Value from, ValueRange to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr);
 

@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -amdgpu-rewrite-mfma-form-sched-stage=true -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
 # %acc is the MFMA's src2, kept from recoloring by a VGPR-only read in the
 # epilogue, so the rewrite copies it into an AGPR after its def. The estimate
@@ -8,7 +8,7 @@
 
 # CHECK: region 0: ArchVGPR 294 -> 294, AGPR 0 -> 2, spills 38 -> 38
 # CHECK: region 1: ArchVGPR 296 -> 294, AGPR 0 -> 4, spills 40 -> 38
-# CHECK: region 2: ArchVGPR 292 -> 292, AGPR 0 -> 0, spills 36 -> 36
+# CHECK: region 2: ArchVGPR 291 -> 291, AGPR 0 -> 0, spills 35 -> 35
 
 --- |
   define amdgpu_kernel void @src2_bridge_pressure() #0 {

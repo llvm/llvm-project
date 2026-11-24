@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_SQRT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_SQRT_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
 #if !defined(LIBC_TARGET_CPU_HAS_SSE2)
@@ -20,33 +22,83 @@
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
+#ifdef LIBC_COMPILER_IS_MSVC
+#include <immintrin.h>
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-template <> LIBC_INLINE float sqrt<float>(float x) {
+namespace internal {
+
+// These wrappers are kept out of the constexpr specializations below because
+// inline assembly is not allowed in a constexpr function before C++20.
+LIBC_INLINE float hardware_sqrt(float x) {
+#ifdef LIBC_COMPILER_IS_MSVC
+  return _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(x)));
+#else
   float result;
   __asm__ __volatile__("sqrtss %x1, %x0" : "=x"(result) : "x"(x));
   return result;
+#endif
 }
 
-template <> LIBC_INLINE double sqrt<double>(double x) {
+LIBC_INLINE double hardware_sqrt(double x) {
+#ifdef LIBC_COMPILER_IS_MSVC
+  __m128d xmm = _mm_set_sd(x);
+  return _mm_cvtsd_f64(_mm_sqrt_sd(xmm, xmm));
+#else
   double result;
   __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));
   return result;
+#endif
 }
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
-template <> LIBC_INLINE long double sqrt<long double>(long double x) {
+LIBC_INLINE long double hardware_sqrt(long double x) {
+#ifdef LIBC_COMPILER_IS_MSVC
+  __m128d xmm = _mm_set_sd(static_cast<double>(x));
+  return _mm_cvtsd_f64(_mm_sqrt_sd(xmm, xmm));
+#else
   long double result;
   __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));
   return result;
+#endif
 }
 #else
-template <> LIBC_INLINE long double sqrt<long double>(long double x) {
+LIBC_INLINE long double hardware_sqrt(long double x) {
   __asm__ __volatile__("fsqrt" : "+t"(x));
   return x;
 }
 #endif
+
+} // namespace internal
+
+template <> LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float sqrt<float>(float x) {
+  if (cpp::is_constant_evaluated()) {
+    return generic::sqrt<float>(x);
+  } else {
+    return internal::hardware_sqrt(x);
+  }
+}
+
+template <> LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double sqrt<double>(double x) {
+  if (cpp::is_constant_evaluated()) {
+    return generic::sqrt<double>(x);
+  } else {
+    return internal::hardware_sqrt(x);
+  }
+}
+
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT long double
+sqrt<long double>(long double x) {
+  if (cpp::is_constant_evaluated()) {
+    return generic::sqrt<long double>(x);
+  } else {
+    return internal::hardware_sqrt(x);
+  }
+}
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

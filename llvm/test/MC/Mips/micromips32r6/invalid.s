@@ -93,7 +93,7 @@
   lwm16 $16, $17, 8($sp)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   lwm16 $16-$20, 8($sp)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   lwm16 $16, $17, $ra, 8($fp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  lwm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  lwm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   sb16 $9, 4($16)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   sb16 $3, 64($16)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   sb16 $16, 4($16)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -115,7 +115,7 @@
   swm16 $16, $17, 8($sp)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swm16 $16-$20, 8($sp)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swm16 $16, $17, $ra, 8($fp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  swm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   mtc0  $4, $3, -1         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mtc0  $4, $3, 8          # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mthc0 $4, $3, -1         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
@@ -390,3 +390,13 @@
   maddu $4, $5             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   msub  $4, $5             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   msubu $4, $5             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+
+# Memory bases and offsets are checked independently.
+  lbu16 $3, 15($16)          # CHECK: :[[@LINE]]:13: error: immediate operand value out of range
+  lhu16 $3, 1($16)           # CHECK: :[[@LINE]]:13: error: immediate operand value out of range
+  lw16 $3, 64($16)           # CHECK: :[[@LINE]]:12: error: immediate operand value out of range
+  lbu16 $3, symbol($16)      # CHECK: :[[@LINE]]:13: error: expected immediate operand kind
+  lbu16 $3, 0($f2)           # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+  lbu16 $3, 0($8)            # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+  lwm16 $16-$17, $ra, 8($fp) # CHECK: :[[@LINE]]:25: error: invalid operand for instruction
+  lw $3, 0($f2)              # CHECK: :[[@LINE]]:12: error: invalid operand for instruction

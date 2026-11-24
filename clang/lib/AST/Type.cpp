@@ -310,6 +310,8 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
                     ? TypeDependence::DependentInstantiation
                     : TypeDependence::None)),
       ElementType(et) {
+  assert(!(tq & ~Qualifiers::CVRMask) &&
+         "only CVR index qualifiers are stored");
   ArrayTypeBits.IndexTypeQuals = tq;
   ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
@@ -2243,6 +2245,8 @@ bool Type::hasAutoForTrailingReturnType() const {
 bool Type::hasIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isIntegerType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isIntegerType();
   if (CanonicalType->isSveVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() == BuiltinType::SveBool ||
@@ -2840,8 +2844,6 @@ bool Type::isSveVLSBuiltinType() const {
     case BuiltinType::SveFloat64:
     case BuiltinType::SveBFloat16:
     case BuiltinType::SveBool:
-    case BuiltinType::SveBoolx2:
-    case BuiltinType::SveBoolx4:
     case BuiltinType::SveMFloat8:
       return true;
     default:
