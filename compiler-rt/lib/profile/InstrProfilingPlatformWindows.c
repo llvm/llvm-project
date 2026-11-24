@@ -85,6 +85,7 @@ const VTableProfData *__llvm_profile_end_vtables(void) { return NULL; }
 const char *__llvm_profile_begin_names(void) {
   const char *Begin = &NamesStart + 1;
   // link.exe may pad the byte-sized start sentinel on Windows Arm64.
+  // Skip that padding here only for compatibility with older profile decoders.
   while (Begin < &NamesEnd && *Begin == '\0')
     ++Begin;
   return Begin;
