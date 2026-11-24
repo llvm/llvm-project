@@ -694,14 +694,16 @@ public: // Part of public interface to class.
   StoreRef killBinding(Store ST, Loc L) override;
 
   void incrementReferenceCount(Store store) override {
-    getRegionBindings(store).manualRetain();
+    if (RegionBindings::TreeTy *T = getRegionBindingsTree(store))
+      T->retain();
   }
 
   /// If the StoreManager supports it, decrement the reference count of
   /// the specified Store object.  If the reference count hits 0, the memory
   /// associated with the object is recycled.
   void decrementReferenceCount(Store store) override {
-    getRegionBindings(store).manualRelease();
+    if (RegionBindings::TreeTy *T = getRegionBindingsTree(store))
+      T->release();
   }
 
   bool includedInBindings(Store store, const MemRegion *region) const override;
@@ -808,6 +810,13 @@ public: // Part of public interface to class.
     return {CBFactory,
             static_cast<const RegionBindings::TreeTy *>(Ptr.getPointer()),
             RBFactory.getTreeFactory(), Ptr.getInt()};
+  }
+
+  static RegionBindings::TreeTy *getRegionBindingsTree(Store store) {
+    llvm::PointerIntPair<Store, 1, bool> Ptr;
+    Ptr.setFromOpaqueValue(const_cast<void *>(store));
+    return static_cast<RegionBindings::TreeTy *>(
+        const_cast<void *>(Ptr.getPointer()));
   }
 
   LimitedRegionBindingsRef
