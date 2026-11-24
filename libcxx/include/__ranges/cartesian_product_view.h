@@ -419,26 +419,13 @@ private:
 
   template <class _Tuple>
   _LIBCPP_HIDE_FROM_ABI constexpr difference_type __distance_from(const _Tuple& __t) const {
-    return __scaled_sum(__t);
-  }
-
-  template <auto _Np>
-  _LIBCPP_HIDE_FROM_ABI constexpr difference_type __scaled_size() const {
-    if constexpr (_Np <= sizeof...(_Vs))
-      return static_cast<difference_type>(ranges::size(std::get<_Np>(__parent_->__bases_))) * __scaled_size<_Np + 1>();
-    return static_cast<difference_type>(1);
-  }
-
-  template <auto _Np>
-  _LIBCPP_HIDE_FROM_ABI constexpr difference_type __scaled_distance(const auto& __t) const {
-    return static_cast<difference_type>(std::get<_Np>(__current_) - std::get<_Np>(__t)) * __scaled_size<_Np + 1>();
-  }
-
-  template <auto _Np = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr difference_type __scaled_sum(const auto& __t) const {
-    if constexpr (_Np <= sizeof...(_Vs))
-      return __scaled_distance<_Np>(__t) + __scaled_sum<_Np + 1>(__t);
-    return static_cast<difference_type>(0);
+    return [&]<size_t... _Ip>(index_sequence<_Ip...>) {
+      auto __result = static_cast<difference_type>(std::get<0>(__current_) - std::get<0>(__t));
+      ((__result = __result * static_cast<difference_type>(ranges::size(std::get<1 + _Ip>(__parent_->__bases_))) +
+                   static_cast<difference_type>(std::get<1 + _Ip>(__current_) - std::get<1 + _Ip>(__t))),
+       ...);
+      return __result;
+    }(make_index_sequence<sizeof...(_Vs)>{});
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, _MultiIter __current)
