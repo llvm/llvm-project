@@ -355,7 +355,8 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
 }
 
 static BinaryOperator *ReuseFDiv(Value *Denom, Value *Divisor,
-                                 FastMathFlags FMF, Instruction *BeforeInst) {
+                                 FastMathFlags FMF,
+                                 BinaryOperator *BeforeInst) {
   auto Expr = Divisor->hasUseList() ? Divisor : Denom;
   if (Expr->hasUseList()) {
     for (User *U : Expr->users()) {
@@ -695,12 +696,21 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
                                       SmallVectorImpl<ValueEntry> &Ops,
                                       OverflowTracking Flags) {
   // case: (single value) / (denominator)
-  if (Ops.size() < 2) {
+  if (Ops.size() == 1) {
+    assert(I->getOpcode() == Instruction::FDiv &&
+           "Only FDIV should have a single operand case!");
     BinaryOperator *Reuse =
-        ReuseFDiv(I->getOperand(0), I->getOperand(1), I->getFastMathFlags(), I);
+        ReuseFDiv(Ops[0].Op, I->getOperand(1), I->getFastMathFlags(), I);
     if (Reuse) {
       I->replaceAllUsesWith(Reuse);
       llvm::salvageDebugInfo(*I);
+      MadeChange = true;
+      RedoInsts.insert(I);
+    } else if (Ops[0].Op != I->getOperand(0)) {
+      Instruction *V = cast<Instruction>(I->getOperand(0));
+      I->setOperand(0, Ops[0].Op);
+      MadeChange = true;
+      RedoInsts.insert(V);
       RedoInsts.insert(I);
     }
     return;
@@ -2177,7 +2187,8 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
       (Cst != ConstantExpr::getBinOpIdentity(Opcode, I->getType()) || isFDiv)) {
     if (Cst == ConstantExpr::getBinOpAbsorber(Opcode, I->getType()))
       return Cst;
-    Ops.push_back(ValueEntry(0, Cst));
+    if (Cst != ConstantExpr::getBinOpIdentity(Opcode, I->getType()) || !isFDiv)
+      Ops.push_back(ValueEntry(0, Cst));
   }
 
   if (Ops.size() == 1 && !isFDiv)
@@ -2802,6 +2813,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
       Ops.insert(Ops.begin(), Op0);
       RewriteExprTree(I, Ops, Flags);
       if (auto *Reassociated = ReassociateFDiv(I)) {
+        MadeChange = true;
         RedoInsts.insert(I);
         RedoInsts.insert(Reassociated);
       }
