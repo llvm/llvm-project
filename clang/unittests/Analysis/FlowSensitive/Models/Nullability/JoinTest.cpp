@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests that pointers have the expected nullability (Nullable, Nonnull,
-// Unspecified) where control flow joins (e.g. after an `if`).  The tests check
-// the analysis state directly (vs tests for emitted diagnostics).
+// Tests that pointers have the expected nullability state after a join
+// operation. The tests check the analysis state directly (vs tests for
+// emitted diagnostics).
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 namespace clang::dataflow::nullability {
 namespace {
 
-TEST(NullabilityJoinTest, JoinSameNullabilityFromAssignments) {
+TEST(NullabilityJoinTest, JoinSameNullability) {
   // Joining when two branches have the same nullability.
   EXPECT_EQ(evaluateNullabilityAtCheck(R"cc(
     void target(int * _Nonnull p1, int * _Nonnull p2, bool b) {
@@ -70,7 +70,7 @@ TEST(NullabilityJoinTest, JoinSameNullabilityFromAssignments) {
             NullabilityKind::Unspecified);
 }
 
-TEST(NullabilityJoinTest, JoinDifferentNullabilityFromAssignments) {
+TEST(NullabilityJoinTest, JoinDifferentNullability) {
   // Joining when two branches have the different nullability.
   // Nonnull and nullable => nullable.
   EXPECT_EQ(evaluateNullabilityAtCheck(R"cc(

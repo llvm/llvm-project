@@ -14,9 +14,9 @@
 namespace clang::dataflow::nullability {
 
 // The analysis does not need any lattice state of its own yet. Pointer
-// nullability is tracked on `PointerValue`s in the `Environment`. This becomes
-// a real lattice once it needs non-flow-sensitive state and to cache const
-// member call results.
+// nullability is tracked as properties on `PointerValue`s in the `Environment`.
+// We'll use this lattice later to store non-flow-sensitive state and to
+// cache const member call results.
 using PointerNullabilityLattice = NoopLattice;
 
 } // namespace clang::dataflow::nullability

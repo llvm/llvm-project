@@ -9,6 +9,7 @@
 #ifndef CLANG_ANALYSIS_FLOWSENSITIVE_MODELS_NULLABILITY_POINTERNULLABILITYMATCHERS_H
 #define CLANG_ANALYSIS_FLOWSENSITIVE_MODELS_NULLABILITY_POINTERNULLABILITYMATCHERS_H
 
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"

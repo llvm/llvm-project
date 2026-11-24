@@ -1,8 +1,15 @@
-//===-- ValueTransferer.h - Value nullability transfer ----------*- C++ -*-===//
+//===-- ValueTransferer.h - Transfer functions for nullability --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+// This file contains transfer functions for flow-sensitive pointer nullability
+// analysis. We call this "value transferer" to distinguish from "type
+// transferer" (see
+// https://github.com/google/crubit/blob/7ef99d77672f716792140a5d5f6548cf7d638200/nullability/type_transferer.h#L13)
+// In contrast, the type transferer only handles flow-insensitive properties
+// derived from the types.
 //
 //===----------------------------------------------------------------------===//
 

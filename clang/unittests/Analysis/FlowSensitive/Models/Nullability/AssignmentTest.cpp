@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests that pointers have the expected nullability (Nullable, Nonnull,
-// Unspecified) after initialization and assignment. The tests check the
-// analysis state directly (vs tests for emitted diagnostics).
+// Tests that pointers have the expected nullability state propagated across
+// initialization and assignments. The tests check the analysis state directly
+// (vs tests for emitted diagnostics).
 //
 //===----------------------------------------------------------------------===//
 
