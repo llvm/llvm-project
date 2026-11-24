@@ -1649,7 +1649,9 @@ class Base(unittest.TestCase):
         return False
 
     def getVariant(self, variant_name):
-        method = getattr(self, self.testMethodName)
+        # Use unittest's `_testMethodName` rather than `testMethodName`, which
+        # is only set in `setUp` (and so is missing for skipped tests).
+        method = getattr(self, self._testMethodName)
         return getattr(method, variant_name, None)
 
     def getDebugInfo(self):

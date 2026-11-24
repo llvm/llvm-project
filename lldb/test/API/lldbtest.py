@@ -1,4 +1,5 @@
 import collections
+import json
 import os
 import re
 import operator
@@ -9,6 +10,76 @@ import lit.util
 from lit.formats.base import TestFormat
 
 import lldbflakes
+
+# Tests discovered by this format in the main lit process. lit copies each
+# worker's result back onto these objects, so they can be summarized at exit.
+_discovered_tests = []
+
+# Result codes dotest can report for an individual test method.
+DOTEST_CODES = [
+    lit.Test.SKIPPED,
+    lit.Test.UNSUPPORTED,
+    lit.Test.PASS,
+    lit.Test.XFAIL,
+    lit.Test.FAIL,
+    lit.Test.XPASS,
+]
+# Result codes for which the test body did not execute.
+NOT_RAN_CODES = {lit.Test.SKIPPED.name, lit.Test.UNSUPPORTED.name}
+
+
+def _parse_debug_info_breakdown(output):
+    match = re.search(r"^Debug info breakdown: (.*)$", output or "", re.MULTILINE)
+    if not match:
+        return {}
+    try:
+        return json.loads(match.group(1))
+    except ValueError:
+        return {}
+
+
+def print_debug_info_report():
+    """Print a table of API test results per debug info variant."""
+    totals = collections.defaultdict(collections.Counter)
+    for test in _discovered_tests:
+        if test.result is None:
+            continue
+        for variant, counts in _parse_debug_info_breakdown(test.result.output).items():
+            totals[variant].update(counts)
+    if not totals:
+        return
+
+    def pct(num, den):
+        return "%.1f%%" % (100.0 * num / den) if den else "-"
+
+    # dotest reports outcomes using lit's result code names. Always show every
+    # code so the table layout is the same from run to run.
+    header = ["Variant", "Total"] + [code.label for code in DOTEST_CODES]
+    header += ["Ran", "Passed (of ran)"]
+    rows = []
+    for variant in sorted(totals):
+        counts = totals[variant]
+        total = sum(counts.values())
+        ran = total - sum(counts[name] for name in NOT_RAN_CODES)
+        rows.append(
+            [variant, str(total)]
+            + [str(counts[code.name]) for code in DOTEST_CODES]
+            + [pct(ran, total), pct(counts[lit.Test.PASS.name], ran)]
+        )
+
+    widths = [max(len(row[i]) for row in [header] + rows) for i in range(len(header))]
+
+    def fmt(row):
+        return "  ".join(
+            cell.ljust(w) if i == 0 else cell.rjust(w)
+            for i, (cell, w) in enumerate(zip(row, widths))
+        )
+
+    print("\nLLDB API test results per debug info variant:")
+    print(fmt(header))
+    print("  ".join("-" * w for w in widths))
+    for row in rows:
+        print(fmt(row))
 
 
 class LLDBTest(TestFormat):
@@ -30,9 +101,19 @@ class LLDBTest(TestFormat):
             if not os.path.isdir(filepath):
                 base, ext = os.path.splitext(filename)
                 if ext in localConfig.suffixes:
-                    yield lit.Test.Test(
+                    test = lit.Test.Test(
                         testSuite, path_in_suite + (filename,), localConfig
                     )
+                    _discovered_tests.append(test)
+                    yield test
+
+    def getTestsForPath(self, testSuite, path_in_suite, litConfig, localConfig):
+        # Used when a test file is named directly on the lit command line.
+        for test in super().getTestsForPath(
+            testSuite, path_in_suite, litConfig, localConfig
+        ):
+            _discovered_tests.append(test)
+            yield test
 
     def execute(self, test, litConfig):
         return lldbflakes.execute_with_reruns(
