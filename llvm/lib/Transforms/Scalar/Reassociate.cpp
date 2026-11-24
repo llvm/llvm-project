@@ -623,50 +623,6 @@ static bool LinearizeExprTree(Instruction *I,
   return Changed;
 }
 
-// Preserve locations for block-local moves and for the simple cross-block case
-// where Source's block unconditionally leads to Destination's block. There
-// must also be no possible implicit exit between the instruction positions.
-static bool canPreserveDebugLocForTreeMove(Instruction *Source,
-                                           Instruction *Destination) {
-  BasicBlock *SourceBlock = Source->getParent();
-  BasicBlock *DestinationBlock = Destination->getParent();
-  if (SourceBlock == DestinationBlock)
-    return true;
-
-  if (SourceBlock->getUniqueSuccessor() != DestinationBlock ||
-      DestinationBlock->getUniquePredecessor() != SourceBlock)
-    return false;
-
-  auto It = Source->getIterator();
-  for (++It; It != SourceBlock->end(); ++It)
-    if (!isGuaranteedToTransferExecutionToSuccessor(&*It))
-      return false;
-
-  for (auto It = DestinationBlock->begin(); It != Destination->getIterator();
-       ++It)
-    if (!isGuaranteedToTransferExecutionToSuccessor(&*It))
-      return false;
-  return true;
-}
-
-// Find the value that this record supersedes within its basic block. This is
-// used to reconstruct the variable view only for instructions moved within the
-// block; cross-block moves retain the pre-existing salvage behavior.
-static DbgVariableRecord *findPreviousDbgValue(DbgVariableRecord &DVR) {
-  DbgVariableRecord *Previous = nullptr;
-  DebugVariable Variable(&DVR);
-  for (Instruction &I : *DVR.getParent()) {
-    for (DbgVariableRecord &CurrentDVR : filterDbgVars(I.getDbgRecordRange())) {
-      if (&CurrentDVR == &DVR)
-        return Previous;
-      if (CurrentDVR.isValueOfVariable() &&
-          DebugVariable(&CurrentDVR) == Variable)
-        Previous = &CurrentDVR;
-    }
-  }
-  return nullptr;
-}
-
 /// Now that the operands for this expression tree are
 /// linearized and optimized, emit them in-order.
 void ReassociatePass::RewriteExprTree(BinaryOperator *I,
@@ -709,13 +665,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   // ExpressionChangedEnd inclusive.
   BinaryOperator *ExpressionChangedStart = nullptr,
                  *ExpressionChangedEnd = nullptr;
-  struct TrackedDbgUser {
-    DbgVariableRecord *Record;
-    DbgVariableRecord *Previous;
-  };
-  DenseMap<Instruction *, SmallVector<TrackedDbgUser, 1>> AdjacentDbgUsers;
-  // Remember adjacent variable updates and the values they supersede in case
-  // the rewritten instructions move later within the block.
+  DenseMap<Instruction *, SmallVector<DbgVariableRecord *, 1>> AdjacentDbgUsers;
+  // Remember adjacent variable updates in case the rewritten instructions move
+  // later within the block.
   auto TrackAdjacentDbgUsers = [&](Instruction &I) {
     auto [It, Inserted] = AdjacentDbgUsers.try_emplace(&I);
     if (!Inserted)
@@ -728,7 +680,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (!DVR->isValueOfVariable() || DVR->getMarker() != NextMarker)
         continue;
 
-      It->second.push_back({DVR, findPreviousDbgValue(*DVR)});
+      It->second.push_back(DVR);
     }
   };
   for (unsigned i = 0; ; ++i) {
@@ -858,7 +810,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   if (ExpressionChangedStart) {
     // Source locations may be reordered within a block, but adjacent variable
     // updates should remain at their original program points. Remember the
-    // moved chain so its variable view can be restored around the new range.
+    // moved chain so affected variables can be unavailable while it executes.
     SmallVector<BinaryOperator *, 4> MovedExprs;
     bool MovesWithinBlock = true;
     for (BinaryOperator *Moved = ExpressionChangedStart; Moved != I;
@@ -883,33 +835,26 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (ExpressionChangedStart == I)
         break;
 
-      // Other cross-block moves can make the source location execute on
-      // different paths, so drop it before relocating the instruction.
-      if (!canPreserveDebugLocForTreeMove(ExpressionChangedStart, I))
-        ExpressionChangedStart->dropLocation();
       ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
     } while (true);
 
     if (MovesWithinBlock && !MovedExprs.empty()) {
-      // Keep updates at their original source program points, but restore each
-      // previous value while executing the moved expression.
-      SmallSet<DebugVariable, 4> RestoredVariables;
+      // Keep updates at their original source program points, but avoid
+      // reporting their new values while executing the moved expression.
+      SmallSet<DebugVariable, 4> UnavailableVariables;
       for (BinaryOperator *Moved : MovedExprs) {
         auto DbgUsersIt = AdjacentDbgUsers.find(Moved);
         if (DbgUsersIt == AdjacentDbgUsers.end())
           continue;
-        for (const TrackedDbgUser &DbgUser : DbgUsersIt->second) {
-          if (!RestoredVariables.insert(DebugVariable(DbgUser.Record)).second)
+        for (DbgVariableRecord *DbgUser : DbgUsersIt->second) {
+          if (!UnavailableVariables.insert(DebugVariable(DbgUser)).second)
             continue;
-          DbgVariableRecord *Restore = DbgUser.Previous
-                                           ? DbgUser.Previous->clone()
-                                           : DbgUser.Record->clone();
-          if (!DbgUser.Previous)
-            Restore->setKillLocation();
+          DbgVariableRecord *Unavailable = DbgUser->clone();
+          Unavailable->setKillLocation();
           I->getParent()->insertDbgRecordBefore(
-              Restore, MovedExprs.front()->getIterator());
+              Unavailable, MovedExprs.front()->getIterator());
         }
       }
 
@@ -919,8 +864,8 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         auto DbgUsersIt = AdjacentDbgUsers.find(Moved);
         if (DbgUsersIt == AdjacentDbgUsers.end())
           continue;
-        for (const TrackedDbgUser &DbgUser : reverse(DbgUsersIt->second))
-          I->getParent()->insertDbgRecordAfter(DbgUser.Record->clone(), Moved);
+        for (DbgVariableRecord *DbgUser : reverse(DbgUsersIt->second))
+          I->getParent()->insertDbgRecordAfter(DbgUser->clone(), Moved);
       }
     }
   }

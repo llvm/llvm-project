@@ -4,7 +4,7 @@
 
 ; Reduced from issue #212714. Reassociation moves the line 6 expression after
 ; part of line 7. Preserve the salvaged tmp update at its original program point,
-; restore tmp's old value for the moved expression, then reapply the update.
+; make tmp unavailable for the moved expression, then reapply the update.
 
 define i32 @example(i32 %a, i32 %b, i32 %c) !dbg !5 {
 ; CHECK-LABEL: @example(
@@ -14,7 +14,7 @@ define i32 @example(i32 %a, i32 %b, i32 %c) !dbg !5 {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 %b to i64, !dbg [[LINE7A:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr @g, i64 0, i64 [[IDXPROM]], !dbg [[LINE7A]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !dbg [[LINE7A]]
-; CHECK-NEXT:      #dbg_value(i32 %c, ![[TMP]], !DIExpression(),
+; CHECK-NEXT:      #dbg_value(i32 poison, ![[TMP]], !DIExpression(DW_OP_plus_uconst, 30, DW_OP_stack_value),
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 %a, 30, !dbg [[LINE6A:![0-9]+]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], %c, !dbg [[LINE6B:![0-9]+]]
 ; CHECK-NEXT:      #dbg_value(i32 %c, ![[TMP]], !DIExpression(DW_OP_plus_uconst, 30, DW_OP_stack_value),
@@ -68,77 +68,6 @@ next:
   ret i32 %result, !dbg !26
 }
 
-; If the predecessor can exit along another path, moving its expression into a
-; successor changes the paths on which it executes. Drop the moved locations.
-
-define i32 @across_conditional_edge(i32 %a, i32 %b, i32 %c) !dbg !27 {
-; CHECK-LABEL: @across_conditional_edge(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 %b, 0
-; CHECK-NEXT:    br i1 [[COND]], label %next, label %exit
-; CHECK:       next:
-; CHECK-NEXT:    [[COND_IDXPROM:%.*]] = sext i32 %b to i64, !dbg [[COND_LINE7A:![0-9]+]]
-; CHECK-NEXT:    [[COND_ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr @g, i64 0, i64 [[COND_IDXPROM]], !dbg [[COND_LINE7A]]
-; CHECK-NEXT:    [[COND_LOAD:%.*]] = load i32, ptr [[COND_ARRAYIDX]], align 4, !dbg [[COND_LINE7A]]
-; CHECK-NEXT:    [[COND_ADD:%.*]] = add i32 %a, 30{{$}}
-; CHECK-NEXT:    [[COND_ADD1:%.*]] = add i32 [[COND_ADD]], %c{{$}}
-; CHECK-NEXT:    [[COND_RESULT:%.*]] = add i32 [[COND_ADD1]], [[COND_LOAD]], !dbg [[COND_LINE7B:![0-9]+]]
-; CHECK-NEXT:    ret i32 [[COND_RESULT]], !dbg [[COND_LINE7C:![0-9]+]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret i32 0, !dbg [[COND_LINE8:![0-9]+]]
-;
-entry:
-  %add = add nsw i32 %c, 10, !dbg !28
-  %add1 = add nsw i32 %add, 20, !dbg !29
-  %cond = icmp ne i32 %b, 0
-  br i1 %cond, label %next, label %exit
-
-next:
-  %idxprom = sext i32 %b to i64, !dbg !30
-  %arrayidx = getelementptr inbounds [2 x i32], ptr @g, i64 0, i64 %idxprom, !dbg !30
-  %load = load i32, ptr %arrayidx, align 4, !dbg !30
-  %add2 = add nsw i32 %a, %load, !dbg !31
-  %result = add nsw i32 %add2, %add1, !dbg !32
-  ret i32 %result, !dbg !33
-
-exit:
-  ret i32 0, !dbg !34
-}
-
-; A single CFG successor is not sufficient if execution can exit implicitly
-; between the old and new positions.
-
-define i32 @across_implicit_exit(i32 %a, i32 %b, i32 %c) !dbg !35 {
-; CHECK-LABEL: @across_implicit_exit(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @may_not_return()
-; CHECK-NEXT:    br label %next
-; CHECK:       next:
-; CHECK-NEXT:    [[EXIT_IDXPROM:%.*]] = sext i32 %b to i64, !dbg [[EXIT_LINE7A:![0-9]+]]
-; CHECK-NEXT:    [[EXIT_ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr @g, i64 0, i64 [[EXIT_IDXPROM]], !dbg [[EXIT_LINE7A]]
-; CHECK-NEXT:    [[EXIT_LOAD:%.*]] = load i32, ptr [[EXIT_ARRAYIDX]], align 4, !dbg [[EXIT_LINE7A]]
-; CHECK-NEXT:    [[EXIT_ADD:%.*]] = add i32 %a, 30{{$}}
-; CHECK-NEXT:    [[EXIT_ADD1:%.*]] = add i32 [[EXIT_ADD]], %c{{$}}
-; CHECK-NEXT:    [[EXIT_RESULT:%.*]] = add i32 [[EXIT_ADD1]], [[EXIT_LOAD]], !dbg [[EXIT_LINE7B:![0-9]+]]
-; CHECK-NEXT:    ret i32 [[EXIT_RESULT]], !dbg [[EXIT_LINE7C:![0-9]+]]
-;
-entry:
-  %add = add nsw i32 %c, 10, !dbg !36
-  %add1 = add nsw i32 %add, 20, !dbg !37
-  call void @may_not_return()
-  br label %next
-
-next:
-  %idxprom = sext i32 %b to i64, !dbg !38
-  %arrayidx = getelementptr inbounds [2 x i32], ptr @g, i64 0, i64 %idxprom, !dbg !38
-  %load = load i32, ptr %arrayidx, align 4, !dbg !38
-  %add2 = add nsw i32 %a, %load, !dbg !39
-  %result = add nsw i32 %add2, %add1, !dbg !40
-  ret i32 %result, !dbg !41
-}
-
-declare void @may_not_return()
-
 ; CHECK: ![[TMP]] = !DILocalVariable(name: "tmp"
 ; CHECK: [[LINE7A]] = !DILocation(line: 7,
 ; CHECK: [[LINE6A]] = !DILocation(line: 6,
@@ -151,13 +80,6 @@ declare void @may_not_return()
 ; CHECK: [[CROSS_LINE6B]] = !DILocation(line: 6,
 ; CHECK: [[CROSS_LINE7B]] = !DILocation(line: 7,
 ; CHECK: [[CROSS_LINE7C]] = !DILocation(line: 7,
-; CHECK: [[COND_LINE7A]] = !DILocation(line: 7,
-; CHECK: [[COND_LINE7B]] = !DILocation(line: 7,
-; CHECK: [[COND_LINE7C]] = !DILocation(line: 7,
-; CHECK: [[COND_LINE8]] = !DILocation(line: 8,
-; CHECK: [[EXIT_LINE7A]] = !DILocation(line: 7,
-; CHECK: [[EXIT_LINE7B]] = !DILocation(line: 7,
-; CHECK: [[EXIT_LINE7C]] = !DILocation(line: 7,
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
@@ -187,18 +109,3 @@ declare void @may_not_return()
 !24 = !DILocation(line: 7, column: 12, scope: !18)
 !25 = !DILocation(line: 7, column: 19, scope: !18)
 !26 = !DILocation(line: 7, column: 3, scope: !18)
-!27 = distinct !DISubprogram(name: "across_conditional_edge", scope: !1, file: !1, line: 4, type: !6, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!28 = !DILocation(line: 6, column: 13, scope: !27)
-!29 = !DILocation(line: 6, column: 18, scope: !27)
-!30 = !DILocation(line: 7, column: 14, scope: !27)
-!31 = !DILocation(line: 7, column: 12, scope: !27)
-!32 = !DILocation(line: 7, column: 19, scope: !27)
-!33 = !DILocation(line: 7, column: 3, scope: !27)
-!34 = !DILocation(line: 8, column: 3, scope: !27)
-!35 = distinct !DISubprogram(name: "across_implicit_exit", scope: !1, file: !1, line: 4, type: !6, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!36 = !DILocation(line: 6, column: 13, scope: !35)
-!37 = !DILocation(line: 6, column: 18, scope: !35)
-!38 = !DILocation(line: 7, column: 14, scope: !35)
-!39 = !DILocation(line: 7, column: 12, scope: !35)
-!40 = !DILocation(line: 7, column: 19, scope: !35)
-!41 = !DILocation(line: 7, column: 3, scope: !35)
