@@ -3620,12 +3620,6 @@ public:
   void EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr, QualType Ty,
                                     GSObjectKind Kind = GSObjectKind::Named);
 
-  /// If this function uses MSVC's /GS (Buffer Security Check) heuristic and
-  /// \p Ty is a "GS buffer", copy the by-value parameter at \p ParamAddr into
-  /// a fresh local so that it is covered by this frame's stack guard, and
-  /// return the copy. cl.exe does the same, naming the copy "<param>$GSCopy$".
-  Address EmitGSBufferParamCopy(const VarDecl &D, Address ParamAddr);
-
   /// If this function uses MSVC's /GS (Buffer Security Check) heuristic, mark
   /// \p AI as a "GS buffer", so that the function requires a stack protector.
   /// \p IsLarge says the buffer should be laid out closest to the guard.

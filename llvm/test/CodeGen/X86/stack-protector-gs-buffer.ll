@@ -113,21 +113,49 @@ define void @marked_bad_layout() #0 {
 
 ;; --- alloca ------------------------------------------------------------------
 
-; A call to alloca is a GS buffer, and is visible as such in the IR, so it
-; needs no mark.
-; CHECK-LABEL: dynamic_alloca:
-; CHECK:         __security_cookie
-define void @dynamic_alloca(i64 %n) #0 {
+; The backend does not recognise a GS buffer from an alloca's element count: an
+; unmarked alloca is not protected however it is sized, and the frontend marks
+; the ones that are buffers.
+; CHECK-LABEL: unmarked_dynamic_alloca:
+; CHECK-NOT:     __security_cookie
+; CHECK:       .seh_endproc
+define void @unmarked_dynamic_alloca(i64 %n) #0 {
   %a = alloca i8, i64 %n
   call void @use(ptr %a)
   ret void
 }
 
-; Even a small constant-sized alloca is a GS buffer.
-; CHECK-LABEL: small_alloca:
+; CHECK-LABEL: marked_dynamic_alloca:
 ; CHECK:         __security_cookie
-define void @small_alloca() #0 {
+define void @marked_dynamic_alloca(i64 %n) #0 {
+  %a = alloca i8, i64 %n, !stack-protector !1, !stack-protector-layout !4
+  call void @use(ptr %a)
+  ret void
+}
+
+; CHECK-LABEL: unmarked_small_alloca:
+; CHECK-NOT:     __security_cookie
+; CHECK:       .seh_endproc
+define void @unmarked_small_alloca() #0 {
   %a = alloca i8, i64 3
+  call void @use(ptr %a)
+  ret void
+}
+
+; Even a small constant-sized alloca is a GS buffer once it is marked.
+; CHECK-LABEL: marked_small_alloca:
+; CHECK:         __security_cookie
+define void @marked_small_alloca() #0 {
+  %a = alloca i8, i64 3, !stack-protector !1, !stack-protector-layout !3
+  call void @use(ptr %a)
+  ret void
+}
+
+; The GCC-compatible strong heuristic still protects every alloca call.
+; CHECK-LABEL: strong_dynamic_alloca:
+; CHECK:         __security_cookie
+define void @strong_dynamic_alloca(i64 %n) #2 {
+  %a = alloca i8, i64 %n
   call void @use(ptr %a)
   ret void
 }

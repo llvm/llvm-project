@@ -554,6 +554,12 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
           continue;
         }
 
+        // Under MSVC's /GS the frontend marks every buffer, including one
+        // allocated with alloca or as a variable length array, so an unmarked
+        // alloca never requires a protector.
+        if (GSBuffer)
+          continue;
+
         if (AI->isArrayAllocation()) {
           auto RemarkBuilder = [&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorAllocaOrArray",
@@ -572,10 +578,8 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
               InsertLayout(AI, MachineFrameInfo::SSPLK_LargeArray);
               ORE.emit(RemarkBuilder);
               NeedsProtector = true;
-            } else if (Strong || GSBuffer) {
-              // Require protectors for all alloca calls in strong mode. MSVC's
-              // /GS likewise treats every _alloca buffer as a GS buffer, with
-              // no size threshold.
+            } else if (Strong) {
+              // Require protectors for all alloca calls in strong mode.
               if (!Layout)
                 return true;
               InsertLayout(AI, MachineFrameInfo::SSPLK_SmallArray);
@@ -592,11 +596,6 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
           }
           continue;
         }
-
-        // Under MSVC's /GS the frontend has already picked out the buffers, so
-        // an unmarked alloca never requires a protector.
-        if (GSBuffer)
-          continue;
 
         bool IsLarge = false;
         if (ContainsProtectableArray(AI->getAllocatedType(), M, SSPBufferSize,

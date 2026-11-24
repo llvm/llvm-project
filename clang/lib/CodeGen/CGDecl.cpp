@@ -1749,8 +1749,7 @@ void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,
     return;
 
   // An ABI slot holding a trivial object is anonymous storage, which cl.exe
-  // does not analyse; it protects the callee instead (see
-  // EmitGSBufferParamCopy). Once the type needs a constructor or a destructor
+  // does not analyse. Once the type needs a constructor or a destructor
   // the temporary becomes a real object, and cl.exe covers it.
   if (Kind != GSObjectKind::Named && Ty.isTrivialType(getContext()))
     return;
@@ -1774,31 +1773,6 @@ void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,
     return;
 
   MarkGSBufferAlloca(AI, IsLarge);
-}
-
-Address CodeGenFunction::EmitGSBufferParamCopy(const VarDecl &D,
-                                               Address ParamAddr) {
-  QualType Ty = D.getType();
-  bool IsLarge = false;
-  if (!MarkGSBuffers ||
-      !isGSBuffer(getContext(), Ty, CGM.getCodeGenOpts().SSPBufferSize,
-                  IsLarge))
-    return ParamAddr;
-
-  // Only copy what can be copied by memcpy and needs no destructor, so that
-  // the copy is indistinguishable from the original. cl.exe likewise leaves
-  // parameters of non-trivial type in the caller's storage.
-  if (!Ty.isTriviallyCopyableType(getContext()) || Ty.isDestructedType())
-    return ParamAddr;
-
-  RawAddress GSCopy = CreateMemTempWithoutCast(
-      Ty, getContext().getDeclAlign(&D), D.getName() + "$GSCopy$");
-  EmitAggregateCopy(MakeAddrLValue(GSCopy, Ty), MakeAddrLValue(ParamAddr, Ty),
-                    Ty, AggValueSlot::DoesNotOverlap);
-  MarkGSBufferAlloca(
-      dyn_cast<llvm::AllocaInst>(GSCopy.getPointer()->stripPointerCasts()),
-      IsLarge);
-  return GSCopy;
 }
 
 /// EmitAutoVarAlloca - Emit the alloca and debug information for a
@@ -2030,6 +2004,12 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // Allocate memory for the array.
       address = CreateTempAlloca(llvmTy, alignment, "vla", VlaSize.NumElts,
                                  &AllocaAddr);
+
+      // MSVC's /GS treats a variable length array as a GS buffer, as it does a
+      // buffer from _alloca, and the backend does not infer that from the
+      // element count.
+      MarkGSBufferAlloca(dyn_cast<llvm::AllocaInst>(AllocaAddr.getPointer()),
+                         /*IsLarge=*/true);
     }
 
     // If we have debug info enabled, properly describe the VLA dimensions for
@@ -3043,25 +3023,14 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
     ABIArgInfo ArgInfo = CurFnInfo->arguments()[ArgNo - 1].info;
 
-    // A by-value parameter is an object the source declared, so cl.exe
-    // classifies it. Where it lives decides what has to happen for this
-    // frame's guard to cover it.
+    // A by-value parameter passed indirectly lives in the caller's frame, which
+    // is not this function's to protect. One that arrived in registers was
+    // spilled to a slot of this frame's own, which is a stack object the source
+    // declared, so cl.exe classifies it.
     if (MarkGSBuffers && !CurFuncIsThunk && isa<ParmVarDecl>(&D)) {
-      if (ArgInfo.isIndirect()) {
-        // The caller allocated the storage, so the guard does not reach it.
-        // When it is a GS buffer, relocate it the way cl.exe does. Only
-        // `byval` and plain `indirect` own their storage; for `byref` the
-        // callee's writes are visible to the caller, so a copy would change
-        // behaviour.
-        if (CurFnInfo->getExtParameterInfo(ArgNo - 1).getABI() ==
-            ParameterABI::Ordinary)
-          DeclPtr = EmitGSBufferParamCopy(D, DeclPtr);
-      } else if (isa<llvm::AllocaInst>(
-                     DeclPtr.getBasePointer()->stripPointerCasts())) {
-        // The argument arrived in registers and the prologue spilled it to a
-        // slot of this frame's own, which the guard already covers. Nothing
-        // needs moving, but it still has to be classified: without this an
-        // aggregate small enough to be passed in registers would be missed.
+      if (!ArgInfo.isIndirect() &&
+          isa<llvm::AllocaInst>(
+              DeclPtr.getBasePointer()->stripPointerCasts())) {
         EmitGSBufferStackProtectorMD(
             DeclPtr.getBasePointer()->stripPointerCasts(), Ty);
       }

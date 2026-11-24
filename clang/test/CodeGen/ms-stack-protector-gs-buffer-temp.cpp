@@ -75,13 +75,11 @@ void pass_no_copy() { takeNoCopy(NoCopy()); }
 
 //--- By-value parameters ------------------------------------------------------
 
-// A by-value parameter lives in the caller's frame, where the guard does not
-// reach, so clang relocates a vulnerable one into a copy of its own. This
-// mirrors the `<name>$GSCopy$` slot cl.exe emits.
+// A by-value parameter passed indirectly lives in the caller's frame, which is
+// not this function's to protect, so there is nothing here to classify.
 // CHECK-LABEL: @"?param@@YAXUBuf@@@Z"
-// CHECK:         %[[COPY:["a-zA-Z0-9$]+]] = alloca %struct.Buf, align 1, !stack-protector ![[FORCE]], !stack-protector-layout ![[LARGE]]
-// CHECK:         call void @llvm.memcpy{{.*}}(ptr {{[^,]*}}%[[COPY]],
-// CHECK:         call void @"?use@@YAXPEBX@Z"(ptr {{[^,]*}}%[[COPY]])
+// CHECK-NOT:     alloca %struct.Buf
+// CHECK:         call void @"?use@@YAXPEBX@Z"(ptr {{[^,]*}}%b)
 void param(Buf b) { use(&b); }
 
 // A parameter small enough to arrive in registers is spilled by the prologue to

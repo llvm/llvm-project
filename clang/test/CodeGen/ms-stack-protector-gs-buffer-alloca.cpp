@@ -212,10 +212,8 @@ void holds_reference(int &x) { HoldsReference s(x); use(&s); }
 
 //--- _alloca ------------------------------------------------------------------
 
-// A buffer allocated by _alloca is a GS buffer whatever its size. An alloca
-// with an element count is one the backend recognises on its own, but a
-// constant count does not stay one for long -- InstCombine folds it into the
-// allocated type -- so the classification is recorded here as well.
+// A buffer allocated by _alloca is a GS buffer whatever its size. The backend
+// does not infer one from an alloca's element count, so it is marked here.
 // CHECK-LABEL: @"?alloca_large@@YAXXZ"
 // CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[FORCE]], !stack-protector-layout ![[LARGE]]
 void alloca_large() { use(_alloca(64)); }
@@ -233,12 +231,12 @@ void alloca_dynamic(int n) { use(_alloca(n)); }
 // CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[FORCE]], !stack-protector-layout ![[LARGE]]
 void alloca_with_align() { use(__builtin_alloca_with_align(64, 128)); }
 
-//--- Left to the backend ------------------------------------------------------
+//--- Variable length arrays ---------------------------------------------------
 
-// A variable-length array lowers to an alloca with an element count, which the
-// backend recognises as a GS buffer on its own.
+// A variable-length array is a buffer like one from _alloca, and the backend
+// does not infer that from the element count, so it is marked here.
 // CHECK-LABEL: @"?vla@@YAXH@Z"
-// CHECK:         alloca i8, i64 %{{[0-9]+}}, align 1{{$}}
+// CHECK:         alloca i8, i64 %{{[0-9]+}}, align 1, !stack-protector ![[FORCE]], !stack-protector-layout ![[LARGE]]
 void vla(int n) { char a[n]; use(a); }
 
 //--- Opting out ---------------------------------------------------------------

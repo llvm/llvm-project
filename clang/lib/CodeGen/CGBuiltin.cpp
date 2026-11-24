@@ -178,16 +178,14 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
 }
 
 /// MSVC's /GS treats a buffer allocated by _alloca as a GS buffer whatever its
-/// size, so mark \p AI as one. The element count that would let the backend
-/// recognise it on its own does not survive InstCombine folding a
-/// constant-sized alloca to an array type, so record it here.
+/// size, so mark \p AI as one. The backend does not infer a GS buffer from
+/// an alloca's element count, so it has to be recorded here.
 static void markAllocaAsGSBuffer(CodeGenFunction &CGF, AllocaInst *AI,
                                  Value *Size) {
   unsigned SSPBufferSize = CGF.CGM.getCodeGenOpts().SSPBufferSize;
   const auto *CI = dyn_cast<llvm::ConstantInt>(Size);
-  // Lay it out as the backend would if the element count were still visible:
-  // a variable size, or one of at least ssp-buffer-size bytes, goes closest to
-  // the stack guard.
+  // A variable size, or one of at least ssp-buffer-size bytes, is laid out
+  // closest to the stack guard.
   CGF.MarkGSBufferAlloca(AI, !CI || CI->getLimitedValue(SSPBufferSize) >=
                                         SSPBufferSize);
 }

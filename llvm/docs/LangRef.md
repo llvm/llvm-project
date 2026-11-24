@@ -2843,12 +2843,12 @@ fn -> other_fn -> other_fn ; fn is norecurse
     boolean value, and is emitted by clang-cl.
 
     Under this heuristic a function is protected if it allocates a "GS
-    buffer", which is either an `alloca` with a non-constant or non-one element
-    count, or an alloca that the frontend marked with `stack-protector`
-    metadata of value `1`. Whether a given
-    variable is a GS buffer depends on its source-level type, which lowering
-    to IR does not preserve, so classifying the fixed-size allocations is the
-    frontend's job.
+    buffer", which is an alloca that the frontend marked with `stack-protector`
+    metadata of value `1`. Whether a given variable is a GS buffer depends on
+    its source-level type, which lowering to IR does not preserve, so
+    classifying the allocations is the frontend's job. That includes an `alloca`
+    with a non-constant element count: it is not recognised from its element
+    count, so the frontend marks it too.
 
     Unlike `sspstrong`, a local variable merely having its address taken does
     not cause a function to be protected, and no alloca is classified from its
