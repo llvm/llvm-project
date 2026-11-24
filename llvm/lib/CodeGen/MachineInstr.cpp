@@ -582,6 +582,12 @@ uint32_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
   return getFlags() | Other.getFlags();
 }
 
+void MachineInstr::intersectFlagsWith(const MachineInstr &Other) {
+  constexpr uint32_t ValueFlags = getPoisonGeneratingFlags() | FmNsz | FmArcp |
+                                  FmContract | FmAfn | FmReassoc;
+  clearFlags(getFlags() & ~Other.getFlags() & ValueFlags);
+}
+
 uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
   uint32_t MIFlags = 0;
   // Copy the wrapping flags.

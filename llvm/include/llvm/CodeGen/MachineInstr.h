@@ -2032,6 +2032,10 @@ public:
   /// not modify the MIFlags of this MachineInstr.
   LLVM_ABI uint32_t mergeFlagsWith(const MachineInstr &Other) const;
 
+  /// Clear the poison-generating and fast-math flags that \p Other does not
+  /// have. Use this when this instruction replaces an identical \p Other.
+  LLVM_ABI void intersectFlagsWith(const MachineInstr &Other);
+
   LLVM_ABI static uint32_t copyFlagsFromInstruction(const Instruction &I);
 
   /// Copy all flags to MachineInst MIFlags
