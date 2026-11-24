@@ -154,6 +154,53 @@ TEST(SPSAllocActionTest, RunActionWithReferenceArgs) {
   EXPECT_EQ(Result, "hello, world!");
 }
 
+// Handler that takes its string argument by non-const lvalue reference,
+// modifies it in place, and then moves it into the given std::string*.
+static orc_rt_WrapperFunctionBuffer exclaim_sps_allocaction(const char *ArgData,
+                                                            size_t ArgSize) {
+  return SPSAllocActionFunction<SPSExecutorAddr, SPSString>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr Out, std::string &S) {
+               S += "!";
+               *Out.toPtr<std::string *>() = std::move(S);
+               return WrapperFunctionBuffer();
+             })
+      .release();
+}
+
+TEST(SPSAllocActionTest, RunActionWithNonConstLValueRefArg) {
+  // Verifies that handlers may take arguments by non-const lvalue reference,
+  // binding to (and modifying) the deserialized value.
+  std::string Result;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, SPSString>::from(
+      exclaim_sps_allocaction, ExecutorAddr::fromPtr(&Result),
+      std::string("hello"));
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+  EXPECT_EQ(Result, "hello!");
+}
+
+// Handler that passes its callable to handle as an lvalue rather than as a
+// temporary.
+static orc_rt_WrapperFunctionBuffer
+lvalue_handler_sps_allocaction(const char *ArgData, size_t ArgSize) {
+  auto H = [](ExecutorAddr IntPtr) {
+    *IntPtr.toPtr<int *>() += 1;
+    return WrapperFunctionBuffer();
+  };
+  return SPSAllocActionFunction<SPSExecutorAddr>::handle(ArgData, ArgSize, H)
+      .release();
+}
+
+TEST(SPSAllocActionTest, RunActionWithLValueHandler) {
+  int Val = 0;
+  auto AA = *MakeAllocAction<SPSExecutorAddr>::from(
+      lvalue_handler_sps_allocaction, ExecutorAddr::fromPtr(&Val));
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+  EXPECT_EQ(Val, 1);
+}
+
 // Test the ORC_RT_SPS_ALLOC_ACTION macro.
 static Error check_values_equal(int32_t X, int32_t Y) {
   if (X == Y)

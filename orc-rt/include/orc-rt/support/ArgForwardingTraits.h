@@ -13,6 +13,8 @@
 #ifndef ORC_RT_SUPPORT_ARGFORWARDINGTRAITS_H
 #define ORC_RT_SUPPORT_ARGFORWARDINGTRAITS_H
 
+#include "orc-rt/support/CallableTraitsHelper.h"
+
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -27,10 +29,19 @@ template <typename... ArgTs> struct ArgForwardingTraits {
   typedef std::tuple<std::decay_t<ArgTs>...> ArgTupleType;
 
   // Forwards arguments based on the parameter types of the handler.
+  //
+  // The call operator takes lvalue references to the deserialized
+  // (ArgTupleType) values and forwards each according to the handler's
+  // declared parameter type: T and T&& parameters receive rvalues, while
+  // const T& and T& parameters receive lvalues. Modifications made through a
+  // T& parameter are made to the deserialized value. The handler's return
+  // value (if any) is returned.
   template <typename FnT> class ForwardArgsAsRequested {
   public:
-    ForwardArgsAsRequested(FnT &&Fn) : Fn(std::move(Fn)) {}
-    void operator()(ArgTs &...Args) { Fn(std::forward<ArgTs>(Args)...); }
+    ForwardArgsAsRequested(FnT Fn) : Fn(std::move(Fn)) {}
+    decltype(auto) operator()(ArgTs &...Args) {
+      return Fn(std::forward<ArgTs>(Args)...);
+    }
 
   private:
     FnT Fn;
@@ -42,6 +53,15 @@ template <typename... ArgTs> struct ArgForwardingTraits {
     return ForwardArgsAsRequested<std::decay_t<FnT>>(std::forward<FnT>(Fn));
   }
 };
+
+template <bool /* is_const */, bool /* is_noexcept */, typename RetT,
+          typename... ArgTs>
+struct ArgForwardingTraitsAdapter : ArgForwardingTraits<ArgTs...> {};
+
+/// ArgForwardingTraits for the parameter types of callable type C.
+template <typename C>
+using ArgForwardingTraitsFor =
+    CallableTraitsHelper<ArgForwardingTraitsAdapter, C>;
 
 } // namespace orc_rt::detail
 

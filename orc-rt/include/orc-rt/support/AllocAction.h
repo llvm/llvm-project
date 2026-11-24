@@ -13,7 +13,7 @@
 #ifndef ORC_RT_SUPPORT_ALLOCACTION_H
 #define ORC_RT_SUPPORT_ALLOCACTION_H
 
-#include "orc-rt/support/CallableTraitsHelper.h"
+#include "orc-rt/support/ArgForwardingTraits.h"
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/scope_exit.h"
@@ -27,36 +27,26 @@ namespace orc_rt {
 typedef orc_rt_WrapperFunctionBuffer (*AllocActionFn)(const char *ArgData,
                                                       size_t ArgSize);
 
-namespace detail {
-
-// Computes the tuple type that AllocActionFunction::handle deserializes
-// arguments into before calling the handler. Parameter types are decayed so
-// that handlers may take arguments by value, const reference, or rvalue
-// reference (a tuple of references couldn't be default-constructed).
-template <typename ReturnT, typename... ArgTs> struct AAHandlerTraitsImpl {
-  typedef std::tuple<std::decay_t<ArgTs>...> ArgTupleType;
-};
-
-template <bool /* is_const */, bool /* is_noexcept */, typename... Ts>
-struct AAHandlerTraitsImplAdapter : AAHandlerTraitsImpl<Ts...> {};
-
-template <typename C>
-using AAHandlerTraits = CallableTraitsHelper<AAHandlerTraitsImplAdapter, C>;
-
-} // namespace detail
-
 struct AllocActionFunction {
 
+  /// Deserializes allocation action arguments using D, calls H with them,
+  /// and serializes H's result using S.
+  ///
+  /// H may take its arguments by value, const reference, rvalue reference, or
+  /// non-const lvalue reference (modifications through the latter are made to
+  /// the deserialized value).
   template <typename Deserializer, typename Serializer, typename Handler>
   static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
                                       Deserializer &&D, Serializer &&S,
                                       Handler &&H) {
-    typename detail::AAHandlerTraits<Handler>::ArgTupleType Args;
+    typedef detail::ArgForwardingTraitsFor<Handler> HandlerTraits;
+    typename HandlerTraits::ArgTupleType Args;
     if (!D.deserialize(ArgData, ArgSize, Args))
       return WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize allocation action argument buffer");
 
-    return S.serialize(std::apply(std::forward<Handler>(H), std::move(Args)));
+    return S.serialize(std::apply(
+        HandlerTraits::forwardArgsAsRequested(std::forward<Handler>(H)), Args));
   }
 };
 
