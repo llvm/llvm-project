@@ -641,7 +641,8 @@ define float @FtoItoFtoF_bf16_s16_f16_f32(bfloat %f) {
 define float @FtoItoFtoF_bf16_su16_f16_f32(bfloat %f) {
 ; CHECK-LABEL: @FtoItoFtoF_bf16_su16_f16_f32(
 ; CHECK-NEXT:    [[I:%.*]] = fptosi bfloat [[F:%.*]] to i16
-; CHECK-NEXT:    [[R:%.*]] = uitofp i16 [[I]] to float
+; CHECK-NEXT:    [[X:%.*]] = uitofp i16 [[I]] to half
+; CHECK-NEXT:    [[R:%.*]] = fpext half [[X]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %i = fptosi bfloat %f to i16
@@ -655,7 +656,8 @@ define float @FtoItoFtoF_bf16_su16_f16_f32(bfloat %f) {
 define double @FtoItoFtoF_f16_su32_f32_f64(half %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f16_su32_f32_f64(
 ; CHECK-NEXT:    [[I:%.*]] = fptosi half [[F:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[I]] to double
+; CHECK-NEXT:    [[X:%.*]] = uitofp i32 [[I]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %i = fptosi half %f to i32
@@ -670,8 +672,7 @@ define float @ItoFtoF_s32_f16_f32_sext_shl(i8 %a) {
 ; CHECK-LABEL: @ItoFtoF_s32_f16_f32_sext_shl(
 ; CHECK-NEXT:    [[E:%.*]] = sext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[S:%.*]] = shl nsw i32 [[E]], 8
-; CHECK-NEXT:    [[H:%.*]] = sitofp i32 [[S]] to half
-; CHECK-NEXT:    [[R:%.*]] = fpext half [[H]] to float
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[S]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %e = sext i8 %a to i32
