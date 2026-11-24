@@ -69,6 +69,47 @@ declare { ptr, i1 } @llvm.type.checked.load(ptr, i32, metadata)
 }>, align 8, !type !{i64 0, !"vfunc4.type"}, !type !{i64 16, !"vfunc2.type"}, !vcall_visibility !{i64 2}
 
 
+; The slot is a byte array that is not all zeroes, this vtable is disqualified from VFE.
+; CHECK:      @vtableNonZeroBytes = internal unnamed_addr constant <{ [8 x i8], ptr }> <{
+; CHECK-SAME:   [8 x i8] c"\01\00\00\00\00\00\00\00",
+; CHECK-SAME:   ptr @vfunc2NonZeroBytes
+; CHECK-SAME: }>, align 8
+@vtableNonZeroBytes = internal unnamed_addr constant <{ [8 x i8], ptr }> <{
+  [8 x i8] c"\01\00\00\00\00\00\00\00",
+  ptr @vfunc2NonZeroBytes
+}>, align 8, !type !{i64 0, !"vfunc1.type"}, !type !{i64 8, !"vfunc2.type"}, !vcall_visibility !{i64 2}
+
+; The slot is a pointer, but not null and not a function, this vtable is disqualified from VFE.
+; CHECK:      @vtableIntToPtr = internal unnamed_addr constant { [2 x ptr] } { [2 x ptr] [
+; CHECK-SAME:   ptr inttoptr (i64 1 to ptr),
+; CHECK-SAME:   ptr @vfunc2IntToPtr
+; CHECK-SAME: ] }, align 8
+@vtableIntToPtr = internal unnamed_addr constant { [2 x ptr] } { [2 x ptr] [
+  ptr inttoptr (i64 1 to ptr),
+  ptr @vfunc2IntToPtr
+]}, align 8, !type !{i64 0, !"vfunc1.type"}, !type !{i64 8, !"vfunc2.type"}, !vcall_visibility !{i64 2}
+
+; Load out of bounds, this vtable is disqualified from VFE.
+; CHECK:      @vtableOutOfBounds = internal unnamed_addr constant <{ ptr, i32 }> <{
+; CHECK-SAME:   ptr @vfunc2OutOfBounds,
+; CHECK-SAME:   i32 0
+; CHECK-SAME: }>, align 8
+@vtableOutOfBounds = internal unnamed_addr constant <{ ptr, i32 }> <{
+  ptr @vfunc2OutOfBounds,
+  i32 0
+}>, align 8, !type !{i64 0, !"vfunc4.type"}, !vcall_visibility !{i64 2}
+
+; Non-constant vtable, this vtable is disqualified from VFE.
+; CHECK:      @vtableMutable = internal unnamed_addr global <{ [8 x i8], ptr }> <{
+; CHECK-SAME:   [8 x i8] zeroinitializer,
+; CHECK-SAME:   ptr @vfunc2Mutable
+; CHECK-SAME: }>, align 8
+@vtableMutable = internal unnamed_addr global <{ [8 x i8], ptr }> <{
+  [8 x i8] zeroinitializer,
+  ptr @vfunc2Mutable
+}>, align 8, !type !{i64 0, !"vfunc1.type"}, !type !{i64 8, !"vfunc2.type"}, !vcall_visibility !{i64 2}
+
+
 ; There is a checked load for vfunc1.type, so this function must be kept.
 ; CHECK: define internal void @vfunc1B(
 define internal void @vfunc1B() {
@@ -106,16 +147,44 @@ define internal void @vfunc2E() {
   ret void
 }
 
+; CHECK: define internal void @vfunc2NonZeroBytes(
+define internal void @vfunc2NonZeroBytes() {
+  ret void
+}
+
+; CHECK: define internal void @vfunc2IntToPtr(
+define internal void @vfunc2IntToPtr() {
+  ret void
+}
+
+; CHECK: define internal void @vfunc2OutOfBounds(
+define internal void @vfunc2OutOfBounds() {
+  ret void
+}
+
+; CHECK: define internal void @vfunc2Mutable(
+define internal void @vfunc2Mutable() {
+  ret void
+}
+
 define void @main() {
-  %1 = ptrtoint ptr @vtableA to i64 ; to keep @vtableA alive
-  %2 = ptrtoint ptr @vtableB to i64 ; to keep @vtableB alive
-  %3 = ptrtoint ptr @vtableC to i64 ; to keep @vtableC alive
-  %4 = ptrtoint ptr @vtableRust to i64 ; to keep @vtableRust alive
-  %5 = ptrtoint ptr @vtableD to i64 ; to keep @vtableD alive
-  %6 = ptrtoint ptr @vtableE to i64 ; to keep @vtableE alive
-  %7 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 0, metadata !"vfunc1.type")
-  %8 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 0, metadata !"vfunc3.type")
-  %9 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 8, metadata !"vfunc4.type")
+  ; To keep the vtables alive.
+  %1 = ptrtoint ptr @vtableA to i64
+  %2 = ptrtoint ptr @vtableB to i64
+  %3 = ptrtoint ptr @vtableC to i64
+  %4 = ptrtoint ptr @vtableRust to i64
+  %5 = ptrtoint ptr @vtableD to i64
+  %6 = ptrtoint ptr @vtableE to i64
+  %7 = ptrtoint ptr @vtableNonZeroBytes to i64
+  %8 = ptrtoint ptr @vtableIntToPtr to i64
+  %9 = ptrtoint ptr @vtableOutOfBounds to i64
+  %10 = ptrtoint ptr @vtableMutable to i64
+
+  ; Methods targeted by a checked load must be kept.
+  %11 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 0, metadata !"vfunc1.type")
+  %12 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 0, metadata !"vfunc3.type")
+  %13 = tail call { ptr, i1 } @llvm.type.checked.load(ptr null, i32 8, metadata !"vfunc4.type")
+
   ret void
 }
 
