@@ -2822,9 +2822,6 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   // A new virtual register to store the result struct.
   Register StructVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(StructVReg, &SPIRV::IDRegClass);
-  // Build the result name if needed.
-  if (ResName.size() > 0)
-    buildOpName(StructVReg, ResName, MIRBuilder);
   // Build the arithmetic with overflow instruction.
   MachineBasicBlock &BB = *I.getParent();
   auto MIB =
@@ -2834,6 +2831,9 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   for (unsigned i = I.getNumDefs(); i < I.getNumOperands(); ++i)
     MIB.addUse(I.getOperand(i).getReg());
   MIB.constrainAllUses(TII, TRI, RBI);
+  // Build the result name if needed.
+  if (ResName.size() > 0)
+    buildOpName(StructVReg, ResName, MIRBuilder);
   // Build instructions to extract fields of the instruction's result.
   // A new virtual register to store the higher part of the result struct.
   Register HigherVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
