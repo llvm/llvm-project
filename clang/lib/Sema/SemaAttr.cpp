@@ -1494,13 +1494,8 @@ void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
   if (!PrevDecl) {
     LoadExternalMappedUndeclaredIdentifiers();
     auto [It, Inserted] = PendingMappedNames.try_emplace(IdentId, Info);
-    if (!Inserted) {
-      if (!It->second.Attr->isEquivalent(Attr)) {
-        Diag(NameLoc, diag::warn_pragma_different_asm_label) << IdentId;
-        return;
-      }
-      It->second = Info;
-    }
+    if (!Inserted && !It->second.Attr->isEquivalent(Attr))
+      Diag(NameLoc, diag::warn_pragma_different_asm_label) << IdentId;
     return;
   }
 
