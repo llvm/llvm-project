@@ -132,7 +132,7 @@ define double @double_in_gprs(i64 %x) {
   ; CHECK-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32_norex2 = COPY [[MOV32rm]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32_norex2 = COPY [[MOV32rm1]]
-  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR32_NOREX2, def %1, def %2, reguse tiedto:$0, [[COPY]](tied-def 3), [[COPY1]](tied-def 4), imm, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR32_NOREX2 ops:2, def %1, def %2, reguse tiedto:$0 ops:2, [[COPY]](tied-def 3), [[COPY1]](tied-def 4), imm, %bb.2
   ; CHECK-NEXT:   MOV32mr %stack.0, 1, $noreg, 4, $noreg, %2 :: (store (s32) into %stack.0 + 4, basealign 8)
   ; CHECK-NEXT:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %stack.0, align 8)
   ; CHECK-NEXT:   [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0)
