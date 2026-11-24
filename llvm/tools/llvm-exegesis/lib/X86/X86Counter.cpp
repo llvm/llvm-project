@@ -189,7 +189,7 @@ Error X86LbrCounter::checkLbrSupport() {
       return Error::success();
 
   return make_error<StringError>(
-      "LBR format with cycles is not suppported on the host.",
+      "LBR format with cycles is not supported on the host.",
       errc::not_supported);
 }
 

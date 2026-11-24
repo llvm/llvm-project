@@ -9,6 +9,7 @@
 // REQUIRES: std-at-least-c++20
 
 #include <algorithm>
+#include <complex>
 #include <cstddef>
 #include <iterator>
 #include <list>
@@ -26,8 +27,10 @@ template <class T>
 T random_value() {
   if constexpr (std::is_integral_v<T>)
     return getRandomInteger<T>(1, 1000);
-  else
+  else if constexpr (std::is_floating_point_v<T>)
     return getRandomFloat<T>(1, 1000);
+  else // std::complex
+    return T(getRandomFloat<typename T::value_type>(1, 1000), getRandomFloat<typename T::value_type>(1, 1000));
 }
 
 int main(int argc, char** argv) {
@@ -71,6 +74,37 @@ int main(int argc, char** argv) {
     bm.operator()<std::list<int>>("std::reduce(list<int>)");
     bm.operator()<std::list<float>>("std::reduce(list<float>)");
     bm.operator()<std::list<double>>("std::reduce(list<double>)");
+  }
+
+  // std::reduce(first, last, init), trivial reduction operator (std::plus<>).
+  {
+    auto bm = []<class Container>(std::string name) {
+      benchmark::RegisterBenchmark(
+          name,
+          [](auto& st) TEST_ALIGN_BENCHMARK {
+            std::size_t const size = st.range(0);
+            using ValueType        = typename Container::value_type;
+
+            Container c;
+            std::generate_n(std::back_inserter(c), size, [] { return random_value<ValueType>(); });
+            ValueType init = static_cast<ValueType>(1);
+
+            for (auto _ : st) {
+              benchmark::ClobberMemory();
+              auto result = std::reduce(c.begin(), c.end(), init);
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(32)
+          ->Arg(50) // non power-of-two
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+    bm.operator()<std::vector<int>>("std::reduce(vector<int>, plus)");
+    bm.operator()<std::vector<float>>("std::reduce(vector<float>, plus)");
+    bm.operator()<std::vector<std::complex<float>>>("std::reduce(vector<complex<float>>, plus)");
+    bm.operator()<std::vector<double>>("std::reduce(vector<double>, plus)");
+    bm.operator()<std::vector<std::complex<double>>>("std::reduce(vector<complex<double>>, plus)");
   }
 
   benchmark::Initialize(&argc, argv);

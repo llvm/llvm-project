@@ -156,6 +156,10 @@ public:
   void addAssignPtrTypeInstr(Value *Val, CallInst *AssignPtrTyCI) {
     AssignPtrTypeInstr[Val] = AssignPtrTyCI;
   }
+  // - Remove a record.
+  void removeAssignPtrTypeInstr(Value *OldVal) {
+    AssignPtrTypeInstr.erase(OldVal);
+  }
   // - Find a record.
   CallInst *findAssignPtrTypeInstr(const Value *Val) {
     auto It = AssignPtrTypeInstr.find(Val);
@@ -461,6 +465,18 @@ public:
   // structures referring this instruction.
   void invalidateMachineInstr(MachineInstr *MI);
 
+  // Rebuild the state of MF after loading MIR.
+  void restoreFromMIR(const MachineFunction &MF);
+
+  // (VReg, type ID) pairs of non-type VRegs, sorted by VReg. Skips VRegs not
+  // referenced in MF and VRegs whose type decl is no longer in MF.
+  SmallVector<std::pair<Register, Register>>
+  getVRegTypeIDs(const MachineFunction &MF) const;
+
+  // Types and constants are inserted after this one at the entry of MF.
+  Register getLastInsertedTypeReg(const MachineFunction &MF) const;
+  void setLastInsertedType(const MachineFunction &MF, MachineInstr *MI);
+
 private:
   SPIRVTypeInst getOpTypeBool(MachineIRBuilder &MIRBuilder);
 
@@ -690,7 +706,9 @@ public:
                               SPIRV::StorageClass::StorageClass SC,
                               bool IsWritable, bool EmitIr = false);
 
-  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
+                                       uint64_t PaddingSizeInBytes,
+                                       uint64_t OffsetInBytes = 0);
 
   SPIRVTypeInst getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
                                                   Type *ElemType);
@@ -729,7 +747,7 @@ public:
   SPIRVTypeInst getOrCreateUnknownType(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode,
-                                       const ArrayRef<MCOperand> Operands);
+                                       const ArrayRef<MachineOperand> Operands);
 
   const TargetRegisterClass *getRegClass(SPIRVTypeInst SpvType) const;
   LLT getRegType(SPIRVTypeInst SpvType) const;

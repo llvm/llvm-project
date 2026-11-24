@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=riscv64 -relocation-model=static -O2 \
-; RUN:   -stop-after=riscv-merge-base-offset -verify-machineinstrs %s -o - \
+; RUN:   -stop-after=riscv-merge-base-offset %s -o - \
 ; RUN:   | FileCheck %s
 
 ; CHECK-LABEL: name: test

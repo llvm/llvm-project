@@ -288,8 +288,8 @@ struct LaunchRequestArguments {
   bool detachOnError = false;
 
   /// Disable ASLR (Address Space Layout Randomization) when launching the
-  /// process.
-  bool disableASLR = true;
+  /// process. If unset, the target's `target.disable-aslr` setting is used.
+  std::optional<bool> disableASLR;
 
   /// Do not set up for terminal I/O to go to running process.
   bool disableSTDIO = false;

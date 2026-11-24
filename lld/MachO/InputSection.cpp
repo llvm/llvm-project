@@ -140,7 +140,8 @@ std::string InputSection::getLocation(uint64_t off) const {
       .str();
 }
 
-std::string InputSection::getSourceLocation(uint64_t off) const {
+std::string InputSection::getSourceLocation(uint64_t off,
+                                            StringRef symName) const {
   auto *obj = dyn_cast_or_null<ObjFile>(getFile());
   if (!obj)
     return {};
@@ -170,10 +171,12 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     return createMsg(li->FileName, li->Line);
 
   // If it failed, look up again as a variable.
-  if (const Defined *sym = getContainingSymbol(off)) {
+  if (symName.empty())
+    if (const Defined *sym = getContainingSymbol(off))
+      symName = sym->getName();
+  if (!symName.empty()) {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
-    StringRef symName = sym->getName();
     symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =
@@ -258,16 +261,23 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
+      if (target->hasAttr(r.type, RelocAttrBits::GOT) && usesAuthGot(this))
+        referentVA = in.authGot->getVA(referentSym) + r.getAddend();
+      else
+        referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
 
-      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
-        // References from thread-local variable sections are treated as offsets
-        // relative to the start of the thread-local data memory area, which
-        // is initialized via copying all the TLV data sections (which are all
-        // contiguous).
+      // References from thread-local variable sections are treated as offsets
+      // relative to the start of the thread-local data memory area, which
+      // is initialized via copying all the TLV data sections (which are all
+      // contiguous). Authenticated pointers are pointers, not offsets.
+      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym) &&
+          !target->hasAttr(r.type, RelocAttrBits::AUTH)) {
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.getAddend());
+        const AuthInfo *auth = r.getAuthInfo();
+        if (!auth)
+          auth = getImplicitAuthInfo(this, referentSym);
+        writeChainedFixup(loc, referentSym, r.getAddend(), auth);
         continue;
       }
     } else if (auto *referentIsec =
@@ -276,9 +286,15 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
-        writeChainedRebase(loc, referentVA);
+        writeChainedRebase(loc, referentVA, r.getAuthInfo());
         continue;
       }
+    }
+    // Only a chained fixup can encode an authenticated pointer.
+    if (target->hasAttr(r.type, RelocAttrBits::AUTH)) {
+      error(getLocation(r.offset) +
+            ": authenticated pointer requires chained fixups");
+      continue;
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
   }
@@ -318,8 +334,8 @@ StringPiece &CStringInputSection::getStringPiece(uint64_t off) {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return it[-1];
 }
 
@@ -331,8 +347,8 @@ size_t CStringInputSection::getStringPieceIndex(uint64_t off) const {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return std::distance(pieces.begin(), it) - 1;
 }
 
@@ -360,7 +376,10 @@ WordLiteralInputSection::WordLiteralInputSection(const Section &section,
     llvm_unreachable("invalid literal section type");
   }
 
-  live.resize(data.size() >> power2LiteralSize, !config->deadStrip);
+  size_t numLiterals = data.size() >> power2LiteralSize;
+  live = std::make_unique<std::atomic<bool>[]>(numLiterals);
+  if (!config->deadStrip)
+    std::fill_n(live.get(), numLiterals, true);
 }
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
@@ -404,6 +423,23 @@ bool macho::isSelRefsSection(const InputSection *isec) {
 bool macho::isEhFrameSection(const InputSection *isec) {
   return isec->getName() == section_names::ehFrame &&
          isec->getSegName() == segment_names::text;
+}
+
+bool macho::usesAuthGot(const InputSection *isec) {
+  // arm64e's unwinder expects signed personality pointers.
+  return config->arch() == AK_arm64e && isEhFrameSection(isec);
+}
+
+const AuthInfo *macho::getImplicitAuthInfo(const InputSection *isec,
+                                           const Symbol *sym) {
+  // The only pointer bound from a TLV descriptor is its thunk, which TLV
+  // accesses call with blraaz.
+  static constexpr AuthInfo tlvThunk = {/*diversity=*/0, PtrAuthKeyIA,
+                                        /*addrDiv=*/false};
+  if (config->arch() == AK_arm64e && isThreadLocalVariables(isec->getFlags()) &&
+      needsBinding(sym))
+    return &tlvThunk;
+  return nullptr;
 }
 
 bool macho::isGccExceptTabSection(const InputSection *isec) {

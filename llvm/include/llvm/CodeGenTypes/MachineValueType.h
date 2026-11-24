@@ -74,6 +74,14 @@ namespace llvm {
     /// Implement operator<<.
     LLVM_ABI void print(raw_ostream &OS) const;
 
+    /// Return the value type as a string, e.g. `i32`.
+    std::string getString() const {
+      std::string S;
+      llvm::raw_string_ostream Stream(S);
+      print(Stream);
+      return S;
+    }
+
     /// Return true if this is a valid simple valuetype.
     bool isValid() const {
       return (SimpleTy >= MVT::FIRST_VALUETYPE &&
@@ -241,6 +249,15 @@ namespace llvm {
     MVT changeVectorElementCount(ElementCount EC) const {
       assert(isVector() && "Not a vector MVT!");
       return MVT::getVectorVT(getVectorElementType(), EC);
+    }
+
+    /// Return a VT for a type whose attributes match ourselves with
+    /// the exception of the element count that is chosen by the caller.
+    MVT changeElementCount(ElementCount EC) const {
+      MVT EltVT = getScalarType();
+      if (!isVector() && EC.isScalar())
+        return EltVT;
+      return MVT::getVectorVT(EltVT, EC);
     }
 
     /// Return a VT for a type whose attributes match ourselves with the

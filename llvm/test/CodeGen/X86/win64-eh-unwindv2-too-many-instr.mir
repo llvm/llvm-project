@@ -42,6 +42,7 @@
 ...
 ---
 name:            too_many_instr
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue

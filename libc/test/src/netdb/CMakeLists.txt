@@ -22,7 +22,6 @@ add_libc_test(
     libc.hdr.netdb_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_addrinfo
-    libc.src.errno.errno
     libc.src.netdb.freeaddrinfo
     libc.src.netdb.getaddrinfo
     libc.test.UnitTest.ErrnoCheckingTest

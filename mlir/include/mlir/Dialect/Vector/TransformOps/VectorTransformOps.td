@@ -490,6 +490,17 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyLowerTransposeToInterleavePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_transpose_to_interleave",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that lower fixed-size rank-2 `vector.transpose`
+    operations to fixed-size `vector.interleave` or `vector.deinterleave`
+    operations. One of the transposed dimensions must be exactly 2.
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerInterleavePatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_interleave",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -546,7 +557,7 @@ def ApplySplitTransferFullPartialPatternsOp : Op<Transform_Dialect,
 
   let arguments = (ins
      DefaultValuedAttr<VectorTransferSplitAttr,
-       "vector::VectorTransferSplit::LinalgCopy">:$split_transfer_strategy
+       "vector::VectorTransferSplit::MemRefCopy">:$split_transfer_strategy
   );
 
   let assemblyFormat = [{

@@ -58,46 +58,6 @@ name:            _ZNK4llvm5APInt5magicEv
 alignment:       16
 tracksRegLiveness: true
 debugInstrRef: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr32 }
-  - { id: 4, class: gr64 }
-  - { id: 5, class: gr32 }
-  - { id: 6, class: gr32 }
-  - { id: 7, class: gr32 }
-  - { id: 8, class: gr64 }
-  - { id: 9, class: gr32 }
-  - { id: 10, class: gr64 }
-  - { id: 11, class: gr32 }
-  - { id: 12, class: gr64 }
-  - { id: 13, class: gr32 }
-  - { id: 14, class: gr64 }
-  - { id: 15, class: gr32 }
-  - { id: 16, class: gr64 }
-  - { id: 17, class: gr64 }
-  - { id: 18, class: gr64 }
-  - { id: 19, class: gr32 }
-  - { id: 20, class: gr8 }
-  - { id: 21, class: gr32 }
-  - { id: 22, class: gr64 }
-  - { id: 23, class: gr64 }
-  - { id: 24, class: gr64 }
-  - { id: 25, class: gr64 }
-  - { id: 26, class: gr64 }
-  - { id: 27, class: gr32 }
-  - { id: 28, class: gr8 }
-  - { id: 29, class: gr64 }
-  - { id: 30, class: gr64 }
-  - { id: 31, class: gr64 }
-  - { id: 32, class: gr64 }
-  - { id: 33, class: gr64 }
-  - { id: 34, class: gr64 }
-  - { id: 35, class: gr64 }
-  - { id: 36, class: gr64 }
-  - { id: 37, class: gr64 }
-  - { id: 38, class: gr8 }
 frameInfo:
   maxAlignment:    1
   adjustsStack:    true
@@ -135,7 +95,7 @@ body:             |
     %6:gr32 = PHI %15, %bb.0, %13, %bb.5, debug-location !13
     %16:gr64 = ADD64rr %4, %4, implicit-def dead $eflags, debug-location !13
     MOV32mr %17, 1, $noreg, 0, $noreg, %5, debug-location !13 :: (store (s32) into `ptr undef`, align 8)
-    MOV64mr %18, 1, $noreg, 0, $noreg, killed %16, debug-location !13 :: (store (s64) into `ptr undef`)
+    MOV64mr %18, 1, $noreg, 0, $noreg, %16, debug-location !13 :: (store (s64) into `ptr undef`)
     %20:gr8 = COPY %19.sub_8bit
     TEST8rr %20, %20, implicit-def $eflags, debug-location !13
     JCC_1 %bb.3, 5, implicit $eflags, debug-location !13
@@ -158,7 +118,7 @@ body:             |
 
   bb.4:
     %29:gr64 = ADD64rr %2, %2, implicit-def dead $eflags, debug-location !13
-    MOV64mr %30, 1, $noreg, 0, $noreg, killed %29, debug-location !13 :: (store (s64) into `ptr undef`)
+    MOV64mr %30, 1, $noreg, 0, $noreg, %29, debug-location !13 :: (store (s64) into `ptr undef`)
 
   bb.5:
     %9:gr32 = MOV32rm %26, 1, $noreg, 0, $noreg, debug-location !13 :: (load (s32) from `ptr undef`, align 8)

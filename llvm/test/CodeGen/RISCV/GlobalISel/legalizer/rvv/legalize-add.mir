@@ -5,9 +5,12 @@
 name:            test_nxv1i8
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv1i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 1 x s8>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 1 x s8>)
@@ -23,9 +26,12 @@ body:             |
 name:            test_nxv2i8
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv2i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s8>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s8>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 2 x s8>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 2 x s8>)
@@ -41,9 +47,12 @@ body:             |
 name:            test_nxv4i8
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv4i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 4 x s8>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 4 x s8>)
@@ -59,9 +68,12 @@ body:             |
 name:            test_nxv8i8
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv8i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s8>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 8 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s8>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 8 x s8>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 8 x s8>)
@@ -77,9 +89,12 @@ body:             |
 name:            test_nxv16i8
 body:             |
   bb.0.entry:
+    liveins: $v8m2, $v10m2
 
     ; CHECK-LABEL: name: test_nxv16i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
+    ; CHECK: liveins: $v8m2, $v10m2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v10m2
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m2 = COPY [[ADD]](<vscale x 16 x s8>)
@@ -95,9 +110,12 @@ body:             |
 name:            test_nxv32i8
 body:             |
   bb.0.entry:
+    liveins: $v8m4, $v12m4
 
     ; CHECK-LABEL: name: test_nxv32i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 32 x s8>) = COPY $v8m4
+    ; CHECK: liveins: $v8m4, $v12m4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 32 x s8>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 32 x s8>) = COPY $v12m4
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 32 x s8>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m4 = COPY [[ADD]](<vscale x 32 x s8>)
@@ -113,9 +131,12 @@ body:             |
 name:            test_nxv64i8
 body:             |
   bb.0.entry:
+    liveins: $v8m8, $v16m8
 
     ; CHECK-LABEL: name: test_nxv64i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 64 x s8>) = COPY $v8m8
+    ; CHECK: liveins: $v8m8, $v16m8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 64 x s8>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 64 x s8>) = COPY $v16m8
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 64 x s8>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m8 = COPY [[ADD]](<vscale x 64 x s8>)
@@ -131,9 +152,12 @@ body:             |
 name:            test_nxv1i16
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv1i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 1 x s16>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 1 x s16>)
@@ -149,9 +173,12 @@ body:             |
 name:            test_nxv2i16
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv2i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s16>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x s16>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s16>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 2 x s16>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 2 x s16>)
@@ -167,9 +194,12 @@ body:             |
 name:            test_nxv4i16
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv4i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 4 x s16>)
@@ -185,9 +215,12 @@ body:             |
 name:            test_nxv8i16
 body:             |
   bb.0.entry:
+    liveins: $v8m2, $v10m2
 
     ; CHECK-LABEL: name: test_nxv8i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $v8m2
+    ; CHECK: liveins: $v8m2, $v10m2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $v10m2
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 8 x s16>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m2 = COPY [[ADD]](<vscale x 8 x s16>)
@@ -203,9 +236,12 @@ body:             |
 name:            test_nxv16i16
 body:             |
   bb.0.entry:
+    liveins: $v8m4, $v12m4
 
     ; CHECK-LABEL: name: test_nxv16i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 16 x s16>) = COPY $v8m4
+    ; CHECK: liveins: $v8m4, $v12m4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 16 x s16>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 16 x s16>) = COPY $v12m4
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 16 x s16>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m4 = COPY [[ADD]](<vscale x 16 x s16>)
@@ -221,9 +257,12 @@ body:             |
 name:            test_nxv32i16
 body:             |
   bb.0.entry:
+    liveins: $v8m8, $v16m8
 
     ; CHECK-LABEL: name: test_nxv32i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 32 x s16>) = COPY $v8m8
+    ; CHECK: liveins: $v8m8, $v16m8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 32 x s16>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 32 x s16>) = COPY $v16m8
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 32 x s16>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m8 = COPY [[ADD]](<vscale x 32 x s16>)
@@ -239,9 +278,12 @@ body:             |
 name:            test_nxv1i32
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv1i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 1 x s32>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 1 x s32>)
@@ -257,9 +299,12 @@ body:             |
 name:            test_nxv2i32
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv2i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 2 x s32>)
@@ -275,9 +320,12 @@ body:             |
 name:            test_nxv4i32
 body:             |
   bb.0.entry:
+    liveins: $v8m2, $v10m2
 
     ; CHECK-LABEL: name: test_nxv4i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v8m2
+    ; CHECK: liveins: $v8m2, $v10m2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v10m2
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 4 x s32>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m2 = COPY [[ADD]](<vscale x 4 x s32>)
@@ -293,9 +341,12 @@ body:             |
 name:            test_nxv8i32
 body:             |
   bb.0.entry:
+    liveins: $v8m4, $v12m4
 
     ; CHECK-LABEL: name: test_nxv8i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s32>) = COPY $v8m4
+    ; CHECK: liveins: $v8m4, $v12m4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 8 x s32>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s32>) = COPY $v12m4
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 8 x s32>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m4 = COPY [[ADD]](<vscale x 8 x s32>)
@@ -311,9 +362,12 @@ body:             |
 name:            test_nxv16i32
 body:             |
   bb.0.entry:
+    liveins: $v8m8, $v16m8
 
     ; CHECK-LABEL: name: test_nxv16i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
+    ; CHECK: liveins: $v8m8, $v16m8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v16m8
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 16 x s32>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m8 = COPY [[ADD]](<vscale x 16 x s32>)
@@ -329,9 +383,12 @@ body:             |
 name:            test_nxv1i64
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: test_nxv1i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY $v9
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 1 x s64>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8 = COPY [[ADD]](<vscale x 1 x s64>)
@@ -347,9 +404,12 @@ body:             |
 name:            test_nxv2i64
 body:             |
   bb.0.entry:
+    liveins: $v8m2, $v10m2
 
     ; CHECK-LABEL: name: test_nxv2i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
+    ; CHECK: liveins: $v8m2, $v10m2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v10m2
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m2 = COPY [[ADD]](<vscale x 2 x s64>)
@@ -365,9 +425,12 @@ body:             |
 name:            test_nxv4i64
 body:             |
   bb.0.entry:
+    liveins: $v8m4, $v12m4
 
     ; CHECK-LABEL: name: test_nxv4i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v8m4
+    ; CHECK: liveins: $v8m4, $v12m4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v12m4
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 4 x s64>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m4 = COPY [[ADD]](<vscale x 4 x s64>)
@@ -383,9 +446,12 @@ body:             |
 name:            test_nxv8i64
 body:             |
   bb.0.entry:
+    liveins: $v8m8, $v16m8
 
     ; CHECK-LABEL: name: test_nxv8i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v8m8
+    ; CHECK: liveins: $v8m8, $v16m8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v16m8
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<vscale x 8 x s64>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $v8m8 = COPY [[ADD]](<vscale x 8 x s64>)

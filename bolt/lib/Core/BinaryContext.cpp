@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -34,6 +35,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -241,8 +243,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
   // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
-  // make it static to outlive the AsmInfo.
-  static const MCTargetOptions MCOptions;
+  // make it static to outlive the AsmInfo. Point it at the library options
+  // parsed from the command line (e.g. -x86-align-branch*).
+  static const MCTargetOptions MCOptions = [] {
+    MCTargetOptions Options;
+    Options.LibraryOptions = &opts::LibraryOptionsCtx;
+    return Options;
+  }();
   std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
@@ -318,8 +325,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   else if (opts::LargeCodeModel.getNumOccurrences())
     BC->UseLargeCodeModel = opts::LargeCodeModel;
 
-  BC->MAB = std::unique_ptr<MCAsmBackend>(
-      BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
+  BC->MAB = std::unique_ptr<MCAsmBackend>(BC->TheTarget->createMCAsmBackend(
+      *BC->STI, *BC->MRI, BC->Ctx->getTargetOptions()));
 
   BC->setFilename(InputFileName);
 
@@ -1318,6 +1325,9 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     }
   }
 
+  if (BD->isVTable())
+    VTableMap.try_emplace(Address, BD);
+
   return Symbol;
 }
 
@@ -1339,6 +1349,17 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
     }
   }
   return nullptr;
+}
+
+const BinaryData *
+BinaryContext::getVTableContainingAddress(uint64_t Address) const {
+  // Vtables do not overlap, so only the last one starting at or before
+  // Address can contain it.
+  auto VI = VTableMap.upper_bound(Address);
+  if (VI == VTableMap.begin())
+    return nullptr;
+  const BinaryData *VTable = std::prev(VI)->second;
+  return VTable->containsAddress(Address) ? VTable : nullptr;
 }
 
 BinaryData *BinaryContext::getGOTSymbol() {
@@ -2170,10 +2191,8 @@ void BinaryContext::preprocessDebugInfo() {
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
-      std::optional<MD5::MD5Result> Checksum;
-      if (LineTable->Prologue.ContentTypes.HasMD5)
-        Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      const char *Name =
+      StringRef CUCompDir = CU->getCompilationDir();
+      StringRef CUName =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         std::optional<DWARFUnit *> DWOCU = getDWOCU(*DWOID);
@@ -2186,11 +2205,48 @@ void BinaryContext::preprocessDebugInfo() {
           NumMissingDWOs++;
           continue;
         }
-        Name = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
-                               nullptr);
+        CUName = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
+                                 nullptr);
       }
-      BinaryLineTable.setRootFile(CU->getCompilationDir(), Name, Checksum,
-                                  std::nullopt);
+
+      // The file names list should always contain at least one entry with
+      // DWARF 5.
+      assert(!FileNames.empty() &&
+             "Missing root file entry in DWARF 5 line table");
+      std::optional<MD5::MD5Result> Checksum;
+      if (LineTable->Prologue.ContentTypes.HasMD5)
+        Checksum = FileNames[0].Checksum;
+      StringRef CompDir =
+          dwarf::toString(LineTable->Prologue.IncludeDirectories[0], "");
+
+      std::string Name;
+      [[maybe_unused]] bool Success = LineTable->Prologue.getFileNameByIndex(
+          0, CompDir, DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
+          Name);
+      assert(Success &&
+             "Unable to get path of root file in DWARF 5 line table");
+
+      // If the first directory/file name entry is not the same as
+      // DW_AT_comp_dir/DW_AT_name (if the attribute exists), then the input
+      // file has invalid DWARF. Emit a warning in this case, and use the line
+      // table values for setting the root file.
+      if (!CUCompDir.empty() && CompDir != CUCompDir) {
+        this->errs() << "BOLT-WARNING: invalid DWARF detected in " << Filename
+                     << ": the first directory entry in the line table ("
+                     << CompDir
+                     << ") does not match the value of DW_AT_comp_dir ("
+                     << CUCompDir << ") for CU at offset 0x"
+                     << Twine::utohexstr(CUID) << "\n";
+      }
+      if (!CUName.empty() && Name != CUName) {
+        this->errs() << "BOLT-WARNING: invalid DWARF detected in " << Filename
+                     << ": the first file name entry in the line table ("
+                     << Name << ") does not match the value of DW_AT_name ("
+                     << CUName << ") for CU at offset 0x"
+                     << Twine::utohexstr(CUID) << "\n";
+      }
+
+      BinaryLineTable.setRootFile(CompDir, Name, Checksum, std::nullopt);
     }
 
     BinaryLineTable.setDwarfVersion(DwarfVersion);
@@ -2203,7 +2259,7 @@ void BinaryContext::preprocessDebugInfo() {
       continue;
     }
     const uint32_t Offset = DwarfVersion < 5 ? 1 : 0;
-    for (size_t I = 0, Size = FileNames.size(); I != Size; ++I) {
+    for (size_t I = 1 - Offset, Size = FileNames.size(); I != Size; ++I) {
       // Dir indexes start at 1, as DWARF file numbers, and a dir index 0
       // means empty dir.
       StringRef Dir = "";
@@ -2220,8 +2276,8 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
-      cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
-                            DwarfVersion));
+      cantFail(getDwarfFile(Dir, FileName, I + Offset, Checksum, std::nullopt,
+                            CUID, DwarfVersion));
     }
   }
 
@@ -2291,6 +2347,10 @@ void BinaryContext::collectDebugScopeBoundaries() {
     if (std::optional<uint64_t> DWOId = CU->getDWOId())
       releaseDWOCU(*DWOId);
   }
+}
+
+bool BinaryContext::shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const {
+  return (AlignBlocks || PreserveBlocksAlignment) && BB.getAlignment() > 1;
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
@@ -2966,7 +3026,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   IndependentCodeEmitter MCEInstance = createIndependentMCCodeEmitter();
   MCContext *LocalCtx = MCEInstance.LocalCtx.get();
   MCAsmBackend *MAB =
-      TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
+      TheTarget->createMCAsmBackend(*STI, *MRI, Ctx->getTargetOptions());
 
   SmallString<256> Code;
   raw_svector_ostream VecOS(Code);

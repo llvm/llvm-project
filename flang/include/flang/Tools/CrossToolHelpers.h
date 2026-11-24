@@ -149,6 +149,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     DwarfVersion = opts.DwarfVersion;
     SplitDwarfFile = opts.SplitDwarfFile;
     DwarfDebugFlags = opts.DwarfDebugFlags;
+    DebugNameTable = opts.getDebugNameTable();
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -198,6 +199,9 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
   std::string SplitDwarfFile = ""; ///< File name for the split debug info
   std::string DwarfDebugFlags = ""; ///< Debug flags to append to DWARF producer
+  Fortran::frontend::CodeGenOptions::DebugNameTableKind DebugNameTable =
+      Fortran::frontend::CodeGenOptions::DebugNameTableKind::
+          None; ///< Name table to emit in the debug info
   Fortran::common::FPMaxminBehavior fpMaxminBehavior =
       Fortran::common::FPMaxminBehavior::Legacy;
 };

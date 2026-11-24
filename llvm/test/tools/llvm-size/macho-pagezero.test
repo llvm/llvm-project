@@ -19,6 +19,7 @@
 # SKIP-NEXT:20	100	0	0	120	78
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -64,6 +65,7 @@ LoadCommands:
     flags:           0
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x7

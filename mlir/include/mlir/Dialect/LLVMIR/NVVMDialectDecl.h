@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_LLVMIR_NVVMDIALECTDECL_H
 #define MLIR_DIALECT_LLVMIR_NVVMDIALECTDECL_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_LLVMIR_NVVMDIALECTDECL_H

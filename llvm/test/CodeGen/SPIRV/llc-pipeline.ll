@@ -19,8 +19,8 @@
 ; SPIRV-O0-NEXT:Machine Module Information
 ; SPIRV-O0-NEXT:Target Transform Information
 ; SPIRV-O0-NEXT:Library Function Lowering Analysis
-; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
+; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Machine Branch Probability Analysis
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
@@ -33,6 +33,7 @@
 ; SPIRV-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-O0-NEXT:      Expand reduction intrinsics
+; SPIRV-O0-NEXT:    SPIRV Lower Resource Names
 ; SPIRV-O0-NEXT:    Expand variadic functions
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIR-V Regularizer
@@ -115,13 +116,6 @@
 ; SPIRV-Opt-NEXT:      Expand Atomic instructions
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Natural Loop Information
-; SPIRV-Opt-NEXT:      Canonicalize natural loops
-; SPIRV-Opt-NEXT:      Scalar Evolution Analysis
-; SPIRV-Opt-NEXT:      Loop Pass Manager
-; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
-; SPIRV-Opt-NEXT:        Induction Variable Users
-; SPIRV-Opt-NEXT:        Loop Strength Reduction
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
@@ -135,6 +129,7 @@
 ; SPIRV-Opt-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-Opt-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-Opt-NEXT:      Expand reduction intrinsics
+; SPIRV-Opt-NEXT:    SPIRV Lower Resource Names
 ; SPIRV-Opt-NEXT:    Expand variadic functions
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIR-V Regularizer
@@ -198,7 +193,6 @@
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Early Machine Loop Invariant Code Motion
-; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Common Subexpression Elimination

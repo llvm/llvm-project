@@ -8,6 +8,7 @@
 # CHECK-NEXT:  triple arm64-apple-macos27.0.0
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

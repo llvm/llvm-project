@@ -673,38 +673,29 @@ void Fortran::lower::omp::lowerAtomic(
     // Fortran uses .eqv./.neqv. for logical equality/inequality, which are
     // LogicalOperation expressions rather than Relational expressions.
     if (!expectedExprStorage) {
-      if (const auto *someLogical =
-              evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeLogical>>(
-                  *cond)) {
-        common::visit(
-            [&](const auto &kindLogical) {
-              using LogicalExpr = std::decay_t<decltype(kindLogical)>;
-              constexpr int K = LogicalExpr::Result::kind;
-              if (const auto *logOp =
-                      std::get_if<evaluate::LogicalOperation<K>>(
-                          &kindLogical.u)) {
-                if (logOp->logicalOperator == common::LogicalOperator::Eqv ||
-                    logOp->logicalOperator == common::LogicalOperator::Neqv) {
-                  relOpr =
-                      (logOp->logicalOperator == common::LogicalOperator::Eqv)
-                          ? common::RelationalOperator::EQ
-                          : common::RelationalOperator::NE;
-                  using Operand =
-                      typename evaluate::LogicalOperation<K>::Operand;
-                  auto leftExpr = evaluate::AsGenericExpr(
-                      evaluate::Expr<Operand>{logOp->left()});
-                  auto rightExpr = evaluate::AsGenericExpr(
-                      evaluate::Expr<Operand>{logOp->right()});
-                  if (evaluate::IsSameOrConvertOf(rightExpr, atom)) {
-                    expectedExprStorage = std::move(leftExpr);
-                    relOpr = reverseRelOp(relOpr);
-                  } else {
-                    expectedExprStorage = std::move(rightExpr);
-                  }
-                }
-              }
-            },
-            someLogical->u);
+      if (const auto *someLogical = evaluate::UnwrapExpr<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>>>(
+              *cond)) {
+        if (const auto *logOp =
+                std::get_if<evaluate::LogicalOperation>(&someLogical->u)) {
+          if (logOp->logicalOperator == common::LogicalOperator::Eqv ||
+              logOp->logicalOperator == common::LogicalOperator::Neqv) {
+            relOpr = (logOp->logicalOperator == common::LogicalOperator::Eqv)
+                         ? common::RelationalOperator::EQ
+                         : common::RelationalOperator::NE;
+            using Operand = typename evaluate::LogicalOperation::Operand;
+            auto leftExpr =
+                evaluate::AsGenericExpr(evaluate::Expr<Operand>{logOp->left()});
+            auto rightExpr = evaluate::AsGenericExpr(
+                evaluate::Expr<Operand>{logOp->right()});
+            if (evaluate::IsSameOrConvertOf(rightExpr, atom)) {
+              expectedExprStorage = std::move(leftExpr);
+              relOpr = reverseRelOp(relOpr);
+            } else {
+              expectedExprStorage = std::move(rightExpr);
+            }
+          }
+        }
       }
     }
 

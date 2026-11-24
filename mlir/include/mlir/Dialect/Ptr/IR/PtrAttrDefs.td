@@ -19,6 +19,7 @@ class Ptr_Attr<string name, string attrMnemonic,
                 list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<Ptr_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/Ptr/IR/PtrAttrs.h"];
   let mnemonic = attrMnemonic;
 }
 

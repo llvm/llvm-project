@@ -9,7 +9,6 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "OutputSegment.h"
-#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -183,19 +182,12 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   StringRef thunkName =
       saver().save(funcSym->getName() + addendSuffix + ".thunk." +
                    std::to_string(thunkInfo.sequence++));
-  if (!isa<Defined>(funcSym) || cast<Defined>(funcSym)->isExternal()) {
-    thunkInfo.sym = symtab->addDefined(
-        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-        /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-        /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
-        /*isWeakDefCanBeHidden=*/false);
-  } else {
-    thunkInfo.sym = make<Defined>(
-        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-        /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
-        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
-        /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
-  }
+  thunkInfo.sym = make<Defined>(
+      thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
+      /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/false,
+      /*includeInSymtab=*/!isPrivateLabel(funcSym->getName()),
+      /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
+      /*isWeakDefCanBeHidden=*/false);
   thunkInfo.sym->used = true;
   thunkInfo.sym->branchExtensionThunk = true;
   target->populateThunk(thunkInfo.isec, funcSym, r.getAddend());
@@ -291,7 +283,7 @@ void TextOutputSection::finalize() {
           alignToPowerOf2(addr + size, isec->align) + isec->getSize();
       // If we were to emit this section, would we have enough space for more
       // thunks? If we do, then we can delay processing this thunk so we may
-      // finalize more potencial target sections. Otherwise we must emit thunks
+      // finalize more potential target sections. Otherwise we must emit thunks
       // until we have enough space.
       if (nextEnd + slop <= highVA)
         break;
@@ -301,17 +293,14 @@ void TextOutputSection::finalize() {
     }
     finalizeOne(isec);
 
-    // TODO: Remove this check and the assert below. In fact, I don't believe
-    // the relocation iteration order matters for correctness.
     bool hasCallsite = llvm::any_of(isec->relocs, [](Relocation &r) {
       return target->hasAttr(r.type, RelocAttrBits::BRANCH);
     });
     if (!hasCallsite)
       continue;
 
-    // Process relocs by ascending address, i.e., ascending offset within isec
-    // FIXME: This property does not hold for object files produced by ld64's
-    // `-r` mode.
+    // Process relocs by ascending address, i.e., ascending offset within isec.
+    // parseRelocations() ensures they are in descending order.
     assert(is_sorted(isec->relocs, [](Relocation &a, Relocation &b) {
       return a.offset > b.offset;
     }));

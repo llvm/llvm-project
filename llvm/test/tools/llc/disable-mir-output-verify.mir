@@ -62,8 +62,8 @@
 # LEGACY-STOP-VERIFY-EACH-NEXT: Stack Frame Layout Analysis
 # LEGACY-STOP-VERIFY-EACH-NEXT: Free MachineFunction
 
-# NPM-PASSES: PrintMIRPreparePass,function(machine-function(verify,print))
-# NPM-PASSES-NOVERIFY: PrintMIRPreparePass,function(machine-function(print))
+# NPM-PASSES: function(machine-function(verify)),print-mir
+# NPM-PASSES-NOVERIFY: function(machine-function(no-op-machine-function)),print-mir
 
 # NPM-STOP: function(machine-function(machine-cp,verify),free-machine-function)
 # NPM-STOP-NOVERIFY: function(machine-function(machine-cp),free-machine-function)

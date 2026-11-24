@@ -41,12 +41,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-hard-clauses"
 
-static cl::opt<unsigned>
-    HardClauseLengthLimit("amdgpu-hard-clause-length-limit",
-                          cl::desc("Maximum number of memory instructions to "
-                                   "place in the same hard clause"),
-                          cl::Hidden);
-
 namespace {
 
 enum HardClauseType {
@@ -102,6 +96,9 @@ public:
   const GCNSubtarget *ST = nullptr;
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
+    // The replay expands to scalar EXEC moves surrounding its memory operation.
+    if (MI.getOpcode() == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay)
+      return HARDCLAUSE_ILLEGAL;
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (ST->hasMixedLoadStoreClauses()) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
@@ -212,10 +209,10 @@ public:
     if (!ST->hasHardClauses())
       return false;
 
-    unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
-        "amdgpu-hard-clause-length-limit", 255);
-    if (HardClauseLengthLimit.getNumOccurrences())
-      MaxClauseLength = HardClauseLengthLimit;
+    unsigned MaxClauseLength =
+        ST->getCLOpts().hard_clause_length_limit.value_or(
+            MF.getFunction().getFnAttributeAsParsedInteger(
+                "amdgpu-hard-clause-length-limit", 255));
     MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());
     if (MaxClauseLength <= 1)
       return false;

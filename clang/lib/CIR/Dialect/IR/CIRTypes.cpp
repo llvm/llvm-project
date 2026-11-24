@@ -26,8 +26,9 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
+
+#include "CIROpDefinitions.h"
 
 //===----------------------------------------------------------------------===//
 // CIR Helpers
@@ -788,7 +789,23 @@ cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
                                kDefaultPointerAlignment * kBitsInByte,
                                kDefaultPointerSizeBits);
 }
+
+// TargetInfo::getBitIntMaxAlign() when the module has no #cir.bitint_spec
+// entry. That is LongLongAlign's initial value.
+constexpr static uint64_t kDefaultBitIntMaxAlignBits = 64;
+
 } // namespace
+
+/// The #cir.bitint_spec entry holds TargetInfo::getBitIntMaxAlign().
+uint64_t IntType::getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::BitIntSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return kDefaultBitIntMaxAlignBits;
+}
 
 llvm::TypeSize
 PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
@@ -1078,15 +1095,17 @@ void IntType::print(mlir::AsmPrinter &printer) const {
 llvm::TypeSize
 IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                            mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(getStorageTypeWidth(dataLayout));
+  if (!isBitInt())
+    return llvm::TypeSize::getFixed(getWidth());
+  uint64_t alignBits =
+      getBitIntAlignRequirement(getBitIntMaxAlignBits(params)) * 8;
+  return llvm::TypeSize::getFixed(llvm::alignTo(getWidth(), alignBits));
 }
 
 unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
-  if (!isBitInt())
-    return getWidth();
-  uint64_t alignBits = getABIAlignment(dataLayout, {}) * 8;
-  return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
+  return static_cast<unsigned>(
+      dataLayout.getTypeSizeInBits(*this).getFixedValue());
 }
 
 uint64_t
@@ -1098,15 +1117,22 @@ IntType::getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const {
   return dataLayout.getTypeABIAlignment(storageTy);
 }
 
+uint64_t IntType::getBitIntAlignRequirement(uint64_t maxAlignBits) const {
+  assert(isBitInt() && "only a _BitInt has a target alignment cap");
+  uint64_t alignBits = std::min(
+      static_cast<uint64_t>(llvm::PowerOf2Ceil(getWidth())), maxAlignBits);
+  return std::max(alignBits / 8, static_cast<uint64_t>(1));
+}
+
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
   unsigned width = getWidth();
   if (isBitInt()) {
-    // _BitInt alignment: min(PowerOf2Ceil(width), 64 bits) in bytes.
-    // Matches Clang's TargetInfo::getBitIntAlign with default max = 64.
-    uint64_t alignBits =
-        std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
-    return std::max(alignBits / 8, static_cast<uint64_t>(1));
+    uint64_t storageBytes = getStorageTypeWidth(dataLayout) / 8;
+    uint64_t storageAlign = getStorageTypeAlignment(dataLayout);
+    if (llvm::alignTo(storageBytes, storageAlign) == storageBytes)
+      return storageAlign;
+    return 1;
   }
   // Round up to a power-of-two byte alignment.  DataLayout consumers such as
   // llvm::Align require power-of-two alignments, and width / 8 is not a power
@@ -1115,6 +1141,40 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
   // keeps __int128 at 16.
   uint64_t alignBits = llvm::PowerOf2Ceil(width);
   return std::max(alignBits / 8, static_cast<uint64_t>(1));
+}
+
+bool IntType::areCompatible(mlir::DataLayoutEntryListRef oldLayout,
+                            mlir::DataLayoutEntryListRef newLayout,
+                            mlir::DataLayoutSpecInterface,
+                            const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only repeat the same _BitInt max alignment.
+  uint64_t oldMax = getBitIntMaxAlignBits(oldLayout);
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::dyn_cast<cir::BitIntSpecAttr>(newEntry.getValue());
+    if (newSpec && newSpec.getMaxAlign() != oldMax)
+      return false;
+  }
+  return true;
+}
+
+llvm::LogicalResult IntType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                                           mlir::Location loc) const {
+  cir::IntType keyTy = getBitIntMaxAlignKey(getContext());
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<IntType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key != keyTy)
+      return mlir::emitError(loc)
+             << "expected _BitInt data layout entry to be keyed on " << keyTy
+             << ", got " << key;
+    if (!mlir::isa<cir::BitIntSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.bitint_spec attribute";
+  }
+  return mlir::success();
 }
 
 mlir::LogicalResult
@@ -1561,12 +1621,91 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
       dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
 }
 
+/// The #cir.vector_spec entry holds TargetInfo::getMaxVectorAlign().
+uint64_t cir::VectorType::getMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::VectorSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return 0;
+}
+
+bool cir::VectorType::areCompatible(
+    mlir::DataLayoutEntryListRef oldLayout,
+    mlir::DataLayoutEntryListRef newLayout, mlir::DataLayoutSpecInterface,
+    const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only repeat the vector alignment cap already in
+  // effect. No entry means the target imposes no limit.
+  uint64_t oldMax = getMaxAlignBits(oldLayout);
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::dyn_cast<cir::VectorSpecAttr>(newEntry.getValue());
+    if (newSpec && newSpec.getMaxAlign() != oldMax)
+      return false;
+  }
+  return true;
+}
+
+llvm::LogicalResult
+cir::VectorType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                               mlir::Location loc) const {
+  cir::VectorType keyTy = getMaxAlignKey(getContext());
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<VectorType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key != keyTy)
+      return mlir::emitError(loc)
+             << "expected vector data layout entry to be keyed on " << keyTy
+             << ", got " << key;
+    if (!mlir::isa<cir::VectorSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.vector_spec attribute";
+  }
+  return mlir::success();
+}
+
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, llvm::ElementCount size) {
+    mlir::Type elementType, llvm::ElementCount size, cir::VectorAbiKind kind) {
   if (size.isZero())
     return emitError() << "the number of vector elements must be non-zero";
-  return success();
+
+  switch (kind) {
+  case cir::VectorAbiKind::Generic:
+    if (size.isScalable())
+      return emitError() << "a scalable vector must have a vector kind";
+    return success();
+  case cir::VectorAbiKind::SVEData: {
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(elementType)) {
+      unsigned width = intTy.getWidth();
+      if (!intTy.isBitInt() &&
+          (width == 8 || width == 16 || width == 32 || width == 64))
+        return success();
+    } else if (mlir::isa<cir::FP16Type, cir::BF16Type, cir::SingleType,
+                         cir::DoubleType>(elementType)) {
+      return success();
+    }
+    return emitError() << "an SVE data vector must have 8-, 16-, 32-, or "
+                          "64-bit integer elements or f16, bf16, float, or "
+                          "double elements";
+  }
+  case cir::VectorAbiKind::SVEPredicate: {
+    unsigned width = size.isScalable() ? 1 : 8;
+    auto intTy = mlir::dyn_cast<cir::IntType>(elementType);
+    if (!intTy || intTy.isSigned() || intTy.isBitInt() ||
+        intTy.getWidth() != width)
+      return emitError() << "an SVE predicate vector must have "
+                         << cir::IntType::get(elementType.getContext(), width,
+                                              /*isSigned=*/false)
+                         << " elements";
+    return success();
+  }
+  }
+  llvm_unreachable("unknown vector kind");
 }
 
 mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
@@ -1615,12 +1754,28 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
     return {};
   }
 
+  // Parse the optional vector kind. A generic vector has no kind keyword.
+  cir::VectorAbiKind kind = cir::VectorAbiKind::Generic;
+  if (odsParser.parseOptionalComma().succeeded()) {
+    llvm::SMLoc kindLoc = odsParser.getCurrentLocation();
+    llvm::StringRef kindName;
+    if (odsParser.parseKeyword(&kindName))
+      return {};
+    std::optional<cir::VectorAbiKind> parsedKind =
+        cir::symbolizeVectorAbiKind(kindName);
+    if (!parsedKind || *parsedKind == cir::VectorAbiKind::Generic) {
+      odsParser.emitError(kindLoc, "expected 'sve_data' or 'sve_predicate'");
+      return {};
+    }
+    kind = *parsedKind;
+  }
+
   // Parse literal '>'
   if (odsParser.parseGreater())
     return {};
   return odsParser.getChecked<VectorType>(
       odsLoc, odsParser.getContext(), mlir::Type((*elementType)),
-      llvm::ElementCount::get(*size, isScalable));
+      llvm::ElementCount::get(*size, isScalable), kind);
 }
 
 void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
@@ -1635,6 +1790,8 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   odsPrinter << ' ' << "x";
   odsPrinter << ' ';
   odsPrinter.printStrippedAttrOrType(getElementType());
+  if (getKind() != cir::VectorAbiKind::Generic)
+    odsPrinter << ", " << cir::stringifyVectorAbiKind(getKind());
   odsPrinter << ">";
 }
 
@@ -1787,8 +1944,8 @@ void printMemorySpace(mlir::AsmPrinter &p,
 }
 
 mlir::OptionalParseResult
-parseGlobalMemorySpace(mlir::AsmParser &p,
-                       mlir::ptr::MemorySpaceAttrInterface &attr) {
+cir::parseGlobalMemorySpace(mlir::AsmParser &p,
+                            mlir::ptr::MemorySpaceAttrInterface &attr) {
 
   mlir::SMLoc loc = p.getCurrentLocation();
   if (parseMemorySpace(p, attr).failed())
@@ -1796,8 +1953,8 @@ parseGlobalMemorySpace(mlir::AsmParser &p,
   return mlir::success();
 }
 
-void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
-                            mlir::ptr::MemorySpaceAttrInterface attr) {
+void cir::printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
+                                 mlir::ptr::MemorySpaceAttrInterface attr) {
   printMemorySpace(printer, attr);
 }
 
@@ -1850,19 +2007,4 @@ mlir::LogicalResult cir::PointerType::verify(
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// CIR Dialect
-//===----------------------------------------------------------------------===//
-
-void CIRDialect::registerTypes() {
-  // Register tablegen'd types.
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "clang/CIR/Dialect/IR/CIROpsTypes.cpp.inc"
-      >();
-
-  // Register raw C++ types.
-  // TODO(CIR) addTypes<RecordType>();
 }

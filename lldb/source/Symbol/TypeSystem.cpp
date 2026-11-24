@@ -95,6 +95,12 @@ CompilerType TypeSystem::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType
+TypeSystem::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                    uint32_t address_space) {
+  return CompilerType();
+}
+
+CompilerType
 TypeSystem::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }

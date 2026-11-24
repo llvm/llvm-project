@@ -159,6 +159,72 @@ TEST(ModuleTest, MakeLookupInfosHonorsLookupNameOverride) {
   }
 }
 
+namespace {
+/// A language that, like most, doesn't parse function names.
+template <LanguageType Type> class MockLanguage : public Language {
+public:
+  LanguageType GetLanguageType() const override { return Type; }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+  bool IsSourceFile(llvm::StringRef file_path) const override { return false; }
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return Language::GetNameForLanguageType(Type);
+  }
+  static void Initialize() {
+    PluginManager::RegisterPlugin(GetPluginNameStatic(), "Mock Language",
+                                  CreateInstance);
+  }
+  static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
+  static Language *CreateInstance(LanguageType language) {
+    return language == Type ? new MockLanguage() : nullptr;
+  }
+};
+} // namespace
+
+// Languages that don't parse function names all look up the full name the
+// same way, so a lookup in all languages only needs one of them.
+TEST(ModuleTest, MakeLookupInfosSkipsRepeatedFullNameLookups) {
+  SubsystemRAII<FileSystem, HostInfo, MockLanguage<eLanguageTypePascal83>,
+                MockLanguage<eLanguageTypeModula2>>
+      subsystems;
+  // Language::ForEach() only finds the plugins that were registered when it
+  // first ran, or that were looked up since.
+  ASSERT_NE(Language::FindPlugin(eLanguageTypePascal83), nullptr);
+  ASSERT_NE(Language::FindPlugin(eLanguageTypeModula2), nullptr);
+
+  auto count_mock_lookups = [](const std::vector<Module::LookupInfo> &infos) {
+    return llvm::count_if(infos, [](const Module::LookupInfo &info) {
+      return info.GetLanguageType() == eLanguageTypePascal83 ||
+             info.GetLanguageType() == eLanguageTypeModula2;
+    });
+  };
+
+  ConstString name("foo");
+  EXPECT_LE(count_mock_lookups(Module::LookupInfo::MakeLookupInfos(
+                name, eFunctionNameTypeAuto, eLanguageTypeUnknown)),
+            1);
+
+  // Lookups that don't match full names use the language to match them.
+  EXPECT_EQ(count_mock_lookups(Module::LookupInfo::MakeLookupInfos(
+                name, eFunctionNameTypeBase, eLanguageTypeUnknown)),
+            2);
+}
+
+TEST(ModuleTest, LookupInfoEqualsIgnoringLanguage) {
+  auto make_lookup_info = [](llvm::StringRef name, LanguageType language) {
+    return Module::LookupInfo::MakeLookupInfos(ConstString(name),
+                                               eFunctionNameTypeBase, language)
+        .front();
+  };
+  Module::LookupInfo foo = make_lookup_info("foo", eLanguageTypePascal83);
+  EXPECT_TRUE(foo.EqualsIgnoringLanguage(
+      make_lookup_info("foo", eLanguageTypeModula2)));
+  EXPECT_FALSE(foo.EqualsIgnoringLanguage(
+      make_lookup_info("bar", eLanguageTypePascal83)));
+  EXPECT_FALSE(
+      foo.EqualsIgnoringLanguage(Module::LookupInfo(foo, ConstString("baz"))));
+}
+
 TEST(ModuleTest, ResolveSymbolContextForAddressExactMatch) {
   // Test that ResolveSymbolContextForAddress prefers exact symbol matches
   // over symbols that merely contain the address.

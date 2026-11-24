@@ -519,11 +519,13 @@ enables only the high-confidence subset of these checks.
 
   - `-Wlifetime-safety-noescape`: Warns when a parameter marked with `[[clang::noescape]]` escapes the function.
   - `-Wlifetime-safety-lifetimebound-violation`: Warns when the analysis cannot verify that the return value can be lifetime bound to a parameter marked with `[[clang::lifetimebound]]`.
+  - `-Wlifetime-safety-capture-by-violation`: Warns when a parameter with `[[clang::lifetime_capture_by]]` attributes is captured by the enclosing object, by global storage, or by another reference parameter, but none of the attributes names that entity (`lifetime_capture_by_this`, `lifetime_capture_by_global`, or the capturing parameter) or `unknown`. Pointer parameters, stores into members of a reference parameter, and captures in calls to free functions are not verified.
 
 - `-Wlifetime-safety-experimental`: Enables experimental checks. These may have known false positives and their behavior may change. They are not enabled by `-Wlifetime-safety-all`.
 
   - `-Wlifetime-safety-experimental-invalidation`: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation or explicit destruction (e.g., `std::unique_ptr::reset`, `std::destroy_at`).
   - `-Wlifetime-safety-experimental-field-origin-escape`: Warns when a member function returns a value derived from a pointer, reference, or view field rather than from `*this` (e.g., `Span::data()`). Owned pointer fields (e.g., `Vector::data()`) are also reported; mark such methods `[[clang::lifetimebound]]` to silence the warning.
+  - `-Wlifetime-safety-experimental-destructor-use`: Treats a non-trivial destructor run at scope exit as a use of the borrows the object holds, so an object destroyed after the storage it borrows from is reported. Destructors that never read the borrow (e.g., `std::function`'s) are also reported.
 
 ## Limitations
 

@@ -388,8 +388,8 @@ defm : OptionalBoolField<"do-counter-promotion",
   "Do counter register promotion">;
 defm : BoolField<"hash-based-counter-split", "true",
   "Rename counter variable of a comdat function based on cfg hash">;
-defm : BoolField<"instrprof-atomic-counter-update-all", "false",
-  "Make all profile counter updates atomic (for testing only)">;
+defm : OptionalBoolField<"instrprof-atomic-counter-update-all",
+  "Override whether all profile counter updates are atomic">;
 defm : BoolField<"iterative-counter-promotion", "true",
   "Allow counter promotion across the whole loop nest">;
 // A debug option.
@@ -681,9 +681,9 @@ defm : BoolField<"pgo-verify-hot-bfi", "false",
 defm : BoolField<"pgo-view-block-coverage-graph", "false",
   "Create a dot file of CFGs with block coverage inference information">;
 // Command line option to turn on CFG dot or text dump of raw profile counts.
-defm : EnumField<"pgo-view-raw-counts", "PGOViewCountsType", "PGOVCT_None",
+defm : EnumField<"pgo-view-raw-counts", "PGOViewCountsType", "PGOViewCountsType::None",
   "none,graph,text",
-  ["PGOVCT_None", "PGOVCT_Graph", "PGOVCT_Text"],
+  ["PGOViewCountsType::None", "PGOViewCountsType::Graph", "PGOViewCountsType::Text"],
   "A boolean option to show CFG dag or text with raw profile counts from profile data. See also option -pgo-view-counts. To limit graph display to only one function, use filtering option -view-bfi-func-name">;
 // Command line option to enable/disable the warning about missing profile
 // information.

@@ -454,6 +454,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
+  bool parseInlineAsmOperandCount(InlineAsm::Flag &F);
   bool parseSymbolicInlineAsmOperand(unsigned OpIdx, MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
@@ -478,7 +479,7 @@ public:
   bool parseDIExpression(MDNode *&Expr);
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
-  bool parseCFIOffset(int &Offset);
+  bool parseCFIOffset(int64_t &Offset);
   bool parseCFIUnsigned(unsigned &Value);
   bool parseCFIRegister(unsigned &Reg);
   bool parseCFIAddressSpace(unsigned &AddressSpace);
@@ -739,6 +740,7 @@ bool MIParser::parseBasicBlockDefinition(
   auto Name = Token.stringValue();
   lex();
   bool MachineBlockAddressTaken = false;
+  bool LabelMustBeEmitted = false;
   BasicBlock *AddressTakenIRBlock = nullptr;
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
@@ -758,6 +760,10 @@ bool MIParser::parseBasicBlockDefinition(
       switch (Token.kind()) {
       case MIToken::kw_machine_block_address_taken:
         MachineBlockAddressTaken = true;
+        lex();
+        break;
+      case MIToken::kw_label_must_be_emitted:
+        LabelMustBeEmitted = true;
         lex();
         break;
       case MIToken::kw_ir_block_address_taken:
@@ -846,6 +852,8 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setMaxBytesForAlignment(MaxBytesForAlignment);
   if (MachineBlockAddressTaken)
     MBB->setMachineBlockAddressTaken();
+  if (LabelMustBeEmitted)
+    MBB->setLabelMustBeEmitted();
   if (AddressTakenIRBlock)
     MBB->setAddressTakenIRBlock(AddressTakenIRBlock);
   MBB->setIsEHPad(IsLandingPad);
@@ -1798,6 +1806,32 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
+/// Parse the optional "ops:N" that ends an inline asm operand flag, giving the
+/// number of operands that follow it. It's omitted when there's one operand.
+bool MIParser::parseInlineAsmOperandCount(InlineAsm::Flag &F) {
+  if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "ops")
+    return false;
+
+  lex();
+  if (Token.isNot(MIToken::colon))
+    return error("expected ':' after 'ops'");
+
+  lex();
+  if (Token.isNot(MIToken::IntegerLiteral))
+    return error("expected an operand count after 'ops:'");
+
+  unsigned NumOps;
+  if (getUnsigned(NumOps))
+    return true;
+
+  if (NumOps > InlineAsm::Flag::getMaxNumOperandRegisters())
+    return error("invalid inline asm operand count");
+
+  F.setNumOperandRegisters(NumOps);
+  lex();
+  return false;
+}
+
 bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
                                              MachineOperand &Dest) {
   assert(OpIdx >= InlineAsm::MIOp_ExtraInfo);
@@ -1833,7 +1867,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     return false;
   }
 
-  // Parse symbolic form: kind[:constraint].
+  // Parse symbolic form: kind[:constraint] [foldable] [ops:N], or, for a
+  // tied use, kind tiedto:$N [ops:N].
   StringRef KindStr = Token.stringValue();
   constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
   InlineAsm::Kind K =
@@ -1844,6 +1879,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           .Case("clobber", InlineAsm::Kind::Clobber)
           .Case("imm", InlineAsm::Kind::Imm)
           .Case("mem", InlineAsm::Kind::Mem)
+          .Case("func", InlineAsm::Kind::Func)
           .Default(InvalidKind);
   if (K == InvalidKind)
     return error("unknown inline asm operand kind '" + KindStr + "'");
@@ -1867,6 +1903,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     lex();
 
     F.setMatchingOp(OperandNo);
+    if (parseInlineAsmOperandCount(F))
+      return true;
 
     Dest = MachineOperand::CreateImm(F);
     return false;
@@ -1881,7 +1919,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           "expected register class or memory constraint name after ':'");
 
     StringRef ConstraintStr = Token.stringValue();
-    if (F.isMemKind()) {
+    if (F.isMemKind() || F.isFuncKind()) {
       InlineAsm::ConstraintCode CC =
           StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
               .Case("es", InlineAsm::ConstraintCode::es)
@@ -1938,6 +1976,9 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     F.setRegMayBeFolded(true);
     lex();
   }
+
+  if (parseInlineAsmOperandCount(F))
+    return true;
 
   Dest = MachineOperand::CreateImm(F);
   return false;
@@ -2614,12 +2655,12 @@ bool MIParser::parseMetadataOperand(MachineOperand &Dest) {
   return false;
 }
 
-bool MIParser::parseCFIOffset(int &Offset) {
+bool MIParser::parseCFIOffset(int64_t &Offset) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi offset");
-  if (Token.integerValue().getSignificantBits() > 32)
-    return error("expected a 32 bit integer (the cfi offset is too large)");
-  Offset = (int)Token.integerValue().getExtValue();
+  if (!Token.integerValue().isRepresentableByInt64())
+    return error("expected a 64 bit integer (the cfi offset is too large)");
+  Offset = Token.integerValue().getExtValue();
   lex();
   return false;
 }
@@ -2650,11 +2691,7 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
 bool MIParser::parseCFIAddressSpace(unsigned &AddressSpace) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi address space literal");
-  if (Token.integerValue().isSigned())
-    return error("expected an unsigned integer (cfi address space)");
-  AddressSpace = Token.integerValue().getZExtValue();
-  lex();
-  return false;
+  return parseCFIUnsigned(AddressSpace);
 }
 
 bool MIParser::parseCFIEscapeValues(std::string &Values) {
@@ -2675,7 +2712,7 @@ bool MIParser::parseCFIEscapeValues(std::string &Values) {
 bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
-  int Offset;
+  int64_t Offset;
   unsigned Reg;
   unsigned AddressSpace;
   unsigned CFIIndex;
@@ -2779,7 +2816,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
       CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createSetRAState(nullptr, State, PACSym));
     } else if (Token.is(MIToken::IntegerLiteral)) {
-      int Offset;
+      int64_t Offset;
       if (parseCFIOffset(Offset))
         return true;
       CFIIndex = MF.addFrameInst(
@@ -2825,7 +2862,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   case MIToken::kw_cfi_llvm_vector_offset: {
     unsigned Reg, MaskReg;
     unsigned RegSize, MaskRegSize;
-    int Offset = 0;
+    int64_t Offset = 0;
 
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIUnsigned(RegSize) || expectAndConsume(MIToken::comma) ||

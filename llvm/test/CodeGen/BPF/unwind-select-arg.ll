@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=bpfel -mcpu=v4 < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 -verify-machineinstrs < %s | FileCheck %s
 ;
 ; The bool is extended when the call is lowered, that is after the label that
 ; starts the range of the invoke. It is a select, which takes blocks of its own,

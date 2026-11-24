@@ -155,7 +155,6 @@ static Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity) {
 
 // TODO: Refine the row and col-in-bytes of tile to row and col of matrix.
 std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
-  IRBuilder<> Builder(II);
   Value *Row = nullptr, *Col = nullptr;
   switch (II->getIntrinsicID()) {
   default:

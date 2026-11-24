@@ -7,6 +7,7 @@
 
 ---
 name: test_wmma_f64_16x16x4_f64_D0_overlaps_A1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1251-LABEL: name: test_wmma_f64_16x16x4_f64_D0_overlaps_A1
@@ -19,6 +20,7 @@ body: |
 
 ---
 name: test_wmma_f64_16x16x4_f64_D0_overlaps_B1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1251-LABEL: name: test_wmma_f64_16x16x4_f64_D0_overlaps_B1
@@ -31,6 +33,7 @@ body: |
 
 ---
 name: test_wmma_f64_16x16x4_f64_D0_overlaps_Index1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1251-LABEL: name: test_wmma_f64_16x16x4_f64_D0_overlaps_Index1

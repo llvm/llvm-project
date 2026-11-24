@@ -48,7 +48,7 @@ VirtualInherits VI;
 // CIR-BEFORE: } align(8) ast(#cir.var.decl.ast)
 //
 // CIR-AFTER: cir.global external @VI = #cir.zero : !rec_VirtualInherits align(8) ast(#cir.var.decl.ast)
-// CIR-AFTER: cir.func {{.*}}@__cxx_global_var_init() {
+// CIR-AFTER: cir.func {{.*}}@__cxx_global_var_init(){{.*}} {
 // CIR-AFTER:   %[[GET_GLOB:.*]] = cir.get_global @VI : !cir.ptr<!rec_VirtualInherits> loc(#loc12)
 // CIR-AFTER:   cir.call @_ZN15VirtualInheritsC1Ev(%[[GET_GLOB]]) nothrow : (!cir.ptr<!rec_VirtualInherits> {llvm.align = 8 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}) -> ()
 
