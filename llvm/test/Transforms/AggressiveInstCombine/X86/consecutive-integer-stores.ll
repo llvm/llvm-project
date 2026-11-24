@@ -9,14 +9,27 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Positive cases.
 
 define void @stores_12_bytes(ptr align 8 %p, i32 noundef %a, i32 noundef %b, i32 noundef %c) {
-; CHECK-LABEL: define void @stores_12_bytes(
-; CHECK-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]]) {
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
-; CHECK-NEXT:    store i32 [[C]], ptr [[P8]], align 8
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @stores_12_bytes(
+; LE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]]) {
+; LE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; LE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; LE-NEXT:    [[TMP2:%.*]] = zext i32 [[B]] to i64
+; LE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 32
+; LE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP1]], [[TMP3]]
+; LE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; LE-NEXT:    store i32 [[C]], ptr [[P8]], align 8
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @stores_12_bytes(
+; BE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]]) {
+; BE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; BE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; BE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 32
+; BE-NEXT:    [[TMP3:%.*]] = zext i32 [[B]] to i64
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
+; BE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; BE-NEXT:    store i32 [[C]], ptr [[P8]], align 8
+; BE-NEXT:    ret void
 ;
   %p4 = getelementptr inbounds i8, ptr %p, i64 4
   %p8 = getelementptr inbounds i8, ptr %p, i64 8
@@ -27,16 +40,35 @@ define void @stores_12_bytes(ptr align 8 %p, i32 noundef %a, i32 noundef %b, i32
 }
 
 define void @stores_16_bytes(ptr align 8 %p, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) {
-; CHECK-LABEL: define void @stores_16_bytes(
-; CHECK-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[P12:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
-; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
-; CHECK-NEXT:    store i32 [[C]], ptr [[P8]], align 8
-; CHECK-NEXT:    store i32 [[D]], ptr [[P12]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @stores_16_bytes(
+; LE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
+; LE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; LE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; LE-NEXT:    [[TMP2:%.*]] = zext i32 [[B]] to i64
+; LE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 32
+; LE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP1]], [[TMP3]]
+; LE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; LE-NEXT:    [[TMP5:%.*]] = zext i32 [[C]] to i64
+; LE-NEXT:    [[TMP6:%.*]] = zext i32 [[D]] to i64
+; LE-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 32
+; LE-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP5]], [[TMP7]]
+; LE-NEXT:    store i64 [[TMP8]], ptr [[P8]], align 8
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @stores_16_bytes(
+; BE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
+; BE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; BE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; BE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 32
+; BE-NEXT:    [[TMP3:%.*]] = zext i32 [[B]] to i64
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
+; BE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; BE-NEXT:    [[TMP5:%.*]] = zext i32 [[C]] to i64
+; BE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 32
+; BE-NEXT:    [[TMP7:%.*]] = zext i32 [[D]] to i64
+; BE-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP6]], [[TMP7]]
+; BE-NEXT:    store i64 [[TMP8]], ptr [[P8]], align 8
+; BE-NEXT:    ret void
 ;
   %p4 = getelementptr inbounds i8, ptr %p, i64 4
   %p8 = getelementptr inbounds i8, ptr %p, i64 8
@@ -49,15 +81,31 @@ define void @stores_16_bytes(ptr align 8 %p, i32 noundef %a, i32 noundef %b, i32
 }
 
 define void @reverse_mixed_width(ptr align 4 %p, i32 noundef %word, i8 noundef %a, i16 noundef %b) {
-; CHECK-LABEL: define void @reverse_mixed_width(
-; CHECK-SAME: ptr align 4 [[P:%.*]], i32 noundef [[WORD:%.*]], i8 noundef [[A:%.*]], i16 noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[C:%.*]] = trunc i32 [[WORD]] to i8
-; CHECK-NEXT:    store i16 [[B]], ptr [[P2]], align 2
-; CHECK-NEXT:    store i8 [[A]], ptr [[P1]], align 1
-; CHECK-NEXT:    store i8 [[C]], ptr [[P]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @reverse_mixed_width(
+; LE-SAME: ptr align 4 [[P:%.*]], i32 noundef [[WORD:%.*]], i8 noundef [[A:%.*]], i16 noundef [[B:%.*]]) {
+; LE-NEXT:    [[C:%.*]] = trunc i32 [[WORD]] to i8
+; LE-NEXT:    [[TMP1:%.*]] = zext i8 [[C]] to i32
+; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[A]] to i32
+; LE-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 8
+; LE-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[TMP1]], [[TMP3]]
+; LE-NEXT:    [[TMP5:%.*]] = zext i16 [[B]] to i32
+; LE-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], 16
+; LE-NEXT:    [[TMP7:%.*]] = or disjoint i32 [[TMP4]], [[TMP6]]
+; LE-NEXT:    store i32 [[TMP7]], ptr [[P]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @reverse_mixed_width(
+; BE-SAME: ptr align 4 [[P:%.*]], i32 noundef [[WORD:%.*]], i8 noundef [[A:%.*]], i16 noundef [[B:%.*]]) {
+; BE-NEXT:    [[C:%.*]] = trunc i32 [[WORD]] to i8
+; BE-NEXT:    [[TMP1:%.*]] = zext i8 [[C]] to i32
+; BE-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 24
+; BE-NEXT:    [[TMP3:%.*]] = zext i8 [[A]] to i32
+; BE-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 16
+; BE-NEXT:    [[TMP5:%.*]] = or disjoint i32 [[TMP2]], [[TMP4]]
+; BE-NEXT:    [[TMP6:%.*]] = zext i16 [[B]] to i32
+; BE-NEXT:    [[TMP7:%.*]] = or disjoint i32 [[TMP5]], [[TMP6]]
+; BE-NEXT:    store i32 [[TMP7]], ptr [[P]], align 4
+; BE-NEXT:    ret void
 ;
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   %p2 = getelementptr inbounds i8, ptr %p, i64 2
@@ -69,12 +117,23 @@ define void @reverse_mixed_width(ptr align 4 %p, i32 noundef %word, i8 noundef %
 }
 
 define void @two_bytes(ptr align 2 %p, i8 noundef %a, i8 noundef %b) {
-; CHECK-LABEL: define void @two_bytes(
-; CHECK-SAME: ptr align 2 [[P:%.*]], i8 noundef [[A:%.*]], i8 noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 [[A]], ptr [[P]], align 1
-; CHECK-NEXT:    store i8 [[B]], ptr [[P1]], align 1
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @two_bytes(
+; LE-SAME: ptr align 2 [[P:%.*]], i8 noundef [[A:%.*]], i8 noundef [[B:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = zext i8 [[A]] to i16
+; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[B]] to i16
+; LE-NEXT:    [[TMP3:%.*]] = shl i16 [[TMP2]], 8
+; LE-NEXT:    [[TMP4:%.*]] = or disjoint i16 [[TMP1]], [[TMP3]]
+; LE-NEXT:    store i16 [[TMP4]], ptr [[P]], align 2
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @two_bytes(
+; BE-SAME: ptr align 2 [[P:%.*]], i8 noundef [[A:%.*]], i8 noundef [[B:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = zext i8 [[A]] to i16
+; BE-NEXT:    [[TMP2:%.*]] = shl i16 [[TMP1]], 8
+; BE-NEXT:    [[TMP3:%.*]] = zext i8 [[B]] to i16
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i16 [[TMP2]], [[TMP3]]
+; BE-NEXT:    store i16 [[TMP4]], ptr [[P]], align 2
+; BE-NEXT:    ret void
 ;
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   store i8 %a, ptr %p, align 1
@@ -83,17 +142,37 @@ define void @two_bytes(ptr align 2 %p, i8 noundef %a, i8 noundef %b) {
 }
 
 define i32 @read_between_pairs(ptr align 8 %p, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) {
-; CHECK-LABEL: define i32 @read_between_pairs(
-; CHECK-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[P12:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
-; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
-; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[C]], ptr [[P8]], align 8
-; CHECK-NEXT:    store i32 [[D]], ptr [[P12]], align 4
-; CHECK-NEXT:    ret i32 [[VALUE]]
+; LE-LABEL: define i32 @read_between_pairs(
+; LE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
+; LE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; LE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; LE-NEXT:    [[TMP2:%.*]] = zext i32 [[B]] to i64
+; LE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 32
+; LE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP1]], [[TMP3]]
+; LE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; LE-NEXT:    [[VALUE:%.*]] = load i32, ptr [[P]], align 8
+; LE-NEXT:    [[TMP5:%.*]] = zext i32 [[C]] to i64
+; LE-NEXT:    [[TMP6:%.*]] = zext i32 [[D]] to i64
+; LE-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 32
+; LE-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP5]], [[TMP7]]
+; LE-NEXT:    store i64 [[TMP8]], ptr [[P8]], align 8
+; LE-NEXT:    ret i32 [[VALUE]]
+;
+; BE-LABEL: define i32 @read_between_pairs(
+; BE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
+; BE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; BE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; BE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 32
+; BE-NEXT:    [[TMP3:%.*]] = zext i32 [[B]] to i64
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
+; BE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; BE-NEXT:    [[VALUE:%.*]] = load i32, ptr [[P]], align 8
+; BE-NEXT:    [[TMP5:%.*]] = zext i32 [[C]] to i64
+; BE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 32
+; BE-NEXT:    [[TMP7:%.*]] = zext i32 [[D]] to i64
+; BE-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP6]], [[TMP7]]
+; BE-NEXT:    store i64 [[TMP8]], ptr [[P8]], align 8
+; BE-NEXT:    ret i32 [[VALUE]]
 ;
   %p4 = getelementptr inbounds i8, ptr %p, i64 4
   %p8 = getelementptr inbounds i8, ptr %p, i64 8
@@ -108,17 +187,33 @@ define i32 @read_between_pairs(ptr align 8 %p, i32 noundef %a, i32 noundef %b, i
 
 ; The read stops the first pair from merging. The second pair can still merge.
 define i32 @read_inside_first_pair(ptr align 8 %p, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) {
-; CHECK-LABEL: define i32 @read_inside_first_pair(
-; CHECK-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[P12:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
-; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
-; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
-; CHECK-NEXT:    store i32 [[C]], ptr [[P8]], align 8
-; CHECK-NEXT:    store i32 [[D]], ptr [[P12]], align 4
-; CHECK-NEXT:    ret i32 [[VALUE]]
+; LE-LABEL: define i32 @read_inside_first_pair(
+; LE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
+; LE-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; LE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; LE-NEXT:    store i32 [[A]], ptr [[P]], align 8
+; LE-NEXT:    [[VALUE:%.*]] = load i32, ptr [[P]], align 8
+; LE-NEXT:    store i32 [[B]], ptr [[P4]], align 4
+; LE-NEXT:    [[TMP1:%.*]] = zext i32 [[C]] to i64
+; LE-NEXT:    [[TMP2:%.*]] = zext i32 [[D]] to i64
+; LE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 32
+; LE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP1]], [[TMP3]]
+; LE-NEXT:    store i64 [[TMP4]], ptr [[P8]], align 8
+; LE-NEXT:    ret i32 [[VALUE]]
+;
+; BE-LABEL: define i32 @read_inside_first_pair(
+; BE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]], i32 noundef [[D:%.*]]) {
+; BE-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; BE-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; BE-NEXT:    store i32 [[A]], ptr [[P]], align 8
+; BE-NEXT:    [[VALUE:%.*]] = load i32, ptr [[P]], align 8
+; BE-NEXT:    store i32 [[B]], ptr [[P4]], align 4
+; BE-NEXT:    [[TMP1:%.*]] = zext i32 [[C]] to i64
+; BE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 32
+; BE-NEXT:    [[TMP3:%.*]] = zext i32 [[D]] to i64
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
+; BE-NEXT:    store i64 [[TMP4]], ptr [[P8]], align 8
+; BE-NEXT:    ret i32 [[VALUE]]
 ;
   %p4 = getelementptr inbounds i8, ptr %p, i64 4
   %p8 = getelementptr inbounds i8, ptr %p, i64 8
@@ -132,13 +227,25 @@ define i32 @read_inside_first_pair(ptr align 8 %p, i32 noundef %a, i32 noundef %
 }
 
 define void @noalias_store(ptr align 8 %p, ptr noalias %q, i32 noundef %a, i32 noundef %b, i32 noundef %c) {
-; CHECK-LABEL: define void @noalias_store(
-; CHECK-SAME: ptr align 8 [[P:%.*]], ptr noalias [[Q:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]]) {
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[C]], ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @noalias_store(
+; LE-SAME: ptr align 8 [[P:%.*]], ptr noalias [[Q:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]]) {
+; LE-NEXT:    store i32 [[C]], ptr [[Q]], align 4
+; LE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; LE-NEXT:    [[TMP2:%.*]] = zext i32 [[B]] to i64
+; LE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 32
+; LE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP1]], [[TMP3]]
+; LE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @noalias_store(
+; BE-SAME: ptr align 8 [[P:%.*]], ptr noalias [[Q:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[C:%.*]]) {
+; BE-NEXT:    store i32 [[C]], ptr [[Q]], align 4
+; BE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; BE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 32
+; BE-NEXT:    [[TMP3:%.*]] = zext i32 [[B]] to i64
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
+; BE-NEXT:    store i64 [[TMP4]], ptr [[P]], align 8
+; BE-NEXT:    ret void
 ;
   %p4 = getelementptr inbounds i8, ptr %p, i64 4
   store i32 %a, ptr %p, align 8
@@ -287,6 +394,3 @@ define i32 @lifetime_boundary(i32 noundef %a, i32 noundef %b) {
 
 declare void @llvm.lifetime.start.p0(ptr)
 declare void @llvm.lifetime.end.p0(ptr)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; BE: {{.*}}
-; LE: {{.*}}

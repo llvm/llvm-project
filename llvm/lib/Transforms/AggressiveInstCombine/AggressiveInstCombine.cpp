@@ -16,6 +16,7 @@
 #include "AggressiveInstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -1840,7 +1841,8 @@ struct StoreChain {
 };
 
 static std::optional<AccessRange> getAccessRange(Instruction &I,
-                                                 const DataLayout &DL) {
+                                                 const DataLayout &DL,
+                                                 bool AllowNonInbounds = true) {
   Value *Ptr = getLoadStorePointerOperand(&I);
   if (!Ptr)
     return std::nullopt;
@@ -1851,7 +1853,7 @@ static std::optional<AccessRange> getAccessRange(Instruction &I,
   unsigned AS = getLoadStoreAddressSpace(&I);
   unsigned IndexBits = DL.getIndexSizeInBits(AS);
   // A wrapping GEP can preserve the high bits of a wider pointer.
-  bool AllowNonInbounds = DL.getPointerSizeInBits(AS) == IndexBits;
+  AllowNonInbounds &= DL.getPointerSizeInBits(AS) == IndexBits;
   int64_t Offset;
   Value *Base =
       GetPointerBaseWithConstantOffset(Ptr, Offset, DL, AllowNonInbounds);
@@ -2171,6 +2173,187 @@ static StoreInst *packStoreChain(const StoreChain &Chain, AliasAnalysis &AA,
 static bool endsStoreChain(const Instruction &I) {
   return I.isAtomic() || I.isVolatile() || I.maySynchronize() ||
          !isGuaranteedToTransferExecutionToSuccessor(&I);
+}
+
+struct AdjacentIntegerStore {
+  StoreInst *Store;
+  BitRange Access;
+};
+
+struct AdjacentStoreMerge {
+  ArrayRef<AdjacentIntegerStore> Stores;
+  StoreInst *Last;
+};
+
+static bool canMergeAdjacentStores(ArrayRef<AdjacentIntegerStore> Stores,
+                                   StoreInst &Last, BatchAAResults &AA,
+                                   AssumptionCache &AC, DominatorTree &DT) {
+  unsigned Remaining = MaxInstrsToScan;
+  for (const AdjacentIntegerStore &Part : Stores) {
+    StoreInst *Store = Part.Store;
+    // A poison input could turn the entire packed value into poison.
+    if (!isGuaranteedNotToBeUndefOrPoison(Store->getValueOperand(), &AC, Store,
+                                          &DT))
+      return false;
+    if (Store == &Last)
+      continue;
+
+    MemoryLocation Loc = MemoryLocation::get(Store).getWithoutAATags();
+    for (Instruction &I :
+         make_range(std::next(Store->getIterator()), Last.getIterator())) {
+      if (isa<DbgInfoIntrinsic>(I))
+        continue;
+      if (!Remaining-- || endsStoreChain(I) || I.isLifetimeStartOrEnd() ||
+          (I.mayReadOrWriteMemory() &&
+           isModOrRefSet(AA.getModRefInfo(&I, Loc))))
+        return false;
+    }
+  }
+  return true;
+}
+
+static void selectAdjacentStoreMerges(
+    SmallVectorImpl<AdjacentIntegerStore> &Stores, const DataLayout &DL,
+    TargetTransformInfo &TTI, BatchAAResults &AA, AssumptionCache &AC,
+    DominatorTree &DT, SmallVectorImpl<AdjacentStoreMerge> &Merges) {
+  if (Stores.size() < 2)
+    return;
+  llvm::sort(Stores, [](const auto &A, const auto &B) {
+    return A.Access.Begin < B.Access.Begin;
+  });
+
+  // Keep each overlapping write by itself. The greatest preceding end also
+  // detects stores contained in an earlier, wider access.
+  SmallBitVector Overlaps(Stores.size());
+  int64_t MaxEnd = Stores.front().Access.Begin;
+  for (size_t I = 0, E = Stores.size(); I != E; ++I) {
+    BitRange Access = Stores[I].Access;
+    if (Access.Begin < MaxEnd ||
+        (I + 1 != E && Access.End > Stores[I + 1].Access.Begin))
+      Overlaps.set(I);
+    MaxEnd = std::max(MaxEnd, Access.End);
+  }
+
+  struct Split {
+    size_t NumStores;
+    unsigned Length;
+    StoreInst *Last;
+  };
+  SmallVector<Split, 8> Best(Stores.size() + 1, {0, 0, nullptr});
+  ArrayRef<AdjacentIntegerStore> Ranges(Stores);
+  for (size_t I = Stores.size(); I-- > 0;) {
+    const AdjacentIntegerStore &First = Ranges[I];
+    Best[I] = {1 + Best[I + 1].NumStores, 1, nullptr};
+    if (Overlaps.test(I))
+      continue;
+
+    StoreInst *Last = First.Store;
+    for (size_t J = I + 1; J != Ranges.size(); ++J) {
+      const AdjacentIntegerStore &Part = Ranges[J];
+      if (Overlaps.test(J) || Ranges[J - 1].Access.End != Part.Access.Begin)
+        break;
+      int64_t Width = Part.Access.End - First.Access.Begin;
+      if (Width > 64)
+        break;
+      if (Last->comesBefore(Part.Store))
+        Last = Part.Store;
+
+      // Minimize the number of stores in the remaining suffix. On a tie,
+      // prefer the wider store at this address.
+      size_t NumStores = 1 + Best[J + 1].NumStores;
+      if (NumStores > Best[I].NumStores || !isPowerOf2_64(Width) ||
+          !DL.fitsInLegalInteger(Width))
+        continue;
+
+      IntegerType *Ty = IntegerType::get(Last->getContext(), Width);
+      Align MinAlign(Width / 8);
+      if (First.Store->getAlign() < MinAlign &&
+          getKnownAlignment(First.Store->getPointerOperand(), DL, First.Store,
+                            &AC, &DT) < MinAlign)
+        continue;
+      // A target can support a narrow store even if that integer type is
+      // promoted in registers.
+      if (TTI.getMemoryOpCost(Instruction::Store, Ty, MinAlign,
+                              First.Store->getPointerAddressSpace(),
+                              TTI::TCK_CodeSize) > TTI::TCC_Basic)
+        continue;
+
+      unsigned Length = J - I + 1;
+      if (canMergeAdjacentStores(Ranges.slice(I, Length), *Last, AA, AC, DT))
+        Best[I] = {NumStores, Length, Last};
+    }
+  }
+
+  for (size_t I = 0; I < Ranges.size(); I += Best[I].Length)
+    if (Best[I].Last)
+      Merges.push_back({Ranges.slice(I, Best[I].Length), Best[I].Last});
+}
+
+static void mergeAdjacentIntegerStores(const AdjacentStoreMerge &Merge,
+                                       const DataLayout &DL) {
+  ArrayRef<AdjacentIntegerStore> Stores = Merge.Stores;
+  const AdjacentIntegerStore &First = Stores.front();
+  int64_t Begin = First.Access.Begin;
+  int64_t End = Stores.back().Access.End;
+  unsigned Width = End - Begin;
+  IRBuilder<> B(Merge.Last);
+  IntegerType *Ty = B.getIntNTy(Width);
+  Value *Packed = ConstantInt::get(Ty, 0);
+  AAMDNodes AATags = First.Store->getAAMetadata();
+  SmallVector<DebugLoc, 8> Locs;
+  SmallVector<Instruction *, 8> OldStores;
+  for (const AdjacentIntegerStore &Part : Stores) {
+    unsigned Shift =
+        DL.isLittleEndian() ? Part.Access.Begin - Begin : End - Part.Access.End;
+    Value *V = B.CreateZExt(Part.Store->getValueOperand(), Ty);
+    if (Shift)
+      V = B.CreateShl(V, Shift);
+    Packed = B.CreateOr(Packed, V, "", /*IsDisjoint=*/true);
+    if (Part.Store != First.Store)
+      AATags = AATags.concat(Part.Store->getAAMetadata());
+    Locs.push_back(Part.Store->getDebugLoc());
+    OldStores.push_back(Part.Store);
+  }
+
+  Align Alignment = std::max(First.Store->getAlign(), Align(Width / 8));
+  StoreInst *Store =
+      B.CreateAlignedStore(Packed, First.Store->getPointerOperand(), Alignment);
+  Store->setAAMetadata(AATags);
+  Store->mergeDIAssignID(OldStores);
+  Store->setDebugLoc(DebugLoc::getMergedLocations(Locs));
+  for (Instruction *OldStore : OldStores)
+    OldStore->eraseFromParent();
+}
+
+/// Collect whole-byte integer stores by base and partition disjoint adjacent
+/// accesses into legal 2-, 4-, or 8-byte writes at the original store
+/// boundaries.
+static bool foldAdjacentIntegerStores(BasicBlock &BB, const DataLayout &DL,
+                                      TargetTransformInfo &TTI,
+                                      AliasAnalysis &AA, AssumptionCache &AC,
+                                      DominatorTree &DT) {
+  SmallMapVector<Value *, SmallVector<AdjacentIntegerStore, 8>, 4> StoresByBase;
+  for (Instruction &I : BB) {
+    auto *Store = dyn_cast<StoreInst>(&I);
+    if (!Store || !Store->isSimple())
+      continue;
+
+    // Inbounds offsets keep all parts of a merged access in one object.
+    if (auto Access = getAccessRange(*Store, DL, /*AllowNonInbounds=*/false);
+        Access && Access->Bits.End - Access->Bits.Begin < 64 &&
+        !Access->Base->isSwiftError())
+      StoresByBase[Access->Base].push_back({Store, Access->Bits});
+  }
+
+  SmallVector<AdjacentStoreMerge, 4> Merges;
+  BatchAAResults BatchAA(AA);
+  for (auto &Entry : StoresByBase)
+    selectAdjacentStoreMerges(Entry.second, DL, TTI, BatchAA, AC, DT, Merges);
+
+  // Check interference against all the original stores before modifying IR.
+  for (const AdjacentStoreMerge &Merge : Merges)
+    mergeAdjacentIntegerStores(Merge, DL);
+  return !Merges.empty();
 }
 
 // Insert both stored values in address order. Byte values keep poison in
@@ -3433,6 +3616,11 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
   }
 
   MadeChange |= foldStoreChains(F, AA, DT, TTI);
+  // Give the specialized store folds first use of their original stores.
+  for (BasicBlock &BB : F)
+    if (DT.isReachableFromEntry(&BB))
+      MadeChange |=
+          foldAdjacentIntegerStores(BB, F.getDataLayout(), TTI, AA, AC, DT);
 
   // We're done with transforms, so remove dead instructions.
   if (MadeChange)
