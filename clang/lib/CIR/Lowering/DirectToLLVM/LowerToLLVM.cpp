@@ -5233,7 +5233,8 @@ struct GPULaunchFuncOperandLowering : public mlir::ConversionPattern {
   mlir::LogicalResult
   matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.modifyOpInPlace(op, [operands] { op->setOperands(operands); });
+    rewriter.modifyOpInPlace(op,
+                             [operands, &op] { op->setOperands(operands); });
     return mlir::success();
   }
 };
