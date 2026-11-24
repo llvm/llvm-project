@@ -6127,17 +6127,16 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
         if (Constant *C = ConstantFoldInstruction(&Inst, DL, &TLI)) {
           bool IsDead = wouldInstructionBeTriviallyDead(&Inst, &TLI);
           auto *CB = dyn_cast<CallBase>(&Inst);
-          if (CB && CB->isMustTailCall() && !IsDead)
+          if (!CB || !CB->isMustTailCall() || IsDead) {
+            LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
+                              << '\n');
+            Inst.replaceAllUsesWith(C);
+            ++NumConstProp;
+            if (IsDead)
+              Inst.eraseFromParent();
+            MadeIRChange = true;
             continue;
-
-          LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
-                            << '\n');
-          Inst.replaceAllUsesWith(C);
-          ++NumConstProp;
-          if (IsDead)
-            Inst.eraseFromParent();
-          MadeIRChange = true;
-          continue;
+          }
         }
 
       // See if we can constant fold its operands.

@@ -36,7 +36,7 @@ define double @test_sin_willreturn_musttail(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    ret double 0.000000e+00
 ;
-  %r = musttail call double @sin(double 0.0) willreturn memory(none)
+  %r = musttail call double @sin(double 0.0) willreturn
   ret double %r
 }
 
