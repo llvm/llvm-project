@@ -1162,8 +1162,11 @@ Similarly, a few transformations are performed during deserialization:
 *   `OpConstantNull` instructions for arrays, structs, and pointers become
     `spirv.Constant` ops with a `#spirv.null` value. These values serialize back
     into `OpConstantNull` instructions.
-*   `OpConstantComposite` instructions with `OpUndef` constituents cannot be
-    represented as `spirv.Constant` and are rejected.
+*   `OpConstantComposite` vectors, arrays, and structs with `OpUndef`
+    constituents are materialized as `spirv.CompositeConstruct` once in each
+    block that uses them, since `spirv.Constant` cannot hold undefined values.
+    Such composites are not supported as variable initializers or
+    `OpSpecConstantOp` operands.
 *   `OpVariable` instructions will be converted to `spirv.GlobalVariable` ops if
     in module-level; otherwise they will be converted into `spirv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a
