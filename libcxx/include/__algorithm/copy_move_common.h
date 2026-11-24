@@ -148,9 +148,9 @@ __copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
 #else
   using _OutDiff _LIBCPP_NODEBUG = typename iterator_traits<_OutIter>::difference_type;
 #endif
-  auto __n                       = __last - __first;
-  auto __range                   = std::__unwrap_range(__first, std::move(__last));
-  _OutDiff __out_n               = static_cast<_OutDiff>(__n);
+  auto __n         = __last - __first;
+  auto __range     = std::__unwrap_range(__first, std::move(__last));
+  _OutDiff __out_n = static_cast<_OutDiff>(__n);
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(
       __n >= 0 && static_cast<decltype(__n)>(__out_n) == __n, "std::copy/move: [first, last) must be a valid range");
   _OutIter __out_final = _IsBackward ? __out_first - __out_n : __out_first + __out_n;
