@@ -778,7 +778,7 @@ TEST(LlvmLibcRegexExprTest, AltCoalescedBranchPlacement) {
   ASSERT_LT(r03_2_inf, star_q23);
   EXPECT_EQ(b.alt(b.rep(r_0_3, 0, 1), b.alt(r03_2_inf, star_q23)), star_q23);
 
-  // Tombstoning an equal branch in kept (p* < (p{0,3}){2,∞}).
+  // Absorbing a duplicate branch already in kept (p* < (p{0,3}){2,∞}).
   const ExprId star_p = b.star('p');
   const ExprId p_0_3 = b.rep('p', 0, 3);
   const ExprId p03_2_inf = b.rep(p_0_3, 2, REPEAT_INF);

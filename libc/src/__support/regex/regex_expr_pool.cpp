@@ -123,11 +123,9 @@ struct ScopedReverseExprIdStack
   ~ScopedReverseExprIdStack() { destroy(this); }
 };
 
-} // namespace
-
 // Pops the head branch from a right-associated Alt spine (or a single non-Alt
 // node), advancing `spine` to the remaining tail or EMPTY_SET_ID.
-static ExprId pop_alt_head(ExprId &spine, const ExprPool &pool) {
+ExprId pop_alt_head(ExprId &spine, const ExprPool &pool) {
   LIBC_ASSERT(spine != INVALID_EXPR_ID && spine != EMPTY_SET_ID);
   const Expr e = pool.get(spine);
   if (e.kind == ExprKind::Alt) {
@@ -138,6 +136,8 @@ static ExprId pop_alt_head(ExprId &spine, const ExprPool &pool) {
   spine = EMPTY_SET_ID;
   return head;
 }
+
+} // namespace
 
 struct ExprPool::ReverseExprIdStack : ScopedReverseExprIdStack {};
 
@@ -408,7 +408,8 @@ ErrorOr<ExprId> ExprPool::prepend_alt_node(ExprId head, ExprId tail) {
                                 : intern_alt_node(head, tail);
 }
 
-// Folds non-tombstoned items right-to-left (LIFO) onto tail as an Alt spine.
+// Folds valid items right-to-left (LIFO) onto tail as an Alt spine, skipping
+// slots cleared to INVALID_EXPR_ID during coalescing.
 ErrorOr<ExprId> ExprPool::fold_alt_right(ReverseExprIdStack &items,
                                          ExprId tail) {
   ErrorOr<ExprId> acc = tail;
@@ -603,12 +604,10 @@ ErrorOr<ExprId> coalesce_repeat_leaves(ExprId a, ExprId b, ExprPool &pool) {
                           cpp::max(lhs->max, rhs->max));
 }
 
-} // namespace
-
 // Attempts to coalesce `candidate` into `acc_item`, updating `acc_item` when
 // their repetition intervals overlap or are adjacent.
-static ErrorOr<bool> try_coalesce_into(ExprId &acc_item, ExprId candidate,
-                                       ExprPool &pool) {
+ErrorOr<bool> try_coalesce_into(ExprId &acc_item, ExprId candidate,
+                                ExprPool &pool) {
   ErrorOr<ExprId> c = coalesce_repeat_pair(acc_item, candidate, pool);
   if (!c.has_value())
     return Error(c.error());
@@ -617,6 +616,8 @@ static ErrorOr<bool> try_coalesce_into(ExprId &acc_item, ExprId candidate,
   acc_item = *c;
   return true;
 }
+
+} // namespace
 
 // Inserts item into a sorted Alt spine without repeat coalescing.
 ErrorOr<ExprId> ExprPool::insert_sorted_no_coalesce(ExprId item, ExprId spine) {
