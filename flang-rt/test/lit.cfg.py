@@ -124,6 +124,7 @@ def push_dynamic_library_lookup_path(config, new_path):
 
     config.environment[dynamic_library_lookup_var] = new_ld_library_path
 
+
 # Set dynamic library lookup path so that dynamically linked runtimes can be found.
 push_dynamic_library_lookup_path(config, config.flang_rt_output_resource_lib_dir)
 
