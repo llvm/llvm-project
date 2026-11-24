@@ -1,6 +1,7 @@
 ; RUN: opt -S -mtriple=spirv64-intel -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=IR
 ; RUN: opt -S -mtriple=spirv64-amd-amdhsa -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=UNCHANGED
 ; RUN: opt -S -mtriple=spirv64-unknown-unknown -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=IR
+; RUN: sed '/^!llvm.module.flags/d' %s | opt -S -mtriple=spirv64-intel -passes=spirv-lower-dynamic-local-memory | FileCheck %s --check-prefix=UNCHANGED
 ; RUN: llc -O0 -mtriple=spirv64-intel %s -o - | FileCheck %s --check-prefix=SPV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-intel %s -o - -filetype=obj | spirv-val %}
 
@@ -12,7 +13,8 @@
 @unused = external addrspace(3) global [0 x i8]
 @sized = internal addrspace(3) global [4 x i32] poison, align 4
 
-; AMDHSA should not be affected by the pass.
+; AMDHSA and modules without the "spirv-dynamic-local-memory" flag should not
+; be affected by the pass.
 ; UNCHANGED: @buf = external addrspace(3) global [0 x i32]
 ; UNCHANGED-NOT: @__spirv_dynamic_local_memory
 ; UNCHANGED: define spir_kernel void @kernel(ptr addrspace(1) noundef %out) addrspace(9)
@@ -242,3 +244,6 @@ define spir_func ptr addrspace(3) @call_instruction() addrspace(9) memory(none) 
 attributes #0 = { "foo" }
 
 !0 = !{i32 1}
+
+!llvm.module.flags = !{!1}
+!1 = !{i32 7, !"spirv-dynamic-local-memory", i32 1}

@@ -132,6 +132,12 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
        M.getTargetTriple().getOS() != Triple::OpenCL))
     return false;
 
+  // The frontend opts in for languages whose runtime sets the argument.
+  auto *Enable = mdconst::extract_or_null<ConstantInt>(
+      M.getModuleFlag("spirv-dynamic-local-memory"));
+  if (!Enable || Enable->isZero())
+    return false;
+
   SmallVector<GlobalVariable *> DynMems;
   for (GlobalVariable &GV : M.globals())
     if (isDynamicLocalMemory(GV) && !GV.use_empty())

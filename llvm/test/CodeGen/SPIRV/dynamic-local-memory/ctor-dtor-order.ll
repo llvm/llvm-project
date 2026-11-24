@@ -77,5 +77,6 @@ define void @dtor() addrspace(9) {
   ret void
 }
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1}
 !0 = !{i32 7, !"openmp-device", i32 50}
+!1 = !{i32 7, !"spirv-dynamic-local-memory", i32 1}
