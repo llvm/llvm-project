@@ -52,12 +52,6 @@ static const CodeGenToolOptions &getCodeGenToolOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<CodeGenToolOptions>();
 }
 
-static std::optional<bool> toOptional(BoolOrDefault X) {
-  if (X == BoolOrDefault::Default)
-    return std::nullopt;
-  return X == BoolOrDefault::True;
-}
-
 std::string codegen::getMArch(const cl::LibraryOptionsContext &C) {
   return C.get<CodeGenToolOptions>().march.str();
 }

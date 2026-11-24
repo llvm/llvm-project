@@ -1239,7 +1239,7 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; AVX512VLCD-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512VLCD-NEXT:    vplzcntd %ymm0, %ymm0
 ; AVX512VLCD-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512VLCD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VLCD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,16,16,16,16,16,16,16]
 ; AVX512VLCD-NEXT:    vzeroupper
 ; AVX512VLCD-NEXT:    retq
 ;
@@ -1248,7 +1248,7 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; AVX512CD-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512CD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512CD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,16,16,16,16,16,16,16]
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
@@ -1447,7 +1447,7 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; AVX512VLCD-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512VLCD-NEXT:    vplzcntd %ymm0, %ymm0
 ; AVX512VLCD-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512VLCD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VLCD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,16,16,16,16,16,16,16]
 ; AVX512VLCD-NEXT:    vzeroupper
 ; AVX512VLCD-NEXT:    retq
 ;
@@ -1456,7 +1456,7 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; AVX512CD-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512CD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512CD-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,16,16,16,16,16,16,16]
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
@@ -1624,7 +1624,7 @@ define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
@@ -1787,7 +1787,7 @@ define <16 x i8> @testv16i8u(<16 x i8> %in) nounwind {
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;

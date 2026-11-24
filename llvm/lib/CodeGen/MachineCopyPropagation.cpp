@@ -49,6 +49,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -86,11 +87,6 @@ STATISTIC(SpillageChainsLength, "Length of spillage chains");
 STATISTIC(NumSpillageChains, "Number of spillage chains");
 DEBUG_COUNTER(FwdCounter, "machine-cp-fwd",
               "Controls which register COPYs are forwarded");
-
-static cl::opt<bool> MCPUseCopyInstr("mcp-use-is-copy-instr", cl::init(false),
-                                     cl::Hidden);
-static cl::opt<cl::boolOrDefault>
-    EnableSpillageCopyElimination("enable-spill-copy-elim", cl::Hidden);
 
 namespace {
 
@@ -480,6 +476,7 @@ public:
 };
 
 class MachineCopyPropagation {
+  const CodeGenOptions &Opts;
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
@@ -488,8 +485,8 @@ class MachineCopyPropagation {
   bool UseCopyInstr;
 
 public:
-  MachineCopyPropagation(bool CopyInstr = false)
-      : UseCopyInstr(CopyInstr || MCPUseCopyInstr) {}
+  MachineCopyPropagation(const CodeGenOptions &Opts, bool CopyInstr)
+      : Opts(Opts), UseCopyInstr(CopyInstr || Opts.mcp_use_is_copy_instr) {}
 
   bool run(MachineFunction &MF);
 
@@ -1602,14 +1599,14 @@ bool MachineCopyPropagationLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  return MachineCopyPropagation(UseCopyInstr).run(MF);
+  return MachineCopyPropagation(getCodeGenOptions(MF), UseCopyInstr).run(MF);
 }
 
 PreservedAnalyses
 MachineCopyPropagationPass::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &) {
   MFPropsModifier _(*this, MF);
-  if (!MachineCopyPropagation(UseCopyInstr).run(MF))
+  if (!MachineCopyPropagation(getCodeGenOptions(MF), UseCopyInstr).run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
@@ -1617,19 +1614,9 @@ MachineCopyPropagationPass::run(MachineFunction &MF,
 }
 
 bool MachineCopyPropagation::run(MachineFunction &MF) {
-  bool IsSpillageCopyElimEnabled = false;
-  switch (EnableSpillageCopyElimination) {
-  case cl::boolOrDefault::BOU_UNSET:
-    IsSpillageCopyElimEnabled =
-        MF.getSubtarget().enableSpillageCopyElimination();
-    break;
-  case cl::boolOrDefault::BOU_TRUE:
-    IsSpillageCopyElimEnabled = true;
-    break;
-  case cl::boolOrDefault::BOU_FALSE:
-    IsSpillageCopyElimEnabled = false;
-    break;
-  }
+  bool IsSpillageCopyElimEnabled =
+      valueOr(Opts.mcp_spill_copy_elim,
+              MF.getSubtarget().enableSpillageCopyElimination());
 
   Changed = false;
 

@@ -27,7 +27,7 @@ def X86_Dialect : Dialect {
   let name = "x86";
   let cppNamespace = "::mlir::x86";
 
-  let useDefaultTypePrinterParser = 1;
+  let hasTypes = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterCoalescer.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
@@ -48,7 +49,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -75,57 +75,12 @@ STATISTIC(NumLaneConflicts, "Number of dead lane conflicts tested");
 STATISTIC(NumLaneResolves, "Number of dead lane conflicts resolved");
 STATISTIC(NumShrinkToUses, "Number of shrinkToUses called");
 
-static cl::opt<bool> EnableJoining("join-liveintervals",
-                                   cl::desc("Coalesce copies (default=true)"),
-                                   cl::init(true), cl::Hidden);
-
-static cl::opt<bool> UseTerminalRule("terminal-rule",
-                                     cl::desc("Apply the terminal rule"),
-                                     cl::init(true), cl::Hidden);
-
-/// Temporary flag to test critical edge unsplitting.
-static cl::opt<bool> EnableJoinSplits(
-    "join-splitedges",
-    cl::desc("Coalesce copies on split edges (default=subtarget)"), cl::Hidden);
-
-/// Temporary flag to test global copy optimization.
-static cl::opt<cl::boolOrDefault> EnableGlobalCopies(
-    "join-globalcopies",
-    cl::desc("Coalesce copies that span blocks (default=subtarget)"),
-    cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
-
-static cl::opt<bool> VerifyCoalescing(
-    "verify-coalescing",
-    cl::desc("Verify machine instrs before and after register coalescing"),
-    cl::Hidden);
-
-static cl::opt<unsigned> LateRematUpdateThreshold(
-    "late-remat-update-threshold", cl::Hidden,
-    cl::desc("During rematerialization for a copy, if the def instruction has "
-             "many other copy uses to be rematerialized, delay the multiple "
-             "separate live interval update work and do them all at once after "
-             "all those rematerialization are done. It will save a lot of "
-             "repeated work. "),
-    cl::init(100));
-
-static cl::opt<unsigned> LargeIntervalSizeThreshold(
-    "large-interval-size-threshold", cl::Hidden,
-    cl::desc("If the valnos size of an interval is larger than the threshold, "
-             "it is regarded as a large interval. "),
-    cl::init(100));
-
-static cl::opt<unsigned> LargeIntervalFreqThreshold(
-    "large-interval-freq-threshold", cl::Hidden,
-    cl::desc("For a large interval, if it is coalesced with other live "
-             "intervals many times more than the threshold, stop its "
-             "coalescing to control the compile time. "),
-    cl::init(256));
-
 namespace {
 
 class JoinVals;
 
 class RegisterCoalescer : private LiveRangeEdit::Delegate {
+  const CodeGenOptions &Opts;
   MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -320,7 +275,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
 
   /// Fix up the subranges of \p LI after values were pruned by the join:
   /// re-extend the pruned PHI inputs in PHIKills to their remaining defs, and
-  /// shrink the subranges in ShrinkMask.
+  /// request a shrink of LI if any subrange is in ShrinkMask.
   void updatePrunedSubRanges(LiveInterval &LI);
 
   /// If the given machine operand reads only undefined lanes add an undef
@@ -357,9 +312,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// This method does the proper fixing of the live-ranges when the afore
   /// mentioned method returns true.
   void shrinkToUses(LiveInterval *LI,
-                    SmallVectorImpl<MachineInstr *> *Dead = nullptr) {
+                    SmallVectorImpl<MachineInstr *> *Dead = nullptr,
+                    LaneBitmask SubRangeMask = LaneBitmask::getAll()) {
     NumShrinkToUses++;
-    if (LIS->shrinkToUses(LI, Dead)) {
+    if (LIS->shrinkToUses(LI, Dead, SubRangeMask)) {
       /// Check whether or not \p LI is composed by multiple connected
       /// components and if that is the case, fix that.
       SmallVector<LiveInterval *, 8> SplitLIs;
@@ -391,14 +347,11 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
                                         LiveRange &RegRange, JoinVals &Vals2);
 
 public:
-  // For legacy pass only.
-  RegisterCoalescer() = default;
-  RegisterCoalescer &operator=(RegisterCoalescer &&Other) = default;
-
-  RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,
-                    const MachineLoopInfo *Loops,
+  RegisterCoalescer(const CodeGenOptions &Opts, LiveIntervals *LIS,
+                    SlotIndexes *SI, const MachineLoopInfo *Loops,
                     const RegisterClassInfo *RegClassInfo)
-      : LIS(LIS), SI(SI), Loops(Loops), RegClassInfo(RegClassInfo) {}
+      : Opts(Opts), LIS(LIS), SI(SI), Loops(Loops), RegClassInfo(RegClassInfo) {
+  }
 
   bool run(MachineFunction &MF);
 };
@@ -1690,7 +1643,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     if (UseMO.getParent()->isCopyLike())
       NumCopyUses++;
   }
-  if (NumCopyUses < LateRematUpdateThreshold) {
+  if (NumCopyUses < Opts.late_remat_update_threshold) {
     // The source interval can become smaller because we removed a use.
     shrinkToUses(&SrcInt, &DeadDefs);
     if (!DeadDefs.empty())
@@ -2028,13 +1981,8 @@ void RegisterCoalescer::updatePrunedSubRanges(LiveInterval &LI) {
       LIS->extendToIndices(S, EndPoints, Undefs);
     }
 
-    if ((S.LaneMask & ShrinkMask).none())
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
-                      << ")\n");
-    LIS->shrinkToUses(S, LI.reg());
-    ShrinkMainRange = true;
+    if ((S.LaneMask & ShrinkMask).any())
+      ShrinkMainRange = true;
   }
 
   LI.removeEmptySubRanges();
@@ -2260,8 +2208,10 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
   // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
   // interval. Since CP.getSrcReg() is in ToBeUpdated set and its live interval
   // is not up-to-date, need to update the merged live interval here.
-  if (ShrinkMainRange || ToBeUpdated.count(CP.getSrcReg()))
+  if (ToBeUpdated.count(CP.getSrcReg()))
     shrinkToUses(&LIS->getInterval(CP.getDstReg()));
+  else if (ShrinkMainRange)
+    shrinkToUses(&LIS->getInterval(CP.getDstReg()), nullptr, ShrinkMask);
 
   // SrcReg is guaranteed to be the register whose live interval that is
   // being merged.
@@ -3292,10 +3242,12 @@ void JoinVals::pruneValues(JoinVals &Other,
       // Check if we're replacing an IMPLICIT_DEF value. The IMPLICIT_DEF
       // instructions are only inserted to provide a live-out value for PHI
       // predecessors, so the instruction should simply go away once its value
-      // has been replaced.
+      // has been replaced. If it still carries defined lanes, this def must
+      // preserve them.
       Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
-      bool EraseImpDef =
-          OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
+      bool EraseImpDef = OtherV.ErasableImplicitDef &&
+                         OtherV.Resolution == CR_Keep &&
+                         OtherV.ValidLanes.none();
       if (!Def.isBlock()) {
         if (changeInstrs) {
           // Remove <def,read-undef> flags. This def is now a partial redef.
@@ -3327,10 +3279,15 @@ void JoinVals::pruneValues(JoinVals &Other,
         // computeAssignment(), the value that was originally copied could have
         // been replaced.
         Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
-        bool EraseImpDef =
-            OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
-        // If the source is an erasable IMPLICIT_DEF, the pruned endpoint is
-        // the next def boundary, not a real use — discard it.
+        // If the source is an erasable IMPLICIT_DEF without any defined lanes,
+        // the pruned endpoints only read undefined values, so discard them. A
+        // partial IMPLICIT_DEF without <read-undef> still carries the lanes of
+        // the value it redefines (its ValidLanes). Without lane information we
+        // cannot tell which endpoints read those lanes, so keep all of them and
+        // restore the live range.
+        bool EraseImpDef = OtherV.ErasableImplicitDef &&
+                           OtherV.Resolution == CR_Keep &&
+                           OtherV.ValidLanes.none();
         LIS->pruneValue(LR, Def, EraseImpDef ? nullptr : &EndPoints);
         LLVM_DEBUG(dbgs() << "\t\tpruned all of " << printReg(Reg) << " at "
                           << Def << ": " << LR << '\n');
@@ -3700,10 +3657,10 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
 }
 
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
-  if (LI.valnos.size() < LargeIntervalSizeThreshold)
+  if (LI.valnos.size() < Opts.large_interval_size_threshold)
     return false;
   auto &Counter = LargeLIVisitCounter[LI.reg()];
-  if (Counter < LargeIntervalFreqThreshold) {
+  if (Counter < Opts.large_interval_freq_threshold) {
     Counter++;
     return false;
   }
@@ -4145,7 +4102,7 @@ static bool isTerminalReg(Register DstReg, const MachineInstr &Copy,
 
 bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
   assert(Copy.isCopyLike());
-  if (!UseTerminalRule)
+  if (!Opts.terminal_rule)
     return false;
   Register SrcReg, DstReg;
   unsigned SrcSubReg = 0, DstSubReg = 0;
@@ -4298,7 +4255,7 @@ RegisterCoalescerPass::run(MachineFunction &MF,
   auto &Loops = MFAM.getResult<MachineLoopAnalysis>(MF);
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
   auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
-  RegisterCoalescer Impl(&LIS, SI, &Loops, RegClassInfo);
+  RegisterCoalescer Impl(getCodeGenOptions(MF), &LIS, SI, &Loops, RegClassInfo);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -4315,7 +4272,7 @@ bool RegisterCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *RegClassInfo =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   SlotIndexes *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  RegisterCoalescer Impl(LIS, SI, Loops, RegClassInfo);
+  RegisterCoalescer Impl(getCodeGenOptions(MF), LIS, SI, Loops, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -4342,10 +4299,8 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   const TargetSubtargetInfo &STI = fn.getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
-  if (EnableGlobalCopies == cl::boolOrDefault::BOU_UNSET)
-    JoinGlobalCopies = STI.enableJoinGlobalCopies();
-  else
-    JoinGlobalCopies = (EnableGlobalCopies == cl::boolOrDefault::BOU_TRUE);
+  JoinGlobalCopies =
+      valueOr(Opts.join_globalcopies, STI.enableJoinGlobalCopies());
 
   // If there are PHIs tracked by debug-info, they will need updating during
   // coalescing. Build an index of those PHIs to ease updating.
@@ -4363,16 +4318,16 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   // The MachineScheduler does not currently require JoinSplitEdges. This will
   // either be enabled unconditionally or replaced by a more general live range
   // splitting optimization.
-  JoinSplitEdges = EnableJoinSplits;
+  JoinSplitEdges = Opts.join_splitedges;
 
-  if (VerifyCoalescing)
+  if (Opts.verify_coalescing)
     MF->verify(LIS, SI, "Before register coalescing", &errs());
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
 
   // Join (coalesce) intervals if requested.
-  if (EnableJoining)
+  if (Opts.join_liveintervals)
     joinAllIntervals();
 
   // After deleting a lot of copies, register classes may be less constrained.
@@ -4424,7 +4379,7 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
 
   LLVM_DEBUG(LIS->dump());
 
-  if (VerifyCoalescing)
+  if (Opts.verify_coalescing)
     MF->verify(LIS, SI, "After register coalescing", &errs());
   return true;
 }

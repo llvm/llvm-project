@@ -487,8 +487,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 /// %CurrentIter = CURRENT-ITERATION-PHI [ %StartV, %vector.ph ],
 ///                                      [ %NextIter, %vector.body ]
 /// %AVL = phi [ trip-count, %vector.ph ], [ %NextAVL, %vector.body ]
-/// %cmp = cmp ult %AVL, MaxSafeElements
-/// %SAFE_AVL = select %cmp, %AVL, MaxSafeElements
+/// %SAFE_AVL = umin %AVL, MaxSafeElements
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL
 /// ...
 /// %OpEVL = cast i32 %VPEVL to IVSize
@@ -522,9 +521,9 @@ void VPlanTransforms::addExplicitVectorLength(
   if (MaxSafeElements) {
     // Support for MaxSafeDist for correct loop emission.
     VPValue *AVLSafe = Plan.getConstantInt(CanIVTy, *MaxSafeElements);
-    VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
-    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc::getUnknown(),
-                               "safe_avl");
+    AVL =
+        Builder.createScalarIntrinsic(Intrinsic::umin, {AVL, AVLSafe}, CanIVTy,
+                                      DebugLoc::getUnknown(), "safe_avl");
   }
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
                                      DebugLoc::getUnknown(), "evl");
@@ -613,12 +612,10 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
              m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi))))
     return;
 
-  // The AVL may be capped to a safe distance.
-  VPValue *SafeAVL, *UnsafeAVL;
+  // The AVL may be capped to the safe distance, a live-in.
+  VPValue *UnsafeAVL;
   if (match(AVL,
-            m_Select(m_SpecificICmp(CmpInst::ICMP_ULT, m_VPValue(UnsafeAVL),
-                                    m_VPValue(SafeAVL)),
-                     m_Deferred(UnsafeAVL), m_Deferred(SafeAVL))))
+            m_Intrinsic<Intrinsic::umin>(m_VPValue(UnsafeAVL), m_LiveIn())))
     AVL = UnsafeAVL;
 
   VPValue *AVLNext;

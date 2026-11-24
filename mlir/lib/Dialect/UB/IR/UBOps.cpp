@@ -27,6 +27,18 @@ struct UBInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
+
+  /// `ub.unreachable` does not return to the caller, so it stays in place when
+  /// the inlined region has more than one block.
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    assert(isa<UnreachableOp>(op) && "unexpected UB terminator");
+  }
+
+  /// The single-block fast path erases the terminator and continues the
+  /// inlined block with the operations after the call, which is wrong for
+  /// `ub.unreachable`. This hook is only asked when the inlined block ends in a
+  /// UB terminator, and `ub.unreachable` is the only one.
+  bool allowSingleBlockOptimization(Block *) const final { return false; }
 };
 } // namespace
 
@@ -38,10 +50,6 @@ void UBDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/UB/IR/UBOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/UB/IR/UBOpsAttributes.cpp.inc"
       >();
   addInterfaces<UBInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, UBDialect>();

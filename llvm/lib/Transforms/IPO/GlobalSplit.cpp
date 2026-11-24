@@ -193,5 +193,10 @@ static bool splitGlobals(Module &M) {
 PreservedAnalyses GlobalSplitPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!splitGlobals(M))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+
+  // Only global variables were changed.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

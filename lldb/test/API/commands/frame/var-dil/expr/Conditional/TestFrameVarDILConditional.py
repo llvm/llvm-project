@@ -17,8 +17,6 @@ class TestFrameVarDILConditional(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # DIL evaluates only the operand chosen by the condition,
         # and doesn't check the type or evaluate the other operand.
         # Check integer values.

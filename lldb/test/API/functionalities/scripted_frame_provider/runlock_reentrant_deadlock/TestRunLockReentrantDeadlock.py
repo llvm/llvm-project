@@ -28,11 +28,6 @@ from lldbsuite.test.lldbtest import *
 class TestRunLockReentrantDeadlock(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24528 (scripted breakpoint resolvers fail on "
-        "Windows; same XFAIL as the sibling tests in this directory)",
-    )
     @skipIfWasm  # the was_hit callback increments the value with an expression
     def test_runlock_reentrant_no_deadlock(self):
         """
