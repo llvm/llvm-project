@@ -309,7 +309,7 @@ define ppc_fp128 @ret_sinpi_ppc_fp128(ppc_fp128 %arg) {
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { ppc_fp128, ppc_fp128 } [[CALL]], 0
 ; CHECK-NEXT:    ret ppc_fp128 [[SIN]]
 ;
-  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppc_fp128(ppc_fp128 %arg)
+  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppcf128(ppc_fp128 %arg)
   %sin = extractvalue {ppc_fp128, ppc_fp128} %call, 0
   ret ppc_fp128 %sin
 }
@@ -321,7 +321,7 @@ define ppc_fp128 @ret_cospi_ppc_fp128(ppc_fp128 %arg) {
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { ppc_fp128, ppc_fp128 } [[CALL]], 1
 ; CHECK-NEXT:    ret ppc_fp128 [[COS]]
 ;
-  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppc_fp128(ppc_fp128 %arg)
+  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppcf128(ppc_fp128 %arg)
   %cos = extractvalue {ppc_fp128, ppc_fp128} %call, 1
   ret ppc_fp128 %cos
 }
@@ -333,7 +333,7 @@ define ppc_fp128 @ret_sinpi_ppc_fp128_nosub(ppc_fp128 nofpclass(sub) %arg) {
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { ppc_fp128, ppc_fp128 } [[CALL]], 0
 ; CHECK-NEXT:    ret ppc_fp128 [[SIN]]
 ;
-  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppc_fp128(ppc_fp128 %arg)
+  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppcf128(ppc_fp128 %arg)
   %sin = extractvalue {ppc_fp128, ppc_fp128} %call, 0
   ret ppc_fp128 %sin
 }
@@ -347,7 +347,7 @@ define ppc_fp128 @ret_sinpi_ppc_fp128_may_be_subnormal(ppc_fp128 nofpclass(nan i
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { ppc_fp128, ppc_fp128 } [[CALL]], 0
 ; CHECK-NEXT:    ret ppc_fp128 [[SIN]]
 ;
-  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppc_fp128(ppc_fp128 %arg)
+  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppcf128(ppc_fp128 %arg)
   %sin = extractvalue {ppc_fp128, ppc_fp128} %call, 0
   ret ppc_fp128 %sin
 }
@@ -361,7 +361,7 @@ define ppc_fp128 @ret_cospi_ppc_fp128_may_be_subnormal(ppc_fp128 nofpclass(nan i
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { ppc_fp128, ppc_fp128 } [[CALL]], 1
 ; CHECK-NEXT:    ret ppc_fp128 [[COS]]
 ;
-  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppc_fp128(ppc_fp128 %arg)
+  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppcf128(ppc_fp128 %arg)
   %cos = extractvalue {ppc_fp128, ppc_fp128} %call, 1
   ret ppc_fp128 %cos
 }
