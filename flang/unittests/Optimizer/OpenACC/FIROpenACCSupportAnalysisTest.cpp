@@ -91,8 +91,7 @@ struct FIROpenACCSupportAnalysisTest : public testing::Test {
         builder.getFunctionType({builder.getI64Type()}, {}));
     Block *entry = func.addEntryBlock();
     builder.setInsertionPointToStart(entry);
-    Type arrayTy = fir::ReferenceType::get(
-        fir::SequenceType::get({10}, builder.getI32Type()));
+    Type arrayTy = fir::SequenceType::get({10}, builder.getI32Type());
     Value addr = fir::AllocaOp::create(builder, loc, arrayTy);
     return fir::DeclareOp::create(builder, loc, addr.getType(), addr,
         /*shape=*/Value{},
