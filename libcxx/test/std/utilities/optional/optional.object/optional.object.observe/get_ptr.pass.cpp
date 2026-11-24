@@ -45,8 +45,10 @@ constexpr bool test() {
     std::optional<int> opt{94};
 
     assert(*opt.get_ptr() == 94);
+    assert(opt.get_ptr() == &opt.value());
 
     assert(*std::as_const(opt).get_ptr() == 94);
+    assert(std::as_const(opt).get_ptr() == &std::as_const(opt).value());
   }
   // [optional.ref.observe]
   {
@@ -65,8 +67,10 @@ constexpr bool test() {
     std::optional<int&> opt{i};
 
     assert(*opt.get_ptr() == 94);
+    assert(opt.get_ptr() == &i);
 
     assert(*std::as_const(opt).get_ptr() == 94);
+    assert(std::as_const(opt).get_ptr() == &i);
   }
 
   return true;
