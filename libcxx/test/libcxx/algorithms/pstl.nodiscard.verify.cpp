@@ -152,4 +152,8 @@ void test() {
   std::remove_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b), 1);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::remove_copy_if(std::execution::par, std::begin(a), std::end(a), std::begin(b), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::unique_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::unique_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b), pred2);
 }
