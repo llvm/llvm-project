@@ -10,7 +10,9 @@ target triple = "nvptx64-nvidia-cuda"
 define i32 @load_local_copy(i64 %index) {
 ; CHECK-LABEL: define i32 @load_local_copy(
 ; CHECK-SAME: i64 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[ELEMENT:%.*]] = getelementptr inbounds [4 x i8], ptr @table, i64 [[INDEX]]
+; CHECK-NEXT:    [[BUFFER:%.*]] = alloca [8 x i32], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(32) [[BUFFER]], ptr noundef nonnull align 4 dereferenceable(32) @table, i64 32, i1 false)
+; CHECK-NEXT:    [[ELEMENT:%.*]] = getelementptr inbounds [4 x i8], ptr [[BUFFER]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LOCAL:%.*]] = addrspacecast ptr [[ELEMENT]] to ptr addrspace(5)
 ; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr addrspace(5) [[LOCAL]], align 4
 ; CHECK-NEXT:    ret i32 [[VALUE]]

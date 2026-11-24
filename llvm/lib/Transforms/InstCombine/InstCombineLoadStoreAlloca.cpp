@@ -41,7 +41,8 @@ STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 /// location, we can optimize this.
 static bool isOnlyCopiedFromConstantMemory(
     AAResults *AA, AllocaInst *V, MemTransferInst *&TheCopy,
-    SmallVectorImpl<Instruction *> &ToDelete, unsigned MaxUsers) {
+    SmallVectorImpl<Instruction *> &ToDelete, bool &HasAddrSpaceCast,
+    unsigned MaxUsers) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
   // ahead and replace the value with the memory location, this lets the caller
   // quickly eliminate the markers.
@@ -76,6 +77,7 @@ static bool isOnlyCopiedFromConstantMemory(
       }
       if (isa<BitCastInst, AddrSpaceCastInst>(I)) {
         // If uses of the bitcast are ok, we are ok.
+        HasAddrSpaceCast |= isa<AddrSpaceCastInst>(I);
         Worklist.emplace_back(I, IsOffset);
         continue;
       }
@@ -158,9 +160,11 @@ static bool isOnlyCopiedFromConstantMemory(
 static MemTransferInst *
 isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *AI,
                                SmallVectorImpl<Instruction *> &ToDelete,
+                               bool &HasAddrSpaceCast,
                                unsigned MaxUsers) {
   MemTransferInst *TheCopy = nullptr;
-  if (isOnlyCopiedFromConstantMemory(AA, AI, TheCopy, ToDelete, MaxUsers))
+  if (isOnlyCopiedFromConstantMemory(AA, AI, TheCopy, ToDelete,
+                                     HasAddrSpaceCast, MaxUsers))
     return TheCopy;
   return nullptr;
 }
@@ -550,9 +554,19 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   // constructs like "void foo() { int A[] = {1,2,3,4,5,6,7,8,9...}; }" if 'A'
   // is only subsequently read.
   SmallVector<Instruction *, 4> ToDelete;
+  bool HasAddrSpaceCast = false;
   if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(
-          AA, &AI, ToDelete, CLOpts.max_copied_from_constant_users)) {
+          AA, &AI, ToDelete, HasAddrSpaceCast,
+          CLOpts.max_copied_from_constant_users)) {
     Value *TheSrc = Copy->getSource();
+    unsigned SrcAddrSpace = TheSrc->getType()->getPointerAddressSpace();
+    bool SameAddrSpace = AI.getAddressSpace() == SrcAddrSpace;
+    // Generic pointers of the same type can point into different memory
+    // spaces. Replacing the alloca could invalidate a derived address space
+    // cast, for example a cast from generic to local memory on NVPTX.
+    if (SameAddrSpace && HasAddrSpaceCast)
+      return visitAllocSite(AI);
+
     Align AllocaAlign = AI.getAlign();
     Align SourceAlign = getOrEnforceKnownAlignment(
       TheSrc, AllocaAlign, DL, &AI, &AC, &DT);
@@ -563,8 +577,7 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
       // is an instruction instead of a constant or argument?
       LLVM_DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
       LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
-      unsigned SrcAddrSpace = TheSrc->getType()->getPointerAddressSpace();
-      if (AI.getAddressSpace() == SrcAddrSpace) {
+      if (SameAddrSpace) {
         for (Instruction *Delete : ToDelete)
           eraseInstFromFunction(*Delete);
 
