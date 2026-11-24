@@ -15,9 +15,6 @@ name:            inttoptr_p0_s64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 body:             |
   bb.1.entry:
     liveins: $rdi

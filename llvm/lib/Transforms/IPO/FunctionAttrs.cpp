@@ -2276,6 +2276,26 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   return Changed;
 }
 
+/// Invalidate analyses for a function with modified attributes, so that we
+/// don't have to invalidate all analyses for all functions.
+static void invalidateChangedFunction(FunctionAnalysisManager &FAM,
+                                      Function &Changed) {
+  PreservedAnalyses FuncPA;
+  // We haven't changed the CFG for modified functions.
+  FuncPA.preserveSet<CFGAnalyses>();
+  FAM.invalidate(Changed, FuncPA);
+  // Also invalidate any direct callers of changed functions since analyses
+  // may care about attributes of direct callees. For example, MemorySSA cares
+  // about whether or not a call's callee modifies memory and queries that
+  // through function attributes.
+  for (auto *U : Changed.users()) {
+    if (auto *Call = dyn_cast<CallBase>(U)) {
+      if (Call->getCalledOperand() == &Changed)
+        FAM.invalidate(*Call->getFunction(), FuncPA);
+    }
+  }
+}
+
 PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
                                                   CGSCCAnalysisManager &AM,
                                                   LazyCallGraph &CG,
@@ -2309,24 +2329,8 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
-  // Invalidate analyses for modified functions so that we don't have to
-  // invalidate all analyses for all functions in this SCC.
-  PreservedAnalyses FuncPA;
-  // We haven't changed the CFG for modified functions.
-  FuncPA.preserveSet<CFGAnalyses>();
-  for (Function *Changed : ChangedFunctions) {
-    FAM.invalidate(*Changed, FuncPA);
-    // Also invalidate any direct callers of changed functions since analyses
-    // may care about attributes of direct callees. For example, MemorySSA cares
-    // about whether or not a call's callee modifies memory and queries that
-    // through function attributes.
-    for (auto *U : Changed->users()) {
-      if (auto *Call = dyn_cast<CallBase>(U)) {
-        if (Call->getCalledOperand() == Changed)
-          FAM.invalidate(*Call->getFunction(), FuncPA);
-      }
-    }
-  }
+  for (Function *Changed : ChangedFunctions)
+    invalidateChangedFunction(FAM, *Changed);
 
   PreservedAnalyses PA;
   // We have not added or removed functions.
@@ -2423,7 +2427,8 @@ static bool addNoFPClassAttrsTopDown(Function &F) {
   return Changed;
 }
 
-static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG) {
+static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG,
+                                         FunctionAnalysisManager &FAM) {
   // We only have a post-order SCC traversal (because SCCs are inherently
   // discovered in post-order), so we accumulate them in a vector and then walk
   // it in reverse. This is simpler than using the RPO iterator infrastructure
@@ -2445,8 +2450,12 @@ static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG) {
   }
   bool Changed = false;
   for (auto *F : llvm::reverse(Worklist)) {
-    Changed |= addNoRecurseAttrsTopDown(*F);
-    Changed |= addNoFPClassAttrsTopDown(*F);
+    bool FChanged = addNoRecurseAttrsTopDown(*F);
+    FChanged |= addNoFPClassAttrsTopDown(*F);
+    if (FChanged) {
+      invalidateChangedFunction(FAM, *F);
+      Changed = true;
+    }
   }
 
   return Changed;
@@ -2456,11 +2465,16 @@ PreservedAnalyses
 ReversePostOrderFunctionAttrsPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
-  if (!deduceFunctionAttributeInRPO(M, CG))
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  if (!deduceFunctionAttributeInRPO(M, CG, FAM))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<LazyCallGraphAnalysis>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
 
@@ -2486,6 +2500,8 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
   // module.
   bool Changed = false;
   LazyCallGraph &CG = MAM.getResult<LazyCallGraphAnalysis>(M);
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   CG.buildRefSCCs();
 
   for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
@@ -2511,14 +2527,17 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
     if (!mayHaveRecursiveCallee(F, AnyFunctionsAddressIsTaken)) {
       F.setDoesNotRecurse();
       ++NumNoRecurse;
+      invalidateChangedFunction(FAM, F);
       Changed = true;
     }
   }
 
+  if (!Changed)
+    return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
-  if (Changed)
-    PA.preserve<LazyCallGraphAnalysis>();
-  else
-    PA = PreservedAnalyses::all();
+  PA.preserve<LazyCallGraphAnalysis>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }

@@ -604,10 +604,6 @@ mlir::AffineMap TestMemRefLayoutAttr::getAffineMap() const {
 //===----------------------------------------------------------------------===//
 
 void TestDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "TestAttrDefs.cpp.inc"
-      >();
   registerDynamicAttr(getDynamicSingletonAttr(this));
   registerDynamicAttr(getDynamicPairAttr(this));
   registerDynamicAttr(getDynamicCustomAssemblyFormatAttr(this));

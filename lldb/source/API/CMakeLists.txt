@@ -71,6 +71,7 @@ add_lldb_library(liblldb ${liblldb_library_type} ${option_framework}
   SBFrameList.cpp
   SBFunction.cpp
   SBHostOS.cpp
+  SBInitializationOptions.cpp
   SBInstruction.cpp
   SBInstructionList.cpp
   SBLanguageRuntime.cpp

@@ -111,24 +111,7 @@ LIBC_INLINE_VAR constexpr double ASINPIF_COEFFS[13] = {
 // Used as: asinpif(x) ~ x * (ASINPIF_COEFFS[0] + v2 * asinpi_eval(v2))
 // where v2 = x^2.
 LIBC_INLINE double asinpi_eval(double v2) {
-  double v4 = v2 * v2;
-  double v8 = v4 * v4;
-  double v16 = v8 * v8;
-
-  double p0 = fputil::multiply_add(v2, ASINPIF_COEFFS[2], ASINPIF_COEFFS[1]);
-  double p1 = fputil::multiply_add(v2, ASINPIF_COEFFS[4], ASINPIF_COEFFS[3]);
-  double p2 = fputil::multiply_add(v2, ASINPIF_COEFFS[6], ASINPIF_COEFFS[5]);
-  double p3 = fputil::multiply_add(v2, ASINPIF_COEFFS[8], ASINPIF_COEFFS[7]);
-  double p4 = fputil::multiply_add(v2, ASINPIF_COEFFS[10], ASINPIF_COEFFS[9]);
-  double p5 = fputil::multiply_add(v2, ASINPIF_COEFFS[12], ASINPIF_COEFFS[11]);
-
-  double q0 = fputil::multiply_add(v4, p1, p0);
-  double q1 = fputil::multiply_add(v4, p3, p2);
-  double q2 = fputil::multiply_add(v4, p5, p4);
-
-  double r0 = fputil::multiply_add(v8, q1, q0);
-
-  return fputil::multiply_add(v16, q2, r0);
+  return fputil::estrin_polyeval</*OFFSET=*/1>(v2, ASINPIF_COEFFS);
 }
 
 // The Taylor expansion of asin(x) around 0 is:

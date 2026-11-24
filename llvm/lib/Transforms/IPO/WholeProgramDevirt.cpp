@@ -584,7 +584,9 @@ struct DevirtModule {
         OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
           return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
         }),
-        DevirtSpeculatively(DevirtSpeculatively) {
+        DevirtSpeculatively(
+            DevirtSpeculatively ||
+            (ImportSummary && ImportSummary->withSpeculativeDevirt())) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -721,20 +723,20 @@ struct DevirtIndex {
 
   PatternList FunctionsToSkip;
 
-  bool DevirtSpeculatively = false;
+  // Whether speculative devirtualization is enabled, as recorded in the
+  // combined index by runWholeProgramDevirtOnIndex.
+  const bool DevirtSpeculatively;
 
   DevirtIndex(
       ModuleSummaryIndex &ExportSummary,
       std::set<GlobalValue::GUID> &ExportedGUIDs,
       std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-      DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
-      const LLVMContext *Ctx)
+      DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr)
       : ExportSummary(ExportSummary), ExportedGUIDs(ExportedGUIDs),
         LocalWPDTargetsMap(LocalWPDTargetsMap),
-        ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr) {
+        ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr),
+        DevirtSpeculatively(ExportSummary.withSpeculativeDevirt()) {
     FunctionsToSkip.init(SkipFunctionNames);
-    if (Ctx)
-      DevirtSpeculatively = getIPOOptions(*Ctx).devirtualize_speculatively;
   }
 
   bool tryFindVirtualCallTargets(std::vector<ValueInfo> &TargetsForSlot,
@@ -757,10 +759,15 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   const bool DevirtualizeSpeculatively =
       DevirtSpeculatively || getIPOOptions(M).devirtualize_speculatively;
 
+  // Preserving the proxy invalidates each function individually, which keeps
+  // analyses like TargetLibraryInfo.
+  PreservedAnalyses ChangedPA;
+  ChangedPA.preserve<FunctionAnalysisManagerModuleProxy>();
+
   if (UseCommandLine) {
     if (!DevirtModule::runForTesting(M, MAM, DevirtualizeSpeculatively))
       return PreservedAnalyses::all();
-    return PreservedAnalyses::none();
+    return ChangedPA;
   }
 
   // FIXME: The state of a run should not be kept in the pass. A more resilient
@@ -777,7 +784,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtualizeSpeculatively)
            .run())
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  return ChangedPA;
 }
 
 // Enable whole program visibility if enabled by client (e.g. linker) or
@@ -856,7 +863,8 @@ void llvm::updateVCallVisibilityInModule(
 }
 
 void llvm::updatePublicTypeTestCalls(Module &M,
-                                     bool WholeProgramVisibilityEnabledInLTO) {
+                                     bool WholeProgramVisibilityEnabledInLTO,
+                                     bool DevirtSpeculativelyInIndex) {
   llvm::TimeTraceScope timeScope("Update public type test calls");
   Function *PublicTypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
@@ -873,11 +881,12 @@ void llvm::updatePublicTypeTestCalls(Module &M,
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
-  }
-  // TODO: With distributed ThinLTO, the type tests are still dropped here
-  // even when devirtualize-speculatively is used, because the distributed
-  // backends don't see this option.
-  else if (!getIPOOptions(M).devirtualize_speculatively) {
+  } else if (!DevirtSpeculativelyInIndex &&
+             !getIPOOptions(M).devirtualize_speculatively) {
+    // Keep the public type tests when speculative devirtualization is enabled,
+    // either via the option or as recorded in the combined index by the thin
+    // link (needed by distributed ThinLTO backends, which don't see the
+    // option), since WPD uses them to find the call sites to devirtualize.
     auto *True = ConstantInt::getTrue(M.getContext());
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
@@ -935,8 +944,14 @@ void llvm::runWholeProgramDevirtOnIndex(
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
     DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
     const LLVMContext *Ctx) {
+  // Record in the combined index whether speculative devirtualization is
+  // enabled. This is consulted by the index-based WPD below, and by the
+  // backends (in particular distributed ThinLTO backends, which do not see the
+  // option) so that they apply the speculative resolutions.
+  if (Ctx && getIPOOptions(*Ctx).devirtualize_speculatively)
+    Summary.setWithSpeculativeDevirt();
   DevirtIndex(Summary, ExportedGUIDs, LocalWPDTargetsMap,
-              ExternallyVisibleSymbolNamesPtr, Ctx)
+              ExternallyVisibleSymbolNamesPtr)
       .run();
 }
 

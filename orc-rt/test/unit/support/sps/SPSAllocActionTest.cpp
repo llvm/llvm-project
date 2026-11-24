@@ -128,6 +128,79 @@ TEST(SPSAllocActionTest, RunActionWithUndecodableArgs) {
                "Could not deserialize allocation action argument buffer");
 }
 
+// Handler that takes its string arguments by const lvalue reference and by
+// rvalue reference, and writes their concatenation to the given std::string*.
+static orc_rt_WrapperFunctionBuffer concat_sps_allocaction(const char *ArgData,
+                                                           size_t ArgSize) {
+  return SPSAllocActionFunction<SPSExecutorAddr, SPSString, SPSString>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr Out, const std::string &A, std::string &&B) {
+               *Out.toPtr<std::string *>() = A + std::move(B);
+               return WrapperFunctionBuffer();
+             })
+      .release();
+}
+
+TEST(SPSAllocActionTest, RunActionWithReferenceArgs) {
+  // Verifies that handlers may take arguments by reference:
+  // AllocActionFunction::handle should deserialize into decayed (value)
+  // types and bind those values to the handler's reference parameters.
+  std::string Result;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, SPSString, SPSString>::from(
+      concat_sps_allocaction, ExecutorAddr::fromPtr(&Result),
+      std::string("hello, "), std::string("world!"));
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+  EXPECT_EQ(Result, "hello, world!");
+}
+
+// Handler that takes its string argument by non-const lvalue reference,
+// modifies it in place, and then moves it into the given std::string*.
+static orc_rt_WrapperFunctionBuffer exclaim_sps_allocaction(const char *ArgData,
+                                                            size_t ArgSize) {
+  return SPSAllocActionFunction<SPSExecutorAddr, SPSString>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr Out, std::string &S) {
+               S += "!";
+               *Out.toPtr<std::string *>() = std::move(S);
+               return WrapperFunctionBuffer();
+             })
+      .release();
+}
+
+TEST(SPSAllocActionTest, RunActionWithNonConstLValueRefArg) {
+  // Verifies that handlers may take arguments by non-const lvalue reference,
+  // binding to (and modifying) the deserialized value.
+  std::string Result;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, SPSString>::from(
+      exclaim_sps_allocaction, ExecutorAddr::fromPtr(&Result),
+      std::string("hello"));
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+  EXPECT_EQ(Result, "hello!");
+}
+
+// Handler that passes its callable to handle as an lvalue rather than as a
+// temporary.
+static orc_rt_WrapperFunctionBuffer
+lvalue_handler_sps_allocaction(const char *ArgData, size_t ArgSize) {
+  auto H = [](ExecutorAddr IntPtr) {
+    *IntPtr.toPtr<int *>() += 1;
+    return WrapperFunctionBuffer();
+  };
+  return SPSAllocActionFunction<SPSExecutorAddr>::handle(ArgData, ArgSize, H)
+      .release();
+}
+
+TEST(SPSAllocActionTest, RunActionWithLValueHandler) {
+  int Val = 0;
+  auto AA = *MakeAllocAction<SPSExecutorAddr>::from(
+      lvalue_handler_sps_allocaction, ExecutorAddr::fromPtr(&Val));
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+  EXPECT_EQ(Val, 1);
+}
+
 // Test the ORC_RT_SPS_ALLOC_ACTION macro.
 static Error check_values_equal(int32_t X, int32_t Y) {
   if (X == Y)
@@ -150,4 +223,51 @@ TEST(SPSAllocActionTest, RunMacroDefinedAllocActionWithErrorFailureReturn) {
   auto B = AA();
   ASSERT_NE(B.getOutOfBandError(), nullptr);
   EXPECT_STREQ(B.getOutOfBandError(), "X and Y differ");
+}
+
+// Test AllocActionFunction::handleWithMethod.
+class Accumulator {
+public:
+  Error add(int32_t N) noexcept {
+    Total += N;
+    return Error::success();
+  }
+  Error take(std::string &S) noexcept {
+    Log = std::move(S);
+    return Error::success();
+  }
+
+  int32_t Total = 0;
+  std::string Log;
+};
+
+ORC_RT_SPS_ALLOC_ACTION_IMPL(
+    method_add_allocaction, (SPSExecutorAddr, int32_t),
+    AllocActionFunction::handleWithMethod(&Accumulator::add))
+ORC_RT_SPS_ALLOC_ACTION_IMPL(
+    method_take_allocaction, (SPSExecutorAddr, SPSString),
+    AllocActionFunction::handleWithMethod(&Accumulator::take))
+
+TEST(SPSAllocActionTest, RunMethodAllocActionCallsTargetObject) {
+  // The method should be called on the object whose address is passed, and
+  // only that object.
+  Accumulator A, B;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, int32_t>::from(
+      method_add_allocaction, ExecutorAddr::fromPtr(&B), int32_t(42));
+  auto R = AA();
+  EXPECT_EQ(R.getOutOfBandError(), nullptr);
+  EXPECT_EQ(A.Total, 0);
+  EXPECT_EQ(B.Total, 42);
+}
+
+TEST(SPSAllocActionTest, RunMethodAllocActionWithNonConstLValueRefArg) {
+  // Method should forward arguments to the wrapped method according to the
+  // method's parameter types. A non-const lvalue reference parameter is the
+  // strictest case: it can't bind to an rvalue.
+  Accumulator A;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, SPSString>::from(
+      method_take_allocaction, ExecutorAddr::fromPtr(&A), std::string("hello"));
+  auto R = AA();
+  EXPECT_EQ(R.getOutOfBandError(), nullptr);
+  EXPECT_EQ(A.Log, "hello");
 }

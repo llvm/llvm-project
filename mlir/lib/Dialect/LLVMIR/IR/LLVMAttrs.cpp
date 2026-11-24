@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrEnums.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -50,18 +50,6 @@ static void printSourceLanguage(AsmPrinter &printer,
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// LLVMDialect registration
-//===----------------------------------------------------------------------===//
-
-void LLVMDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
-
-      >();
-}
 
 //===----------------------------------------------------------------------===//
 // AddressSpaceAttr

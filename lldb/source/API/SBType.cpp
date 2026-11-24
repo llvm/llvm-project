@@ -22,6 +22,7 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "llvm/ADT/APSInt.h"
@@ -391,7 +392,7 @@ const char *SBTypeStaticField::GetName() {
 
   if (!IsValid())
     return "";
-  return m_opaque_up->GetName().GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_up->GetName());
 }
 
 const char *SBTypeStaticField::GetMangledName() {
@@ -399,7 +400,7 @@ const char *SBTypeStaticField::GetMangledName() {
 
   if (!IsValid())
     return "";
-  return m_opaque_up->GetMangledName().GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_up->GetMangledName());
 }
 
 SBType SBTypeStaticField::GetType() {
@@ -634,7 +635,7 @@ const char *SBType::GetName() {
 
   if (!IsValid())
     return "";
-  return m_opaque_sp->GetName().GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetName());
 }
 
 const char *SBType::GetDisplayTypeName() {
@@ -642,7 +643,7 @@ const char *SBType::GetDisplayTypeName() {
 
   if (!IsValid())
     return "";
-  return m_opaque_sp->GetDisplayTypeName().GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetDisplayTypeName());
 }
 
 lldb::TypeClass SBType::GetTypeClass() {
@@ -836,7 +837,7 @@ const char *SBTypeMember::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_up)
-    return m_opaque_up->GetName().GetCString();
+    return StringPool::GetSystemPool().Intern(m_opaque_up->GetName());
   return nullptr;
 }
 
@@ -957,7 +958,7 @@ const char *SBTypeMemberFunction::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_sp)
-    return m_opaque_sp->GetName().GetCString();
+    return StringPool::GetSystemPool().Intern(m_opaque_sp->GetName());
   return nullptr;
 }
 
@@ -972,14 +973,14 @@ const char *SBTypeMemberFunction::GetDemangledName() {
     return nullptr;
 
   Mangled mangled(mangled_str);
-  return mangled.GetDemangledName().GetCString();
+  return StringPool::GetSystemPool().Intern(mangled.GetDemangledName());
 }
 
 const char *SBTypeMemberFunction::GetMangledName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_sp)
-    return m_opaque_sp->GetMangledName().GetCString();
+    return StringPool::GetSystemPool().Intern(m_opaque_sp->GetMangledName());
   return nullptr;
 }
 
