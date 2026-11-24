@@ -1872,8 +1872,8 @@ def riscv_pwmul   : RVSDNode<"PWMUL",   SDT_RISCVPackedWideningMul, [SDNPCommuta
 def riscv_pwmulu  : RVSDNode<"PWMULU",  SDT_RISCVPackedWideningMul, [SDNPCommutative]>;
 def riscv_pwmulsu : RVSDNode<"PWMULSU", SDT_RISCVPackedWideningMul>;
 
-// The result is either a vector or a scalar GPR (or GPR pair on RV32) holding
-// the products of the selected elements of the vector sources.
+// The result is either a vector or a scalar GPR holding the products of the
+// selected elements of the vector sources.
 def SDT_RISCVWideningMulByHalves
     : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
                            SDTCisSameAs<1, 2>,
