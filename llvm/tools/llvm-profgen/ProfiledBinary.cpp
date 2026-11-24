@@ -601,6 +601,9 @@ bool ProfiledBinary::isNamedRangeStop(
     StringRef Name, std::optional<RangeEndReason> *Reason) const {
   using ReasonTy = RangeEndReason;
   using Stop = std::pair<StringLiteral, ReasonTy>;
+  // TODO: Replace these tables with queries to a new or extended MC interface
+  // for classifying control-flow effects.
+
   // Keep both tables sorted by instruction name for binary search.
   static constexpr Stop AArch64Stops[] = {
       {"DCPS1", ReasonTy::Trap},  {"DCPS2", ReasonTy::Trap},
@@ -729,6 +732,9 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
             EndReason = IsTrap ? RangeEndReason::Trap : RangeEndReason::Barrier;
         } else if (MCDesc.hasUnmodeledSideEffects() &&
                    (TheTriple.isAArch64() || TheTriple.isX86())) {
+          // Transfers such as SVC have unmodeled side effects but lack
+          // branch/call/return flags. Use hasUnmodeledSideEffects() to limit
+          // name lookups.
           StringRef Name = MII->getName(Inst.getOpcode());
           IsRangeStop =
               isNamedRangeStop(Name, CheckLBRRanges ? &EndReason : nullptr);
