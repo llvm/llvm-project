@@ -1440,10 +1440,9 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
     Reg = MatchRegisterAltName(Name.lower());
 
   if (Reg) {
-    // Some registers have identical spellings. The generated matcher might
-    // have chosen one or another spelling, e.g. "%fp" or "%i6" might have been
-    // matched to either SP::I6 or SP::I6_I7. Other parts of SparcAsmParser
-    // are not prepared for this, so we do some canonicalization.
+    // Some registers share a spelling (e.g. "f0" for F0/D0/Q0, "sp" for
+    // O6/O6_O7). PositionOrder in SparcRegisterInfo.td makes the generated
+    // matcher return the canonical one.
 
     // See the note in SparcRegisterInfo.td near ASRRegs register class.
     if (Reg == SP::ASR4 && Name == "tick") {
@@ -1456,8 +1455,8 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
       return Reg;
     }
 
-    // The generated matcher does not currently return QFP registers.
-    // If it changes, we will need to handle them in a similar way.
+    // The generated matcher never returns QFP registers because of
+    // PositionOrder.
     assert(!MRI.getRegClass(SP::QFPRegsRegClassID).contains(Reg));
 
     // Other registers do not need special handling.
