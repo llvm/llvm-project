@@ -25,6 +25,7 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
@@ -202,6 +203,26 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
     return true;
   default:
     return ctx.config.machine == mt;
+  }
+}
+
+static llvm::SmallVector<std::string, 3>
+perTargetRuntimeDirForMachineType(MachineTypes mt) {
+  switch (mt) {
+  case ARM64:
+  case ARM64X:
+    return {"aarch64-pc-windows-msvc"};
+  case ARM64EC:
+    return {"arm64ec-pc-windows-msvc", "aarch64-pc-windows-msvc"};
+  case ARMNT:
+    return {"armv7-pc-windows-msvc", "arm-pc-windows-msvc",
+            "thumbv7-pc-windows-msvc"};
+  case AMD64:
+    return {"x86_64-pc-windows-msvc"};
+  case I386:
+    return {"i686-pc-windows-msvc", "i386-pc-windows-msvc"};
+  default:
+    return {};
   }
 }
 
@@ -797,6 +818,9 @@ void LinkerDriver::setMachine(MachineTypes machine) {
     ctx.hybridSymtab.emplace(ctx, ARM64);
   }
 
+  if (!ctx.config.mingw)
+    addClangPerTargetRuntimeDirSearchPaths();
+
   addWinSysRootLibSearchPaths();
 }
 
@@ -881,6 +905,7 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   SmallString<128> runtimeLibDir(rootDir);
   sys::path::append(runtimeLibDir, "lib", "clang",
                     std::to_string(LLVM_VERSION_MAJOR), "lib");
+  clangRuntimeLibDir = runtimeLibDir.str();
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
   SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
@@ -889,6 +914,16 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
   searchPaths.push_back(saver().save(runtimeLibDir.str()));
   searchPaths.push_back(saver().save(libDir.str()));
+}
+
+void LinkerDriver::addClangPerTargetRuntimeDirSearchPaths() {
+  auto machineDirs = perTargetRuntimeDirForMachineType(ctx.config.machine);
+  // Add per-target resource dir library path
+  for (std::string machineDir : machineDirs) {
+    SmallString<128> targetRuntimeDir(clangRuntimeLibDir);
+    sys::path::append(targetRuntimeDir, machineDir);
+    searchPaths.push_back(saver().save(targetRuntimeDir.str()));
+  }
 }
 
 void LinkerDriver::addWinSysRootLibSearchPaths() {

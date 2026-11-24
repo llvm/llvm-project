@@ -1315,7 +1315,54 @@ AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
   return AggValueSlot::MayOverlap;
 }
 
+/// CheckAggExprForMemSetUse - If the initializer is large and has a lot of
+/// zeros in it, emit a memset and avoid storing the individual zeros.
+static void checkAggExprForMemSetUse(AggValueSlot &slot, const Expr *e,
+                                     CIRGenFunction &cgf) {
+  // If the slot is already known to be zeroed, nothing to do.  Don't mess with
+  // volatile stores.
+  if (slot.isZeroed() || slot.isVolatile() || !slot.getAddress().isValid())
+    return;
+
+  // C++ objects with a user-declared constructor don't need zero'ing.
+  if (cgf.getLangOpts().CPlusPlus) {
+    if (const RecordType *rt = cgf.getContext()
+                                   .getBaseElementType(e->getType())
+                                   ->getAsCanonical<RecordType>()) {
+      const auto *rd = cast<CXXRecordDecl>(rt->getDecl());
+      if (rd->hasUserDeclaredConstructor())
+        return;
+    }
+  }
+
+  // If the type is 16-bytes or smaller, prefer individual stores over memset.
+  CharUnits size = slot.getPreferredSize(cgf.getContext(), e->getType());
+  if (size <= CharUnits::fromQuantity(16))
+    return;
+
+  // Check to see if over 3/4 of the initializer are known to be zero.  If so,
+  // we prefer to emit memset + individual stores for the rest.
+  CharUnits numNonZeroBytes = CodeGenUtils::GetNumNonZeroBytesInInit(e, cgf);
+  if (numNonZeroBytes * 4 > size)
+    return;
+
+  // Okay, it seems like a good idea to use an initial memset, emit the call.
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  Address addr = slot.getAddress().withElementType(builder, cgf.cgm.voidTy);
+  mlir::Value zero = builder.getConstInt(loc, cgf.cgm.uInt8Ty, 0);
+  mlir::Value sizeVal =
+      builder.getConstInt(loc, cgf.cgm.uInt64Ty, size.getQuantity());
+  builder.createMemSet(loc, addr, zero, sizeVal);
+
+  // Tell the AggExprEmitter that the slot is known zero.
+  slot.setZeroed();
+}
+
 void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {
+  // Optimize the slot if possible.
+  checkAggExprForMemSetUse(slot, e, *this);
+
   AggExprEmitter(*this, slot).Visit(const_cast<Expr *>(e));
 }
 

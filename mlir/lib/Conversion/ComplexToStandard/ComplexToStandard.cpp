@@ -337,14 +337,17 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
     Value inf = arith::ConstantOp::create(
         b, ET, b.getFloatAttr(ET, APFloat::getInf(floatSemantics)));
 
-    Value exp = math::ExpOp::create(b, x, fmf);
+    // Intermediate exp may overflow.
+    arith::FastMathFlags fmfWithInf =
+        arith::bitEnumClear(fmf, arith::FastMathFlags::ninf);
+    Value exp = math::ExpOp::create(b, x, fmfWithInf);
     Value xHalf = arith::MulFOp::create(b, x, half, fmf);
     Value expHalf = math::ExpOp::create(b, xHalf, fmf);
     Value cos = math::CosOp::create(b, y, fmf);
     Value sin = math::SinOp::create(b, y, fmf);
 
-    Value expIsInf =
-        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, exp, inf, fmf);
+    Value expIsInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, exp,
+                                           inf, fmfWithInf);
     Value yIsZero =
         arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, y, zero);
 

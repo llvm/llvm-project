@@ -309,7 +309,7 @@ float fpPreInc() {
 }
 
 // CIR: cir.func{{.*}} @_Z8fpPreIncv() -> (!cir.float{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.float>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.float>
 // CIR:    %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
 // CIR:    %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CIR:    cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
@@ -345,7 +345,7 @@ float fpPreDec() {
 }
 
 // CIR: cir.func{{.*}} @_Z8fpPreDecv() -> (!cir.float{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.float>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.float>
 // CIR:    %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
 // CIR:    %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CIR:    cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
@@ -381,7 +381,7 @@ float fpPostInc() {
 }
 
 // CIR: cir.func{{.*}} @_Z9fpPostIncv() -> (!cir.float{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.float>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.float>
 // CIR:    %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
 // CIR:    %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CIR:    cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
@@ -417,7 +417,7 @@ float fpPostDec() {
 }
 
 // CIR: cir.func{{.*}} @_Z9fpPostDecv() -> (!cir.float{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.float>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.float>
 // CIR:    %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
 // CIR:    %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CIR:    cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
@@ -524,7 +524,7 @@ double doubleUPreInc(double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z13doubleUPreIncd({{.*}}) -> (!cir.double{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.double>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
 // CIR:    %[[DBL_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.double
@@ -558,7 +558,7 @@ double doubleUPreDec(double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z13doubleUPreDecd({{.*}}) -> (!cir.double{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.double>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
 // CIR:    %[[DBL_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.double
@@ -592,7 +592,7 @@ double doubleUPostInc(double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z14doubleUPostIncd({{.*}}) -> (!cir.double{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.double>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
 // CIR:    %[[DBL_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.double
@@ -626,7 +626,7 @@ double doubleUPostDec(double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z14doubleUPostDecd({{.*}}) -> (!cir.double{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.double>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.double>
 // CIR:    %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
 // CIR:    %[[DBL_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.double
@@ -692,7 +692,7 @@ long double ldUPreInc(long double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z9ldUPreInce({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.long_double<!cir.f80>>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
 // CIR:    %[[LD_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.long_double<!cir.f80>
@@ -726,7 +726,7 @@ long double ldUPreDec(long double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z9ldUPreDece({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.long_double<!cir.f80>>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
 // CIR:    %[[LD_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.long_double<!cir.f80>
@@ -760,7 +760,7 @@ long double ldUPostInc(long double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z10ldUPostInce({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.long_double<!cir.f80>>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
 // CIR:    %[[LD_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.long_double<!cir.f80>
@@ -794,7 +794,7 @@ long double ldUPostDec(long double f) {
 }
 
 // CIR: cir.func{{.*}} @_Z10ldUPostDece({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.long_double<!cir.f80>>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.long_double<!cir.f80>>
 // CIR:    %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
 // CIR:    %[[LD_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.long_double<!cir.f80>
@@ -860,7 +860,7 @@ __float128 f128UPreInc(__float128 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z11f128UPreIncg({{.*}}) -> (!cir.f128{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f128>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
 // CIR:    %[[F128_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.f128
@@ -894,7 +894,7 @@ __float128 f128UPreDec(__float128 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z11f128UPreDecg({{.*}}) -> (!cir.f128{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f128>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
 // CIR:    %[[F128_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.f128
@@ -928,7 +928,7 @@ __float128 f128UPostInc(__float128 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z12f128UPostIncg({{.*}}) -> (!cir.f128{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f128>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
 // CIR:    %[[F128_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.f128
@@ -962,7 +962,7 @@ __float128 f128UPostDec(__float128 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z12f128UPostDecg({{.*}}) -> (!cir.f128{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f128>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f128>
 // CIR:    %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
 // CIR:    %[[F128_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.f128
@@ -1038,7 +1038,7 @@ _Float16 Float16UPreInc(_Float16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z14Float16UPreIncDF16_({{.*}}) -> (!cir.f16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f16>
 // CIR:    %[[PREINC_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR:    %[[PREINC_INPUT:.*]] = cir.load{{.*}} %[[PREINC_F]]
 // CIR:    %[[PREINC_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.f16
@@ -1072,7 +1072,7 @@ _Float16 Float16UPreDec(_Float16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z14Float16UPreDecDF16_({{.*}}) -> (!cir.f16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f16>
 // CIR:    %[[PREDEC_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR:    %[[PREDEC_INPUT:.*]] = cir.load{{.*}} %[[PREDEC_F]]
 // CIR:    %[[PREDEC_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.f16
@@ -1106,7 +1106,7 @@ _Float16 Float16UPostInc(_Float16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z15Float16UPostIncDF16_({{.*}}) -> (!cir.f16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f16>
 // CIR:    %[[POSTINC_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR:    %[[POSTINC_INPUT:.*]] = cir.load{{.*}} %[[POSTINC_F]]
 // CIR:    %[[POSTINC_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.f16
@@ -1140,7 +1140,7 @@ _Float16 Float16UPostDec(_Float16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z15Float16UPostDecDF16_({{.*}}) -> (!cir.f16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.f16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.f16>
 // CIR:    %[[POSTDEC_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR:    %[[POSTDEC_INPUT:.*]] = cir.load{{.*}} %[[POSTDEC_F]]
 // CIR:    %[[POSTDEC_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.f16
@@ -1444,7 +1444,7 @@ __bf16 bf16UPreInc(__bf16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z11bf16UPreIncDF16b({{.*}}) -> (!cir.bf16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bf16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
 // CIR:    %[[BF16_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.bf16
@@ -1478,7 +1478,7 @@ __bf16 bf16UPreDec(__bf16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z11bf16UPreDecDF16b({{.*}}) -> (!cir.bf16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bf16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
 // CIR:    %[[BF16_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.bf16
@@ -1512,7 +1512,7 @@ __bf16 bf16UPostInc(__bf16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z12bf16UPostIncDF16b({{.*}}) -> (!cir.bf16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bf16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
 // CIR:    %[[BF16_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.bf16
@@ -1546,7 +1546,7 @@ __bf16 bf16UPostDec(__bf16 f) {
 }
 
 // CIR: cir.func{{.*}} @_Z12bf16UPostDecDF16b({{.*}}) -> (!cir.bf16{{.*}})
-// CIR:    %[[RV:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bf16>
+// CIR:    %[[RV:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.bf16>
 // CIR:    %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
 // CIR:    %[[BF16_NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.bf16
@@ -1744,7 +1744,7 @@ vi4 vecIntPreInc(vi4 a) {
   return ++a;
 }
 // CIR-LABEL: @_Z12vecIntPreIncDv4_i
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[INCREMENTED:.+]] = cir.inc %[[INPUT]] : !cir.vector<4 x !s32i>
@@ -1775,7 +1775,7 @@ vi4 vecIntPreDec(vi4 a) {
   return --a;
 }
 // CIR-LABEL: @_Z12vecIntPreDecDv4_i
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[DECREMENTED:.+]] = cir.dec %[[INPUT]] : !cir.vector<4 x !s32i>
@@ -1806,7 +1806,7 @@ vi4 vecIntPostInc(vi4 a) {
   return a++;
 }
 // CIR-LABEL: @_Z13vecIntPostIncDv4_i
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[INCREMENTED:.+]] = cir.inc %[[INPUT]] : !cir.vector<4 x !s32i>
@@ -1837,7 +1837,7 @@ vi4 vecIntPostDec(vi4 a) {
   return a--;
 }
 // CIR-LABEL: @_Z13vecIntPostDecDv4_i
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[DECREMENTED:.+]] = cir.dec %[[INPUT]] : !cir.vector<4 x !s32i>
@@ -1868,7 +1868,7 @@ uvi4 vecUIntPreInc(uvi4 b) {
   return ++b;
 }
 // CIR-LABEL: @_Z13vecUIntPreIncDv4_j
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[INCREMENTED:.+]] = cir.inc %[[INPUT]] : !cir.vector<4 x !u32i>
@@ -1899,7 +1899,7 @@ uvi4 vecUIntPreDec(uvi4 b) {
   return --b;
 }
 // CIR-LABEL: @_Z13vecUIntPreDecDv4_j
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[DECREMENTED:.+]] = cir.dec %[[INPUT]] : !cir.vector<4 x !u32i>
@@ -1930,7 +1930,7 @@ uvi4 vecUIntPostInc(uvi4 b) {
   return b++;
 }
 // CIR-LABEL: @_Z14vecUIntPostIncDv4_j
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[INCREMENTED:.+]] = cir.inc %[[INPUT]] : !cir.vector<4 x !u32i>
@@ -1961,7 +1961,7 @@ uvi4 vecUIntPostDec(uvi4 b) {
   return b--;
 }
 // CIR-LABEL: @_Z14vecUIntPostDecDv4_j
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[DECREMENTED:.+]] = cir.dec %[[INPUT]] : !cir.vector<4 x !u32i>
@@ -1992,7 +1992,7 @@ vsh8 vecShortPreInc(vsh8 c) {
   return ++c;
 }
 // CIR-LABEL: @_Z14vecShortPreIncDv8_s
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<8 x !s16i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[C:.+]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[C]]
 // CIR:  %[[INCREMENTED:.+]] = cir.inc %[[INPUT]] : !cir.vector<8 x !s16i>
@@ -2023,7 +2023,7 @@ vsh8 vecShortPreDec(vsh8 c) {
   return --c;
 }
 // CIR-LABEL: @_Z14vecShortPreDecDv8_s
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<8 x !s16i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[C:.+]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[C]]
 // CIR:  %[[DECREMENTED:.+]] = cir.dec %[[INPUT]] : !cir.vector<8 x !s16i>
@@ -2054,7 +2054,7 @@ vsh8 vecShortPostInc(vsh8 c) {
   return c++;
 }
 // CIR-LABEL: @_Z15vecShortPostIncDv8_s
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<8 x !s16i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[C:.+]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[C]]
 // CIR:  %[[INCREMENTED:.+]] = cir.inc %[[INPUT]] : !cir.vector<8 x !s16i>
@@ -2085,7 +2085,7 @@ vsh8 vecShortPostDec(vsh8 c) {
   return c--;
 }
 // CIR-LABEL: @_Z15vecShortPostDecDv8_s
-// CIR:  %[[RV:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<8 x !s16i>>
+// CIR:  %[[RV:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[C:.+]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<8 x !s16i>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[C]]
 // CIR:  %[[DECREMENTED:.+]] = cir.dec %[[INPUT]] : !cir.vector<8 x !s16i>
@@ -2116,7 +2116,7 @@ vf4 vecFloatPreInc(vf4 a) {
   return ++a;
 }
 // CIR-LABEL: @_Z14vecFloatPreIncDv4_f
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
@@ -2149,7 +2149,7 @@ vf4 vecFloatPreDec(vf4 a) {
   return --a;
 }
 // CIR-LABEL: @_Z14vecFloatPreDecDv4_f
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.float
@@ -2182,7 +2182,7 @@ vf4 vecFloatPostInc(vf4 a) {
   return a++;
 }
 // CIR-LABEL: @_Z15vecFloatPostIncDv4_f
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
@@ -2215,7 +2215,7 @@ vf4 vecFloatPostDec(vf4 a) {
   return a--;
 }
 // CIR-LABEL: @_Z15vecFloatPostDecDv4_f
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[A]]
 // CIR:  %[[NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.float
@@ -2248,7 +2248,7 @@ vd2 vecDoublePreInc(vd2 b) {
   return ++b;
 }
 // CIR-LABEL: @_Z15vecDoublePreIncDv2_d
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.double
@@ -2281,7 +2281,7 @@ vd2 vecDoublePreDec(vd2 b) {
   return --b;
 }
 // CIR-LABEL: @_Z15vecDoublePreDecDv2_d
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.double
@@ -2314,7 +2314,7 @@ vd2 vecDoublePostInc(vd2 b) {
   return b++;
 }
 // CIR-LABEL: @_Z16vecDoublePostIncDv2_d
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.double
@@ -2347,7 +2347,7 @@ vd2 vecDoublePostDec(vd2 b) {
   return b--;
 }
 // CIR-LABEL: @_Z16vecDoublePostDecDv2_d
-// CIR:  %[[RVPTR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>
+// CIR:  %[[RVPTR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[B:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR:  %[[INPUT:.+]] = cir.load{{.*}} %[[B]]
 // CIR:  %[[NEGONE:.*]] = cir.const #cir.fp<-1.000000e+00> : !cir.double

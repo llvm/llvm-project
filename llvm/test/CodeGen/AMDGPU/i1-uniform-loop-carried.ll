@@ -3,9 +3,9 @@
 ; RUN: llc -global-isel -mtriple=amdgpu12.00-amd-amdhsa < %s | FileCheck -check-prefix=GFX12-GISEL %s
 
 ; Loop-carried divergent i1 values in a loop with a uniform trip count. The
-; latch post-dominates the header and ends in a uniform branch, so EXEC is the
-; same on every iteration and no lane-mask merges are needed across the
-; back-edge. Only the join of the inner divergent if needs merging.
+; only latch ends in a uniform branch, so EXEC is the same on every iteration
+; and no lane-mask merges are needed across the back-edge. Only the join of the
+; inner divergent if needs merging.
 define amdgpu_kernel void @uniform_loop_live_side(ptr addrspace(1) %buf) {
 ; GFX12-LABEL: uniform_loop_live_side:
 ; GFX12:       ; %bb.0: ; %entry
@@ -217,11 +217,10 @@ define amdgpu_kernel void @divergent_break_live_out(ptr addrspace(1) %buf, i32 %
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    s_mov_b32 s7, 0
+; GFX12-NEXT:    s_mov_b32 s6, 0
 ; GFX12-NEXT:    s_mov_b32 s3, 0
 ; GFX12-NEXT:    ; implicit-def: $sgpr4
 ; GFX12-NEXT:    ; implicit-def: $sgpr5
-; GFX12-NEXT:    ; implicit-def: $sgpr6
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -235,32 +234,30 @@ define amdgpu_kernel void @divergent_break_live_out(ptr addrspace(1) %buf, i32 %
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_b32 s1, exec_lo, s5
-; GFX12-NEXT:    s_and_not1_b32 s7, s7, exec_lo
+; GFX12-NEXT:    s_and_b32 s1, exec_lo, s7
+; GFX12-NEXT:    s_and_not1_b32 s4, s4, exec_lo
+; GFX12-NEXT:    s_and_b32 s6, s5, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_or_b32 s3, s1, s3
-; GFX12-NEXT:    s_and_b32 s1, s6, exec_lo
-; GFX12-NEXT:    s_and_not1_b32 s4, s4, exec_lo
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_or_b32 s7, s7, s1
-; GFX12-NEXT:    s_or_b32 s4, s4, s1
+; GFX12-NEXT:    s_or_b32 s4, s4, s6
+; GFX12-NEXT:    s_mov_b32 s6, s5
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX12-NEXT:  .LBB1_2: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_ashr_i32 s1, s0, 31
-; GFX12-NEXT:    s_or_b32 s5, s5, exec_lo
+; GFX12-NEXT:    s_mov_b32 s7, -1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_lshl_b64 s[8:9], s[0:1], 2
-; GFX12-NEXT:    s_and_not1_b32 s1, s6, exec_lo
+; GFX12-NEXT:    s_and_not1_b32 s1, s5, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, s8
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s9, v1, vcc_lo
-; GFX12-NEXT:    s_and_b32 s6, s7, exec_lo
+; GFX12-NEXT:    s_and_b32 s5, s6, exec_lo
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_or_b32 s6, s1, s6
+; GFX12-NEXT:    s_or_b32 s5, s1, s5
 ; GFX12-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX12-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -272,19 +269,14 @@ define amdgpu_kernel void @divergent_break_live_out(ptr addrspace(1) %buf, i32 %
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
-; GFX12-NEXT:    s_xor_b32 s7, s7, vcc_lo
+; GFX12-NEXT:    s_xor_b32 s6, s6, vcc_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_ge_u32 s0, s2
-; GFX12-NEXT:    s_cselect_b32 s8, -1, 0
-; GFX12-NEXT:    s_and_not1_b32 s6, s6, exec_lo
-; GFX12-NEXT:    s_and_b32 s7, s7, exec_lo
+; GFX12-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX12-NEXT:    s_and_not1_b32 s5, s5, exec_lo
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_b32 s8, s8, exec_lo
-; GFX12-NEXT:    s_or_b32 s6, s6, s7
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_or_b32 s5, s5, s8
-; GFX12-NEXT:    ; implicit-def: $sgpr7
+; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX12-NEXT:    s_or_not1_b32 s7, s7, exec_lo
+; GFX12-NEXT:    s_or_b32 s5, s5, s6
 ; GFX12-NEXT:    s_branch .LBB1_1
 ; GFX12-NEXT:  .LBB1_4: ; %exit
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -296,11 +288,9 @@ define amdgpu_kernel void @divergent_break_live_out(ptr addrspace(1) %buf, i32 %
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-GISEL-NEXT:    s_mov_b32 s8, 0
+; GFX12-GISEL-NEXT:    s_mov_b32 s7, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX12-GISEL-NEXT:    ; implicit-def: $sgpr7
-; GFX12-GISEL-NEXT:    ; implicit-def: $sgpr9
 ; GFX12-GISEL-NEXT:    ; implicit-def: $sgpr6
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
@@ -313,31 +303,25 @@ define amdgpu_kernel void @divergent_break_live_out(ptr addrspace(1) %buf, i32 %
 ; GFX12-GISEL-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_and_b32 s5, exec_lo, s7
+; GFX12-GISEL-NEXT:    s_and_b32 s5, exec_lo, s8
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 s6, s6, exec_lo
+; GFX12-GISEL-NEXT:    s_and_b32 s8, exec_lo, s7
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, s5, s3
-; GFX12-GISEL-NEXT:    s_and_b32 s5, exec_lo, s9
-; GFX12-GISEL-NEXT:    s_and_not1_b32 s8, s8, exec_lo
-; GFX12-GISEL-NEXT:    s_or_b32 s6, s6, s5
-; GFX12-GISEL-NEXT:    s_or_b32 s8, s8, s5
+; GFX12-GISEL-NEXT:    s_or_b32 s6, s6, s8
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-GISEL-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX12-GISEL-NEXT:  .LBB1_2: ; %loop
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_ashr_i32 s5, s4, 31
-; GFX12-GISEL-NEXT:    s_and_not1_b32 s7, s7, exec_lo
+; GFX12-GISEL-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX12-GISEL-NEXT:    s_lshl_b64 s[10:11], s[4:5], 2
-; GFX12-GISEL-NEXT:    s_and_not1_b32 s5, s9, exec_lo
+; GFX12-GISEL-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s10 :: v_dual_mov_b32 v4, s11
-; GFX12-GISEL-NEXT:    s_and_b32 s9, exec_lo, s8
-; GFX12-GISEL-NEXT:    s_or_b32 s7, s7, exec_lo
-; GFX12-GISEL-NEXT:    s_or_b32 s9, s5, s9
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v3, vcc_lo, v1, v3
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v4, null, v2, v4, vcc_lo
-; GFX12-GISEL-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX12-GISEL-NEXT:    global_load_b32 v3, v[3:4], off
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v3
@@ -348,18 +332,17 @@ define amdgpu_kernel void @divergent_break_live_out(ptr addrspace(1) %buf, i32 %
 ; GFX12-GISEL-NEXT:    s_add_co_i32 s4, s4, 1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v3
-; GFX12-GISEL-NEXT:    s_xor_b32 s8, s8, vcc_lo
+; GFX12-GISEL-NEXT:    s_xor_b32 s9, s7, vcc_lo
 ; GFX12-GISEL-NEXT:    s_cmp_ge_u32 s4, s2
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s10, exec_lo, 0
-; GFX12-GISEL-NEXT:    s_and_not1_b32 s9, s9, exec_lo
-; GFX12-GISEL-NEXT:    s_and_b32 s8, exec_lo, s8
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 s7, s7, exec_lo
+; GFX12-GISEL-NEXT:    s_and_b32 s9, exec_lo, s9
+; GFX12-GISEL-NEXT:    s_and_not1_b32 s8, s8, exec_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_b32 s10, exec_lo, s10
-; GFX12-GISEL-NEXT:    s_or_b32 s9, s9, s8
+; GFX12-GISEL-NEXT:    s_or_b32 s7, s7, s9
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_or_b32 s7, s7, s10
-; GFX12-GISEL-NEXT:    ; implicit-def: $sgpr8
+; GFX12-GISEL-NEXT:    s_or_b32 s8, s8, s10
 ; GFX12-GISEL-NEXT:    s_branch .LBB1_1
 ; GFX12-GISEL-NEXT:  .LBB1_4: ; %exit
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s3

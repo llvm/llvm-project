@@ -2155,6 +2155,12 @@ static void writeGenericDINode(raw_ostream &Out, const GenericDINode *N,
   Out << ")";
 }
 
+static void writeMDFunctionLocalContext(raw_ostream &Out,
+                                        const MDFunctionLocalContext *FLMD,
+                                        AsmWriterContext &WriterCtx) {
+  // Not implemented.
+}
+
 static void writeDILocation(raw_ostream &Out, const DILocation *DL,
                             AsmWriterContext &WriterCtx) {
   Out << "!DILocation(";
@@ -3412,6 +3418,8 @@ getWholeProgDevirtResKindName(WholeProgramDevirtResolution::Kind K) {
     return "singleImpl";
   case WholeProgramDevirtResolution::BranchFunnel:
     return "branchFunnel";
+  case WholeProgramDevirtResolution::Speculative:
+    return "speculative";
   }
   llvm_unreachable("invalid WholeProgramDevirtResolution kind");
 }
@@ -3506,7 +3514,8 @@ void AssemblyWriter::printWPDRes(const WholeProgramDevirtResolution &WPDRes) {
   Out << "wpdRes: (kind: ";
   Out << getWholeProgDevirtResKindName(WPDRes.TheKind);
 
-  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl) {
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl ||
+      WPDRes.TheKind == WholeProgramDevirtResolution::Speculative) {
     Out << ", singleImplName: \"";
     printEscapedString(WPDRes.SingleImplName, Out);
     Out << "\"";

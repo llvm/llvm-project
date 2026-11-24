@@ -217,9 +217,26 @@ bool RISCVRegisterBankInfo::anyUseOnlyUseFP(
 static bool useGPRPairForS64(const RISCVSubtarget &ST, LLT Ty) {
   if (!ST.hasStdExtZilsd())
     return false;
+  // With typed LLTs, an i64 always uses a GPR pair. An f64 only uses one when
+  // there is no D extension to hold it in an FPR.
   if (LLT::getUseExtended())
-    return Ty.isInteger();
+    return Ty.isInteger() || !ST.hasStdExtD();
   return !ST.hasStdExtD();
+}
+
+/// Returns true if a scalar floating point value of the given size is held in
+/// an FPR. Otherwise (soft-float, Zfinx, ...) it lives in a GPR.
+static bool hasFPRFor(const RISCVSubtarget &ST, unsigned Size) {
+  switch (Size) {
+  case 16:
+    return ST.hasStdExtZfhmin();
+  case 32:
+    return ST.hasStdExtF();
+  case 64:
+    return ST.hasStdExtD();
+  default:
+    return false;
+  }
 }
 
 static const RegisterBankInfo::ValueMapping *getVRBValueMapping(unsigned Size) {
@@ -557,6 +574,21 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
+  case TargetOpcode::G_BITCAST: {
+    // Scalar bitcasts move values between the FPR and GPR banks based on the
+    // type kind. Vector bitcasts stay in the VR bank.
+    for (unsigned Idx = 0; Idx < 2; ++Idx) {
+      LLT Ty = MRI.getType(MI.getOperand(Idx).getReg());
+      if (Ty.isVector())
+        OpdsMapping[Idx] =
+            getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+      else if (Ty.isFloat() && hasFPRFor(Subtarget, Ty.getSizeInBits()))
+        OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
+      else
+        OpdsMapping[Idx] = GPRValueMapping;
+    }
+    break;
+  }
   case TargetOpcode::G_SPLAT_VECTOR: {
     OpdsMapping[0] = getVRBValueMapping(MRI.getType(MI.getOperand(0).getReg())
                                             .getSizeInBits()
@@ -598,8 +630,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
     }
 
-    if (IntrinsicID == Intrinsic::riscv_orc_b ||
-        IntrinsicID == Intrinsic::riscv_vsetvli ||
+    if (IntrinsicID == Intrinsic::riscv_vsetvli ||
         IntrinsicID == Intrinsic::riscv_vsetvlimax) {
       for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
         const MachineOperand &MO = MI.getOperand(Idx);

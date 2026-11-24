@@ -135,6 +135,21 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
 }
 
+/// Returns true if all memory effects of `op` free memory that is allocated
+/// locally to `enclosingOp`.
+static bool freesOnlyLocallyDefined(Operation *op, Operation *enclosingOp) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  memOp.getEffects(effects);
+  return !effects.empty() &&
+         llvm::all_of(effects, [&](const MemoryEffects::EffectInstance &e) {
+           return isa<MemoryEffects::Free>(e.getEffect()) && e.getValue() &&
+                  isLocallyDefined(e.getValue(), enclosingOp);
+         });
+}
+
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
   if (llvm::any_of(forOp.getResultTypes(), llvm::IsaPred<BaseMemRefType>))
@@ -153,9 +168,11 @@ bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
         loadAndStoreOps.push_back(op);
     } else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
                !hasSingleEffect<MemoryEffects::Allocate>(op) &&
-               !isMemoryEffectFree(op)) {
+               !freesOnlyLocallyDefined(op, forOp) && !isMemoryEffectFree(op)) {
       // Alloc-like ops inside `forOp` are fine (they don't impact parallelism)
       // as long as they don't escape the loop (which has been checked above).
+      // So are dealloc-like ops freeing such allocations. Freeing other memory
+      // may race with accesses to it from other iterations.
       return WalkResult::interrupt();
     }
 
@@ -664,12 +681,12 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
     return DependenceResult::NoDependence;
   }
 
-  return checkAccessDependence(srcRel, dstRel, loopDepth, dependenceConstraints,
-                               dependenceComponents);
+  return checkAccessDependence(std::move(srcRel), std::move(dstRel), loopDepth,
+                               dependenceConstraints, dependenceComponents);
 }
 
 DependenceResult mlir::affine::checkAccessDependence(
-    IntegerRelation srcRel, IntegerRelation dstRel, unsigned loopDepth,
+    IntegerRelation &&srcRel, IntegerRelation &&dstRel, unsigned loopDepth,
     FlatAffineValueConstraints *dependenceConstraints,
     SmallVector<DependenceComponent, 2> *dependenceComponents) {
   FlatAffineValueConstraints srcDomain(srcRel.getDomainSet());
@@ -707,9 +724,8 @@ DependenceResult mlir::affine::checkAccessDependence(
   LLVM_DEBUG(llvm::dbgs() << "Dependence polyhedron:\n");
   LLVM_DEBUG(dependenceDomain.dump());
 
-  FlatAffineValueConstraints result(dependenceDomain);
   if (dependenceConstraints)
-    *dependenceConstraints = result;
+    *dependenceConstraints = FlatAffineValueConstraints(dependenceDomain);
   return DependenceResult::HasDependence;
 }
 
@@ -741,7 +757,7 @@ void mlir::affine::getDependenceComponents(
             srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &depComps);
         if (hasDependence(result))
-          depCompsVec->push_back(depComps);
+          depCompsVec->push_back(std::move(depComps));
       }
     }
   }

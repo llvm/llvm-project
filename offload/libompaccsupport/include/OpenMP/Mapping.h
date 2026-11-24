@@ -18,6 +18,7 @@
 #include "omptarget.h"
 
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -245,14 +246,9 @@ public:
   uint64_t decRefCount(bool UseHoldRefCount) const {
     uint64_t &ThisRefCount =
         UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
-    uint64_t OtherRefCount =
-        UseHoldRefCount ? States->DynRefCount : States->HoldRefCount;
-    (void)OtherRefCount;
     if (ThisRefCount != INFRefCount) {
       if (ThisRefCount > 0)
         --ThisRefCount;
-      else
-        assert(OtherRefCount >= 0 && "total refcount underflow");
     }
     return getTotalRefCount();
   }
@@ -349,7 +345,7 @@ struct HostDataToTargetMapKeyTy {
   HostDataToTargetMapKeyTy(uintptr_t Key) : KeyValue(Key) {}
   HostDataToTargetMapKeyTy(HostDataToTargetTy *HDTT)
       : KeyValue(HDTT->HstPtrBegin), HDTT(HDTT) {}
-  HostDataToTargetTy *HDTT;
+  HostDataToTargetTy *HDTT = nullptr;
 };
 inline bool operator<(const HostDataToTargetMapKeyTy &LHS,
                       const uintptr_t &RHS) {
@@ -495,9 +491,22 @@ struct AttachMapInfo {
         MapType(Type), Pointername(Name) {}
 };
 
+/// Host contents of attached pointers/descriptors, in the order they were
+/// saved.
+struct SavedHostPtrsTy {
+  /// Host address and size of each saved pointer/descriptor.
+  llvm::SmallVector<std::pair<void *, int64_t>> Ptrs;
+  /// Their contents, concatenated in the same order.
+  llvm::SmallVector<char> Contents;
+  /// Host ranges of the FROM transfers that saved something. A
+  /// pointer/descriptor overlapping one of them is already saved.
+  llvm::SmallVector<std::pair<uintptr_t, uintptr_t>, 2> TransferRanges;
+};
+
 /// Structure to track new allocations, ATTACH entries, DELETE entries and
 /// skipped FROM data transfer information for a given construct, across
-/// recursive calls (for handling mappers) to targetDataBegin/targetDataEnd.
+/// recursive calls (for handling mappers) to targetDataBegin/targetDataEnd/
+/// targetDataUpdate.
 struct StateInfoTy {
   /// ATTACH map entries for deferred processing until all other maps are done.
   llvm::SmallVector<AttachMapInfo> AttachEntries;
@@ -522,6 +531,12 @@ struct StateInfoTy {
   /// entries whose ref-count is already zero when the entry is encountered.
   /// Key: host pointer, Value: size.
   llvm::DenseMap<void *, int64_t> ReleasedEntries;
+
+  /// Host contents of attached pointers/descriptors, saved before the first
+  /// FROM transfer of the construct that overwrites them, to be written back
+  /// once the construct is synchronized. Heap-owned because that happens in a
+  /// post-processing function, which can run after this StateInfo is gone.
+  std::shared_ptr<SavedHostPtrsTy> SavedHostPtrs;
 
   StateInfoTy() = default;
 

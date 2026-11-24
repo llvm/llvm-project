@@ -121,22 +121,19 @@ namespace AMDGPU {
 ///  - If an incoming block has no predecessors in this set, we can take the
 ///    incoming value as a scalar lane mask as-is.
 ///  -- A special case of this is when the def block has a self-loop.
+///  -- An edge from the def block to an incoming block does not count, since
+///     it starts a new trip around a loop through the def block.
 ///  - Otherwise, the incoming value needs to be merged with a previously
 ///    defined lane mask.
 ///  - If there is a path into the set of reachable blocks that does _not_ go
 ///    through an incoming block where we can take the scalar lane mask as-is,
 ///    we need to invent an available value for the SSAUpdater. Choices are
 ///    0 and undef, with differing consequences for how to merge values etc.
-///  - Back-edges of loops whose EXEC is the same on every iteration (see
-///    isExecInvariantBackEdge) do not let a wave reach a block with a different
-///    set of active lanes, so they are ignored, and an incoming value along
-///    such a back-edge is taken as-is.
 ///
 /// TODO: We could use region analysis to quickly skip over SESE regions during
 ///       the traversal.
 ///
 class PhiIncomingAnalysis {
-  MachineDominatorTree &DT;
   MachinePostDominatorTree &PDT;
   const SIInstrInfo *TII;
 
@@ -147,9 +144,8 @@ class PhiIncomingAnalysis {
   SmallVector<MachineBasicBlock *, 4> Predecessors;
 
 public:
-  PhiIncomingAnalysis(MachineDominatorTree &DT, MachinePostDominatorTree &PDT,
-                      const SIInstrInfo *TII)
-      : DT(DT), PDT(PDT), TII(TII) {}
+  PhiIncomingAnalysis(MachinePostDominatorTree &PDT, const SIInstrInfo *TII)
+      : PDT(PDT), TII(TII) {}
 
   /// Returns whether \p MBB is a source in the induced subgraph of reachable
   /// blocks.
@@ -169,16 +165,10 @@ public:
     // traversal.
     ReachableMap.try_emplace(&DefBlock, false);
 
-    MachineBasicBlock *ExecInvariantLatch = nullptr;
     for (auto Incoming : Incomings) {
       MachineBasicBlock *MBB = Incoming.Block;
       if (MBB == &DefBlock) {
         ReachableMap[&DefBlock] = true; // self-loop on DefBlock
-        continue;
-      }
-
-      if (isExecInvariantBackEdge(*MBB, DefBlock)) {
-        ExecInvariantLatch = MBB;
         continue;
       }
 
@@ -190,12 +180,8 @@ public:
 
     while (!Stack.empty()) {
       MachineBasicBlock *MBB = Stack.pop_back_val();
-      if (!ReachableMap.try_emplace(MBB, false).second)
-        continue;
-      for (MachineBasicBlock *Succ : MBB->successors()) {
-        if (!isExecInvariantBackEdge(*MBB, *Succ))
-          Stack.push_back(Succ);
-      }
+      if (ReachableMap.try_emplace(MBB, false).second)
+        append_range(Stack, MBB->successors());
     }
 
     // Insert remaining incoming blocks.
@@ -204,17 +190,21 @@ public:
       ReachableMap.try_emplace(MBB, false);
     }
 
-    if (ExecInvariantLatch)
-      ReachableMap[ExecInvariantLatch] = true;
-
     for (auto &[MBB, IsSource] : ReachableMap) {
-      if (MBB == ExecInvariantLatch)
-        continue;
-
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
-        if (isExecInvariantBackEdge(*Pred, *MBB))
+        // An edge from the def block starts a new trip around a cycle through
+        // the def block. Every lane that is active at the def block at the end
+        // of that trip was active at the end of MBB, since MBB's terminator
+        // cannot enable more lanes.
+        if (Pred == &DefBlock) {
+          assert(llvm::none_of(MBB->terminators(),
+                               [](const MachineInstr &MI) {
+                                 return MI.getOpcode() == AMDGPU::SI_ELSE;
+                               }) &&
+                 "SI_ELSE block in a cycle through the def block");
           continue;
+        }
         if (ReachableMap.count(Pred)) {
           HaveReachablePred = true;
         } else {
@@ -231,12 +221,6 @@ public:
       }
       Stack.clear();
     }
-  }
-
-private:
-  bool isExecInvariantBackEdge(const MachineBasicBlock &Latch,
-                               const MachineBasicBlock &Header) const {
-    return ::isExecInvariantBackEdge(Latch, Header, DT, *TII);
   }
 };
 
@@ -615,7 +599,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     return false;
 
   LoopFinder LF(DT, PDT, TII);
-  PhiIncomingAnalysis PIA(DT, PDT, TII);
+  PhiIncomingAnalysis PIA(PDT, TII);
 
   DT.updateDFSNumbers();
   for (MachineInstr *MI : Vreg1Phis) {

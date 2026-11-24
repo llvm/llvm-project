@@ -25,7 +25,6 @@
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -35,13 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "systemz-lower"
-
-// Temporarily let this be disabled by default until all known problems
-// related to argument extensions are fixed.
-static cl::opt<bool> EnableIntArgExtCheck(
-    "argext-abi-check", cl::init(false),
-    cl::desc("Verify that narrow int args are properly extended per the "
-             "SystemZ ABI."));
 
 namespace {
 // Represents information about a comparison.
@@ -297,6 +289,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          MVT::i128, Legal);
+
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, MVT::i128, Legal);
     }
   }
 
@@ -351,11 +345,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ, MVT::i64, Legal);
 
-  // On z17 we have native support for a 64-bit CTTZ.
+  // On z17 we have native support for a 64-bit CTTZ, PDEP, and PEXT.
   if (Subtarget.hasMiscellaneousExtensions4()) {
     setOperationAction(ISD::CTTZ, MVT::i32, Promote);
     setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Promote);
     setOperationAction(ISD::CTTZ, MVT::i64, Legal);
+    setOperationAction({ISD::PDEP, ISD::PEXT}, MVT::i32, Promote);
+    setOperationAction({ISD::PDEP, ISD::PEXT}, MVT::i64, Custom);
   }
 
   // On z15 we have native support for a 64-bit CTPOP.
@@ -509,6 +505,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VT,
                          Legal);
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, VT, Legal);
     }
   }
 
@@ -5162,6 +5159,64 @@ SDValue SystemZTargetLowering::lowerUADDSUBO_CARRY(SDValue Op,
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, SetCC);
 }
 
+SDValue SystemZTargetLowering::lowerPDEP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  assert(Op.getValueType() == MVT::i64 && "Expected i64 PDEP");
+  SDValue Val = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+
+  if (auto *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
+    unsigned PopCount = MaskC->getAPIntValue().popcount();
+    if (PopCount == 0)
+      return DAG.getConstant(0, DL, MVT::i64);
+    if (PopCount == 64)
+      return Val;
+    SDValue ShiftedVal =
+        DAG.getNode(ISD::SHL, DL, MVT::i64, Val,
+                    DAG.getConstant(64 - PopCount, DL, MVT::i64));
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getTargetConstant(Intrinsic::s390_bdepg, DL, MVT::i32), ShiftedVal,
+        Mask);
+  }
+
+  SDValue PopCount = DAG.getNode(ISD::CTPOP, DL, MVT::i64, Mask);
+  SDValue ShiftAmt = DAG.getNode(ISD::AND, DL, MVT::i64,
+                                 DAG.getNegative(PopCount, DL, MVT::i64),
+                                 DAG.getConstant(63, DL, MVT::i64));
+  SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, MVT::i64, Val, ShiftAmt);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+                     DAG.getTargetConstant(Intrinsic::s390_bdepg, DL, MVT::i32),
+                     ShiftedVal, Mask);
+}
+
+SDValue SystemZTargetLowering::lowerPEXT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  assert(Op.getValueType() == MVT::i64 && "Expected i64 PEXT");
+  SDValue Val = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+
+  SDValue Bext = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::s390_bextg, DL, MVT::i32), Val, Mask);
+
+  if (auto *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
+    unsigned PopCount = MaskC->getAPIntValue().popcount();
+    if (PopCount == 0)
+      return DAG.getConstant(0, DL, MVT::i64);
+    if (PopCount == 64)
+      return Val;
+    return DAG.getNode(ISD::SRL, DL, MVT::i64, Bext,
+                       DAG.getConstant(64 - PopCount, DL, MVT::i64));
+  }
+
+  SDValue PopCount = DAG.getNode(ISD::CTPOP, DL, MVT::i64, Mask);
+  SDValue ShiftAmt = DAG.getNode(ISD::AND, DL, MVT::i64,
+                                 DAG.getNegative(PopCount, DL, MVT::i64),
+                                 DAG.getConstant(63, DL, MVT::i64));
+  return DAG.getNode(ISD::SRL, DL, MVT::i64, Bext, ShiftAmt);
+}
+
 SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
                                           SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -5678,6 +5733,21 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::s390_vmlhg:
   case Intrinsic::s390_vmlhq:
     return DAG.getNode(ISD::MULHU, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+
+  case Intrinsic::s390_vavgb:
+  case Intrinsic::s390_vavgh:
+  case Intrinsic::s390_vavgf:
+  case Intrinsic::s390_vavgg:
+  case Intrinsic::s390_vavgq:
+    return DAG.getNode(ISD::AVGCEILS, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vavglb:
+  case Intrinsic::s390_vavglh:
+  case Intrinsic::s390_vavglf:
+  case Intrinsic::s390_vavglg:
+  case Intrinsic::s390_vavglq:
+    return DAG.getNode(ISD::AVGCEILU, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
 
   case Intrinsic::s390_vmahb:
@@ -7378,6 +7448,10 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerOR(Op, DAG);
   case ISD::CTPOP:
     return lowerCTPOP(Op, DAG);
+  case ISD::PDEP:
+    return lowerPDEP(Op, DAG);
+  case ISD::PEXT:
+    return lowerPEXT(Op, DAG);
   case ISD::VECREDUCE_ADD:
     return lowerVECREDUCE_ADD(Op, DAG);
   case ISD::ATOMIC_FENCE:
@@ -11557,8 +11631,8 @@ bool SystemZTargetLowering::enableNarrowIntArgsVerification() const {
   if (!Subtarget.isTargetELF())
     return false;
 
-  if (EnableIntArgExtCheck.getNumOccurrences())
-    return EnableIntArgExtCheck;
+  if (auto V = toOptional(Subtarget.getCLOpts().argext_abi_check))
+    return *V;
 
 #ifdef NDEBUG
   return false;
