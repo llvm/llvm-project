@@ -99,6 +99,20 @@ cir::StructType getUnionFlattenType(cir::UnionType unionTy,
                               cir::RecordType::getAllDataKinds(fields));
 }
 
+/// The struct \p structTy is flattened as: itself, or if it has bit-fields,
+/// the storage of each member that owns bytes.  This matches its LLVM type.
+cir::StructType getStructFlattenType(cir::StructType structTy) {
+  if (!llvm::any_of(structTy.getMembers(), llvm::IsaPred<cir::BitFieldType>))
+    return structTy;
+  SmallVector<mlir::Type> fields;
+  for (mlir::Type member : structTy.getMembers())
+    if (cir::memberOwnsBytes(member))
+      fields.push_back(cir::memberStorageType(member));
+  return cir::StructType::get(structTy.getContext(), fields,
+                              structTy.getPacked(), structTy.isClass(),
+                              cir::RecordType::getAllDataKinds(fields));
+}
+
 /// Return the coerced RecordType for a Direct classification that should be
 /// flattened into individual scalar arguments, or a null type if the
 /// classification does not call for flattening.
@@ -106,8 +120,8 @@ cir::StructType getUnionFlattenType(cir::UnionType unionTy,
 /// Flattening applies when all four conditions hold:
 ///   1. The classification is Direct with a non-null coercedType.
 ///   2. canFlatten is set.
-///   3. The coercedType is a struct, or a union, which is flattened as the
-///      struct getUnionFlattenType returns.
+///   3. The coercedType is a struct or a union, which is flattened as the
+///      struct getStructFlattenType or getUnionFlattenType returns.
 ///   4. The struct has at least one field.  A struct of one field is passed as
 ///      that field.
 cir::RecordType getFlattenedCoercedType(const ArgClassification &ac,
@@ -117,6 +131,8 @@ cir::RecordType getFlattenedCoercedType(const ArgClassification &ac,
   auto recTy = dyn_cast<cir::RecordType>(ac.coercedType);
   if (auto unionTy = dyn_cast_if_present<cir::UnionType>(recTy))
     recTy = getUnionFlattenType(unionTy, dl);
+  else if (auto structTy = dyn_cast_if_present<cir::StructType>(recTy))
+    recTy = getStructFlattenType(structTy);
   if (!recTy || !recTy.isStruct() || recTy.getMembers().empty())
     return {};
   return recTy;

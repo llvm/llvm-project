@@ -1,0 +1,92 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// A struct wider than 64 bits is passed Direct with no coerce type, as the
+// fields of its LLVM type. A bit-field access unit is passed as its storage
+// type, and a zero-width bit-field, which has no storage, is dropped.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!rec_bf_t = !cir.struct<"bf_t" {data !s32i, data !s32i, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!u32i, 16>, #cir.bitfield_decl<!u32i, 11>]>, data !s8i}>
+!rec_zw_t = !cir.struct<"zw_t" {data !s32i, data !s32i, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 3>]>, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>, data !s8i}>
+!rec_pk_t = !cir.struct<"pk_t" packed {data !s8i, data !cir.array<!s32i x 2>, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!u32i, 12>]>}>
+
+// CHECK-DAG: ![[FLAT:rec_anon_struct[0-9]*]] = !cir.struct<{data !s32i, data !s32i, data !u32i, data !s8i}>
+// CHECK-DAG: ![[ZW_FLAT:rec_anon_struct[0-9]*]] = !cir.struct<{data !s32i, data !s32i, data !u8i, data !cir.array<!u8i x 3>, data !s8i}>
+// CHECK-DAG: ![[PK_FLAT:rec_anon_struct[0-9]*]] = !cir.struct<packed {data !s8i, data !cir.array<!s32i x 2>, data !u16i}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  cir.func @arg_bf(%arg0: !rec_bf_t) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_bf_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_bf_t, target_address_space(5)> -> !cir.ptr<!rec_bf_t>
+    cir.store %arg0, %1 : !rec_bf_t, !cir.ptr<!rec_bf_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_bf(%[[A:[^:]+]]: !s32i, %[[B:[^:]+]]: !s32i, %[[UNIT:[^:]+]]: !u32i, %[[C:[^:]+]]: !s8i) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<![[FLAT]], target_address_space(5)>
+  // CHECK-NEXT:   %[[F0:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[A]], %[[F0]] : !s32i, !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[F1:.*]] = cir.get_member %[[COERCE]][1] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[B]], %[[F1]] : !s32i, !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[F2:.*]] = cir.get_member %[[COERCE]][2] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!u32i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[UNIT]], %[[F2]] : !u32i, !cir.ptr<!u32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[F3:.*]] = cir.get_member %[[COERCE]][3] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!s8i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[C]], %[[F3]] : !s8i, !cir.ptr<!s8i, target_address_space(5)>
+  // CHECK-NEXT:   %[[AS_BF:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!rec_bf_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_bf_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S_CAST:.*]] = cir.cast address_space %[[S]] : !cir.ptr<!rec_bf_t, target_address_space(5)> -> !cir.ptr<!rec_bf_t>
+  // CHECK-NEXT:   cir.copy %[[AS_BF]] align(4) to %[[S_CAST]] align(4) : !cir.ptr<!rec_bf_t, target_address_space(5)>, !cir.ptr<!rec_bf_t>
+  // CHECK-NEXT:   cir.return
+
+  cir.func @call_bf(%arg0: !cir.ptr<!rec_bf_t>) requires_call_conv_lowering {
+    %0 = cir.load align(4) %arg0 : !cir.ptr<!rec_bf_t>, !rec_bf_t
+    cir.call @arg_bf(%0) : (!rec_bf_t) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func @call_bf(%[[P:.*]]: !cir.ptr<!rec_bf_t>) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_bf_t, target_address_space(5)>
+  // CHECK-NEXT:   cir.copy %[[P]] align(4) to %[[COERCE]] align(4) : !cir.ptr<!rec_bf_t>, !cir.ptr<!rec_bf_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[AS_FLAT:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_bf_t, target_address_space(5)> -> !cir.ptr<![[FLAT]], target_address_space(5)>
+  // CHECK-NEXT:   %[[F0:.*]] = cir.get_member %[[AS_FLAT]][0] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[A:.*]] = cir.load %[[F0]] : !cir.ptr<!s32i, target_address_space(5)>, !s32i
+  // CHECK-NEXT:   %[[F1:.*]] = cir.get_member %[[AS_FLAT]][1] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[B:.*]] = cir.load %[[F1]] : !cir.ptr<!s32i, target_address_space(5)>, !s32i
+  // CHECK-NEXT:   %[[F2:.*]] = cir.get_member %[[AS_FLAT]][2] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!u32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[UNIT:.*]] = cir.load %[[F2]] : !cir.ptr<!u32i, target_address_space(5)>, !u32i
+  // CHECK-NEXT:   %[[F3:.*]] = cir.get_member %[[AS_FLAT]][3] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!s8i, target_address_space(5)>
+  // CHECK-NEXT:   %[[C:.*]] = cir.load %[[F3]] : !cir.ptr<!s8i, target_address_space(5)>, !s8i
+  // CHECK-NEXT:   cir.call @arg_bf(%[[A]], %[[B]], %[[UNIT]], %[[C]]) : (!s32i, !s32i, !u32i, !s8i) -> ()
+  // CHECK-NEXT:   cir.return
+
+  // The zero-width bit-field is dropped, the padding ahead of it is passed.
+  cir.func @arg_zw(%arg0: !rec_zw_t) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_zw_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_zw_t, target_address_space(5)> -> !cir.ptr<!rec_zw_t>
+    cir.store %arg0, %1 : !rec_zw_t, !cir.ptr<!rec_zw_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_zw(%{{[^:]+}}: !s32i, %{{[^:]+}}: !s32i, %{{[^:]+}}: !u8i, %{{[^:]+}}: !cir.array<!u8i x 3>, %{{[^:]+}}: !s8i) {
+  // CHECK-NEXT:   %{{.*}} = cir.alloca "coerce" align(4) : !cir.ptr<![[ZW_FLAT]], target_address_space(5)>
+
+  // The flattened struct stays packed.
+  cir.func @arg_pk(%arg0: !rec_pk_t) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(1) init : !cir.ptr<!rec_pk_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_pk_t, target_address_space(5)> -> !cir.ptr<!rec_pk_t>
+    cir.store %arg0, %1 : !rec_pk_t, !cir.ptr<!rec_pk_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_pk(%{{[^:]+}}: !s8i, %{{[^:]+}}: !cir.array<!s32i x 2>, %{{[^:]+}}: !u16i) {
+  // CHECK-NEXT:   %{{.*}} = cir.alloca "coerce" align(1) : !cir.ptr<![[PK_FLAT]], target_address_space(5)>
+}
