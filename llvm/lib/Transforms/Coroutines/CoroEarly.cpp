@@ -28,6 +28,9 @@ class Lowerer : public coro::LowererBase {
   void lowerCoroDone(IntrinsicInst *II);
 
 public:
+  // Set if noalias was removed from the arguments of any function.
+  bool RemovedNoAliasArg = false;
+
   Lowerer(Module &M)
       : LowererBase(M), Builder(M),
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
@@ -217,17 +220,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F, FunctionAnalysisManager &FAM) {
   PreservedAnalyses FuncPA;
   FuncPA.preserveSet<CFGAnalyses>();
   FAM.invalidate(F, FuncPA);
-
-  // Removing noalias may affect the analyses of callers.
-  if (RemovedNoAlias) {
-    for (User *U : F.users()) {
-      if (auto *Call = dyn_cast<CallBase>(U)) {
-        if (Call->getCalledOperand() == &F)
-          FAM.invalidate(*Call->getFunction(), FuncPA);
-      }
-    }
-  }
-
+  RemovedNoAliasArg |= RemovedNoAlias;
   return true;
 }
 
@@ -258,6 +251,10 @@ PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
   PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<CFGAnalyses>();
+  // Removing noalias may affect the analyses of the callers, so only preserve
+  // all function analyses if that didn't happen.
+  if (!L.RemovedNoAliasArg)
+    PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
