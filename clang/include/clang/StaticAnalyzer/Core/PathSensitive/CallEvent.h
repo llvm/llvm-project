@@ -578,7 +578,7 @@ public:
 /// Represents a call to a block.
 ///
 /// Example: <tt>^{ statement-body }()</tt>
-class BlockCall : public CallEvent {
+class BlockCall final : public CallEvent {
   friend class CallEventManager;
 
 protected:
@@ -736,7 +736,7 @@ public:
 ///   S::operator()(1, 2);  // B
 ///   fptr(1, 2); // C
 /// \endcode
-class CXXStaticOperatorCall : public SimpleFunctionCall {
+class CXXStaticOperatorCall final : public SimpleFunctionCall {
   friend class CallEventManager;
 
 protected:
@@ -794,7 +794,7 @@ public:
 /// Represents a non-static C++ member function call.
 ///
 /// Example: \c obj.fun()
-class CXXMemberCall : public CXXInstanceCall {
+class CXXMemberCall final : public CXXInstanceCall {
   friend class CallEventManager;
 
 protected:
@@ -836,7 +836,7 @@ public:
 /// implemented as a non-static member function.
 ///
 /// Example: <tt>iter + 1</tt>
-class CXXMemberOperatorCall : public CXXInstanceCall {
+class CXXMemberOperatorCall final : public CXXInstanceCall {
   friend class CallEventManager;
 
 protected:
@@ -896,7 +896,7 @@ public:
 ///
 /// This can occur at the end of a scope (for automatic objects), at the end
 /// of a full-expression (for temporaries), or as part of a delete.
-class CXXDestructorCall : public CXXInstanceCall {
+class CXXDestructorCall final : public CXXInstanceCall {
   friend class CallEventManager;
 
 protected:
@@ -985,7 +985,7 @@ public:
 /// Represents a call to a C++ constructor.
 ///
 /// Example: \c T(1)
-class CXXConstructorCall : public AnyCXXConstructorCall {
+class CXXConstructorCall final : public AnyCXXConstructorCall {
   friend class CallEventManager;
 
 protected:
@@ -1054,7 +1054,7 @@ public:
 /// B b = X{};
 ///
 /// ... b.b is initialized to true.
-class CXXInheritedConstructorCall : public AnyCXXConstructorCall {
+class CXXInheritedConstructorCall final : public AnyCXXConstructorCall {
   friend class CallEventManager;
 
 protected:
@@ -1117,7 +1117,7 @@ public:
 /// Represents the memory allocation call in a C++ new-expression.
 ///
 /// This is a call to "operator new".
-class CXXAllocatorCall : public AnyFunctionCall {
+class CXXAllocatorCall final : public AnyFunctionCall {
   friend class CallEventManager;
 
 protected:
@@ -1200,7 +1200,7 @@ public:
 // http://lists.llvm.org/pipermail/cfe-dev/2020-April/065080.html
 // clang/test/Analysis/cxx-dynamic-memory-analysis-order.cpp
 // clang/unittests/StaticAnalyzer/CallEventTest.cpp
-class CXXDeallocatorCall : public AnyFunctionCall {
+class CXXDeallocatorCall final : public AnyFunctionCall {
   friend class CallEventManager;
 
 protected:
@@ -1246,7 +1246,7 @@ enum ObjCMessageKind { OCM_PropertyAccess, OCM_Subscript, OCM_Message };
 /// Represents any expression that calls an Objective-C method.
 ///
 /// This includes all of the kinds listed in ObjCMessageKind.
-class ObjCMethodCall : public CallEvent {
+class ObjCMethodCall final : public CallEvent {
   friend class CallEventManager;
 
   const PseudoObjectExpr *getContainingPseudoObjectExpr() const;
