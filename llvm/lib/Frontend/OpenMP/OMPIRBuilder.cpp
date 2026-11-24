@@ -3363,11 +3363,20 @@ Value *OpenMPIRBuilder::getGPUWarpSize() {
 }
 
 Value *OpenMPIRBuilder::getNVPTXWarpID() {
+  // A SPIR-V kernel's subgroup size is picked by the device compiler (16 or 32
+  // on Intel GPUs), so GV_Warp_Size cannot be it. Use the size the device
+  // runtime uses (mapping::getWarpSize()).
+  if (M.getTargetTriple().isSPIRV())
+    return Builder.CreateUDiv(getGPUThreadID(), getGPUWarpSize(),
+                              "nvptx_warp_id");
   unsigned LaneIDBits = Log2_32(Config.getGridValue().GV_Warp_Size);
   return Builder.CreateAShr(getGPUThreadID(), LaneIDBits, "nvptx_warp_id");
 }
 
 Value *OpenMPIRBuilder::getNVPTXLaneID() {
+  if (M.getTargetTriple().isSPIRV())
+    return Builder.CreateURem(getGPUThreadID(), getGPUWarpSize(),
+                              "nvptx_lane_id");
   unsigned LaneIDBits = Log2_32(Config.getGridValue().GV_Warp_Size);
   assert(LaneIDBits < 32 && "Invalid LaneIDBits size in NVPTX device.");
   unsigned LaneIDMask = ~0u >> (32u - LaneIDBits);
