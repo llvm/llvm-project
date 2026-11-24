@@ -81,6 +81,10 @@ using TargetRegisterClass = MCRegisterClass;
                             ISD::NodeType) const override;
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
+    unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             unsigned Depth) const override;
     bool isCheapToSpeculateCtlz(Type *Ty) const override;
     bool hasBitTest(SDValue X, SDValue Y) const override;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;

@@ -1409,6 +1409,8 @@ public:
     /// Accumulator operand of a fused link. An unfused link accumulates the
     /// source defined by the previous link.
     int AccOpIdx;
+
+    bool isFused() const { return MulOpc != 0; }
   };
 
   /// Return the FP accumulation chain link description of \P MI, or

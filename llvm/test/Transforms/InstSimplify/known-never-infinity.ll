@@ -425,16 +425,27 @@ define i1 @isNotKnownNeverInfinity_roundeven(double %x) {
   ret i1 %r
 }
 
-define i1 @isNotKnownNeverInfinity_fptrunc_round(double %x) {
-; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_fptrunc_round
+define i1 @isNotKnownNeverInfinity_fptrunc_round_downward(double %x) {
+; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_fptrunc_round_downward
+; CHECK-SAME: (double [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.downward")
+  %r = fcmp une float %e, +inf
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_fptrunc_round_upward(double %x) {
+; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_fptrunc_round_upward
 ; CHECK-SAME: (double [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[A]], metadata !"round.downward")
+; CHECK-NEXT:    [[E:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[A]], metadata !"round.upward")
 ; CHECK-NEXT:    [[R:%.*]] = fcmp une float [[E]], +inf
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = fadd ninf double %x, 1.0
-  %e = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.downward")
+  %e = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.upward")
   %r = fcmp une float %e, +inf
   ret i1 %r
 }

@@ -1578,6 +1578,16 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // J is first, I is second.
       bool LoadJ = J.mayLoad(), StoreJ = J.mayStore();
       bool LoadI = I.mayLoad(), StoreI = I.mayStore();
+
+      // BankConflictMutation adds an artificial edge between loads that
+      // likely map to the same bank. Other passes add artificial edges too,
+      // so re-check the condition before keeping the loads apart.
+      if (SUJ->Succs[i].isArtificial() &&
+          HexagonSubtarget::mayHaveBankConflict(J, I, *HII)) {
+        FoundSequentialDependence = true;
+        break;
+      }
+
       bool NVStoreJ = HII->isNewValueStore(J);
       bool NVStoreI = HII->isNewValueStore(I);
       bool IsVecJ = HII->isHVXVec(J) || HII->isHLXVec(J);

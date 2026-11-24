@@ -235,3 +235,21 @@ void test14(struct S14 *s14) {
   // CHECK: ret void
   *s14 = (struct S14) { { [5 ... 11] = 17 } };
 }
+
+int global_var15;
+
+void test15(void) {
+  struct S15 {
+    char a[32];
+    void (*func)(void);
+    int* global;
+    char b[32];
+  };
+
+  struct S15 s = {.func = &test15, .global = &global_var15};
+  // CHECK-LABEL: @test15(
+  // CHECK: call void @llvm.memset
+  // CHECK: store ptr @test15, ptr %{{[0-9]*}}, align 4
+  // CHECK: store ptr @global_var15, ptr %{{[0-9]*}}, align 4
+  // CHECK-NOT: call void @llvm.memcpy
+}

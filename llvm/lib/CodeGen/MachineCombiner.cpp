@@ -534,7 +534,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
   auto RevisitFusedFMA = [&](MachineInstr &NewRoot) {
     std::optional<TargetInstrInfo::FMAChainLinkInfo> Info =
         TII->getFMAChainLinkInfo(NewRoot);
-    if (!Info || Info->MulOpc == 0)
+    if (!Info || !Info->isFused())
       return;
     BlockIter = NewRoot.getIterator();
     if (!IncrementalUpdate)
