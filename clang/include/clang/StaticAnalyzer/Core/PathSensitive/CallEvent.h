@@ -1262,8 +1262,7 @@ protected:
       RegionAndSymbolInvalidationTraits *ETraits) const override;
 
   /// Check if the selector may have multiple definitions (may have overrides).
-  virtual bool canBeOverridenInSubclass(ObjCInterfaceDecl *IDecl,
-                                        Selector Sel) const;
+  bool canBeOverridenInSubclass(ObjCInterfaceDecl *IDecl, Selector Sel) const;
 
 public:
   const ObjCMessageExpr *getOriginExpr() const override {
