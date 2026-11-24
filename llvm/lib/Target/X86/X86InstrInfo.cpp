@@ -11051,6 +11051,7 @@ void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
   X86AddressMode M;
   M.BaseType = X86AddressMode::FrameIndexBase;
   M.Base.FrameIndex = FI;
+  assert(isInt<32>(Offset) && "Offset doesn't fit in a displacement");
   M.Disp = Offset;
   M.getFullAddress(Ops);
 }
