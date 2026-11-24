@@ -199,6 +199,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
   // Remap argument indices in allocsize attribute.
   if (auto AllocSize = NF->getAttributes().getFnAttrs().getAllocSizeArgs()) {
+    bool Exact = NF->getFnAttribute(Attribute::AllocSize).isAllocSizeExact();
     unsigned Arg1 = NewArgIndices[AllocSize->first];
     assert(Arg1 != (unsigned)-1 && "allocsize cannot be promoted argument");
     std::optional<unsigned> Arg2;
@@ -206,7 +207,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       Arg2 = NewArgIndices[*AllocSize->second];
       assert(Arg2 != (unsigned)-1 && "allocsize cannot be promoted argument");
     }
-    NF->addFnAttr(Attribute::getWithAllocSizeArgs(F->getContext(), Arg1, Arg2));
+    NF->addFnAttr(
+        Attribute::getWithAllocSizeArgs(F->getContext(), Arg1, Arg2, Exact));
   }
 
   AttributeFuncs::updateMinLegalVectorWidthAttr(*NF, LargestVectorWidth);

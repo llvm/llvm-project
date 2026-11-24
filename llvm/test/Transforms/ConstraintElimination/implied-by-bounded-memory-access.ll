@@ -6,7 +6,7 @@
 @g_external = external global [5 x i8]
 
 declare void @free(ptr allocptr noundef captures(none)) mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc"
-declare ptr @malloc(i64) mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc"
+declare ptr @malloc(i64) mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0, exact) memory(inaccessiblemem: readwrite) "alloc-family"="malloc"
 declare void @may_not_return(i1)
 
 define i8 @load_global(i64 %idx) {

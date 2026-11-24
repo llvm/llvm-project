@@ -303,10 +303,13 @@ static bool setAllocatedPointerParam(Function &F, unsigned ArgNo) {
 
 static bool setAllocSize(Function &F, unsigned ElemSizeArg,
                          std::optional<unsigned> NumElemsArg) {
-  if (F.hasFnAttribute(Attribute::AllocSize))
+  // The library functions return objects of exactly the requested size. Also
+  // say so if the declaration only has the attribute that gives a lower bound.
+  Attribute Attr = F.getFnAttribute(Attribute::AllocSize);
+  if (Attr.isValid() && Attr.isAllocSizeExact())
     return false;
   F.addFnAttr(Attribute::getWithAllocSizeArgs(F.getContext(), ElemSizeArg,
-                                              NumElemsArg));
+                                              NumElemsArg, /*Exact=*/true));
   return true;
 }
 

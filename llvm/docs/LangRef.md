@@ -2179,7 +2179,7 @@ define void @f() "no-sse" { ... }
     but returns zeroed memory. The function must have "zeroed" allocation behavior,
     the same `alloc-family`, and take exactly the same arguments.
 
-`allocsize(<EltSizeParam>[, <NumEltsParam>])`
+`allocsize(<EltSizeParam>[, <NumEltsParam>][, exact])`
 :   This attribute indicates that the annotated function will always return at
     least a given number of bytes (or null). Its arguments are zero-indexed
     parameter numbers; if one argument is provided, then it's assumed that at
@@ -2188,6 +2188,23 @@ define void @f() "no-sse" { ... }
     `CallSite.Args[EltSizeParam] * CallSite.Args[NumEltsParam]` bytes are
     available. The referenced parameters must be integer types. No assumptions
     are made about the contents of the returned block of memory.
+
+    Without `exact`, the given number of bytes is only a lower bound. The
+    function may return a pointer into a larger
+    [allocated object](#allocatedobjects), with further accessible memory
+    before the returned pointer or after the given number of bytes, such as
+    a header that the allocator keeps in front of what it returns. Nothing is
+    assumed about accesses to such memory.
+
+    With `exact`, the function returns either null or a pointer to the first
+    byte of an allocated object whose size is exactly the given number of
+    bytes. As for any other allocated object, the behavior is then undefined
+    if memory outside of these bytes is accessed through a pointer
+    [based](#pointeraliasing) on the returned pointer, whether or not the
+    allocator reserved more memory than that. Optimizations rely on this: for
+    example, if the return value is also `noalias`, a store of the given
+    number of bytes to the returned pointer overwrites the whole object, so
+    that an earlier store through any pointer based on it is dead.
 
 `alwaysinline`
 :   This attribute indicates that the inliner should attempt to inline

@@ -240,8 +240,8 @@ entry:
 
 declare void @bury(i32) local_unnamed_addr #2
 
-; Function Attrs: nounwind allocsize(0)
-declare ptr @malloc(i64) nounwind allocsize(0) allockind("alloc,uninitialized") "alloc-family"="malloc"
+; Function Attrs: nounwind allocsize(0, exact)
+declare ptr @malloc(i64) nounwind allocsize(0, exact) allockind("alloc,uninitialized") "alloc-family"="malloc"
 
 declare ptr @get_unknown_buffer()
 

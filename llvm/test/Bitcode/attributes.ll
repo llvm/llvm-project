@@ -612,6 +612,16 @@ define void @f_sanitize_concurrency() sanitize_concurrency {
   ret void
 }
 
+; CHECK: define ptr @allocsize_exact(i32 %0) [[ALLOCSIZEEXACT:#[0-9]+]]
+define ptr @allocsize_exact(i32 %0) allocsize(0, exact) {
+  ret ptr null
+}
+
+; CHECK: define ptr @allocsize_two_exact(i32 %0, i32 %1) [[ALLOCSIZETWOEXACT:#[0-9]+]]
+define ptr @allocsize_two_exact(i32 %0, i32 %1) allocsize(0, 1, exact) {
+  ret ptr null
+}
+
 ; CHECK: define linkonce_odr void @likely_module_local() [[LIKELYMODULELOCAL:#[0-9]+]]
 define linkonce_odr void @likely_module_local() likely_module_local {
   ret void
@@ -682,5 +692,7 @@ define linkonce_odr void @likely_module_local() likely_module_local {
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
 ; CHECK: attributes [[NOIPA]] = { noipa }
 ; CHECK: attributes [[SANITIZE_CONCURRENCY]] = { sanitize_concurrency }
+; CHECK: attributes [[ALLOCSIZEEXACT]] = { allocsize(0,exact) }
+; CHECK: attributes [[ALLOCSIZETWOEXACT]] = { allocsize(0,1,exact) }
 ; CHECK: attributes [[LIKELYMODULELOCAL]] = { likely_module_local }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

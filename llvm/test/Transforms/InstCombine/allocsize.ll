@@ -6,8 +6,8 @@
 ; args, and to prove that arbitrary unfoldable values don't interfere with
 ; allocsize if they're not used by allocsize.
 
-declare ptr @my_malloc(ptr, i32) allocsize(1)
-declare ptr @my_calloc(ptr, ptr, i32, i32) allocsize(2, 3)
+declare ptr @my_malloc(ptr, i32) allocsize(1, exact)
+declare ptr @my_calloc(ptr, ptr, i32, i32) allocsize(2, 3, exact)
 
 define void @test_malloc(ptr %p, ptr %r) {
 ; CHECK-LABEL: define void @test_malloc(
@@ -196,8 +196,8 @@ define void @test_nobuiltin(ptr %p, ptr %r) {
   ret void
 }
 
-attributes #0 = { allocsize(1) }
-attributes #1 = { allocsize(2, 3) }
+attributes #0 = { allocsize(1, exact) }
+attributes #1 = { allocsize(2, 3, exact) }
 
 declare i32 @llvm.objectsize.i32.p0(ptr, i1)
 declare i64 @llvm.objectsize.i64.p0(ptr, i1)

@@ -1732,9 +1732,10 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   case Attribute::AllocSize: {
     unsigned ElemSizeArg;
     std::optional<unsigned> NumElemsArg;
-    if (parseAllocSizeArguments(ElemSizeArg, NumElemsArg))
+    bool Exact;
+    if (parseAllocSizeArguments(Exact, ElemSizeArg, NumElemsArg))
       return true;
-    B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
+    B.addAllocSizeAttr(ElemSizeArg, NumElemsArg, Exact);
     return false;
   }
   case Attribute::VScaleRange: {
@@ -3083,7 +3084,9 @@ bool LLParser::parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
   return false;
 }
 
-bool LLParser::parseAllocSizeArguments(unsigned &BaseSizeArg,
+/// parseAllocSizeArguments
+///   ::= '(' uint32 (',' uint32)? (',' 'exact')? ')'
+bool LLParser::parseAllocSizeArguments(bool &Exact, unsigned &BaseSizeArg,
                                        std::optional<unsigned> &HowManyArg) {
   Lex.Lex();
 
@@ -3094,7 +3097,9 @@ bool LLParser::parseAllocSizeArguments(unsigned &BaseSizeArg,
   if (parseUInt32(BaseSizeArg))
     return true;
 
-  if (EatIfPresent(lltok::comma)) {
+  Exact = false;
+  HowManyArg = std::nullopt;
+  if (EatIfPresent(lltok::comma) && !(Exact = EatIfPresent(lltok::kw_exact))) {
     auto HowManyAt = Lex.getLoc();
     unsigned HowMany;
     if (parseUInt32(HowMany))
@@ -3103,8 +3108,12 @@ bool LLParser::parseAllocSizeArguments(unsigned &BaseSizeArg,
       return error(HowManyAt,
                    "'allocsize' indices can't refer to the same parameter");
     HowManyArg = HowMany;
-  } else
-    HowManyArg = std::nullopt;
+    if (EatIfPresent(lltok::comma)) {
+      if (!EatIfPresent(lltok::kw_exact))
+        return tokError("expected 'exact'");
+      Exact = true;
+    }
+  }
 
   auto EndParen = Lex.getLoc();
   if (!EatIfPresent(lltok::rparen))

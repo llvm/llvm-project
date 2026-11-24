@@ -2,7 +2,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
-declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0, exact)
 
 declare void @nocapture_func_frees_pointer(ptr nocapture)
 
@@ -162,7 +162,7 @@ bb:
   ret void
 }
 
-declare noalias ptr @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1)
+declare noalias ptr @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1, exact)
 
 define void @test3b(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test3b
@@ -211,7 +211,7 @@ bb:
   ret void
 }
 
-declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1)
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1, exact)
 
 define void @test0() {
 ; CHECK-LABEL: define {{[^@]+}}@test0() {
@@ -696,15 +696,15 @@ bb:
 }
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0,exact) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind willreturn }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nofree nosync willreturn }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nofree nounwind }
 ; CHECK: attributes #[[ATTR4]] = { noreturn }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { allockind("free") }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR7:[0-9]+]] = { allockind("alloc,uninitialized,aligned") allocsize(1) }
-; CHECK: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) }
+; CHECK: attributes #[[ATTR7:[0-9]+]] = { allockind("alloc,uninitialized,aligned") allocsize(1,exact) }
+; CHECK: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1,exact) }
 ; CHECK: attributes #[[ATTR9]] = { norecurse }
 ; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #[[ATTR11]] = { nounwind }

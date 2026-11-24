@@ -185,7 +185,7 @@ entry:
 
 declare ptr @__memset_chk(ptr, i32, i32, i32) nounwind
 
-declare noalias ptr @malloc(i32) nounwind allockind("alloc,uninitialized") allocsize(0)
+declare noalias ptr @malloc(i32) nounwind allockind("alloc,uninitialized") allocsize(0, exact)
 
 define i32 @test7(ptr %esc) {
 ; CHECK-LABEL: @test7(
@@ -200,7 +200,7 @@ define i32 @test7(ptr %esc) {
   ret i32 %objsize
 }
 
-declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1)
+declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0, 1, exact)
 
 define i32 @test8(ptr %esc) {
 ; CHECK-LABEL: @test8(

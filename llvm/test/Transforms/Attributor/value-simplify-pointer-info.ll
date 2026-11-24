@@ -2397,7 +2397,7 @@ entry:
   ret i32 %0
 }
 
-declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0, exact) "alloc-family"="malloc"
 
 declare void @free(ptr) allockind("free") "alloc-family"="malloc"
 
@@ -2458,7 +2458,7 @@ entry:
   ret i32 %0
 }
 
-declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) "alloc-family"="malloc"
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1, exact) "alloc-family"="malloc"
 
 define dso_local i32 @conditional_calloc(i32 %x) {
 ; CHECK-LABEL: define dso_local i32 @conditional_calloc(
@@ -3627,9 +3627,9 @@ declare void @llvm.assume(i1 noundef)
 ; TUNIT: attributes #[[ATTR5]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR6]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read) }
 ; TUNIT: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind memory(write) }
-; TUNIT: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; TUNIT: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0,exact) "alloc-family"="malloc" }
 ; TUNIT: attributes #[[ATTR9:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
-; TUNIT: attributes #[[ATTR10:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; TUNIT: attributes #[[ATTR10:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1,exact) "alloc-family"="malloc" }
 ; TUNIT: attributes #[[ATTR11]] = { mustprogress nofree norecurse nosync nounwind willreturn uwtable }
 ; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR13]] = { nofree norecurse nosync nounwind memory(none) }
@@ -3653,9 +3653,9 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR6]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR7]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind memory(write) }
-; CGSCC: attributes #[[ATTR9:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; CGSCC: attributes #[[ATTR9:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0,exact) "alloc-family"="malloc" }
 ; CGSCC: attributes #[[ATTR10:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
-; CGSCC: attributes #[[ATTR11:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; CGSCC: attributes #[[ATTR11:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1,exact) "alloc-family"="malloc" }
 ; CGSCC: attributes #[[ATTR12]] = { mustprogress nofree norecurse nosync nounwind willreturn uwtable }
 ; CGSCC: attributes #[[ATTR13]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nosync nounwind memory(argmem: readwrite) }

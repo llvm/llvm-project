@@ -1109,7 +1109,7 @@ attributes #8 = { nounwind }
 ; AMDGPU: attributes #[[ATTR2]] = { convergent norecurse nounwind }
 ; AMDGPU: attributes #[[ATTR3]] = { norecurse nounwind }
 ; AMDGPU: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
-; AMDGPU: attributes #[[ATTR5:[0-9]+]] = { nofree nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
+; AMDGPU: attributes #[[ATTR5:[0-9]+]] = { nofree nosync nounwind allockind("alloc,uninitialized") allocsize(0,exact) "alloc-family"="__kmpc_alloc_shared" }
 ; AMDGPU: attributes #[[ATTR6]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; AMDGPU: attributes #[[ATTR7]] = { convergent }
 ; AMDGPU: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -1122,7 +1122,7 @@ attributes #8 = { nounwind }
 ; NVPTX: attributes #[[ATTR2]] = { convergent norecurse nounwind }
 ; NVPTX: attributes #[[ATTR3]] = { norecurse nounwind }
 ; NVPTX: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
-; NVPTX: attributes #[[ATTR5:[0-9]+]] = { nofree nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
+; NVPTX: attributes #[[ATTR5:[0-9]+]] = { nofree nosync nounwind allockind("alloc,uninitialized") allocsize(0,exact) "alloc-family"="__kmpc_alloc_shared" }
 ; NVPTX: attributes #[[ATTR6]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; NVPTX: attributes #[[ATTR7]] = { convergent }
 ; NVPTX: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

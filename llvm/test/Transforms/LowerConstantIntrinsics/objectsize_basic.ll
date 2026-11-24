@@ -135,7 +135,7 @@ define i64 @vla_pointer_size_mismatch(i42 %x) {
   ret i64 %objsize
 }
 
-declare ptr @malloc(i64) allocsize(0)
+declare ptr @malloc(i64) allocsize(0, exact)
 
 define i64 @test_objectsize_malloc() {
 ; CHECK-LABEL: @test_objectsize_malloc(

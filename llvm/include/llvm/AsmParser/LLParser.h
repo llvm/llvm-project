@@ -358,7 +358,7 @@ namespace llvm {
     bool parseOptionalCommaAlign(MaybeAlign &Alignment, bool &AteExtraComma);
     bool parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
                                      bool &AteExtraComma);
-    bool parseAllocSizeArguments(unsigned &BaseSizeArg,
+    bool parseAllocSizeArguments(bool &Exact, unsigned &BaseSizeArg,
                                  std::optional<unsigned> &HowManyArg);
     bool parseVScaleRangeArguments(unsigned &MinValue, unsigned &MaxValue);
     LLVM_ABI bool parseIndexList(SmallVectorImpl<unsigned> &Indices,

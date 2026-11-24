@@ -6,7 +6,7 @@
 
 target datalayout="e-p:32:32:32"
 
-declare ptr @my_malloc(ptr, i64) allocsize(1)
+declare ptr @my_malloc(ptr, i64) allocsize(1, exact)
 
 define void @test_malloc(ptr %p, ptr %r) {
   %1 = call ptr @my_malloc(ptr null, i64 100)

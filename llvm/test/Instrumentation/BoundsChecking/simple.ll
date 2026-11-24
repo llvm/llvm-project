@@ -9,9 +9,9 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-p2:64:64:64:48-i1:8:8-i8:8:8-i16:1
 @.str_as2 = private addrspace(2) constant [8 x i8] c"abcdefg\00"
 
 
-declare noalias ptr @malloc(i64) nounwind allocsize(0)
-declare noalias ptr @calloc(i64, i64) nounwind allocsize(0,1)
-declare noalias ptr @realloc(ptr nocapture allocptr, i64) nounwind allocsize(1)
+declare noalias ptr @malloc(i64) nounwind allocsize(0, exact)
+declare noalias ptr @calloc(i64, i64) nounwind allocsize(0, 1, exact)
+declare noalias ptr @realloc(ptr nocapture allocptr, i64) nounwind allocsize(1, exact)
 
 define void @f1() nounwind {
 ; CHECK-LABEL: @f1(

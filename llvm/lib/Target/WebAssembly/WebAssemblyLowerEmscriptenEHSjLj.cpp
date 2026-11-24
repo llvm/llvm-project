@@ -562,10 +562,11 @@ Value *WebAssemblyLowerEmscriptenEHSjLjImpl::wrapInvoke(CallBase *CI) {
     // The allocsize attribute (if any) refers to parameters by index and needs
     // to be adjusted.
     auto [SizeArg, NEltArg] = *Args;
+    bool Exact = FnAttrs.getAttribute(Attribute::AllocSize).isAllocSizeExact();
     SizeArg += 1;
     if (NEltArg)
       NEltArg = *NEltArg + 1;
-    FnAttrs.addAllocSizeAttr(SizeArg, NEltArg);
+    FnAttrs.addAllocSizeAttr(SizeArg, NEltArg, Exact);
   }
   // In case the callee has 'noreturn' attribute, We need to remove it, because
   // we expect invoke wrappers to return.

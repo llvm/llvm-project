@@ -11,7 +11,7 @@
 declare void @llvm.assume(i1)
 declare void @useI32(i32) nosync nocallback
 declare void @free(ptr) allockind("free") "alloc-family"="malloc"
-declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) "alloc-family"="malloc"
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1, exact) "alloc-family"="malloc"
 
 ;.
 ; CHECK: @GInt1 = internal global i32 undef, align 4
@@ -874,7 +874,7 @@ define i32 @two_calls() {
 ; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nocallback nosync }
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
-; TUNIT: attributes #[[ATTR3:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; TUNIT: attributes #[[ATTR3:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1,exact) "alloc-family"="malloc" }
 ; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR5]] = { norecurse nosync }
 ; TUNIT: attributes #[[ATTR6]] = { nocallback }
@@ -889,7 +889,7 @@ define i32 @two_calls() {
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nosync }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
-; CGSCC: attributes #[[ATTR3:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; CGSCC: attributes #[[ATTR3:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1,exact) "alloc-family"="malloc" }
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR5]] = { nosync }
 ; CGSCC: attributes #[[ATTR6]] = { norecurse nosync }

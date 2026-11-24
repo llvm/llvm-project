@@ -107,11 +107,21 @@ LLVM_ABI Value *getAllocAlignment(const CallBase *V,
 /// calls that return their argument. A mapper function can be used to replace
 /// one Value* (operand to the allocation) with another. This is useful when
 /// doing abstract interpretation.
+///
+/// The allocated object has at least this size. It has exactly this size, so
+/// that there is no memory to access through the returned pointer outside of
+/// it, only if isAllocSizeExact() says so.
 LLVM_ABI std::optional<APInt> getAllocSize(
     const CallBase *CB, const TargetLibraryInfo *TLI,
     function_ref<const Value *(const Value *)> Mapper = [](const Value *V) {
       return V;
     });
+
+/// Return whether what getAllocSize() returns for this call is the exact size
+/// of the allocated object, as opposed to a lower bound for it, as it is for a
+/// function with an `allocsize` attribute that is not `exact`.
+LLVM_ABI bool isAllocSizeExact(const CallBase *CB,
+                               const TargetLibraryInfo *TLI);
 
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return
