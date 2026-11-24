@@ -15821,6 +15821,13 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
           ExtOpc = ISD::SIGN_EXTEND;
           break;
         }
+      } else if (User->getOpcode() == ISD::SELECT_CC &&
+                 (User->getOperand(0) == SDValue(Load, 0) ||
+                  User->getOperand(1) == SDValue(Load, 0)) &&
+                 ISD::isSignedIntSetCC(User->getOperandCondCode(4))) {
+        ExtLoadType = ISD::SEXTLOAD;
+        ExtOpc = ISD::SIGN_EXTEND;
+        break;
       }
     }
   }
