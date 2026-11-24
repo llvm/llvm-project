@@ -67,17 +67,3 @@ define i32 @srem_i32(i32 %a, i32 %b, i1 %m) {
   %r = call i32 @llvm.masked.srem.i32(i32 %a, i32 %b, i1 %m)
   ret i32 %r
 }
-
-define i32 @mask_poison(i32 %a, i32 %b) {
-; CHECK-LABEL: mask_poison:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    cmovnel %esi, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    retq
-  %r = call i32 @llvm.masked.sdiv.i32(i32 %a, i32 %b, i1 poison)
-  ret i32 %r
-}

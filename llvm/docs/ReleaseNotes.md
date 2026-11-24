@@ -59,8 +59,10 @@ Makes programs 10x faster by doing Special New Thing.
   `CallBase::isNoInline()` to query whether a function or call should not be
   inlined.
 
-* The `llvm.masked.{u,s}{div,rem}` intrinsics now also accept scalar integer operands with an `i1` mask.
-  Disabled operations return poison without undefined behavior.
+* The `llvm.masked.{u,s}{div,rem}` intrinsics now also accept scalar integer
+  operands with an `i1` mask; disabled operations return `poison` without
+  undefined behavior. Passing a `poison` mask, or a vector mask containing any
+  `poison` element, is now documented as undefined behavior.
 
 * LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
   avoids repeated module-wide scans to rebuild metadata numbering, which can

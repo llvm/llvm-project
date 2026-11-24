@@ -110,8 +110,7 @@ template <class T> static bool forEachCall(Function &Intrin, T Callback) {
   return Changed;
 }
 
-// Primary lowering for scalar llvm.masked.{u,s}{div,rem}; SelectionDAG and
-// GlobalISel keep matching fallbacks for standalone MIR/SelectionDAG inputs.
+// Lower scalar llvm.masked.{u,s}{div,rem} to a guarded division before ISel.
 static bool lowerScalarMaskedDivRem(Function &F) {
   Type *RetTy = F.getReturnType();
   if (!RetTy->isIntegerTy())
@@ -130,11 +129,9 @@ static bool lowerScalarMaskedDivRem(Function &F) {
       // case, so false refines every outcome without emitting a division.
       Result = Builder.getFalse();
     } else {
-      // Freezing the mask prevents a poison mask from introducing UB when
-      // the original division would be safe.
-      Value *Mask = Builder.CreateFreeze(CI->getArgOperand(2));
-      Value *Divisor = Builder.CreateSelect(Mask, CI->getArgOperand(1),
-                                            ConstantInt::get(RetTy, 1));
+      Value *Divisor =
+          Builder.CreateSelect(CI->getArgOperand(2), CI->getArgOperand(1),
+                               ConstantInt::get(RetTy, 1));
       Result = Builder.CreateBinOp(Opcode, CI->getArgOperand(0), Divisor);
     }
     Result->takeName(CI);
