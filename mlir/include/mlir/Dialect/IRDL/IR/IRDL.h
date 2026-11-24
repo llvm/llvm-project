@@ -15,9 +15,6 @@
 
 #include "mlir/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "mlir/Dialect/IRDL/IR/IRDLTraits.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include <memory>
 

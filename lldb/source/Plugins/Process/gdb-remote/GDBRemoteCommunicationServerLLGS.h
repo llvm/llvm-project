@@ -84,6 +84,8 @@ public:
     m_connection_accelerator_plugin = &plugin;
   }
 
+  NativeProcessProtocol *GetCurrentProcess() { return m_current_process; }
+
   // NativeProcessProtocol::NativeDelegate overrides
   void InitializeDelegate(NativeProcessProtocol *process) override;
 

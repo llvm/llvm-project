@@ -864,62 +864,64 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
   auto *S3 = cast<sandboxir::StoreInst>(&*It++);
   auto *S4 = cast<sandboxir::StoreInst>(&*It++);
   auto *S5 = cast<sandboxir::StoreInst>(&*It++);
-  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
   {
-    // Scenario 1: Build new DAG
-    auto NewIntvl = DAG.extend({S3, S3});
-    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S3, S3));
-    EXPECT_EQ(DAG.getInterval().top(), S3);
-    EXPECT_EQ(DAG.getInterval().bottom(), S3);
-    [[maybe_unused]] auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    // Check UnscheduledSuccs.
-    EXPECT_EQ(S3N->getNumUnscheduledDeps(), 0u);
-  }
-  {
-    // Scenario 2: Extend below
-    auto NewIntvl = DAG.extend({S5, S5});
-    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S4, S5));
-    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
-    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
-    EXPECT_TRUE(S4N->hasMemPred(S3N));
-    EXPECT_TRUE(S5N->hasMemPred(S4N));
-    EXPECT_TRUE(S5N->hasMemPred(S3N));
-    // Check UnscheduledSuccs.
-    EXPECT_EQ(S3N->getNumUnscheduledDeps(), 2u); // S4N, S5N
-    EXPECT_EQ(S4N->getNumUnscheduledDeps(), 1u); // S5N
-    EXPECT_EQ(S5N->getNumUnscheduledDeps(), 0u);
-  }
-  {
-    // Scenario 3: Extend above
-    auto NewIntvl = DAG.extend({S1, S2});
-    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S1, S2));
-    auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
-    auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
-    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
-    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+    sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
+    {
+      // Scenario 1: Build new DAG
+      auto NewIntvl = DAG.extend({S3, S3});
+      EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S3, S3));
+      EXPECT_EQ(DAG.getInterval().top(), S3);
+      EXPECT_EQ(DAG.getInterval().bottom(), S3);
+      [[maybe_unused]] auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+      // Check UnscheduledSuccs.
+      EXPECT_EQ(S3N->getNumUnscheduledDeps(), 0u);
+    }
+    {
+      // Scenario 2: Extend below
+      auto NewIntvl = DAG.extend({S5, S5});
+      EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S4, S5));
+      auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+      auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+      auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+      EXPECT_TRUE(S4N->hasMemPred(S3N));
+      EXPECT_TRUE(S5N->hasMemPred(S4N));
+      EXPECT_TRUE(S5N->hasMemPred(S3N));
+      // Check UnscheduledSuccs.
+      EXPECT_EQ(S3N->getNumUnscheduledDeps(), 2u); // S4N, S5N
+      EXPECT_EQ(S4N->getNumUnscheduledDeps(), 1u); // S5N
+      EXPECT_EQ(S5N->getNumUnscheduledDeps(), 0u);
+    }
+    {
+      // Scenario 3: Extend above
+      auto NewIntvl = DAG.extend({S1, S2});
+      EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S1, S2));
+      auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+      auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+      auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+      auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+      auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
 
-    EXPECT_TRUE(S2N->hasMemPred(S1N));
+      EXPECT_TRUE(S2N->hasMemPred(S1N));
 
-    EXPECT_TRUE(S3N->hasMemPred(S2N));
-    EXPECT_TRUE(S3N->hasMemPred(S1N));
+      EXPECT_TRUE(S3N->hasMemPred(S2N));
+      EXPECT_TRUE(S3N->hasMemPred(S1N));
 
-    EXPECT_TRUE(S4N->hasMemPred(S3N));
-    EXPECT_TRUE(S4N->hasMemPred(S2N));
-    EXPECT_TRUE(S4N->hasMemPred(S1N));
+      EXPECT_TRUE(S4N->hasMemPred(S3N));
+      EXPECT_TRUE(S4N->hasMemPred(S2N));
+      EXPECT_TRUE(S4N->hasMemPred(S1N));
 
-    EXPECT_TRUE(S5N->hasMemPred(S4N));
-    EXPECT_TRUE(S5N->hasMemPred(S3N));
-    EXPECT_TRUE(S5N->hasMemPred(S2N));
-    EXPECT_TRUE(S5N->hasMemPred(S1N));
+      EXPECT_TRUE(S5N->hasMemPred(S4N));
+      EXPECT_TRUE(S5N->hasMemPred(S3N));
+      EXPECT_TRUE(S5N->hasMemPred(S2N));
+      EXPECT_TRUE(S5N->hasMemPred(S1N));
 
-    // Check UnscheduledSuccs.
-    EXPECT_EQ(S1N->getNumUnscheduledDeps(), 4u); // S2N, S3N, S4N, S5N
-    EXPECT_EQ(S2N->getNumUnscheduledDeps(), 3u); // S3N, S4N, S5N
-    EXPECT_EQ(S3N->getNumUnscheduledDeps(), 2u); // S4N, S5N
-    EXPECT_EQ(S4N->getNumUnscheduledDeps(), 1u); // S5N
-    EXPECT_EQ(S5N->getNumUnscheduledDeps(), 0u);
+      // Check UnscheduledSuccs.
+      EXPECT_EQ(S1N->getNumUnscheduledDeps(), 4u); // S2N, S3N, S4N, S5N
+      EXPECT_EQ(S2N->getNumUnscheduledDeps(), 3u); // S3N, S4N, S5N
+      EXPECT_EQ(S3N->getNumUnscheduledDeps(), 2u); // S4N, S5N
+      EXPECT_EQ(S4N->getNumUnscheduledDeps(), 1u); // S5N
+      EXPECT_EQ(S5N->getNumUnscheduledDeps(), 0u);
+    }
   }
 
   {
@@ -956,62 +958,64 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
   auto *S3 = cast<sandboxir::StoreInst>(&*It++);
   auto *S4 = cast<sandboxir::StoreInst>(&*It++);
   auto *S5 = cast<sandboxir::StoreInst>(&*It++);
-  sandboxir::DependencyGraph DAG(TopDown, getAA(*LLVMF), Ctx);
   {
-    // Scenario 1: Build new DAG
-    auto NewIntvl = DAG.extend({S3, S3});
-    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S3, S3));
-    EXPECT_EQ(DAG.getInterval().top(), S3);
-    EXPECT_EQ(DAG.getInterval().bottom(), S3);
-    [[maybe_unused]] auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    // Check UnscheduledSuccs.
-    EXPECT_EQ(S3N->getNumUnscheduledDeps(), 0u);
-  }
-  {
-    // Scenario 2: Extend below
-    auto NewIntvl = DAG.extend({S5, S5});
-    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S4, S5));
-    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
-    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
-    EXPECT_TRUE(S4N->hasMemPred(S3N));
-    EXPECT_TRUE(S5N->hasMemPred(S4N));
-    EXPECT_TRUE(S5N->hasMemPred(S3N));
-    // Check UnscheduledPreds.
-    EXPECT_EQ(S3N->getNumUnscheduledDeps(), 0u);
-    EXPECT_EQ(S4N->getNumUnscheduledDeps(), 1u); // S3N
-    EXPECT_EQ(S5N->getNumUnscheduledDeps(), 2u); // S3N, S4N
-  }
-  {
-    // Scenario 3: Extend above
-    auto NewIntvl = DAG.extend({S1, S2});
-    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S1, S2));
-    auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
-    auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
-    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
-    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
-    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+    sandboxir::DependencyGraph DAG(TopDown, getAA(*LLVMF), Ctx);
+    {
+      // Scenario 1: Build new DAG
+      auto NewIntvl = DAG.extend({S3, S3});
+      EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S3, S3));
+      EXPECT_EQ(DAG.getInterval().top(), S3);
+      EXPECT_EQ(DAG.getInterval().bottom(), S3);
+      [[maybe_unused]] auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+      // Check UnscheduledSuccs.
+      EXPECT_EQ(S3N->getNumUnscheduledDeps(), 0u);
+    }
+    {
+      // Scenario 2: Extend below
+      auto NewIntvl = DAG.extend({S5, S5});
+      EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S4, S5));
+      auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+      auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+      auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+      EXPECT_TRUE(S4N->hasMemPred(S3N));
+      EXPECT_TRUE(S5N->hasMemPred(S4N));
+      EXPECT_TRUE(S5N->hasMemPred(S3N));
+      // Check UnscheduledPreds.
+      EXPECT_EQ(S3N->getNumUnscheduledDeps(), 0u);
+      EXPECT_EQ(S4N->getNumUnscheduledDeps(), 1u); // S3N
+      EXPECT_EQ(S5N->getNumUnscheduledDeps(), 2u); // S3N, S4N
+    }
+    {
+      // Scenario 3: Extend above
+      auto NewIntvl = DAG.extend({S1, S2});
+      EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S1, S2));
+      auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+      auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+      auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+      auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+      auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
 
-    EXPECT_TRUE(S2N->hasMemPred(S1N));
+      EXPECT_TRUE(S2N->hasMemPred(S1N));
 
-    EXPECT_TRUE(S3N->hasMemPred(S2N));
-    EXPECT_TRUE(S3N->hasMemPred(S1N));
+      EXPECT_TRUE(S3N->hasMemPred(S2N));
+      EXPECT_TRUE(S3N->hasMemPred(S1N));
 
-    EXPECT_TRUE(S4N->hasMemPred(S3N));
-    EXPECT_TRUE(S4N->hasMemPred(S2N));
-    EXPECT_TRUE(S4N->hasMemPred(S1N));
+      EXPECT_TRUE(S4N->hasMemPred(S3N));
+      EXPECT_TRUE(S4N->hasMemPred(S2N));
+      EXPECT_TRUE(S4N->hasMemPred(S1N));
 
-    EXPECT_TRUE(S5N->hasMemPred(S4N));
-    EXPECT_TRUE(S5N->hasMemPred(S3N));
-    EXPECT_TRUE(S5N->hasMemPred(S2N));
-    EXPECT_TRUE(S5N->hasMemPred(S1N));
+      EXPECT_TRUE(S5N->hasMemPred(S4N));
+      EXPECT_TRUE(S5N->hasMemPred(S3N));
+      EXPECT_TRUE(S5N->hasMemPred(S2N));
+      EXPECT_TRUE(S5N->hasMemPred(S1N));
 
-    // Check UnscheduledPreds.
-    EXPECT_EQ(S1N->getNumUnscheduledDeps(), 0u);
-    EXPECT_EQ(S2N->getNumUnscheduledDeps(), 1u); // S1N
-    EXPECT_EQ(S3N->getNumUnscheduledDeps(), 2u); // S1N, S2N
-    EXPECT_EQ(S4N->getNumUnscheduledDeps(), 3u); // S1N, S2N, S3N
-    EXPECT_EQ(S5N->getNumUnscheduledDeps(), 4u); // S1N, S2N, S3N, S4N
+      // Check UnscheduledPreds.
+      EXPECT_EQ(S1N->getNumUnscheduledDeps(), 0u);
+      EXPECT_EQ(S2N->getNumUnscheduledDeps(), 1u); // S1N
+      EXPECT_EQ(S3N->getNumUnscheduledDeps(), 2u); // S1N, S2N
+      EXPECT_EQ(S4N->getNumUnscheduledDeps(), 3u); // S1N, S2N, S3N
+      EXPECT_EQ(S5N->getNumUnscheduledDeps(), 4u); // S1N, S2N, S3N, S4N
+    }
   }
   {
     // Check UnscheduledPreds when a node is scheduled
@@ -1145,8 +1149,7 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %arg) {
   S4NotInDAG->eraseFromParent();
 }
 
-// Same but check that we don't update UnscheduledSuccs and UnscheduledPreds
-// when Node is scheduled.
+// Same but check that we don't update UnscheduledDeps when Node is scheduled.
 TEST_F(DependencyGraphTest, EraseInstrCallbackScheduled) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3) {
@@ -1173,12 +1176,18 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3) {
   EXPECT_EQ(S1MemN->getNumUnscheduledDeps(), 2u);
   EXPECT_EQ(S2MemN->getNumUnscheduledDeps(), 1u);
   EXPECT_EQ(S3MemN->getNumUnscheduledDeps(), 0u);
-  // Mark S2 as scheduled and erase it.
-  S2MemN->setScheduled();
-  S2->eraseFromParent();
-  EXPECT_EQ(DAG.getNode(S2), nullptr);
-  // Check that we did not update S1's UnscheduledSuccs
-  EXPECT_EQ(S1MemN->getNumUnscheduledDeps(), 2u);
+  // Mark S3 as scheduled.
+  S3MemN->setScheduled();
+  S1MemN->decrUnscheduledDeps();
+  S2MemN->decrUnscheduledDeps();
+  EXPECT_EQ(S1MemN->getNumUnscheduledDeps(), 1u);
+  EXPECT_EQ(S2MemN->getNumUnscheduledDeps(), 0u);
+  // Erase S3.
+  S3->eraseFromParent();
+  EXPECT_EQ(DAG.getNode(S3), nullptr);
+  // Check that we did not update S1 and S2 UnscheduledSuccs
+  EXPECT_EQ(S1MemN->getNumUnscheduledDeps(), 1u);
+  EXPECT_EQ(S2MemN->getNumUnscheduledDeps(), 0u);
 }
 
 TEST_F(DependencyGraphTest, MoveInstrCallback) {
@@ -1212,6 +1221,27 @@ define void @foo(ptr %ptr, ptr %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   EXPECT_EQ(S1N->getNextNode(), LdN);
   EXPECT_EQ(LdN->getPrevNode(), S1N);
   EXPECT_EQ(LdN->getNextNode(), S2N);
+}
+
+TEST_F(DependencyGraphTest, MoveInstrCallback_EmptyDAG) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, ptr %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+  %ld0 = load i8, ptr %ptr2
+  store i8 %v1, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+
+  // Move an instruction but with an empty DAG.
+  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
+  S1->moveBefore(Ld);
 }
 
 // Check that the mem chain is maintained correctly when the move destination is
@@ -1502,14 +1532,15 @@ define void @foo(i8 %v0) {
   auto *Modify = cast<sandboxir::BinaryOperator>(&*It++);
   // DAG contains all Add0, Add1 and Modify
   sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
-  DAG.extend({Add0, Add1, Modify});
+  DAG.extend({Add0});
   auto *Add0N = DAG.getNode(Add0);
-  auto *Add1N = DAG.getNode(Add1);
   // Mark Add0N and Add1N as scheduled.
 #ifndef NDEBUG
   EXPECT_TRUE(Add0N->validUnscheduledDeps());
 #endif
   Add0N->setScheduled();
+  DAG.extend({Add1, Modify});
+  auto *Add1N = DAG.getNode(Add1);
 #ifndef NDEBUG
   EXPECT_FALSE(Add0N->validUnscheduledDeps());
   EXPECT_DEATH(Add0N->getNumUnscheduledDeps(), ".*");
@@ -1631,7 +1662,7 @@ define void @foo(i8 %v0) {
 TEST_F(DependencyGraphTest, MaintainUnscheduledPredsWhenOperandScheduled) {
   parseIR(C, R"IR(
 define void @foo(i8 %v0) {
-  %sched = add i8 %add0, 1
+  %sched = add i8 %v0, 1
   %add0 = add i8 %v0, 0
   ret void
 }

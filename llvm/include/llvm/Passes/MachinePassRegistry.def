@@ -45,6 +45,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-register-class-info",
 MACHINE_FUNCTION_ANALYSIS("machine-regions", MachineRegionInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-uniformity", MachineUniformityAnalysis())
+MACHINE_FUNCTION_ANALYSIS("mir2vec-vocab", MIR2VecVocabAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MACHINE_FUNCTION_ANALYSIS("reaching-def", ReachingDefAnalysis())
 MACHINE_FUNCTION_ANALYSIS("regalloc-evict", RegAllocEvictionAdvisorAnalysis())
@@ -78,6 +79,7 @@ MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("finalizebundle-test", FinalizeBundleTestPass())
 MACHINE_FUNCTION_PASS("fixup-statepoint-caller-saved", FixupStatepointCallerSavedPass())
 MACHINE_FUNCTION_PASS("funclet-layout", FuncletLayoutPass())
+MACHINE_FUNCTION_PASS("if-converter", IfConverterPass())
 MACHINE_FUNCTION_PASS("init-undef", InitUndefPass())
 MACHINE_FUNCTION_PASS("implicit-null-checks", ImplicitNullChecksPass())
 MACHINE_FUNCTION_PASS("instruction-select", InstructionSelectPass())
@@ -85,6 +87,7 @@ MACHINE_FUNCTION_PASS("ir-translator", IRTranslatorPass(TM->getOptLevel()))
 MACHINE_FUNCTION_PASS("kcfi", MachineKCFIPass())
 MACHINE_FUNCTION_PASS("gc-empty-basic-blocks", GCEmptyBasicBlocksPass())
 MACHINE_FUNCTION_PASS("legalizer", LegalizerPass())
+MACHINE_FUNCTION_PASS("live-debug-values", LiveDebugValuesPass())
 MACHINE_FUNCTION_PASS("load-store-opt", LoadStoreOptPass())
 MACHINE_FUNCTION_PASS("localizer", LocalizerPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
@@ -130,6 +133,7 @@ MACHINE_FUNCTION_PASS("print<machine-regions>",
                       MachineRegionInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-uniformity>",
                       MachineUniformityPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<mir2vec>", MIR2VecPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<reaching-def>", ReachingDefPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<virtregmap>", VirtRegMapPrinterPass(errs()))
@@ -161,6 +165,8 @@ MACHINE_FUNCTION_PASS("unreachable-mbb-elimination",
                       UnreachableMachineBlockElimPass())
 MACHINE_FUNCTION_PASS("verify", MachineVerifierPass())
 MACHINE_FUNCTION_PASS("verify<machine-cycles>", MachineCycleInfoVerifierPass())
+MACHINE_FUNCTION_PASS("verify<machine-dom-tree>",
+                      MachineDominatorTreeVerifierPass())
 MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifierPass())
 MACHINE_FUNCTION_PASS("xray-instrumentation", XRayInstrumentationPass())
 #undef MACHINE_FUNCTION_PASS
@@ -186,17 +192,6 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
                                    "BranchFolderPass");
     },
     "enable-tail-merge")
-
-MACHINE_FUNCTION_PASS_WITH_PARAMS(
-    "live-debug-values", "LiveDebugValuesPass",
-    [](bool ShouldEmitDebugEntryValues) {
-      return LiveDebugValuesPass(ShouldEmitDebugEntryValues);
-    },
-    [](StringRef Params) {
-      return parseSinglePassOption(Params, "emit-debug-entry-values",
-                                   "LiveDebugValuesPass");
-    },
-    "emit-debug-entry-values")
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "machine-sink", "MachineSinkingPass",
@@ -248,15 +243,12 @@ DUMMY_MACHINE_MODULE_PASS("machine-outliner", MachineOutlinerPass)
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
 #endif
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-prepare", BasicBlockSectionsPass)
-DUMMY_MACHINE_FUNCTION_PASS("bbsections-profile-reader", BasicBlockSectionsProfileReaderPass)
 DUMMY_MACHINE_FUNCTION_PASS("fs-profile-loader", MIRProfileLoaderNewPass)
 DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machineinstr-printer", MachineFunctionPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
-DUMMY_MACHINE_FUNCTION_PASS("prolog-epilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass)
-DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)
 DUMMY_MACHINE_FUNCTION_PASS("stackmap-liveness", StackMapLivenessPass)
 #undef DUMMY_MACHINE_FUNCTION_PASS

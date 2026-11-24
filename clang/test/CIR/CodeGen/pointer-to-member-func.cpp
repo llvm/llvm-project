@@ -27,22 +27,22 @@ struct Foo {
 void (Foo::*m1_ptr)(int) = &Foo::m1;
 
 // CIR-BEFORE: cir.global external @m1_ptr = #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-AFTER-DAG:     cir.global "private" constant cir_private @[[NONVIRT_RET:.*]] = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
-// CIR-AFTER-X86-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<9> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
-// CIR-AFTER-ARM-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<8> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
-// CIR-AFTER-DAG:     cir.global "private" constant cir_private @[[NULL_RET:.*]] = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-DAG:     cir.global "private" constant cir_private unnamed_addr @[[NONVIRT_RET:.*]] = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-X86-DAG: cir.global "private" constant cir_private unnamed_addr @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<9> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-ARM-DAG: cir.global "private" constant cir_private unnamed_addr @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<8> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-DAG:     cir.global "private" constant cir_private unnamed_addr @[[NULL_RET:.*]] = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
 // CIR-AFTER:         cir.global external @m1_ptr = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
 // LLVM-DAG:     @m1_ptr = global { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
-// LLVM-DAG:     @[[NONVIRT_RET:.*]] = private constant { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
-// LLVM-X86-DAG: @[[VIRT_RET:.*]] = private constant { i64, i64 } { i64 9, i64 0 }
-// LLVM-ARM-DAG: @[[VIRT_RET:.*]] = private constant { i64, i64 } { i64 8, i64 1 }
-// LLVM-DAG:     @[[NULL_RET:.*]] = private constant { i64, i64 } zeroinitializer
+// LLVM-DAG:     @[[NONVIRT_RET:.*]] = private unnamed_addr constant { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
+// LLVM-X86-DAG: @[[VIRT_RET:.*]] = private unnamed_addr constant { i64, i64 } { i64 9, i64 0 }
+// LLVM-ARM-DAG: @[[VIRT_RET:.*]] = private unnamed_addr constant { i64, i64 } { i64 8, i64 1 }
+// LLVM-DAG:     @[[NULL_RET:.*]] = private unnamed_addr constant { i64, i64 } zeroinitializer
 // OGCG: @m1_ptr = global { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
 
 // Global pointer to virtual method
 void (Foo::*m2_ptr)(int) = &Foo::m2;
 
-// CIR-BEFORE: cir.global external @m2_ptr = #cir.method<vtable_offset = 0> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
+// CIR-BEFORE: cir.global external @m2_ptr = #cir.method<vtable_index = 0> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-AFTER-X86: cir.global external @m2_ptr = #cir.const_record<{#cir.int<1> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
 // CIR-AFTER-ARM: cir.global external @m2_ptr = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
 // LLVM-X86-DAG: @m2_ptr = global { i64, i64 } { i64 1, i64 0 }
@@ -62,24 +62,31 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z16make_non_virtualv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
-// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct{{.*}} attributes {{{.*}}nothrow, optnone} {
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct{{.*}} attributes {{{.*}}nothrow, optnone} {
+// CIR-AFTER-ARM: cir.func {{.*}} @_Z16make_non_virtualv() -> !cir.array<!u64i x 2> attributes {{{.*}}nothrow, optnone} {
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NONVIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
-// CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
-// CIR-AFTER:   cir.return %[[RET]] : !rec_anon_struct
+// CIR-AFTER-X86: %[[RET:.*]] = cir.load %[[RETVAL]]
+// CIR-AFTER-X86: cir.return %[[RET]] : !rec_anon_struct
+// CIR-AFTER-ARM: %[[RET_ARR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.array<!u64i x 2>>
+// CIR-AFTER-ARM: %[[RET:.*]] = cir.load{{.*}} %[[RET_ARR]]
+// CIR-AFTER-ARM: cir.return %[[RET]] : !cir.array<!u64i x 2>
 
-// LLVM: define {{.*}} { i64, i64 } @_Z16make_non_virtualv()
+// LLVM-X86: define {{.*}} { i64, i64 } @_Z16make_non_virtualv()
+// LLVM-ARM: define {{.*}} [2 x i64] @_Z16make_non_virtualv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
 // LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[NONVIRT_RET]]
-// LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
-// LLVM:   ret { i64, i64 } %[[RET]]
+// LLVM-X86: %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
+// LLVM-X86: ret { i64, i64 } %[[RET]]
+// LLVM-ARM: %[[RET:.*]] = load [2 x i64], ptr %[[RETVAL]]
+// LLVM-ARM: ret [2 x i64] %[[RET]]
 
 // OGCG-X86: define {{.*}} { i64, i64 } @_Z16make_non_virtualv()
 // OGCG-X86:   ret { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
@@ -95,24 +102,30 @@ auto make_virtual() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z12make_virtualv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<vtable_offset = 8> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<vtable_index = 1> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
-// CIR-AFTER: cir.func {{.*}} @_Z12make_virtualv() -> !rec_anon_struct
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86: cir.func {{.*}} @_Z12make_virtualv() -> !rec_anon_struct
+// CIR-AFTER-ARM: cir.func {{.*}} @_Z12make_virtualv() -> !cir.array<!u64i x 2>
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[VIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
-// CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
-// CIR-AFTER:   cir.return %[[RET]] : !rec_anon_struct
+// CIR-AFTER-X86: %[[RET:.*]] = cir.load %[[RETVAL]]
+// CIR-AFTER-X86: cir.return %[[RET]] : !rec_anon_struct
+// CIR-AFTER-ARM: %[[RET_ARR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.array<!u64i x 2>>
+// CIR-AFTER-ARM: %[[RET:.*]] = cir.load{{.*}} %[[RET_ARR]]
+// CIR-AFTER-ARM: cir.return %[[RET]] : !cir.array<!u64i x 2>
 
 // LLVM: define {{.*}} @_Z12make_virtualv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
 // LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[VIRT_RET]]
-// LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
-// LLVM:   ret { i64, i64 } %[[RET]]
+// LLVM-X86: %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
+// LLVM-X86: ret { i64, i64 } %[[RET]]
+// LLVM-ARM: %[[RET:.*]] = load [2 x i64], ptr %[[RETVAL]]
+// LLVM-ARM: ret [2 x i64] %[[RET]]
 
 // OGCG:     define {{.*}} @_Z12make_virtualv()
 // OGCG-X86:   ret { i64, i64 } { i64 9, i64 0 }
@@ -126,24 +139,30 @@ auto make_null() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z9make_nullv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<null> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
-// CIR-AFTER: cir.func {{.*}} @_Z9make_nullv() -> !rec_anon_struct
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86: cir.func {{.*}} @_Z9make_nullv() -> !rec_anon_struct
+// CIR-AFTER-ARM: cir.func {{.*}} @_Z9make_nullv() -> !cir.array<!u64i x 2>
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NULL_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
-// CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
-// CIR-AFTER:   cir.return %[[RET]] : !rec_anon_struct
+// CIR-AFTER-X86: %[[RET:.*]] = cir.load %[[RETVAL]]
+// CIR-AFTER-X86: cir.return %[[RET]] : !rec_anon_struct
+// CIR-AFTER-ARM: %[[RET_ARR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.array<!u64i x 2>>
+// CIR-AFTER-ARM: %[[RET:.*]] = cir.load{{.*}} %[[RET_ARR]]
+// CIR-AFTER-ARM: cir.return %[[RET]] : !cir.array<!u64i x 2>
 
 // LLVM: define {{.*}} @_Z9make_nullv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
 // LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[NULL_RET]]
-// LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
-// LLVM:   ret { i64, i64 } %[[RET]]
+// LLVM-X86: %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
+// LLVM-X86: ret { i64, i64 } %[[RET]]
+// LLVM-ARM: %[[RET:.*]] = load [2 x i64], ptr %[[RETVAL]]
+// LLVM-ARM: ret [2 x i64] %[[RET]]
 
 // OGCG:     define {{.*}} @_Z9make_nullv()
 // OGCG-X86:   ret { i64, i64 } zeroinitializer
@@ -177,14 +196,12 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-AFTER-ARM:  %[[VIRT_BIT_TEST:.*]] = cir.and %[[ADJ]], %[[ONE]] : !s64i
 // CIR-AFTER:      %[[IS_VIRTUAL:.*]] = cir.cmp eq %[[VIRT_BIT_TEST]], %[[ONE]] : !s64i
 // CIR-AFTER:      %[[CALLEE:.*]] = cir.ternary(%[[IS_VIRTUAL]], true {
-// CIR-AFTER:        %[[VTABLE_PTR:.*]] = cir.cast bitcast %[[ADJUSTED_THIS]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!s8i>>
-// CIR-AFTER:        %[[VTABLE:.*]] = cir.load %[[VTABLE_PTR]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+// CIR-AFTER:        %[[VTABLE_PTR:.*]] = cir.vtable.get_vptr %[[ADJUSTED_THIS]] : !cir.ptr<!void> -> !cir.ptr<!cir.vptr>
+// CIR-AFTER:        %[[VTABLE:.*]] = cir.load %[[VTABLE_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-AFTER-X86:    %[[OFFSET:.*]] = cir.sub %[[METHOD_PTR]], %[[ONE]] : !s64i
-// CIR-AFTER-X86:    %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[OFFSET]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
-// CIR-AFTER-ARM:    %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[METHOD_PTR]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
-// CIR-AFTER:        %[[VIRTUAL_FN_PTR:.*]] = cir.cast bitcast %[[VTABLE_SLOT]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>>
-// CIR-AFTER:        %[[VIRTUAL_FN_PTR_LOAD:.*]] = cir.load %[[VIRTUAL_FN_PTR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
-// CIR-AFTER:        cir.yield %[[VIRTUAL_FN_PTR_LOAD]] : !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
+// CIR-AFTER-X86:    %[[VIRTUAL_FN_PTR:.*]] = cir.vtable.get_virtual_fn_by_offset %[[VTABLE]][%[[OFFSET]] : !s64i] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
+// CIR-AFTER-ARM:    %[[VIRTUAL_FN_PTR:.*]] = cir.vtable.get_virtual_fn_by_offset %[[VTABLE]][%[[METHOD_PTR]] : !s64i] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
+// CIR-AFTER:        cir.yield %[[VIRTUAL_FN_PTR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
 // CIR-AFTER:      }, false {
 // CIR-AFTER:        %[[CALLEE_PTR:.*]] = cir.cast int_to_ptr %[[METHOD_PTR]] : !s64i -> !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
 // CIR-AFTER:        cir.yield %[[CALLEE_PTR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>

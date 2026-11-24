@@ -26,16 +26,6 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<double> LongBranchFactor(
-    "amdgpu-long-branch-factor", cl::init(1.0), cl::Hidden,
-    cl::desc("Factor to apply to what qualifies as a long branch "
-             "to reserve a pair of scalar registers. If this value "
-             "is 0 the long branch registers are never reserved. As this "
-             "value grows the greater chance the branch distance will fall "
-             "within the threshold and the registers will be marked to be "
-             "reserved. We lean towards always reserving a register for  "
-             "long jumps"));
-
 class GCNPreRALongBranchReg {
 
   struct BasicBlockInfo {
@@ -136,8 +126,9 @@ bool GCNPreRALongBranchReg::run(MachineFunction &MF) {
     if (Last == MBB.end() || !Last->isUnconditionalBranch())
       continue;
     MachineBasicBlock *DestBB = TII->getBranchDestBlock(*Last);
-    uint64_t BlockDistance = static_cast<uint64_t>(
-        LongBranchFactor * BlockInfo[DestBB->getNumber()].Offset);
+    uint64_t BlockDistance =
+        static_cast<uint64_t>(STM.getCLOpts().long_branch_factor *
+                              BlockInfo[DestBB->getNumber()].Offset);
     // If the distance falls outside the threshold assume it is a long branch
     // and we need to reserve the registers
     if (!TII->isBranchOffsetInRange(Last->getOpcode(), BlockDistance)) {

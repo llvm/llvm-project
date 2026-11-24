@@ -9,8 +9,12 @@ define i8 @pr165438(<4 x i32> %0) {
 ; CHECK:         .functype pr165438 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    i8x16.extract_lane_u 0
 ; CHECK-NEXT:    # fallthrough-return
 entry:

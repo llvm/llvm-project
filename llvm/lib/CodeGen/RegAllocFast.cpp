@@ -680,14 +680,17 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
       LLVM_DEBUG(dbgs() << "Cloning debug info due to live out spill\n");
     }
 
-    // Rewrite unassigned dbg_values to use the stack slot.
-    // TODO We can potentially do this for list debug values as well if we know
-    // how the dbg_values are getting unassigned.
+    // Rewrite the dbg_values to use the stack slot too, whether or not they
+    // were assigned a register. They all come after the spill, so the slot
+    // holds the value wherever they are, but the register can be clobbered
+    // before the end of the block. A dbg_value left on the register would
+    // also override the one inserted above, leaving a hole in the variable's
+    // location from the clobber until the clone before the terminator.
+    // TODO We can potentially do this for list debug values as well.
     if (DBG.isNonListDebugValue()) {
       MachineOperand &MO = DBG.getDebugOperand(0);
-      if (MO.isReg() && !MO.getReg()) {
-        updateDbgValueForSpill(DBG, FI, Register());
-      }
+      if (MO.isReg())
+        updateDbgValueForSpill(DBG, FI, MO.getReg());
     }
   }
   // Now this register is spilled there is should not be any DBG_VALUE

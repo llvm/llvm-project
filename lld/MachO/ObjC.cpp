@@ -782,8 +782,8 @@ bool ObjcCategoryMerger::parsePointerListInfo(const ConcatInputSection *isec,
     const Relocation *reloc = ptrListSym->isec()->getRelocAt(off);
     assert(reloc && "No reloc found at pointer list offset");
 
-    auto *listSym =
-        dyn_cast_or_null<Defined>(reloc->referent.dyn_cast<Symbol *>());
+    auto *listSym = dyn_cast_or_null<Defined>(
+        dyn_cast_if_present<Symbol *>(reloc->referent));
     // Sometimes, the reloc points to a StringPiece (InputSection + addend)
     // instead of a symbol.
     // TODO: Skip these cases for now, but we should fix this.
@@ -1173,7 +1173,7 @@ DenseSet<const Symbol *> ObjcCategoryMerger::collectNlCategories() {
       continue;
 
     for (auto &r : sec->relocs) {
-      const Symbol *sym = r.referent.dyn_cast<Symbol *>();
+      const Symbol *sym = dyn_cast_if_present<Symbol *>(r.referent);
       nlCategories.insert(sym);
     }
   }

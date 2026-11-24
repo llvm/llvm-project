@@ -32,8 +32,8 @@ struct Trivial {
 // LLVM-DAG: %struct.WithMemPtr = type { i32, double, { i64, i64 } }
 // LLVM-DAG: %struct.Trivial = type { i32, double, i64 }
 
-// CIR-AFTER-DAG: cir.global "private" constant cir_private @__const.local.localT_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.int<0> : !s64i}> : !rec_Trivial
-// CIR-AFTER-DAG: cir.global "private" constant cir_private @__const.local.localMpt_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.double, #cir.const_record<{#cir.global_view<@_ZN5Other4funcEif> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct}> : !rec_WithMemPtr
+// CIR-AFTER-DAG: cir.global "private" constant cir_private unnamed_addr @__const.local.localT_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.int<0> : !s64i}> : !rec_Trivial
+// CIR-AFTER-DAG: cir.global "private" constant cir_private unnamed_addr @__const.local.localMpt_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.double, #cir.const_record<{#cir.global_view<@_ZN5Other4funcEif> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct}> : !rec_WithMemPtr
 
 // LLVM-DAG: @__const.local.localMpt_init = private {{.*}}constant %struct.WithMemPtr { i32 1, double 2.000000e+00, { i64, i64 } { i64 ptrtoint (ptr @_ZN5Other4funcEif to i64), i64 0 } }
 // LLVM-DAG: @__const.local.localT_init = private {{.*}}constant %struct.Trivial { i32 1, double 2.200000e+00, i64 0 }

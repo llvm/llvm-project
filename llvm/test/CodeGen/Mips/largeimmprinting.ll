@@ -18,11 +18,11 @@ entry:
 ; 32:  sw      $ra, 20($[[R1]])
 
 ; 64:  lui     $[[R0:[0-9]+]], 1
-; 64:  daddiu  $[[R0]], $[[R0]], 32
+; 64:  daddiu  $[[R0]], $[[R0]], 48
 ; 64:  dsubu   $sp, $sp, $[[R0]]
 ; 64:  lui     $[[R1:[0-9]+]], 1
 ; 64:  daddu   $[[R1]], $sp, $[[R1]]
-; 64:  sd      $ra, 24($[[R1]])
+; 64:  sd      $ra, 40($[[R1]])
 
   %agg.tmp = alloca %struct.S1, align 8
   call void @llvm.memcpy.p0.p0.i32(ptr align 1 %agg.tmp, ptr align 1 @s1, i32 65536, i1 false)

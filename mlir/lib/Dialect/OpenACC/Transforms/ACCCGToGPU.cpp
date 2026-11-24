@@ -96,7 +96,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -564,6 +565,9 @@ private:
   /// Privates with no recoverable name or compiler temps are skipped.
   void recordThreadPrivate(acc::PrivateLocalOp privateLocal);
 
+  /// Record \p privatizeOp as global memory storage, for the closing remark.
+  void recordGlobalMemory(acc::PrivatizeOp privatizeOp);
+
   /// Element size in bytes for \p elementType .
   int64_t getElementSizeInBytes(Location loc, Type elementType) const;
 
@@ -786,6 +790,7 @@ private:
   SharedMemoryBudget sharedMemBudget;
   SmallVector<std::string> sharedMemPrivateVarNames;
   SmallVector<std::string> threadPrivateVarNames;
+  SmallVector<std::string> globalMemVarNames;
   llvm::SmallVector<Operation *, 4> deferredBarrierSeqLoops;
 
   Value getThreadId(Location loc, gpu::Dimension dim) {
@@ -958,6 +963,16 @@ void ACCCGToGPULowering::recordThreadPrivate(acc::PrivateLocalOp privateLocal) {
   // The same variable reaches this point once per acc.private_local it has.
   if (!llvm::is_contained(threadPrivateVarNames, varName))
     threadPrivateVarNames.push_back(varName);
+}
+
+void ACCCGToGPULowering::recordGlobalMemory(acc::PrivatizeOp privatizeOp) {
+  std::string varName = accSupport.getVariableName(privatizeOp.getResult());
+  // A name that could not be recovered, or a compiler temp are skipped.
+  if (varName.empty())
+    return;
+  // The same variable reaches this point once per acc.privatize it has.
+  if (!llvm::is_contained(globalMemVarNames, varName))
+    globalMemVarNames.push_back(varName);
 }
 
 FailureOr<arith::AtomicRMWKind>
@@ -1361,6 +1376,14 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     accSupport.emitRemark(computeRegion, [&]() {
       return (llvm::Twine("GPU shared memory used for ") +
               llvm::join(sharedMemPrivateVarNames, ","))
+          .str();
+    });
+  }
+
+  if (!globalMemVarNames.empty()) {
+    accSupport.emitRemark(computeRegion, [&]() {
+      return (llvm::Twine("GPU global memory used for ") +
+              llvm::join(globalMemVarNames, ","))
           .str();
     });
   }
@@ -3066,6 +3089,7 @@ Value ACCCGToGPULowering::allocatePrivatizeHeapStorage(
   Location loc = privatize.getLoc();
   Value mem =
       memref::AllocOp::create(rewriter, loc, baseTy, mappedDynamicSizes);
+  recordGlobalMemory(privatize);
   OpBuilder::InsertionGuard guard(rewriter);
   Block *allocBlock = mem.getDefiningOp()->getBlock();
   if (allocBlock->mightHaveTerminator()) {
@@ -3222,6 +3246,7 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   rewriter.setInsertionPoint(thenBlock.getTerminator());
   auto mem = memref::AllocOp::create(rewriter, privatize->getLoc(), baseTy,
                                      mappedDynamicSizes);
+  recordGlobalMemory(privatize);
   // Shared memory allocation
   gpu::AddressSpaceAttr sharedMemoryAddressSpace = gpu::AddressSpaceAttr::get(
       computeRegion->getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());

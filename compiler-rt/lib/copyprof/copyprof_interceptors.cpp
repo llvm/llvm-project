@@ -16,6 +16,7 @@
 #include "copyprof/copyprof_interface_internal.h"
 #include "copyprof/copyprof_internal.h"
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
@@ -69,13 +70,6 @@ int CopyProfOnExit() { return 0; }
 
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) REAL(name)
 
-#include "sanitizer_common/sanitizer_platform_interceptors.h"
-// These interceptors allocate memory via `WRAP(malloc)`, but heap functions are
-// not intercepted yet.
-#undef SANITIZER_INTERCEPT_STRNDUP
-#undef SANITIZER_INTERCEPT___STRNDUP
-#undef SANITIZER_INTERCEPT_REALPATH
-
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 namespace __copyprof {
@@ -84,6 +78,7 @@ void InitializeInterceptors() {
   static bool initialized;
   CHECK(!initialized);
   initialized = true;
+  InitializeHeapInterceptors();
   InitializeCommonInterceptors();
 }
 

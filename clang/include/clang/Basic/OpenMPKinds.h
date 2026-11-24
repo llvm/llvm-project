@@ -435,9 +435,8 @@ bool isOpenMPPrivate(OpenMPClauseKind Kind);
 /// \return true - the clause is a threadprivate clause, otherwise - false.
 bool isOpenMPThreadPrivate(OpenMPClauseKind Kind);
 
-/// Checks if the specified directive kind is one of tasking directives - task,
-/// taskloop, taksloop simd, master taskloop, parallel master taskloop, master
-/// taskloop simd, or parallel master taskloop simd.
+/// Checks if the specified directive kind is one of tasking directives - task
+/// or any taskloop-based directive.
 bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 
 /// Checks if the specified directive kind is one of the composite or combined

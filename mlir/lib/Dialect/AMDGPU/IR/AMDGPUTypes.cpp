@@ -14,10 +14,3 @@
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
-
-void mlir::amdgpu::AMDGPUDialect::registerTypes() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
-      >();
-}

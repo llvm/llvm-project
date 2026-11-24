@@ -53,7 +53,7 @@ define void @foo(i32 %iCount, i32 %c, i32 %jCount) {
 ; CHECK:       [[FOR_BODY34]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[FOR_BODY3_LR_PH3]] ], [ [[TMP7:%.*]], %[[FOR_BODY34]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[WIDE_LOAD]], %[[FOR_BODY3_LR_PH3]] ], [ [[TMP6:%.*]], %[[FOR_BODY34]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1024 x i32], ptr @B, i64 0, <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], ptr @B, <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER5]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6]] = add nsw <4 x i32> [[TMP5]], [[TMP3]]

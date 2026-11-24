@@ -28,6 +28,7 @@ namespace {
 namespace llvm {
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 
@@ -143,7 +144,8 @@ private:
   bool selectG_PTRMASK(MachineInstr &I) const;
   bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
-  bool selectBufferLoadLds(MachineInstr &MI) const;
+  bool selectBufferLoadLds(MachineInstr &MI,
+                           const AMDGPU::BufferIntrinsicInfo &Info) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
   bool selectTensorLoadStore(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
@@ -191,6 +193,7 @@ private:
   selectVOP3BMods(MachineOperand &Root) const;
 
   ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3NoOpSelMods(MachineOperand &Root) const;
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,

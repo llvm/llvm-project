@@ -10,7 +10,6 @@
 ---
 name:            testBranchCoal
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$f1', virtual-reg: '%0' }
   - { reg: '$f2', virtual-reg: '%1' }

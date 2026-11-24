@@ -16,6 +16,9 @@ class CCIfExtend<CCAction A>
   : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
 class CCIfOrigTypeShaderCCIsSGPR<CCAction A>
   : CCIf<[{!OrigTy->getScalarType()->isFloatingPointTy()}], A>;
+class CCIfInRegOrNoRealTrue16<CCAction A>
+  : CCIf<"ArgFlags.isInReg() || !State.getMachineFunction()"
+         ".getSubtarget<GCNSubtarget>().useRealTrue16Insts()", A>;
 
 
 // Calling convention for SI
@@ -25,6 +28,8 @@ def CC_SI_Gfx : CallingConv<[
   // 32 is reserved for the stack pointer
   // 33 is reserved for the frame pointer
   // 34 is reserved for the base pointer
+  CCIfType<[i16, f16, bf16], CCIfInRegOrNoRealTrue16<CCPromoteToType<i32>>>,
+
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(4, 30), !cast<Register>("SGPR"#i))  // SGPR4-29
   >>>,
@@ -48,6 +53,7 @@ def RetCC_SI_Gfx : CallingConv<[
 def CC_SI_SHADER : CallingConv<[
 
   CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i16, f16, bf16], CCIfInRegOrNoRealTrue16<CCPromoteToType<i32>>>,
 
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 44), !cast<Register>("SGPR"#i))  // SGPR0-43
@@ -137,6 +143,7 @@ def CC_AMDGPU_Func : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
   CCIfType<[i1], CCPromoteToType<i32>>,
   CCIfType<[i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i16, f16, bf16], CCIfInRegOrNoRealTrue16<CCPromoteToType<i32>>>,
 
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
@@ -167,6 +174,8 @@ def CC_AMDGPU : CallingConv<[
 ]>;
 
 def CC_AMDGPU_CS_CHAIN : CallingConv<[
+  CCIfType<[i16, f16, bf16], CCIfInRegOrNoRealTrue16<CCPromoteToType<i32>>>,
+
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(105), !cast<Register>("SGPR"#i))
   >>>,

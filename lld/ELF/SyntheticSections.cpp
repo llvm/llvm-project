@@ -25,6 +25,7 @@
 #include "Target.h"
 #include "Thunks.h"
 #include "Writer.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -103,8 +104,8 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
                                 SectionBase &section) {
-  Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
-                           type, value, size, &section);
+  Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
+                           value, size, &section);
   if (ctx.in.symTab)
     ctx.in.symTab->addSymbol(s);
 
@@ -2076,7 +2077,7 @@ void SymbolTableBaseSection::maybeAddSttFile() {
           syms.drop_front(firstGlobalIdx),
           [](const SymbolTableEntry &s) { return s.sym->isLocal(); })) {
     synthSttFileSym =
-        makeDefined(ctx, ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
+        makeDefined(ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
                     /*value=*/0, /*size=*/0, nullptr);
     addSymbol(synthSttFileSym);
   }
@@ -3432,7 +3433,7 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
   SmallVector<GdbChunk, 0> chunks(files.size());
   SmallVector<SmallVector<NameAttrEntry, 0>, 0> nameAttrs(files.size());
 
-  parallelFor(0, files.size(), [&](size_t i) {
+  parallelForFineGrained(files.size(), [&](size_t i) {
     // To keep memory usage low, we don't want to keep cached DWARFContext, so
     // avoid getDwarf() here.
     ObjFile<ELFT> *file = cast<ObjFile<ELFT>>(files[i]);
@@ -3821,7 +3822,7 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Split sections");
   // splitIntoPieces needs to be called on each MergeInputSection
   // before calling finalizeContents().
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
+  parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
     for (InputSectionBase *sec : file->getSections()) {
       if (!sec)
         continue;
