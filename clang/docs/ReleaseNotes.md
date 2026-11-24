@@ -457,6 +457,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
   for more information.
 
+- Added `-fpass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass
+  plugin named `<plugin>`, as `opt -plugin-arg=<plugin>,<arg>` does. It reaches
+  plugins loaded with `-fpass-plugin=` and statically linked ones such as Polly.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
