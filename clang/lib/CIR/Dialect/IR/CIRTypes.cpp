@@ -1670,10 +1670,42 @@ cir::VectorType::verifyEntries(mlir::DataLayoutEntryListRef entries,
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, llvm::ElementCount size) {
+    mlir::Type elementType, llvm::ElementCount size, cir::VectorAbiKind kind) {
   if (size.isZero())
     return emitError() << "the number of vector elements must be non-zero";
-  return success();
+
+  switch (kind) {
+  case cir::VectorAbiKind::Generic:
+    if (size.isScalable())
+      return emitError() << "a scalable vector must have a vector kind";
+    return success();
+  case cir::VectorAbiKind::SVEData: {
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(elementType)) {
+      unsigned width = intTy.getWidth();
+      if (!intTy.isBitInt() &&
+          (width == 8 || width == 16 || width == 32 || width == 64))
+        return success();
+    } else if (mlir::isa<cir::FP16Type, cir::BF16Type, cir::SingleType,
+                         cir::DoubleType>(elementType)) {
+      return success();
+    }
+    return emitError() << "an SVE data vector must have 8-, 16-, 32-, or "
+                          "64-bit integer elements or f16, bf16, float, or "
+                          "double elements";
+  }
+  case cir::VectorAbiKind::SVEPredicate: {
+    unsigned width = size.isScalable() ? 1 : 8;
+    auto intTy = mlir::dyn_cast<cir::IntType>(elementType);
+    if (!intTy || intTy.isSigned() || intTy.isBitInt() ||
+        intTy.getWidth() != width)
+      return emitError() << "an SVE predicate vector must have "
+                         << cir::IntType::get(elementType.getContext(), width,
+                                              /*isSigned=*/false)
+                         << " elements";
+    return success();
+  }
+  }
+  llvm_unreachable("unknown vector kind");
 }
 
 mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
@@ -1722,12 +1754,28 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
     return {};
   }
 
+  // Parse the optional vector kind. A generic vector has no kind keyword.
+  cir::VectorAbiKind kind = cir::VectorAbiKind::Generic;
+  if (odsParser.parseOptionalComma().succeeded()) {
+    llvm::SMLoc kindLoc = odsParser.getCurrentLocation();
+    llvm::StringRef kindName;
+    if (odsParser.parseKeyword(&kindName))
+      return {};
+    std::optional<cir::VectorAbiKind> parsedKind =
+        cir::symbolizeVectorAbiKind(kindName);
+    if (!parsedKind || *parsedKind == cir::VectorAbiKind::Generic) {
+      odsParser.emitError(kindLoc, "expected 'sve_data' or 'sve_predicate'");
+      return {};
+    }
+    kind = *parsedKind;
+  }
+
   // Parse literal '>'
   if (odsParser.parseGreater())
     return {};
   return odsParser.getChecked<VectorType>(
       odsLoc, odsParser.getContext(), mlir::Type((*elementType)),
-      llvm::ElementCount::get(*size, isScalable));
+      llvm::ElementCount::get(*size, isScalable), kind);
 }
 
 void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
@@ -1742,6 +1790,8 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   odsPrinter << ' ' << "x";
   odsPrinter << ' ';
   odsPrinter.printStrippedAttrOrType(getElementType());
+  if (getKind() != cir::VectorAbiKind::Generic)
+    odsPrinter << ", " << cir::stringifyVectorAbiKind(getKind());
   odsPrinter << ">";
 }
 
@@ -1957,19 +2007,4 @@ mlir::LogicalResult cir::PointerType::verify(
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// CIR Dialect
-//===----------------------------------------------------------------------===//
-
-void CIRDialect::registerTypes() {
-  // Register tablegen'd types.
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "clang/CIR/Dialect/IR/CIROpsTypes.cpp.inc"
-      >();
-
-  // Register raw C++ types.
-  // TODO(CIR) addTypes<RecordType>();
 }

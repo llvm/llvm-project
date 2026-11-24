@@ -420,6 +420,18 @@ private:
   LogicalResult convertBranchArgs(llvm::Instruction *branch,
                                   llvm::BasicBlock *target,
                                   SmallVectorImpl<Value> &blockArguments);
+  /// Converted operand bundles, with flattened operands and one size and tag
+  /// per bundle.
+  struct OperandBundles {
+    SmallVector<Value> operands;
+    DenseI32ArrayAttr sizes;
+    ArrayAttr tags;
+  };
+
+  /// Converts operand bundles, preserving their order and empty bundles.
+  FailureOr<OperandBundles>
+  convertOperandBundles(ArrayRef<llvm::OperandBundleUse> bundles);
+
   /// Convert `callInst` operands. For indirect calls, the method additionally
   /// inserts the called function at the beginning of the returned `operands`
   /// array.  If `allowInlineAsm` is set to false (the default), it will return

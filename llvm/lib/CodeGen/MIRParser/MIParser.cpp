@@ -1879,6 +1879,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           .Case("clobber", InlineAsm::Kind::Clobber)
           .Case("imm", InlineAsm::Kind::Imm)
           .Case("mem", InlineAsm::Kind::Mem)
+          .Case("func", InlineAsm::Kind::Func)
           .Default(InvalidKind);
   if (K == InvalidKind)
     return error("unknown inline asm operand kind '" + KindStr + "'");
@@ -1918,7 +1919,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           "expected register class or memory constraint name after ':'");
 
     StringRef ConstraintStr = Token.stringValue();
-    if (F.isMemKind()) {
+    if (F.isMemKind() || F.isFuncKind()) {
       InlineAsm::ConstraintCode CC =
           StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
               .Case("es", InlineAsm::ConstraintCode::es)
@@ -1949,7 +1950,6 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
               .Case("ZR", InlineAsm::ConstraintCode::ZR)
               .Case("ZS", InlineAsm::ConstraintCode::ZS)
               .Case("ZT", InlineAsm::ConstraintCode::ZT)
-              .Case("RF", InlineAsm::ConstraintCode::RF)
               .Default(InlineAsm::ConstraintCode::Unknown);
       if (CC == InlineAsm::ConstraintCode::Unknown)
         return error("unknown memory constraint '" + ConstraintStr + "'");

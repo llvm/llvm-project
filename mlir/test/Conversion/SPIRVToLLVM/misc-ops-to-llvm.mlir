@@ -115,6 +115,30 @@ spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>, %arg2: vect
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.VectorExtractDynamic
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @vector_extract_dynamic
+// CHECK-SAME: (%[[VEC:.*]]: vector<4xf32>, %[[IDX:.*]]: i32)
+spirv.func @vector_extract_dynamic(%arg0: vector<4xf32>, %arg1: i32) "None" {
+  // CHECK: llvm.extractelement %[[VEC]][%[[IDX]] : i32] : vector<4xf32>
+  %0 = spirv.VectorExtractDynamic %arg0[%arg1] : vector<4xf32>, i32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.VectorInsertDynamic
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @vector_insert_dynamic
+// CHECK-SAME: (%[[VEC:.*]]: vector<4xf32>, %[[VAL:.*]]: f32, %[[IDX:.*]]: i32)
+spirv.func @vector_insert_dynamic(%arg0: vector<4xf32>, %arg1: f32, %arg2: i32) "None" {
+  // CHECK: llvm.insertelement %[[VAL]], %[[VEC]][%[[IDX]] : i32] : vector<4xf32>
+  %0 = spirv.VectorInsertDynamic %arg1, %arg0[%arg2] : vector<4xf32>, i32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.VectorShuffle
 //===----------------------------------------------------------------------===//
 

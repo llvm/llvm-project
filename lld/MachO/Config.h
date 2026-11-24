@@ -259,6 +259,7 @@ struct Configuration {
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   llvm::cl::LibraryOptionsContext libraryOptions;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
+  llvm::SmallVector<llvm::StringRef, 0> passPluginArgs;
 
   bool zeroModTime = true;
   bool generateUuid = true;

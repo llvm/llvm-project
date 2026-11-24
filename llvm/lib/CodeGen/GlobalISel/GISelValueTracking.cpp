@@ -1330,7 +1330,12 @@ void GISelValueTracking::computeKnownFPClassForFPTrunc(
   const fltSemantics &SrcSem =
       getFltSemanticForLLT(MRI.getType(Val).getScalarType());
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem,
+  const RoundingMode RM =
+      MI.getOpcode() == TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND
+          ? static_cast<RoundingMode>(MI.getOperand(2).getImm())
+          : RoundingMode::NearestTiesToEven;
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem, RM,
                                 MF.getDenormalMode(DstSem),
                                 MF.getDenormalMode(SrcSem));
 }
