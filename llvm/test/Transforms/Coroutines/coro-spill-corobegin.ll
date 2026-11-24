@@ -54,14 +54,14 @@ declare void @print.i32(i32)
 declare void @free(ptr)
 ; CHECK-LABEL: define ptr @f() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 32)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[INNERID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @g, ptr @g.resumers)
-; CHECK-NEXT:    [[INNERHDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[INNERID]], ptr null)
+; CHECK-NEXT:    [[INNERID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @g, ptr @g.resumers)
+; CHECK-NEXT:    [[INNERHDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[INNERID]], ptr null)
 ; CHECK-NEXT:    [[INNERHDL_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store ptr [[INNERHDL]], ptr [[INNERHDL_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
@@ -77,7 +77,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[GVAR_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[INNERHDL_RELOAD]], i32 0, i32 4
 ; CHECK-NEXT:    [[GVAR:%.*]] = load i32, ptr [[GVAR_ADDR]], align 4
 ; CHECK-NEXT:    call void @print.i32(i32 [[GVAR]])
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
@@ -85,7 +85,7 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;

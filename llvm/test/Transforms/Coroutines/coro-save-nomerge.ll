@@ -10,11 +10,11 @@ define void @final_nonfinal_suspend(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[AWAIT_SUSPEND:%.*]], label [[FINAL_SUSPEND:%.*]]
 ; CHECK:       await.suspend:
-; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.save(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.save.p0(ptr null)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.coro.suspend(token [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[CORO_RET:%.*]]
 ; CHECK:       final.suspend:
-; CHECK-NEXT:    [[TMP2:%.*]] = call token @llvm.coro.save(ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = call token @llvm.coro.save.p0(ptr null)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.coro.suspend(token [[TMP2]], i1 true)
 ; CHECK-NEXT:    br label [[CORO_RET]]
 ; CHECK:       coro.ret:
@@ -44,11 +44,11 @@ define void @both_nonfinal_suspend(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[AWAIT_SUSPEND:%.*]], label [[FINAL_SUSPEND:%.*]]
 ; CHECK:       await.suspend:
-; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.save(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.save.p0(ptr null)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.coro.suspend(token [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[CORO_RET:%.*]]
 ; CHECK:       final.suspend:
-; CHECK-NEXT:    [[TMP2:%.*]] = call token @llvm.coro.save(ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = call token @llvm.coro.save.p0(ptr null)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.coro.suspend(token [[TMP2]], i1 false)
 ; CHECK-NEXT:    br label [[CORO_RET]]
 ; CHECK:       coro.ret:

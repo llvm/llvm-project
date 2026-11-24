@@ -49,23 +49,23 @@ unreach:
 
 ; Verify that in the initial function resume is not marked with musttail.
 ; CHECK-LABEL: @f(
-; CHECK: %[[addr1:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
+; CHECK: %[[addr1:.+]] = call ptr @llvm.coro.subfn.addr.p0(ptr null, i8 0)
 ; CHECK-NOT: musttail call void %[[addr1]](ptr null)
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
 ; CHECK: %[[hdl:.+]] = call ptr @g()
 ; CHECK-NEXT: call ptr @await_suspend_function
-; CHECK-NEXT: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr
+; CHECK-NEXT: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr.p0
 ; CHECK-NEXT: musttail call void %[[addr2]]
 ; CHECK-NEXT: ret void
 ; CHECK: %[[hdl2:.+]] = call ptr @h()
 ; CHECK-NEXT: call ptr @await_suspend_function
-; CHECK-NEXT: %[[addr3:.+]] = call ptr @llvm.coro.subfn.addr
+; CHECK-NEXT: %[[addr3:.+]] = call ptr @llvm.coro.subfn.addr.p0
 ; CHECK-NEXT: musttail call void %[[addr3]]
 ; CHECK-NEXT: ret void
 ; CHECK: call ptr @await_suspend_function
-; CHECK: %[[addr4:.+]] = call ptr @llvm.coro.subfn.addr
+; CHECK: %[[addr4:.+]] = call ptr @llvm.coro.subfn.addr.p0
 ; CHECK-NEXT: musttail call void %[[addr4]]
 ; CHECK-NEXT: ret void
 

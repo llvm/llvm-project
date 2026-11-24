@@ -22,8 +22,7 @@ define internal fastcc void @foo.resume_musttail(ptr %FramePtr) {
 ; CHECK-LABEL: @foo.resume_musttail(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
-; CHECK-NEXT:    [[VFRAME:%.*]] = bitcast ptr [[TMP0]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call token @llvm.coro.id(i32 16, ptr null, ptr @bar, ptr @bar.resumers)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call token @llvm.coro.id.p0(i32 16, ptr null, ptr @bar, ptr @bar.resumers)
 ; CHECK-NEXT:    [[CALL34:%.*]] = call ptr undef()
 ; CHECK-NEXT:    musttail call fastcc void undef(ptr [[CALL34]])
 ; CHECK-NEXT:    ret void
@@ -31,8 +30,7 @@ define internal fastcc void @foo.resume_musttail(ptr %FramePtr) {
 ; NOAA-LABEL: @foo.resume_musttail(
 ; NOAA-NEXT:  entry:
 ; NOAA-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
-; NOAA-NEXT:    [[VFRAME:%.*]] = bitcast ptr [[TMP0]] to ptr
-; NOAA-NEXT:    [[TMP1:%.*]] = call token @llvm.coro.id(i32 16, ptr null, ptr @bar, ptr @bar.resumers)
+; NOAA-NEXT:    [[TMP1:%.*]] = call token @llvm.coro.id.p0(i32 16, ptr null, ptr @bar, ptr @bar.resumers)
 ; NOAA-NEXT:    [[CALL34:%.*]] = call ptr undef()
 ; NOAA-NEXT:    musttail call fastcc void undef(ptr [[CALL34]])
 ; NOAA-NEXT:    ret void

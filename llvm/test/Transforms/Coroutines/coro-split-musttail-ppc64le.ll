@@ -42,12 +42,12 @@ exit:
 
 ; Verify that in the initial function resume is not marked with musttail.
 ; CHECK-LABEL: @f(
-; CHECK: %[[addr1:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
+; CHECK: %[[addr1:.+]] = call ptr @llvm.coro.subfn.addr.p0(ptr null, i8 0)
 ; CHECK-NOT: musttail call fastcc void %[[addr1]](ptr null)
 
 ; Verify that ppc target not using PC-Relative addressing in the resume part resume call is not marked with musttail.
 ; CHECK-LABEL: @f.resume(
-; CHECK: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
+; CHECK: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr.p0(ptr null, i8 0)
 ; CHECK-NEXT: call fastcc void %[[addr2]](ptr null)
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

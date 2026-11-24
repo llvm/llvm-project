@@ -45,7 +45,7 @@ entry:
   %0 = call token @llvm.coro.id(i32 0, ptr null, ptr nonnull @bar, ptr null)
   %1 = call i1 @llvm.coro.alloc(token %0)
   call void @foo(ptr null, ptr null) #4
-  ; CHECK: %[[FOO_ID:.+]] = call token @llvm.coro.id(i32 0, ptr null, ptr nonnull @foo, ptr @foo.resumers)
+  ; CHECK: %[[FOO_ID:.+]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr nonnull @foo, ptr @foo.resumers)
   ; CHECK-NEXT: store ptr @foo.resume, ptr %[[CALLEE_FRAME]], align 8
   ; CHECK-NEXT: %[[DESTROY_ADDR:.+]] = getelementptr inbounds nuw %foo.Frame, ptr %[[CALLEE_FRAME]], i32 0, i32 1
   ; CHECK-NEXT: store ptr @foo.destroy, ptr %[[DESTROY_ADDR]], align 8

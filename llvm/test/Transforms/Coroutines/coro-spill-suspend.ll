@@ -46,9 +46,9 @@ declare void @free(ptr)
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 24)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
@@ -81,7 +81,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    [[SP1_RELOAD:%.*]] = load i8, ptr [[SP1_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call void @print(i8 [[SP1_RELOAD]])
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    br label %[[COROEND]]
 ; CHECK:       [[COROEND]]:
@@ -107,7 +107,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    [[SP1_RELOAD:%.*]] = load i8, ptr [[SP1_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call void @print(i8 [[SP1_RELOAD]])
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[UNREACHABLE]]:

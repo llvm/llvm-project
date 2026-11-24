@@ -988,7 +988,7 @@ def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
 //
 
 let partition = LLVM_CoroIntrinsicPartition in {
-def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [TokenProducerTrait], 1> {
+def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [1], [TokenProducerTrait], 1> {
   let arguments = (ins I32:$align,
                        LLVM_AnyPointer:$promise,
                        LLVM_AnyPointer:$coroaddr,
@@ -998,7 +998,7 @@ def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [TokenProducerTrait], 1> {
 }
 
 def LLVM_CoroBeginOp
-    : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
+    : LLVM_IntrOp<"coro.begin", [0], [], [], 1> {
   let arguments = (ins Token:$token,
                        LLVM_AnyPointer:$mem);
   let assemblyFormat = "$token `,` $mem attr-dict `:` functional-type(operands, results)";
@@ -1019,7 +1019,7 @@ def LLVM_CoroAlignOp : LLVM_IntrOp<"coro.align", [0], [], [], 1> {
 }
 
 def LLVM_CoroSaveOp
-    : LLVM_IntrOp<"coro.save", [], [], [TokenProducerTrait], 1> {
+    : LLVM_IntrOp<"coro.save", [], [0], [TokenProducerTrait], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` functional-type(operands, results)";
 }
@@ -1032,7 +1032,7 @@ def LLVM_CoroSuspendOp
 }
 
 def LLVM_CoroEndOp
-    : LLVM_IntrOp<"coro.end", [], [], [], 1> {
+    : LLVM_IntrOp<"coro.end", [], [0], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle,
                        I1:$unwind,
                        Token:$retvals);
@@ -1040,18 +1040,18 @@ def LLVM_CoroEndOp
 }
 
 def LLVM_CoroFreeOp
-    : LLVM_IntrOp<"coro.free", [], [], [], 1> {
+    : LLVM_IntrOp<"coro.free", [0], [], [], 1> {
   let arguments = (ins Token:$id,
                        LLVM_AnyPointer:$handle);
   let assemblyFormat = "$id `,` $handle attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
+def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [0], [], 0> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
 }
 
-def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
+def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [0], [], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle,
                        I32:$align,
                        I1:$from);
@@ -1059,22 +1059,22 @@ def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
   let assemblyFormat = "$handle `,` $align `,` $from attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroFrameOp : LLVM_IntrOp<"coro.frame", [], [], [], 1> {
+def LLVM_CoroFrameOp : LLVM_IntrOp<"coro.frame", [0], [], [], 1> {
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_CoroNoopOp : LLVM_IntrOp<"coro.noop", [], [], [], 1> {
+def LLVM_CoroNoopOp : LLVM_IntrOp<"coro.noop", [0], [], [], 1> {
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_CoroDestroyOp : LLVM_IntrOp<"coro.destroy", [], [], [], 0> {
+def LLVM_CoroDestroyOp : LLVM_IntrOp<"coro.destroy", [], [0], [], 0> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
 }
 
-def LLVM_CoroDoneOp : LLVM_IntrOp<"coro.done", [], [], [], 1> {
+def LLVM_CoroDoneOp : LLVM_IntrOp<"coro.done", [], [0], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` functional-type(operands, results)";
 }
@@ -1083,13 +1083,13 @@ def LLVM_CoroIsInRampOp : LLVM_IntrOp<"coro.is_in_ramp", [], [], [], 1> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_CoroDeadOp : LLVM_IntrOp<"coro.dead", [], [], [], 0> {
+def LLVM_CoroDeadOp : LLVM_IntrOp<"coro.dead", [], [0], [], 0> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
 }
 
 def LLVM_CoroAwaitSuspendVoidOp
-    : LLVM_IntrOp<"coro.await.suspend.void", [], [], [], 0> {
+    : LLVM_IntrOp<"coro.await.suspend.void", [], [0, 1], [], 0> {
   let arguments = (ins LLVM_AnyPointer:$awaiter,
                        LLVM_AnyPointer:$frame,
                        LLVM_AnyPointer:$wrapper);
@@ -1101,7 +1101,7 @@ def LLVM_CoroAwaitSuspendVoidOp
 }
 
 def LLVM_CoroAwaitSuspendBoolOp
-    : LLVM_IntrOp<"coro.await.suspend.bool", [], [], [], 1> {
+    : LLVM_IntrOp<"coro.await.suspend.bool", [], [0, 1], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$awaiter,
                        LLVM_AnyPointer:$frame,
                        LLVM_AnyPointer:$wrapper);
@@ -1112,7 +1112,7 @@ def LLVM_CoroAwaitSuspendBoolOp
 }
 
 def LLVM_CoroAwaitSuspendHandleOp
-    : LLVM_IntrOp<"coro.await.suspend.handle", [], [], [], 0> {
+    : LLVM_IntrOp<"coro.await.suspend.handle", [], [0, 1], [], 0> {
   let arguments = (ins LLVM_AnyPointer:$awaiter,
                        LLVM_AnyPointer:$frame,
                        LLVM_AnyPointer:$wrapper);

@@ -6,7 +6,7 @@ define ptr @noop() {
 ; CHECK-LABEL: define ptr @noop(
 ; CHECK-SAME: ) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[N:%.*]] = call ptr @llvm.coro.noop()
+; CHECK-NEXT:    [[N:%.*]] = call ptr @llvm.coro.noop.p0()
 ; CHECK-NEXT:    ret ptr [[N]]
 ;
 entry:

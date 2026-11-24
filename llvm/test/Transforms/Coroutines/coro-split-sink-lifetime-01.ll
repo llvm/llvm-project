@@ -89,9 +89,9 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca %"struct.lean_future<int>::Awaiter", align 8
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @a, ptr @a.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @a, ptr @a.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
-; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @a.resume, ptr [[VFRAME]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @a.destroy, ptr [[DESTROY_ADDR]], align 8
@@ -105,9 +105,9 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca %"struct.lean_future<int>::Awaiter", align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @a_optnone, ptr @a_optnone.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @a_optnone, ptr @a_optnone.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
-; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @a_optnone.resume, ptr [[VFRAME]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @a_optnone.destroy, ptr [[DESTROY_ADDR]], align 8

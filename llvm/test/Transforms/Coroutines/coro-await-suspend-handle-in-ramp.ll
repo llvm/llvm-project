@@ -22,7 +22,7 @@ entry:
 ; CHECK:      define void @f() {
 ; CHECK:      entry:
 ; CHECK:        %[[NEXT_HDL:.+]] = call ptr @await_suspend_wrapper_handle(
-; CHECK-NEXT:   %[[CONT:.+]] = call ptr @llvm.coro.subfn.addr(ptr %[[NEXT_HDL]], i8 0)
+; CHECK-NEXT:   %[[CONT:.+]] = call ptr @llvm.coro.subfn.addr.p0(ptr %[[NEXT_HDL]], i8 0)
 ; CHECK-NEXT:   call void %[[CONT]](ptr %[[NEXT_HDL]])
 step:
   br label %cleanup
