@@ -4218,6 +4218,21 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
   return llvm::ConstantStruct::getAnon(Data);
 }
 
+llvm::GlobalVariable *
+CodeGenFunction::EmitCheckStaticData(ArrayRef<llvm::Constant *> StaticArgs) {
+  llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+  auto *InfoPtr = new llvm::GlobalVariable(
+      CGM.getModule(), Info->getType(),
+      // Non-constant global is used in a handler to deduplicate reports.
+      // TODO: change deduplication logic and make it constant.
+      /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
+      nullptr, llvm::GlobalVariable::NotThreadLocal,
+      CGM.getDataLayout().getDefaultGlobalsAddressSpace());
+  InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+  return InfoPtr;
+}
+
 namespace {
 /// Specify under what conditions this check can be recovered
 enum class CheckRecoverableKind {
@@ -4404,16 +4419,7 @@ void CodeGenFunction::EmitCheck(
 
   // Emit handler arguments and create handler function type.
   if (!StaticArgs.empty()) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-    auto *InfoPtr = new llvm::GlobalVariable(
-        CGM.getModule(), Info->getType(),
-        // Non-constant global is used in a handler to deduplicate reports.
-        // TODO: change deduplication logic and make it constant.
-        /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
-        nullptr, llvm::GlobalVariable::NotThreadLocal,
-        CGM.getDataLayout().getDefaultGlobalsAddressSpace());
-    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    llvm::GlobalVariable *InfoPtr = EmitCheckStaticData(StaticArgs);
     Args.push_back(Builder.CreateAddrSpaceCast(InfoPtr, CGM.VoidPtrTy));
     ArgTypes.push_back(CGM.VoidPtrTy);
   }
@@ -4469,18 +4475,15 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::CallInst *CheckCall;
   llvm::FunctionCallee SlowPathFn;
   if (WithDiag) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-    auto *InfoPtr =
-        new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
-                                 llvm::GlobalVariable::PrivateLinkage, Info);
-    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    llvm::GlobalVariable *InfoPtr = EmitCheckStaticData(StaticArgs);
 
     SlowPathFn = CGM.getModule().getOrInsertFunction(
         "__cfi_slowpath_diag",
         llvm::FunctionType::get(VoidTy, {Int64Ty, Int8PtrTy, Int8PtrTy},
                                 false));
-    CheckCall = Builder.CreateCall(SlowPathFn, {TypeId, Ptr, InfoPtr});
+    CheckCall = Builder.CreateCall(
+        SlowPathFn,
+        {TypeId, Ptr, Builder.CreateAddrSpaceCast(InfoPtr, Int8PtrTy)});
   } else {
     SlowPathFn = CGM.getModule().getOrInsertFunction(
         "__cfi_slowpath",
