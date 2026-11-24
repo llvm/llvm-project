@@ -128,7 +128,20 @@ static void specializeForLoopForUnrolling(ForOp op) {
   op.erase();
 }
 
-/// Helper that splits off the last iteration in-place.
+/// Rewrite a for loop with bounds/step that potentially do not divide evenly
+/// into a for loop where the step divides the iteration space evenly, followed
+/// by another scf.for for the last (partial) iteration (if any).
+///
+/// This function rewrites the given scf.for loop in-place and creates a new
+/// scf.for operation for the last iteration. It replaces all uses of the
+/// unpeeled loop with the results of the newly generated scf.for.
+///
+/// The newly generated scf.for operation is returned via `partialIteration`.
+/// The return value indicates whether the loop was rewritten or not.
+///
+/// Note: Loops with a step size of 0 cannot be peeled. Applying this function
+/// to such a loop may result in IR with undefined behavior.
+///
 /// When `remainderOnly` is true, it only peels if there is a partial remainder
 /// (rejects evenly divisible ranges and step <= 1).
 /// When `remainderOnly` is false, it peels the last iteration even if the range
@@ -181,8 +194,11 @@ static LogicalResult peelForLoopAtLastBound(RewriterBase &b, ForOp forOp,
     }
   }
 
-  // affine reasoning is signed and index-only,
-  // so use it only for signed index loops.
+  // A proven zero remainder means the step already divides the range, so the
+  // remainder-only peel has nothing to split off. Last-iteration peeling still
+  // peels a full step in that case, so this check does not apply to it.
+  // Affine reasoning is signed and index-only, so use it only for signed
+  // index loops.
   if (remainderOnly && !isUnsigned &&
       forOp.getInductionVar().getType().isIndex()) {
     AffineExpr sym0, sym1, sym2;
@@ -244,8 +260,8 @@ static LogicalResult peelForLoopAtLastBound(RewriterBase &b, ForOp forOp,
 /// divides evenly, this peels a full last step. Otherwise, it peels the
 /// partial remainder.
 ///
-/// If there is at most one iteration, return failure and leave the loop
-/// unchanged.
+/// If the bounds are constant and there is at most one iteration, return
+/// failure and leave the loop unchanged. A dynamic step is still peeled.
 LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
                                                   ForOp &partialIteration) {
   return peelForLoopAtLastBound(b, forOp, partialIteration,
