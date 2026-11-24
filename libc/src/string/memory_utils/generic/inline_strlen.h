@@ -159,8 +159,9 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
     if (n <= VEC_SIZE)
       return nullptr;
   } else {
+    size_t alignment = alignof(cpp::simd<char>);
     const cpp::simd<char> *aligned = reinterpret_cast<const cpp::simd<char> *>(
-        __builtin_align_down(s, alignof(cpp::simd<char>)));
+        __builtin_align_down(s, alignment));
     size_t offset = static_cast<size_t>(
         s - reinterpret_cast<const unsigned char *>(aligned));
     cpp::simd_mask<char> cmp_v = shift_mask<unsigned char>(
