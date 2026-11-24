@@ -178,4 +178,39 @@ contains
       call base_simd()
     end do
   end subroutine test_construct_simd
+
+  subroutine base_do_simd
+    !$omp declare variant (vsub_ds_simd) match(construct={simd})
+    !$omp declare variant (vsub_ds_do_simd) match(construct={do, simd})
+  end subroutine
+  subroutine vsub_ds_simd
+  end subroutine
+  subroutine vsub_ds_do_simd
+  end subroutine
+
+  ! Composite DO SIMD contributes the DO and SIMD construct traits, in that
+  ! order, so both variants match and the more specific {do, simd} selector
+  ! outranks {simd}. Plain SIMD contributes only the SIMD trait, so only {simd}
+  ! matches.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_rank_do_simd(
+  ! CHECK: omp.wsloop
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMmPvsub_ds_do_simd()
+  ! CHECK-NOT: fir.call @_QMmPvsub_ds_simd()
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMmPvsub_ds_simd()
+  ! CHECK-NOT: fir.call @_QMmPvsub_ds_do_simd()
+  subroutine test_rank_do_simd(n)
+    integer :: n, i
+    !$omp do simd
+    do i = 1, n
+      call base_do_simd()
+    end do
+    !$omp end do simd
+    !$omp simd
+    do i = 1, n
+      call base_do_simd()
+    end do
+  end subroutine test_rank_do_simd
 end module m
