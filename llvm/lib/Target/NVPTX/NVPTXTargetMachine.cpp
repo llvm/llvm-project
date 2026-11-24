@@ -119,17 +119,7 @@ public:
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
-  void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
-
-  bool addRegAssignAndRewriteFast() override {
-    llvm_unreachable("should not be used");
-  }
-
-  bool addRegAssignAndRewriteOptimized() override {
-    llvm_unreachable("should not be used");
-  }
 
 private:
   // If the opt level is aggressive, add GVN; otherwise, add EarlyCSE. This
@@ -225,22 +215,11 @@ void NVPTXPassConfig::addStraightLineScalarOptimizationPasses() {
 }
 
 void NVPTXPassConfig::addIRPasses() {
-  // The following passes are known to not play well with virtual regs hanging
-  // around after register allocation (which in our case, is *all* registers).
-  // We explicitly disable them here.  We do, however, need some functionality
-  // of the PrologEpilogCodeInserter pass, so we emulate that behavior in the
-  // NVPTXPrologEpilog pass (see NVPTXPrologEpilogPass.cpp).
+  // We need some functionality of the PrologEpilogCodeInserter pass, so we
+  // emulate that behavior in the NVPTXPrologEpilog pass (see
+  // NVPTXPrologEpilogPass.cpp).
   disablePass(&PrologEpilogCodeInserterID);
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&MachineCopyPropagationID);
   disablePass(&TailDuplicateLegacyID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   // Leave block placement to ptxas. Its CFG transformations can invalidate
   // layout decisions made at the PTX level, and block placement here can
@@ -342,15 +321,6 @@ void NVPTXPassConfig::addPostRegAlloc() {
     // will replace VRFrame with VRFrameLocal when possible.
     addPass(createNVPTXPeepholeLegacyPass());
   }
-}
-
-FunctionPass *NVPTXPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr; // No reg alloc
-}
-
-void NVPTXPassConfig::addFastRegAlloc() {
-  addPass(&PHIEliminationID);
-  addPass(&TwoAddressInstructionPassID);
 }
 
 void NVPTXPassConfig::addOptimizedRegAlloc() {

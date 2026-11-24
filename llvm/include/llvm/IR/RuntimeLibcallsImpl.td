@@ -162,6 +162,7 @@ class MemoryEffects<ModRefInfo mr = ModRef> {
 
 def UnknownMemory : MemoryEffects;
 def NoMemory : MemoryEffects<NoModRef>;
+def ReadOnlyMemory : MemoryEffects<Ref>;
 def ArgMemOnly : MemoryEffects<NoModRef> { let ArgMem = ModRef; }
 def ArgMemReadOnly : MemoryEffects<NoModRef> { let ArgMem = Ref; }
 def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
@@ -171,14 +172,20 @@ def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
 }
 
 def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
-def InaccessibleOrErrnoMem : MemoryEffects<NoModRef> {
+def InaccessibleMemOrErrnoWrite : MemoryEffects<NoModRef> {
   let InaccessibleMem = ModRef;
-  let ErrnoMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 def InaccessibleOrArgMem : MemoryEffects<NoModRef> {
   let ArgMem = ModRef;
   let InaccessibleMem = ModRef;
+}
+
+def InaccessibleOrArgMemOrErrnoWrite : MemoryEffects<NoModRef> {
+  let ArgMem = ModRef;
+  let InaccessibleMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 class ValueAttr<list<AttrProperty> props, string expr>

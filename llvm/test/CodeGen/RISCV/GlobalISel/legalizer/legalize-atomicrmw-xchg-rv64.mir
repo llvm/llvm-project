@@ -11,25 +11,25 @@ body:             |
     ; RV64IA-ZABHA: liveins: $x10, $x11
     ; RV64IA-ZABHA-NEXT: {{  $}}
     ; RV64IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s8))
-    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i8))
+    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-ZABHA-NEXT: PseudoRET implicit $x10
     ;
     ; RV64IA-LABEL: name: atomicrmw_xchg_i8_monotonic
     ; RV64IA: liveins: $x10, $x11
     ; RV64IA-NEXT: {{  $}}
     ; RV64IA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s8))
-    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i8))
+    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %1:_(s64) = COPY $x11
-    %2:_(s8) = G_TRUNC %1(s64)
-    %3:_(s8) = G_ATOMICRMW_XCHG %0(p0), %2 :: (load store monotonic (s8))
-    %4:_(s64) = G_ANYEXT %3(s8)
-    $x10 = COPY %4(s64)
+    %1:_(i64) = COPY $x11
+    %2:_(i8) = G_TRUNC %1(i64)
+    %3:_(i8) = G_ATOMICRMW_XCHG %0(p0), %2 :: (load store monotonic (i8))
+    %4:_(i64) = G_ANYEXT %3(i8)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -42,25 +42,25 @@ body:             |
     ; RV64IA-ZABHA: liveins: $x10, $x11
     ; RV64IA-ZABHA-NEXT: {{  $}}
     ; RV64IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s16))
-    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i16))
+    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-ZABHA-NEXT: PseudoRET implicit $x10
     ;
     ; RV64IA-LABEL: name: atomicrmw_xchg_i16_monotonic
     ; RV64IA: liveins: $x10, $x11
     ; RV64IA-NEXT: {{  $}}
     ; RV64IA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s16))
-    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i16))
+    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %1:_(s64) = COPY $x11
-    %2:_(s16) = G_TRUNC %1(s64)
-    %3:_(s16) = G_ATOMICRMW_XCHG %0(p0), %2 :: (load store monotonic (s16))
-    %4:_(s64) = G_ANYEXT %3(s16)
-    $x10 = COPY %4(s64)
+    %1:_(i64) = COPY $x11
+    %2:_(i16) = G_TRUNC %1(i64)
+    %3:_(i16) = G_ATOMICRMW_XCHG %0(p0), %2 :: (load store monotonic (i16))
+    %4:_(i64) = G_ANYEXT %3(i16)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -73,25 +73,25 @@ body:             |
     ; RV64IA-ZABHA: liveins: $x10, $x11
     ; RV64IA-ZABHA-NEXT: {{  $}}
     ; RV64IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s32))
-    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i32))
+    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-ZABHA-NEXT: PseudoRET implicit $x10
     ;
     ; RV64IA-LABEL: name: atomicrmw_xchg_i32_monotonic
     ; RV64IA: liveins: $x10, $x11
     ; RV64IA-NEXT: {{  $}}
     ; RV64IA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s32))
-    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i32))
+    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %1:_(s64) = COPY $x11
-    %2:_(s32) = G_TRUNC %1(s64)
-    %3:_(s32) = G_ATOMICRMW_XCHG %0(p0), %2 :: (load store monotonic (s32))
-    %4:_(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
+    %1:_(i64) = COPY $x11
+    %2:_(i32) = G_TRUNC %1(i64)
+    %3:_(i32) = G_ATOMICRMW_XCHG %0(p0), %2 :: (load store monotonic (i32))
+    %4:_(i64) = G_ANYEXT %3(i32)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -104,22 +104,22 @@ body:             |
     ; RV64IA-ZABHA: liveins: $x10, $x11
     ; RV64IA-ZABHA-NEXT: {{  $}}
     ; RV64IA-ZABHA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s64))
-    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-ZABHA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i64))
+    ; RV64IA-ZABHA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-ZABHA-NEXT: PseudoRET implicit $x10
     ;
     ; RV64IA-LABEL: name: atomicrmw_xchg_i64_monotonic
     ; RV64IA: liveins: $x10, $x11
     ; RV64IA-NEXT: {{  $}}
     ; RV64IA-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(s64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (s64))
-    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](s64)
+    ; RV64IA-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; RV64IA-NEXT: [[ATOMICRMW_XCHG:%[0-9]+]]:_(i64) = G_ATOMICRMW_XCHG [[COPY]](p0), [[COPY1]] :: (load store monotonic (i64))
+    ; RV64IA-NEXT: $x10 = COPY [[ATOMICRMW_XCHG]](i64)
     ; RV64IA-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %1:_(s64) = COPY $x11
-    %2:_(s64) = G_ATOMICRMW_XCHG %0(p0), %1 :: (load store monotonic (s64))
-    $x10 = COPY %2(s64)
+    %1:_(i64) = COPY $x11
+    %2:_(i64) = G_ATOMICRMW_XCHG %0(p0), %1 :: (load store monotonic (i64))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 ...

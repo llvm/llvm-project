@@ -233,7 +233,13 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
                 additional_reginfo_up->GetRegisterInfoAtIndex(reg_idx);
             m_regset_regnum_collection[combined_regset_idx].push_back(
                 m_register_infos.size());
-            m_register_infos.push_back(*reginfo);
+            // The strings in reginfo are owned by the additional_reginfo_up. To
+            // avoid dangling pointers, intern the strings with ConstString.
+            RegisterInfo new_reginfo = *reginfo;
+            new_reginfo.name = ConstString(reginfo->name).AsCString(nullptr);
+            new_reginfo.alt_name =
+                ConstString(reginfo->alt_name).AsCString(nullptr);
+            m_register_infos.push_back(new_reginfo);
             registers_this_regset++;
           }
         }

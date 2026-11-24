@@ -811,6 +811,10 @@ foreach Index = !range(0, 32, 1) in {
   def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
 }
 
+// Give each LMUL group its own PositionOrder so that its registers are
+// contiguous in the register enum. This allows the AsmMatcher to convert
+// between them with simple arithmetic.
+let PositionOrder = 1 in
 foreach Index = !range(0, 32, 2) in {
   def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index),
@@ -820,6 +824,7 @@ foreach Index = !range(0, 32, 2) in {
   }
 }
 
+let PositionOrder = 2 in
 foreach Index = !range(0, 32, 4) in {
   def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M2"),
@@ -829,6 +834,7 @@ foreach Index = !range(0, 32, 4) in {
   }
 }
 
+let PositionOrder = 3 in
 foreach Index = !range(0, 32, 8) in {
   def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M4"),
@@ -919,53 +925,94 @@ def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
               (add (sequence "V%u", 8, 31),
                    (sequence "V%u", 7, 0)), 1> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::V0, 32>";
+  let DiagnosticType = "InvalidRegClassVR";
+  let DiagnosticString = "operand must be a vector register";
 }
 
-def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
+def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1> {
+  let DiagnosticType = "InvalidRegClassVRNoV0";
+  let DiagnosticString = "operand must be a vector register excluding v0";
+}
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
                              (sequence "V%uM2", 6, 0, 2)), 2> {
   let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM2RegClassID, 32, 2>";
+  let DiagnosticType = "InvalidRegClassVRM2";
+  let DiagnosticString = "operand must be the start of a valid M2 vector register group";
 }
 
 def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2> {
   let CoerceFromRegClass = VR;
+  let DiagnosticType = "InvalidRegClassVRM2NoV0";
+  let DiagnosticString = "operand must be the start of a valid M2 vector register group excluding v0";
 }
 
 def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
                              V24M4, V28M4, V4M4, V0M4), 4> {
   let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM4RegClassID, 32, 4>";
+  let DiagnosticType = "InvalidRegClassVRM4";
+  let DiagnosticString = "operand must be the start of a valid M4 vector register group";
 }
 
 def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4> {
   let CoerceFromRegClass = VR;
+  let DiagnosticType = "InvalidRegClassVRM4NoV0";
+  let DiagnosticString = "operand must be the start of a valid M4 vector register group excluding v0";
 }
 
 def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8> {
   let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM8RegClassID, 32, 8>";
+  let DiagnosticType = "InvalidRegClassVRM8";
+  let DiagnosticString = "operand must be the start of a valid M8 vector register group";
 }
 
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8> {
   let CoerceFromRegClass = VR;
+  let DiagnosticType = "InvalidRegClassVRM8NoV0";
+  let DiagnosticString = "operand must be the start of a valid M8 vector register group excluding v0";
 }
 
 // Fractional LMUL register classes for inline assembly.
 // The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
 // regclass enum. Tablegen uses the name to break ties. This is important
 // because only VR/VRNoV0 have the full type lists.
-def ZZZ_VRMF8 : VReg<VMF8VTs, (add VR), 1>;
-def ZZZ_VRMF8NoV0 : VReg<VMF8VTs, (add VRNoV0), 1>;
+def ZZZ_VRMF8 : VReg<VMF8VTs, (add VR), 1> {
+  let DiagnosticType = VR.DiagnosticType;
+  let DiagnosticString = VR.DiagnosticString;
+}
 
-def ZZZ_VRMF4 : VReg<VMF4VTs, (add VR), 1>;
-def ZZZ_VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1>;
+def ZZZ_VRMF8NoV0 : VReg<VMF8VTs, (add VRNoV0), 1> {
+  let DiagnosticType = VRNoV0.DiagnosticType;
+  let DiagnosticString = VRNoV0.DiagnosticString;
+}
 
-def ZZZ_VRMF2 : VReg<VMF2VTs, (add VR), 1>;
-def ZZZ_VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
+def ZZZ_VRMF4 : VReg<VMF4VTs, (add VR), 1> {
+  let DiagnosticType = VR.DiagnosticType;
+  let DiagnosticString = VR.DiagnosticString;
+}
 
-def VMV0 : VReg<VMaskVTs, (add V0), 1>;
+def ZZZ_VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1> {
+  let DiagnosticType = VRNoV0.DiagnosticType;
+  let DiagnosticString = VRNoV0.DiagnosticString;
+}
+
+def ZZZ_VRMF2 : VReg<VMF2VTs, (add VR), 1> {
+  let DiagnosticType = VR.DiagnosticType;
+  let DiagnosticString = VR.DiagnosticString;
+}
+
+def ZZZ_VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1> {
+  let DiagnosticType = VRNoV0.DiagnosticType;
+  let DiagnosticString = VRNoV0.DiagnosticString;
+}
+
+def VMV0 : VReg<VMaskVTs, (add V0), 1> {
+  let DiagnosticType = "InvalidRegClassVMV0";
+  let DiagnosticString = "register must be v0";
+}
 
 // The register class is added for inline assembly for vector mask types.
 // The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
