@@ -264,7 +264,6 @@ body: |
 
 ---
 name: v_add_u32_e32_zero
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -273,8 +272,8 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 0, [[COPY]], implicit $exec
-    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e32_]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY1]]
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_ADD_U32_e32 0, %0, implicit $exec
     SI_RETURN_TO_EPILOG %1
@@ -282,7 +281,6 @@ body: |
 
 ---
 name: v_add_u32_e64_zero
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -291,8 +289,8 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], 0, 0, implicit $exec
-    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY1]]
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_ADD_U32_e64 %0, 0, 0, implicit $exec
     SI_RETURN_TO_EPILOG %1
@@ -300,7 +298,6 @@ body: |
 
 ---
 name: v_add_u32_e64_zero_clamp
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -309,8 +306,8 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], 0, 1, implicit $exec
-    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY1]]
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_ADD_U32_e64 %0, 0, 1, implicit $exec
     SI_RETURN_TO_EPILOG %1

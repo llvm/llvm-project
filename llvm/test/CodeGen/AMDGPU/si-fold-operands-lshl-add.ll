@@ -20,7 +20,6 @@ define amdgpu_kernel void @lds_shift_zero(i32 %value) {
 ; GISEL-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GISEL-NEXT:    v_add_u32_e32 v0, 0, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GISEL-NEXT:    ds_write_b32 v0, v1
