@@ -404,7 +404,7 @@ private:
       __advance<_Np - 1>(__div);
       __it = __first + static_cast<iter_difference_t<decltype(__first)>>(__mod);
     } else {
-      __it += __x;
+      __it += static_cast<iter_difference_t<decltype(__it)>>(__x);
     }
   }
 
