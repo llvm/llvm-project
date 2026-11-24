@@ -5,7 +5,7 @@
 ; the zero-extended value.
 
 ; CHECK-LABEL: define void @eq_i32_minus_one(
-; CHECK: #dbg_value(i32 %a, ![[#]], !DIExpression(DW_OP_constu, 18446744073709551615, DW_OP_eq, DW_OP_stack_value),
+; CHECK: #dbg_value(i32 %a, ![[#]], !DIExpression(DW_OP_constu, 4294967295, DW_OP_eq, DW_OP_stack_value),
 define void @eq_i32_minus_one(i32 %a) !dbg !5 {
   %c = icmp eq i32 %a, -1, !dbg !10
     #dbg_value(i1 %c, !9, !DIExpression(), !10)
@@ -13,7 +13,7 @@ define void @eq_i32_minus_one(i32 %a) !dbg !5 {
 }
 
 ; CHECK-LABEL: define void @ne_i32_minus_one(
-; CHECK: #dbg_value(i32 %a, ![[#]], !DIExpression(DW_OP_constu, 18446744073709551615, DW_OP_ne, DW_OP_stack_value),
+; CHECK: #dbg_value(i32 %a, ![[#]], !DIExpression(DW_OP_constu, 4294967295, DW_OP_ne, DW_OP_stack_value),
 define void @ne_i32_minus_one(i32 %a) !dbg !11 {
   %c = icmp ne i32 %a, -1, !dbg !12
     #dbg_value(i1 %c, !13, !DIExpression(), !12)
@@ -21,7 +21,7 @@ define void @ne_i32_minus_one(i32 %a) !dbg !11 {
 }
 
 ; CHECK-LABEL: define void @ult_i8_negative(
-; CHECK: #dbg_value(i8 %a, ![[#]], !DIExpression(DW_OP_constu, 18446744073709551560, DW_OP_lt, DW_OP_stack_value),
+; CHECK: #dbg_value(i8 %a, ![[#]], !DIExpression(DW_OP_constu, 200, DW_OP_lt, DW_OP_stack_value),
 define void @ult_i8_negative(i8 %a) !dbg !14 {
   %c = icmp ult i8 %a, 200, !dbg !15
     #dbg_value(i1 %c, !16, !DIExpression(), !15)
@@ -29,7 +29,7 @@ define void @ult_i8_negative(i8 %a) !dbg !14 {
 }
 
 ; CHECK-LABEL: define void @eq_i1_true(
-; CHECK: #dbg_value(i1 %a, ![[#]], !DIExpression(DW_OP_constu, 18446744073709551615, DW_OP_eq, DW_OP_stack_value),
+; CHECK: #dbg_value(i1 %a, ![[#]], !DIExpression(DW_OP_constu, 1, DW_OP_eq, DW_OP_stack_value),
 define void @eq_i1_true(i1 %a) !dbg !17 {
   %c = icmp eq i1 %a, true, !dbg !18
     #dbg_value(i1 %c, !19, !DIExpression(), !18)
