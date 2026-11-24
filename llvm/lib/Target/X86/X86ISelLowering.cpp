@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -13076,7 +13077,7 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
   if (VT == MVT::v4i32 &&
       (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
       Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
-    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, DAG.getBitcast(VT, V1));
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
@@ -46744,6 +46745,23 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     }
     return DAG.isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
   }
+  case X86ISD::VBROADCAST_LOAD:
+  case X86ISD::SUBV_BROADCAST_LOAD: {
+    // If we're loading from the constant pool, check if the constant
+    // contains poison/undef.
+    // TODO: type size mismatch handling.
+    auto *LD = cast<MemIntrinsicSDNode>(Op);
+    if (const Constant *Cst = getTargetConstantFromBasePtr(LD->getBasePtr())) {
+      // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+      if (includesPoison(Kind) && includesUndef(Kind))
+        return ::isGuaranteedNotToBeUndefOrPoison(Cst);
+      if (includesPoison(Kind))
+        return ::isGuaranteedNotToBePoison(Cst);
+      assert(includesUndef(Kind) && "UndefOnly expected");
+      return ::isGuaranteedNotToBeUndef(Cst);
+    }
+    break;
+  }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, Kind, Depth);
@@ -61439,6 +61457,8 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61448,6 +61468,18 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.isConstantIntBuildVectorOrConstantInt(Op,
                                                      /*AllowOpaques*/ false);
   };
+
+  // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
+  if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
+      VT.isVectorOf(MVT::i64)) {
+    SDValue X;
+    if (sd_match(N, m_Neg(m_OneUse(m_And(m_Value(X), m_One()))))) {
+      SDValue VecConst =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X, VecConst);
+      return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
+    }
+  }
 
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with

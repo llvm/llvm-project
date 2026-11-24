@@ -6013,7 +6013,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     SmallVector<Value *, 3> Args(CI->args());
     if (NewFn->getIntrinsicID() == Intrinsic::coro_end && Args.size() == 2)
       Args.push_back(ConstantTokenNone::get(CI->getContext()));
-    NewCall = Builder.CreateCall(NewFn, Args);
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CI->getOperandBundlesAsDefs(OpBundles);
+    NewCall = Builder.CreateCall(NewFn, Args, OpBundles);
 
     if (!CI->getType()->isVoidTy()) {
       if (!CI->use_empty()) {

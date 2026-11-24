@@ -355,6 +355,22 @@ struct __reduce;
 //                       _Tp __init, _BinaryOperation __op) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __remove_copy;
+// template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Tp>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//                       _ForwardOutIterator __out_it,
+//                       const _Tp &__value) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __remove_copy_if;
+// template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Predicate>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//                       _ForwardOutIterator __out_it,
+//                       _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __replace;
 // template <class _Policy, class _ForwardIterator, class _Tp>
 // optional<__empty>
@@ -398,6 +414,12 @@ struct __reverse_copy;
 // optional<_ForwardIterator>
 // operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last,
 //                       _ForwardIterator __result) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __rotate;
+// template <class _Policy, class _ForwardIterator>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __rotate_copy;

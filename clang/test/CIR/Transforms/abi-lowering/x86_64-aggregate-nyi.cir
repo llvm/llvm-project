@@ -152,11 +152,11 @@ module attributes {
   // CHECK: not yet implemented for type '!cir.struct<"HoldsAllPad" {data
 
   // A scalable vector has no size the eightbyte rules can read.
-  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) requires_call_conv_lowering {
+  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float, sve_data>) requires_call_conv_lowering {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
+  // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float, sve_data>
 
   // A _BitInt element narrower than a byte has no memory representation in
   // CIR's lowering to LLVM, so this is rejected here rather than failing
