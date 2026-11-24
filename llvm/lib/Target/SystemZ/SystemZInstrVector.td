@@ -610,21 +610,21 @@ let Predicates = [FeatureVector] in {
   let isCommutable = 1 in {
     // Average.
     def VAVG  : BinaryVRRcGeneric<"vavg", 0xE7F2>;
-    def VAVGB : BinaryVRRc<"vavgb", 0xE7F2, int_s390_vavgb, v128b, v128b, 0>;
-    def VAVGH : BinaryVRRc<"vavgh", 0xE7F2, int_s390_vavgh, v128h, v128h, 1>;
-    def VAVGF : BinaryVRRc<"vavgf", 0xE7F2, int_s390_vavgf, v128f, v128f, 2>;
-    def VAVGG : BinaryVRRc<"vavgg", 0xE7F2, int_s390_vavgg, v128g, v128g, 3>;
+    def VAVGB : BinaryVRRc<"vavgb", 0xE7F2, avgceils, v128b, v128b, 0>;
+    def VAVGH : BinaryVRRc<"vavgh", 0xE7F2, avgceils, v128h, v128h, 1>;
+    def VAVGF : BinaryVRRc<"vavgf", 0xE7F2, avgceils, v128f, v128f, 2>;
+    def VAVGG : BinaryVRRc<"vavgg", 0xE7F2, avgceils, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VAVGQ : BinaryVRRc<"vavgq", 0xE7F2, int_s390_vavgq, v128q, v128q, 4>;
+      def VAVGQ : BinaryVRRc<"vavgq", 0xE7F2, avgceils, v128q, v128q, 4>;
 
     // Average logical.
     def VAVGL  : BinaryVRRcGeneric<"vavgl", 0xE7F0>;
-    def VAVGLB : BinaryVRRc<"vavglb", 0xE7F0, int_s390_vavglb, v128b, v128b, 0>;
-    def VAVGLH : BinaryVRRc<"vavglh", 0xE7F0, int_s390_vavglh, v128h, v128h, 1>;
-    def VAVGLF : BinaryVRRc<"vavglf", 0xE7F0, int_s390_vavglf, v128f, v128f, 2>;
-    def VAVGLG : BinaryVRRc<"vavglg", 0xE7F0, int_s390_vavglg, v128g, v128g, 3>;
+    def VAVGLB : BinaryVRRc<"vavglb", 0xE7F0, avgceilu, v128b, v128b, 0>;
+    def VAVGLH : BinaryVRRc<"vavglh", 0xE7F0, avgceilu, v128h, v128h, 1>;
+    def VAVGLF : BinaryVRRc<"vavglf", 0xE7F0, avgceilu, v128f, v128f, 2>;
+    def VAVGLG : BinaryVRRc<"vavglg", 0xE7F0, avgceilu, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
-      def VAVGLQ : BinaryVRRc<"vavglq", 0xE7F0, int_s390_vavglq, v128q, v128q, 4>;
+      def VAVGLQ : BinaryVRRc<"vavglq", 0xE7F0, avgceilu, v128q, v128q, 4>;
   }
 
   // Checksum.
