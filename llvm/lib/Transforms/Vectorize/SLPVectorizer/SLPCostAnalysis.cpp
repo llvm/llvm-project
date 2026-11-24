@@ -598,16 +598,37 @@ SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
 std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
                    const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
-                   const TTI::TargetCostKind CostKind) {
-  auto Shape = VFShape::get(CI->getFunctionType(),
-                            ElementCount::getFixed(getNumElements(VecTy)),
-                            false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+                   const TTI::TargetCostKind CostKind, ArrayRef<Value *> VL,
+                   ScalarEvolution &SE) {
   auto LibCost = InstructionCost::getInvalid();
-  if (!CI->isNoBuiltin() && VecFunc) {
+  unsigned VF = getNumElements(VecTy);
+  std::optional<VFInfo> Variant = getCallVectorVariant(CI, VF, VL, SE, &TLI);
+  if (Variant) {
     // Calculate the cost of the vector library call.
     // If the corresponding vector call is cheaper, return its cost.
-    LibCost = TTI.getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
+    // The linear arguments are passed as the scalars.
+    SmallVector<Type *> LibArgTys(ArgTys);
+    for (const VFParameter &P : Variant->Shape.Parameters)
+      if (P.ParamKind == VFParamKind::OMP_Linear)
+        LibArgTys[P.ParamPos] = CI->getArgOperand(P.ParamPos)->getType();
+    Type *RetTy = CI->getType()->isVoidTy() ? CI->getType() : VecTy;
+    LibCost = TTI.getCallInstrCost(nullptr, RetTy, LibArgTys, CostKind);
+    // The padded lanes are added to the arguments and dropped from the result.
+    unsigned PaddedVF = Variant->Shape.VF.getFixedValue();
+    if (PaddedVF > VF) {
+      SmallVector<int> WidenMask = createPaddingMask(VF, PaddedVF);
+      for (auto *ArgTy : make_isa_range<VectorType>(ArgTys)) {
+        LibCost += TTI.getShuffleCost(
+            TTI::SK_PermuteSingleSrc,
+            cast<VectorType>(getWidenedType(ArgTy->getScalarType(), PaddedVF)),
+            ArgTy, CostKind, WidenMask);
+      }
+      if (!RetTy->isVoidTy())
+        LibCost += TTI.getShuffleCost(
+            TTI::SK_PermuteSingleSrc, cast<VectorType>(VecTy),
+            cast<VectorType>(getWidenedType(VecTy->getScalarType(), PaddedVF)),
+            CostKind, createSequentialMask(0, VF, 0));
+    }
   }
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
 
@@ -638,7 +659,7 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
   if (ID == Intrinsic::sincos &&
       shouldSplitVectorSinCos(TLI,
                               CI->getArgOperand(0)->getType()->getScalarType(),
-                              Shape.VF, CI->getModule()))
+                              ElementCount::getFixed(VF), CI->getModule()))
     IntrinsicCost =
         2 * TTI.getCallInstrCost(nullptr, ArgTys.front(), ArgTys, CostKind);
 
@@ -650,6 +671,7 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
 static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
                                        const TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
+                                       ScalarEvolution &SE,
                                        const TTI::TargetCostKind CostKind) {
   assert((isa<BinaryOperator, CallInst>(I)) &&
          "getVectorOpCost expects an arithmetic op or a vectorizable call.");
@@ -658,7 +680,8 @@ static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
     SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, TTI);
     auto [IntrCost, LibCost] =
-        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind,
+                           /*VL=*/{}, SE);
     return std::min(IntrCost, LibCost);
   }
   SmallVector<const Value *, 2> Args{I->getOperand(0), I->getOperand(1)};
@@ -677,7 +700,7 @@ static unsigned getPoorThroughputTypeKey(Type *Ty) {
 
 bool isPoorThroughputOp(bool ReVec, Instruction *I,
                         const TargetTransformInfo &TTI,
-                        const TargetLibraryInfo &TLI,
+                        const TargetLibraryInfo &TLI, ScalarEvolution &SE,
                         PoorThroughputOpCache &Cache,
                         const TTI::TargetCostKind CostKind,
                         unsigned MaxVecRegSize) {
@@ -692,14 +715,14 @@ bool isPoorThroughputOp(bool ReVec, Instruction *I,
     if (ScalarCost < TTI::TCC_Expensive)
       return false;
     constexpr unsigned MinVF = 2;
-    if (getVectorOpCost(I, MinVF, TTI, TLI, CostKind) < ScalarCost * MinVF)
+    if (getVectorOpCost(I, MinVF, TTI, TLI, SE, CostKind) < ScalarCost * MinVF)
       return true;
     // Some ops (e.g. div by constant) scalarize at VF=2 but have a cheap
     // vector form at the full register width.
     unsigned TyBits = Ty->getPrimitiveSizeInBits().getFixedValue();
     unsigned MaxVF = TyBits ? llvm::bit_floor(MaxVecRegSize / TyBits) : 0;
-    return MaxVF > MinVF &&
-           getVectorOpCost(I, MaxVF, TTI, TLI, CostKind) < ScalarCost * MaxVF;
+    return MaxVF > MinVF && getVectorOpCost(I, MaxVF, TTI, TLI, SE, CostKind) <
+                                ScalarCost * MaxVF;
   };
   auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
     if (IsCheap)

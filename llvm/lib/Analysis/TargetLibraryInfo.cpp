@@ -17,6 +17,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/SystemLibraries.h"
+#include "llvm/IR/VFABIDemangler.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
@@ -1270,6 +1272,10 @@ static bool compareWithScalarFnName(const VecDesc &LHS, StringRef S) {
   return LHS.getScalarFnName() < S;
 }
 
+static bool compareWithVectorFnName(const VecDesc &LHS, StringRef S) {
+  return LHS.getVectorFnName() < S;
+}
+
 void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::append_range(VectorDescs, Fns);
   llvm::sort(VectorDescs, compareByScalarFnName);
@@ -1471,6 +1477,52 @@ TargetLibraryInfoImpl::getVectorMappingInfo(StringRef F, const ElementCount &VF,
     ++I;
   }
   return nullptr;
+}
+
+const VecDesc *
+TargetLibraryInfoImpl::getScalarizedMappingInfo(const CallBase &CB) const {
+  FunctionType *FTy = CB.getFunctionType();
+  auto *VecTy = FTy->getNumParams() == 0
+                    ? nullptr
+                    : dyn_cast<FixedVectorType>(FTy->getParamType(0));
+  const Function *Callee = CB.getCalledFunction();
+  if (!VecTy || !Callee || Callee->isIntrinsic() || Callee->hasLocalLinkage() ||
+      CB.isNoBuiltin())
+    return nullptr;
+  // The result is void, the vector or the structure of vectors, the arguments
+  // are the vectors or the scalars.
+  Type *RetTy = FTy->getReturnType();
+  if ((!RetTy->isVoidTy() && !isVectorizedTy(RetTy)) ||
+      any_of(FTy->params(), [](Type *Ty) {
+        return !isa<FixedVectorType>(Ty) && !VectorType::isValidElementType(Ty);
+      }))
+    return nullptr;
+  StringRef F = sanitizeFunctionName(Callee->getName());
+  if (F.empty())
+    return nullptr;
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(ScalarDescs, F, compareWithVectorFnName);
+  if (I == ScalarDescs.end() || StringRef(I->getVectorFnName()) != F ||
+      I->isMasked() || I->getVectorizationFactor() != VecTy->getElementCount())
+    return nullptr;
+  // The scalarized call must match the prototypes of all the library functions,
+  // mapped to the vector function, and their mappings are preferred.
+  FunctionType *ScalarFTy = toScalarizedFunctionTy(FTy);
+  const VecDesc *VD = &*I;
+  for (; I != ScalarDescs.end() && StringRef(I->getVectorFnName()) == F; ++I) {
+    LibFunc LF = getLibFunc(I->getScalarFnName());
+    if (LF == NotLibFunc)
+      continue;
+    if (!isValidProtoForLibFunc(*ScalarFTy, LF, *Callee->getParent()))
+      return nullptr;
+    VD = &*I;
+  }
+  // The call must match the prototype of the vector function.
+  std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(
+      VD->getVectorFunctionABIVariantString(), ScalarFTy);
+  if (!Info || VFABI::createFunctionType(*Info, ScalarFTy) != FTy)
+    return nullptr;
+  return VD;
 }
 
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,

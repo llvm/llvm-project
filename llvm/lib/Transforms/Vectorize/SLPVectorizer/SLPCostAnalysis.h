@@ -40,6 +40,7 @@ class FastMathFlags;
 class FixedVectorType;
 class Function;
 class Instruction;
+class ScalarEvolution;
 class TargetLibraryInfo;
 class Type;
 class User;
@@ -196,11 +197,13 @@ SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
 
 /// Calculates the costs of vectorized intrinsic (if possible) and vectorized
 /// function (if possible) calls. Returns invalid cost for the corresponding
-/// calls, if they cannot be vectorized/will be scalarized.
+/// calls, if they cannot be vectorized/will be scalarized. The lane calls
+/// \p VL, if known, allow the vector function with linear arguments.
 std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
                    const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
-                   const TargetTransformInfo::TargetCostKind CostKind);
+                   const TargetTransformInfo::TargetCostKind CostKind,
+                   ArrayRef<Value *> VL, ScalarEvolution &SE);
 
 /// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
 struct PoorThroughputOpCache {
@@ -216,7 +219,7 @@ struct PoorThroughputOpCache {
 /// widest vector fitting into it is checked too.
 bool isPoorThroughputOp(bool ReVec, Instruction *I,
                         const TargetTransformInfo &TTI,
-                        const TargetLibraryInfo &TLI,
+                        const TargetLibraryInfo &TLI, ScalarEvolution &SE,
                         PoorThroughputOpCache &Cache,
                         const TargetTransformInfo::TargetCostKind CostKind,
                         unsigned MaxVecRegSize = 0);
