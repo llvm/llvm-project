@@ -1446,6 +1446,21 @@ alias(
 )
 
 alias(
+    name = "strndup",
+    actual = "//libc/src/string:strndup",
+)
+
+alias(
+    name = "strerror",
+    actual = "//libc/src/string:strerror",
+)
+
+alias(
+    name = "strerror_r",
+    actual = "//libc/src/string:strerror_r",
+)
+
+alias(
     name = "strspn",
     actual = "//libc/src/string:strspn",
 )

@@ -3686,6 +3686,21 @@ bool IRTranslatorImpl::handleUnsupportedIntrinsic(
   return true;
 }
 
+/// Use Info.size as SelectionDAG does, but keep memVT's type when the sizes
+/// match. An invalid LLT means unknown size.
+static LLT getTgtMemIntrinsicMemTy(const TargetLowering::IntrinsicInfo &Info) {
+  LLT MemTy = Info.memVT.isSimple()
+                  ? getLLTForMVT(Info.memVT.getSimpleVT())
+                  : LLT::scalar(Info.memVT.getStoreSizeInBits());
+  if (!Info.size)
+    return MemTy;
+  LocationSize Size = LocationSize::precise(Info.size);
+  if (!Size.hasValue())
+    return LLT();
+  return MemTy.getSizeInBytes() == Size.getValue() ? MemTy
+                                                   : LLT::scalar(8 * Info.size);
+}
+
 /// Translate a call or callbr to an intrinsic.
 bool IRTranslatorImpl::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
@@ -3738,9 +3753,7 @@ bool IRTranslatorImpl::translateIntrinsic(
   for (const auto &Info : TgtMemIntrinsicInfos) {
     Align Alignment = Info.align.value_or(
         DL->getABITypeAlign(Info.memVT.getTypeForEVT(CB.getContext())));
-    LLT MemTy = Info.memVT.isSimple()
-                    ? getLLTForMVT(Info.memVT.getSimpleVT())
-                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
+    LLT MemTy = getTgtMemIntrinsicMemTy(Info);
 
     // TODO: We currently just fallback to address space 0 if
     // getTgtMemIntrinsic didn't yield anything useful.

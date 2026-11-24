@@ -173,37 +173,35 @@ inline __locale_t __get_c_locale();
 #    if defined(_LIBCPP_BUILDING_LIBRARY)
 using __lconv_t _LIBCPP_NODEBUG = lconv;
 
-inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
+inline __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return newlocale(__category_mask, __name, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __locale) {
-  return ::setlocale(__category, __locale);
-}
+inline char* __setlocale(int __category, char const* __locale) { return ::setlocale(__category, __locale); }
 
-inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { freelocale(__loc); }
+inline void __freelocale(__locale_t __loc) { freelocale(__loc); }
 
-inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return __libcpp_localeconv_l(__loc); }
+inline __lconv_t* __localeconv(__locale_t& __loc) { return __libcpp_localeconv_l(__loc); }
 #    endif // _LIBCPP_BUILDING_LIBRARY
 
 //
 // Strtonum functions
 //
 template <class _FloatT>
-_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
+_FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
+inline float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
   return strtof_l(__nptr, __endptr, __get_c_locale());
 }
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+inline double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
   return strtod_l(__nptr, __endptr, __get_c_locale());
 }
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+inline long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
   return strtold_l(__nptr, __endptr, __get_c_locale());
 }
 
@@ -211,40 +209,36 @@ inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(co
 // Character manipulation functions
 //
 #    if defined(_LIBCPP_BUILDING_LIBRARY)
-inline _LIBCPP_HIDE_FROM_ABI int __strcoll(const char* __s1, const char* __s2, __locale_t __loc) {
-  return strcoll_l(__s1, __s2, __loc);
-}
-inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, size_t __n, __locale_t __loc) {
+inline int __strcoll(const char* __s1, const char* __s2, __locale_t __loc) { return strcoll_l(__s1, __s2, __loc); }
+inline size_t __strxfrm(char* __dest, const char* __src, size_t __n, __locale_t __loc) {
   return strxfrm_l(__dest, __src, __n, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __ch, __locale_t __loc) { return toupper_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __ch, __locale_t __loc) { return tolower_l(__ch, __loc); }
+inline int __toupper(int __ch, __locale_t __loc) { return toupper_l(__ch, __loc); }
+inline int __tolower(int __ch, __locale_t __loc) { return tolower_l(__ch, __loc); }
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __s1, const wchar_t* __s2, __locale_t __loc) {
+inline int __wcscoll(const wchar_t* __s1, const wchar_t* __s2, __locale_t __loc) {
   return wcscoll_l(__s1, __s2, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
+inline size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
   return wcsxfrm_l(__dest, __src, __n, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __ch, wctype_t __type, __locale_t __loc) {
-  return iswctype_l(__ch, __type, __loc);
-}
-inline _LIBCPP_HIDE_FROM_ABI int __iswspace(wint_t __ch, __locale_t __loc) { return iswspace_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswprint(wint_t __ch, __locale_t __loc) { return iswprint_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswcntrl(wint_t __ch, __locale_t __loc) { return iswcntrl_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswupper(wint_t __ch, __locale_t __loc) { return iswupper_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswlower(wint_t __ch, __locale_t __loc) { return iswlower_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswalpha(wint_t __ch, __locale_t __loc) { return iswalpha_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswblank(wint_t __ch, __locale_t __loc) { return iswblank_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswdigit(wint_t __ch, __locale_t __loc) { return iswdigit_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswpunct(wint_t __ch, __locale_t __loc) { return iswpunct_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __iswxdigit(wint_t __ch, __locale_t __loc) { return iswxdigit_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI wint_t __towupper(wint_t __ch, __locale_t __loc) { return towupper_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI wint_t __towlower(wint_t __ch, __locale_t __loc) { return towlower_l(__ch, __loc); }
+inline int __iswctype(wint_t __ch, wctype_t __type, __locale_t __loc) { return iswctype_l(__ch, __type, __loc); }
+inline int __iswspace(wint_t __ch, __locale_t __loc) { return iswspace_l(__ch, __loc); }
+inline int __iswprint(wint_t __ch, __locale_t __loc) { return iswprint_l(__ch, __loc); }
+inline int __iswcntrl(wint_t __ch, __locale_t __loc) { return iswcntrl_l(__ch, __loc); }
+inline int __iswupper(wint_t __ch, __locale_t __loc) { return iswupper_l(__ch, __loc); }
+inline int __iswlower(wint_t __ch, __locale_t __loc) { return iswlower_l(__ch, __loc); }
+inline int __iswalpha(wint_t __ch, __locale_t __loc) { return iswalpha_l(__ch, __loc); }
+inline int __iswblank(wint_t __ch, __locale_t __loc) { return iswblank_l(__ch, __loc); }
+inline int __iswdigit(wint_t __ch, __locale_t __loc) { return iswdigit_l(__ch, __loc); }
+inline int __iswpunct(wint_t __ch, __locale_t __loc) { return iswpunct_l(__ch, __loc); }
+inline int __iswxdigit(wint_t __ch, __locale_t __loc) { return iswxdigit_l(__ch, __loc); }
+inline wint_t __towupper(wint_t __ch, __locale_t __loc) { return towupper_l(__ch, __loc); }
+inline wint_t __towlower(wint_t __ch, __locale_t __loc) { return towlower_l(__ch, __loc); }
 #      endif
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+inline _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
     __strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
@@ -252,42 +246,38 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
 //
 // Other functions
 //
-inline _LIBCPP_HIDE_FROM_ABI decltype(__libcpp_mb_cur_max_l(__locale_t())) __mb_len_max(__locale_t __loc) {
+inline decltype(__libcpp_mb_cur_max_l(__locale_t())) __mb_len_max(__locale_t __loc) {
   return __libcpp_mb_cur_max_l(__loc);
 }
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __ch, __locale_t __loc) { return __libcpp_btowc_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI int __wctob(wint_t __ch, __locale_t __loc) { return __libcpp_wctob_l(__ch, __loc); }
-inline _LIBCPP_HIDE_FROM_ABI size_t
+inline wint_t __btowc(int __ch, __locale_t __loc) { return __libcpp_btowc_l(__ch, __loc); }
+inline int __wctob(wint_t __ch, __locale_t __loc) { return __libcpp_wctob_l(__ch, __loc); }
+inline size_t
 __wcsnrtombs(char* __dest, const wchar_t** __src, size_t __nwc, size_t __len, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_wcsnrtombs_l(__dest, __src, __nwc, __len, __ps, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI size_t __wcrtomb(char* __s, wchar_t __ch, mbstate_t* __ps, __locale_t __loc) {
+inline size_t __wcrtomb(char* __s, wchar_t __ch, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_wcrtomb_l(__s, __ch, __ps, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI size_t
+inline size_t
 __mbsnrtowcs(wchar_t* __dest, const char** __src, size_t __nms, size_t __len, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_mbsnrtowcs_l(__dest, __src, __nms, __len, __ps, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__mbrtowc(wchar_t* __pwc, const char* __s, size_t __n, mbstate_t* __ps, __locale_t __loc) {
+inline size_t __mbrtowc(wchar_t* __pwc, const char* __s, size_t __n, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_mbrtowc_l(__pwc, __s, __n, __ps, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI int __mbtowc(wchar_t* __pwc, const char* __pmb, size_t __max, __locale_t __loc) {
+inline int __mbtowc(wchar_t* __pwc, const char* __pmb, size_t __max, __locale_t __loc) {
   return __libcpp_mbtowc_l(__pwc, __pmb, __max, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI size_t __mbrlen(const char* __s, size_t __n, mbstate_t* __ps, __locale_t __loc) {
+inline size_t __mbrlen(const char* __s, size_t __n, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_mbrlen_l(__s, __n, __ps, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, __locale_t __loc) {
+inline size_t __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
-  return ::nl_langinfo_l(CODESET, __loc);
-}
+inline const char* __get_locale_encoding(__locale_t __loc) { return ::nl_langinfo_l(CODESET, __loc); }
 
 #    endif // _LIBCPP_BUILDING_LIBRARY
 
@@ -301,13 +291,13 @@ _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral") // GCC doesn't support [[g
 #    endif
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
-    char* __s, size_t __n, __locale_t __loc, const char* __format, _Args&&... __args) {
+_LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 4, 5)
+int __snprintf(char* __s, size_t __n, __locale_t __loc, const char* __format, _Args&&... __args) {
   return std::__libcpp_snprintf_l(__s, __n, __loc, __format, std::forward<_Args>(__args)...);
 }
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
-    char** __s, __locale_t __loc, const char* __format, _Args&&... __args) {
+_LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4)
+int __asprintf(char** __s, __locale_t __loc, const char* __format, _Args&&... __args) {
   return std::__libcpp_asprintf_l(__s, __loc, __format, std::forward<_Args>(__args)...);
 }
 _LIBCPP_DIAGNOSTIC_POP
