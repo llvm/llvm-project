@@ -75,7 +75,9 @@
   /* therefore, no trap reason is emitted for this case. */                    \
   SANITIZER_CHECK(BoundsSafety, bounds_safety, 0, "")                          \
   SANITIZER_CHECK(ReturnAlignmentAssumption, return_alignment_assumption, 0,   \
-                  "Alignment assumption violated")
+                  "Alignment assumption violated")                             \
+  SANITIZER_CHECK(KCFICheckFail, cfi_check_fail, 0,                            \
+                  "Control flow integrity check failed")
 
 enum SanitizerHandler {
 #define SANITIZER_CHECK(Enum, Name, Version, Msg) Enum,
