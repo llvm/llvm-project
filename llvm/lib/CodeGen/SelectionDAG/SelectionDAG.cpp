@@ -2521,7 +2521,7 @@ SDValue SelectionDAG::getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
 SDValue SelectionDAG::getFreeze(SDValue V, UndefPoisonKind Kind) {
   // TODO: Remove isGuaranteedNotToBeUndefOrPoison handling from getNode().
   if (Kind == UndefPoisonKind::UndefOrPoison)
-    return getFreeze(V);
+    return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
   APInt DemandedElts = getDemandAllEltsMask(V);
   return getFreeze(V, DemandedElts, Kind);
 }
