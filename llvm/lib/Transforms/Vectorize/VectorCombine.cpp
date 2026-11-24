@@ -2347,7 +2347,7 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
     Value *Src;
     // Match uitofp with the same integer type as the fptoui result.
     // Exact representability is checked separately below.
-    if (match(V, m_OneUse(m_UIToFP(m_Value(Src))))) {
+    if (match(V, m_OneUse(m_UIToFP(m_SpecificType(IntTy, Src))))) {
       if (Src->getType() != IntTy)
         return nullptr;
       return Src;
@@ -2409,9 +2409,8 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
                     << I << "\n  OldCost: " << OldCost
                     << " vs NewCost: " << NewCost << "\n");
 
-  if (NewCost > OldCost) {
+  if (NewCost > OldCost)
     return false;
-  }
 
   Value *NewInst = Builder.CreateUDiv(SrcX, SrcY);
   replaceValue(I, *NewInst);
