@@ -122,7 +122,8 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
-  /// loads. \returns true on success.
+  /// loads. Loads with uses other than \p Stores are unpacked from the vector
+  /// load. \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
   /// Vectorizes \p Loads into a single load and unpacks each original load
