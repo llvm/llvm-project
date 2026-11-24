@@ -109,8 +109,10 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
 
   /// \p VecLoad is the vectorized \p OrigLoads. This function unpacks the
   /// elements of \p VecLoad that have uses, casting them back to the
-  /// element's type (as in \p OrigLoads) if needed.
-  void unpackIfNeeded(LoadInst *VecLoad, BndlRef<Instruction *> OrigLoads);
+  /// element's type (as in \p OrigLoads) if needed. Uses by instructions in
+  /// \p DeadUsers (e.g., the stores about to be erased) are ignored.
+  void unpackIfNeeded(LoadInst *VecLoad, BndlRef<Instruction *> OrigLoads,
+                      BndlRef<Instruction *> DeadUsers = {});
 
   /// Packs \p Constants into one constant vector. The element type is chosen
   /// by VecUtils::getCombinedVectorTypeFor().
@@ -122,7 +124,8 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
-  /// loads. \returns true on success.
+  /// loads. Loads with uses other than \p Stores are unpacked from the vector
+  /// load. \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
   /// Vectorizes \p Loads into a single load and unpacks each original load

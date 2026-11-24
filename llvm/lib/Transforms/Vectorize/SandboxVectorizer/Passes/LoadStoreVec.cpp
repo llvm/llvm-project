@@ -87,7 +87,8 @@ bool LoadStoreVec::canUnpack(FixedVectorType *FromTy, TypeRangeT ToTypes) {
 }
 
 void LoadStoreVec::unpackIfNeeded(LoadInst *VecLoad,
-                                  BndlRef<Instruction *> OrigLoads) {
+                                  BndlRef<Instruction *> OrigLoads,
+                                  BndlRef<Instruction *> DeadUsers) {
   Type *VecElemTy = cast<FixedVectorType>(VecLoad->getType())->getElementType();
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
   unsigned Lane = 0;
@@ -96,11 +97,14 @@ void LoadStoreVec::unpackIfNeeded(LoadInst *VecLoad,
     unsigned NumElems = Utils::getNumBits(Orig->getType(), *DL) /
                         Utils::getNumBits(VecElemTy, *DL);
     Type *LanesTy = getWidenedType(VecElemTy, NumElems);
-    if (!Orig->hasNUses(0)) {
+    auto IsLiveUse = [&DeadUsers](const Use &U) {
+      return !is_contained(DeadUsers, U.getUser());
+    };
+    if (any_of(Orig->uses(), IsLiveUse)) {
       Value *Unpacked = VecUtils::unpack(VecLoad, LanesTy, Lane, WhereIt);
       Unpacked = SameSizeReinterpret::reinterpretValue(
           Unpacked, Orig->getType(), WhereIt, *Ctx, *DL);
-      Orig->replaceAllUsesWith(Unpacked);
+      Orig->replaceUsesWithIf(Unpacked, IsLiveUse);
     }
     Lane += VecUtils::getNumLanes(LanesTy);
   }
@@ -315,21 +319,13 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   BasicBlock *BB = Stores[0]->getParent();
   // TODO: For now we only support load operands.
   // TODO: For now we don't cross BBs.
-  // TODO: For now don't vectorize if the loads have external uses.
-  bool AllLoads = all_of(Operands, [BB](Value *V) {
+  bool AllLoadsInSameBB = all_of(Operands, [BB](Value *V) {
     auto *LI = dyn_cast<LoadInst>(V);
-    if (LI == nullptr)
-      return false;
-    // TODO: For now we don't cross BBs.
-    if (LI->getParent() != BB)
-      return false;
-    if (LI->hasNUsesOrMore(2))
-      return false;
-    return true;
+    return LI && LI->getParent() == BB;
   });
   bool AllConstants =
       all_of(Operands, [](Value *V) { return isa<Constant>(V); });
-  if (!AllLoads && !AllConstants)
+  if (!AllLoadsInSameBB && !AllConstants)
     return false;
 
   // Vectorizing mixed floats and integers with external uses may not be
@@ -337,14 +333,28 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   saveIR(Rgn);
   Value *VecOp = nullptr;
   SmallVector<Instruction *, 8> Loads;
-  if (AllLoads) {
+  SmallVector<Type *, 8> TypeVec;
+  if (AllLoadsInSameBB) {
     Loads.reserve(Operands.size());
-    for (Value *Op : Operands)
+    TypeVec.reserve(Operands.size());
+    for (Value *Op : Operands) {
       Loads.push_back(cast<Instruction>(Op));
-    if (!canVectorize(Loads)) {
+      TypeVec.push_back(Op->getType());
+    }
+    
+    std::optional<Type *> LoadsVecTy = canVectorize(Loads);
+
+    if (!LoadsVecTy) {
+      // TODO: Add an optimization remark
       Ctx->accept();
       return false;
     }
+    if (!canUnpack(cast<FixedVectorType>(*LoadsVecTy), TypeVec)) {
+      // TODO: Add an optimization remark
+      Ctx->accept();
+      return false;
+    }
+
     VecOp = createVectorLoad(Loads);
     assert(VecOp != nullptr && "Expected vector value!");
   } else if (AllConstants) {
@@ -366,9 +376,13 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
   Utils::propagateMetadata(VecS, Stores);
 
-  DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
-  if (AllLoads)
+  if (AllLoadsInSameBB) {
+    // The scalar stores are about to be erased, so only unpack the loads for
+    // their other users.
+    unpackIfNeeded(cast<LoadInst>(VecOp), Loads, Stores);
     DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
+  }
+  DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   DeadInstrMorgue.tryEraseDeadInstrs();
 
   return acceptOrRevert();
