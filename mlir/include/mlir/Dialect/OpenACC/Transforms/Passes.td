@@ -316,9 +316,7 @@ def ACCLoopCollapse : Pass<"acc-loop-collapse", "mlir::func::FuncOp"> {
     operations. Reductions of the original loop are carried over to the
     collapsed loop.
 
-    The collapsed loop keeps the discardable attributes of the original loop
-    (such as `acc.par_dims`, `acc.gpu_block_redundant` and `acc.chunk_size`),
-    and records the number of collapsed dimensions in `acc.collapse_count`.
+    The number of collapsed dimensions is recorded in `acc.collapse_count`.
 
     Example:
     ```
