@@ -1,18 +1,14 @@
 ! A list-directed READ that reaches the end of the file at a derived-type
 ! item with a defined formatted READ signals the end of file without calling
-! the defined input procedure for that item.
+! the defined input procedure for that item. The case with neither END= nor
+! IOSTAT= is in dtio-list-input-eof-fatal.f90.
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" not --crash %t 2>%t.err \
-! RUN:   | FileCheck %s
-! RUN: FileCheck --check-prefix=ERR %s < %t.err
+! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
 
 ! CHECK: IOSTAT=: T -1 0
 ! CHECK-NEXT: END= branch: -1 0
 ! CHECK-NEXT: array: T 7 -1 -1 1
-! CHECK-NOT: not terminated
-
-! ERR: fatal Fortran runtime error({{.*}}): End of file during input
 
 module dtio_list_input_eof_m
   implicit none
@@ -56,9 +52,4 @@ program dtio_list_input_eof
   line = '7'
   read (line, *, iostat=ios) a
   print '(a,l1,4(1x,i0))', 'array: ', ios == iostat_end, a%n, calls
-
-  ! Neither END= nor IOSTAT=: the end of file terminates the program.
-  line = ' '
-  read (line, *) x
-  print '(a)', 'not terminated'
 end program

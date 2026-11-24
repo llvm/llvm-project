@@ -1,17 +1,12 @@
 ! After a derived-type item with a defined formatted READ, a list-directed
-! READ statement keeps its END= and IOSTAT= handling, and an end of file
-! with neither of them terminates the program.
+! READ statement keeps its END= and IOSTAT= handling. The case with neither
+! END= nor IOSTAT= is in dtio-list-input-eof-fatal.f90.
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" not --crash %t 2>%t.err \
-! RUN:   | FileCheck %s
-! RUN: FileCheck --check-prefix=ERR %s < %t.err
+! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
 
 ! CHECK: END= branch: 5
 ! CHECK-NEXT: IOSTAT=: T 5
-! CHECK-NOT: not terminated
-
-! ERR: fatal Fortran runtime error({{.*}}): End of file during input
 
 module dtio_list_input_end_m
   implicit none
@@ -50,8 +45,4 @@ program dtio_list_input_end
   x%n = -1
   read (line, *, iostat=ios) x, n
   print '(a,l1,1x,i0)', 'IOSTAT=: ', ios == iostat_end, x%n
-
-  ! Neither END= nor IOSTAT=: the end of file terminates the program.
-  read (line, *) x, n
-  print '(a)', 'not terminated'
 end program
