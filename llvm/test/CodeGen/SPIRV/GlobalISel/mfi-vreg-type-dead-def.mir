@@ -4,6 +4,7 @@
 
 # CHECK: vregTypes:
 # CHECK-NEXT: - { reg: '%1', type: '%0' }
+# CHECK-NEXT: lastInsertedType: ''
 # CHECK-NEXT: body:
 
 ---
