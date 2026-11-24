@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler \
 # RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false -o - %s | FileCheck %s
 
-# Several chain prefixes can cost exactly the same. AGPR utilization decides
+# Several chain prefixes can cost exactly the same. Free ArchVGPRs decide
 # between them, but only while there are AGPRs to spare, and never over a
 # cheaper prefix.
 
@@ -14,10 +14,10 @@
 
 # Eleven identical chains. From nine chains on, every longer prefix saves the
 # same -7680, because the loop is already under the ArchVGPR limit. Breaking
-# the tie on utilization alone would run to all eleven, which puts 248 of 256
-# AGPRs in use -- close enough to the AGPR limit that the next thing to need
-# one spills instead. Utilization only counts while it stays under 7/8 of the
-# limit, so the scan stops at nine chains.
+# the tie on free ArchVGPRs alone would run to all eleven, which puts 248 of 256
+# AGPRs in use -- close enough to the AGPR limit that the next thing to need one
+# spills instead. Free ArchVGPRs only count while the AGPRs stay under 7/8 of
+# the limit, so the scan stops at nine chains.
 
 
 ---
@@ -142,9 +142,9 @@ body: |
 ...
 
 # Six chains whose result leaves the loop, then six whose result feeds a V_ADD
-# inside it. Converting past the sixth keeps raising AGPR utilization, but each
-# one buys a bridge copy at loop frequency. Utilization must not override the
-# worse cost.
+# inside it. Converting past the sixth keeps freeing ArchVGPRs, but each one
+# buys a bridge copy at loop frequency. Free ArchVGPRs must not override the
+# worse cost in the loops.
 
 
 ---

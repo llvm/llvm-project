@@ -4,13 +4,13 @@
 
 # Two chains. Chain A runs at entry frequency and needs no bridge copy, so it
 # pays for itself. Chain B sits in a block that runs half as often and its
-# accumulator cannot be recolored, so converting it buys no extra pressure
-# relief and costs one bridge copy. Scaled by that frequency the copy costs 4
-# rather than 9 -- still enough to make the two-chain prefix worse than chain A
-# alone, so only chain A is converted.
+# accumulator cannot be recolored, so converting it costs one bridge copy,
+# scaled by that frequency to 4 rather than 9. The copy is colder than entry, so
+# it does not count against the plan in the loops, and B's extra relief in
+# region 2 decides: both chains are converted.
 #
-# Charging the copy BlockFreq / EntryFreq instead rounds it down to zero, which
-# ties the two prefixes and lets the AGPR-utilization tiebreak convert both.
+# Charging the copy BlockFreq / EntryFreq instead rounds it to zero and changes
+# the total cost.
 
 --- |
   define amdgpu_kernel void @cold_bridge_copies() #0 { ret void }
@@ -53,7 +53,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   undef %accB.sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF]], [[DEF]], implicit $exec
-  ; CHECK-NEXT:   %b0:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %m0, %m1, %accB, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY %accB
+  ; CHECK-NEXT:   %b0:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 %m0, %m1, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_NOP 0, implicit %b0
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}

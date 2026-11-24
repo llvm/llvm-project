@@ -110,10 +110,14 @@ private:
   struct MFMARewriteCost {
     /// Spill saving plus bridge copies. Negative means profitable.
     int64_t Cost = std::numeric_limits<int64_t>::max();
-    /// AGPRs the plan leaves in use, or 0 once that is past the soft limit.
-    unsigned AGPRUtil = 0;
+    /// The spill saving plus the copies in blocks hotter than entry.
+    int64_t HotCost = std::numeric_limits<int64_t>::max();
+    /// The most ArchVGPRs any region needs after the plan; the maximum past the
+    /// soft AGPR limit.
+    unsigned ArchPeak = std::numeric_limits<unsigned>::max();
 
-    /// Cheapest wins; ties go to the plan holding the most in AGPRs.
+    /// Cheapest in the loops wins, then the lowest ArchVGPR peak, then the
+    /// cheapest overall.
     bool isBetterThan(const MFMARewriteCost &O) const;
   };
 

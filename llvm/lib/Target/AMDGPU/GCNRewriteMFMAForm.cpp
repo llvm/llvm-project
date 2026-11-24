@@ -116,8 +116,8 @@ SmallVector<MachineInstr *, 32> RewriteMFMAFormStage::selectChainPrefix(
 
 bool RewriteMFMAFormStage::MFMARewriteCost::isBetterThan(
     const MFMARewriteCost &O) const {
-  int64_t NegUtil = -(int64_t)AGPRUtil, ONegUtil = -(int64_t)O.AGPRUtil;
-  return std::tie(Cost, NegUtil) < std::tie(O.Cost, ONegUtil);
+  return std::tie(HotCost, ArchPeak, Cost) <
+         std::tie(O.HotCost, O.ArchPeak, O.Cost);
 }
 
 unsigned RewriteMFMAFormStage::findBestChainCount(
@@ -129,8 +129,8 @@ unsigned RewriteMFMAFormStage::findBestChainCount(
       Result = cost(Plan, measure(Plan));
     MFMAToAGPR->setConvertSet(nullptr);
     LLVM_DEBUG(dbgs() << "RewriteMFMAForm: probe " << N << '/' << Chains.size()
-                      << " chains, cost " << Result.Cost << ", AGPR util "
-                      << Result.AGPRUtil << '\n');
+                      << " chains, cost " << Result.Cost << ", ArchVGPR peak "
+                      << Result.ArchPeak << '\n');
     return Result;
   };
 
@@ -142,8 +142,8 @@ unsigned RewriteMFMAFormStage::findBestChainCount(
   // more only moves the spills. The cost is not monotonic either, so scan every
   // prefix rather than binary searching for the crossover.
   //
-  // Cheapest prefix wins; equal-cost prefixes are broken toward the one holding
-  // the most in AGPRs. See MFMARewriteCost::isBetterThan().
+  // The prefix that is cheapest in the loops wins; among equals, the one that
+  // leaves the most ArchVGPRs free. See MFMARewriteCost::isBetterThan().
   for (unsigned N = 1; N <= Chains.size(); ++N) {
     MFMARewriteCost Result = Probe(N);
     // A rewrite that does not pay for itself is not worth doing at all, however
@@ -608,6 +608,7 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   unsigned MaxAGPRAfter = 0;
   // What the region the rewrite helps most still spills after it.
   unsigned BestRegionSpillsAfter = 0;
+  unsigned ArchPeak = 0;
   uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
 
   std::pair<unsigned, unsigned> MaxVectorRegs =
@@ -644,6 +645,8 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
     MaxAGPRAfter = std::max(MaxAGPRAfter, PressureAfter.getAGPRNum());
+    ArchPeak = std::max(ArchPeak, PressureAfter.getArchVGPRNum() -
+                                      PressureAfter.getAVGPRNum());
     MostAVFreeSaving =
         std::max(MostAVFreeSaving, (int64_t)SpillsWithoutAV(PressureBefore) -
                                        (int64_t)SpillsWithoutAV(PressureAfter));
@@ -694,7 +697,7 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
 
     // If we have increased spilling in any block, just bail.
     if (SpillCost > 0)
-      return {SpillCost, /*AGPRUtil=*/0};
+      return {SpillCost};
 
     if (SpillCost < BestSpillCost) {
       BestSpillCost = SpillCost;
@@ -707,7 +710,7 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   // runs 10% slower converted: its loops stay over the limit and gain about 190
   // AGPR moves.
   if (BestSpillCost < 0 && BestRegionSpillsAfter > 0 && MostAVFreeSaving <= 0)
-    return {std::numeric_limits<int64_t>::max() / 2, /*AGPRUtil=*/0};
+    return {std::numeric_limits<int64_t>::max() / 2};
 
   // Set the cost to the largest decrease in spill cost in order to not double
   // count spill reductions.
@@ -717,7 +720,7 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   // Charge for every bridge copy apply() is going to emit, weighted by the
   // frequency of the block it lands in. A bridge crosses the register banks, so
   // it is priced as an AGPR copy even though the register is still VGPR here.
-  unsigned CopyCost = 0;
+  unsigned CopyCost = 0, HotCopyCost = 0;
   auto ChargeCopy = [&](const MachineBasicBlock *MBB, Register Reg) {
     uint64_t BlockFreq = MBFI->getBlockFreq(MBB).getFrequency();
 
@@ -740,6 +743,8 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
     else
       Copy *= (int64_t)RelativeFreq;
     CopyCost += Copy;
+    if (BlockFreq > EntryFreq)
+      HotCopyCost += Copy;
   };
 
   for (auto [DefMI, Reg] : Plan.DefBridges)
@@ -748,16 +753,18 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   for (const BridgeCopy &Bridge : Plan.UseBridges)
     ChargeCopy(Bridge.MBB, Bridge.Reg);
 
-  // Report the AGPR utilization only while there is headroom left. Past this
-  // soft limit, using more AGPRs is a risk rather than a bonus: they spill too.
+  // Count the free ArchVGPRs only under the soft AGPR limit; past it more AGPRs
+  // are a risk.
   unsigned SoftAGPRLimit = AGPRThreshold * 7 / 8;
-  unsigned AGPRUtil = MaxAGPRAfter <= SoftAGPRLimit ? MaxAGPRAfter : 0;
+  unsigned Peak = MaxAGPRAfter <= SoftAGPRLimit
+                      ? ArchPeak
+                      : std::numeric_limits<unsigned>::max();
 
   LLVM_DEBUG(dbgs() << "  spill cost " << Cost << ", copy cost " << CopyCost
                     << ", AGPR " << MaxAGPRAfter << '/' << AGPRThreshold
                     << '\n');
 
-  return {Cost + CopyCost, AGPRUtil};
+  return {Cost + CopyCost, Cost + HotCopyCost, Peak};
 }
 
 /// Insert "MappedReg = COPY Reg" after the reaching def \p RD, unless \p
