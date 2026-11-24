@@ -5502,6 +5502,11 @@ public:
   /// passing to a runtime sanitizer handler.
   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
 
+  /// Emit a private unnamed_addr non-constant global containing static
+  /// arguments for a UBSan runtime check handler.
+  llvm::GlobalVariable *
+  EmitCheckStaticData(ArrayRef<llvm::Constant *> StaticArgs);
+
   void EmitKCFIOperandBundle(const CGCallee &Callee,
                              SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
