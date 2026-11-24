@@ -26,6 +26,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -991,6 +992,40 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   return Reg;
 }
 
+// A binding is aliased when it is used under more than one name. It's
+// expected that differently typed aliases, for example reinterpretations
+// of a buffer, will use distinct names.
+bool SPIRVGlobalRegistry::isBindingAliased(const Module &M, uint32_t Set,
+                                           uint32_t Binding) {
+  if (!AliasedBindingsComputed) {
+    AliasedBindingsComputed = true;
+    DenseMap<std::pair<uint32_t, uint32_t>, StringRef> FirstName;
+    for (const Function &F : M) {
+      if (F.getIntrinsicID() !=
+          Intrinsic::spv_resource_handlefrombinding_mdname)
+        continue;
+      for (const User *U : F.users()) {
+        const auto *CI = dyn_cast<CallInst>(U);
+        if (!CI)
+          continue;
+        auto *S = dyn_cast<ConstantInt>(CI->getArgOperand(0));
+        auto *B = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+        if (!S || !B)
+          continue;
+        auto *NameMD = cast<MDNode>(
+            cast<MetadataAsValue>(CI->getArgOperand(4))->getMetadata());
+        StringRef Name = cast<MDString>(NameMD->getOperand(0))->getString();
+        std::pair<uint32_t, uint32_t> Key = {S->getZExtValue(),
+                                             B->getZExtValue()};
+        auto [It, Inserted] = FirstName.try_emplace(Key, Name);
+        if (!Inserted && It->second != Name)
+          AliasedBindings.insert(Key);
+      }
+    }
+  }
+  return AliasedBindings.contains({Set, Binding});
+}
+
 // Returns a name based on the Type. Notes that this does not look at
 // decorations, and will return the same string for two types that are the same
 // except for decorations.
@@ -1006,6 +1041,10 @@ Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
 
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::DescriptorSet, {Set});
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Binding, {Binding});
+  if (getPointerStorageClass(VarType) == SPIRV::StorageClass::StorageBuffer &&
+      isBindingAliased(*MIRBuilder.getMF().getFunction().getParent(), Set,
+                       Binding))
+    buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Aliased, {});
   return VarReg;
 }
 

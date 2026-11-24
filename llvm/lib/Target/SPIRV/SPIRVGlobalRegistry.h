@@ -65,6 +65,11 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // is emitted.
   DenseSet<SPIRVTypeInst> BlockDecoratedTypes;
 
+  // Set/binding pairs used by more than one resource.
+  bool AliasedBindingsComputed = false;
+  DenseSet<std::pair<uint32_t, uint32_t>> AliasedBindings;
+  bool isBindingAliased(const Module &M, uint32_t Set, uint32_t Binding);
+
   // Stores for each function the last inserted SPIR-V Type.
   // See: SPIRVGlobalRegistry::createOpType.
   DenseMap<const MachineFunction *, MachineInstr *> LastInsertedTypeMap;

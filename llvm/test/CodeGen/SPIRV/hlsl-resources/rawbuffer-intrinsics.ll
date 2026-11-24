@@ -2,9 +2,9 @@
 ; RUN: llc -O2 -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s --check-prefixes=CHECK,TYPED --implicit-check-not=Untyped
 ; RUN: llc -O0 -enable-new-pm -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s --check-prefixes=CHECK,TYPED --implicit-check-not=Untyped
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -filetype=obj -o %t.typed.spv && spirv-val --target-env vulkan1.3 %t.typed.spv %}
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute -spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK,UNTYPED
-; RUN: llc -O2 -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute -spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK,UNTYPED
-; RUN: llc -O0 -enable-new-pm -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute -spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK,UNTYPED
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute -spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK,UNTYPED --implicit-check-not=Aliased
+; RUN: llc -O2 -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute -spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK,UNTYPED --implicit-check-not=Aliased
+; RUN: llc -O0 -enable-new-pm -verify-machineinstrs -mtriple=spirv-unknown-vulkan-compute -spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK,UNTYPED --implicit-check-not=Aliased
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute -spirv-ext=+SPV_KHR_untyped_pointers %s -filetype=obj -o %t.spv && spirv-val --target-env vulkan1.3 %t.spv %}
 
 ; Check lowering of raw buffer intrinsics to SPIRV. The resource, which can be reinterpreted to load/store
@@ -18,6 +18,8 @@
 ; CHECK-DAG: %[[#UINT:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#FLOAT:]] = OpTypeFloat 32
 ; TYPED-DAG: OpTypeRuntimeArray %[[#FLOAT]]
+; TYPED-DAG: OpName %[[#BUF_I32:]] ".resource.alias.0.0.i32.rw.buf"
+; TYPED-DAG: OpDecorate %[[#BUF_I32]] Aliased
 ; UNTYPED-DAG: %[[#FLOAT4:]] = OpTypeVector %[[#FLOAT]] 4
 
 @in = private unnamed_addr constant [3 x i8] c"in\00"
@@ -112,8 +114,8 @@ define void @vector_copy_eight() #0 {
 ; UNTYPED: OpStore {{%[0-9]+}} %[[#VECTOR]] Aligned 4
 ; CHECK: OpFunctionEnd
 define void @copy_readonly() #0 {
-  %input = call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr @in)
-  %output = call target("spirv.VulkanBuffer", [0 x i8], 12, 1) @llvm.spv.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr @out)
+  %input = call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr @in)
+  %output = call target("spirv.VulkanBuffer", [0 x i8], 12, 1) @llvm.spv.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, ptr @out)
   %v = call <4 x float> @llvm.spv.resource.load.rawbuffer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %input, i32 4, i32 4)
   call void @llvm.spv.resource.store.rawbuffer(target("spirv.VulkanBuffer", [0 x i8], 12, 1) %output, i32 8, <4 x float> %v, i32 4)
   ret void
