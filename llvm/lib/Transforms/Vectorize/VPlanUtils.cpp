@@ -508,6 +508,12 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   }
   if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
+  // An unmasked gather from a single-scalar address loads the same value for
+  // all lanes. A consecutive load's address is a single scalar too, but it
+  // points to the first of VF consecutive elements, one per lane.
+  if (auto *LoadR = dyn_cast<VPWidenLoadRecipe>(VPV))
+    return !LoadR->isMasked() && !LoadR->isConsecutive() &&
+           isSingleScalar(LoadR->getAddr());
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return preservesUniformity(WidenR->getOpcode()) &&
            all_of(WidenR->operands(), isSingleScalar);
