@@ -46,6 +46,12 @@ static void test_mbrtoc8_partial_init() {
   assert(mbrtoc8(&c8, partial_init, sizeof(partial_init), &st) == 1);
   assert(__msan_test_shadow(&c8, sizeof(c8)) == -1);
   assert(c8 == u8'x');
+
+  partial_init[0] = '\0';
+  __msan_poison(&c8, sizeof(c8));
+  assert(mbrtoc8(&c8, partial_init, sizeof(partial_init), &st) == 0);
+  assert(__msan_test_shadow(&c8, sizeof(c8)) == -1);
+  assert(c8 == u8'\0');
 }
 
 static void test_mbrtoc8_null_src() {

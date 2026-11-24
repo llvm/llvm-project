@@ -748,6 +748,7 @@ if config.target_os == "Linux" and not config.android:
             (2, 30),
             (2, 33),
             (2, 34),
+            (2, 36),
             (2, 37),
             (2, 38),
             (2, 40),
@@ -763,7 +764,12 @@ if config.target_os == "Linux" and not config.android:
     except:
         pass
 
-if not target_is_windows and compiler_id != "MSVC":
+if "glibc" in config.available_features and (major, minor) >= (2, 36):
+    config.available_features.add("have-uchar-c8")
+elif config.target_os == "NetBSD":
+    ver = [int(x) for x in re.findall(r"\d+", platform.release())[:2]]
+    if ver >= [10, 1]:
+        config.available_features.add("have-uchar-c8")
     # Detect whether the target's <uchar.h> declares mbrtoc8() and c8rtomb().
     cmd_args = [config.clang.strip()]
     if compiler_id == "Clang":
@@ -776,7 +782,7 @@ if not target_is_windows and compiler_id != "MSVC":
             stdout=subprocess.DEVNULL,
             stdin=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            env={**config.environment, "LANG": "C"},
+            env=config.environment,
         )
         cmd.communicate(
             b"#include <uchar.h>\n"

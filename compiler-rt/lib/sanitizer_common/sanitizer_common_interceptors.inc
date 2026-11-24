@@ -4085,9 +4085,18 @@ static ALWAYS_INLINE SIZE_T MbrtocImpl(void* ctx, Fn real, CharT* pc,
   if (ps)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
   CharT local_pc = 0;
-  SIZE_T res = real(&local_pc, s, n, ps);
+  SIZE_T res = real(pc ? &local_pc : nullptr, s, n, ps);
   if (ps)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
+  if (res == (SIZE_T)-3) {
+    // A previous conversion resulted in multiple characters and the next
+    // character was read from `ps`. Nothing was read from `s`.
+    if (pc && (s || SI_GLIBC)) {
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
+      *pc = local_pc;
+    }
+    return res;
+  }
   if (!s)
     // `pc` and `n` are ignored.
     return res;
@@ -4103,20 +4112,11 @@ static ALWAYS_INLINE SIZE_T MbrtocImpl(void* ctx, Fn real, CharT* pc,
       COMMON_INTERCEPTOR_READ_RANGE(ctx, s, n);
     return res;
   }
-  if (res == (SIZE_T)-3) {
-    // A previous conversion resulted in multiple characters and the next
-    // character was read from `ps`. Nothing was read from `s`.
-    if (pc) {
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
-      *pc = local_pc;
-    }
-    return res;
-  }
   SIZE_T read_cnt;
   if (res == 0) {
     // If local_pc == 0, shift-reset bytes plus '\0' were read; otherwise
     // (e.g. glibc multi-codepoint continuation), 0 bytes were read from `s`.
-    read_cnt = (local_pc == 0) ? internal_strnlen(s, n) + 1 : 0;
+    read_cnt = (local_pc == 0) ? Min(internal_strnlen(s, n) + 1, n) : 0;
   } else {
     read_cnt = res;
   }
