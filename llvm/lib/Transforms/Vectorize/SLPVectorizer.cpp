@@ -15099,7 +15099,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
       LI0->getPointerOperand(), CommonAlignment,
       TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
   if (StridedCost >= CompressedCost && !Opts.slp_force_strided_loads) {
-    CompressEntryToData.try_emplace(&E, std::move(CompressInfo));
+    Candidate.CompressEntryToData.try_emplace(&E, std::move(CompressInfo));
     return;
   }
 
@@ -15110,7 +15110,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
            << "; CompressedCost = " << CompressedCost << "\n";
   });
   E.State = TreeEntry::StridedVectorize;
-  TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
+  Candidate.TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
 }
 
 void BoUpSLP::transformNodes() {
@@ -15129,9 +15129,9 @@ void BoUpSLP::transformNodes() {
 
   // Perform transformations that modify nodes in-place last.
   llvm::scope_exit PreferStridedLoads([&] {
-    for (std::unique_ptr<TreeEntry> &E : VectorizableTree) {
+    for (std::unique_ptr<TreeEntry> &E : Candidate.VectorizableTree) {
       if (E->State == TreeEntry::CompressVectorize &&
-          !DeletedNodes.contains(E.get()))
+          !Shared.DeletedNodes.contains(E.get()))
         convertCompressedLoadToStrided(*E);
     }
   });
