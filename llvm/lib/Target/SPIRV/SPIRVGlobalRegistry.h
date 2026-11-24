@@ -702,7 +702,9 @@ public:
                               SPIRV::StorageClass::StorageClass SC,
                               bool IsWritable, bool EmitIr = false);
 
-  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
+                                       uint64_t PaddingSizeInBytes,
+                                       uint64_t OffsetInBytes = 0);
 
   SPIRVTypeInst getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
                                                   Type *ElemType);

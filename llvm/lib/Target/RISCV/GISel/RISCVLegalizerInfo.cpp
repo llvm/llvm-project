@@ -753,7 +753,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                     (ST.hasStdExtZfh() &&
                      Query.Types[0].getSizeInBits() == 16));
           },
-          LegalizeMutations::changeTo(1, sXLen))
+          LegalizeMutations::changeTo(1, iXLen))
       // Otherwise only promote to s32 since we have si libcalls.
       .minScalar(1, s32)
       .libcallFor({{f32, s32}, {f64, s32}, {f32, s64}, {f64, s64}})

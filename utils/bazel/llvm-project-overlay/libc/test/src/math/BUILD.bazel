@@ -359,6 +359,13 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "exp2bf16",
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "exp2m1f",
     deps = [
         "//libc/src/__support/CPP:array",

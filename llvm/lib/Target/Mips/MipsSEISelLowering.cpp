@@ -304,12 +304,12 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::i32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 
-    setOperationAction(ISD::SETCC, MVT::f32, Legal);
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
     setOperationAction(ISD::SELECT, MVT::f32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
-    setOperationAction(ISD::SETCC, MVT::f64, Legal);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
     setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 

@@ -10046,6 +10046,7 @@ cc_library(
         ":ArmSMEToLLVMIRTranslation",
         ":ArmSVEToLLVMIRTranslation",
         ":BuiltinToLLVMIRTranslation",
+        ":DLTIDialect",
         ":GPUToLLVMIRTranslation",
         ":LLVMIRToLLVMTranslation",
         ":LLVMIRToNVVMTranslation",
