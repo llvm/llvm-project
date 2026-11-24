@@ -5914,19 +5914,6 @@ static bool shouldSpecializeIndirectCallee(Attributor &A,
   return NumAssumedCallees <= A.Opts.openmp_opt_max_callees_for_specialization;
 }
 
-/// Invalidate the analyses of each function individually, so analyses which
-/// never need to be invalidated, such as TargetLibraryInfo, are kept.
-static PreservedAnalyses invalidateFunctions(Module &M,
-                                             FunctionAnalysisManager &FAM) {
-  for (Function &F : M)
-    FAM.invalidate(F, PreservedAnalyses::none());
-
-  PreservedAnalyses PA;
-  PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  return PA;
-}
-
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
@@ -5937,6 +5924,11 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   KernelSet Kernels = getDeviceKernels(M);
+
+  // Preserving the proxy invalidates each function individually, which keeps
+  // analyses like TargetLibraryInfo.
+  PreservedAnalyses ChangedPA;
+  ChangedPA.preserve<FunctionAnalysisManagerModuleProxy>();
 
   if (Opts.openmp_opt_print_module_before)
     LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt Module Pass:\n" << M);
@@ -5987,7 +5979,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     }
 
   if (SCC.empty())
-    return Changed ? invalidateFunctions(M, FAM) : PreservedAnalyses::all();
+    return Changed ? ChangedPA : PreservedAnalyses::all();
 
   AnalysisGetter AG(FAM);
 
@@ -6036,7 +6028,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     LLVM_DEBUG(dbgs() << TAG << "Module after OpenMPOpt Module Pass:\n" << M);
 
   if (Changed)
-    return invalidateFunctions(M, FAM);
+    return ChangedPA;
 
   return PreservedAnalyses::all();
 }
