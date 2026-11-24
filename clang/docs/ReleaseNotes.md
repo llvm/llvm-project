@@ -451,8 +451,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   for more information.
 
 - Added experimental `-fmodules-driver` option to enable explicit module
-  builds using C++20 and/or Clang named modules, managed by the Clang driver.
-  This also supports the C++ standard library modules.
+  builds using C++20 named modules or Clang modules, managed by the Clang
+  driver. This also supports the C++ standard library modules.
 
 - Added `-Rmodules-driver` option to emit remarks for `-fmodules-driver`,
   such as the build graph with module dependencies as a DOT graph.

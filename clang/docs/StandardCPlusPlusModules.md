@@ -516,8 +516,12 @@ The `-fmodules-driver` feature is experimental.
 
 The `-fmodules-driver` option enables the Clang driver to automatically discover
 module dependencies and manage the entire compilation process for builds using
-Standard C++ named modules and/or Clang modules. This includes support for importing
-the C++ Standard library modules `std` and `std.compat`.
+Standard C++ named modules. This includes support for importing the C++
+Standard library modules `std` and `std.compat`, which requires libc++ 19 or
+later, or libstdc++ 15 or later.
+
+For Clang modules, see
+{ref}`Driver-managed module builds <modules-driver-clang-modules>`.
 
 ##### Examples
 
@@ -555,127 +559,79 @@ For the more complex example from the Quick Start section, invoke Clang like:
 $ clang++ -std=c++20 -fmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
 ```
 
-`-fmodules-driver` can also be combined with `-fmodules` for Clang modules
-support:
-
-```c++
-// module.modulemap
-module HelloUniverse {
-  header "HelloUniverse.h"
-  export *
-}
-
-// HelloUniverse.h
-#pragma once
-#include <iostream>
-inline void helloUniverse() {
-  std::cout << "Hello, Universe!\n";
-}
-
-// main.cpp
-#include "HelloUniverse.h"
-int main() {
-  helloUniverse();
-}
-```
-
-Then, invoke Clang like:
-
-```console
-$ clang -fmodules -fmodules-driver -fmodule-map-file=module.modulemap main.cpp
-```
-
-You can also combine Standard C++ named modules and Clang modules in the same
-compilation:
-
-```c++
-// module.modulemap
-module HelloUniverse {
-  header "HelloUniverse.h"
-  export *
-}
-
-// HelloUniverse.h
-#pragma once
-#include <iostream>
-void helloUniverse() {
-  std::cout << "Hello, Universe!\n";
-}
-
-// HelloWorld.cppm
-export module HelloWorld;
-import std;
-
-export void helloWorld() {
-  std::cout << "Hello World!\n";
-}
-
-// main.cpp
-#include "HelloUniverse.h"
-import HelloWorld;
-
-int main() {
-  helloWorld();
-  helloUniverse();
-}
-```
-
-```console
-$ clang++ -std=c++20 -fmodules -fmodules-driver -fmodule-map-file=module.modulemap HelloWorld.cppm main.cpp
-```
-
 The build graph for any `-fmodules-driver` invocation can be printed in DOT
 format using the `-Rmodules-driver` remark:
 
 ```console
-$ clang++ -std=c++20 -fmodules -fmodules-driver -Rmodules-driver -fmodule-map-file=module.modulemap HelloWorld.cppm main.cpp
+$ clang++ -std=c++20 -fmodules-driver -Rmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
 ```
 
 In the resulting DOT graph, Standard C++ named modules are labeled just as
 "Named module".
 
 ```{graphviz}
-digraph {
+digraph "Module Dependency Graph" {
      rankdir="BT";
      label="Module Dependency Graph";
      node [shape=Mrecord, colorscheme=set23, style=filled];
 
-     "_Builtin_float-7QLH939LP86YH5HP0PG8FH8FV" [fillcolor=1, label="{ Module type: Clang module | Module name: _Builtin_float | Hash: 7QLH939LP86YH5HP0PG8FH8FV }"];
-     "_Builtin_limits-5CX6ZT8UA1ABH32C5FDC0IJ7S" [fillcolor=1, label="{ Module type: Clang module | Module name: _Builtin_limits | Hash: 5CX6ZT8UA1ABH32C5FDC0IJ7S }"];
-     "_Builtin_stdarg-F18YUTXMGX9UNHPY8KDJBSQIK" [fillcolor=1, label="{ Module type: Clang module | Module name: _Builtin_stdarg | Hash: F18YUTXMGX9UNHPY8KDJBSQIK }"];
-     "_Builtin_stddef-EV2KR1MCSB6QEU876DYYYKWXW" [fillcolor=1, label="{ Module type: Clang module | Module name: _Builtin_stddef | Hash: EV2KR1MCSB6QEU876DYYYKWXW }"];
-     "_Builtin_stdint-30RFMCKWE59K7VQQPWKPCVBXW" [fillcolor=1, label="{ Module type: Clang module | Module name: _Builtin_stdint | Hash: 30RFMCKWE59K7VQQPWKPCVBXW }"];
-     "_Builtin_inttypes-DUZ97LSOR7LR7AKS6D5AQ6P97" [fillcolor=1, label="{ Module type: Clang module | Module name: _Builtin_inttypes | Hash: DUZ97LSOR7LR7AKS6D5AQ6P97 }"];
-     "HelloUniverse-75Y8BHODUL1O3IR5VBHWP0YM" [fillcolor=1, label="{ Module type: Clang module | Module name: HelloUniverse | Hash: 75Y8BHODUL1O3IR5VBHWP0YM }"];
-     "std-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: \<Standard library path\>/std.cppm | Module type: Named module | Module name: std | Triple: x86_64-unknown-linux-gnu }"];
-     "HelloWorld-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: HelloWorld.cppm | Module type: Named module | Module name: HelloWorld | Triple: x86_64-unknown-linux-gnu }"];
-     "main.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: main.cpp | Triple: x86_64-unknown-linux-gnu }"];
+     "M:interface_part-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: interface_part.cppm | Module type: Named module | Module name: M:interface_part | Triple: x86_64-unknown-linux-gnu }"];
+     "M:impl_part-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: impl_part.cppm | Module type: Named module | Module name: M:impl_part | Triple: x86_64-unknown-linux-gnu }"];
+     "M-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: M.cppm | Module type: Named module | Module name: M | Triple: x86_64-unknown-linux-gnu }"];
+     "Impl.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: Impl.cpp | Triple: x86_64-unknown-linux-gnu }"];
+     "User.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: User.cpp | Triple: x86_64-unknown-linux-gnu }"];
 
-     "_Builtin_float-7QLH939LP86YH5HP0PG8FH8FV" -> "std-x86_64-unknown-linux-gnu";
-     "_Builtin_limits-5CX6ZT8UA1ABH32C5FDC0IJ7S" -> "std-x86_64-unknown-linux-gnu";
-     "_Builtin_stdarg-F18YUTXMGX9UNHPY8KDJBSQIK" -> "HelloUniverse-75Y8BHODUL1O3IR5VBHWP0YM";
-     "_Builtin_stdarg-F18YUTXMGX9UNHPY8KDJBSQIK" -> "std-x86_64-unknown-linux-gnu";
-     "_Builtin_stddef-EV2KR1MCSB6QEU876DYYYKWXW" -> "HelloUniverse-75Y8BHODUL1O3IR5VBHWP0YM";
-     "_Builtin_stddef-EV2KR1MCSB6QEU876DYYYKWXW" -> "std-x86_64-unknown-linux-gnu";
-     "_Builtin_stdint-30RFMCKWE59K7VQQPWKPCVBXW" -> "_Builtin_inttypes-DUZ97LSOR7LR7AKS6D5AQ6P97";
-     "_Builtin_stdint-30RFMCKWE59K7VQQPWKPCVBXW" -> "std-x86_64-unknown-linux-gnu";
-     "_Builtin_inttypes-DUZ97LSOR7LR7AKS6D5AQ6P97" -> "std-x86_64-unknown-linux-gnu";
-     "HelloUniverse-75Y8BHODUL1O3IR5VBHWP0YM" -> "main.cpp-x86_64-unknown-linux-gnu";
-     "std-x86_64-unknown-linux-gnu" -> "HelloWorld-x86_64-unknown-linux-gnu";
-     "HelloWorld-x86_64-unknown-linux-gnu" -> "main.cpp-x86_64-unknown-linux-gnu";
+     "M:interface_part-x86_64-unknown-linux-gnu" -> "M:impl_part-x86_64-unknown-linux-gnu";
+     "M:interface_part-x86_64-unknown-linux-gnu" -> "M-x86_64-unknown-linux-gnu";
+     "M:impl_part-x86_64-unknown-linux-gnu" -> "M-x86_64-unknown-linux-gnu";
+     "M-x86_64-unknown-linux-gnu" -> "Impl.cpp-x86_64-unknown-linux-gnu";
+     "M-x86_64-unknown-linux-gnu" -> "User.cpp-x86_64-unknown-linux-gnu";
 }
 ```
+
+##### Implementation
+
+Clang's dependency scanning tooling needs to be invoked on a `-cc1` command line
+for each input. The Clang driver is therefore first run as it would be without
+`-fmodules-driver`, to create these command lines for all user inputs. By
+default, compilation jobs are also created for the C++ Standard library modules,
+because they too need to be scanned for dependencies if imported by any input
+specified on the command line.
+
+The Clang driver then:
+
+1. Scans all inputs for module dependencies.
+   C++ Standard library modules are scanned on demand, only if any user input
+   imports them.
+
+2. Builds the dependency graph, where each node represents one compilation job.
+   This also generates `-cc1` command lines for any discovered Clang modules.
+   The compilation jobs created for C++ Standard library modules are removed if
+   they are not imported.
+   This is the graph printed by `-Rmodules-driver`.
+
+3. Updates each job's command line to explicitly pass in its module
+   dependencies.
+
+4. Runs the jobs in topological order of the dependency graph.
+
+`-fmodules-driver` currently requires Reduced BMIs, which are enabled by
+default. With Reduced BMIs, the BMI of a module unit is emitted as a by-product
+of the job compiling it to an object file, so the driver only needs to add
+`-fmodule-output` instead of creating a separate precompile job.
 
 ##### Limitations
 
 - Modules are recompiled on each invocation. Caching support is planned for a
   future release.
-- Standard C++ named modules can import Clang modules, but importing Standard
-  C++ named modules into Clang modules is not yet supported.
-- The `-o` option can only be used with a single input file.
-- Using `-fmodules-driver` with `-stdlib=libc++` and `-fmodules` currently
-  doesn't work correctly when importing `std`.
+- Combining Standard C++ named modules and Clang modules in the same
+  compilation is not recommended. For example, using `-fmodules-driver` with
+  `-stdlib=libc++` and `-fmodules` currently doesn't work correctly when
+  importing `std`.
   See [discussion in PR #193312](https://github.com/llvm/llvm-project/pull/193312).
+- `-fno-modules-reduced-bmi` is not supported.
+- BMIs are always written as temporary files, and flags which influence the
+  output location of BMIs, such as `-fmodule-output=`, are ignored.
 - Flags such as `-fsyntax-only` are not supported when compiling multiple
   input files. Using such flags would not be supported for the above examples.
 
