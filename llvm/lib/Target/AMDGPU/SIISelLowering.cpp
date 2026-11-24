@@ -13518,7 +13518,6 @@ namespace {
 struct SubDwordPosition {
   SDValue Index;
   SDValue BitOffset;
-  std::optional<uint64_t> KnownBitOffset;
 };
 } // end anonymous namespace
 
@@ -13532,10 +13531,8 @@ static SubDwordPosition getSubDwordPosition(SelectionDAG &DAG,
   // address of the index, so that the parts of a split access share the index
   // of their dword. Otherwise Ptr << 3 will do, as the bit-field extract reads
   // only its low 5 bits.
-  std::optional<unsigned> Byte =
-      AMDGPU::getVGPRDwordByteOffset(*MemOp->getMemOperand(), [&] {
-        return DAG.computeKnownBits(Ptr).trunc(2);
-      });
+  std::optional<unsigned> Byte = AMDGPU::getVGPRDwordByteOffset(
+      *MemOp->getMemOperand(), DAG.computeKnownBits(Ptr).trunc(2));
   SDValue DwordAddress = Byte
                              ? DAG.getNode(ISD::SUB, DL, MVT::i32, Ptr,
                                            DAG.getConstant(*Byte, DL, MVT::i32))
@@ -13543,8 +13540,7 @@ static SubDwordPosition getSubDwordPosition(SelectionDAG &DAG,
   Pos.Index = DAG.getNode(ISD::SRL, DL, MVT::i32, DwordAddress,
                           DAG.getConstant(2, DL, MVT::i32));
   if (Byte) {
-    Pos.KnownBitOffset = *Byte * 8;
-    Pos.BitOffset = DAG.getConstant(*Pos.KnownBitOffset, DL, MVT::i32);
+    Pos.BitOffset = DAG.getConstant(*Byte * 8, DL, MVT::i32);
   } else {
     Pos.BitOffset = DAG.getNode(ISD::SHL, DL, MVT::i32, Ptr,
                                 DAG.getConstant(3, DL, MVT::i32));
@@ -13587,11 +13583,9 @@ static SDValue lowerSubDwordStoreVGPR(StoreSDNode *Store, SelectionDAG &DAG) {
   Value = DAG.getAnyExtOrTrunc(DAG.getBitcast(IntVT, Value), DL, MVT::i32);
 
   // The value is shifted into place under a mask of its bits. A shift by 32 or
-  // more is poison, so a variable amount is masked, which selection folds away.
-  SDValue Shift = Pos.KnownBitOffset
-                      ? Pos.BitOffset
-                      : DAG.getNode(ISD::AND, DL, MVT::i32, Pos.BitOffset,
-                                    DAG.getConstant(31, DL, MVT::i32));
+  // more is poison, so the amount is masked, which selection folds away.
+  SDValue Shift = DAG.getNode(ISD::AND, DL, MVT::i32, Pos.BitOffset,
+                              DAG.getConstant(31, DL, MVT::i32));
   SDValue ShiftedValue = DAG.getNode(ISD::SHL, DL, MVT::i32, Value, Shift);
   SDValue Mask =
       DAG.getNode(ISD::SHL, DL, MVT::i32,

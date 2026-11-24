@@ -88,18 +88,16 @@ unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment) {
   return 8;
 }
 
-std::optional<unsigned>
-getVGPRDwordByteOffset(const MachineMemOperand &MMO,
-                       function_ref<KnownBits()> LowAddressBits) {
+std::optional<unsigned> getVGPRDwordByteOffset(const MachineMemOperand &MMO,
+                                               KnownBits LowAddressBits) {
   if (MMO.getBaseAlign() >= Align(4))
     return MMO.getOffset() & 3;
-  KnownBits Known = LowAddressBits();
   const unsigned AlignBits = std::min(Log2(MMO.getAlign()), 2u);
-  Known.Zero.setLowBits(AlignBits);
-  Known.One.clearLowBits(AlignBits);
-  if (!Known.isConstant())
+  LowAddressBits.Zero.setLowBits(AlignBits);
+  LowAddressBits.One.clearLowBits(AlignBits);
+  if (!LowAddressBits.isConstant())
     return std::nullopt;
-  return Known.getConstant().getZExtValue();
+  return LowAddressBits.getConstant().getZExtValue();
 }
 
 // Returns the target extension type of a global variable,

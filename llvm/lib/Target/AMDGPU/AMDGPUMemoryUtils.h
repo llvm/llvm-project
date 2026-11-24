@@ -89,9 +89,8 @@ unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment);
 // with memory operand \p MMO, if it is known: the offset of the memory operand
 // if its base is dword-aligned, otherwise what the alignment of the access and
 // \p LowAddressBits, the known low two bits of the address, give.
-std::optional<unsigned>
-getVGPRDwordByteOffset(const MachineMemOperand &MMO,
-                       function_ref<KnownBits()> LowAddressBits);
+std::optional<unsigned> getVGPRDwordByteOffset(const MachineMemOperand &MMO,
+                                               KnownBits LowAddressBits);
 
 // If GV is a named-barrier return its type. Otherwise return nullptr.
 TargetExtType *isNamedBarrier(const GlobalVariable &GV);

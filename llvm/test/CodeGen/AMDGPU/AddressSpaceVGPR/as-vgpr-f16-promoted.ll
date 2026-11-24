@@ -42,43 +42,6 @@ define half @load_f16(ptr addrspace(13) inreg %p) {
   ret half %x
 }
 
-define bfloat @load_bf16(ptr addrspace(13) inreg %p) {
-; GFX7-SDAG-LABEL: load_bf16:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    s_mov_b32 s4, 3
-; GFX7-SDAG-NEXT:    s_lshl_b32 s4, s16, s4
-; GFX7-SDAG-NEXT:    s_mov_b32 s5, 2
-; GFX7-SDAG-NEXT:    s_lshr_b32 s5, s16, s5
-; GFX7-SDAG-NEXT:    s_mov_b32 m0, s5
-; GFX7-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_mov_b32 s5, 16
-; GFX7-SDAG-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-SDAG-NEXT:    v_bfe_u32 v0, v0, s4, v1
-; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-SDAG-NEXT:    v_and_b32_e64 v0, v0, s4
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: load_bf16:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX7-GISEL-NEXT:    s_lshr_b32 s4, s16, s4
-; GFX7-GISEL-NEXT:    s_mov_b32 s5, 3
-; GFX7-GISEL-NEXT:    s_lshl_b32 s5, s16, s5
-; GFX7-GISEL-NEXT:    s_mov_b32 s6, 31
-; GFX7-GISEL-NEXT:    s_and_b32 s5, s5, s6
-; GFX7-GISEL-NEXT:    s_mov_b32 m0, s4
-; GFX7-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_mov_b32 s4, 16
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %x = load bfloat, ptr addrspace(13) %p
-  ret bfloat %x
-}
-
 define half @load_f16_align1(ptr addrspace(13) inreg %p) {
 ; GFX7-SDAG-LABEL: load_f16_align1:
 ; GFX7-SDAG:       ; %bb.0:
@@ -139,43 +102,6 @@ define half @load_f16_align1(ptr addrspace(13) inreg %p) {
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %x = load half, ptr addrspace(13) %p, align 1
   ret half %x
-}
-
-define <1 x half> @load_v1f16(ptr addrspace(13) inreg %p) {
-; GFX7-SDAG-LABEL: load_v1f16:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    s_mov_b32 s4, 3
-; GFX7-SDAG-NEXT:    s_lshl_b32 s4, s16, s4
-; GFX7-SDAG-NEXT:    s_mov_b32 s5, 2
-; GFX7-SDAG-NEXT:    s_lshr_b32 s5, s16, s5
-; GFX7-SDAG-NEXT:    s_mov_b32 m0, s5
-; GFX7-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX7-SDAG-NEXT:    s_mov_b32 s5, 16
-; GFX7-SDAG-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-SDAG-NEXT:    v_bfe_u32 v0, v0, s4, v1
-; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-SDAG-NEXT:    v_and_b32_e64 v0, v0, s4
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: load_v1f16:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX7-GISEL-NEXT:    s_lshr_b32 s4, s16, s4
-; GFX7-GISEL-NEXT:    s_mov_b32 s5, 3
-; GFX7-GISEL-NEXT:    s_lshl_b32 s5, s16, s5
-; GFX7-GISEL-NEXT:    s_mov_b32 s6, 31
-; GFX7-GISEL-NEXT:    s_and_b32 s5, s5, s6
-; GFX7-GISEL-NEXT:    s_mov_b32 m0, s4
-; GFX7-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX7-GISEL-NEXT:    s_mov_b32 s4, 16
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, v1, v2
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %x = load <1 x half>, ptr addrspace(13) %p
-  ret <1 x half> %x
 }
 
 define void @store_f16(ptr addrspace(13) inreg %p, half %v) {

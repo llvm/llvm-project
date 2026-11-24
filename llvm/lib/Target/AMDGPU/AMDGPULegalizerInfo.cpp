@@ -3580,11 +3580,10 @@ static LLT getVGPRLoadStorePartType(LLT Ty) {
 
 namespace {
 // Where the bits of an 8- or 16-bit access on AMDGPUAS::VGPR are: the index of
-// the dword holding them, and their offset in it, which may be known.
+// the dword holding them, and their offset in it.
 struct SubDwordPosition {
   Register Index;
   Register BitOffset;
-  std::optional<uint64_t> KnownBitOffset;
 };
 } // end anonymous namespace
 
@@ -3599,10 +3598,8 @@ static SubDwordPosition getSubDwordPosition(LegalizerHelper &Helper,
   // The bits start at (Ptr & 3) * 8. A known byte offset is taken off the
   // address of the index, so that the parts of a split access share the index
   // of their dword. Otherwise the offset is (Ptr << 3) & 31.
-  std::optional<unsigned> Byte =
-      AMDGPU::getVGPRDwordByteOffset(LdSt.getMMO(), [&] {
-        return Helper.getValueTracking()->getKnownBits(Ptr).trunc(2);
-      });
+  std::optional<unsigned> Byte = AMDGPU::getVGPRDwordByteOffset(
+      LdSt.getMMO(), Helper.getValueTracking()->getKnownBits(Ptr).trunc(2));
   Register DwordAddress = PtrAsInt.getReg(0);
   if (Byte.value_or(0) != 0) {
     DwordAddress =
@@ -3610,8 +3607,7 @@ static SubDwordPosition getSubDwordPosition(LegalizerHelper &Helper,
   }
   Pos.Index = B.buildLShr(I32, DwordAddress, B.buildConstant(I32, 2)).getReg(0);
   if (Byte) {
-    Pos.KnownBitOffset = *Byte * 8;
-    Pos.BitOffset = B.buildConstant(I32, *Pos.KnownBitOffset).getReg(0);
+    Pos.BitOffset = B.buildConstant(I32, *Byte * 8).getReg(0);
   } else {
     auto BitAddress = B.buildShl(I32, PtrAsInt, B.buildConstant(I32, 3));
     Pos.BitOffset =
@@ -3644,17 +3640,17 @@ static void lowerSubDwordLoadVGPR(LegalizerHelper &Helper, GAnyLoad &Ld) {
   // as for an extending load of a whole dword; otherwise they are extracted.
   const bool IsSigned = isa<GSExtLoad>(Ld);
   const bool IsZExt = isa<GZExtLoad>(Ld);
-  if (!Pos.KnownBitOffset) {
-    auto Width = B.buildConstant(I32, MemSize);
-    Bits = IsSigned ? B.buildSbfx(I32, Bits, Pos.BitOffset, Width).getReg(0)
-                    : B.buildUbfx(I32, Bits, Pos.BitOffset, Width).getReg(0);
-  } else {
-    if (*Pos.KnownBitOffset != 0)
+  if (std::optional<APInt> Known = getIConstantVRegVal(Pos.BitOffset, MRI)) {
+    if (!Known->isZero())
       Bits = B.buildLShr(I32, Bits, Pos.BitOffset).getReg(0);
     if (IsSigned)
       Bits = B.buildSExtInReg(I32, Bits, MemSize).getReg(0);
     else if (IsZExt)
       Bits = B.buildZExtInReg(I32, Bits, MemSize).getReg(0);
+  } else {
+    auto Width = B.buildConstant(I32, MemSize);
+    Bits = IsSigned ? B.buildSbfx(I32, Bits, Pos.BitOffset, Width).getReg(0)
+                    : B.buildUbfx(I32, Bits, Pos.BitOffset, Width).getReg(0);
   }
 
   const Register Int =

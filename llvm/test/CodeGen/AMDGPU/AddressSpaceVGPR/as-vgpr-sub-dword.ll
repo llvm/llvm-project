@@ -229,59 +229,6 @@ define <2 x i8> @load_v2i8(ptr addrspace(13) inreg %p) {
   ret <2 x i8> %x
 }
 
-define <8 x i1> @load_v8i1(ptr addrspace(13) inreg %p) {
-; GFX12-SDAG-LABEL: load_v8i1:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, s0, 8
-; GFX12-SDAG-NEXT:    v_lshrrev_b16 v0.h, 1, v0.l
-; GFX12-SDAG-NEXT:    v_and_b16 v1.h, v0.l, 15
-; GFX12-SDAG-NEXT:    v_lshrrev_b16 v2.h, 5, v0.l
-; GFX12-SDAG-NEXT:    v_lshrrev_b16 v4.l, 4, v0.l
-; GFX12-SDAG-NEXT:    v_lshrrev_b16 v6.l, 6, v0.l
-; GFX12-SDAG-NEXT:    v_lshrrev_b16 v7.l, 7, v0.l
-; GFX12-SDAG-NEXT:    v_and_b16 v1.l, v0.h, 1
-; GFX12-SDAG-NEXT:    v_lshrrev_b16 v2.l, 2, v1.h
-; GFX12-SDAG-NEXT:    v_lshrrev_b16 v3.l, 3, v1.h
-; GFX12-SDAG-NEXT:    v_and_b16 v5.l, v2.h, 1
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: load_v8i1:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, 31
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_bfe_u32 v0, v0, s0, 8
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 1, v0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 2, v0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 3, v0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 4, v0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 5, v0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 6, v0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 7, v0
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %x = load <8 x i1>, ptr addrspace(13) %p
-  ret <8 x i1> %x
-}
-
 define <1 x half> @load_v1f16(ptr addrspace(13) inreg %p) {
 ; GFX12-SDAG-LABEL: load_v1f16:
 ; GFX12-SDAG:       ; %bb.0:
@@ -1014,180 +961,6 @@ define void @store_v8i1_trunc_v8i32(ptr addrspace(13) inreg %p, <8 x i32> %v) {
   ret void
 }
 
-define void @store_v16i1_trunc_v16i16_align1(ptr addrspace(13) inreg %p, <16 x i16> %v) {
-; GFX12-SDAG-LABEL: store_v16i1_trunc_v16i16_align1:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_and_b16 v7.l, v7.l, 1
-; GFX12-SDAG-NEXT:    v_and_b16 v6.l, v6.l, 1
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v6.h, 1, v6.h
-; GFX12-SDAG-NEXT:    v_and_b16 v5.l, v5.l, 1
-; GFX12-SDAG-NEXT:    v_and_b16 v4.l, v4.l, 1
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v4.h, 1, v4.h
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v7.l, 2, v7.l
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v7.h, 3, v7.h
-; GFX12-SDAG-NEXT:    v_or_b16 v6.l, v6.l, v6.h
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v5.l, 2, v5.l
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v5.h, 3, v5.h
-; GFX12-SDAG-NEXT:    v_or_b16 v4.l, v4.l, v4.h
-; GFX12-SDAG-NEXT:    v_and_b16 v3.l, v3.l, 1
-; GFX12-SDAG-NEXT:    v_and_b16 v2.l, v2.l, 1
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v2.h, 1, v2.h
-; GFX12-SDAG-NEXT:    v_and_b16 v1.l, v1.l, 1
-; GFX12-SDAG-NEXT:    v_and_b16 v0.l, v0.l, 1
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v0.h, 1, v0.h
-; GFX12-SDAG-NEXT:    v_or_b16 v6.h, v7.h, v7.l
-; GFX12-SDAG-NEXT:    v_and_b16 v6.l, v6.l, 3
-; GFX12-SDAG-NEXT:    v_or_b16 v5.l, v5.h, v5.l
-; GFX12-SDAG-NEXT:    v_and_b16 v4.l, v4.l, 3
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v3.l, 2, v3.l
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v3.h, 3, v3.h
-; GFX12-SDAG-NEXT:    v_or_b16 v2.l, v2.l, v2.h
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v1.l, 2, v1.l
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v1.h, 3, v1.h
-; GFX12-SDAG-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-SDAG-NEXT:    v_or_b16 v4.h, v6.l, v6.h
-; GFX12-SDAG-NEXT:    v_or_b16 v4.l, v4.l, v5.l
-; GFX12-SDAG-NEXT:    v_or_b16 v2.h, v3.h, v3.l
-; GFX12-SDAG-NEXT:    v_and_b16 v2.l, v2.l, 3
-; GFX12-SDAG-NEXT:    v_or_b16 v1.l, v1.h, v1.l
-; GFX12-SDAG-NEXT:    v_and_b16 v0.l, v0.l, 3
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v4.h, 4, v4.h
-; GFX12-SDAG-NEXT:    v_and_b16 v0.h, v4.l, 15
-; GFX12-SDAG-NEXT:    v_or_b16 v1.h, v2.l, v2.h
-; GFX12-SDAG-NEXT:    s_add_co_i32 s1, s0, 1
-; GFX12-SDAG-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_lshl_b32 s2, s1, 3
-; GFX12-SDAG-NEXT:    v_or_b16 v0.h, v0.h, v4.h
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v1.l, 4, v1.h
-; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s1, 2
-; GFX12-SDAG-NEXT:    v_and_b16 v0.l, v0.l, 15
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_lshl_b32 s1, 0xff, s2
-; GFX12-SDAG-NEXT:    v_and_b16 v2.l, v0.h, 0xff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-SDAG-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v1, s2, v2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v0
-; GFX12-SDAG-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
-; GFX12-SDAG-NEXT:    v_and_b16 v0.l, v0.l, 0xff
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    v_bfi_b32 v1, s1, v1, v2
-; GFX12-SDAG-NEXT:    s_lshl_b32 s1, s0, 3
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v1
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v0, s1, v0
-; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-SDAG-NEXT:    s_lshl_b32 s0, 0xff, s1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    v_bfi_b32 v0, s0, v0, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: store_v16i1_trunc_v16i16_align1:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v0.h, 1
-; GFX12-GISEL-NEXT:    v_and_b16 v0.l, v0.l, 1
-; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v1.l, 1
-; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v1.h, 1
-; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 1, v0.h
-; GFX12-GISEL-NEXT:    s_lshl_b32 s1, s0, 3
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 2, v1.l
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 3, v1.h
-; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 1
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v2.l, 1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v2.h, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 4, v0.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v3.l, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 5, v1.l
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v3.h, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 6, v1.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v4.l, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 7, v0.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v4.h, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 8, v1.l
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v5.l, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 9, v1.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v5.h, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 10, v0.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v6.l, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 11, v1.l
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v6.h, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 12, v1.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v7.l, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 13, v0.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 14, v1.l
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 15, v7.h
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v2, s1, v0
-; GFX12-GISEL-NEXT:    s_lshl_b32 s1, 0xff, s1
-; GFX12-GISEL-NEXT:    v_lshrrev_b16 v0.l, 8, v0.l
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_bfi_b32 v1, s1, v2, v1
-; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, s0, v0
-; GFX12-GISEL-NEXT:    s_lshl_b32 s0, 0xff, s0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, v1
-; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v0
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %t = trunc <16 x i16> %v to <16 x i1>
-  store <16 x i1> %t, ptr addrspace(13) %p, align 1
-  ret void
-}
-
 define void @store_v32i1_trunc_v32i32(ptr addrspace(13) inreg %p, <32 x i32> %v) {
 ; GFX12-SDAG-LABEL: store_v32i1_trunc_v32i32:
 ; GFX12-SDAG:       ; %bb.0:
@@ -1415,53 +1188,6 @@ define void @store_v32i1_trunc_v32i32(ptr addrspace(13) inreg %p, <32 x i32> %v)
   ret void
 }
 
-; The dword index folds into the offset of the access.
-define void @store_i8_folded_offset(i32 inreg %i, i8 %v) {
-; GFX12-SDAG-LABEL: store_i8_folded_offset:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v3
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_bfi_b32 v0, 0xff00, v0, v1
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v3, v0
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: store_i8_folded_offset:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_lshl2_add_u32 s0, s0, 12
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_or_b32 s0, s0, 1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_add_co_i32 s0, s0, -1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff00ff, v1
-; GFX12-GISEL-NEXT:    v_and_or_b32 v0, v0, 0xff00, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v0
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %idx = add nuw i32 %i, 3
-  %base = shl nuw i32 %idx, 2
-  %addr = or disjoint i32 %base, 1
-  %q = inttoptr i32 %addr to ptr addrspace(13)
-  store i8 %v, ptr addrspace(13) %q
-  ret void
-}
-
 ; Two stores to different bytes of one dword, then a read of it. Each store
 ; reads and writes the whole dword, so the second must read it after the first
 ; writes it.
@@ -1601,7 +1327,7 @@ define void @store_in_loop(ptr addrspace(13) inreg %p, i8 %v, i32 inreg %n) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:  .LBB29_1: ; %loop
+; GFX12-SDAG-NEXT:  .LBB26_1: ; %loop
 ; GFX12-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s2, s0, 3
 ; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
@@ -1616,7 +1342,7 @@ define void @store_in_loop(ptr addrspace(13) inreg %p, i8 %v, i32 inreg %n) {
 ; GFX12-SDAG-NEXT:    v_bfi_b32 v1, s2, v1, v2
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v1
-; GFX12-SDAG-NEXT:    s_cbranch_scc1 .LBB29_1
+; GFX12-SDAG-NEXT:    s_cbranch_scc1 .LBB26_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %exit
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1627,7 +1353,7 @@ define void @store_in_loop(ptr addrspace(13) inreg %p, i8 %v, i32 inreg %n) {
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:  .LBB29_1: ; %loop
+; GFX12-GISEL-NEXT:  .LBB26_1: ; %loop
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s2, s0, 3
@@ -1642,7 +1368,7 @@ define void @store_in_loop(ptr addrspace(13) inreg %p, i8 %v, i32 inreg %n) {
 ; GFX12-GISEL-NEXT:    v_bfi_b32 v1, s2, v2, v1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    s_cbranch_scc1 .LBB29_1
+; GFX12-GISEL-NEXT:    s_cbranch_scc1 .LBB26_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %exit
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1672,7 +1398,7 @@ define void @store_divergent_if(ptr addrspace(13) inreg %p, i8 %v, i32 %tid) {
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12-SDAG-NEXT:    v_cmpx_gt_u32_e32 8, v1
-; GFX12-SDAG-NEXT:    s_cbranch_execz .LBB30_2
+; GFX12-SDAG-NEXT:    s_cbranch_execz .LBB27_2
 ; GFX12-SDAG-NEXT:  ; %bb.1: ; %then
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s2, s0, 3
 ; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
@@ -1685,7 +1411,7 @@ define void @store_divergent_if(ptr addrspace(13) inreg %p, i8 %v, i32 %tid) {
 ; GFX12-SDAG-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
-; GFX12-SDAG-NEXT:  .LBB30_2: ; %exit
+; GFX12-SDAG-NEXT:  .LBB27_2: ; %exit
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
