@@ -5105,12 +5105,14 @@ AArch64TTIImpl::getBuildVectorContextHint(
     ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
     function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
         GatherUseOps) const {
-  if (Scalars.empty() || !ST->isNeonAvailable() ||
+  if (Scalars.empty() || Mask.empty() || !ST->isNeonAvailable() ||
       !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
     return VectorInstrContext::None;
 
   const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
-  if (SplatIt == Scalars.end() || isa<ExtractElementInst>(*SplatIt))
+  if (SplatIt == Scalars.end() || isa<Constant, ExtractElementInst>(*SplatIt) ||
+      any_of(Scalars,
+             [&](Value *V) { return V != *SplatIt && !isa<UndefValue>(V); }))
     return VectorInstrContext::None;
 
   // The indexed (by element) FMLA/FMLS take the splatted operand from a lane of
@@ -5121,7 +5123,8 @@ AArch64TTIImpl::getBuildVectorContextHint(
       !(ScalarTy->isHalfTy() && ST->hasFullFP16()))
     return VectorInstrContext::None;
   if (ST->useSVEForFixedLengthVectors() &&
-      Scalars.size() * ScalarTy->getPrimitiveSizeInBits().getFixedValue() > 128)
+      Mask.size() * ScalarTy->getPrimitiveSizeInBits().getFixedValue() >
+          AArch64::SVEBitsPerBlock)
     return VectorInstrContext::None;
 
   // Same use limit as SLP, bounds the walk over the users of the scalar.
@@ -5142,22 +5145,24 @@ AArch64TTIImpl::getBuildVectorContextHint(
   // undercounts. Mixed fadd and fsub users form such an alternate node, which
   // is not fused.
   std::optional<unsigned> FusedOpcode;
-  if (all_of((*SplatIt)->users(), [&](const User *U) {
-        const auto *FMul = dyn_cast<BinaryOperator>(U);
-        if (!FMul || FMul->getOpcode() != Instruction::FMul)
-          return true;
-        if (!FMul->hasOneUse() || !FMul->hasAllowContract())
-          return false;
-        const auto *FAddSub = dyn_cast<BinaryOperator>(FMul->user_back());
-        if (!FAddSub || FAddSub->getParent() != FMul->getParent() ||
-            !FAddSub->hasAllowContract() ||
-            (FAddSub->getOpcode() != Instruction::FAdd &&
-             FAddSub->getOpcode() != Instruction::FSub))
-          return false;
-        if (!FusedOpcode)
-          FusedOpcode = FAddSub->getOpcode();
-        return *FusedOpcode == FAddSub->getOpcode();
-      }))
+  if (all_of((*SplatIt)->users(),
+             [&](const User *U) {
+               if (!match(U, m_FMul(m_Value(), m_Value())))
+                 return true;
+               if (!match(U, m_OneUse(m_AllowContract(m_Value()))))
+                 return false;
+               const auto *FAddSub = dyn_cast<Instruction>(U->user_back());
+               if (!FAddSub ||
+                   FAddSub->getParent() != cast<Instruction>(U)->getParent() ||
+                   !match(FAddSub, m_AllowContract(m_CombineOr(
+                                       m_FAdd(m_Value(), m_Value()),
+                                       m_FSub(m_Value(), m_Value())))))
+                 return false;
+               if (!FusedOpcode)
+                 FusedOpcode = FAddSub->getOpcode();
+               return *FusedOpcode == FAddSub->getOpcode();
+             }) &&
+      FusedOpcode)
     return VectorInstrContext::SplatOpFolded;
 
   return VectorInstrContext::None;
@@ -7473,6 +7478,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
          "Expected the Mask to match the return size if given");
   assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
          "Expected the same scalar types");
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded) {
+    int TmpIndex = Index;
+    VectorType *TmpSubTp = SubTp;
+    if (improveShuffleKindFromMask(Kind, Mask, SrcTy, TmpIndex, TmpSubTp) ==
+        TTI::SK_Broadcast)
+      return TTI::TCC_Free;
+  }
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
@@ -7571,9 +7583,6 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
-  if (VIC == TTI::VectorInstrContext::SplatOpFolded &&
-      Kind == TTI::SK_Broadcast)
-    return TTI::TCC_Free;
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
   // A subvector extract can be implemented with a NEON/SVE ext (or trivial
   // extract, if from lane 0) for 128-bit NEON vectors or legal SVE vectors.

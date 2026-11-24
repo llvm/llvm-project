@@ -2390,8 +2390,8 @@ private:
 
   /// Collects into \p UserOps the user operations of the gathers of the scalars
   /// of \p E, for TTI::getBuildVectorContextHint(). Returns false if no user is
-  /// found, some user cannot be described, or some binary user has a
-  /// non-constant splat as its other operand.
+  /// found, some user cannot be described, or some binary or FMA user has a
+  /// non-constant splat as its other (multiplicand) operand.
   bool
   collectGatherUserOps(const TreeEntry &E,
                        SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
@@ -13622,19 +13622,22 @@ bool BoUpSLP::collectGatherUserOps(
       continue;
     const TreeEntry *UserTE = TE->UserTreeIndex.UserTE;
     if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
-        TransformedToGatherNodes.contains(UserTE))
+        TransformedToGatherNodes.contains(UserTE) || UserTE->isGather())
       return false;
 
-    // A binary operation takes at most one of its operands as a scalar.
     unsigned OpIdx = TE->UserTreeIndex.EdgeIdx;
-    if (UserTE->getNumOperands() == 2) {
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
+    if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
+      IntrinsicID = II->getIntrinsicID();
+    // A binary operation, or the multiplicands of an FMA, take at most one
+    // scalar operand.
+    if (UserTE->getNumOperands() >= 2 && OpIdx < 2 &&
+        (UserTE->getNumOperands() == 2 || UserTE->hasReassocScalars() ||
+         IntrinsicID == Intrinsic::fma || IntrinsicID == Intrinsic::fmuladd)) {
       ArrayRef<Value *> Other = UserTE->getOperand(1 - OpIdx);
       if (isSplat(Other) && !allConstant(Other))
         return false;
     }
-    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
-    if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
-      IntrinsicID = II->getIntrinsicID();
     UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID, OpIdx);
   }
   return !UserOps.empty();
