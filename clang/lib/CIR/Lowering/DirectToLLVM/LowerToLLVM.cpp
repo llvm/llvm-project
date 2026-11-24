@@ -22,6 +22,7 @@
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -5222,6 +5223,55 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
   lowerOpenCLModuleMetadataAttrs(module);
 }
 
+namespace {
+/// Convert the argument types of a gpu.func. gpu.func is not a CIR op, but
+/// kernels outlined from CIR carry CIR types in their signature; without this
+/// the body would be lowered while the signature keeps CIR types.
+struct GPUFuncSignatureLowering
+    : public mlir::OpConversionPattern<mlir::gpu::GPUFuncOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::gpu::GPUFuncOp func, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    const mlir::TypeConverter *converter = getTypeConverter();
+    mlir::Block &entry = func.getBody().front();
+    mlir::TypeConverter::SignatureConversion signature(entry.getNumArguments());
+    if (failed(converter->convertSignatureArgs(func.getArgumentTypes(),
+                                               signature)))
+      return mlir::failure();
+    // Workgroup and private attributions follow the arguments; keep them.
+    for (unsigned i = func.getNumArguments(), e = entry.getNumArguments();
+         i < e; ++i)
+      signature.addInputs(i, entry.getArgument(i).getType());
+    rewriter.applySignatureConversion(&entry, signature, converter);
+    rewriter.modifyOpInPlace(func, [&] {
+      func.setType(mlir::FunctionType::get(
+          func.getContext(),
+          signature.getConvertedTypes().take_front(func.getNumArguments()),
+          func.getFunctionType().getResults()));
+    });
+    return mlir::success();
+  }
+};
+
+/// Convert the kernel operands of gpu.launch_func to the types expected by the
+/// converted kernel signature.
+struct GPULaunchFuncOperandLowering
+    : public mlir::OpConversionPattern<mlir::gpu::LaunchFuncOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::gpu::LaunchFuncOp launch, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.modifyOpInPlace(launch, [&] {
+      launch.getKernelOperandsMutable().assign(adaptor.getKernelOperands());
+    });
+    return mlir::success();
+  }
+};
+} // namespace
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
@@ -5291,6 +5341,18 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::populateOpenMPToLLVMConversionPatterns(converter, patterns);
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
+  // Kernels outlined from CIR keep CIR types in their signature and launch
+  // operands; convert them so later GPU-to-LLVM lowerings see LLVM types.
+  patterns.add<GPUFuncSignatureLowering, GPULaunchFuncOperandLowering>(
+      converter, &getContext());
+  target.addDynamicallyLegalOp<mlir::gpu::GPUFuncOp>(
+      [&](mlir::gpu::GPUFuncOp func) {
+        return converter.isSignatureLegal(func.getFunctionType());
+      });
+  target.addDynamicallyLegalOp<mlir::gpu::LaunchFuncOp>(
+      [&](mlir::gpu::LaunchFuncOp launch) {
+        return converter.isLegal(launch.getKernelOperands().getTypes());
+      });
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);

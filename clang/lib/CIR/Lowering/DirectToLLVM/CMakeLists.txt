@@ -28,6 +28,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRBuiltinToLLVMIRTranslation
   MLIRDLTIDialect
   MLIRFuncDialect
+  MLIRGPUDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRLLVMIRTransforms
