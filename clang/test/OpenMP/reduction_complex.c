@@ -1002,50 +1002,52 @@ int foo() {
 // SPIRV-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
 // SPIRV-NEXT:    [[TMP2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
 // SPIRV-NEXT:    [[TMP3:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
-// SPIRV-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 63
-// SPIRV-NEXT:    [[TMP4:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
-// SPIRV-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 6
-// SPIRV-NEXT:    [[TMP5:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP4:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_warp_size()
+// SPIRV-NEXT:    [[NVPTX_LANE_ID:%.*]] = urem i32 [[TMP3]], [[TMP4]]
+// SPIRV-NEXT:    [[TMP5:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[TMP6:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_warp_size()
+// SPIRV-NEXT:    [[NVPTX_WARP_ID:%.*]] = udiv i32 [[TMP5]], [[TMP6]]
+// SPIRV-NEXT:    [[TMP7:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
 // SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
 // SPIRV-NEXT:    br label [[PRECOND:%.*]]
 // SPIRV:       precond:
-// SPIRV-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
-// SPIRV-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// SPIRV-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], 2
+// SPIRV-NEXT:    br i1 [[TMP9]], label [[BODY:%.*]], label [[EXIT:%.*]]
 // SPIRV:       body:
 // SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
 // SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3:[0-9]+]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM]])
 // SPIRV-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // SPIRV-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // SPIRV:       then:
-// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
-// SPIRV-NEXT:    [[TMP9:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP8]], align 8
-// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP9]], i32 [[TMP6]]
-// SPIRV-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// SPIRV-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(4) [[TMP10]], align 4
-// SPIRV-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
+// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP7]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP11:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP10]], align 8
+// SPIRV-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP11]], i32 [[TMP8]]
+// SPIRV-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// SPIRV-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(4) [[TMP12]], align 4
+// SPIRV-NEXT:    store volatile i32 [[TMP14]], ptr addrspace(3) [[TMP13]], align 4
 // SPIRV-NEXT:    br label [[IFCONT:%.*]]
 // SPIRV:       else:
 // SPIRV-NEXT:    br label [[IFCONT]]
 // SPIRV:       ifcont:
 // SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
 // SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM2]])
-// SPIRV-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// SPIRV-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// SPIRV-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// SPIRV-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP15]]
 // SPIRV-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
 // SPIRV:       then3:
-// SPIRV-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
-// SPIRV-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
-// SPIRV-NEXT:    [[TMP16:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP15]], align 8
-// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP16]], i32 [[TMP6]]
-// SPIRV-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
-// SPIRV-NEXT:    store i32 [[TMP18]], ptr addrspace(4) [[TMP17]], align 4
+// SPIRV-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP7]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP18:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP17]], align 8
+// SPIRV-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP18]], i32 [[TMP8]]
+// SPIRV-NEXT:    [[TMP20:%.*]] = load volatile i32, ptr addrspace(3) [[TMP16]], align 4
+// SPIRV-NEXT:    store i32 [[TMP20]], ptr addrspace(4) [[TMP19]], align 4
 // SPIRV-NEXT:    br label [[IFCONT5:%.*]]
 // SPIRV:       else4:
 // SPIRV-NEXT:    br label [[IFCONT5]]
 // SPIRV:       ifcont5:
-// SPIRV-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
-// SPIRV-NEXT:    store i32 [[TMP19]], ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP21:%.*]] = add nsw i32 [[TMP8]], 1
+// SPIRV-NEXT:    store i32 [[TMP21]], ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
 // SPIRV-NEXT:    br label [[PRECOND]]
 // SPIRV:       exit:
 // SPIRV-NEXT:    ret void
@@ -1138,50 +1140,52 @@ int foo() {
 // SPIRV-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
 // SPIRV-NEXT:    [[TMP2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
 // SPIRV-NEXT:    [[TMP3:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
-// SPIRV-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 63
-// SPIRV-NEXT:    [[TMP4:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
-// SPIRV-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 6
-// SPIRV-NEXT:    [[TMP5:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
+// SPIRV-NEXT:    [[TMP4:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_warp_size()
+// SPIRV-NEXT:    [[NVPTX_LANE_ID:%.*]] = urem i32 [[TMP3]], [[TMP4]]
+// SPIRV-NEXT:    [[TMP5:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_hardware_thread_id_in_block()
+// SPIRV-NEXT:    [[TMP6:%.*]] = call spir_func addrspace(9) i32 @__kmpc_get_warp_size()
+// SPIRV-NEXT:    [[NVPTX_WARP_ID:%.*]] = udiv i32 [[TMP5]], [[TMP6]]
+// SPIRV-NEXT:    [[TMP7:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[DOTADDR_ASCAST]], align 8
 // SPIRV-NEXT:    store i32 0, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
 // SPIRV-NEXT:    br label [[PRECOND:%.*]]
 // SPIRV:       precond:
-// SPIRV-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
-// SPIRV-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
-// SPIRV-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// SPIRV-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], 2
+// SPIRV-NEXT:    br i1 [[TMP9]], label [[BODY:%.*]], label [[EXIT:%.*]]
 // SPIRV:       body:
 // SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
 // SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM]])
 // SPIRV-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // SPIRV-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // SPIRV:       then:
-// SPIRV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
-// SPIRV-NEXT:    [[TMP9:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP8]], align 8
-// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP9]], i32 [[TMP6]]
-// SPIRV-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// SPIRV-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(4) [[TMP10]], align 4
-// SPIRV-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
+// SPIRV-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP7]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP11:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP10]], align 8
+// SPIRV-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP11]], i32 [[TMP8]]
+// SPIRV-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// SPIRV-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(4) [[TMP12]], align 4
+// SPIRV-NEXT:    store volatile i32 [[TMP14]], ptr addrspace(3) [[TMP13]], align 4
 // SPIRV-NEXT:    br label [[IFCONT:%.*]]
 // SPIRV:       else:
 // SPIRV-NEXT:    br label [[IFCONT]]
 // SPIRV:       ifcont:
 // SPIRV-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call spir_func addrspace(9) i32 @__kmpc_global_thread_num(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr addrspace(4)))
 // SPIRV-NEXT:    call spir_func addrspace(9) void @__kmpc_barrier(ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr addrspace(4)), i32 [[OMP_GLOBAL_THREAD_NUM2]])
-// SPIRV-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// SPIRV-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// SPIRV-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// SPIRV-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP15]]
 // SPIRV-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
 // SPIRV:       then3:
-// SPIRV-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
-// SPIRV-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP5]], i64 0, i64 0
-// SPIRV-NEXT:    [[TMP16:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP15]], align 8
-// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP16]], i32 [[TMP6]]
-// SPIRV-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
-// SPIRV-NEXT:    store i32 [[TMP18]], ptr addrspace(4) [[TMP17]], align 4
+// SPIRV-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// SPIRV-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [1 x ptr addrspace(4)], ptr addrspace(4) [[TMP7]], i64 0, i64 0
+// SPIRV-NEXT:    [[TMP18:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP17]], align 8
+// SPIRV-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr addrspace(4) [[TMP18]], i32 [[TMP8]]
+// SPIRV-NEXT:    [[TMP20:%.*]] = load volatile i32, ptr addrspace(3) [[TMP16]], align 4
+// SPIRV-NEXT:    store i32 [[TMP20]], ptr addrspace(4) [[TMP19]], align 4
 // SPIRV-NEXT:    br label [[IFCONT5:%.*]]
 // SPIRV:       else4:
 // SPIRV-NEXT:    br label [[IFCONT5]]
 // SPIRV:       ifcont5:
-// SPIRV-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
-// SPIRV-NEXT:    store i32 [[TMP19]], ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
+// SPIRV-NEXT:    [[TMP21:%.*]] = add nsw i32 [[TMP8]], 1
+// SPIRV-NEXT:    store i32 [[TMP21]], ptr addrspace(4) [[DOTCNT_ADDR_ASCAST]], align 4
 // SPIRV-NEXT:    br label [[PRECOND]]
 // SPIRV:       exit:
 // SPIRV-NEXT:    ret void
