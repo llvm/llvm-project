@@ -5097,16 +5097,7 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
     return SDValue();
 
-  // Prefetch the 64-bit address that a 32-bit constant pointer is cast to, as
-  // a load does.
-  SDValue Ptr = Op.getOperand(1);
-  if (Ptr.getValueType() != MVT::i32)
-    return Op;
-  SmallVector<SDValue, 5> Ops(Op->ops());
-  Ops[1] = DAG.getAddrSpaceCast(SDLoc(Op), MVT::i64, Ptr,
-                                AMDGPUAS::CONSTANT_ADDRESS_32BIT,
-                                AMDGPUAS::CONSTANT_ADDRESS);
-  return SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
+  return Op;
 }
 
 // Work around DAG legality rules only based on the result type.
