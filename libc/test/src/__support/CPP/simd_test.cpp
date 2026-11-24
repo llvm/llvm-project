@@ -92,6 +92,21 @@ TEST(LlvmLibcSIMDTest, ToBitmask) {
   EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m16)), uint64_t{0x8001});
 }
 
+TEST(LlvmLibcSIMDTest, FromBitmask) {
+  EXPECT_FALSE(cpp::from_bitmask<1>(0)[0]);
+  EXPECT_TRUE(cpp::from_bitmask<1>(1)[0]);
+
+  cpp::simd<bool, 8> mask = cpp::from_bitmask<8>(0b10000101);
+  EXPECT_TRUE(mask[0]);
+  EXPECT_FALSE(mask[1]);
+  EXPECT_TRUE(mask[2]);
+  EXPECT_FALSE(mask[3]);
+  EXPECT_FALSE(mask[4]);
+  EXPECT_FALSE(mask[5]);
+  EXPECT_FALSE(mask[6]);
+  EXPECT_TRUE(mask[7]);
+}
+
 TEST(LlvmLibcSIMDTest, SplitConcat) {
   cpp::simd<char, 8> v{1, 1, 2, 2, 3, 3, 4, 4};
   auto [v1, v2, v3, v4] = cpp::split<2, 2, 2, 2>(v);

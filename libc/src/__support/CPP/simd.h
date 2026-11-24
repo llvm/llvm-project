@@ -199,12 +199,26 @@ LIBC_INLINE constexpr static int find_last_set(simd<T, N> v) {
 template <size_t N>
 LIBC_INLINE constexpr static auto to_bitmask(const simd<bool, N> &m) {
   using bitmask_t = internal::get_as_integer_type_t<simd<bool, N>>;
-  if constexpr (N % CHAR_BIT == 0) {
+  if constexpr (N % CHAR_BIT == 0 &&
+                __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
     return cpp::bit_cast<bitmask_t>(m);
   } else {
     bitmask_t res = 0;
     for (size_t i = 0; i < N; ++i)
       res |= static_cast<bitmask_t>(m[i]) << i;
+    return res;
+  }
+}
+template <size_t N>
+LIBC_INLINE constexpr static simd<bool, N>
+from_bitmask(internal::get_as_integer_type_t<simd<bool, N>> bm) {
+  if constexpr (N % CHAR_BIT == 0 &&
+                __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+    return cpp::bit_cast<simd<bool, N>>(bm);
+  } else {
+    simd<bool, N> res;
+    for (size_t i = 0; i < N; ++i)
+      res[i] = (bm >> i) & 1;
     return res;
   }
 }
