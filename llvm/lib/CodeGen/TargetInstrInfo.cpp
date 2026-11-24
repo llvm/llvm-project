@@ -749,6 +749,12 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
     }
   }
 
+  // An undef use doesn't read the register, so if every operand in Ops is
+  // one (e.g. the peephole optimizer folding a load into them), the asm
+  // wouldn't access the slot, and there's nothing to fold.
+  if (!Reads && !Writes)
+    return nullptr;
+
   MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
   foldInlineAsmMemOperands(NewMI, Ops, FI, TII);
 
