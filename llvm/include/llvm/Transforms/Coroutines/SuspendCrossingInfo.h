@@ -66,7 +66,7 @@ class SuspendCrossingInfo {
       NeverKill = true;
     }
   };
-  Function *F;
+  [[maybe_unused]] Function *F;
   SmallVector<BlockData, 32> Block;
 
   /// Compute the BlockData for the current function in one iteration.

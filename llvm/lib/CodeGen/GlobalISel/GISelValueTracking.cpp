@@ -1017,10 +1017,7 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
-    // If we have a known 1, its position is our upper bound.
-    unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
-    unsigned LowBits = llvm::bit_width(PossibleLZ);
-    Known.Zero.setBitsFrom(LowBits);
+    Known = SrcOpKnown.ctlz(/*ZeroIsPoison=*/false).zextOrTrunc(BitWidth);
     break;
   }
   case TargetOpcode::G_CTLS: {
@@ -1333,7 +1330,12 @@ void GISelValueTracking::computeKnownFPClassForFPTrunc(
   const fltSemantics &SrcSem =
       getFltSemanticForLLT(MRI.getType(Val).getScalarType());
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem,
+  const RoundingMode RM =
+      MI.getOpcode() == TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND
+          ? static_cast<RoundingMode>(MI.getOperand(2).getImm())
+          : RoundingMode::NearestTiesToEven;
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem, RM,
                                 MF.getDenormalMode(DstSem),
                                 MF.getDenormalMode(SrcSem));
 }

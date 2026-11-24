@@ -84,6 +84,10 @@ in a future version of Clang.
 
 ### ABI Changes in This Version
 
+- Clang now correctly mangles ``new std::initializer_list<T>{...}``
+  expressions under the Itanium C++ ABI. Previous versions emitted a duplicate
+  initializer-list marker in the mangled name. (#GH232531)
+
 - Clang now correctly mangles C++20 parenthesized aggregate initialization
   expressions. Previously, initializer arguments could be omitted from the
   mangled name, causing distinct entities to receive the same name.
@@ -569,6 +573,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `explicit_bzero` is called with a size argument larger than the destination
   buffer.
 
+- `-Wfortify-source` now diagnoses calls to `fread_unlocked`,
+  `fwrite_unlocked`, and `fgets_unlocked` when the requested size exceeds the
+  corresponding buffer (or is negative for `fgets_unlocked`).
+
+- `-Wfortify-source` now diagnoses when `getlogin_r`, `ttyname_r`, `ptsname_r`,
+  or `confstr` is called with a size argument larger than the destination
+  buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -584,6 +596,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   before C23. They stay in `-Wc23-extensions` and are still reported under
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
+
+- `-Wuninitialized` no longer warns about an uninitialized variable passed to
+  `__builtin_classify_type`, `__builtin_constant_p`,
+  `__builtin_infer_alloc_token` or `__builtin_os_log_format_buffer_size`,
+  none of which depends on its arguments' values.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -1061,6 +1078,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   misparsed as function declarations in direct-initialization contexts under
   `-fms-extensions` or in HLSL mode.
 
+- Fixed a crash on partial variable template specializations when part of which are
+  imported from modules. (#GH244974)
+
 - Fixed the destruction timing of temporaries created by default member
   initializers during aggregate initialization. Such an initializer is part of
   the full-expression containing the aggregate initialization. (#GH85601)
@@ -1448,11 +1468,17 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
   Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
 
+- `__ARM_SIZEOF_WCHAR_T` now matches the size of `wchar_t`. It was 4 on Arm and
+  AArch64 Windows, where `wchar_t` is 2 bytes.
+
 #### Android Support
 
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
+
+- `clang-cl` now supports `/std:c++23` in accordance with the release of MSVC
+  Build Tools version 14.52. `/std:c++23preview` is now an alias of `/std:c++23`.
 
 - Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
   position when ``-fms-compatibility`` is enabled, matching the existing
@@ -1533,6 +1559,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
+- Removed the `-Wcuda-compat` warning about a parenthesized argument to
+  `#pragma unroll` in CUDA and HIP. The warning matched `nvcc` before CUDA 8.0,
+  when the unroll factor had to be a literal; CUDA 8.0 added support for
+  integral constant expressions, and both `#pragma unroll N` and
+  `#pragma unroll (N)` are now documented and generate identical code. The
+  warning is therefore obsolete.
+
 - Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
 
 - Clang now provides device-side definitions of `__cxa_pure_virtual()` and
@@ -1572,6 +1605,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### DWARF Support in Clang
 
 ### Floating Point Support in Clang
+
+- Added support for the `__builtin_iseqsig` builtin, which GCC also provides,
+  for implementing the C23 `iseqsig` macro. It compares its arguments for
+  equality like `==`, but is a signaling comparison: it raises the "invalid"
+  floating-point exception if either argument is a NaN. Like GCC's, it never
+  sets `errno`, so it implements the macro only when `errno` need not be set
+  for a domain error (`math_errhandling & MATH_ERRNO` is zero, as with
+  `-fno-math-errno`).
 
 ### Fixed Point Support in Clang
 
@@ -1619,6 +1660,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - `unix.BlockInCriticalSection` checker now recognizes `mtx_timedlock`
   calls with 2 arguments as a locking call. This fixes false negatives.
   (#GH237154)
+
+- Fixed an issue where predefined library builtins containing `_` (such as
+  `objc_read_weak`) could falsely match unrelated C library function names
+  (such as `read`) via fuzzy builtin matching, and added explicit
+  `CStringChecker` modeling for C23 `memset_explicit`.
 
 % comment:
 % This is for the Static Analyzer.
@@ -1670,9 +1716,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
-- `-fsanitize=alloc-token` now also infers the allocated type from a placement
-  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
-  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 

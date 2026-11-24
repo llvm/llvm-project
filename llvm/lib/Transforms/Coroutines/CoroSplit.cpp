@@ -2343,8 +2343,6 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
       continue;
 
     F.setSplittedCoroutine();
-    // Renumber basic blocks so that they are dense for crossing value analysis.
-    F.renumberBlocks();
 
     // Query BFI and populate SuspendFreqs right before splitting.
     auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);

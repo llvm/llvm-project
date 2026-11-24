@@ -1,6 +1,6 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" -mtriple=dxil-pc-shadermodel6.6-library 2>&1 %s | FileCheck %s --check-prefixes=CHECK,CHECK-66
 ; RUN: opt -S --passes="print-dx-shader-flags" -mtriple=dxil-pc-shadermodel6.7-library 2>&1 %s | FileCheck %s --check-prefixes=CHECK,CHECK-67
-; RUN: llc %s -disable-dxil-remove-unused-resources -mtriple=dxil-pc-shadermodel6.7-library --filetype=obj -o - | \
+; RUN: llc %s -dx-remove-unused-resources=false -mtriple=dxil-pc-shadermodel6.7-library --filetype=obj -o - | \
 ; RUN:   obj2yaml | FileCheck %s --check-prefix=DXC
 
 ; This test makes sure that the shader flag 'Resource descriptor heap indexing'

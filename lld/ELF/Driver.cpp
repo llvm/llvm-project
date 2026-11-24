@@ -1680,7 +1680,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
-      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", true);
   ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
@@ -1869,6 +1869,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+  ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
 
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {

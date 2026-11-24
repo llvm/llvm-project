@@ -9,18 +9,18 @@ body:             |
     ; CHECK-LABEL: name: xor_i7
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $x10 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s7) = G_TRUNC %0(s32)
-    %3:_(s7) = G_TRUNC %1(s32)
-    %4:_(s7) = G_XOR %2, %3
-    %5:_(s32) = G_ANYEXT %4(s7)
-    $x10 = COPY %5(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i7) = G_TRUNC %0(i32)
+    %3:_(i7) = G_TRUNC %1(i32)
+    %4:_(i7) = G_XOR %2, %3
+    %5:_(i32) = G_ANYEXT %4(i7)
+    $x10 = COPY %5(i32)
     PseudoRET implicit $x10
 
 ...
@@ -32,18 +32,18 @@ body:             |
     ; CHECK-LABEL: name: xor_i8
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $x10 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s8) = G_TRUNC %0(s32)
-    %3:_(s8) = G_TRUNC %1(s32)
-    %4:_(s8) = G_XOR %2, %3
-    %5:_(s32) = G_ANYEXT %4(s8)
-    $x10 = COPY %5(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i8) = G_TRUNC %0(i32)
+    %3:_(i8) = G_TRUNC %1(i32)
+    %4:_(i8) = G_XOR %2, %3
+    %5:_(i32) = G_ANYEXT %4(i8)
+    $x10 = COPY %5(i32)
     PseudoRET implicit $x10
 
 ...
@@ -55,18 +55,18 @@ body:             |
     ; CHECK-LABEL: name: xor_i16
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $x10 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s16) = G_TRUNC %0(s32)
-    %3:_(s16) = G_TRUNC %1(s32)
-    %4:_(s16) = G_XOR %2, %3
-    %5:_(s32) = G_ANYEXT %4(s16)
-    $x10 = COPY %5(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i16) = G_TRUNC %0(i32)
+    %3:_(i16) = G_TRUNC %1(i32)
+    %4:_(i16) = G_XOR %2, %3
+    %5:_(i32) = G_ANYEXT %4(i16)
+    $x10 = COPY %5(i32)
     PseudoRET implicit $x10
 
 ...
@@ -78,15 +78,15 @@ body:             |
     ; CHECK-LABEL: name: xor_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $x10 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s32) = G_XOR %0, %1
-    $x10 = COPY %2(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i32) = G_XOR %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -98,28 +98,28 @@ body:             |
     ; CHECK-LABEL: name: xor_i48
     ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %xlo:_(s32) = COPY $x10
-    ; CHECK-NEXT: %xhi:_(s32) = COPY $x11
-    ; CHECK-NEXT: %ylo:_(s32) = COPY $x12
-    ; CHECK-NEXT: %yhi:_(s32) = COPY $x13
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %xlo, %ylo
-    ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR %xhi, %yhi
-    ; CHECK-NEXT: $x10 = COPY [[XOR]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[XOR1]](s32)
+    ; CHECK-NEXT: %xlo:_(i32) = COPY $x10
+    ; CHECK-NEXT: %xhi:_(i32) = COPY $x11
+    ; CHECK-NEXT: %ylo:_(i32) = COPY $x12
+    ; CHECK-NEXT: %yhi:_(i32) = COPY $x13
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR %xlo, %ylo
+    ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR %xhi, %yhi
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[XOR1]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
-    %xlo:_(s32) = COPY $x10
-    %xhi:_(s32) = COPY $x11
-    %ylo:_(s32) = COPY $x12
-    %yhi:_(s32) = COPY $x13
-    %x0:_(s64) = G_MERGE_VALUES %xlo(s32), %xhi(s32)
-    %y0:_(s64) = G_MERGE_VALUES %ylo(s32), %yhi(s32)
-    %x:_(s48) = G_TRUNC %x0(s64)
-    %y:_(s48) = G_TRUNC %y0(s64)
-    %z:_(s48) = G_XOR %x, %y
-    %z0:_(s64) = G_ANYEXT %z(s48)
-    %zlo:_(s32), %zhi:_(s32) = G_UNMERGE_VALUES %z0(s64)
-    $x10 = COPY %zlo(s32)
-    $x11 = COPY %zhi(s32)
+    %xlo:_(i32) = COPY $x10
+    %xhi:_(i32) = COPY $x11
+    %ylo:_(i32) = COPY $x12
+    %yhi:_(i32) = COPY $x13
+    %x0:_(i64) = G_MERGE_VALUES %xlo(i32), %xhi(i32)
+    %y0:_(i64) = G_MERGE_VALUES %ylo(i32), %yhi(i32)
+    %x:_(i48) = G_TRUNC %x0(i64)
+    %y:_(i48) = G_TRUNC %y0(i64)
+    %z:_(i48) = G_XOR %x, %y
+    %z0:_(i64) = G_ANYEXT %z(i48)
+    %zlo:_(i32), %zhi:_(i32) = G_UNMERGE_VALUES %z0(i64)
+    $x10 = COPY %zlo(i32)
+    $x11 = COPY %zhi(i32)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -131,25 +131,25 @@ body:             |
     ; CHECK-LABEL: name: xor_i64
     ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %lo1:_(s32) = COPY $x10
-    ; CHECK-NEXT: %hi1:_(s32) = COPY $x11
-    ; CHECK-NEXT: %lo2:_(s32) = COPY $x12
-    ; CHECK-NEXT: %hi2:_(s32) = COPY $x13
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %lo1, %lo2
-    ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR %hi1, %hi2
-    ; CHECK-NEXT: $x10 = COPY [[XOR]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[XOR1]](s32)
+    ; CHECK-NEXT: %lo1:_(i32) = COPY $x10
+    ; CHECK-NEXT: %hi1:_(i32) = COPY $x11
+    ; CHECK-NEXT: %lo2:_(i32) = COPY $x12
+    ; CHECK-NEXT: %hi2:_(i32) = COPY $x13
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR %lo1, %lo2
+    ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR %hi1, %hi2
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[XOR1]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
-    %lo1:_(s32) = COPY $x10
-    %hi1:_(s32) = COPY $x11
-    %lo2:_(s32) = COPY $x12
-    %hi2:_(s32) = COPY $x13
-    %x1:_(s64) = G_MERGE_VALUES %lo1(s32), %hi1(s32)
-    %x2:_(s64) = G_MERGE_VALUES %lo2(s32), %hi2(s32)
-    %y:_(s64) = G_XOR %x1, %x2
-    %loy:_(s32), %hiy:_(s32) = G_UNMERGE_VALUES %y(s64)
-    $x10 = COPY %loy(s32)
-    $x11 = COPY %hiy(s32)
+    %lo1:_(i32) = COPY $x10
+    %hi1:_(i32) = COPY $x11
+    %lo2:_(i32) = COPY $x12
+    %hi2:_(i32) = COPY $x13
+    %x1:_(i64) = G_MERGE_VALUES %lo1(i32), %hi1(i32)
+    %x2:_(i64) = G_MERGE_VALUES %lo2(i32), %hi2(i32)
+    %y:_(i64) = G_XOR %x1, %x2
+    %loy:_(i32), %hiy:_(i32) = G_UNMERGE_VALUES %y(i64)
+    $x10 = COPY %loy(i32)
+    $x11 = COPY %hiy(i32)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -161,32 +161,32 @@ body:             |
     ; CHECK-LABEL: name: xor_i96
     ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14, $x15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %lo1:_(s32) = COPY $x10
-    ; CHECK-NEXT: %mid1:_(s32) = COPY $x11
-    ; CHECK-NEXT: %hi1:_(s32) = COPY $x12
-    ; CHECK-NEXT: %lo2:_(s32) = COPY $x13
-    ; CHECK-NEXT: %mid2:_(s32) = COPY $x14
-    ; CHECK-NEXT: %hi2:_(s32) = COPY $x15
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %lo1, %lo2
-    ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR %mid1, %mid2
-    ; CHECK-NEXT: [[XOR2:%[0-9]+]]:_(s32) = G_XOR %hi1, %hi2
-    ; CHECK-NEXT: $x10 = COPY [[XOR]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[XOR1]](s32)
-    ; CHECK-NEXT: $x12 = COPY [[XOR2]](s32)
+    ; CHECK-NEXT: %lo1:_(i32) = COPY $x10
+    ; CHECK-NEXT: %mid1:_(i32) = COPY $x11
+    ; CHECK-NEXT: %hi1:_(i32) = COPY $x12
+    ; CHECK-NEXT: %lo2:_(i32) = COPY $x13
+    ; CHECK-NEXT: %mid2:_(i32) = COPY $x14
+    ; CHECK-NEXT: %hi2:_(i32) = COPY $x15
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR %lo1, %lo2
+    ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR %mid1, %mid2
+    ; CHECK-NEXT: [[XOR2:%[0-9]+]]:_(i32) = G_XOR %hi1, %hi2
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[XOR1]](i32)
+    ; CHECK-NEXT: $x12 = COPY [[XOR2]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11, implicit $x12
-    %lo1:_(s32) = COPY $x10
-    %mid1:_(s32) = COPY $x11
-    %hi1:_(s32) = COPY $x12
-    %lo2:_(s32) = COPY $x13
-    %mid2:_(s32) = COPY $x14
-    %hi2:_(s32) = COPY $x15
-    %x1:_(s96) = G_MERGE_VALUES %lo1(s32), %mid1(s32), %hi1(s32)
-    %x2:_(s96) = G_MERGE_VALUES %lo2(s32), %mid2(s32), %hi2(s32)
-    %y:_(s96) = G_XOR %x1, %x2
-    %lo:_(s32), %mid:_(s32), %hi:_(s32) = G_UNMERGE_VALUES %y(s96)
-    $x10 = COPY %lo(s32)
-    $x11 = COPY %mid(s32)
-    $x12 = COPY %hi(s32)
+    %lo1:_(i32) = COPY $x10
+    %mid1:_(i32) = COPY $x11
+    %hi1:_(i32) = COPY $x12
+    %lo2:_(i32) = COPY $x13
+    %mid2:_(i32) = COPY $x14
+    %hi2:_(i32) = COPY $x15
+    %x1:_(i96) = G_MERGE_VALUES %lo1(i32), %mid1(i32), %hi1(i32)
+    %x2:_(i96) = G_MERGE_VALUES %lo2(i32), %mid2(i32), %hi2(i32)
+    %y:_(i96) = G_XOR %x1, %x2
+    %lo:_(i32), %mid:_(i32), %hi:_(i32) = G_UNMERGE_VALUES %y(i96)
+    $x10 = COPY %lo(i32)
+    $x11 = COPY %mid(i32)
+    $x12 = COPY %hi(i32)
     PseudoRET implicit $x10, implicit $x11, implicit $x12
 
 ...
