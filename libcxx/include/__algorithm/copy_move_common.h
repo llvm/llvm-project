@@ -86,11 +86,15 @@ template <class _InIter, class _OutIter>
 struct __can_rewrap
     : integral_constant<bool, is_copy_constructible<_InIter>::value && is_copy_constructible<_OutIter>::value> {};
 
-// When _InIter and _Sent have the same type, check random-access category/concept rather than sized_sentinel_for:
-// classic std::copy only requires Cpp17InputIterator, which allows pre-C++20 iterator wrappers with an unconstrained
-// operator- that do not specialize disable_sized_sentinel_for (mirroring std::distance).
+// True when `__last - __first` is valid and O(1).
+// `__copy_move_unwrap_iters` is shared by classic `std::copy` (which has no `_AlgPolicy`) and `std::ranges::copy`.
+// When `_InIter` and `_Sent` are the same type, the call may come from classic `std::copy`, where pre-C++20
+// non-random-access iterator facades can declare an unconstrained `operator-` without specializing
+// `disable_sized_sentinel_for`; check random-access category/concept instead of `sized_sentinel_for` (mirroring
+// `std::distance`). Different `_InIter`/`_Sent` types only occur in `ranges::` algorithms, where
+// `sized_sentinel_for` guarantees `__last - __first` is valid.
 template <class _InIter, class _Sent>
-struct __has_random_access_distance
+struct __has_constant_time_distance
     : integral_constant<bool,
                         is_same<_InIter, _Sent>::value ? (__has_random_access_iterator_category<_InIter>::value
 #if _LIBCPP_STD_VER >= 20
@@ -113,7 +117,7 @@ struct __can_unwrap_copy_move
     : integral_constant< bool,
                          __can_rewrap<_InIter, _OutIter>::value &&
                              (!__unwrap_iter_may_strip_checks<_OutIter>::value ||
-                              __has_random_access_distance<_InIter, _Sent>::value)> {};
+                              __has_constant_time_distance<_InIter, _Sent>::value)> {};
 
 template <class _Algorithm,
           bool _IsBackward = false,
