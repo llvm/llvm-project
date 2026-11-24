@@ -1097,40 +1097,48 @@ multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
 }
 
 // AArch64 calls
+defvar SMCompatible = StringFnAttr<"aarch64_pstate_sm_compatible">;
+defvar SCFnAttrs = !listconcat([]<Attr>, CommonFnAttrs, [SMCompatible]);
+
 def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
-  let FnAttrs = CommonFnAttrs;
+  let FnAttrs = SCFnAttrs;
   let Memory = ArgMemOnly;
   let ParamAttrs = [[NoAlias, Returned, WriteOnly], [NoAlias, ReadOnly]];
 }
 
 def SC_MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
-  let FnAttrs = CommonFnAttrs;
+  let FnAttrs = SCFnAttrs;
   let Memory = ArgMemOnly;
   let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
 }
 
 def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
-  let FnAttrs = CommonFnAttrs;
+  let FnAttrs = SCFnAttrs;
   let Memory = ArgMemWriteOnly;
   let ParamAttrs = [[Returned, WriteOnly]];
 }
 
 def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
-  let FnAttrs = CommonFnAttrs;
+  let FnAttrs = SCFnAttrs;
   let Memory = ArgMemReadOnly;
   let ParamAttrs = [[ReadOnly]];
 }
 
 // AArch64 SME ABI calls
+class SMEABILibcall<FuncArgType RetType, list<FuncArgType> ArgTypes = []>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = [NoUnwind, SMCompatible];
+}
+
 def SMEState : StructFuncArgType<[UInt64, UInt64]>;
-def SMEABI_SME_STATE : NoUnwindLibcall<SMEState>;
-def SMEABI_TPIDR2_SAVE : NoUnwindLibcall<Void>;
-def SMEABI_ZA_DISABLE : NoUnwindLibcall<Void>;
-def SMEABI_TPIDR2_RESTORE : NoUnwindLibcall<Void, [Ptr]>;
-def SMEABI_GET_CURRENT_VG : NoUnwindLibcall<UInt64>;
-def SMEABI_SME_STATE_SIZE : NoUnwindLibcall<UInt64>;
-def SMEABI_SME_SAVE : NoUnwindLibcall<Void, [Ptr]>;
-def SMEABI_SME_RESTORE : NoUnwindLibcall<Void, [Ptr]>;
+def SMEABI_SME_STATE : SMEABILibcall<SMEState>;
+def SMEABI_TPIDR2_SAVE : SMEABILibcall<Void>;
+def SMEABI_ZA_DISABLE : SMEABILibcall<Void>;
+def SMEABI_TPIDR2_RESTORE : SMEABILibcall<Void, [Ptr]>;
+def SMEABI_GET_CURRENT_VG : SMEABILibcall<UInt64>;
+def SMEABI_SME_STATE_SIZE : SMEABILibcall<UInt64>;
+def SMEABI_SME_SAVE : SMEABILibcall<Void, [Ptr]>;
+def SMEABI_SME_RESTORE : SMEABILibcall<Void, [Ptr]>;
 
 // ARM EABI calls
 // The AEABI memory functions (RTABI section 5.3.4) return void, and

@@ -204,6 +204,9 @@ class AllocFamilyAttr<string family>
     : ValueAttr<[FnAttr],
                 "Attribute::get(C, \"alloc-family\", \"" # family # "\")">;
 
+class StringFnAttr<string kind>
+    : ValueAttr<[FnAttr], "Attribute::get(C, \"" # kind # "\")">;
+
 class NoFPClassAttr<string mask>
     : ValueAttr<[ParamAttr, RetAttr],
                 "Attribute::getWithNoFPClass(C, " # mask # ")">;
