@@ -655,25 +655,25 @@ entry:
 define dso_local i32 @test_mult_rm_early_clobber_output_rm_input_no_pressure(ptr noundef %foo) local_unnamed_addr {
 ; FAST_ISEL_GREEDY_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; FAST_ISEL_GREEDY_RA:    #APP
-; FAST_ISEL_GREEDY_RA:    # multiple m output, rm input: no pressure
+; FAST_ISEL_GREEDY_RA:    # multiple early-clobber rm output, rm input: no pressure
 ; FAST_ISEL_GREEDY_RA:    # %eax, %esi, %r8d, %ecx, %edx
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
 ;
 ; FAST_ISEL_FAST_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; FAST_ISEL_FAST_RA:    #APP
-; FAST_ISEL_FAST_RA:    # multiple m output, rm input: no pressure
+; FAST_ISEL_FAST_RA:    # multiple early-clobber rm output, rm input: no pressure
 ; FAST_ISEL_FAST_RA:    # %eax, %edx, %ecx, %esi, %r8d
 ; FAST_ISEL_FAST_RA:    #NO_APP
 ;
 ; GREEDY_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; GREEDY_RA:    #APP
-; GREEDY_RA:    # multiple m output, rm input: no pressure
+; GREEDY_RA:    # multiple early-clobber rm output, rm input: no pressure
 ; GREEDY_RA:    # %eax, %esi, %r8d, %ecx, %edx
 ; GREEDY_RA:    #NO_APP
 ;
 ; FAST_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; FAST_RA:    #APP
-; FAST_RA:    # multiple m output, rm input: no pressure
+; FAST_RA:    # multiple early-clobber rm output, rm input: no pressure
 ; FAST_RA:    # %eax, %edx, %ecx, %esi, %r8d
 ; FAST_RA:    #NO_APP
 entry:
@@ -683,7 +683,7 @@ entry:
   %0 = load i32, ptr %d4, align 4
   %e5 = getelementptr inbounds nuw i8, ptr %foo, i64 16
   %1 = load i32, ptr %e5, align 4
-  %2 = tail call { i32, i32, i32 } asm sideeffect "# multiple m output, rm input: no pressure\0A\09# $0, $1, $2, $3, $4", "=&rm,=&rm,=&rm,rm,rm,~{dirflag},~{fpsr},~{flags}"(i32 %0, i32 %1)
+  %2 = tail call { i32, i32, i32 } asm sideeffect "# multiple early-clobber rm output, rm input: no pressure\0A\09# $0, $1, $2, $3, $4", "=&rm,=&rm,=&rm,rm,rm,~{dirflag},~{fpsr},~{flags}"(i32 %0, i32 %1)
   %asmresult = extractvalue { i32, i32, i32 } %2, 0
   %asmresult6 = extractvalue { i32, i32, i32 } %2, 1
   %asmresult7 = extractvalue { i32, i32, i32 } %2, 2
@@ -699,7 +699,7 @@ define dso_local i32 @test_mult_rm_early_clobber_output_rm_input_pressure(ptr no
 ; FAST_ISEL_GREEDY_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
 ; FAST_ISEL_GREEDY_RA:    #APP
-; FAST_ISEL_GREEDY_RA:    # multiple m output, rm input: pressure
+; FAST_ISEL_GREEDY_RA:    # multiple early-clobber rm output, rm input: pressure
 ; FAST_ISEL_GREEDY_RA:    # %r8d, %r9d, %eax, %esi, %edi
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
 ;
@@ -708,7 +708,7 @@ define dso_local i32 @test_mult_rm_early_clobber_output_rm_input_pressure(ptr no
 ; FAST_ISEL_FAST_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_ISEL_FAST_RA:    #NO_APP
 ; FAST_ISEL_FAST_RA:    #APP
-; FAST_ISEL_FAST_RA:    # multiple m output, rm input: pressure
+; FAST_ISEL_FAST_RA:    # multiple early-clobber rm output, rm input: pressure
 ; FAST_ISEL_FAST_RA:    # %eax, %edi, %ecx, %edx, %esi
 ; FAST_ISEL_FAST_RA:    #NO_APP
 ;
@@ -717,7 +717,7 @@ define dso_local i32 @test_mult_rm_early_clobber_output_rm_input_pressure(ptr no
 ; GREEDY_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; GREEDY_RA:    #NO_APP
 ; GREEDY_RA:    #APP
-; GREEDY_RA:    # multiple m output, rm input: pressure
+; GREEDY_RA:    # multiple early-clobber rm output, rm input: pressure
 ; GREEDY_RA:    # %r8d, %r9d, %eax, %esi, %edi
 ; GREEDY_RA:    #NO_APP
 ;
@@ -726,7 +726,7 @@ define dso_local i32 @test_mult_rm_early_clobber_output_rm_input_pressure(ptr no
 ; FAST_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_RA:    #NO_APP
 ; FAST_RA:    #APP
-; FAST_RA:    # multiple m output, rm input: pressure
+; FAST_RA:    # multiple early-clobber rm output, rm input: pressure
 ; FAST_RA:    # %eax, %edi, %ecx, %edx, %esi
 ; FAST_RA:    #NO_APP
 entry:
@@ -737,7 +737,7 @@ entry:
   %1 = load i32, ptr %d18, align 4
   %e19 = getelementptr inbounds nuw i8, ptr %foo, i64 16
   %2 = load i32, ptr %e19, align 4
-  %3 = tail call { i32, i32, i32 } asm sideeffect "# multiple m output, rm input: pressure\0A\09# $0, $1, $2, $3, $4", "=&rm,=&rm,=&rm,rm,rm,~{dirflag},~{fpsr},~{flags}"(i32 %1, i32 %2)
+  %3 = tail call { i32, i32, i32 } asm sideeffect "# multiple early-clobber rm output, rm input: pressure\0A\09# $0, $1, $2, $3, $4", "=&rm,=&rm,=&rm,rm,rm,~{dirflag},~{fpsr},~{flags}"(i32 %1, i32 %2)
   %asmresult20 = extractvalue { i32, i32, i32 } %3, 0
   %asmresult21 = extractvalue { i32, i32, i32 } %3, 1
   %asmresult22 = extractvalue { i32, i32, i32 } %3, 2
