@@ -22,7 +22,6 @@
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -5226,16 +5225,15 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
 namespace {
 /// Convert the kernel operands of gpu.launch_func to the types expected by the
 /// converted kernel signature.
-struct GPULaunchFuncOperandLowering
-    : public mlir::OpConversionPattern<mlir::gpu::LaunchFuncOp> {
-  using OpConversionPattern::OpConversionPattern;
+struct GPULaunchFuncOperandLowering : public mlir::ConversionPattern {
+  GPULaunchFuncOperandLowering(const mlir::TypeConverter &converter,
+                               mlir::MLIRContext *ctx)
+      : ConversionPattern(converter, "gpu.launch_func", /*benefit=*/1, ctx) {}
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::gpu::LaunchFuncOp launch, OpAdaptor adaptor,
+  matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.modifyOpInPlace(launch, [&] {
-      launch.getKernelOperandsMutable().assign(adaptor.getKernelOperands());
-    });
+    rewriter.modifyOpInPlace(op, [&] { op->setOperands(operands); });
     return mlir::success();
   }
 };
@@ -5312,16 +5310,18 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                            mlir::func::FuncDialect>();
   // Kernels outlined from CIR keep CIR types in their signature and launch
   // operands; convert them so later GPU-to-LLVM lowerings see LLVM types.
-  mlir::populateFunctionOpInterfaceTypeConversionPattern<mlir::gpu::GPUFuncOp>(
-      patterns, converter);
+  mlir::populateFunctionOpInterfaceTypeConversionPattern("gpu.func", patterns,
+                                                         converter);
   patterns.add<GPULaunchFuncOperandLowering>(converter, &getContext());
-  target.addDynamicallyLegalOp<mlir::gpu::GPUFuncOp>(
-      [&](mlir::gpu::GPUFuncOp func) {
-        return converter.isSignatureLegal(func.getFunctionType());
+  mlir::MLIRContext *ctx = &getContext();
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.func", ctx), [&](mlir::Operation *op) {
+        return converter.isSignatureLegal(mlir::cast<mlir::FunctionType>(
+            mlir::cast<mlir::FunctionOpInterface>(op).getFunctionType()));
       });
-  target.addDynamicallyLegalOp<mlir::gpu::LaunchFuncOp>(
-      [&](mlir::gpu::LaunchFuncOp launch) {
-        return converter.isLegal(launch.getKernelOperands().getTypes());
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.launch_func", ctx), [&](mlir::Operation *op) {
+        return converter.isLegal(op->getOperandTypes());
       });
 
   llvm::SmallVector<mlir::Operation *> ops;

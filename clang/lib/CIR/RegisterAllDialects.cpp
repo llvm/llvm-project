@@ -10,7 +10,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -28,7 +27,7 @@ void registerAllDialects(mlir::DialectRegistry &registry) {
   // pointer types as keys.
   registry
       .insert<mlir::BuiltinDialect, cir::CIRDialect, mlir::arith::ArithDialect,
-              mlir::DLTIDialect, mlir::gpu::GPUDialect, mlir::LLVM::LLVMDialect,
+              mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
               mlir::omp::OpenMPDialect, mlir::acc::OpenACCDialect>();
   // Register extensions to integrate CIR types with OpenACC and OpenMP.
   cir::omp::registerOpenMPExtensions(registry);
