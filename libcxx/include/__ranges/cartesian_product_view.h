@@ -17,10 +17,10 @@
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
+#include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
@@ -392,7 +392,7 @@ private:
 
       // An empty base makes the whole product empty, so a non-zero advance from a valid iterator is already
       // undefined; `__sz` is therefore positive here.
-      const auto __idx = static_cast<difference_type>(std::distance(__first, __it));
+      const auto __idx = static_cast<difference_type>(__it - __first);
       __x += __idx;
 
       difference_type __div = __x / __sz;
@@ -402,7 +402,7 @@ private:
         __div--;
       }
       __advance<_Np - 1>(__div);
-      __it = std::next(__first, __mod);
+      __it = __first + static_cast<iter_difference_t<decltype(__first)>>(__mod);
     } else {
       __it += __x;
     }
