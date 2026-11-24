@@ -6719,8 +6719,7 @@ define half @v_copysign_f16_0_f32(float %sign) {
   ret half %op
 }
 
-; Uniform copysign with a VALU user must not select the true16 pattern that
-; reads an SGPR hi16.
+; Uniform copysign with a VALU user must not read an SGPR hi16.
 define amdgpu_ps i32 @s_copysign_f16_0_f32_valu_user(float inreg %sign) {
 ; SI-LABEL: s_copysign_f16_0_f32_valu_user:
 ; SI:       ; %bb.0:

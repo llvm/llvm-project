@@ -2641,9 +2641,9 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (fcopysign (fp16vt fpimm_pos_zero), f32:$src1),
+  (DivergentBinFrag<fcopysign> (fp16vt fpimm_pos_zero), f32:$src1),
   (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)),
-                     0, (EXTRACT_SUBREG VGPR_32:$src1, hi16))
+                     0, (vgpr32_hi16 $src1))
 >;
 
 def : GCNPat <
