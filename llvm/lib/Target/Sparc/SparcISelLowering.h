@@ -204,6 +204,10 @@ namespace llvm {
     AtomicExpansionKind
     shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
+    /// True when forced-atomics is used because the target has no
+    /// compare-and-swap.
+    bool useForcedAtomics() const;
+
     void ReplaceNodeResults(SDNode *N,
                             SmallVectorImpl<SDValue>& Results,
                             SelectionDAG &DAG) const override;

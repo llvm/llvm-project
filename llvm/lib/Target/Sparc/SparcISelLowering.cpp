@@ -1603,8 +1603,17 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 // TargetLowering Implementation
 //===----------------------------------------------------------------------===//
 
+bool SparcTargetLowering::useForcedAtomics() const {
+  return Subtarget->hasForcedAtomics() && !Subtarget->isV9() &&
+         !Subtarget->hasLeonCasa();
+}
+
 TargetLowering::AtomicExpansionKind
 SparcTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  // Don't expand forced atomics, they become __sync libcalls.
+  if (useForcedAtomics())
+    return AtomicExpansionKind::None;
+
   if (AI->getOperation() == AtomicRMWInst::Xchg &&
       AI->getType()->getPrimitiveSizeInBits() == 32)
     return AtomicExpansionKind::None; // Uses xchg instruction
@@ -1874,14 +1883,25 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setMaxAtomicSizeInBitsSupported(64);
     else
       setMaxAtomicSizeInBitsSupported(32);
-  } else if (Subtarget->hasLeonCasa())
+  } else if (Subtarget->hasLeonCasa() || Subtarget->hasForcedAtomics())
     setMaxAtomicSizeInBitsSupported(32);
   else
     setMaxAtomicSizeInBitsSupported(0);
 
-  setMinCmpXchgSizeInBits(32);
-
-  setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, Legal);
+  if (useForcedAtomics()) {
+    // Without compare-and-swap, use __sync libcalls for everything but
+    // atomic loads, stores and fences. V7 has no swap instruction, so use a
+    // libcall for that too.
+    setOperationAction(
+        {ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD,
+         ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR,
+         ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
+         ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+        {MVT::i8, MVT::i16, MVT::i32}, LibCall);
+  } else {
+    setMinCmpXchgSizeInBits(32);
+    setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, Legal);
+  }
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Legal);
 
