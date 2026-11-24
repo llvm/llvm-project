@@ -1,0 +1,243 @@
+// RUN: cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+// A non-byval indirect argument of a type that can be passed in registers is
+// copied to a temporary at the call, since the callee may write the memory it
+// is passed.  AArch64 passes a record larger than 16 bytes this way.
+// indirect-non-byval-nyi.cir has the same call sites for a record that cannot
+// be passed in registers.
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Outer = !cir.struct<"Outer" {data !rec_Big}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @use(%p: !cir.ptr<!rec_Big>)
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
+
+  cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg_align16 }
+
+  // The caller's own variable is copied, so the callee cannot change it.
+  cir.func @caller_local(%s: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %var = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %var : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %var : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.call @use(%var) : (!cir.ptr<!rec_Big>) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_local(%[[S:.*]]: !rec_Big)
+  // CHECK-NEXT:   %[[VAR:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[VAR]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[VAR]] align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[TMP]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-NEXT:   cir.call @use(%[[VAR]])
+
+  // A record value with no storage behind it is stored to the temporary.
+  cir.func @caller_value(%novalue: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    cir.call @takes_big_non_byval(%novalue) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_value(%[[S:.*]]: !rec_Big)
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[TMP]]) :
+
+  // A volatile load becomes a volatile copy.
+  cir.func @caller_volatile(%s: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %volatileload = cir.load volatile %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%volatileload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_volatile(
+  // CHECK:        %[[SRC:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %{{.*}}, %[[SRC]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[SRC]] align(8) to %[[TMP]] align(8) volatile : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[TMP]]) :
+
+  // A member of an enclosing record.
+  cir.func @caller_member(%s: !rec_Outer)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "outer" align(8) : !cir.ptr<!rec_Outer>
+    cir.store %s, %tmp : !rec_Outer, !cir.ptr<!rec_Outer>
+    %member = cir.get_member %tmp[0] {name = "inner"}
+        : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Big>
+    %memberload = cir.load %member : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%memberload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_member(
+  // CHECK:        %[[M:.*]] = cir.get_member %{{.*}}[0] {name = "inner"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[M]] align(1) to %[[TMP]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[TMP]]) :
+
+  // The temporary states the alignment the callee is told about, and the copy
+  // reads at the alignment the load stated.
+  cir.func @caller_align16(%s: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load align(8) %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval16(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_align16(
+  // CHECK:        %[[SRC:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %{{.*}}, %[[SRC]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(16) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[SRC]] align(8) to %[[TMP]] align(16) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval16(%[[TMP]]) :
+  // CHECK-SAME:     llvm.align = 16 : i64
+
+  // The copy is taken where the load was, so a store between the load and the
+  // call does not reach the callee.
+  cir.func @caller_store_between(%s: !rec_Big, %t: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.store %t, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_store_between(%[[S:[^:]+]]: !rec_Big, %[[T:[^:]+]]: !rec_Big)
+  // CHECK-NEXT:   %[[SRC:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[SRC]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[SRC]] align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[T]], %[[SRC]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[TMP]]) :
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
+
+  // A non-byval parameter handed on to another non-byval call is copied, so
+  // the inner callee cannot change this function's parameter.
+  cir.func @param_to_non_byval(%arg0: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @param_to_non_byval(%[[PTR:[a-z0-9]+]]: !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[PTR]] align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[TMP]]) :
+
+  // The same with the parameter passed with no load of its slot.
+  cir.func @unloaded_param_to_non_byval(%arg0: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_to_non_byval(%[[PTR:[a-z0-9]+]]: !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[PTR]] align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[TMP]]) :
+
+}
+
+// -----
+
+!s129i = !cir.int<s, 129>
+
+#non_byval_bitint = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_bitint(%arg0: !s129i)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_bitint }
+
+  // A _BitInt is stored from its value, which converts it to its in-memory
+  // form.
+  cir.func @caller_bitint(%p: !cir.ptr<!s129i>)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %v = cir.load align(16) %p : !cir.ptr<!s129i>, !s129i
+    cir.call @takes_bitint(%v) : (!s129i) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_bitint(%[[P:.*]]: !cir.ptr<!cir.int<s, 129>>)
+  // CHECK-NEXT:   %[[V:.*]] = cir.load align(16) %[[P]] : !cir.ptr<!cir.int<s, 129>>, !cir.int<s, 129>
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "indirect.tmp" align(16) : !cir.ptr<!cir.int<s, 129>>
+  // CHECK-NEXT:   cir.store %[[V]], %[[TMP]] : !cir.int<s, 129>, !cir.ptr<!cir.int<s, 129>>
+  // CHECK-NEXT:   cir.call @takes_bitint(%[[TMP]]) :
+  // CHECK-SAME:     (!cir.ptr<!cir.int<s, 129>> {llvm.align = 16 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+}

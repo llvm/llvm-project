@@ -17,10 +17,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "gtest/gtest.h"
 
-#include "TestAttributes.h"
-#include "TestDialect.h"
-#include "TestOps.h"
-#include "TestTypes.h"
+#include "TestAttributesCore.h"
+#include "TestOpsPatterns.h"
+#include "TestTypesCore.h"
 #include "mlir/IR/OwningOpRef.h"
 
 using namespace mlir;

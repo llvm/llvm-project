@@ -12,8 +12,11 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -59,7 +62,23 @@ public:
   /// the same priority will be put together. Strings with higher priority are
   /// placed closer to the begin of string table. When adding same string with
   /// different priority, the maximum priority win.
-  LLVM_ABI size_t add(CachedHashStringRef S, uint8_t Priority = 0);
+  size_t add(CachedHashStringRef S, uint8_t Priority = 0) {
+    // Inline: lld calls this for every mergeable string piece.
+    if (K == WinCOFF)
+      assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
+
+    assert(!isFinalized());
+    if (Priority)
+      StringPriorityMap[S] = std::max(Priority, StringPriorityMap[S]);
+
+    auto P = StringIndexMap.try_emplace(S);
+    if (P.second) {
+      size_t Start = alignTo(Size, Alignment);
+      P.first->second = Start;
+      Size = Start + S.size() + (K != RAW);
+    }
+    return P.first->second;
+  }
   size_t add(StringRef S, uint8_t Priority = 0) {
     return add(CachedHashStringRef(S), Priority);
   }

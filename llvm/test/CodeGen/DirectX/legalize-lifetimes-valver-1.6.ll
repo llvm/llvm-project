@@ -1,13 +1,13 @@
 ; RUN: opt -S -passes='dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-SM63
 ; RUN: opt -S -passes='dxil-op-lower' -mtriple=dxil-pc-shadermodel6.6-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-SM66
-; RUN: opt -S -dxil-prepare -dxil-embed -mtriple=dxil-pc-shadermodel6.6-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-EMBED
+; RUN: opt -S -dxil-prepare -dxil-embedder -mtriple=dxil-pc-shadermodel6.6-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-EMBED
 
 ; Lifetime intrinsics are not valid prior to shader model 6.6 and are instead
 ; replaced with undef stores, provided the validator version is 1.6 or greater
 
-; The dxil-embed pass will remove lifetime intrinsics because they transformed
+; The dxil-embedder pass will remove lifetime intrinsics because they transformed
 ; in a way that is illegal in modern LLVM IR before serializing to DXIL bitcode.
-; So we check that no bitcast or lifetime intrinsics remain after dxil-embed
+; So we check that no bitcast or lifetime intrinsics remain after dxil-embedder
 
 ; CHECK-LABEL: define void @test_legal_lifetime() {
 ; CHECK-NEXT:       [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4

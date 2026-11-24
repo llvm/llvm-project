@@ -28,13 +28,15 @@ class DependencyTracker {
 public:
   DependencyTracker(CompileUnit &CU) : CU(CU) {}
 
-  /// Recursively walk the \p DIE tree and look for DIEs to keep. Store that
-  /// information in \p CU's DIEInfo.
-  ///
   /// This function is the entry point of the DIE selection algorithm. It is
   /// expected to walk the DIE tree and(through the mediation of
   /// Context.File.Addresses) ask for relocation adjustment value on each
   /// DIE that might be a 'root DIE'(f.e. subprograms, variables).
+  void collectLiveRoots();
+
+  /// Recursively walk the \p DIE tree and look for DIEs to keep. Store that
+  /// information in \p CU's DIEInfo. This method should be called as a
+  /// followup processing after collectLiveRoots().
   ///
   /// Returns true if all dependencies are correctly discovered. Inter-CU
   /// dependencies cannot be discovered if referenced CU is not analyzed yet.
@@ -345,6 +347,11 @@ protected:
 
   /// Mark parents as keeping children.
   void markParentsAsKeepingChildren(const UnitEntryPairTy &Entry);
+
+  /// Keep \p Child if it is a variable that is kept with its parent, which the
+  /// walk in progress keeps for \p RootEntry.
+  void keepWithParent(const UnitEntryPairTy &RootEntry,
+                      const UnitEntryPairTy &Child, TreeWalkKindTy Kind);
 
   /// Mark whole DIE tree as placed in "PlainDwarf".
   void setPlainDwarfPlacementRec(const UnitEntryPairTy &Entry);

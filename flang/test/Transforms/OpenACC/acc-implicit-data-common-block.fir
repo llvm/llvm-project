@@ -60,3 +60,39 @@ func.func @whole_block_accessed() {
 
 // CHECK-LABEL: func.func @whole_block_accessed
 // CHECK: acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<5000xi8>>) dataClause(acc_copy) implicit(true) name("com_")
+
+// -----
+
+// A common block initialized in a BLOCK DATA unit has a typed global that the
+// members reach through a fir.convert of its address. It must not be mapped as
+// a whole either when a member is mapped explicitly.
+
+fir.global @com_ : tuple<i32, !fir.array<16xi8>> {
+  %0 = fir.zero_bits tuple<i32, !fir.array<16xi8>>
+  fir.has_value %0 : tuple<i32, !fir.array<16xi8>>
+}
+
+func.func @typed_global_members_only_via_storage() {
+  %c4 = arith.constant 4 : index
+  %c4_i32 = arith.constant 4 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %addr = fir.address_of(@com_) : !fir.ref<tuple<i32, !fir.array<16xi8>>>
+  %com = fir.convert %addr : (!fir.ref<tuple<i32, !fir.array<16xi8>>>) -> !fir.ref<!fir.array<20xi8>>
+  %shape = fir.shape %c4 : (index) -> !fir.shape<1>
+  %p = fir.coordinate_of %com, %c4 : (!fir.ref<!fir.array<20xi8>>, index) -> !fir.ref<i8>
+  %ap = fir.convert %p : (!fir.ref<i8>) -> !fir.ref<!fir.array<4xi32>>
+  %a = fir.declare %ap(%shape) storage(%com[4]) uniq_name("_QFEa") : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.ref<!fir.array<20xi8>>) -> !fir.ref<!fir.array<4xi32>>
+  %ca = acc.copyin varPtr(%a : !fir.ref<!fir.array<4xi32>>) dataClause(acc_copy) name("a") -> !fir.ref<!fir.array<4xi32>>
+  acc.serial dataOperands(%ca : !fir.ref<!fir.array<4xi32>>) {
+    %d = fir.declare %ca(%shape) storage(%com[4]) uniq_name("_QFEa") : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.ref<!fir.array<20xi8>>) -> !fir.ref<!fir.array<4xi32>>
+    %e = fir.array_coor %d(%shape) %c1_i32 : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, i32) -> !fir.ref<i32>
+    fir.store %c4_i32 to %e : !fir.ref<i32>
+    acc.yield
+  }
+  acc.copyout accPtr(%ca : !fir.ref<!fir.array<4xi32>>) to varPtr(%a : !fir.ref<!fir.array<4xi32>>) dataClause(acc_copy) name("a")
+  return
+}
+
+// CHECK-LABEL: func.func @typed_global_members_only_via_storage
+// CHECK-NOT: name("com_")
+// CHECK: acc.serial

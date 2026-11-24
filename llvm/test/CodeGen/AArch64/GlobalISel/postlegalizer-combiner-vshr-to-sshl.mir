@@ -3,7 +3,6 @@
 ---
 name:            lshr_by_register
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -27,7 +26,6 @@ body:             |
 ---
 name:            ashr_by_nonsplat_constant
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -56,7 +54,6 @@ body:             |
 ---
 name:            ashr_by_splat_imm
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -79,7 +76,6 @@ body:             |
 ---
 name:            lshr_by_zero
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0

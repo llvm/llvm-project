@@ -70,23 +70,23 @@ void call_take(void) { take("hi"); }
 
 // CIR-SPV-LABEL: cir.func{{.*}} @subscript
 // CIR-SPV: %[[G:.*]] = cir.get_global @".str.1" : !cir.ptr<!cir.array<!s8i x 4>, target_address_space(2)>
-// CIR-SPV: cir.get_element %[[G]][{{.*}}] : !cir.ptr<!cir.array<!s8i x 4>, target_address_space(2)> -> !cir.ptr<!s8i, target_address_space(2)>
+// CIR-SPV: cir.get_element inbounds %[[G]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s8i x 4>, target_address_space(2)> -> !cir.ptr<!s8i, target_address_space(2)>
 
 // CIR-GCN-LABEL: cir.func{{.*}} @subscript
 // CIR-GCN: %[[G:.*]] = cir.get_global @".str.1" : !cir.ptr<!cir.array<!s8i x 4>, target_address_space(4)>
-// CIR-GCN: cir.get_element %[[G]][{{.*}}] : !cir.ptr<!cir.array<!s8i x 4>, target_address_space(4)> -> !cir.ptr<!s8i, target_address_space(4)>
+// CIR-GCN: cir.get_element inbounds %[[G]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s8i x 4>, target_address_space(4)> -> !cir.ptr<!s8i, target_address_space(4)>
 
 // LLVM-SPV-LABEL: define{{.*}} i8 @subscript
-// LLVM-SPV: getelementptr {{.*}}[4 x i8], ptr addrspace(2) @.str.1
+// LLVM-SPV: getelementptr inbounds [4 x i8], ptr addrspace(2) @.str.1
 
 // OGCG-SPV-LABEL: define{{.*}} i8 @subscript
-// OGCG-SPV: getelementptr {{.*}}[4 x i8], ptr addrspace(2) @.str.1
+// OGCG-SPV: getelementptr inbounds [4 x i8], ptr addrspace(2) @.str.1
 
 // LLVM-GCN-LABEL: define{{.*}} i8 @subscript
-// LLVM-GCN: getelementptr {{.*}}[4 x i8], ptr addrspace(4) @.str.1
+// LLVM-GCN: getelementptr inbounds [4 x i8], ptr addrspace(4) @.str.1
 
 // OGCG-GCN-LABEL: define{{.*}} i8 @subscript
-// OGCG-GCN: getelementptr {{.*}}[4 x i8], ptr addrspace(4) @.str.1
+// OGCG-GCN: getelementptr inbounds [4 x i8], ptr addrspace(4) @.str.1
 char subscript(int i) { return "abc"[i]; }
 
 // CIR-SPV-LABEL: cir.func{{.*}} @func_name

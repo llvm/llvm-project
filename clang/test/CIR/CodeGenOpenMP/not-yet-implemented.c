@@ -43,4 +43,20 @@ void conflicting_hint() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical 'hint' combining conflicting sync hints}}
 #pragma omp critical(conflict) hint(3)
   {}
+void loop_continue(int *a) {
+#pragma omp parallel for
+  for (int i = 0; i < 10; ++i) {
+    // expected-error@+1{{ClangIR code gen Not Yet Implemented: continue in an OpenMP loop body}}
+    if (i == 3) continue;
+    a[i] = i;
+  }
+
+  // A continue that targets a loop nested in the body is supported.
+#pragma omp for
+  for (int i = 0; i < 10; ++i) {
+    for (int j = 0; j < 10; ++j) {
+      if (j == 3) continue;
+      a[j] = i;
+    }
+  }
 }

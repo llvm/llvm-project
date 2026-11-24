@@ -596,7 +596,7 @@
 // MSP430:#define __WCHAR_MAX__ 32767
 // MSP430:#define __WCHAR_TYPE__ int
 // MSP430:#define __WCHAR_WIDTH__ 16
-// MSP430:#define __WINT_TYPE__ int
+// MSP430:#define __WINT_TYPE__ unsigned int
 // MSP430:#define __WINT_WIDTH__ 16
 // MSP430:#define __clang__ 1
 //
@@ -1050,6 +1050,7 @@
 // SPARC:#define __FLT_MIN_EXP__ (-125)
 // SPARC:#define __FLT_MIN__ 1.17549435e-38F
 // SPARC:#define __FLT_RADIX__ 2
+// SPARC:#define __GCC_ATOMIC_INT_LOCK_FREE 1
 // SPARC:#define __GCC_ATOMIC_LLONG_LOCK_FREE 1
 // SPARC:#define __INT16_C(c) c
 // SPARC:#define __INT16_C_SUFFIX__

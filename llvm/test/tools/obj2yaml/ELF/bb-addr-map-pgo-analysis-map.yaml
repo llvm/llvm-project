@@ -239,3 +239,55 @@ Sections:
 # MISSING-FEC-NEXT:          Type:    SHT_LLVM_BB_ADDR_MAP
 # MISSING-FEC-NEXT:          Content: '{{([[:xdigit:]]+)}}'{{$}}
 
+## Check that obj2yaml keeps 'NumBlocks' and does not decode BB entries when
+## 'OmitBBEntries' is set, and that the output round-trips.
+
+# RUN: yaml2obj --docnum=4 %s -o %t5
+# RUN: obj2yaml %t5 -o %t5.out
+# RUN: FileCheck %s --input-file %t5.out --check-prefix=OMIT
+# RUN: yaml2obj %t5.out -o %t5.rt
+# RUN: cmp %t5 %t5.rt
+
+# OMIT:      Entries:
+# OMIT-NEXT:   - Version: 2
+# OMIT-NEXT:     Feature: 0x11
+# OMIT-NEXT:     BBRanges:
+# OMIT-NEXT:       - BaseAddress: 0x10
+# OMIT-NEXT:         NumBlocks:   1
+# OMIT-NEXT:   - Version: 2
+# OMIT-NEXT:     BBRanges:
+# OMIT-NEXT:       - BBEntries:
+# OMIT-NEXT:           - ID:            0
+# OMIT-NEXT:             AddressOffset: 0x0
+# OMIT-NEXT:             Size:          0x1
+# OMIT-NEXT:             Metadata:      0x0
+# OMIT-NEXT: PGOAnalyses:
+# OMIT-NEXT:   - FuncEntryCount: 100
+# OMIT-NEXT:   - {}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_bb_addr_map
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        Feature: 0x11
+        BBRanges:
+          - BaseAddress: 0x10
+            NumBlocks:   1
+      - Version: 2
+        Feature: 0x0
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x0
+    PGOAnalyses:
+      - FuncEntryCount: 100
+      - {}

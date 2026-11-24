@@ -103,12 +103,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
-  - { id: 2, class: vr128, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
@@ -161,12 +156,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
-  - { id: 2, class: vr128, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }

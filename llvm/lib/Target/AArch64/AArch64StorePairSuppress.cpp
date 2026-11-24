@@ -30,7 +30,6 @@ using namespace llvm;
 namespace {
 class AArch64StorePairSuppress : public MachineFunctionPass {
   const AArch64InstrInfo *TII;
-  const MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
   MachineTraceMetrics *Traces;
   MachineTraceMetrics::Ensemble *MinInstr;
@@ -133,7 +132,6 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = ST.getInstrInfo();
-  MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
   Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;

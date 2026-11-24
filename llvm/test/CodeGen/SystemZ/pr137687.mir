@@ -3,7 +3,6 @@
 
 ---
 name:            t
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
