@@ -115,6 +115,9 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   restOfCreateSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
                         bool ExplicitLayoutRequired, bool EmitIR);
+  // Key SpirvType by Ty unless Ty already has a type in MF.
+  void addTypeKey(const Type *Ty, bool ExplicitLayoutRequired,
+                  SPIRVTypeInst SpirvType, const MachineFunction &MF);
 
   // Internal function creating the Types/Constants at the correct position
   // in the function by tweaking the passed "MIRBuilder" insertion point and
