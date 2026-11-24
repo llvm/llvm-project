@@ -722,7 +722,7 @@ define <16 x i8> @test_signed_v16i8_v16bf16(<16 x bfloat> %f) nounwind {
 define i32 @test_signed_i32_bf16(bfloat %f) nounwind {
 ; X86-LABEL: test_signed_i32_bf16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovw {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vpinsrw $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X86-NEXT:    vcvttss2sis %xmm0, %eax
 ; X86-NEXT:    retl
@@ -739,7 +739,7 @@ define i32 @test_signed_i32_bf16(bfloat %f) nounwind {
 define i64 @test_unsigned_i64_bf16(bfloat %f) nounwind {
 ; X86-LABEL: test_unsigned_i64_bf16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovw {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vpinsrw $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,xmm0[0,1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvttps2uqq %xmm1, %xmm1
 ; X86-NEXT:    vpextrd $1, %xmm1, %edx

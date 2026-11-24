@@ -125,14 +125,9 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasX87())
     return MVT::i32;
 
-  if (isTypeLegal(MVT::f16)) {
-    if (VT.isVectorOf(MVT::bf16))
-      return getRegisterTypeForCallingConv(
-          Context, CC, VT.changeVectorElementType(Context, MVT::f16));
-
-    if (VT == MVT::bf16)
-      return MVT::f16;
-  }
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
+    return getRegisterTypeForCallingConv(
+        Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
@@ -1786,7 +1781,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
           RC = &X86::GR32RegClass;
         else if (Is64Bit && RegVT == MVT::i64)
           RC = &X86::GR64RegClass;
-        else if (RegVT == MVT::f16)
+        else if (RegVT == MVT::f16 || RegVT == MVT::bf16)
           RC = Subtarget.hasAVX512() ? &X86::FR16XRegClass : &X86::FR16RegClass;
         else if (RegVT == MVT::f32)
           RC = Subtarget.hasAVX512() ? &X86::FR32XRegClass : &X86::FR32RegClass;

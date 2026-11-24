@@ -5,13 +5,13 @@
 define bfloat @select_ogt_bf16(bfloat %a, bfloat %b) {
 ; CHECK-LABEL: select_ogt_bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovw %xmm1, %eax
-; CHECK-NEXT:    vmovw %xmm0, %ecx
+; CHECK-NEXT:    vpextrw $0, %xmm1, %eax
+; CHECK-NEXT:    vpextrw $0, %xmm0, %ecx
 ; CHECK-NEXT:    vpslld $16, %xmm1, %xmm1
 ; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm0
 ; CHECK-NEXT:    cmoval %ecx, %eax
-; CHECK-NEXT:    vmovw %eax, %xmm0
+; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp ogt bfloat %a, %b
   %sel = select i1 %cmp, bfloat %a, bfloat %b

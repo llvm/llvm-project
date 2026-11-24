@@ -109,7 +109,7 @@ multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
         def rri : AVX512Ii8<0x53, MRMSrcReg, (outs _.FRC:$dst),
                             (ins _.FRC:$src1, _.FRC:$src2, i32u8imm:$src3),
                              !strconcat(OpStr, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
-                             [(set _.FRC:$dst, (OpNode _.FRC:$src1, _.FRC:$src2, (i32 timm:$src3)))]>,
+                             [(set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1, _.FRC:$src2, (i32 timm:$src3))))]>,
                        Sched<[WriteFMAX]>;
 
         def rmi : AVX512Ii8<0x53, MRMSrcMem, (outs _.FRC:$dst),
