@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -E -P -I%t -o - 2>&1 \
 // RUN:     -Wno-include-angled-in-module-purview | FileCheck %t/a.cppm --check-prefix=CHECK-NO-WARN
 // RUN: %clang_cc1 -std=c++20 %t/b.cpp -E -P -I%t -o - 2>&1 | FileCheck %t/a.cppm --check-prefix=CHECK-NO-WARN
+// RUN: %clang_cc1 -std=c++20 -E -verify -Wno-extra-tokens \
+// RUN:   -Winclude-angled-in-module-purview -I%t -o %t/tmp %t/invalid.cppm
 
 //--- a.h
 // left empty
@@ -66,3 +68,8 @@ module :private;
 struct module {};
 void foo(module m);
 #include <stddef.h>
+
+//--- invalid.cppm
+// expected-no-diagnostics
+export module :oops;
+#include <a.h>
