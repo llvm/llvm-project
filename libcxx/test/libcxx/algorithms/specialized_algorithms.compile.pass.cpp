@@ -88,8 +88,10 @@ template <class CharT>
 using obi = std::ostreambuf_iterator<CharT>;
 static_assert(has_alg<Alg::__copy, iter_pair<char*, char*>, single_iter<obi<char>>>);
 static_assert(has_alg<Alg::__copy, iter_pair<const char*, const char*>, single_iter<obi<char>>>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(has_alg<Alg::__copy, iter_pair<wchar_t*, wchar_t*>, single_iter<obi<wchar_t>>>);
 static_assert(has_alg<Alg::__copy, iter_pair<const wchar_t*, const wchar_t*>, single_iter<obi<wchar_t>>>);
 static_assert(!has_alg<Alg::__copy, iter_pair<char*, char*>, single_iter<obi<wchar_t>>>);
+#endif
 
 } // namespace ostreambuf_iterator

@@ -9,9 +9,9 @@
 #include "pthread_attr_setstack.h"
 #include "pthread_attr_setstacksize.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h" // For STACK_ALIGNMENT
 

@@ -128,6 +128,12 @@ public:
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
+  lldb_private::FileSpecList GetReExportedLibraries() override;
+
+  bool ReExportedLibrariesShadowLocalDefinitions() const override {
+    return true;
+  }
+
   lldb_private::Address
   GetImageInfoAddress(lldb_private::Target *target) override;
 
@@ -176,7 +182,7 @@ private:
   typedef std::vector<elf::ELFProgramHeader> ProgramHeaderColl;
 
   struct ELFSectionHeaderInfo : public elf::ELFSectionHeader {
-    lldb_private::ConstString section_name;
+    std::string section_name;
   };
 
   typedef std::vector<ELFSectionHeaderInfo> SectionHeaderColl;
@@ -348,7 +354,7 @@ private:
   /// index of the corresponding section or zero if no section with the given
   /// name can be found (note that section indices are always 1 based, and so
   /// section index 0 is never valid).
-  lldb::user_id_t GetSectionIndexByName(const char *name);
+  lldb::user_id_t GetSectionIndexByName(llvm::StringRef name);
 
   /// Returns the section header with the given id or NULL.
   const ELFSectionHeaderInfo *GetSectionHeaderByIndex(lldb::user_id_t id);

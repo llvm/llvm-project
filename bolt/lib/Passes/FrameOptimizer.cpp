@@ -40,7 +40,6 @@ FrameOptimization("frame-opt",
     clEnumValN(FOP_NONE, "none", "do not perform frame optimization"),
     clEnumValN(FOP_HOT, "hot", "perform FOP on hot functions"),
     clEnumValN(FOP_ALL, "all", "perform FOP on all functions")),
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 static cl::opt<bool> RemoveStores(

@@ -21,7 +21,7 @@ define dso_local void @test_no_bitcast(ptr %A_mem, ptr %B_mem, ptr %C_mem) local
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TILELOAD_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[C_MEM:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [4 x i8], ptr [[C_MEM:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[TMP7]], [[TILELOAD_SCALARIZE_COLS_IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP6]], align 4
@@ -53,7 +53,7 @@ define dso_local void @test_no_bitcast(ptr %A_mem, ptr %B_mem, ptr %C_mem) local
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext i16 [[TILELOAD_SCALARIZE_COLS_IV11]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP13]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], [[TMP14]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[A_MEM:%.*]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr [4 x i8], ptr [[A_MEM:%.*]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV5]], 16
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i16 [[TMP19]], [[TILELOAD_SCALARIZE_COLS_IV11]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP18]], align 4
@@ -85,7 +85,7 @@ define dso_local void @test_no_bitcast(ptr %A_mem, ptr %B_mem, ptr %C_mem) local
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i16 [[TILELOAD_SCALARIZE_COLS_IV26]] to i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = mul i64 [[TMP25]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[TMP27]], [[TMP26]]
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[B_MEM:%.*]], i64 [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr [4 x i8], ptr [[B_MEM:%.*]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV20]], 16
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i16 [[TMP31]], [[TILELOAD_SCALARIZE_COLS_IV26]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[TMP30]], align 4
@@ -169,7 +169,7 @@ define dso_local void @test_no_bitcast(ptr %A_mem, ptr %B_mem, ptr %C_mem) local
 ; CHECK-NEXT:    [[TMP57:%.*]] = zext i16 [[TILESTORE_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 [[TMP56]], 4
 ; CHECK-NEXT:    [[TMP59:%.*]] = add i64 [[TMP58]], [[TMP57]]
-; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr i32, ptr [[C_MEM]], i64 [[TMP59]]
+; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr [4 x i8], ptr [[C_MEM]], i64 [[TMP59]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = mul i16 [[TILESTORE_SCALARIZE_ROWS_IV]], 16
 ; CHECK-NEXT:    [[TMP63:%.*]] = add i16 [[TMP62]], [[TILESTORE_SCALARIZE_COLS_IV]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = extractelement <256 x i32> [[TMP54]], i16 [[TMP63]]

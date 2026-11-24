@@ -353,6 +353,58 @@ def SPIRV_SwitchOp : SPIRV_Op<"Switch",
 
 // -----
 
+def SPIRV_KHRAbortOp : SPIRV_KhrVendorOp<"Abort", [InFunctionScope,
+                                                   Terminator]> {
+  let summary = [{
+    Ceases all further processing in the invocation that executes it.
+  }];
+
+  let description = [{
+    Only instructions executed before OpAbortKHR will have side effects.
+    Other invocations in the same Device scope instance will also be
+    terminated in finite time, though may reach completion.
+
+    Message Type is the type of the data to be written. Message Type must be
+    a concrete type. If the Shader capability is declared, Message Type must
+    have an explicit layout.
+
+    Message is data that is passed to the client API after termination.
+    Message Type must logically match the type of Message, as defined in
+    OpCopyLogical.
+
+    This instruction must be the last instruction in a block.
+
+    <!-- End of AutoGen section -->
+
+    Message Type is always the type of Message.
+
+    #### Example:
+
+    ```mlir
+    spirv.KHR.Abort %msg : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_abort]>,
+    Capability<[SPIRV_C_AbortKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_Type:$message
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$message attr-dict `:` type($message)";
+
+  let autogenSerialization = 0;
+}
+
+// -----
+
 def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
   let summary = [{
     Deprecated (use OpTerminateInvocation or OpDemoteToHelperInvocation).
@@ -391,6 +443,94 @@ def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
   let results = (outs);
   let assemblyFormat = "attr-dict";
   let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_LifetimeStartOp : SPIRV_Op<"LifetimeStart", [InFunctionScope]> {
+  let summary = "Declare that an object was not defined before this instruction.";
+
+  let description = [{
+    Pointer is a pointer to the object whose lifetime is starting. Its type
+    must be an OpTypePointer with Storage Class Function.
+
+    Size is an unsigned 32-bit integer. Size must be 0 if Pointer is a
+    pointer to a non-void type or the Addresses capability is not declared.
+    If Size is non-zero, it is the number of bytes of memory whose lifetime
+    is starting.
+
+    <!-- End of AutoGen section -->
+
+    Only zero sizes are currently supported because SPIR-V dialect pointers
+    cannot point to void.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$pointer `,` $size attr-dict `:` type($pointer)";
+}
+
+// -----
+
+def SPIRV_LifetimeStopOp : SPIRV_Op<"LifetimeStop", [InFunctionScope]> {
+  let summary = "Declare that an object is dead after this instruction.";
+
+  let description = [{
+    Pointer is a pointer to the object whose lifetime is ending. Its type
+    must be an OpTypePointer with Storage Class Function.
+
+    Size is an unsigned 32-bit integer. Size must be 0 if Pointer is a
+    pointer to a non-void type or the Addresses capability is not declared.
+    If Size is non-zero, it is the number of bytes of memory whose lifetime
+    is ending.
+
+    <!-- End of AutoGen section -->
+
+    Only zero sizes are currently supported because SPIR-V dialect pointers
+    cannot point to void.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    spirv.LifetimeStop %0, 0 : !spirv.ptr<f32, Function>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$pointer `,` $size attr-dict `:` type($pointer)";
 }
 
 // -----

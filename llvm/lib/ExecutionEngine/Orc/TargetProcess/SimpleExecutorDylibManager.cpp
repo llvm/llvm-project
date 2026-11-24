@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorDylibManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/NativeDylibManagerSPSCI.h"
 
@@ -69,13 +72,17 @@ Error SimpleExecutorDylibManager::shutdown() {
 
 void SimpleExecutorDylibManager::addBootstrapSymbols(
     StringMap<ExecutorAddr> &M) {
+  Mangler Mangle{Triple(sys::getProcessTriple())};
   // SimpleExecutorDylibManager is the LLVM-side implementation of the runtime's
   // NativeDylibManager controller interface, so it publishes its bootstrap
   // symbols under the NativeDylibManager_* names. The class itself will be
   // renamed to NativeDylibManager to match in a future cleanup.
-  M[rt::sps_ci::NativeDylibManagerInstanceName] = ExecutorAddr::fromPtr(this);
-  M[rt::sps_ci::DylibMgrOpen::Name] = ExecutorAddr::fromPtr(&openWrapper);
-  M[rt::sps_ci::DylibMgrResolve::Name] = ExecutorAddr::fromPtr(&resolveWrapper);
+  M[Mangle.mangledCopy(rt::sps_ci::NativeDylibManagerInstanceName)] =
+      ExecutorAddr::fromPtr(this);
+  M[Mangle.mangledCopy(rt::sps_ci::DylibMgrOpen::Name)] =
+      ExecutorAddr::fromPtr(&openWrapper);
+  M[Mangle.mangledCopy(rt::sps_ci::DylibMgrResolve::Name)] =
+      ExecutorAddr::fromPtr(&resolveWrapper);
 }
 
 llvm::orc::shared::CWrapperFunctionBuffer

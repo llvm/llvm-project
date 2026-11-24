@@ -40,9 +40,7 @@ double _Complex divd(double _Complex a, double _Complex b) { return a / b; }
 // CIR-LABEL: cir.func {{.*}}@divd
 // CIR: cir.call @__divdc3({{.*}}) : (!cir.double, !cir.double, !cir.double, !cir.double) -> [[REC_D]]{{[^0-9]}}
 
-// CIR does not carry noundef onto expanded parameters.
-// LLVMCIR: define dso_local { double, double } @divd(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
-// OGCG: define dso_local { double, double } @divd(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
+// LLVM: define dso_local { double, double } @divd(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
 
 // LLVMCIR: call { double, double } @__divdc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
 // OGCG: call { double, double } @__divdc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
@@ -63,9 +61,8 @@ long double _Complex divld(long double _Complex a, long double _Complex b) {
 // CIR-LABEL: cir.func {{.*}}@divld
 // CIR: cir.call @__divxc3({{.*}}) : (!cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>) -> [[REC_LD]]{{[^0-9]}}
 
-// An x87 pair is passed indirectly, and CIR marks those byval slots noalias.
-// LLVMCIR: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
-// OGCG: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
+// An x87 pair is passed indirectly.
+// LLVM: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
 
 // LLVMCIR: call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
 // OGCG: call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}})

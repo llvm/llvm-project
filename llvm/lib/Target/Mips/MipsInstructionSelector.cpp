@@ -151,7 +151,7 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
   // Ori zero extends immediate. Used for values with zeros in high 16 bits.
   if (Imm.getHiBits(16).isZero()) {
     MachineInstr *Inst =
-        B.buildInstr(Mips::ORi, {DestReg}, {Register(Mips::ZERO)})
+        B.buildInstr(Mips::ORi, {DestReg}, {Register(Mips::R0)})
             .addImm(Imm.getLoBits(16).getLimitedValue());
     constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
     return true;
@@ -166,7 +166,7 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
   // ADDiu sign extends immediate. Used for values with 1s in high 17 bits.
   if (Imm.isSignedIntN(16)) {
     MachineInstr *Inst =
-        B.buildInstr(Mips::ADDiu, {DestReg}, {Register(Mips::ZERO)})
+        B.buildInstr(Mips::ADDiu, {DestReg}, {Register(Mips::R0)})
             .addImm(Imm.getLoBits(16).getLimitedValue());
     constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
     return true;
@@ -407,11 +407,6 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
-  case G_BRINDIRECT: {
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoIndirectBranch))
-             .add(I.getOperand(0));
-    break;
-  }
   case G_PHI: {
     const Register DestReg = I.getOperand(0).getReg();
 
@@ -457,10 +452,12 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       if (MMO->getSize() != 4 || !isRegInGprb(I.getOperand(0).getReg(), MRI))
         return false;
 
+      unsigned LeftOffset = SignedOffset + (STI.isLittle() ? 3 : 0);
+      unsigned RightOffset = SignedOffset + (STI.isLittle() ? 0 : 3);
       if (I.getOpcode() == G_STORE) {
-        if (!buildUnalignedStore(I, Mips::SWL, BaseAddr, SignedOffset + 3, MMO))
+        if (!buildUnalignedStore(I, Mips::SWL, BaseAddr, LeftOffset, MMO))
           return false;
-        if (!buildUnalignedStore(I, Mips::SWR, BaseAddr, SignedOffset, MMO))
+        if (!buildUnalignedStore(I, Mips::SWR, BaseAddr, RightOffset, MMO))
           return false;
         I.eraseFromParent();
         return true;
@@ -471,11 +468,11 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
         BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::IMPLICIT_DEF))
             .addDef(ImplDef);
         Register Tmp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
-        if (!buildUnalignedLoad(I, Mips::LWL, Tmp, BaseAddr, SignedOffset + 3,
+        if (!buildUnalignedLoad(I, Mips::LWL, Tmp, BaseAddr, LeftOffset,
                                 ImplDef, MMO))
           return false;
         if (!buildUnalignedLoad(I, Mips::LWR, I.getOperand(0).getReg(),
-                                BaseAddr, SignedOffset, Tmp, MMO))
+                                BaseAddr, RightOffset, Tmp, MMO))
           return false;
         I.eraseFromParent();
         return true;
@@ -745,7 +742,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       break;
     case CmpInst::ICMP_NE: // LHS != RHS -> 0 < (LHS ^ RHS)
       Instructions.emplace_back(Mips::XOR, Temp, LHS, RHS);
-      Instructions.emplace_back(Mips::SLTu, ICMPReg, Mips::ZERO, Temp);
+      Instructions.emplace_back(Mips::SLTu, ICMPReg, Mips::R0, Temp);
       break;
     case CmpInst::ICMP_UGT: // LHS >  RHS -> RHS < LHS
       Instructions.emplace_back(Mips::SLTu, ICMPReg, RHS, LHS);
@@ -848,7 +845,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     Register TrueInReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ADDiu))
         .addDef(TrueInReg)
-        .addUse(Mips::ZERO)
+        .addUse(Mips::R0)
         .addImm(1);
 
     unsigned Size = MRI.getType(I.getOperand(2).getReg()).getSizeInBits();
@@ -863,7 +860,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
 
     MachineInstr *Move = BuildMI(MBB, I, I.getDebugLoc(), TII.get(MoveOpcode))
                              .addDef(I.getOperand(0).getReg())
-                             .addUse(Mips::ZERO)
+                             .addUse(Mips::R0)
                              .addUse(Mips::FCC0)
                              .addUse(TrueInReg);
     constrainSelectedInstRegOperands(*Move, TII, TRI, RBI);

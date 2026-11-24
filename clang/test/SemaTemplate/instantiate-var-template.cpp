@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -std=c++1y %s
+// RUN: %clang_cc1 -verify -std=c++17 %s
 
 namespace PR17846 {
   template <typename T> constexpr T pi = T(3.14);
@@ -58,3 +59,36 @@ namespace GH97881_comment {
     (void)sizeof(g<false>); // expected-note {{in instantiation of variable template specialization 'GH97881_comment::g'}}
   }
 }
+
+#if __cplusplus >= 201703L
+namespace GH134148 {
+  // The initializer of a variable template specialization with an undeduced
+  // type is instantiated eagerly, here from inside the instantiation of the
+  // lambda in another specialization's initializer. The nested instantiation
+  // must get its own local instantiation scope rather than reusing the
+  // lambda's scope, which already holds the instantiations of the lambda's
+  // own locals.
+  template <int N> constexpr auto sum = [] { return sum<N - 1> + N; }();
+  template <> constexpr auto sum<0> = 0;
+  static_assert(sum<3> == 6);
+
+  template <class T> struct Unwrap { using type = T; static constexpr int depth = 0; };
+  template <class T> struct Unwrap<T &> {
+    using type = typename Unwrap<T>::type;
+    static constexpr int depth = Unwrap<T>::depth + 1;
+  };
+
+  template <class T, class... Args>
+  constexpr auto count = [] {
+    if constexpr (Unwrap<T>::depth > 0)
+      return count<typename Unwrap<T>::type, Args...> + 1;
+    else
+      return sizeof...(Args);
+  }();
+  template <class T, int = count<T>> constexpr int use(T &&) { return count<T>; }
+
+  int f();
+  static_assert(use(f) == 1);
+  static_assert(count<int &&> == 0);
+}
+#endif

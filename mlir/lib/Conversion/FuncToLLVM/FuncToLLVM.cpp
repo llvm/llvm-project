@@ -23,7 +23,12 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -600,16 +605,18 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     auto promoted = this->getTypeConverter()->promoteOperands(
         callOp.getLoc(), /*opOperands=*/callOp->getOperands(),
         adaptor.getOperands(), rewriter, useBarePtrCallConv);
+    LLVM::CallOp::Properties properties{};
+    LLVM::CallOp::populateDefaultProperties(
+        OperationName(LLVM::CallOp::getOperationName(), rewriter.getContext()),
+        properties);
+    properties.operandSegmentSizes = {static_cast<int32_t>(promoted.size()), 0};
+    properties.op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
     auto newOp = LLVM::CallOp::create(
         rewriter, callOp.getLoc(),
         packedResult ? TypeRange(packedResult) : TypeRange(), promoted,
-        callOp->getDiscardableAttrDictionary().getValue());
+        properties, callOp->getDiscardableAttrDictionary().getValue());
     if constexpr (std::is_same_v<CallOpType, func::CallOp>)
       newOp.setCalleeAttr(callOp.getCalleeAttr());
-
-    newOp.getProperties().operandSegmentSizes = {
-        static_cast<int32_t>(promoted.size()), 0};
-    newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
 
     // Helper function that extracts an individual result from the return value
     // of the new call op. llvm.call ops support only 0 or 1 result. In case of

@@ -58,9 +58,6 @@ protected:
   SymbolNameToDefinitionMap SymbolToDefinition;
 
 private:
-  static SymbolStringPtr getInitSymbol(ExecutionSession &ES,
-                                       const ThreadSafeModule &TSM);
-
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
 };
 

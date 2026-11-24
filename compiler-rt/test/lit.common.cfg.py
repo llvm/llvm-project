@@ -377,6 +377,7 @@ tool_symbolizer_path_list = [
     "MSAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
     "UBSAN_SYMBOLIZER_PATH",
+    "CSAN_SYMBOLIZER_PATH",
 ]
 
 if config.have_disable_symbolizer_path_search:
@@ -591,6 +592,33 @@ if config.target_os == "Darwin":
 
     config.darwin_os_version = darwin_os_version
 
+    # For simulators, darwin_os_version above is the host's. The simulator
+    # runtime's version is in SIMULATOR_RUNTIME_VERSION inside the simulator.
+    if config.apple_platform.endswith("sim"):
+        sim_os_version = None
+        sim_version = lit_config.run_command_cached(
+            [
+                config.darwin_run_wrapper,
+                "/bin/sh",
+                "-c",
+                "echo $SIMULATOR_RUNTIME_VERSION",
+            ],
+            text=True,
+            allow_failure=True,
+        )
+        if sim_version and re.fullmatch(r"\d+(\.\d+){1,2}", sim_version.strip()):
+            parts = tuple(int(x) for x in sim_version.strip().split("."))
+            sim_os_version = parts + (0,) * (3 - len(parts))
+
+        if sim_os_version is None:
+            lit_config.warning(
+                "Could not determine OS version of the simulator runtime"
+            )
+        # 27.0-27.2 simulators cannot interpose certain calls from the shared
+        # cache (e.g. memcpy/memcmp/strlen), so ASan cannot intercept them.
+        elif (27, 0, 0) <= sim_os_version < (27, 3, 0):
+            config.available_features.add("iossim-dyld-interpose-bug")
+
     # Detect x86_64h
     output = lit_config.run_command_cached(
         os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True, allow_failure=True
@@ -696,7 +724,7 @@ if config.android:
             % (adb, android_api_level_str)
         )
     android_api_level = min(android_api_level, int(config.android_api_level))
-    for required in [26, 28, 29, 30]:
+    for required in [26, 28, 29, 30, 34, 37]:
         if android_api_level >= required:
             config.available_features.add("android-%s" % required)
     # FIXME: Replace with appropriate version when availible.
@@ -743,6 +771,7 @@ if config.target_os == "Linux" and not config.android:
         for required in [
             (2, 19),
             (2, 27),
+            (2, 28),
             (2, 30),
             (2, 33),
             (2, 34),
@@ -1094,3 +1123,71 @@ config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
 config.substitutions.append(("%llvm_src", config.llvm_src_root))
 
 config.substitutions.append(("%python", '"%s"' % (sys.executable)))
+
+# Names of device archives under lib/<gpu-triple>/, e.g. "ubsan_standalone".
+# Stored as data; lit's process pool cannot pickle callables on the config.
+config.gpu_runtimes = []
+_rt_prefix = "libclang_rt."
+_rt_suffix = ".a"
+for _triple in ("amdgpu-amd-amdhsa", "amdgcn-amd-amdhsa"):
+    _libdir = os.path.join(config.compiler_rt_output_dir, "lib", _triple)
+    try:
+        _names = os.listdir(_libdir)
+    except OSError:
+        continue
+    for _fname in _names:
+        if _fname.startswith(_rt_prefix) and _fname.endswith(_rt_suffix):
+            config.gpu_runtimes.append(_fname[len(_rt_prefix) : -len(_rt_suffix)])
+
+config.gpu_arch = lit_config.params.get("amdgpu_arch", config.gpu_arch)
+config.hip_lib_dir = lit_config.params.get("hip_lib_path", config.hip_lib_dir)
+can_run_hip = config.can_run_hip or (
+    "amdgpu_arch" in lit_config.params and "hip_lib_path" in lit_config.params
+)
+
+if config.gpu_arch:
+    config.available_features.add("amdgpu")
+    config.substitutions.append(("%gpu_arch", config.gpu_arch))
+    config.substitutions.append(
+        ("%amdgpu_arch", lit_config.params.get("amdgpu_arch", "native"))
+    )
+
+if can_run_hip:
+    config.available_features.add("hip")
+    hip_flags = [
+        config.clang,
+        "-xhip",
+        "--offload-arch=" + config.gpu_arch,
+        "-nogpuinc",
+        "-nogpulib",
+        "-g",
+        "-isystem",
+        os.path.join(config.compiler_rt_src_root, "test", "Inputs"),
+        "-include",
+        "hip.h",
+    ]
+    config.substitutions.append(("%clang_hip ", " ".join(hip_flags) + " "))
+    config.substitutions.append(
+        (
+            "%hip_libs",
+            "-L%s -lamdhip64 -Wl,-rpath,%s" % (config.hip_lib_dir, config.hip_lib_dir),
+        )
+    )
+    config.substitutions.append(("%hip_lib_path", config.hip_lib_dir))
+
+if getattr(config, "gpu_device_count", 0) >= 2:
+    config.available_features.add("multi-device")
+
+if getattr(config, "can_run_openmp_offload", False):
+    config.available_features.add("openmp-offload")
+    omp_flags = [
+        config.clang,
+        "-fopenmp",
+        "--offload-arch=" + config.gpu_arch,
+        "-g",
+        "-frtlib-add-rpath",
+    ]
+    config.substitutions.append(("%clang_omp_offload ", " ".join(omp_flags) + " "))
+
+if can_run_hip or getattr(config, "can_run_openmp_offload", False):
+    lit_config.parallelism_groups["gpu"] = 1

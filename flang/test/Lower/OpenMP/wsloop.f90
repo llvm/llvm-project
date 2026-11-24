@@ -14,7 +14,7 @@ subroutine simple_loop
   ! CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP DO
   do i=1, 9
-  ! CHECK:          %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK:          %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] uniq_name("_QFsimple_loopEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:          hlfir.assign %[[I]] to %[[IV_DECL:.*]]#0 : i32, !fir.ref<i32>
   ! CHECK:          %[[LOAD_IV:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
   ! CHECK:          fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
@@ -36,7 +36,7 @@ subroutine simple_loop_with_step
   ! CHECK:      %[[WS_STEP:.*]] = arith.constant 2 : i32
   ! CHECK:      omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_IV:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
-  ! CHECK:          %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loop_with_stepEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK:          %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] uniq_name("_QFsimple_loop_with_stepEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:          hlfir.assign %[[I]] to %[[IV_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:          %[[LOAD_IV:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
   !$OMP DO
@@ -62,7 +62,7 @@ subroutine loop_with_schedule_nowait
   ! CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP DO SCHEDULE(runtime)
   do i=1, 9
-  ! CHECK:          %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFloop_with_schedule_nowaitEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK:          %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] uniq_name("_QFloop_with_schedule_nowaitEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:          hlfir.assign %[[I]] to %[[IV_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:          %[[LOAD_IV:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
   ! CHECK:          fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1

@@ -15,6 +15,7 @@
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -255,12 +256,17 @@ public:
   enum class AddrType : uint8_t { Call, AfterCall };
   virtual ~CallEdge();
 
-  /// Get the callee's definition.
+  /// Get the callee's definition, resolved against \p images.
+  ///
+  /// The result is never cached. A CallEdge is owned by a Module in the shared
+  /// module cache, so it outlives any one Target, while the callee it resolves
+  /// to depends on that Target's image list and dies with its own module. The
+  /// returned symbol context anchors that module.
   ///
   /// Note that this might lazily invoke the DWARF parser. A register context
   /// from the caller's activation is needed to find indirect call targets.
-  virtual Function *GetCallee(ModuleList &images,
-                              ExecutionContext &exe_ctx) = 0;
+  virtual SymbolContext GetCallee(ModuleList &images,
+                                  ExecutionContext &exe_ctx) = 0;
 
   /// Get the load PC address of the instruction which executes after the call
   /// returns. Returns LLDB_INVALID_ADDRESS iff this is a tail call. \p caller
@@ -298,6 +304,9 @@ protected:
   static lldb::addr_t GetLoadAddress(lldb::addr_t unresolved_pc,
                                      Function &caller, Target &target);
 
+  /// Find the function containing \p addr.
+  static SymbolContext ResolveCallee(const Address &addr);
+
   /// Like \ref GetReturnPCAddress, but returns an unresolved file address.
   lldb::addr_t GetUnresolvedReturnPCAddress() const {
     return caller_address_type == AddrType::AfterCall && !is_tail_call
@@ -324,14 +333,13 @@ public:
                  lldb::addr_t caller_address, bool is_tail_call,
                  CallSiteParameterArray &&parameters);
 
-  Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
+  SymbolContext GetCallee(ModuleList &images,
+                          ExecutionContext &exe_ctx) override;
 
 private:
-  Function *ResolveCallee(ModuleList &images);
+  Address ResolveCalleeAddress(ModuleList &images) const;
 
   const char *m_symbol_name;
-  std::once_flag m_resolved_flag;
-  Function *m_callee_def = nullptr;
 };
 
 /// An indirect call site. Used to represent call sites where the address of
@@ -345,7 +353,8 @@ public:
                    AddrType caller_address_type, lldb::addr_t caller_address,
                    bool is_tail_call, CallSiteParameterArray &&parameters);
 
-  Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
+  SymbolContext GetCallee(ModuleList &images,
+                          ExecutionContext &exe_ctx) override;
 
 private:
   // Used to describe an indirect call.

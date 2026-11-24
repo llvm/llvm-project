@@ -40,21 +40,20 @@ TEST(LlvmLibcTLSFTableTest, BinToMinSize) {
 
 TEST(LlvmLibcTLSFTableTest, OccupancyQueriesAndMutations) {
   Table table;
-  for (size_t i = 0; i < Table::TOTAL_BINS; ++i) {
+  for (size_t i = 0; i < Table::TOTAL_BINS; ++i)
     EXPECT_FALSE(table.is_occupied(i));
-  }
 
   table.mark_occupied(5);
   EXPECT_TRUE(table.is_occupied(5));
   EXPECT_FALSE(table.is_occupied(4));
   EXPECT_FALSE(table.is_occupied(6));
 
-  table.mark_occupied(100);
-  EXPECT_TRUE(table.is_occupied(100));
+  table.mark_occupied(Table::TOTAL_BINS - 3);
+  EXPECT_TRUE(table.is_occupied(Table::TOTAL_BINS - 3));
 
   table.mark_vacant(5);
   EXPECT_FALSE(table.is_occupied(5));
-  EXPECT_TRUE(table.is_occupied(100));
+  EXPECT_TRUE(table.is_occupied(Table::TOTAL_BINS - 3));
 }
 
 TEST(LlvmLibcTLSFTableTest, FindFirstOccupiedAfter) {

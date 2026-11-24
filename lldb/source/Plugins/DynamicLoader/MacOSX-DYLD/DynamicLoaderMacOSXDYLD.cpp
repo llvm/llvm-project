@@ -297,8 +297,8 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
 
       // If we didn't have an executable before, but now we do, then the dyld
       // module shared pointer might be unique and we may need to add it again
-      // (since Target::SetExecutableModule() will clear the images). So append
-      // the dyld module back to the list if it is
+      // (since Target::RebuildModuleListWithExecutable() will clear the
+      // images). So append the dyld module back to the list if it is
       /// unique!
       if (dyld_module_sp) {
         target.GetImages().AppendIfNeeded(dyld_module_sp);
@@ -896,8 +896,8 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
         if (lc_id_dylinker) {
           const lldb::offset_t name_offset =
               load_cmd_offset + data.GetU32(&offset);
-          const char *path = data.PeekCStr(name_offset);
-          lc_id_dylinker->SetFile(path, FileSpec::Style::native);
+          if (std::optional<llvm::StringRef> path = data.PeekCStr(name_offset))
+            lc_id_dylinker->SetFile(*path, FileSpec::Style::native);
           FileSystem::Instance().Resolve(*lc_id_dylinker);
         }
         break;
@@ -978,8 +978,8 @@ void DynamicLoaderMacOSXDYLD::UpdateImageInfosHeaderAndLoadCommands(
         // re-add it back to make sure it is always in the list.
         ModuleSP dyld_module_sp(GetDYLDModule());
 
-        m_process->GetTarget().SetExecutableModule(exe_module_sp,
-                                                   eLoadDependentsNo);
+        m_process->GetTarget().RebuildModuleListWithExecutable(
+            exe_module_sp, eLoadDependentsNo);
 
         if (dyld_module_sp) {
           if (target.GetImages().AppendIfNeeded(dyld_module_sp)) {

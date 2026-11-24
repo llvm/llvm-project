@@ -173,7 +173,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Note that Fuchsia never needs to link in sanitizer runtime deps.  Any
     // sanitizer runtimes with system dependencies use the `.deplibs` feature
     // instead.
-    addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+    addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
 
     addXRayRuntime(ToolChain, Args, CmdArgs);
 
@@ -217,6 +217,7 @@ void fuchsia::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xstatic_lib_tool);
   CmdArgs.push_back(Output.getFilename());
 
   for (const auto &II : Inputs) {
@@ -346,7 +347,7 @@ ToolChain::RuntimeLibType
 Fuchsia::GetRuntimeLibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt" && Value != "platform")
+    if (Value != "compiler-rt" && Value != "platform" && Value != "none")
       getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
           << Value << "Fuchsia";
   }

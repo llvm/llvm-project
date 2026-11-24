@@ -44,7 +44,7 @@ void test(const char *fmt, __builtin_va_list ap) {
 // LLVM: define {{.*}} void @test{{.*}}
 // LLVM:   call i32 @__vprintfieee128.inline(ptr {{.*}} %{{.*}}, ptr {{.*}} %{{.*}})
 //
-// LLVM: attributes #[[ALWAYS_INLINE_ATTR]] = { alwaysinline }
+// LLVM: attributes #[[ALWAYS_INLINE_ATTR]] = { alwaysinline "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 
 // Note: OGCG emits these in the opposite order, but the content is the same.
 

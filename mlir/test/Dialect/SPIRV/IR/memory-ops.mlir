@@ -202,6 +202,32 @@ func.func @volatile_aligned_load() -> () {
   return
 }
 
+// CHECK-LABEL: @make_pointer_visible_load
+func.func @make_pointer_visible_load() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.Load "Function" %{{.*}} ["MakePointerVisible|NonPrivatePointer"] : f32
+  %1 = spirv.Load "Function" %0 ["MakePointerVisible|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @load_bad_operand() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
+  %1 = spirv.Load "Function" %0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @load_make_pointer_visible_missing_non_private() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  %1 = spirv.Load "Function" %0 ["MakePointerVisible"] : f32
+  return
+}
+
 // -----
 
 // CHECK-LABEL: load_none_access
@@ -401,6 +427,32 @@ func.func @aligned_store(%arg0 : f32) -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   // CHECK: spirv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
   spirv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
+  return
+}
+
+// CHECK-LABEL: @make_pointer_available_store
+func.func @make_pointer_available_store(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @store_bad_operand(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
+  spirv.Store  "Function" %0, %arg0 ["MakePointerVisible|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @store_make_pointer_available_missing_non_private(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable"] : f32
   return
 }
 
@@ -690,6 +742,46 @@ func.func @copy_memory_invalid_source_maa2() {
 
 // -----
 
+func.func @copy_memory_target_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_target_make_pointer_available_missing_non_private() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_source_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_source_make_pointer_visible_missing_non_private() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<MakePointerVisible>, memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
 func.func @copy_memory_print_maa() {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
@@ -705,6 +797,17 @@ func.func @copy_memory_print_maa() {
 
   // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4], ["Aligned", 8] : f32
   "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Aligned>, memory_access=#spirv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // A lone mask applies to both operands, so it may carry MakePointerVisible,
+  // MakePointerAvailable, or both. It must stay a lone mask when printed.
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|NonPrivatePointer"], ["MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, source_memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
 
   spirv.Return
 }
@@ -737,4 +840,62 @@ func.func @ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64
 func.func @inbounds_ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
   %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.PtrEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @ptr_equal
+func.func @ptr_equal(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) -> i1 {
+  // CHECK: spirv.PtrEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+  %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_equal_type_mismatch(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, Workgroup>) -> i1 {
+  // expected-error @+1 {{failed to verify that all of {operand1, operand2} have same type}}
+  %0 = "spirv.PtrEqual"(%arg0, %arg1) : (!spirv.ptr<f32, CrossWorkgroup>, !spirv.ptr<f32, Workgroup>) -> i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_equal_non_ptr(%arg0: i32, %arg1: i32) -> i1 {
+  // expected-error @+1 {{operand #0 must be any SPIR-V pointer type}}
+  %0 = "spirv.PtrEqual"(%arg0, %arg1) : (i32, i32) -> i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_equal_non_bool(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) -> i32 {
+  // expected-error @+1 {{result #0 must be bool}}
+  %0 = "spirv.PtrEqual"(%arg0, %arg1) : (!spirv.ptr<f32, CrossWorkgroup>, !spirv.ptr<f32, CrossWorkgroup>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.PtrNotEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @ptr_not_equal
+func.func @ptr_not_equal(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) -> i1 {
+  // CHECK: spirv.PtrNotEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+  %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+  return %0 : i1
+}
+
+// -----
+
+func.func @ptr_not_equal_type_mismatch(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<i32, CrossWorkgroup>) -> i1 {
+  // expected-error @+1 {{failed to verify that all of {operand1, operand2} have same type}}
+  %0 = "spirv.PtrNotEqual"(%arg0, %arg1) : (!spirv.ptr<f32, CrossWorkgroup>, !spirv.ptr<i32, CrossWorkgroup>) -> i1
+  return %0 : i1
 }

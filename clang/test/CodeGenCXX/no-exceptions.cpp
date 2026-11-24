@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %std_cxx11- -Wno-dynamic-exception-spec %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %std_cxx11- -Wno-dynamic-exception-spec %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s %}
 
 void g();
 

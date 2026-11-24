@@ -115,7 +115,7 @@ this. Optimizations benefit from knowing about the target and data
 layout.
 
 ```c++
-TheModule->setDataLayout(TargetMachine->createDataLayout());
+TheModule->setDataLayout(TargetMachine->getTargetTriple().computeDataLayout());
 TheModule->setTargetTriple(TargetTriple);
 ```
 

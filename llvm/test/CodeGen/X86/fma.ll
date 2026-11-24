@@ -1122,8 +1122,8 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    pushl %ebp ## encoding: [0x55]
 ; FMACALL32_BDVER2-NEXT:    movl %esp, %ebp ## encoding: [0x89,0xe5]
 ; FMACALL32_BDVER2-NEXT:    andl $-32, %esp ## encoding: [0x83,0xe4,0xe0]
-; FMACALL32_BDVER2-NEXT:    subl $448, %esp ## encoding: [0x81,0xec,0xc0,0x01,0x00,0x00]
-; FMACALL32_BDVER2-NEXT:    ## imm = 0x1C0
+; FMACALL32_BDVER2-NEXT:    subl $416, %esp ## encoding: [0x81,0xec,0xa0,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## imm = 0x1A0
 ; FMACALL32_BDVER2-NEXT:    vmovaps 56(%ebp), %xmm4 ## encoding: [0xc5,0xf8,0x28,0x65,0x38]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %ymm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x29,0x94,0x24,0x60,0x01,0x00,0x00]

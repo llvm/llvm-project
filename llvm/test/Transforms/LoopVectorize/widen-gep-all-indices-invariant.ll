@@ -96,13 +96,15 @@ define void @wide_gep_multiple_indices_some_invariant(ptr noalias %dst, ptr noal
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [10 x float], ptr [[TMP0]], i32 [[X]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x ptr> [[WIDE_GEP]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [40 x i8], ptr [[TMP0]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr [4 x i8], ptr [[WIDE_GEP]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x ptr> [[WIDE_GEP1]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:

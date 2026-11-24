@@ -97,3 +97,15 @@ define void @overflow_bitwidth_1() {
   ret void
 }
 
+; CHECK: error: could not allocate input reg for constraint '{}'
+define void @empty_reg_name() {
+  tail call void asm sideeffect "; use %0", "{}"(i64 123)
+  ret void
+}
+
+; CHECK: error: could not allocate output register for constraint '{}'
+define void @empty_reg_name_def() {
+  %v = tail call i32 asm sideeffect "v_mov_b32 $0, -1", "={}"()
+  ret void
+}
+

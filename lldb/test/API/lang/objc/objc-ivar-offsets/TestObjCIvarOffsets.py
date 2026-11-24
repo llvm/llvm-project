@@ -19,21 +19,9 @@ class TestObjCIvarOffsets(TestBase):
     def test_with_python_api(self):
         """Test printing ObjC objects that use unbacked properties"""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation(self.main_source, self.stop_line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Created a process.")
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "Stopped it too.")
-
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
-        thread = thread_list[0]
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.main_source), self.stop_line
+        )
 
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame, "frame 0 is valid")

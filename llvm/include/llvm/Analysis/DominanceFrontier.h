@@ -91,6 +91,10 @@ public:
   void analyze(const DomTreeT &DT);
 };
 
+extern template class LLVM_TEMPLATE_ABI
+    DominanceFrontierBase<BasicBlock, false>;
+extern template class LLVM_TEMPLATE_ABI DominanceFrontierBase<BasicBlock, true>;
+
 class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
 public:
   using DomTreeT = DomTreeBase<BasicBlock>;
@@ -125,10 +129,6 @@ public:
 
   void dump() const;
 };
-
-extern template class LLVM_TEMPLATE_ABI
-    DominanceFrontierBase<BasicBlock, false>;
-extern template class LLVM_TEMPLATE_ABI DominanceFrontierBase<BasicBlock, true>;
 
 /// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis

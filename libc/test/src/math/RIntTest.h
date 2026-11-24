@@ -122,12 +122,12 @@ public:
   }
 };
 
-#define LIST_RINT_TESTS(F, func)                                               \
-  using LlvmLibcRIntTest = RIntTestTemplate<F>;                                \
-  TEST_F(LlvmLibcRIntTest, specialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcRIntTest, RoundNumbers) { testRoundNumbers(&func); }          \
-  TEST_F(LlvmLibcRIntTest, Fractions) { testFractions(&func); }                \
-  TEST_F(LlvmLibcRIntTest, SubnormalRange) { testSubnormalRange(&func); }      \
-  TEST_F(LlvmLibcRIntTest, NormalRange) { testNormalRange(&func); }
+#define LIST_RINT_TESTS(Name, F, func)                                         \
+  using LlvmLibc##Name##Test = RIntTestTemplate<F>;                            \
+  TEST_F(LlvmLibc##Name##Test, specialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundNumbers) { testRoundNumbers(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) { testSubnormalRange(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H

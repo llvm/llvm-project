@@ -3352,6 +3352,28 @@ TEST(APIntTest, RoundingSDiv) {
   }
 }
 
+TEST(APIntTest, AverageSub) {
+  // Compare against the definition using a wider type, exhaustively for i8.
+  for (unsigned I = 0; I != 256; ++I) {
+    for (unsigned J = 0; J != 256; ++J) {
+      APInt A(8, I), B(8, J);
+      APInt ExpectedS = (A.sext(9) - B.sext(9)).ashr(1).trunc(8);
+      APInt ExpectedU = (A.zext(9) - B.zext(9)).ashr(1).trunc(8);
+      EXPECT_EQ(ExpectedS, APIntOps::avgSubFloorS(A, B));
+      EXPECT_EQ(ExpectedU, APIntOps::avgSubFloorU(A, B));
+    }
+  }
+
+  // The difference of the extremes doesn't overflow.
+  APInt UMax = APInt::getMaxValue(32);
+  APInt SMin = APInt::getSignedMinValue(32);
+  APInt SMax = APInt::getSignedMaxValue(32);
+  EXPECT_EQ(APInt(32, 0x80000000), APIntOps::avgSubFloorU(APInt(32, 0), UMax));
+  EXPECT_EQ(APInt(32, 0x7fffffff), APIntOps::avgSubFloorU(UMax, APInt(32, 0)));
+  EXPECT_EQ(APInt(32, 0x80000000), APIntOps::avgSubFloorS(SMin, SMax));
+  EXPECT_EQ(APInt(32, 0x7fffffff), APIntOps::avgSubFloorS(SMax, SMin));
+}
+
 TEST(APIntTest, Average) {
   APInt A0(32, 0);
   APInt A2(32, 2);
@@ -3486,6 +3508,33 @@ TEST(APIntTest, smul_ov) {
         EXPECT_EQ(Wide.trunc(Bits), Narrow);
         EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
       }
+
+  for (unsigned Bits : {8, 32, 63, 64, 65}) {
+    APInt Min = APInt::getSignedMinValue(Bits);
+    APInt Max = APInt::getSignedMaxValue(Bits);
+    const APInt Values[] = {APInt(Bits, 0),
+                            APInt(Bits, 1),
+                            APInt(Bits, -1, true),
+                            APInt(Bits, 2),
+                            APInt(Bits, -2, true),
+                            Min,
+                            Min + 1,
+                            Max - 1,
+                            Max};
+    for (const APInt &A : Values)
+      for (const APInt &B : Values) {
+        bool Overflow;
+        APInt Narrow = A.smul_ov(B, Overflow);
+        APInt Wide = A.sext(2 * Bits) * B.sext(2 * Bits);
+        EXPECT_EQ(Wide.trunc(Bits), Narrow);
+        EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
+      }
+  }
+
+  APInt Zero = APInt::getZeroWidth();
+  bool Overflow = true;
+  EXPECT_EQ(Zero, Zero.smul_ov(Zero, Overflow));
+  EXPECT_FALSE(Overflow);
 }
 
 TEST(APIntTest, sfloordiv_ov) {

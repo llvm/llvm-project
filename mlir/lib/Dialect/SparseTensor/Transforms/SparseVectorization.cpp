@@ -44,14 +44,18 @@ struct VL {
   bool enableSIMDIndex32;
 };
 
-/// Helper test for invariant value (defined outside given block).
-static bool isInvariantValue(Value val, Block *block) {
-  return val.getDefiningOp() && val.getDefiningOp()->getBlock() != block;
-}
-
 /// Helper test for invariant argument (defined outside given block).
 static bool isInvariantArg(BlockArgument arg, Block *block) {
   return arg.getOwner() != block;
+}
+
+/// Helper test for invariant value (defined outside given block).
+/// Handles both block arguments and operation results.
+static bool isInvariantValue(Value val, Block *block) {
+  if (auto arg = dyn_cast<BlockArgument>(val))
+    return isInvariantArg(arg, block);
+
+  return val.getDefiningOp()->getBlock() != block;
 }
 
 /// Returns true when `mem`'s most minor dimension has a statically known
@@ -385,9 +389,11 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
 }
 
 #define UNAOP(xxx)                                                             \
-  if (isa<xxx>(def)) {                                                         \
-    if (codegen)                                                               \
-      vexp = xxx::create(rewriter, loc, vx);                                   \
+  if (auto x = dyn_cast<xxx>(def)) {                                           \
+    if (codegen) {                                                             \
+      vexp = xxx::create(rewriter, loc, ValueRange{vx}, x.getProperties(),     \
+                         x->getDiscardableAttrDictionary().getValue());        \
+    }                                                                          \
     return true;                                                               \
   }
 
@@ -395,15 +401,19 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
   if (auto x = dyn_cast<xxx>(def)) {                                           \
     if (codegen) {                                                             \
       VectorType vtp = vectorType(vl, x.getType());                            \
-      vexp = xxx::create(rewriter, loc, vtp, vx);                              \
+      vexp = xxx::create(rewriter, loc, TypeRange{vtp}, ValueRange{vx},        \
+                         x.getProperties(),                                    \
+                         x->getDiscardableAttrDictionary().getValue());        \
     }                                                                          \
     return true;                                                               \
   }
 
 #define BINOP(xxx)                                                             \
-  if (isa<xxx>(def)) {                                                         \
-    if (codegen)                                                               \
-      vexp = xxx::create(rewriter, loc, vx, vy);                               \
+  if (auto x = dyn_cast<xxx>(def)) {                                           \
+    if (codegen) {                                                             \
+      vexp = xxx::create(rewriter, loc, ValueRange{vx, vy}, x.getProperties(), \
+                         x->getDiscardableAttrDictionary().getValue());        \
+    }                                                                          \
     return true;                                                               \
   }
 

@@ -124,6 +124,8 @@ private:
   /// add X, <-1, -1...> --> sub X, <1, 1...>
   bool selectVecAddAsVecSubIfProfitable(SDNode *Node);
 
+  void PreprocessISelDAG() override;
+
   void Select(SDNode *N) override;
 
   virtual bool trySelect(SDNode *Node) = 0;

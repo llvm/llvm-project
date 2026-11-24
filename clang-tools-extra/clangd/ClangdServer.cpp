@@ -219,7 +219,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      ? new FileIndex(Opts.EnableOutgoingCalls)
                      : nullptr),
       ModulesManager(Opts.ModulesManager),
-      ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
@@ -299,6 +298,8 @@ ClangdServer::~ClangdServer() {
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                llvm::StringRef Version,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
+  bool NewModule = ModulesManager && ModulesManager->observeSourcePath(File);
+
   std::string ActualVersion = DraftMgr.addDraft(File, Version, Contents);
   ParseOptions Opts;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
@@ -312,7 +313,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
-  Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
   Inputs.ModulesManager = ModulesManager;
   adjustParseInputs(Inputs, File);
@@ -320,6 +320,9 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
     BackgroundIdx->boostRelated(File);
+  if (NewModule)
+    reparseOpenFilesIfNeeded(
+        [&](PathRef OpenFile) { return !pathEqual(OpenFile, File); });
 }
 
 void ClangdServer::reparseOpenFilesIfNeeded(
@@ -942,8 +945,13 @@ void ClangdServer::outgoingCalls(
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
-  // FIXME: Do nothing for now. This will be used for indexing and potentially
-  // invalidating other caches.
+  if (!ModulesManager)
+    return;
+  bool ModulesChanged = false;
+  for (const auto &Change : Params.changes)
+    ModulesChanged |= ModulesManager->onFileEvent(Change);
+  if (ModulesChanged)
+    reparseOpenFilesIfNeeded([](PathRef) { return true; });
 }
 
 void ClangdServer::workspaceSymbols(
@@ -1147,7 +1155,8 @@ ClangdServer::blockUntilIdleForTest(std::optional<double> TimeoutSeconds) {
 
 #if defined(__has_feature) &&                                                  \
     (__has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
-     __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer))
+     __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer) ||     \
+     __has_feature(undefined_behavior_sanitizer))
   if (TimeoutSeconds.has_value())
     (*TimeoutSeconds) *= 10;
 #endif
@@ -1210,7 +1219,18 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
                                     : Context::current().clone());
     return ModulesManager->hasRequiredModules(File);
   };
-  Inputs.Opts.SkipPreambleBuild = SkipPreambleBuild || HasRequiredModules();
+
+  Inputs.Opts.SkipPreambleBuild = [&]() {
+    switch (SkipPreambleBuild) {
+    case SkipPreambleBuildPolicy::Never:
+      return false;
+    case SkipPreambleBuildPolicy::Modules:
+      return HasRequiredModules();
+    case SkipPreambleBuildPolicy::Always:
+      return true;
+    }
+    llvm_unreachable("fully covered switch");
+  }();
 }
 
 } // namespace clangd

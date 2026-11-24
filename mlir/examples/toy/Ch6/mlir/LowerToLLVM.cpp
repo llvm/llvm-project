@@ -43,7 +43,10 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Pass/Pass.h"
@@ -165,7 +168,7 @@ private:
     // Get the pointer to the first character in the global string.
     Value globalPtr = LLVM::AddressOfOp::create(builder, loc, global);
     Value cst0 = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
-                                          builder.getIndexAttr(0));
+                                          builder.getI64IntegerAttr(0));
     return LLVM::GEPOp::create(
         builder, loc, LLVM::LLVMPointerType::get(builder.getContext()),
         global.getType(), globalPtr, ArrayRef<Value>({cst0, cst0}));

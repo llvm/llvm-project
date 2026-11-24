@@ -397,7 +397,7 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(
     O << "acqrel";
     break;
   case wasm::WASM_MEM_ORDER_SEQ_CST:
-    if (STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics])
+    if (STI.getFeatureBits()[WebAssembly::FeatureAcquireReleaseAtomics])
       O << "seqcst";
     break;
   default:

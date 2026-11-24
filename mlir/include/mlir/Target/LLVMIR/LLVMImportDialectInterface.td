@@ -13,6 +13,7 @@ def LLVMImportDialectInterface : DialectInterface<"LLVMImportDialectInterface"> 
     DialectRegistry.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Target/LLVMIR/LLVMImportInterface.h"];
 
   let methods = [
     InterfaceMethod<[{

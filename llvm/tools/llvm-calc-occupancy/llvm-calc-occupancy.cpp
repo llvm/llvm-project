@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
   const MCSubtargetInfo &STI = ST;
 
   // Parse inputs.
-  unsigned WGMin = 1, WGMax = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+  unsigned WGMin = 1, WGMax = AMDGPU::getMaxFlatWorkGroupSize();
   bool WGSpecified = !WGSizeStr.empty();
   if (WGSpecified && !parseWGRange(WGSizeStr, WGMin, WGMax)) {
     WithColor::error(errs(), ToolName)
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
   unsigned AddrVGPRs =
       AMDGPU::IsaInfo::getAddressableNumVGPRs(STI, DynVGPRBlockSize);
   unsigned AddrSGPRs = ST.getAddressableNumSGPRs();
-  unsigned MaxWGSize = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+  unsigned MaxWGSize = AMDGPU::getMaxFlatWorkGroupSize();
 
   // Warn about inputs that exceed the hardware's physical capacity: such a
   // kernel could not actually launch, so the reported occupancy is only the

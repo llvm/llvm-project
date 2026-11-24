@@ -18,9 +18,9 @@ using float128 = LIBC_NAMESPACE::fputil::Float128;
 
 using LIBC_NAMESPACE::operator""_u128;
 
-LIST_SQRT_TESTS(float128, LIBC_NAMESPACE::sqrtf128);
+LIST_SQRT_TESTS(Sqrtf128, float128, LIBC_NAMESPACE::sqrtf128);
 
-TEST_F(LlvmLibcSqrtTest, HardToRound) {
+TEST_F(LlvmLibcSqrtf128Test, HardToRound) {
   using LIBC_NAMESPACE::fputil::testing::RoundingMode;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float128>;
 

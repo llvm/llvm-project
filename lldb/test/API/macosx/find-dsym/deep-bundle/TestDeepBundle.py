@@ -13,6 +13,8 @@ exe_name = "deep-bundle"  # must match Makefile
 
 
 class DeepBundleTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.source = "main.c"

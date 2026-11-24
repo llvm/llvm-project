@@ -333,7 +333,7 @@ func.func @multi_level_tiled_matmul() {
 // USE-EXPENSIVE-MATH-LABEL: func @peeling_main_loop
 func.func @peeling_main_loop() {
   %c0 = arith.constant 0 : index
-  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %bound = test.value_with_bounds < min = 0, max = 1>
   affine.for %iv = %bound to 9 step 2 iter_args(%arg = %c0) -> index {
     %sum = arith.addi %arg, %bound : index
     affine.yield %sum : index
@@ -342,7 +342,7 @@ func.func @peeling_main_loop() {
 }
 
 // USE-EXPENSIVE-MATH: %[[C0:.*]] = arith.constant 0 : index
-// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds <min = 0, max = 1>
 // USE-EXPENSIVE-MATH: %[[MAIN_RES:.*]] = affine.for %[[IV_MAIN:.*]] = 0 to 4 iter_args(%[[ARG_MAIN:.*]] = %[[C0]]) -> (index)
 // USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV_MAIN]])[%[[BOUND]]]
 // USE-EXPENSIVE-MATH: %[[TAIL_RES:.*]] = affine.for %[[IV_TAIL:.*]] = 4 to #[[$MAP_UB]]()[%[[BOUND]]] iter_args(%[[ARG_TAIL:.*]] = %[[MAIN_RES]]) -> (index)
@@ -354,7 +354,7 @@ func.func @peeling_main_loop() {
 // USE-EXPENSIVE-MATH-LABEL: func @fully_constantized_no_peeling
 func.func @fully_constantized_no_peeling() {
   %c0 = arith.constant 0 : index
-  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %bound = test.value_with_bounds < min = 0, max = 1>
   affine.for %iv = %bound to 6 step 2 iter_args(%arg = %c0) -> index {
     %sum = arith.addi %arg, %bound : index
     affine.yield %sum : index
@@ -363,7 +363,7 @@ func.func @fully_constantized_no_peeling() {
 }
 
 // USE-EXPENSIVE-MATH: %[[C0:.*]] = arith.constant 0 : index
-// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds <min = 0, max = 1>
 // USE-EXPENSIVE-MATH: %{{.*}} = affine.for %[[IV:.*]] = 0 to 3 iter_args(%{{.*}} = %[[C0]]) -> (index)
 // USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV]])[%[[BOUND]]]
 
@@ -373,7 +373,7 @@ func.func @fully_constantized_no_peeling() {
 // USE-EXPENSIVE-MATH-LABEL: func @peel_nested_loops
 func.func @peel_nested_loops() {
   %c0 = arith.constant 0 : index
-  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %bound = test.value_with_bounds < min = 0, max = 1>
   affine.for %i = %bound to 7 step 2 {
     affine.for %j = %bound to 7 step 2 { 
       "test.foo"() : () -> ()
@@ -395,7 +395,7 @@ func.func @peel_nested_loops() {
 // USE-EXPENSIVE-MATH-AND-PROMOTE-LABEL: func @single_iter_promoted
 func.func @single_iter_promoted() {
   %c0 = arith.constant 0 :index
-  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %bound = test.value_with_bounds < min = 0, max = 1>
   affine.for %iv = %bound to 2 step 2 {
     "test.foo"() : () -> ()
   }
@@ -409,7 +409,7 @@ func.func @single_iter_promoted() {
 // USE-EXPENSIVE-MATH-AND-PROMOTE-LABEL: func @single_iter_promoted_with_remainder
 func.func @single_iter_promoted_with_remainder() {
   %c0 = arith.constant 0 : index
-  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %bound = test.value_with_bounds < min = 0, max = 1>
   affine.for %i = %bound to 3 step 2 {
     "test.foo"() : () -> ()
   }

@@ -9,8 +9,10 @@ static_library("HLSL") {
     "HLSLBinding.cpp",
     "HLSLResource.cpp",
     "HLSLRootSignature.cpp",
+    "HLSLUtils.cpp",
     "RootSignatureMetadata.cpp",
     "RootSignatureValidations.cpp",
+    "SemanticSignaturePacking.cpp",
     "SemanticSignatures.cpp",
   ]
 }

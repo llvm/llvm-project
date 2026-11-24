@@ -49,8 +49,8 @@ end subroutine test
 ! FIRST_INLINE:       hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
 ! FIRST_INLINE:     }
 ! FIRST_INLINE:   } else {
-! FIRST_INLINE:     %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
-! FIRST_INLINE:     %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+! FIRST_INLINE:     %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
+! FIRST_INLINE:     %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp")
 ! FIRST_INLINE:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 ! FIRST_INLINE:       hlfir.designate %[[SUM]] (%{{.*}})
 ! FIRST_INLINE:       fir.load
@@ -77,8 +77,8 @@ end subroutine test
 ! BUFFERIZE:       hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
 ! BUFFERIZE:     }
 ! BUFFERIZE:   } else {
-! BUFFERIZE:     %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
-! BUFFERIZE:     %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+! BUFFERIZE:     %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
+! BUFFERIZE:     %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp")
 ! BUFFERIZE:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 ! BUFFERIZE:       hlfir.designate %{{.*}} (%{{.*}})
 ! BUFFERIZE:       fir.load
@@ -103,8 +103,8 @@ end subroutine test
 ! INLINE_HLFIR:       hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
 ! INLINE_HLFIR:     }
 ! INLINE_HLFIR:   } else {
-! INLINE_HLFIR:     %[[ALLOC2:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
-! INLINE_HLFIR:     %[[TEMP2:.*]]:2 = hlfir.declare %[[ALLOC2]](%{{.*}}) {uniq_name = ".tmp"}
+! INLINE_HLFIR:     %[[ALLOC2:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
+! INLINE_HLFIR:     %[[TEMP2:.*]]:2 = hlfir.declare %[[ALLOC2]](%{{.*}}) uniq_name(".tmp")
 ! INLINE_HLFIR:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 ! INLINE_HLFIR:       hlfir.designate %{{.*}} (%{{.*}})
 ! INLINE_HLFIR:       fir.load

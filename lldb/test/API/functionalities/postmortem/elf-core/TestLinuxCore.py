@@ -969,7 +969,7 @@ class LinuxCoreTestCase(TestBase):
     @skipIfLLVMTargetMissing("RISCV")
     def test_riscv32_regs_gpr_csr(self):
         # check basic registers using 32 bit RISC-V core file
-        target = self.dbg.CreateTarget(None)
+        target = self.dbg.CreateTarget("riscv32-imcxqcixqccmp.gpr_csr.out")
         self.assertTrue(target, VALID_TARGET)
         process = target.LoadCore("riscv32-imcxqcixqccmp.gpr_csr.core")
 
@@ -1016,66 +1016,66 @@ class LinuxCoreTestCase(TestBase):
             "mepc": ("0x00000000", "csr_0x341"),
             "mcause": ("0x00000000", "csr_0x342"),
             "mip": ("0x00000000", "csr_0x344"),
-            "csr_0x7c0": ("0x00081000", "csr_0x7c0"),
+            "qc.mmcr": ("0x00081000", "csr_0x7c0"),
             "mnepc": ("0x00000000", "csr_0x741"),
             "mncause": ("0x00000000", "csr_0x742"),
-            "csr_0x7c3": ("0x00000004", "csr_0x7c3"),
-            "csr_0x7d0": ("0x00000000", "csr_0x7d0"),
-            "csr_0x7d4": ("0x00000000", "csr_0x7d4"),
+            "qc.mntvec": ("0x00000004", "csr_0x7c3"),
+            "qc.mwpstartaddr0": ("0x00000000", "csr_0x7d0"),
+            "qc.mwpendaddr0": ("0x00000000", "csr_0x7d4"),
             "mscratch": ("0x00000000", "csr_0x340"),
             "mnscratch": ("0x00000000", "csr_0x740"),
-            "csr_0x7c8": ("0x00000000", "csr_0x7c8"),
+            "qc.mthreadptr": ("0x00000000", "csr_0x7c8"),
             "mcycle": ("0x00000000", "csr_0xb00"),
             "mimpid": ("0x00000100", "csr_0xf13"),
             "mhartid": ("0x00000000", "csr_0xf14"),
-            "csr_0x7f0": ("0x00000000", "csr_0x7f0"),
-            "csr_0x7f1": ("0x00000000", "csr_0x7f1"),
-            "csr_0x7f2": ("0x00000000", "csr_0x7f2"),
-            "csr_0x7f3": ("0x00000000", "csr_0x7f3"),
-            "csr_0x7f4": ("0x00000000", "csr_0x7f4"),
-            "csr_0x7f5": ("0x00000000", "csr_0x7f5"),
-            "csr_0x7f6": ("0x00000000", "csr_0x7f6"),
-            "csr_0x7f7": ("0x00000000", "csr_0x7f7"),
-            "csr_0x7f8": ("0xfffffffe", "csr_0x7f8"),
-            "csr_0x7f9": ("0x00000000", "csr_0x7f9"),
-            "csr_0x7fa": ("0x00000000", "csr_0x7fa"),
-            "csr_0x7fb": ("0x00000000", "csr_0x7fb"),
-            "csr_0x7fc": ("0x00000000", "csr_0x7fc"),
-            "csr_0x7fd": ("0x00000000", "csr_0x7fd"),
-            "csr_0x7fe": ("0x00000000", "csr_0x7fe"),
-            "csr_0x7ff": ("0x00000000", "csr_0x7ff"),
-            "csr_0xbc0": ("0x00000000", "csr_0xbc0"),
-            "csr_0xbc1": ("0x00000000", "csr_0xbc1"),
-            "csr_0xbc2": ("0x00000000", "csr_0xbc2"),
-            "csr_0xbc3": ("0x00000000", "csr_0xbc3"),
-            "csr_0xbc4": ("0x00000000", "csr_0xbc4"),
-            "csr_0xbc5": ("0x00000000", "csr_0xbc5"),
-            "csr_0xbc6": ("0x00000000", "csr_0xbc6"),
-            "csr_0xbc7": ("0x00000000", "csr_0xbc7"),
-            "csr_0xbc8": ("0x00000000", "csr_0xbc8"),
-            "csr_0xbc9": ("0x00000000", "csr_0xbc9"),
-            "csr_0xbca": ("0x00000000", "csr_0xbca"),
-            "csr_0xbcb": ("0x00000000", "csr_0xbcb"),
-            "csr_0xbcc": ("0x00000000", "csr_0xbcc"),
-            "csr_0xbcd": ("0x00000000", "csr_0xbcd"),
-            "csr_0xbce": ("0x00000000", "csr_0xbce"),
-            "csr_0xbcf": ("0x00000000", "csr_0xbcf"),
-            "csr_0xbd0": ("0x00000000", "csr_0xbd0"),
-            "csr_0xbd1": ("0x00000000", "csr_0xbd1"),
-            "csr_0xbd2": ("0x00000000", "csr_0xbd2"),
-            "csr_0xbd3": ("0x00000000", "csr_0xbd3"),
-            "csr_0xbd4": ("0x00000000", "csr_0xbd4"),
-            "csr_0xbd5": ("0x00000000", "csr_0xbd5"),
-            "csr_0xbd6": ("0x00000000", "csr_0xbd6"),
-            "csr_0xbd7": ("0x00000000", "csr_0xbd7"),
-            "csr_0xbd8": ("0x00000000", "csr_0xbd8"),
-            "csr_0xbd9": ("0x00000000", "csr_0xbd9"),
-            "csr_0xbda": ("0x00000000", "csr_0xbda"),
-            "csr_0xbdb": ("0x00000000", "csr_0xbdb"),
-            "csr_0xbdc": ("0x00000000", "csr_0xbdc"),
-            "csr_0xbdd": ("0x00000000", "csr_0xbdd"),
-            "csr_0xbde": ("0x00000000", "csr_0xbde"),
-            "csr_0xbdf": ("0x00000000", "csr_0xbdf"),
+            "qc.mclicip0": ("0x00000000", "csr_0x7f0"),
+            "qc.mclicip1": ("0x00000000", "csr_0x7f1"),
+            "qc.mclicip2": ("0x00000000", "csr_0x7f2"),
+            "qc.mclicip3": ("0x00000000", "csr_0x7f3"),
+            "qc.mclicip4": ("0x00000000", "csr_0x7f4"),
+            "qc.mclicip5": ("0x00000000", "csr_0x7f5"),
+            "qc.mclicip6": ("0x00000000", "csr_0x7f6"),
+            "qc.mclicip7": ("0x00000000", "csr_0x7f7"),
+            "qc.mclicie0": ("0xfffffffe", "csr_0x7f8"),
+            "qc.mclicie1": ("0x00000000", "csr_0x7f9"),
+            "qc.mclicie2": ("0x00000000", "csr_0x7fa"),
+            "qc.mclicie3": ("0x00000000", "csr_0x7fb"),
+            "qc.mclicie4": ("0x00000000", "csr_0x7fc"),
+            "qc.mclicie5": ("0x00000000", "csr_0x7fd"),
+            "qc.mclicie6": ("0x00000000", "csr_0x7fe"),
+            "qc.mclicie7": ("0x00000000", "csr_0x7ff"),
+            "qc.mclicilvl00": ("0x00000000", "csr_0xbc0"),
+            "qc.mclicilvl01": ("0x00000000", "csr_0xbc1"),
+            "qc.mclicilvl02": ("0x00000000", "csr_0xbc2"),
+            "qc.mclicilvl03": ("0x00000000", "csr_0xbc3"),
+            "qc.mclicilvl04": ("0x00000000", "csr_0xbc4"),
+            "qc.mclicilvl05": ("0x00000000", "csr_0xbc5"),
+            "qc.mclicilvl06": ("0x00000000", "csr_0xbc6"),
+            "qc.mclicilvl07": ("0x00000000", "csr_0xbc7"),
+            "qc.mclicilvl08": ("0x00000000", "csr_0xbc8"),
+            "qc.mclicilvl09": ("0x00000000", "csr_0xbc9"),
+            "qc.mclicilvl10": ("0x00000000", "csr_0xbca"),
+            "qc.mclicilvl11": ("0x00000000", "csr_0xbcb"),
+            "qc.mclicilvl12": ("0x00000000", "csr_0xbcc"),
+            "qc.mclicilvl13": ("0x00000000", "csr_0xbcd"),
+            "qc.mclicilvl14": ("0x00000000", "csr_0xbce"),
+            "qc.mclicilvl15": ("0x00000000", "csr_0xbcf"),
+            "qc.mclicilvl16": ("0x00000000", "csr_0xbd0"),
+            "qc.mclicilvl17": ("0x00000000", "csr_0xbd1"),
+            "qc.mclicilvl18": ("0x00000000", "csr_0xbd2"),
+            "qc.mclicilvl19": ("0x00000000", "csr_0xbd3"),
+            "qc.mclicilvl20": ("0x00000000", "csr_0xbd4"),
+            "qc.mclicilvl21": ("0x00000000", "csr_0xbd5"),
+            "qc.mclicilvl22": ("0x00000000", "csr_0xbd6"),
+            "qc.mclicilvl23": ("0x00000000", "csr_0xbd7"),
+            "qc.mclicilvl24": ("0x00000000", "csr_0xbd8"),
+            "qc.mclicilvl25": ("0x00000000", "csr_0xbd9"),
+            "qc.mclicilvl26": ("0x00000000", "csr_0xbda"),
+            "qc.mclicilvl27": ("0x00000000", "csr_0xbdb"),
+            "qc.mclicilvl28": ("0x00000000", "csr_0xbdc"),
+            "qc.mclicilvl29": ("0x00000000", "csr_0xbdd"),
+            "qc.mclicilvl30": ("0x00000000", "csr_0xbde"),
+            "qc.mclicilvl31": ("0x00000000", "csr_0xbdf"),
         }
 
         for regname, values in {**gpr_values, **csr_values}.items():
@@ -1442,6 +1442,56 @@ class LinuxCoreTestCase(TestBase):
 
         self.check_all(process, pid, region_count, thread_name)
 
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_build_id_with_moved_program_headers(self):
+        # /tmp/libmoved.so is mapped at 0x400000 and its e_phoff is 0x1000,
+        # but file offset 0x1000 is mapped at 0x600000, as happens after
+        # patchelf moves the program headers. 0x400000 + e_phoff is the start
+        # of /tmp/libother.so, whose bytes read as a PT_NOTE with a huge
+        # p_memsz. The build ID must come from the real program headers.
+        yaml_path = self.getSourcePath("elf-NT_FILE-moved-program-headers.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-moved-program-headers.core")
+        log_path = self.getBuildArtifact("elf-NT_FILE-moved-program-headers.log")
+        self.yaml2obj(yaml_path, core_path)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        self.addTearDownHook(lambda: self.runCmd("log disable lldb process"))
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+        with open(log_path, "r") as f:
+            self.assertIn(
+                '01020304-0506-0708-090A-0B0C0D0E0F10-11121314 "/tmp/libmoved.so"',
+                f.read(),
+            )
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_build_id_with_file_mapped_twice(self):
+        # /tmp/libdup.so is loaded twice. The first load is at 0x400000 with
+        # file offset 0x1000 at 0x401000, but none of its memory is in the
+        # core. The second load is at 0x500000 with file offset 0x1000, which
+        # holds the program headers, at 0x600000. The build ID of the second
+        # load must come from its own mapping of the program headers, not from
+        # the first load's mapping below its ELF header.
+        yaml_path = self.getSourcePath("elf-NT_FILE-file-mapped-twice.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-file-mapped-twice.core")
+        log_path = self.getBuildArtifact("elf-NT_FILE-file-mapped-twice.log")
+        self.yaml2obj(yaml_path, core_path)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        self.addTearDownHook(lambda: self.runCmd("log disable lldb process"))
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+        with open(log_path, "r") as f:
+            self.assertIn(
+                "@ 0000000000500000: "
+                '01020304-0506-0708-090A-0B0C0D0E0F10-11121314 "/tmp/libdup.so"',
+                f.read(),
+            )
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")

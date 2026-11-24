@@ -98,6 +98,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-EMPTY:
+// CHECK-NEXT: uint32_t GenMyCombiner::getRootFlagsToDrop() const {
+// CHECK-NEXT:   return MachineInstr::getPoisonGeneratingFlags();
+// CHECK-NEXT: }
+// CHECK-EMPTY:
 // CHECK:      bool GenMyCombiner::tryCombineAll(MachineInstr &I) const {
 // CHECK-NEXT:   const PredicateBitset AvailableFeatures = getAvailableFeatures();
 // CHECK-NEXT:   State.MIs.clear();

@@ -67,7 +67,6 @@ static cl::opt<bool>
 SuppressMergedDataOutput("q",
   cl::desc("do not print merged data to stdout"),
   cl::init(false),
-  cl::Optional,
   cl::cat(MergeFdataCategory));
 
 static cl::opt<std::string>
@@ -363,7 +362,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       auto [Signature, ExecCount] = Line.rsplit(' ');
       if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
-      // Only LBR profile has misprediction field
+      // Only branch entries in brstack profiles have a misprediction field.
       if (!NoLBRCollection.value_or(false) && IsBranchEntry) {
         auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
         Signature = SignatureLBR;

@@ -95,9 +95,41 @@ const auto TemplateFilter = [](const NamedDecl *D) {
   return isa<TemplateDecl>(D);
 };
 
+// If `T` is a template parameter with a default argument, return that default
+// argument, otherwise return a null QualType.
+// We can't do anything useful with a template parameter itself (e.g. we cannot
+// look up member names inside it), so where one turns up, using its default
+// argument is a reasonable heuristic: it's what the parameter will be bound to
+// unless the instantiation site says otherwise.
+// Note that `T` must not be canonicalized: a canonical TemplateTypeParmType
+// does not retain its TemplateTypeParmDecl, and so has no default argument to
+// offer.
+QualType getDefaultTemplateArgument(QualType T) {
+  // Use getAs() rather than a dyn_cast, so that we see through sugar such as a
+  // member typedef naming the parameter (e.g. `typedef A allocator_type;`).
+  const auto *TTPT = T.isNull() ? nullptr : T->getAs<TemplateTypeParmType>();
+  if (!TTPT)
+    return QualType();
+  const auto *TTPD = TTPT->getDecl();
+  if (!TTPD || !TTPD->hasDefaultArgument())
+    return QualType();
+  const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+  if (DefaultArg.getKind() != TemplateArgument::Type)
+    return QualType();
+  return DefaultArg.getAsType();
+}
+
 QualType resolveDeclToType(const NamedDecl *D, ASTContext &Ctx) {
   if (const auto *TempD = dyn_cast<TemplateDecl>(D)) {
     D = TempD->getTemplatedDecl();
+  }
+  // Check this before the TypeDecl case below, which a TypedefNameDecl also
+  // satisfies: canonicalizing it would discard the TemplateTypeParmDecl that
+  // the default argument hangs off.
+  if (const auto *TND = dyn_cast<TypedefNameDecl>(D)) {
+    if (QualType Default = getDefaultTemplateArgument(TND->getUnderlyingType());
+        !Default.isNull())
+      return Default;
   }
   if (const auto *TD = dyn_cast<TypeDecl>(D))
     return Ctx.getCanonicalTypeDeclType(TD);
@@ -246,19 +278,9 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
-    if (const auto *TTPT = dyn_cast_if_present<TemplateTypeParmType>(T.Type)) {
-      // We can't do much useful with a template parameter (e.g. we cannot look
-      // up member names inside it). However, if the template parameter has a
-      // default argument, as a heuristic we can replace T with the default
-      // argument type.
-      if (const auto *TTPD = TTPT->getDecl()) {
-        if (TTPD->hasDefaultArgument()) {
-          const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
-          if (DefaultArg.getKind() == TemplateArgument::Type) {
-            return {DefaultArg.getAsType()};
-          }
-        }
-      }
+    if (QualType Default = getDefaultTemplateArgument(T.Type);
+        !Default.isNull()) {
+      return {Default};
     }
 
     // Similarly, heuristically replace a template template parameter with its
@@ -358,8 +380,24 @@ QualType HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
   // resolveExprToType(CE->getCallee()) would bail in the case of multiple
   // overloads, as it can't produce a single type for them. We can be more
   // permissive here, and allow multiple overloads with a common return type.
-  std::vector<const NamedDecl *> CalleeDecls =
-      resolveExprToDecls(CE->getCallee());
+  std::vector<const NamedDecl *> CalleeDecls;
+  for (const NamedDecl *D : resolveExprToDecls(CE->getCallee())) {
+    // The callee may be re-exported from a dependent base class by a using
+    // declaration, e.g. libstdc++'s `vector` has `using _Base::get_allocator;`.
+    // Such a declaration has no function type of its own, so replace it with
+    // what it names. That may be an overload set, but a conflicting return type
+    // within it is handled below just as it is between two distinct callee
+    // declarations, so simply flatten it in. Only one level is looked through;
+    // a using declaration naming another one is not resolved.
+    if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(D)) {
+      auto Underlying = resolveUsingValueDecl(UUVD);
+      CalleeDecls.insert(CalleeDecls.end(), Underlying.begin(),
+                         Underlying.end());
+      continue;
+    }
+    CalleeDecls.push_back(D);
+  }
+
   QualType CommonReturnType;
   for (const NamedDecl *CalleeDecl : CalleeDecls) {
     QualType CalleeType = resolveDeclToType(CalleeDecl, Ctx);

@@ -12,25 +12,41 @@
 // the runtime is built with -frtti or not. This is predominantly used to
 // support error handling.
 //
-// The RTTIRoot class defines methods for comparing type ids. Implementations
-// of these methods can be injected into new classes using the RTTIExtends
-// class template.
+// Types identify themselves by name: each participating class declares a
+// RTTIName string, and RTTIRoot defines methods for comparing them.
+// Implementations of these methods can be injected into new classes using the
+// RTTIExtends class template, which also documents the requirements RTTIName
+// must satisfy.
+//
+// Names rather than addresses are used because a type's identity has to survive
+// crossing a library boundary. An object may be constructed by one library and
+// have its type queried by another, each with its own copy of orc-rt, so any
+// per-type address would differ between them. Comparing names is unaffected.
+// Within a single library the addresses do agree, and RTTIRoot records which
+// library produced each value so that case can be fast-pathed to a pointer
+// comparison.
 //
 // E.g.
 //
 //   @code{.cpp}
 //   class MyBaseClass : public RTTIExtends<MyBaseClass, RTTIRoot> {
 //   public:
+//     static constexpr const char *RTTIName = "mylib::MyBaseClass";
+//
 //     virtual void foo() = 0;
 //   };
 //
 //   class MyDerivedClass1 : public RTTIExtends<MyDerivedClass1, MyBaseClass> {
 //   public:
+//     static constexpr const char *RTTIName = "mylib::MyDerivedClass1";
+//
 //     void foo() override {}
 //   };
 //
 //   class MyDerivedClass2 : public RTTIExtends<MyDerivedClass2, MyBaseClass> {
 //   public:
+//     static constexpr const char *RTTIName = "mylib::MyDerivedClass2";
+//
 //     void foo() override {}
 //   };
 //
@@ -52,9 +68,39 @@
 #ifndef ORC_RT_SUPPORT_RTTI_H
 #define ORC_RT_SUPPORT_RTTI_H
 
+#include "orc-rt-c/support/RTTI.h"
+
+#include <cstring>
+#include <string_view>
 #include <type_traits>
 
 namespace orc_rt {
+
+class RTTIRoot;
+
+inline orc_rt_RTTIRootRef wrap(RTTIRoot *R) noexcept {
+  return reinterpret_cast<orc_rt_RTTIRootRef>(R);
+}
+
+inline RTTIRoot *unwrap(orc_rt_RTTIRootRef R) noexcept {
+  return reinterpret_cast<RTTIRoot *>(R);
+}
+
+/// Use this to implement C RTTI support on the given type.
+///
+/// Type must be named unqualified: it is pasted into both the C symbol name and
+/// an isA<> query, so a namespace-qualified name would produce a nonsense
+/// symbol. Use this macro from the defining scope, or bring the type into scope
+/// with a using-declaration instead.
+#define ORC_RT_C_RTTI_IMPL(Type)                                               \
+  extern "C" ORC_RT_C_EXPORT orc_rt_##Type##Ref orc_rt_##Type##_fromRTTIRoot(  \
+      orc_rt_RTTIRootRef Obj) noexcept {                                       \
+    if (!Obj)                                                                  \
+      return nullptr;                                                          \
+    if (unwrap(Obj)->isA<Type>())                                              \
+      return reinterpret_cast<orc_rt_##Type##Ref>(Obj);                        \
+    return nullptr;                                                            \
+  }
 
 class ErrorInfoBase;
 
@@ -68,28 +114,42 @@ class RTTIRoot {
 public:
   virtual ~RTTIRoot() noexcept = default;
 
-  /// Returns the class ID for this type.
-  static const void *classID() noexcept { return &ID; }
+  /// The name identifying this type. See RTTIExtends for the requirements this
+  /// must satisfy.
+  static constexpr const char *RTTIName = "orc_rt::RTTIRoot";
 
-  /// Returns the class ID for the dynamic type of this RTTIRoot instance.
-  virtual const void *dynamicClassID() const noexcept = 0;
+  /// Return the library ID for this value.
+  ///
+  /// This identifies which dylib produced the value, allowing us to fast-path
+  /// type equality checks within the same library.
+  const void *libraryID() const noexcept { return LibraryID; }
 
-  /// Returns true if this class's ID matches the given class ID.
-  virtual bool isA(const void *const ClassID) const noexcept {
-    return ClassID == classID();
-  }
+  /// Returns the RTTIName of the dynamic type of this RTTIRoot instance.
+  virtual const char *dynamicRTTIName() const noexcept = 0;
 
   /// Check whether this instance is a subclass of QueryT.
   template <typename QueryT> bool isA() const noexcept {
-    return isA(QueryT::classID());
+    return libraryID() == &ThisLibraryID ? sameDylibIsA(QueryT::RTTIName)
+                                         : differentDylibIsA(QueryT::RTTIName);
   }
 
   static bool classof(const RTTIRoot *R) noexcept { return R->isA<RTTIRoot>(); }
 
-private:
-  virtual void anchor() noexcept;
+protected:
+  /// Fast-path isA for values produced by this dylib.
+  virtual bool sameDylibIsA(const char *const ClassName) const noexcept {
+    return ClassName == RTTIName;
+  }
 
-  static char ID;
+  /// Slow-path isA for values produced by different dylibs.
+  virtual bool differentDylibIsA(const char *const ClassName) const noexcept {
+    return strcmp(ClassName, RTTIName) == 0;
+  }
+
+private:
+  static char ThisLibraryID;
+  const char *const LibraryID = &ThisLibraryID;
+  virtual void anchor() noexcept;
 };
 
 /// Inheritance utility for extensible RTTI.
@@ -101,13 +161,30 @@ private:
 /// RTTIExtents uses CRTP so the first template argument to RTTIExtends is the
 /// newly introduced type, and the *second* argument is the parent class.
 ///
+/// Each participating type must declare its own RTTIName:
+///
 /// class MyType : public RTTIExtends<MyType, RTTIRoot> {
+/// public:
+///   static constexpr const char *RTTIName = "mylib::MyType";
 ///   ...
 /// };
 ///
 /// class MyDerivedType : public RTTIExtends<MyDerivedType, MyType> {
+/// public:
+///   static constexpr const char *RTTIName = "mylib::MyDerivedType";
 ///   ...
 /// };
+///
+/// RTTINames must be unique across every library in the process, not just
+/// within one hierarchy. Types from different libraries are compared by name,
+/// so two unrelated types that share a name would satisfy each other's isa<>
+/// checks. Qualifying the name with its namespace, as above, is usually enough
+/// to keep it unique.
+///
+/// Forgetting to declare RTTIName leaves ParentT's visible by inheritance,
+/// which would make the type indistinguishable from its parent; RTTIExtends
+/// static_asserts against that. It cannot detect a collision with an unrelated
+/// type.
 ///
 template <typename ThisT, typename ParentT> class RTTIExtends : public ParentT {
 public:
@@ -115,25 +192,31 @@ public:
                 "RTTIExtends should not be used to define orc_rt custom error "
                 "types, use ErrorExtends instead");
 
-  // Inherit constructors and isA methods from ParentT.
-  using ParentT::isA;
+  // Inherit constructors from ParentT.
   using ParentT::ParentT;
 
-  static char ID;
-
-  static const void *classID() noexcept { return &ThisT::ID; }
-
-  const void *dynamicClassID() const noexcept override { return &ThisT::ID; }
-
-  bool isA(const void *const ClassID) const noexcept override {
-    return ClassID == classID() || ParentT::isA(ClassID);
+  const char *dynamicRTTIName() const noexcept override {
+    static_assert(std::string_view(ThisT::RTTIName) !=
+                      std::string_view(ParentT::RTTIName),
+                  "ThisT must define its own RTTIName, distinct from "
+                  "ParentT::RTTIName (did you forget to shadow it, or copy "
+                  "the parent's string literal instead of writing a new "
+                  "one?)");
+    return ThisT::RTTIName;
   }
 
   static bool classof(const RTTIRoot *R) noexcept { return R->isA<ThisT>(); }
-};
 
-template <typename ThisT, typename ParentT>
-char RTTIExtends<ThisT, ParentT>::ID = 0;
+protected:
+  bool sameDylibIsA(const char *const ClassName) const noexcept override {
+    return ClassName == ThisT::RTTIName || ParentT::sameDylibIsA(ClassName);
+  }
+
+  bool differentDylibIsA(const char *const ClassName) const noexcept override {
+    return strcmp(ClassName, ThisT::RTTIName) == 0 ||
+           ParentT::differentDylibIsA(ClassName);
+  }
+};
 
 /// Returns true if the given value is an instance of the template type
 /// parameter.

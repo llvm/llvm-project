@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -57,6 +58,19 @@ static std::pair<unsigned, unsigned> getMFHiLoOpc(unsigned Src) {
                           (unsigned)Mips::PseudoMFLO64);
 
   return std::make_pair(0, 0);
+}
+
+/// Return the number of instructions that save (or restore) the callee-saved
+/// registers in \p CSI. On MIPS I an AFGR64 register has no sdc1/ldc1 and is
+/// saved and restored with two swc1/lwc1.
+static unsigned getNumCSRInstrs(const MipsSubtarget &STI,
+                                ArrayRef<CalleeSavedInfo> CSI) {
+  unsigned N = CSI.size();
+  if (!STI.hasMips2())
+    N += llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
+      return Mips::AFGR64RegClass.contains(I.getReg());
+    });
+  return N;
 }
 
 namespace {
@@ -277,17 +291,17 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
 }
 
 /// This method expands the same instruction that MipsSEInstrInfo::
-/// expandBuildPairF64 does, for the case when ABI is fpxx and mthc1 is not
-/// available and the case where the ABI is FP64A. It is implemented here
+/// expandBuildPairF64 does, for FPXX/FP64 when mthc1 is not available and
+/// for FP64A. It is implemented here
 /// because frame indexes are eliminated before MipsSEInstrInfo::
 /// expandBuildPairF64 is called.
 bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       bool FP64) const {
-  // For fpxx and when mthc1 is not available, use:
+  // For FPXX/FP64 when mthc1 is not available, use:
   //   spill + reload via ldc1
   //
-  // The case where dmtc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a BuildPairF64 node.
   //
   // The FP64A ABI (fp64 with nooddspreg) must also use a spill/reload sequence
@@ -305,12 +319,6 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
     Register DstReg = I->getOperand(0).getReg();
     Register LoReg = I->getOperand(1).getReg();
     Register HiReg = I->getOperand(2).getReg();
-
-    // It should be impossible to have FGR64 on MIPS-II or MIPS32r1 (which are
-    // the cases where mthc1 is not available). 64-bit architectures and
-    // MIPS32r2 or later can use FGR64 though.
-    assert(Subtarget.isGP64bit() || Subtarget.hasMTHC1() ||
-           !Subtarget.isFP64bit());
 
     const TargetRegisterClass *RC = &Mips::GPR32RegClass;
     const TargetRegisterClass *RC2 =
@@ -331,8 +339,8 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
 }
 
 /// This method expands the same instruction that MipsSEInstrInfo::
-/// expandExtractElementF64 does, for the case when ABI is fpxx and mfhc1 is not
-/// available and the case where the ABI is FP64A. It is implemented here
+/// expandExtractElementF64 does, for FPXX/FP64 when mfhc1 is not available and
+/// for FP64A. It is implemented here
 /// because frame indexes are eliminated before MipsSEInstrInfo::
 /// expandExtractElementF64 is called.
 bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
@@ -347,10 +355,10 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     return true;
   }
 
-  // For fpxx and when mfhc1 is not available, use:
+  // For FPXX/FP64 when mfhc1 is not available, use:
   //   spill + reload via ldc1
   //
-  // The case where dmfc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a ExtractElementF64 node.
   //
   // The FP64A ABI (fp64 with nooddspreg) must also use a spill/reload sequence
@@ -369,12 +377,6 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     Register SrcReg = Op1.getReg();
     unsigned N = Op2.getImm();
     int64_t Offset = 4 * (Subtarget.isLittle() ? N : (1 - N));
-
-    // It should be impossible to have FGR64 on MIPS-II or MIPS32r1 (which are
-    // the cases where mfhc1 is not available). 64-bit architectures and
-    // MIPS32r2 or later can use FGR64 though.
-    assert(Subtarget.isGP64bit() || Subtarget.hasMTHC1() ||
-           !Subtarget.isFP64bit());
 
     const TargetRegisterClass *RC =
         FP64 ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;
@@ -411,7 +413,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned ZERO = ABI.GetNullPtr();
   unsigned MOVE = ABI.GetGPRMoveOp();
   unsigned ADDiu = ABI.GetPtrAddiuOp();
-  unsigned AND = ABI.IsN64() ? Mips::AND64 : Mips::AND;
+  unsigned AND = ABI.GetPtrAndOp();
 
   const TargetRegisterClass *RC = ABI.ArePtrs64bit() ?
         &Mips::GPR64RegClass : &Mips::GPR32RegClass;
@@ -435,7 +437,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Find the instruction past the last instruction that saves a callee-saved
   // register to the stack.
-  std::advance(MBBI, CSI.size());
+  std::advance(MBBI, getNumCSRInstrs(STI, CSI));
   CFIBuilder.setInsertPoint(MBBI);
 
   if (!CSI.empty()) {
@@ -509,13 +511,18 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
       if (hasBP(MF)) {
         // move $s7, $sp
-        unsigned BP = STI.isABI_N64() ? Mips::S7_64 : Mips::S7;
+        unsigned BP = STI.getABI().GetBasePtr();
         BuildMI(MBB, MBBI, dl, TII.get(MOVE), BP)
           .addReg(SP)
           .addReg(ZERO);
       }
     }
   }
+
+  // Mark all the instructions added to the prologue as frame setup, so the
+  // scavenger doesn't place emergency spills above them.
+  for (MachineInstr &MI : make_range(MBB.begin(), MBBI))
+    MI.setFlag(MachineInstr::FrameSetup);
 }
 
 void MipsSEFrameLowering::emitInterruptPrologueStub(
@@ -556,13 +563,12 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
   if (IntKind == "eic") {
     // Coprocessor registers are always live per se.
     MBB.addLiveIn(Mips::COP013);
-    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::K0)
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::R26)
         .addReg(Mips::COP013)
-        .addImm(0)
         .setMIFlag(MachineInstr::FrameSetup);
 
-    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EXT), Mips::K0)
-        .addReg(Mips::K0)
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EXT), Mips::R26)
+        .addReg(Mips::R26)
         .addImm(10)
         .addImm(6)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -570,34 +576,32 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
 
   // Fetch and spill EPC
   MBB.addLiveIn(Mips::COP014);
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::K1)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::R27)
       .addReg(Mips::COP014)
-      .addImm(0)
       .setMIFlag(MachineInstr::FrameSetup);
 
-  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
+  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::R27, false,
                                       MipsFI->getISRRegFI(0), PtrRC, 0);
 
   // Fetch and Spill Status
   MBB.addLiveIn(Mips::COP012);
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::K1)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::R27)
       .addReg(Mips::COP012)
-      .addImm(0)
       .setMIFlag(MachineInstr::FrameSetup);
 
-  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
+  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::R27, false,
                                       MipsFI->getISRRegFI(1), PtrRC, 0);
 
   // Build the configuration for disabling lower priority interrupts. Non EIC
   // interrupts need to be masked off with zero, EIC from the Cause register.
   unsigned InsPosition = 8;
   unsigned InsSize = 0;
-  unsigned SrcReg = Mips::ZERO;
+  unsigned SrcReg = Mips::R0;
 
   // If the interrupt we're tied to is the EIC, switch the source for the
   // masking off interrupts to the cause register.
   if (IntKind == "eic") {
-    SrcReg = Mips::K0;
+    SrcReg = Mips::R26;
     InsPosition = 10;
     InsSize = 6;
   } else
@@ -613,34 +617,33 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
                   .Default(0);
   assert(InsSize != 0 && "Unknown interrupt type!");
 
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::K1)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::R27)
       .addReg(SrcReg)
       .addImm(InsPosition)
       .addImm(InsSize)
-      .addReg(Mips::K1)
+      .addReg(Mips::R27)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Mask off KSU, ERL, EXL
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::K1)
-      .addReg(Mips::ZERO)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::R27)
+      .addReg(Mips::R0)
       .addImm(1)
       .addImm(4)
-      .addReg(Mips::K1)
+      .addReg(Mips::R27)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Disable the FPU as we are not spilling those register sets.
   if (!STI.useSoftFloat())
-    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::K1)
-        .addReg(Mips::ZERO)
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::R27)
+        .addReg(Mips::R0)
         .addImm(29)
         .addImm(1)
-        .addReg(Mips::K1)
+        .addReg(Mips::R27)
         .setMIFlag(MachineInstr::FrameSetup);
 
   // Set the new status
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
-      .addReg(Mips::K1)
-      .addImm(0)
+      .addReg(Mips::R27)
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
@@ -665,8 +668,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     // Find the first instruction that restores a callee-saved register.
     MachineBasicBlock::iterator I = MBBI;
 
-    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
-      --I;
+    std::advance(I, -int(getNumCSRInstrs(STI, MFI.getCalleeSavedInfo())));
 
     // Insert instruction "move $sp, $fp" at this location.
     BuildMI(MBB, I, DL, TII.get(MOVE), SP).addReg(FP).addReg(ZERO);
@@ -678,8 +680,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Find first instruction that restores a callee-saved register.
     MachineBasicBlock::iterator I = MBBI;
-    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
-      --I;
+    std::advance(I, -int(getNumCSRInstrs(STI, MFI.getCalleeSavedInfo())));
 
     // Insert instructions that restore eh data registers.
     for (int J = 0; J < 4; ++J) {
@@ -711,22 +712,20 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   const TargetRegisterClass *PtrRC = &Mips::GPR32RegClass;
 
   // Disable Interrupts.
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::DI), Mips::ZERO);
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::DI), Mips::R0);
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EHB));
 
   // Restore EPC
   STI.getInstrInfo()->loadRegFromStackSlot(
-      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(0), PtrRC, Register());
+      MBB, MBBI, Mips::R27, MipsFI->getISRRegFI(0), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP014)
-      .addReg(Mips::K1)
-      .addImm(0);
+      .addReg(Mips::R27);
 
   // Restore Status
   STI.getInstrInfo()->loadRegFromStackSlot(
-      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(1), PtrRC, Register());
+      MBB, MBBI, Mips::R27, MipsFI->getISRRegFI(1), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
-      .addReg(Mips::K1)
-      .addImm(0);
+      .addReg(Mips::R27);
 }
 
 StackOffset
@@ -774,12 +773,12 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
       unsigned Op = 0;
       if (!STI.getABI().ArePtrs64bit()) {
         Op = (Reg == Mips::HI0) ? Mips::MFHI : Mips::MFLO;
-        Reg = Mips::K0;
+        Reg = Mips::R26;
       } else {
         Op = (Reg == Mips::HI0) ? Mips::MFHI64 : Mips::MFLO64;
-        Reg = Mips::K0_64;
+        Reg = Mips::R26_64;
       }
-      BuildMI(MBB, MI, DL, TII.get(Op), Mips::K0)
+      BuildMI(MBB, MI, DL, TII.get(Op), Mips::R26)
           .setMIFlag(MachineInstr::FrameSetup);
     }
 
@@ -821,7 +820,7 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MipsABIInfo ABI = STI.getABI();
   unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
   unsigned FP = ABI.GetFramePtr();
-  unsigned BP = ABI.IsN64() ? Mips::S7_64 : Mips::S7;
+  unsigned BP = ABI.GetBasePtr();
 
   // Mark $ra and $fp as used if function has dedicated frame pointer.
   if (hasFP(MF)) {

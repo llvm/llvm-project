@@ -69,21 +69,28 @@ void initialize_thunks(const sanitizer_thunk *begin,
 #  define REGISTER_WEAK_FUNCTION_ADDRESS(fn) &fn
 #endif
 
-#define REGISTER_WEAK_FUNCTION(local_function)                          \
-  extern "C" void local_function();                                     \
-  extern "C" void WEAK_EXPORT_NAME(local_function)();                   \
-  WIN_WEAK_IMPORT_DEF(local_function)                                   \
-  REGISTER_WEAK_OPTNONE static int register_weak_##local_function() {   \
-    if ((uintptr_t)REGISTER_WEAK_FUNCTION_ADDRESS(local_function) !=    \
-        (uintptr_t)REGISTER_WEAK_FUNCTION_ADDRESS(                      \
-            WEAK_EXPORT_NAME(local_function))) {                        \
-      return __sanitizer::register_weak(                                \
-          SANITIZER_STRINGIFY(WEAK_EXPORT_NAME(local_function)),        \
-          reinterpret_cast<__sanitizer::uptr>(local_function));         \
-    }                                                                   \
-    return 0;                                                           \
-  }                                                                     \
-  __pragma(section(".WEAK$M", long, read)) __declspec(allocate(         \
-      ".WEAK$M")) int (*__sanitizer_register_weak_##local_function)() = \
-      register_weak_##local_function;
+#if !defined(__GNUC__) || defined(__clang__)
+#  define REGISTER_WEAK_FUNCTION(local_function)                          \
+    extern "C" void local_function();                                     \
+    extern "C" void WEAK_EXPORT_NAME(local_function)();                   \
+    WIN_WEAK_IMPORT_DEF(local_function)                                   \
+    REGISTER_WEAK_OPTNONE static int register_weak_##local_function() {   \
+      if ((uintptr_t)REGISTER_WEAK_FUNCTION_ADDRESS(local_function) !=    \
+          (uintptr_t)REGISTER_WEAK_FUNCTION_ADDRESS(                      \
+              WEAK_EXPORT_NAME(local_function))) {                        \
+        return __sanitizer::register_weak(                                \
+            SANITIZER_STRINGIFY(WEAK_EXPORT_NAME(local_function)),        \
+            reinterpret_cast<__sanitizer::uptr>(local_function));         \
+      }                                                                   \
+      return 0;                                                           \
+    }                                                                     \
+    __pragma(section(".WEAK$M", long, read)) __declspec(allocate(         \
+        ".WEAK$M")) int (*__sanitizer_register_weak_##local_function)() = \
+        register_weak_##local_function;
+#else
+// GNU ld does not support /alternatename. User overrides of weak sanitizer
+// functions are not forwarded to the sanitizer DLL on this toolchain.
+#  define REGISTER_WEAK_FUNCTION(local_function) \
+    extern "C" void local_function();
+#endif
 #endif  // SANITIZER_WIN_THUNK_INTERCEPTION_H

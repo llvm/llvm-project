@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=pipeliner -pipeliner-force-ii=8 %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes=pipeliner -pipeliner-force-ii=8 %s -o - | FileCheck %s
 # Verify the generated prolog / steady-state kernel / epilog structure of a pipelined loop.
 
 # CHECK-LABEL: name: swp_amdgpu_pipeline_gen_structure

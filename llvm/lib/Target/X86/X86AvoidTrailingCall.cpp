@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/IR/PassManager.h"
 
 #define AVOIDCALL_DESC "X86 avoid trailing call pass"
 #define AVOIDCALL_NAME "x86-avoid-trailing-call"

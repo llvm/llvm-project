@@ -1,11 +1,11 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 @buf = internal global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 16
 
-; When longjmpable calls are coverted into invokes in Wasm SjLj transformation
+; When longjmpable calls are converted into invokes in Wasm SjLj transformation
 ; and their unwind destination is an existing catchpad or cleanuppad due to
 ; maintain the scope structure, the new pred BBs created by invokes and the
 ; correct incoming values should be added the existing phis in those unwind
@@ -124,3 +124,6 @@ declare i32 @llvm.wasm.memory.size.i32(i32) #1
 attributes #0 = { nocallback nofree nosync nounwind willreturn }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(read) }
 attributes #2 = { returns_twice }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"wasm"}

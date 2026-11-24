@@ -130,7 +130,7 @@ define void @high_alignment(i32 %x) {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-128, %esp
-; CHECK-NEXT:    subl $128, %esp
+; CHECK-NEXT:    addl $-128, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    movl %esp, %eax
@@ -187,7 +187,7 @@ define void @split_i128(ptr %sret, i128 %x) {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-16, %esp
-; CHECK-NEXT:    subl $48, %esp
+; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    movl 24(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl 28(%ebp), %ebx

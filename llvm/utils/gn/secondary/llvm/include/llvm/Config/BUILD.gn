@@ -28,7 +28,7 @@ import("//llvm/version.gni")
 # to keep the gn build close to the cmake build.
 
 # Other than in the cmake build, header generation doesn't do any feature
-# checking. See also "Philosophy" in llvm/utils/gn/README.rst.
+# checking. See also "Philosophy" in llvm/utils/gn/README.md.
 
 ##############################################################################
 # config.h, llvm-config.h, abi-breaking.h
@@ -88,9 +88,6 @@ write_cmake_config("config") {
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
     "HAVE_BUILTIN_THREAD_POINTER=",
-    "HAVE_CRASHREPORTERCLIENT_H=",
-    "HAVE_DECL_FE_ALL_EXCEPT=1",
-    "HAVE_DECL_FE_INEXACT=1",
     "LLVM_ENABLE_CRASH_DUMPS=",
     "HAVE_FFI_CALL=",
     "HAVE_FFI_FFI_H=",
@@ -102,7 +99,6 @@ write_cmake_config("config") {
     "HAVE_MALLCTL=",
     "HAVE_PTHREAD_GET_NAME_NP=",
     "HAVE_PTHREAD_SET_NAME_NP=",
-    "HAVE_VALGRIND_VALGRIND_H=",
     "HAVE_WINDOWS_ICU=",
     "HAVE__ALLOCA=",
     "HAVE___ALLOCA=",
@@ -128,6 +124,7 @@ write_cmake_config("config") {
     "LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG=1",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
     "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
+    "LLVM_WINDOWS_RESTRICTED_APIS=",
     "PACKAGE_BUGREPORT=https://github.com/llvm/llvm-project/issues/",
     "PACKAGE_NAME=LLVM",
     "PACKAGE_STRING=LLVM ${llvm_version}git",
@@ -218,7 +215,6 @@ write_cmake_config("config") {
       "HAVE_PTHREAD_SETNAME_NP=",
       "HAVE_PREAD=",
       "HAVE_PTHREAD_H=",
-      "HAVE_PTHREAD_MUTEX_LOCK=",
       "HAVE_PTHREAD_RWLOCK_INIT=",
       "HAVE_SBRK=",
       "HAVE_SETENV=",
@@ -246,7 +242,6 @@ write_cmake_config("config") {
       "HAVE_PTHREAD_SETNAME_NP=1",
       "HAVE_PREAD=1",
       "HAVE_PTHREAD_H=1",
-      "HAVE_PTHREAD_MUTEX_LOCK=1",
       "HAVE_PTHREAD_RWLOCK_INIT=1",
       "HAVE_SBRK=1",
       "HAVE_SETENV=1",
@@ -392,6 +387,9 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_ENABLE_ZSTD=" ]
   }
+
+  # FIXME: no liblzma support in the GN build yet; xz decompression is off.
+  values += [ "LLVM_ENABLE_LZMA=" ]
 
   if (llvm_enable_libcurl) {
     values += [ "LLVM_ENABLE_CURL=1" ]

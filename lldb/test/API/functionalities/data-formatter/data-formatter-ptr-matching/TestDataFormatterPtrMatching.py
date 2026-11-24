@@ -16,6 +16,7 @@ class PtrMatchingDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_summary_with_command(self):
         """Test "type summary add" command line option "--pointer-match-depth"."""
         self.build()

@@ -185,7 +185,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
 };
 
 #      if _LIBCPP_STD_VER >= 17
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_mutex") shared_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_mutex") _LIBCPP_WARN_UNUSED shared_mutex {
   __shared_mutex_base __base_;
 
 public:
@@ -214,7 +214,7 @@ public:
 };
 #      endif
 
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_timed_mutex") shared_timed_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_timed_mutex") _LIBCPP_WARN_UNUSED shared_timed_mutex {
   __shared_mutex_base __base_;
 
 public:

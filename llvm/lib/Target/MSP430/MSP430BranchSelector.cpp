@@ -30,10 +30,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "msp430-branch-select"
 
-static cl::opt<bool>
-    BranchSelectEnabled("msp430-branch-select", cl::Hidden, cl::init(true),
-                        cl::desc("Expand out of range branches"));
-
 STATISTIC(NumSplit, "Number of machine basic blocks split");
 STATISTIC(NumExpanded, "Number of branches expanded to long format");
 
@@ -234,7 +230,7 @@ bool MSP430BSelImpl::runOnMachineFunction(MachineFunction &mf) {
   TII = static_cast<const MSP430InstrInfo *>(MF->getSubtarget().getInstrInfo());
 
   // If the pass is disabled, just bail early.
-  if (!BranchSelectEnabled)
+  if (!MF->getSubtarget<MSP430Subtarget>().getCLOpts().branch_select)
     return false;
 
   LLVM_DEBUG(dbgs() << "\n********** " << DEBUG_TYPE << " **********\n");

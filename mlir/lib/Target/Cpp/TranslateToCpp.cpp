@@ -54,13 +54,6 @@ interleaveWithError(ForwardIterator begin, ForwardIterator end,
   return success();
 }
 
-template <typename Container, typename UnaryFunctor, typename NullaryFunctor>
-static inline LogicalResult interleaveWithError(const Container &c,
-                                                UnaryFunctor eachFn,
-                                                NullaryFunctor betweenFn) {
-  return interleaveWithError(c.begin(), c.end(), eachFn, betweenFn);
-}
-
 template <typename Container, typename UnaryFunctor>
 static inline LogicalResult interleaveCommaWithError(const Container &c,
                                                      raw_ostream &os,
@@ -109,6 +102,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::LogicalAndOp op) { return 4; })
       .Case([&](emitc::LogicalNotOp op) { return 15; })
       .Case([&](emitc::LogicalOrOp op) { return 3; })
+      .Case([&](emitc::MemberCallOpaqueOp op) { return 16; })
       .Case([&](emitc::MemberOfPtrOp op) { return 17; })
       .Case([&](emitc::MemberOp op) { return 17; })
       .Case([&](emitc::MulOp op) { return 13; })
@@ -1784,6 +1778,10 @@ LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
     assert(def && "Expected operand to be defined by an operation");
     if (auto expressionOp = dyn_cast<ExpressionOp>(def))
       def = expressionOp.getRootOp();
+    // Within an expression, `emitc.load` emits only its operand, so determine
+    // parentheses from the operand rather than from the load operation.
+    if (auto loadOp = dyn_cast<emitc::LoadOp>(def))
+      return emitOperand(loadOp.getOperand(), isInBrackets);
     FailureOr<int> precedence = getOperatorPrecedence(def);
     if (failed(precedence))
       return failure();
@@ -1836,9 +1834,10 @@ CppEmitter::emitOperandsAndAttributes(Operation &op,
                                       ArrayRef<StringRef> exclude) {
   if (failed(emitOperands(op)))
     return failure();
+  auto attrs = op.getDiscardableAttrs();
   // Insert comma in between operands and non-filtered attributes if needed.
   if (op.getNumOperands() > 0) {
-    for (NamedAttribute attr : op.getAttrs()) {
+    for (NamedAttribute attr : attrs) {
       if (!llvm::is_contained(exclude, attr.getName().strref())) {
         os << ", ";
         break;
@@ -1854,7 +1853,7 @@ CppEmitter::emitOperandsAndAttributes(Operation &op,
       return failure();
     return success();
   };
-  return interleaveCommaWithError(op.getAttrs(), os, emitNamedAttribute);
+  return interleaveCommaWithError(attrs, os, emitNamedAttribute);
 }
 
 LogicalResult CppEmitter::emitVariableAssignment(OpResult result) {

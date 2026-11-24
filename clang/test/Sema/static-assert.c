@@ -31,7 +31,7 @@ _Static_assert(1, invalid); // ext-warning {{'_Static_assert' is a C11 extension
 // expected-error@-2 {{expected string literal for diagnostic message in static_assert}}
 #endif
 // cxx-error@-4 {{use of undeclared identifier 'invalid'}}
-// cxx-warning@-5 {{'static_assert' with a user-generated message is a C++26 extension}}
+// cxx-warning@-5 {{'static_assert' with a user-generated message is a C++2c extension}}
 
 struct A {
   int a;

@@ -181,6 +181,7 @@ __host__ __device__ float func(float a, float b, float c) { return a + b * c; }
 // NV-ON:       fma.rn.f32
 // NV-ON-NEXT:  st.param.b32
 // AMD-ON:       v_fmac_f32_e32
+// AMD-ON-NEXT:  s_waitcnt vmcnt(0) lgkmcnt(0)
 // AMD-ON-NEXT:  s_setpc_b64
 
 // NV-OFF:      mul.rn.f32
@@ -252,21 +253,16 @@ __host__ __device__ float func2(float a, float b, float c) {
 // AMD-OPT-OFF-NEXT: v_add_f32_e32
 // AMD-OPT-OFF-NEXT: s_setpc_b64
 
-// Test multiply/add in the different statements, which is forced
-// to be compiled with fp contract on. fmul/fadd without contract
-// flags are emitted in IR. In nvptx, they are emitted as FMA in
-// fp-contract is fast but not on, as nvptx backend uses the same
-// fp fuse option as front end, whereas fast fp fuse option in
-// backend fuses fadd/fmul disregarding contract flag. In amdgcn
-// they are not fused as amdgcn always use standard fp fusion
-// option which respects contract flag.
+// Test multiply/add in the different statements, which is forced to be compiled
+// with fp contract on. fmul/fadd without contract flags are emitted in IR.
   __host__ __device__ float func3(float a, float b, float c) {
 #pragma clang fp contract(on)
   float t = b * c;
   return t + a;
 }
 // COMMON-LABEL: _Z5func3fff
-// NV-OPT-FAST: fma.rn.f32
+// NV-OPT-FAST: mul.rn.f32
+// NV-OPT-FAST: add.rn.f32
 // NV-OPT-FAST-NEXT: st.param.b32
 // NV-OPT-FASTSTD: mul.rn.f32
 // NV-OPT-FASTSTD: add.rn.f32
@@ -285,7 +281,8 @@ __host__ __device__ float func2(float a, float b, float c) {
 // AMD-OPT-OFF-IR: fmul float
 // AMD-OPT-OFF-IR: fadd float
 
-// AMD-OPT-FAST: v_fmac_f32_e32
+// AMD-OPT-FAST: v_mul_f32_e32
+// AMD-OPT-FAST-NEXT: v_add_f32_e32
 // AMD-OPT-FAST-NEXT: s_setpc_b64
 // AMD-OPT-FASTSTD: v_mul_f32_e32
 // AMD-OPT-FASTSTD-NEXT: v_add_f32_e32

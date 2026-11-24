@@ -1,0 +1,191 @@
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+
+target datalayout = "p:64:64:64:64-p1:128:128:128:64"
+
+; CHECK-LABEL: test_bitextract
+; CHECK: bitextract i8, b32 %src, i32 24
+define i8 @test_bitextract(b32 %src) {
+  %result = bitextract i8, b32 %src, i32 24
+  ret i8 %result
+}
+
+; CHECK-LABEL: test_bitinsert
+; CHECK: bitinsert b32 %base, i8 %val, i32 3
+define b32 @test_bitinsert(b32 %base, i8 %val) {
+  %result = bitinsert b32 %base, i8 %val, i32 3
+  ret b32 %result
+}
+
+; CHECK-LABEL: bitinsert_val_int
+; CHECK: %r = bitinsert b64 %base, i32 %val, i32 0
+define b64 @bitinsert_val_int(b64 %base, i32 %val) {
+  %r = bitinsert b64 %base, i32 %val, i32 0
+  ret b64 %r
+}
+
+; CHECK-LABEL: bitinsert_val_fp
+; CHECK: %r = bitinsert b64 %base, double %val, i32 0
+define b64 @bitinsert_val_fp(b64 %base, double %val) {
+  %r = bitinsert b64 %base, double %val, i32 0
+  ret b64 %r
+}
+
+; CHECK-LABEL: bitinsert_val_byte
+; CHECK: %r = bitinsert b64 %base, b32 %val, i32 0
+define b64 @bitinsert_val_byte(b64 %base, b32 %val) {
+  %r = bitinsert b64 %base, b32 %val, i32 0
+  ret b64 %r
+}
+
+; CHECK-LABEL: bitinsert_val_ptr
+; CHECK: %r = bitinsert b64 %base, ptr %val, i32 0
+define b64 @bitinsert_val_ptr(b64 %base, ptr %val) {
+  %r = bitinsert b64 %base, ptr %val, i32 0
+  ret b64 %r
+}
+
+; CHECK-LABEL: bitinsert_val_ptr_other_as
+; CHECK: %r = bitinsert b64 %base, ptr addrspace(2) %val, i32 0
+define b64 @bitinsert_val_ptr_other_as(b64 %base, ptr addrspace(2) %val) {
+  %r = bitinsert b64 %base, ptr addrspace(2) %val, i32 0
+  ret b64 %r
+}
+
+; CHECK-LABEL: bitinsert_val_non_address_bits
+; CHECK: %r = bitinsert b128 %base, ptr addrspace(1) %val, i32 0
+define b128 @bitinsert_val_non_address_bits(b128 %base,
+                                              ptr addrspace(1) %val) {
+  %r = bitinsert b128 %base, ptr addrspace(1) %val, i32 0
+  ret b128 %r
+}
+
+; CHECK-LABEL: bitextract_ty_int
+; CHECK: %r = bitextract i32, b64 %src, i32 0
+define i32 @bitextract_ty_int(b64 %src) {
+  %r = bitextract i32, b64 %src, i32 0
+  ret i32 %r
+}
+
+; CHECK-LABEL: bitextract_ty_fp
+; CHECK: %r = bitextract double, b64 %src, i32 0
+define double @bitextract_ty_fp(b64 %src) {
+  %r = bitextract double, b64 %src, i32 0
+  ret double %r
+}
+
+; CHECK-LABEL: bitextract_ty_byte
+; CHECK: %r = bitextract b32, b64 %src, i32 0
+define b32 @bitextract_ty_byte(b64 %src) {
+  %r = bitextract b32, b64 %src, i32 0
+  ret b32 %r
+}
+
+; CHECK-LABEL: bitextract_ty_ptr
+; CHECK: %r = bitextract ptr, b64 %src, i32 0
+define ptr @bitextract_ty_ptr(b64 %src) {
+  %r = bitextract ptr, b64 %src, i32 0
+  ret ptr %r
+}
+
+; CHECK-LABEL: bitextract_ty_ptr_other_as
+; CHECK: %r = bitextract ptr addrspace(2), b64 %src, i32 0
+define ptr addrspace(2) @bitextract_ty_ptr_other_as(b64 %src) {
+  %r = bitextract ptr addrspace(2), b64 %src, i32 0
+  ret ptr addrspace(2) %r
+}
+
+; CHECK-LABEL: bitextract_ty_non_address_bits
+; CHECK: %r = bitextract ptr addrspace(1), b128 %src, i32 0
+define ptr addrspace(1) @bitextract_ty_non_address_bits(b128 %src) {
+  %r = bitextract ptr addrspace(1), b128 %src, i32 0
+  ret ptr addrspace(1) %r
+}
+
+; CHECK-LABEL: bitinsert_vec
+; CHECK: %r = bitinsert <4 x b32> %base, <4 x i8> %val, <4 x i32> splat (i32 8)
+define <4 x b32> @bitinsert_vec(<4 x b32> %base, <4 x i8> %val) {
+  %r = bitinsert <4 x b32> %base, <4 x i8> %val, <4 x i32> splat (i32 8)
+  ret <4 x b32> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_var_offset
+; CHECK: %r = bitinsert <2 x b32> %base, <2 x i8> %val, <2 x i32> %off
+define <2 x b32> @bitinsert_vec_var_offset(<2 x b32> %base, <2 x i8> %val,
+                                           <2 x i32> %off) {
+  %r = bitinsert <2 x b32> %base, <2 x i8> %val, <2 x i32> %off
+  ret <2 x b32> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_val_fp
+; CHECK: %r = bitinsert <2 x b64> %base, <2 x float> %val, <2 x i32> <i32 0, i32 32>
+define <2 x b64> @bitinsert_vec_val_fp(<2 x b64> %base, <2 x float> %val) {
+  %r = bitinsert <2 x b64> %base, <2 x float> %val, <2 x i32> <i32 0, i32 32>
+  ret <2 x b64> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_val_byte
+; CHECK: %r = bitinsert <2 x b64> %base, <2 x b32> %val, <2 x i32> zeroinitializer
+define <2 x b64> @bitinsert_vec_val_byte(<2 x b64> %base, <2 x b32> %val) {
+  %r = bitinsert <2 x b64> %base, <2 x b32> %val, <2 x i32> zeroinitializer
+  ret <2 x b64> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_val_ptr
+; CHECK: %r = bitinsert <2 x b128> %base, <2 x ptr addrspace(1)> %val, <2 x i32> zeroinitializer
+define <2 x b128> @bitinsert_vec_val_ptr(<2 x b128> %base,
+                                         <2 x ptr addrspace(1)> %val) {
+  %r = bitinsert <2 x b128> %base, <2 x ptr addrspace(1)> %val, <2 x i32> zeroinitializer
+  ret <2 x b128> %r
+}
+
+; CHECK-LABEL: bitinsert_scalable_vec
+; CHECK: %r = bitinsert <vscale x 4 x b32> %base, <vscale x 4 x i16> %val, <vscale x 4 x i32> %off
+define <vscale x 4 x b32> @bitinsert_scalable_vec(<vscale x 4 x b32> %base,
+                                                  <vscale x 4 x i16> %val,
+                                                  <vscale x 4 x i32> %off) {
+  %r = bitinsert <vscale x 4 x b32> %base, <vscale x 4 x i16> %val, <vscale x 4 x i32> %off
+  ret <vscale x 4 x b32> %r
+}
+
+; CHECK-LABEL: bitextract_vec
+; CHECK: %r = bitextract <4 x i8>, <4 x b32> %src, <4 x i32> splat (i32 8)
+define <4 x i8> @bitextract_vec(<4 x b32> %src) {
+  %r = bitextract <4 x i8>, <4 x b32> %src, <4 x i32> splat (i32 8)
+  ret <4 x i8> %r
+}
+
+; CHECK-LABEL: bitextract_vec_var_offset
+; CHECK: %r = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> %off
+define <2 x i8> @bitextract_vec_var_offset(<2 x b32> %src, <2 x i32> %off) {
+  %r = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> %off
+  ret <2 x i8> %r
+}
+
+; CHECK-LABEL: bitextract_vec_ty_fp
+; CHECK: %r = bitextract <2 x float>, <2 x b64> %src, <2 x i32> <i32 0, i32 32>
+define <2 x float> @bitextract_vec_ty_fp(<2 x b64> %src) {
+  %r = bitextract <2 x float>, <2 x b64> %src, <2 x i32> <i32 0, i32 32>
+  ret <2 x float> %r
+}
+
+; CHECK-LABEL: bitextract_vec_ty_byte
+; CHECK: %r = bitextract <2 x b32>, <2 x b64> %src, <2 x i32> zeroinitializer
+define <2 x b32> @bitextract_vec_ty_byte(<2 x b64> %src) {
+  %r = bitextract <2 x b32>, <2 x b64> %src, <2 x i32> zeroinitializer
+  ret <2 x b32> %r
+}
+
+; CHECK-LABEL: bitextract_vec_ty_ptr
+; CHECK: %r = bitextract <2 x ptr addrspace(1)>, <2 x b128> %src, <2 x i32> zeroinitializer
+define <2 x ptr addrspace(1)> @bitextract_vec_ty_ptr(<2 x b128> %src) {
+  %r = bitextract <2 x ptr addrspace(1)>, <2 x b128> %src, <2 x i32> zeroinitializer
+  ret <2 x ptr addrspace(1)> %r
+}
+
+; CHECK-LABEL: bitextract_scalable_vec
+; CHECK: %r = bitextract <vscale x 4 x i16>, <vscale x 4 x b32> %src, <vscale x 4 x i32> %off
+define <vscale x 4 x i16> @bitextract_scalable_vec(<vscale x 4 x b32> %src,
+                                                   <vscale x 4 x i32> %off) {
+  %r = bitextract <vscale x 4 x i16>, <vscale x 4 x b32> %src, <vscale x 4 x i32> %off
+  ret <vscale x 4 x i16> %r
+}

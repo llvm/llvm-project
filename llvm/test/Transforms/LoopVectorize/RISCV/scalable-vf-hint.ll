@@ -10,7 +10,7 @@
 ; }
 ;
 ; CHECK: <vscale x 2 x i32>
-define void @test(ptr %a, ptr %b) {
+define void @test(ptr %a, ptr %b) vscale_range(2, 8) {
 entry:
   br label %loop
 

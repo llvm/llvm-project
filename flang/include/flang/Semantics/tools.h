@@ -51,6 +51,7 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool IsOpenACCMapped(const Symbol &, const Scope &);
 bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);
@@ -723,8 +724,8 @@ public:
 private:
   SemanticsContext &context_;
   std::set<parser::Label> labels_;
-  parser::CharBlock currentStatementSourcePosition_{nullptr};
-  parser::CharBlock constructSourcePosition_{nullptr};
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock constructSourcePosition_;
   const char *construct_{nullptr};
 
   parser::MessageFormattedText GetEnclosingConstructMsg();
@@ -764,20 +765,6 @@ void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
 
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
-template <typename R, typename T>
-std::optional<R> GetConstExpr(SemanticsContext &semanticsContext, const T &x) {
-  using DefaultCharConstantType = evaluate::Ascii;
-  if (const auto *expr{GetExpr(semanticsContext, x)}) {
-    const auto foldExpr{evaluate::Fold(
-        semanticsContext.foldingContext(), common::Clone(*expr))};
-    if constexpr (std::is_same_v<R, std::string>) {
-      return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-          foldExpr);
-    }
-  }
-  return std::nullopt;
-}
-
 // Returns "m" for a module, "m:sm" for a submodule.
 std::string GetModuleOrSubmoduleName(const Symbol &);
 
@@ -788,6 +775,17 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
 bool AreSameModuleSymbol(const Symbol &, const Symbol &);
+
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op);
+parser::CharBlock MangleSpecialFunctions(parser::CharBlock name);
+std::string MangleDefinedOperator(parser::CharBlock name);
+
+// Map a mangled declare reduction name (e.g., "op.+", "op.combine.",
+// "op.max") back to the Fortran identifier used as the scope key for the
+// corresponding operator or procedure (e.g., "operator(+)", ".combine.",
+// "max"). Non-mangled names (procedure designators) are returned as-is.
+std::string GetReductionFortranId(parser::CharBlock mangledName);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

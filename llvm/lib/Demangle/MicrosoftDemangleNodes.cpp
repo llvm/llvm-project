@@ -225,7 +225,10 @@ void IdentifierNode::outputTemplateParameters(OutputBuffer &OB,
   if (!TemplateParams)
     return;
   OB << "<";
-  TemplateParams->output(OB, Flags);
+  std::string_view Sep = (Flags & OF_CompactTemplateLists) ? "," : ", ";
+  TemplateParams->output(OB, Flags, Sep);
+  if ((Flags & OF_SplitTemplateClosers) != 0 && OB.back() == '>')
+    OB << ' ';
   OB << ">";
 }
 
@@ -384,8 +387,8 @@ void LiteralOperatorIdentifierNode::output(OutputBuffer &OB,
   outputTemplateParameters(OB, Flags);
 }
 
-void FunctionSignatureNode::outputPre(OutputBuffer &OB,
-                                      OutputFlags Flags) const {
+void FunctionSignatureNode::outputPreSignature(OutputBuffer &OB,
+                                               OutputFlags Flags) const {
   if (!(Flags & OF_NoAccessSpecifier)) {
     if (FunctionClass & FC_Public)
       OB << "public: ";
@@ -411,6 +414,11 @@ void FunctionSignatureNode::outputPre(OutputBuffer &OB,
     ReturnType->outputPre(OB, Flags);
     OB << " ";
   }
+}
+
+void FunctionSignatureNode::outputPre(OutputBuffer &OB,
+                                      OutputFlags Flags) const {
+  outputPreSignature(OB, Flags);
 
   if (!(Flags & OF_NoCallingConvention))
     outputCallingConvention(OB, CallConvention);
@@ -483,7 +491,9 @@ void PointerTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {
     // It needs to go inside the parentheses.
     const FunctionSignatureNode *Sig =
         static_cast<const FunctionSignatureNode *>(Pointee);
-    Sig->outputPre(OB, OF_NoCallingConvention);
+    // A function pointer's return type is part of its type, so we ignore
+    // OF_NoReturnType.
+    Sig->outputPreSignature(OB, OutputFlags(Flags & ~OF_NoReturnType));
   } else
     Pointee->outputPre(OB, Flags);
 
@@ -498,8 +508,10 @@ void PointerTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {
     OB << "(";
     const FunctionSignatureNode *Sig =
         static_cast<const FunctionSignatureNode *>(Pointee);
-    outputCallingConvention(OB, Sig->CallConvention);
-    OB << " ";
+    if (!(Flags & OF_NoCallingConvention)) {
+      outputCallingConvention(OB, Sig->CallConvention);
+      OB << " ";
+    }
   }
 
   if (ClassParent) {
@@ -531,7 +543,12 @@ void PointerTypeNode::outputPost(OutputBuffer &OB, OutputFlags Flags) const {
       Pointee->kind() == NodeKind::FunctionSignature)
     OB << ")";
 
-  Pointee->outputPost(OB, Flags);
+  if (Pointee->kind() == NodeKind::FunctionSignature) {
+    // A function pointer's return type is part of its type, so we ignore
+    // OF_NoReturnType.
+    Pointee->outputPost(OB, OutputFlags(Flags & ~OF_NoReturnType));
+  } else
+    Pointee->outputPost(OB, Flags);
 }
 
 void TagTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {

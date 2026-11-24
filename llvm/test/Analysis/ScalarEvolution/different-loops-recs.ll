@@ -141,7 +141,7 @@ define void @test_01(i32 %a, i32 %b) {
 ; CHECK-NEXT:    %sum3 = add i32 %phi4, %phi5
 ; CHECK-NEXT:    --> {116,+,3}<%loop2> U: [116,618) S: [116,618) Exits: (116 + (3 * ((-160 + (-6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6)) + (-2 * %a) + (-2 * %b) + (1000 umax (165 + (2 * %a) + (2 * %b) + (6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6))<nuw>))) /u 6))<nuw><nsw>)<nuw> LoopDispositions: { %loop2: Computable }
 ; CHECK-NEXT:    %sum4 = add i32 %sum3, %phi6
-; CHECK-NEXT:    --> {159,+,6}<%loop2> U: [159,1162) S: [159,1162) Exits: (159 + (6 * ((-160 + (-6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6)) + (-2 * %a) + (-2 * %b) + (1000 umax (165 + (2 * %a) + (2 * %b) + (6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6))<nuw>))) /u 6))<nuw>) LoopDispositions: { %loop2: Computable }
+; CHECK-NEXT:    --> {159,+,6}<%loop2> U: [159,1162) S: [159,1162) Exits: (159 + (6 * ((-160 + (-6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6)) + (-2 * %a) + (-2 * %b) + (1000 umax (165 + (2 * %a) + (2 * %b) + (6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6))<nuw>))) /u 6))<nuw>)<u nuw> LoopDispositions: { %loop2: Computable }
 ; CHECK-NEXT:    %is2 = add i32 %sum4, %b
 ; CHECK-NEXT:    --> {(159 + %b),+,6}<nw><%loop2> U: full-set S: full-set Exits: (159 + (6 * ((-160 + (-6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6)) + (-2 * %a) + (-2 * %b) + (1000 umax (165 + (2 * %a) + (2 * %b) + (6 * ((-1 + (-2 * %a) + (-1 * %b) + (1000 umax (6 + (2 * %a) + %b))) /u 6))<nuw>))) /u 6))<nuw> + %b) LoopDispositions: { %loop2: Computable }
 ; CHECK-NEXT:    %ec2 = add i32 %is1, %is2

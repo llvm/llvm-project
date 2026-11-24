@@ -75,6 +75,11 @@ test.with_custom_attr_prop_dict <attr = first, prop = 9>
 // CHECK: test.with_custom_attr_prop_dict <prop = 10, attr = first, optionalAttr = second>
 test.with_custom_attr_prop_dict <optionalAttr = second, prop = 10, attr = first>
 
+// Comma-separated bit enums are bracketed so their commas cannot be confused
+// with separators between prop-dict entries.
+// CHECK: test.with_custom_bit_enum_attr_prop_dict <flags = [read, write], next = 9>
+test.with_custom_bit_enum_attr_prop_dict <next = 9, flags = [write, read]>
+
 // Properties bound elsewhere in the assembly format are excluded from the
 // key-value list.
 // CHECK: test.with_properties_and_attr 7 <rhs = 8>

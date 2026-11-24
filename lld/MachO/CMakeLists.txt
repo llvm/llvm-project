@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
+llvm_tablegen(Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(MachOOptionsTableGen)
 
 include_directories(${LLVM_MAIN_SRC_DIR}/../libunwind/include)
@@ -29,6 +29,7 @@ add_lld_library(lldMachO
   BPSectionOrderer.cpp
   SectionPriorities.cpp
   Sections.cpp
+  StripSwiftForceLoad.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp

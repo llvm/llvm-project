@@ -31,7 +31,7 @@ def _getTempPaths(test):
 
 def _checkBaseSubstitutions(substitutions):
     substitutions = [s for (s, _) in substitutions]
-    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{flags}", "%{exec}"]:
+    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
 def _executeScriptInternal(test, litConfig, commands):
@@ -235,10 +235,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         %{compile_flags}   - Flags to use when compiling a test case
         %{link_flags}      - Flags to use when linking a test case
         %{flags}           - Flags to use either when compiling or linking a test case
-        %{benchmark_flags} - Flags to use when compiling benchmarks. These flags should provide access to
-                             GoogleBenchmark but shouldn't hardcode any optimization level or other settings,
-                             since the benchmarks should be run under the same configuration as the rest of
-                             the test suite.
         %{exec}            - A command to prefix the execution of executables
 
     Note that when building an executable (as opposed to only compiling a source
@@ -358,6 +354,13 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                     "Test {} requires support for benchmarks, which isn't supported by this configuration".format(
                         test.getFullName()
                     ),
+                )
+            substitutions = [s for (s, _) in test.config.substitutions]
+            if "%{benchmark_flags}" not in substitutions:
+                return lit.Test.Result(
+                    lit.Test.UNRESOLVED,
+                    "Test {} is a benchmark, but the %{{benchmark_flags}} substitution "
+                    "isn't provided by the configuration.".format(test.getFullName()),
                 )
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",

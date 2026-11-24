@@ -193,3 +193,14 @@ func.func @gpu_shared_memory_negative_fixed_bytes() {
       : () -> memref<8xf32, #gpu.address_space<workgroup>>
   return
 }
+
+// -----
+
+func.func @nested_kernel_environment() {
+  acc.kernel_environment {
+    // expected-error@+1 {{must not be nested within another acc.kernel_environment}}
+    acc.kernel_environment {
+    }
+  }
+  return
+}

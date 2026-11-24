@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  Defines Valgrind communication methods, if HAVE_VALGRIND_VALGRIND_H is
-//  defined.  If we have valgrind.h but valgrind isn't running, its macros are
-//  no-ops.
+//  Defines Valgrind communication methods if valgrind.h is available. If we
+//  have valgrind.h but valgrind isn't running, its macros are no-ops.
 //
 //===----------------------------------------------------------------------===//
 
-#include <stddef.h>
 #include "llvm/Support/Valgrind.h"
-#include "llvm/Config/config.h"
+#include <stddef.h>
 
-#if HAVE_VALGRIND_VALGRIND_H
+#if __has_include(<valgrind/valgrind.h>)
 #include <valgrind/valgrind.h>
 
 bool llvm::sys::RunningOnValgrind() {
@@ -27,7 +25,7 @@ void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
   VALGRIND_DISCARD_TRANSLATIONS(Addr, Len);
 }
 
-#else  // !HAVE_VALGRIND_VALGRIND_H
+#else
 
 bool llvm::sys::RunningOnValgrind() {
   return false;
@@ -36,4 +34,4 @@ bool llvm::sys::RunningOnValgrind() {
 void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
 }
 
-#endif  // !HAVE_VALGRIND_VALGRIND_H
+#endif

@@ -47,6 +47,17 @@ int baz() { return y + x; }
 // ARGS: nvlink{{.*}} -arch sm_52 -foo -o a.out [[INPUT:.+]].cubin
 
 //
+// Check that GNU response files are expanded to nvlink.
+//
+// RUN: echo '-arch sm_52 %t-u.o -o a.out' > %t.rsp
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object @%t.rsp 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RSP
+// RUN: echo '"-arch" "sm_52" "%t-u.o" "-o" "a.out"' > %t.quoted.rsp
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object @%t.quoted.rsp 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RSP
+// RSP: nvlink{{.*}} -arch sm_52 -o a.out {{.*}}.cubin
+
+//
 // Check the symbol resolution for static archives. We expect to only link
 // `libx.a` and `liby.a` because extern weak symbols do not extract and `libz.a`
 // is not used at all.
@@ -101,6 +112,12 @@ int baz() { return y + x; }
 // RUN:   --lto-debug-pass-manager --lto-newpm-passes=forceattrs \
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=PASSES
 // PASSES: Running pass: ForceFunctionAttrsPass
+
+// Check that -mllvm options apply to the LTO pipeline and backend.
+
+// RUN: clang-nvlink-wrapper --dry-run %t.o %t-u.o %t-y.a --lto-debug-pass-manager -mllvm -enable-merge-functions -mllvm -print-isel-input -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=MLLVM
+// MLLVM: Running pass: MergeFunctionsPass
+// MLLVM: *** Final LLVM Code input to ISel ***
 
 //
 // Check that '-plugin` is ingored like in `ld.lld`

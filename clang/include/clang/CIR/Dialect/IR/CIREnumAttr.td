@@ -16,42 +16,47 @@
 include "mlir/IR/EnumAttr.td"
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 
-class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
-    : I32EnumAttr<name, summary, cases> {
+// A CIR enum describes a C++ enum and nothing else. It either gets a
+// `CIR_EnumAttr` wrapper below, or it is used as a raw parameter of some other
+// attribute, so it derives from `EnumInfo` rather than the older
+// `EnumAttrInfo`, which doubles as an `IntegerAttr` constraint and would need
+// its `genSpecializedAttr` cleared on every enum.
+class CIR_I32Enum<string name, string summary, list<EnumCase> cases>
+    : I32Enum<name, summary, cases> {
   let cppNamespace = "::cir";
 }
 
-class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
-    : I64EnumAttr<name, summary, cases> {
+class CIR_I64Enum<string name, string summary, list<EnumCase> cases>
+    : I64Enum<name, summary, cases> {
   let cppNamespace = "::cir";
 }
 
-class CIR_I32BitEnumAttr<string name, string summary,
+class CIR_I32BitEnum<string name, string summary,
                          list<BitEnumCaseBase> cases>
-    : I32BitEnumAttr<name, summary, cases> {
+    : I32BitEnum<name, summary, cases> {
   let cppNamespace = "::cir";
 }
 
-class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
+// Upstream `EnumAttr` defaults to a bare `$value`, so a standalone attribute
+// falls back to the generic `#cir<cleanup all>` form. Keeping the `<` `>`
+// delimiters gets the dialect's own `#cir.cleanup<all>` instead. Operations
+// that want the bare keyword wrap the argument in the `enum` directive, as in
+// `enum($cleanupKind)`. Naming the argument directly prints `<all>`.
+class CIR_EnumAttr<EnumInfo info, string name = "", list<Trait> traits = []>
     : EnumAttr<CIR_Dialect, info, name, traits> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-class CIR_DefaultValuedEnumParameter<EnumAttrInfo info, string value = "">
-    : EnumParameter<info> {
-  let defaultValue = value;
-}
-
-def CIR_LangAddressSpace : CIR_I32EnumAttr<
+def CIR_LangAddressSpace : CIR_I32Enum<
   "LangAddressSpace", "language address space kind", [
-  I32EnumAttrCase<"Default", 0, "default">,
-  I32EnumAttrCase<"OffloadPrivate", 1, "offload_private">,
-  I32EnumAttrCase<"OffloadLocal", 2, "offload_local">,
-  I32EnumAttrCase<"OffloadGlobal", 3, "offload_global">,
-  I32EnumAttrCase<"OffloadConstant", 4, "offload_constant">,
-  I32EnumAttrCase<"OffloadGeneric", 5, "offload_generic">,
-  I32EnumAttrCase<"OffloadGlobalDevice", 6, "offload_global_device">,
-  I32EnumAttrCase<"OffloadGlobalHost", 7, "offload_global_host">
+  I32EnumCase<"Default", 0, "default">,
+  I32EnumCase<"OffloadPrivate", 1, "offload_private">,
+  I32EnumCase<"OffloadLocal", 2, "offload_local">,
+  I32EnumCase<"OffloadGlobal", 3, "offload_global">,
+  I32EnumCase<"OffloadConstant", 4, "offload_constant">,
+  I32EnumCase<"OffloadGeneric", 5, "offload_generic">,
+  I32EnumCase<"OffloadGlobalDevice", 6, "offload_global_device">,
+  I32EnumCase<"OffloadGlobalHost", 7, "offload_global_host">
 ]> {
   let description = [{
     Enumerates language-specific address spaces used by CIR. These represent
@@ -59,7 +64,6 @@ def CIR_LangAddressSpace : CIR_I32EnumAttr<
     OpenCL `__local`) before target lowering.
   }];
 
-  let genSpecializedAttr = 0;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRENUMATTR_TD

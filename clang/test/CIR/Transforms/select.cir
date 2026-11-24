@@ -24,6 +24,18 @@ module {
   // CHECK-NEXT:   cir.return %[[ARG1]] : !s32i
   // CHECK-NEXT: }
 
+  cir.func @no_fold_undef(%arg0 : !s32i, %arg1 : !s32i) -> !s32i {
+    %0 = cir.const #cir.undef : !cir.bool
+    %1 = cir.select if %0 then %arg0 else %arg1 : (!cir.bool, !s32i, !s32i) -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @no_fold_undef(%[[ARG0:.+]]: !s32i, %[[ARG1:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   %[[#C:]] = cir.const #cir.undef : !cir.bool
+  // CHECK-NEXT:   %[[#R:]] = cir.select if %[[#C]] then %[[ARG0]] else %[[ARG1]]
+  // CHECK-NEXT:   cir.return %[[#R]] : !s32i
+  // CHECK-NEXT: }
+
   cir.func @fold_to_const(%arg0 : !cir.bool) -> !s32i {
     %0 = cir.const #cir.int<42> : !s32i
     %1 = cir.select if %arg0 then %0 else %0 : (!cir.bool, !s32i, !s32i) -> !s32i

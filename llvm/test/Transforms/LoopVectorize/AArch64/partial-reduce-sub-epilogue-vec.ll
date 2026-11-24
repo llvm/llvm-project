@@ -22,11 +22,9 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-EPI-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-EPI-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC1]], i32 [[INDEX]]
-; CHECK-EPI-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP4]], align 4
 ; CHECK-EPI-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 16 x i8>, ptr [[TMP4]], align 4
-; CHECK-EPI-NEXT:    [[TMP5:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x i32>
 ; CHECK-EPI-NEXT:    [[TMP6:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
-; CHECK-EPI-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP5]], [[TMP6]]
+; CHECK-EPI-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP6]], [[TMP6]]
 ; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
 ; CHECK-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; CHECK-EPI-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -48,11 +46,9 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    [[INDEX2:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-EPI-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ [[TMP11]], %[[VEC_EPILOG_PH]] ], [ [[TMP16:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-EPI-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC1]], i32 [[INDEX2]]
-; CHECK-EPI-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP12]], align 4
-; CHECK-EPI-NEXT:    [[TMP13:%.*]] = sext <4 x i8> [[WIDE_LOAD4]] to <4 x i32>
 ; CHECK-EPI-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP12]], align 4
 ; CHECK-EPI-NEXT:    [[TMP14:%.*]] = sext <4 x i8> [[WIDE_LOAD5]] to <4 x i32>
-; CHECK-EPI-NEXT:    [[TMP15:%.*]] = mul <4 x i32> [[TMP13]], [[TMP14]]
+; CHECK-EPI-NEXT:    [[TMP15:%.*]] = mul <4 x i32> [[TMP14]], [[TMP14]]
 ; CHECK-EPI-NEXT:    [[TMP16]] = sub <4 x i32> [[VEC_PHI3]], [[TMP15]]
 ; CHECK-EPI-NEXT:    [[INDEX_NEXT6]] = add nuw i32 [[INDEX2]], 4
 ; CHECK-EPI-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT6]], 36
@@ -62,11 +58,11 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-EPI:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 36, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-EPI-NEXT:    [[BC_MERGE_RDX7:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
 ; CHECK-EPI-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-EPI:       [[LOOP]]:
 ; CHECK-EPI-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-EPI-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[BC_MERGE_RDX7]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
+; CHECK-EPI-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[BC_MERGE_RDX5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
 ; CHECK-EPI-NEXT:    [[SRC1_GEP:%.*]] = getelementptr i8, ptr [[SRC1]], i32 [[IV]]
 ; CHECK-EPI-NEXT:    [[SRC1_LOAD:%.*]] = load i8, ptr [[SRC1_GEP]], align 4
 ; CHECK-EPI-NEXT:    [[SRC1_LOAD_EXT:%.*]] = sext i8 [[SRC1_LOAD]] to i32
@@ -99,11 +95,9 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC1]], i32 [[INDEX]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP4]], align 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 16 x i8>, ptr [[TMP4]], align 4
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP5:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x i32>
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP6:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP5]], [[TMP6]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP6]], [[TMP6]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -124,11 +118,9 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX2:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i32> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC1]], i32 [[INDEX2]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i8>, ptr [[TMP12]], align 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i8>, ptr [[TMP12]], align 4
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP13:%.*]] = sext <8 x i8> [[WIDE_LOAD4]] to <8 x i32>
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP14:%.*]] = sext <8 x i8> [[WIDE_LOAD5]] to <8 x i32>
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP15:%.*]] = mul <8 x i32> [[TMP13]], [[TMP14]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP15:%.*]] = mul <8 x i32> [[TMP14]], [[TMP14]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[PARTIAL_REDUCE6]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI3]], <8 x i32> [[TMP15]])
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX_NEXT7]] = add nuw i32 [[INDEX2]], 8
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT7]], 32
@@ -139,11 +131,11 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PARTIAL-RED-EPI:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[LOOP]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[BC_MERGE_RDX8]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[BC_MERGE_RDX6]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC1_GEP:%.*]] = getelementptr i8, ptr [[SRC1]], i32 [[IV]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC1_LOAD:%.*]] = load i8, ptr [[SRC1_GEP]], align 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[SRC1_LOAD_EXT:%.*]] = sext i8 [[SRC1_LOAD]] to i32

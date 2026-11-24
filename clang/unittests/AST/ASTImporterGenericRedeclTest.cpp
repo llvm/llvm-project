@@ -130,8 +130,6 @@ struct ClassTemplateSpec {
   }
 };
 
-const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
-    varTemplateDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateSpecializationDecl>
     varTemplateSpecializationDecl;
 

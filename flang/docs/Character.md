@@ -8,11 +8,6 @@
 
 # Implementation of `CHARACTER` types in Flang
 
-```{contents}
----
-local:
----
-```
 
 ## Kinds and Character Sets
 

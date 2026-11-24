@@ -40,7 +40,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -51,11 +50,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-cf-opt"
-
-static cl::opt<bool>
-    NoX86CFOpt("no-x86-call-frame-opt",
-               cl::desc("Avoid optimizing x86 call frames for size"),
-               cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -145,7 +139,7 @@ INITIALIZE_PASS(X86CallFrameOptimizationLegacy, DEBUG_TYPE,
 // Also returns false in cases where it's potentially legal, but
 // we don't even want to try.
 bool X86CallFrameOptimizationImpl::isLegal(MachineFunction &MF) {
-  if (NoX86CFOpt.getValue())
+  if (STI->getCLOpts().no_x86_call_frame_opt)
     return false;
 
   // We can't encode multiple DW_CFA_GNU_args_size or DW_CFA_def_cfa_offset
@@ -476,7 +470,8 @@ void X86CallFrameOptimizationImpl::collectCallInfo(
     return;
 
   Context.Call = &*I;
-  if ((++I)->getOpcode() != TII->getCallFrameDestroyOpcode())
+  I = next_nodbg(I, MBB.end(), /*SkipPseudoOp=*/false);
+  if (I->getOpcode() != TII->getCallFrameDestroyOpcode())
     return;
 
   // Now, go through the vector, and see that we don't have any gaps,
@@ -539,6 +534,7 @@ void X86CallFrameOptimizationImpl::adjustCallSequence(
 
       // If storing a 32-bit vreg on 64-bit targets, extend to a 64-bit vreg
       // in preparation for the PUSH64. The upper 32 bits can be undef.
+      bool RegIsUndef = PushOp.isUndef();
       if (Is64Bit && Store->getOpcode() == X86::MOV32mr) {
         Register UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
         Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
@@ -547,6 +543,7 @@ void X86CallFrameOptimizationImpl::adjustCallSequence(
             .addReg(UndefReg)
             .add(PushOp)
             .addImm(X86::sub_32bit);
+        RegIsUndef = false;
       }
 
       // If PUSHrmm is not slow on this target, try to fold the source of the
@@ -568,7 +565,7 @@ void X86CallFrameOptimizationImpl::adjustCallSequence(
       } else {
         PushOpcode = Is64Bit ? X86::PUSH64r : X86::PUSH32r;
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
-                   .addReg(Reg)
+                   .addReg(Reg, getUndefRegState(RegIsUndef))
                    .getInstr();
         Push->cloneMemRefs(MF, *Store);
       }
@@ -617,22 +614,24 @@ MachineInstr *X86CallFrameOptimizationImpl::canFoldIntoRegPush(
   if (!MRI->hasOneNonDBGUse(Reg))
     return nullptr;
 
-  MachineInstr &DefMI = *MRI->getVRegDef(Reg);
+  MachineInstr *DefMI = MRI->getVRegDef(Reg);
+  if (!DefMI)
+    return nullptr;
 
   // Make sure the def is a MOV from memory.
   // If the def is in another block, give up.
-  if ((DefMI.getOpcode() != X86::MOV32rm &&
-       DefMI.getOpcode() != X86::MOV64rm) ||
-      DefMI.getParent() != FrameSetup->getParent())
+  if ((DefMI->getOpcode() != X86::MOV32rm &&
+       DefMI->getOpcode() != X86::MOV64rm) ||
+      DefMI->getParent() != FrameSetup->getParent())
     return nullptr;
 
   // Make sure we don't have any instructions between DefMI and the
   // push that make folding the load illegal.
-  for (MachineBasicBlock::iterator I = DefMI; I != FrameSetup; ++I)
+  for (MachineBasicBlock::iterator I = *DefMI; I != FrameSetup; ++I)
     if (I->isLoadFoldBarrier())
       return nullptr;
 
-  return &DefMI;
+  return DefMI;
 }
 
 FunctionPass *llvm::createX86CallFrameOptimizationLegacyPass() {

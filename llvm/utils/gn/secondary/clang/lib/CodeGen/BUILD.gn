@@ -12,6 +12,7 @@ static_library("CodeGen") {
     "//clang/lib/AST",
     "//clang/lib/Analysis",
     "//clang/lib/Basic",
+    "//clang/lib/CodeGenUtils",
     "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//llvm/lib/ABI",
@@ -149,6 +150,7 @@ static_library("CodeGen") {
     "Targets/WebAssembly.cpp",
     "Targets/X86.cpp",
     "Targets/XCore.cpp",
+    "Targets/Xtensa.cpp",
     "TrapReasonBuilder.cpp",
     "VarBypassDetector.cpp",
   ]

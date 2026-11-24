@@ -21,7 +21,6 @@
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -52,7 +51,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/IPO.h"
@@ -85,10 +83,6 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
-namespace llvm {
-  void initializeARMExecutionDomainFixPass(PassRegistry&);
-}
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
@@ -99,15 +93,16 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMAsmPrinterPass(Registry);
+  initializeARMAvoidTrailingCallPass(Registry);
   initializeARMLoadStoreOptLegacyPass(Registry);
   initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
-  initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
+  initializeThumb2ITBlockPass(Registry);
   initializeMVETPAndVPTOptimisationsPass(Registry);
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
@@ -153,29 +148,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(Options.MCOptions.ABIName), TT, CPU, FS,
-          Options, getEffectiveRelocModel(TT, RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
-
-  // Default to triple-appropriate EABI
-  if (Options.EABIVersion == EABI::Default ||
-      Options.EABIVersion == EABI::Unknown) {
-    // musl is compatible with glibc with regard to EABI version
-    if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-         TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-        !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
-      this->Options.EABIVersion = EABI::GNU;
-    else
-      this->Options.EABIVersion = EABI::EABI5;
-  }
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
@@ -186,6 +162,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   initAsmInfo();
+
+  LLT::setUseExtended(true);
 
   // ARM supports the MachineOutliner.
   setMachineOutliner(true);
@@ -198,8 +176,8 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
   const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
-  bool FPRegsUnavailable = !ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only();
-  if (FPRegsUnavailable) {
+  if (!ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only() ||
+      ARMSTI->useSoftFloat()) {
     const StringRef FPRegsUnavailableMsg =
         ", but floating-point registers are unavailable";
     const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
@@ -221,8 +199,10 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
           const Function *Callee = CB->getCalledFunction();
           F.getContext().diagnose(DiagnosticInfoUnsupported(
               F,
-              (Callee ? Twine("call to '") + Callee->getName() + "'"
-                      : Twine("indirect call")) +
+              (Callee ? Twine("'") + F.getName() + "' calls '" +
+                            Callee->getName() + "', which"
+                      : Twine("'") + F.getName() +
+                            "' makes an indirect call that") +
                   " expects a hard-float calling convention" +
                   FPRegsUnavailableMsg,
               CB->getDebugLoc()));
@@ -237,39 +217,46 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
   // An explicit "float-abi" module flag always wins, even for AAPCS16.
   if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi")))
     return *FloatABI::parseABIType(Val->getString());
-
-  // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
-  // even on triples whose default float ABI is soft (the triple default only
-  // detects AAPCS16 when it is the triple's own default ABI).
-  if (TargetABI == ARM::ARM_ABI_AAPCS16)
-    return FloatABI::Hard;
-  // Otherwise fall back to the ABI implied by the target triple.
-  return M.getTargetTriple().getDefaultFloatABI();
+  return M.getTargetTriple().getDefaultFloatABI(getTargetABIName(M));
 }
 
 ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
   // Consistency of "target-abi" and -target-abi is validated elsewhere.
   if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     return ARM::computeTargetABI(TargetTriple, MD->getString());
-  return TargetABI;
+  return ARM::computeTargetABI(TargetTriple, Options.MCOptions.getABIName());
 }
 
 const ARMSubtarget *
 ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const ARMSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+  Attrs.MinSize = FnAttrs.getAttribute(Attribute::MinSize);
+  Attrs.DenormalFPEnv = FnAttrs.getAttribute(Attribute::DenormalFPEnv);
+  Attrs.FloatABI = getFloatABI(*M);
+  Attrs.ABI = getEffectiveABI(*M);
+
+  if (const ARMSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function before we can generate a subtarget. We also need to use
   // it as a key for the subtarget since that can be the only difference
   // between two functions.
-  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool SoftFloat = Attrs.SoftFloat.getValueAsBool();
   // If the soft float attribute is set on the function turn on the soft float
   // subtarget feature.
   if (SoftFloat)
@@ -278,31 +265,32 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   // Use the optminsize to identify the subtarget, but don't use it in the
   // feature string.
   std::string Key = CPU + FS;
-  if (F.hasMinSize())
+  if (Attrs.MinSize.isValid())
     Key += "+minsize";
 
   DenormalMode DM = F.getDenormalFPEnv().DefaultMode;
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
-  FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
-  // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
-  // registers, but no floating-point hardware (mve+nofp)
-  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+  // It is legal to have FloatABI::Hard for targets with SIMD registers
+  // but no floating-point hardware (mve+nofp).
+  Key +=
+      Attrs.FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
 
-  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
-  Key += "+abi=" + std::to_string((int)ABI);
+  Key += "+abi=" + std::to_string((int)Attrs.ABI);
 
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       FloatABI, ABI, F.hasMinSize(), DM);
+                                       Attrs.FloatABI, Attrs.ABI,
+                                       Attrs.MinSize.isValid(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
           "instructions, but the target does not support ARM mode execution.");
   }
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -370,6 +358,9 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() == CodeGenOptLevel::Aggressive;
+  }
   void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -377,23 +368,7 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
-class ARMExecutionDomainFix : public ExecutionDomainFix {
-public:
-  static char ID;
-  ARMExecutionDomainFix() : ExecutionDomainFix(ID, ARM::DPRRegClass) {}
-  StringRef getPassName() const override {
-    return "ARM Execution Domain Fix";
-  }
-};
-char ARMExecutionDomainFix::ID;
-
 } // end anonymous namespace
-
-INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-                      "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
-INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-                    "ARM Execution Domain Fix", false, false)
 
 void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "ARMPassRegistry.def"
@@ -409,10 +384,7 @@ std::unique_ptr<CSEConfigBase> ARMPassConfig::getCSEConfig() const {
 }
 
 void ARMPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single)
-    addPass(createLowerAtomicPass());
-  else
-    addPass(createAtomicExpandLegacyPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -520,9 +492,6 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (getOptLevel() == CodeGenOptLevel::Aggressive)
-      addPass(&MachinePipelinerID);
-
     addPass(createMVETPAndVPTOptimisationsPass());
 
     addPass(createMLxExpansionPass());
@@ -540,7 +509,7 @@ void ARMPassConfig::addPreSched2() {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptLegacyPass());
 
-    addPass(new ARMExecutionDomainFix());
+    addPass(createExecutionDomainFixLegacyPass());
     addPass(createBreakFalseDepsLegacyPass());
   }
 
@@ -560,7 +529,7 @@ void ARMPassConfig::addPreSched2() {
              this->TM->getSubtarget<ARMSubtarget>(F).restrictIT();
     }));
 
-    addPass(createIfConverter([](const MachineFunction &MF) {
+    addPass(createIfConverterLegacyPass([](const MachineFunction &MF) {
       return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }
@@ -605,6 +574,10 @@ void ARMPassConfig::addPreEmitPass2() {
   // Inserts BTIs at the start of functions and indirectly-called basic blocks,
   // so passes cannot add to the start of basic blocks once this has run.
   addPass(createARMBranchTargetsPass());
+  // Inserts traps after calls that end a function or funclet, so it has to
+  // come before ARMConstantIslands.
+  if (TM->getTargetTriple().isOSWindows())
+    addPass(createARMAvoidTrailingCallPass());
   // Inserts Constant Islands. Block sizes cannot be increased after this point,
   // as this may push the branch ranges and load offsets of accessing constant
   // pools out of range..
@@ -616,7 +589,7 @@ void ARMPassConfig::addPreEmitPass2() {
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }
@@ -642,4 +615,7 @@ bool ARMBaseTargetMachine::parseMachineFunctionInfo(
   return false;
 }
 
-void ARMBaseTargetMachine::reset() { SubtargetMap.clear(); }
+void ARMBaseTargetMachine::reset() {
+  SubtargetMap.clear();
+  LastSubtarget.clear();
+}

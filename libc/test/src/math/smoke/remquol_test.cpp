@@ -10,4 +10,4 @@
 
 #include "src/math/remquol.h"
 
-LIST_REMQUO_TESTS(long double, LIBC_NAMESPACE::remquol)
+LIST_REMQUO_TESTS(Remquol, long double, LIBC_NAMESPACE::remquol)

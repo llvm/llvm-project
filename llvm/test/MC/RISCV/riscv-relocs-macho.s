@@ -137,12 +137,24 @@ Ltmp3:
 ; CHECK-NEXT:                      00000040:  RISCV_RELOC_UNSIGNED   _a
 ; CHECK-NEXT: 42: 0000             <unknown>
         .word _a - _b + 42
+
+; Same as before, but the offset between _a and _b is shifted by a
+; value that does not fit in a 12-bit immediate. Being data, the whole
+; shift amount is stored in the 4 bytes at 44.
+;
+; CHECK-NEXT: 44: 1388             <unknown>
+; CHECK-NEXT:                      00000044:  RISCV_RELOC_SUBTRACTOR         _b
+; CHECK-NEXT:                      00000044:  RISCV_RELOC_UNSIGNED   _a
+; CHECK-NEXT: 46: 0000             <unknown>
+        .word _a - _b + 5000
         .end_data_region
 ; No more relocation directive past this line.
 ; CHECK-NOT: {{.}}
 
-; OTOOL-LABEL: Relocation information (__TEXT,__text) 20 entries 
+; OTOOL-LABEL: Relocation information (__TEXT,__text) 22 entries
 ; OTOOL-NEXT:  address  pcrel length extern type    scattered symbolnum/value
+; OTOOL-NEXT:  00000044 False long   True   1       False     _b
+; OTOOL-NEXT:  00000044 False long   True   0       False     _a
 ; OTOOL-NEXT:  00000040 False long   True   1       False     _b
 ; OTOOL-NEXT:  00000040 False long   True   0       False     _a
 ; OTOOL-NEXT:  0000003c False long   True   1       False     _b
@@ -181,4 +193,5 @@ Ltmp3:
 ; OTOOL-NEXT:  	.long 42	@ KIND_DATA
 ; OTOOL-NEXT:  	.long 0	@ KIND_DATA
 ; OTOOL-NEXT:  	.long 42	@ KIND_DATA
+; OTOOL-NEXT:  	.long 5000	@ KIND_DATA
 ; OTOOL-NOT: {{.}}

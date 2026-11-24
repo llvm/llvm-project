@@ -7,57 +7,48 @@
 define i64 @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) optsize {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    pushq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %rbx, -48
-; CHECK-NEXT:    .cfi_offset %r12, -40
-; CHECK-NEXT:    .cfi_offset %r13, -32
-; CHECK-NEXT:    .cfi_offset %r14, -24
-; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movq %r9, %r14
-; CHECK-NEXT:    movq %r8, %rbx
-; CHECK-NEXT:    movq %rcx, %r12
-; CHECK-NEXT:    movq %rdx, %r15
-; CHECK-NEXT:    movq %rsi, %r13
+; CHECK-NEXT:    movq %r8, %rax
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.else
-; CHECK-NEXT:    testq %r13, %r13
-; CHECK-NEXT:    movq %r15, %rax
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  .LBB0_4: # %if.end
-; CHECK-NEXT:    addq %r13, %rax
-; CHECK-NEXT:    addq %r12, %r15
-; CHECK-NEXT:    addq %rax, %r15
-; CHECK-NEXT:    addq %r14, %rbx
-; CHECK-NEXT:    addq %r15, %rbx
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    popq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:  .LBB0_5: # %if.end
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    addq %rcx, %rdx
+; CHECK-NEXT:    addq %rdi, %rdx
+; CHECK-NEXT:    addq %r9, %rax
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1: # %if.then
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rcx, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    callq bar1@PLT
 ; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: # %if.then2
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rcx, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    callq bar2@PLT
-; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:  .LBB0_4: # %if.end
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-NEXT:    movq (%rsp), %rcx # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    jmp .LBB0_5
 entry:
   %tobool.not = icmp eq ptr %ptr, null
   br i1 %tobool.not, label %if.then, label %if.else, !prof !5

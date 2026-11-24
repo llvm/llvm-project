@@ -34,7 +34,7 @@ define void @set_func(i32 %x) {
 ; CHECK-LABEL: define void @set_func(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1) to ptr
+; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 4) to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
@@ -52,13 +52,13 @@ define amdgpu_kernel void @timestwo() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.timestwo.lds to ptr
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TIMESTWO_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.timestwo.lds, i32 0, i32 1) to ptr
+; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.timestwo.lds, i32 4) to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TIMESTWO_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.timestwo.lds, i32 0, i32 1) to ptr
+; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.timestwo.lds, i32 4) to ptr
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.timestwo.lds to ptr
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64

@@ -10,13 +10,14 @@ define amdgpu_kernel void @uniform_or_i8(ptr addrspace(1) %result, ptr addrspace
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP4]], i32 [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call i8 @llvm.amdgcn.wave.reduce.or.i8(i8 [[VAL]], i32 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[BB8:.*]], label %[[BB10:.*]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = atomicrmw or ptr addrspace(1) [[UNIFORM_PTR]], i8 [[VAL]] monotonic, align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = atomicrmw or ptr addrspace(1) [[UNIFORM_PTR]], i8 [[TMP8]] monotonic, align 1
 ; CHECK-NEXT:    br label %[[BB10]]
 ; CHECK:       [[BB10]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP9]], %[[BB8]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB8]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i8 [[TMP11]] to i32
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP16]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP17]] to i8
@@ -40,9 +41,7 @@ define amdgpu_kernel void @uniform_add_i8(ptr addrspace(1) %result, ptr addrspac
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP4]], i32 [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i8
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i8 [[VAL]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i8 @llvm.amdgcn.wave.reduce.add.i8(i8 [[VAL]], i32 1)
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
 ; CHECK:       [[BB11]]:
@@ -85,13 +84,14 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP4]], i32 [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call i16 @llvm.amdgcn.wave.reduce.or.i16(i16 [[VAL]], i32 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[BB8:.*]], label %[[BB10:.*]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = atomicrmw or ptr addrspace(1) [[UNIFORM_PTR]], i16 [[VAL]] monotonic, align 2
+; CHECK-NEXT:    [[TMP10:%.*]] = atomicrmw or ptr addrspace(1) [[UNIFORM_PTR]], i16 [[TMP8]] monotonic, align 2
 ; CHECK-NEXT:    br label %[[BB10]]
 ; CHECK:       [[BB10]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP9]], %[[BB8]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB8]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext i16 [[TMP11]] to i32
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP16]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP17]] to i16
@@ -115,9 +115,7 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP4]], i32 [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i16
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i16 [[VAL]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i16 @llvm.amdgcn.wave.reduce.add.i16(i16 [[VAL]], i32 1)
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
 ; CHECK:       [[BB11]]:

@@ -15,9 +15,11 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -format experimental-full -log-path=%t/scan.log -j 1 \
 // RUN:   -module-names=M,N -o %t/deps.json
-// RUN: FileCheck %s < %t/scan.log
+// The background thread flushes PCMs at nondeterministic points, ignore that.
+// RUN: grep -v pcm_flush: %t/scan.log | FileCheck %s
 
-// CHECK: [{{[0-9]+\.[0-9]+}}] [[#PID:]] [[#TID1:]]: init_compiler_instance_with_context:{{.*}}
+// CHECK: [{{[0-9]+\.[0-9]+}}] [[#PID:]] [[#TID1:]]: logging_start
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: init_compiler_instance_with_context:{{.*}}
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: start scan_by_name: M
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: timestamp_read: {{.*}}[[MPCMFILE:.*\.pcm]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: pcm_read_cached: {{.*}}[[MPCMFILE]]
@@ -46,6 +48,7 @@
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: timestamp_read: {{.*}}[[NPCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: pcm_finalized: {{.*}}[[NPCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: finish scan_by_name: N
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: logging_end
 
 //--- cdb.json.template
 [{

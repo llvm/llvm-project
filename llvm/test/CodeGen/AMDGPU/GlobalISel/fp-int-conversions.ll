@@ -689,7 +689,8 @@ define amdgpu_ps float @fpext_hif16_to_32(<2 x half> inreg %val) {
 ;
 ; GFX12-LABEL: fpext_hif16_to_32:
 ; GFX12:  ; %bb.0:
-; GFX12:    s_cvt_hi_f32_f16 s0, s0
+; GFX12:    s_lshr_b32 s0, s0, 16
+; GFX12:    s_cvt_f32_f16 s0, s0
 ; GFX12:    v_mov_b32_e32 v0, s0
 ; GFX12:    ; return to shader part epilog
   %hielt = extractelement <2 x half> %val, i32 1
@@ -702,14 +703,13 @@ define amdgpu_ps float @fptosi_v4f32_to_v4i8_bitcast_f32(<4 x float> %v) {
 ; TRUE16:  ; %bb.0:
 ; TRUE16:    v_cvt_i32_f32_e32 v1, v1
 ; TRUE16:    v_cvt_i32_f32_e32 v2, v2
-; TRUE16:    v_cvt_i32_f32_e32 v3, v3
 ; TRUE16:    v_cvt_i32_f32_e32 v0, v0
+; TRUE16:    v_cvt_i32_f32_e32 v3, v3
 ; TRUE16:    v_and_b32_e32 v1, 0xff, v1
 ; TRUE16:    v_and_b32_e32 v2, 0xff, v2
-; TRUE16:    v_and_b32_e32 v3, 0xff, v3
 ; TRUE16:    v_lshlrev_b32_e32 v1, 8, v1
 ; TRUE16:    v_lshlrev_b32_e32 v2, 16, v2
-; TRUE16:    v_and_or_b32 v0, 0xff, v0, v1
+; TRUE16:    v_and_or_b32 v0, v0, 0xff, v1
 ; TRUE16:    v_lshlrev_b32_e32 v1, 24, v3
 ; TRUE16:    v_or3_b32 v0, v0, v2, v1
 ; TRUE16:    ; return to shader part epilog
@@ -718,14 +718,13 @@ define amdgpu_ps float @fptosi_v4f32_to_v4i8_bitcast_f32(<4 x float> %v) {
 ; GFX12:  ; %bb.0:
 ; GFX12:    v_cvt_i32_f32_e32 v1, v1
 ; GFX12:    v_cvt_i32_f32_e32 v2, v2
-; GFX12:    v_cvt_i32_f32_e32 v3, v3
 ; GFX12:    v_cvt_i32_f32_e32 v0, v0
+; GFX12:    v_cvt_i32_f32_e32 v3, v3
 ; GFX12:    v_and_b32_e32 v1, 0xff, v1
 ; GFX12:    v_and_b32_e32 v2, 0xff, v2
-; GFX12:    v_and_b32_e32 v3, 0xff, v3
 ; GFX12:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX12:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX12:    v_and_or_b32 v0, 0xff, v0, v1
+; GFX12:    v_and_or_b32 v0, v0, 0xff, v1
 ; GFX12:    v_lshlrev_b32_e32 v1, 24, v3
 ; GFX12:    v_or3_b32 v0, v0, v2, v1
 ; GFX12:    ; return to shader part epilog
@@ -737,22 +736,20 @@ define amdgpu_ps float @fptosi_v4f32_to_v4i8_bitcast_f32(<4 x float> %v) {
 define amdgpu_ps half @fptosi_v2f32_to_v2i8_bitcast_f16(<2 x float> %v) {
 ; TRUE16-LABEL: fptosi_v2f32_to_v2i8_bitcast_f16:
 ; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_i32_f32_e32 v0, v0
 ; TRUE16:    v_cvt_i32_f32_e32 v1, v1
-; TRUE16:    v_cvt_i32_f32_e32 v2, v0
-; TRUE16:    v_and_b16 v0.l, 0xff, v1.l
-; TRUE16:    v_and_b16 v0.h, 0xff, v2.l
-; TRUE16:    v_lshlrev_b16 v0.l, 8, v0.l
-; TRUE16:    v_or_b16 v0.l, v0.h, v0.l
+; TRUE16:    v_and_b16 v0.l, v0.l, 0xff
+; TRUE16:    v_lshlrev_b16 v0.h, 8, v1.l
+; TRUE16:    v_or_b16 v0.l, v0.l, v0.h
 ; TRUE16:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: fptosi_v2f32_to_v2i8_bitcast_f16:
 ; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_i32_f32_e32 v0, v0
 ; GFX12:    v_cvt_i32_f32_e32 v1, v1
-; GFX12:    v_cvt_i32_f32_e32 v2, v0
-; GFX12:    v_and_b16 v0.l, 0xff, v1.l
-; GFX12:    v_and_b16 v0.h, 0xff, v2.l
-; GFX12:    v_lshlrev_b16 v0.l, 8, v0.l
-; GFX12:    v_or_b16 v0.l, v0.h, v0.l
+; GFX12:    v_and_b16 v0.l, v0.l, 0xff
+; GFX12:    v_lshlrev_b16 v0.h, 8, v1.l
+; GFX12:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX12:    ; return to shader part epilog
   %cvt = fptosi <2 x float> %v to <2 x i8>
   %res = bitcast <2 x i8> %cvt to half
@@ -762,22 +759,20 @@ define amdgpu_ps half @fptosi_v2f32_to_v2i8_bitcast_f16(<2 x float> %v) {
 define amdgpu_ps bfloat @fptosi_v2f32_to_v2i8_bitcast_bf16(<2 x float> %v) {
 ; TRUE16-LABEL: fptosi_v2f32_to_v2i8_bitcast_bf16:
 ; TRUE16:  ; %bb.0:
+; TRUE16:    v_cvt_i32_f32_e32 v0, v0
 ; TRUE16:    v_cvt_i32_f32_e32 v1, v1
-; TRUE16:    v_cvt_i32_f32_e32 v2, v0
-; TRUE16:    v_and_b16 v0.l, 0xff, v1.l
-; TRUE16:    v_and_b16 v0.h, 0xff, v2.l
-; TRUE16:    v_lshlrev_b16 v0.l, 8, v0.l
-; TRUE16:    v_or_b16 v0.l, v0.h, v0.l
+; TRUE16:    v_and_b16 v0.l, v0.l, 0xff
+; TRUE16:    v_lshlrev_b16 v0.h, 8, v1.l
+; TRUE16:    v_or_b16 v0.l, v0.l, v0.h
 ; TRUE16:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: fptosi_v2f32_to_v2i8_bitcast_bf16:
 ; GFX12:  ; %bb.0:
+; GFX12:    v_cvt_i32_f32_e32 v0, v0
 ; GFX12:    v_cvt_i32_f32_e32 v1, v1
-; GFX12:    v_cvt_i32_f32_e32 v2, v0
-; GFX12:    v_and_b16 v0.l, 0xff, v1.l
-; GFX12:    v_and_b16 v0.h, 0xff, v2.l
-; GFX12:    v_lshlrev_b16 v0.l, 8, v0.l
-; GFX12:    v_or_b16 v0.l, v0.h, v0.l
+; GFX12:    v_and_b16 v0.l, v0.l, 0xff
+; GFX12:    v_lshlrev_b16 v0.h, 8, v1.l
+; GFX12:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX12:    ; return to shader part epilog
   %cvt = fptosi <2 x float> %v to <2 x i8>
   %res = bitcast <2 x i8> %cvt to bfloat

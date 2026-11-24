@@ -1,8 +1,6 @@
 // Tests evaluating expressions with side effects on convenience variable.
 // Applied side effect should be visible to the debugger.
 
-// UNSUPPORTED: system-windows
-
 // RUN: %build %s -o %t
 // RUN: %lldb %t \
 // RUN:   -o "settings set target.process.track-memory-cache-changes false" \

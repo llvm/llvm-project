@@ -63,13 +63,8 @@ def PDL_Dialect : Dialect {
   }];
 
   let name = "pdl";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::pdl";
-
-  let useDefaultTypePrinterParser = 1;
-  let extraClassDeclaration = [{
-    void registerTypes();
-  }];
+  let hasTypes = 1;
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLDIALECT

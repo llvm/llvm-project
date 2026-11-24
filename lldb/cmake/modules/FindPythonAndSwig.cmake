@@ -37,7 +37,7 @@ macro(FindPython3)
 endmacro()
 
 if(Python3_LIBRARIES AND Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND LLDB_ENABLE_SWIG)
-  set(PYTHONANDSWIG_FOUND TRUE)
+  set(PythonAndSwig_FOUND TRUE)
 else()
   if (LLDB_ENABLE_SWIG)
     FindPython3()
@@ -59,7 +59,7 @@ else()
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(PythonAndSwig
                                     FOUND_VAR
-                                      PYTHONANDSWIG_FOUND
+                                      PythonAndSwig_FOUND
                                     REQUIRED_VARS
                                       Python3_LIBRARIES
                                       Python3_INCLUDE_DIRS
@@ -69,7 +69,7 @@ endif()
 
 if (WIN32)
   set(LLDB_REQUIRED_PYTHON "3.11")
-  if(PYTHONANDSWIG_FOUND AND "${Python3_VERSION}" VERSION_LESS "${LLDB_REQUIRED_PYTHON}")
+  if(PythonAndSwig_FOUND AND "${Python3_VERSION}" VERSION_LESS "${LLDB_REQUIRED_PYTHON}")
     message(ERROR "Using Python ${Python3_VERSION}. Python ${LLDB_REQUIRED_PYTHON}+ is required.")
   endif()
 endif()

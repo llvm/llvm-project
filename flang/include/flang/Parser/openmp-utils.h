@@ -18,9 +18,11 @@
 #include "flang/Parser/parse-tree.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <cassert>
 #include <iterator>
+#include <limits>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -35,6 +37,63 @@ template <typename T> constexpr auto addr_if(std::optional<T> &x) {
 template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
   return x ? &*x : nullptr;
 }
+
+namespace descriptor {
+// Generic interfaces for entities that are "containers":
+// * Clause:
+//   ├─ Elements: Modifiers
+//   ╰─ Sets:     ModifierSets
+// * Directive
+//   ├─ Elements: Clauses
+//   ╰─ Sets:     ClauseSets
+// * ClauseSet:
+//   ╰─ Elements: Clauses
+// * ModifierSet:
+//   ╰─ Elements: Modifiers
+llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version);
+llvm::omp::ModifierSets GetSets(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version);
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version);
+llvm::omp::ClauseSets GetSets(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version);
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::ClauseSet &desc, llvm::omp::Version version);
+llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::ModifierSet &desc, llvm::omp::Version version);
+
+// The set of "elements" allowed on a given "container" is the union of all
+// elements listed explicitly, and elements of all sets. E.g. the set of all
+// clauses allowed on a given directive is the set of clauses listed in the
+// descriptor, plus the union of all clause sets.
+template <typename DescriptorTy>
+auto GetAllowedElements(const DescriptorTy &desc, llvm::omp::Version version) {
+  auto allowed{GetElements(desc, version)};
+  for (auto s : GetSets(desc, version)) {
+    allowed |= GetElements(llvm::omp::getDescriptor(s), version);
+  }
+  return allowed;
+}
+
+template <typename ElemTy, typename OwnerTy>
+llvm::directive::VersionRange GetVersionRangeForElement(
+    ElemTy elemId, OwnerTy ownerId) {
+  llvm::omp::Version minVer{llvm::omp::Version::Max()};
+  llvm::omp::Version maxVer{0};
+  const auto &desc{llvm::omp::getDescriptor(ownerId)};
+  for (llvm::omp::Version v : desc.getVersions()) {
+    if (GetAllowedElements(desc, v).test(elemId)) {
+      minVer = std::min(minVer, v);
+      maxVer = std::max(maxVer, v);
+    }
+  }
+  return llvm::directive::VersionRange{minVer, maxVer};
+}
+
+llvm::directive::VersionRange GetVersionRangeForDirective(
+    llvm::omp::Directive dirId);
+} // namespace descriptor
 
 const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
 const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
@@ -142,8 +201,10 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
   return detail::DirectiveNameScope::GetOmpDirectiveName(x);
 }
 
-std::string GetUpperName(llvm::omp::Clause id, unsigned version);
-std::string GetUpperName(llvm::omp::Directive id, unsigned version);
+std::string GetUpperName(
+    llvm::omp::Clause id, llvm::omp::Version version, bool annotate = true);
+std::string GetUpperName(
+    llvm::omp::Directive id, llvm::omp::Version version, bool annotate = true);
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x);
 const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
@@ -218,6 +279,18 @@ struct OmpAllocateInfo {
 };
 
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
+
+namespace detail {
+template <typename ClauseTy, typename VoidTy = void> struct HasModifierImpl {
+  static constexpr bool value{false};
+};
+template <typename ClauseTy>
+struct HasModifierImpl<ClauseTy, std::void_t<typename ClauseTy::Modifier>> {
+  static constexpr bool value{true};
+};
+} // namespace detail
+template <typename ClauseTy>
+static constexpr bool HasModifier = detail::HasModifierImpl<ClauseTy>::value;
 
 template <typename R, typename = void, typename = void> struct is_range {
   static constexpr bool value{false};

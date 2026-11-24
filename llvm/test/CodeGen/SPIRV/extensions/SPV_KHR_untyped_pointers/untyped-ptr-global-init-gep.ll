@@ -1,7 +1,5 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s
-
-; No spirv-val run here. SPIRV-Tools rejects opcode 4424 inside OpSpecConstantOp
-; while parsing, because its table of valid opcodes predates this extension.
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; A constant expression GEP over an untyped global needs
 ; OpUntypedInBoundsPtrAccessChainKHR, which spells out its Base Type. The offset

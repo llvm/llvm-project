@@ -695,6 +695,12 @@ json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
     result.insert({"description", ERB.description});
   if (ERB.details.has_value())
     result.insert({"details", *ERB.details});
+  if (ERB.lldbExtStopReasonExtendedInfo)
+    result.insert(
+        {"$__lldb_stopReasonExtendedInfo", *ERB.lldbExtStopReasonExtendedInfo});
+  if (ERB.lldbExtExtendedCrashInformation)
+    result.insert({"$__lldb_extendedCrashInformation",
+                   *ERB.lldbExtExtendedCrashInformation});
   return result;
 }
 
@@ -776,7 +782,8 @@ llvm::json::Value toJSON(const LocationsResponseBody &Body) {
 bool fromJSON(const llvm::json::Value &Params, CompileUnitsArguments &Args,
               llvm::json::Path Path) {
   json::ObjectMapper O(Params, Path);
-  return O && O.map("moduleId", Args.moduleId);
+  return O && O.map("moduleId", Args.moduleId) &&
+         O.mapOptional("compileUnitIds", Args.compileUnitIds);
 }
 
 llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {

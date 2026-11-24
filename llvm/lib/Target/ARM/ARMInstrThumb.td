@@ -355,7 +355,7 @@ def tBKPT : T1I<(outs), (ins imm0_255:$val), NoItinerary, "bkpt\t$val",
 def : InstAlias<"bkpt", (tBKPT 0), 0>, Requires<[IsThumb]>;
 
 def tHLT : T1I<(outs), (ins imm0_63:$val), NoItinerary, "hlt\t$val",
-                []>, T1Encoding<0b101110>, Requires<[IsThumb, HasV8]> {
+                []>, T1Encoding<0b101110>, Requires<[IsThumb, IsNotMClass]> {
   let Inst{9-6} = 0b1010;
   bits<6> val;
   let Inst{5-0} = val;
@@ -1549,10 +1549,10 @@ def tInt_eh_sjlj_setjmp : ThumbXI<(outs),(ins tGPR:$src, tGPR:$val),
                                   AddrModeNone, 0, NoItinerary, "","",
                           [(set R0, (ARMeh_sjlj_setjmp tGPR:$src, tGPR:$val))]>;
 
-// This gets lowered to an instruction sequence of 10 bytes
+// This gets lowered to an instruction sequence of 10 or 12 bytes
 // FIXME: Non-IOS version(s)
 let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, isCodeGenOnly = 1,
-    Size = 10, Defs = [ R7, LR, SP ] in
+    Defs = [ R7, LR, SP ] in
 def tInt_eh_sjlj_longjmp : XI<(outs), (ins tGPR:$src, tGPR:$scratch),
                               AddrModeNone, 0, IndexModeNone,
                               Pseudo, NoItinerary, "", "",

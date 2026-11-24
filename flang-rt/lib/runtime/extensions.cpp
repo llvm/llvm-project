@@ -10,12 +10,12 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
-#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
@@ -505,8 +505,8 @@ int RTNAME(Irand)(int *i) {
 // RAND(I)
 float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
   unsigned mask = 0;
-  constexpr int radix = std::numeric_limits<float>::radix;
-  constexpr int digits = std::numeric_limits<float>::digits;
+  constexpr int radix = common::numeric_limits<float>::radix;
+  constexpr int digits = common::numeric_limits<float>::digits;
   if constexpr (radix == 2) {
     mask = ~(unsigned)0u << (32 - digits + 1);
   } else {

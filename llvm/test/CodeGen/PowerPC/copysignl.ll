@@ -37,7 +37,7 @@ define double @foo_d_ll(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    addi 1, 1, 16
 ; BE32-NEXT:    blr
 entry:
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %a, ppc_fp128 %b) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %a, ppc_fp128 %b)
   %conv = fptrunc ppc_fp128 %call to double
   ret double %conv
 }
@@ -75,13 +75,12 @@ define double @foo_d_ll_freeze(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    addi 1, 1, 16
 ; BE32-NEXT:    blr
 entry:
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %a, ppc_fp128 %b) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %a, ppc_fp128 %b)
   %freeze = freeze ppc_fp128 %call
   %conv = fptrunc ppc_fp128 %freeze to double
   ret double %conv
 }
 
-declare ppc_fp128 @copysignl(ppc_fp128, ppc_fp128) #0
 
 define double @foo_dl(double %a, ppc_fp128 %b) #0 {
 ; LE-LABEL: foo_dl:
@@ -117,11 +116,10 @@ define double @foo_dl(double %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    blr
 entry:
   %conv = fptrunc ppc_fp128 %b to double
-  %call = tail call double @copysign(double %a, double %conv) #0
+  %call = tail call double @llvm.copysign.f64(double %a, double %conv)
   ret double %call
 }
 
-declare double @copysign(double, double) #0
 
 define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; LE-LABEL: foo_ll:
@@ -208,7 +206,7 @@ define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    blr
 entry:
   %conv = fpext double %a to ppc_fp128
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %b) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %conv, ppc_fp128 %b)
   ret ppc_fp128 %call
 }
 
@@ -292,7 +290,7 @@ define ppc_fp128 @foo_ld(double %a, double %b) #0 {
 entry:
   %conv = fpext double %a to ppc_fp128
   %conv1 = fpext double %b to ppc_fp128
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %conv1) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %conv, ppc_fp128 %conv1)
   ret ppc_fp128 %call
 }
 
@@ -376,7 +374,7 @@ define ppc_fp128 @foo_lf(double %a, float %b) #0 {
 entry:
   %conv = fpext double %a to ppc_fp128
   %conv1 = fpext float %b to ppc_fp128
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %conv1) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %conv, ppc_fp128 %conv1)
   ret ppc_fp128 %call
 }
 

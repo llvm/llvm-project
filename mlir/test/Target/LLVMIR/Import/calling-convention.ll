@@ -4,6 +4,8 @@
 declare fastcc void @cconv_fastcc()
 ; CHECK: llvm.func @cconv_ccc()
 declare ccc void @cconv_ccc()
+; CHECK: llvm.func preserve_nonecc @cconv_preserve_none()
+declare preserve_nonecc void @cconv_preserve_none()
 
 ; CHECK-LABEL: @call_cconv
 define void @call_cconv() {
@@ -11,6 +13,8 @@ define void @call_cconv() {
   call fastcc void @cconv_fastcc()
   ; CHECK: llvm.call @cconv_ccc()
   call ccc void @cconv_ccc()
+  ; CHECK: llvm.call preserve_nonecc @cconv_preserve_none()
+  call preserve_nonecc void @cconv_preserve_none()
   ret void
 }
 

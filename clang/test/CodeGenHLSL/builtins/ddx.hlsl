@@ -60,3 +60,10 @@ float3 test_f32_ddx3(float3 val) {
 float4 test_f32_ddx4(float4 val) {
     return ddx(val);
 }
+
+// CHECK-LABEL: define {{.*}} <5 x float> @_ZN4hlsl8__detail8ddx_impl
+// CHECK: %[[VAR]] = call {{.*}} <5 x float> @llvm.[[CALL]].v5f32(<5 x float> %{{.*}})
+// CHECK: ret <5 x float> %[[VAR]]
+vector<float, 5> test_f32_ddx5(vector<float, 5> val) {
+    return ddx(val);
+}

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdpal -o - %s | FileCheck %s
 
 ; Check for verifier error after tail duplication. An implicit_def of
-; a subregsiter is needed to maintain liveness after assignment.
+; a subregister is needed to maintain liveness after assignment.
 
 define amdgpu_vs void @test(i32 inreg %cmp, i32 %e0) {
 ; CHECK-LABEL: test:

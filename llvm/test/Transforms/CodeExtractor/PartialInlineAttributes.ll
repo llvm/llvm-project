@@ -37,7 +37,7 @@ if.end:
   ret i32 %add
 }
 
-define i32 @callee_writeonly(i32 %v) writeonly ssp {
+define i32 @callee_writeonly(i32 %v) writeonly sanitize_concurrency ssp {
 entry:
   %cmp = icmp sgt i32 %v, 2000
   br i1 %cmp, label %if.then, label %if.end
@@ -76,7 +76,7 @@ attributes #0 = {
   sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar"
   "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
-; CHECK: attributes [[FN_ATTRS0]] = { ssp
+; CHECK: attributes [[FN_ATTRS0]] = { sanitize_concurrency ssp
 ; CHECK: attributes [[FN_ATTRS]] = { inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind nonlazybind optsize safestack sanitize_address sanitize_hwaddress sanitize_memory sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar" "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
 ; attributes to drop

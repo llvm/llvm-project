@@ -23,7 +23,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -93,6 +92,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
 
     // Emit a check and trap if the target hash doesn't match.
     IRBuilder<> Builder(Call);
+    Builder.disableGEPCanonicalization();
     Value *FuncPtr = Call->getCalledOperand();
     // ARM uses the least significant bit of the function pointer to select
     // between ARM and Thumb modes for the callee. Instructions are always

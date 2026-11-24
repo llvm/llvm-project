@@ -11,7 +11,8 @@ from lldbsuite.test.lldbtest import *
 class AssertingInferiorTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
     @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple="^mips")
@@ -22,7 +23,8 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
     @expectedFailureAndroid(api_levels=list(range(16 + 1)))  # b.android.com/179836
     def test_inferior_asserting_register(self):
@@ -32,7 +34,8 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
     @expectedFailureAll(
         oslist=["linux"],
@@ -58,7 +61,8 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
     @expectedFailureAll(
         oslist=["linux"],
@@ -74,7 +78,8 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
     @expectedFailureAll(
         oslist=["linux"],
@@ -87,11 +92,6 @@ class AssertingInferiorTestCase(TestBase):
         """Test that lldb functions correctly after stepping through a call to assert()."""
         self.build()
         self.inferior_asserting_step()
-
-    def set_breakpoint(self, line):
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", line, num_expected_locations=1, loc_exact=True
-        )
 
     def check_stop_reason(self):
         matched = lldbplatformutil.match_android_device(
@@ -280,15 +280,10 @@ class AssertingInferiorTestCase(TestBase):
 
     def inferior_asserting_step(self):
         """Test that lldb functions correctly after stepping through a call to assert()."""
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Launch the process, and do not stop at the entry point.
-        self.set_breakpoint(self.line)
-        target.LaunchSimple(None, None, self.get_process_working_directory())
+        target, _, _, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line
+        )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
 
         self.expect(
             "thread list",

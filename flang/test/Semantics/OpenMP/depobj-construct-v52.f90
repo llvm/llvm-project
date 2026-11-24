@@ -2,7 +2,8 @@
 
 subroutine f00
   integer :: obj
-!WARNING: 'dependence-type' modifier is no longer supported in OpenMP v5.2 on DEPEND clause
+!ERROR: 'task-dependence-type' modifier is required
+!WARNING: 'dependence-type' modifier is no longer allowed on DEPEND clause since OpenMP v5.2 [-Wopenmp-deprecated]
 !ERROR: A DEPEND clause on a DEPOBJ construct must not have SINK or SOURCE as dependence type
   !$omp depobj(obj) depend(source)
 end

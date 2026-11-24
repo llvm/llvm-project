@@ -229,12 +229,18 @@
 # STREAMING-NEXT:  1      2     2.00                  U     rprfm	pldkeep, x0, [x0]
 # STREAMING-NEXT:  1      2     1.00    *             U     ld1q	{za0h.q[w12, 0]}, p0/z, [x0, x0, lsl #4]
 # STREAMING-NEXT:  1      7     1.00    *             U     ld1w	{za0v.s[w12, 0]}, p0/z, [x0]
+# STREAMING-NEXT:  1      2     2.00    *                   ld1w	{ z0.s - z3.s }, pn8/z, [x0, x0, lsl #2]
 # STREAMING-NEXT:  1      2     2.00    *             U     ld1w	{ z0.s, z4.s, z8.s, z12.s }, pn8/z, [x0, x0, lsl #2]
+# STREAMING-NEXT:  1      2     2.00    *             U     ldnt1w	{ z0.s, z4.s, z8.s, z12.s }, pn8/z, [x0]
 # STREAMING-NEXT:  1      2     1.00    *             U     ldr	zt0, [x0]
 # STREAMING-NEXT:  1      7     1.00    *             U     ldr	za[w12, 0], [x0]
 # STREAMING-NEXT:  1      2     1.00    *      *      U     st1q	{za0h.q[w12, 0]}, p0, [x0, x0, lsl #4]
 # STREAMING-NEXT:  1      11    1.00    *      *      U     st1w	{za0h.s[w12, 0]}, p0, [x0]
+# STREAMING-NEXT:  1      2     2.00           *      U     st1w	{ z0.s - z3.s }, pn8, [x0, x0, lsl #2]
+# STREAMING-NEXT:  1      2     2.00           *      U     st1w	{ z0.s, z4.s, z8.s, z12.s }, pn8, [x0]
 # STREAMING-NEXT:  1      2     2.00           *      U     st1w	{ z0.s, z4.s, z8.s, z12.s }, pn8, [x0, x0, lsl #2]
+# STREAMING-NEXT:  1      2     2.00           *      U     stnt1w	{ z0.s - z3.s }, pn8, [x0, x0, lsl #2]
+# STREAMING-NEXT:  1      2     2.00           *      U     stnt1w	{ z0.s, z4.s, z8.s, z12.s }, pn8, [x0]
 # STREAMING-NEXT:  1      2     1.00           *      U     str	zt0, [x0]
 # STREAMING-NEXT:  1      11    1.00           *      U     str	za[w12, 0], [x0]
 # STREAMING-NEXT:  1      1     0.50    *      *      U     cpp	rctx, x2
@@ -281,7 +287,7 @@
 
 # STREAMING:      Resource pressure per iteration:
 # STREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# STREAMING-NEXT:  -      -      -     7.20   7.20   7.20   7.20   7.20    -      -      -     12.00   -     146.00 4.00   45.50  21.50  3.00   0.33   0.33   0.33   12.00  111.00  -     0.50   104.00  -     0.50    -     1.50   4.50    -      -      -      -      -      -      -
+# STREAMING-NEXT:  -      -      -     7.20   7.20   7.20   7.20   7.20    -      -      -     16.00   -     146.00 4.00   45.50  21.50  3.00   0.33   0.33   0.33   20.00  111.00  -     0.50   104.00  -     0.50    -     1.50   4.50    -      -      -      -      -      -      -
 
 # STREAMING:      Resource pressure by instruction:
 # STREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
@@ -504,12 +510,18 @@
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     rprfm	pldkeep, x0, [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1q	{za0h.q[w12, 0]}, p0/z, [x0, x0, lsl #4]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1w	{za0v.s[w12, 0]}, p0/z, [x0]
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ld1w	{ z0.s - z3.s }, pn8/z, [x0, x0, lsl #2]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ld1w	{ z0.s, z4.s, z8.s, z12.s }, pn8/z, [x0, x0, lsl #2]
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnt1w	{ z0.s, z4.s, z8.s, z12.s }, pn8/z, [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldr	zt0, [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldr	za[w12, 0], [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     st1q	{za0h.q[w12, 0]}, p0, [x0, x0, lsl #4]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     st1w	{za0h.s[w12, 0]}, p0, [x0]
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     st1w	{ z0.s - z3.s }, pn8, [x0, x0, lsl #2]
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     st1w	{ z0.s, z4.s, z8.s, z12.s }, pn8, [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     st1w	{ z0.s, z4.s, z8.s, z12.s }, pn8, [x0, x0, lsl #2]
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     stnt1w	{ z0.s - z3.s }, pn8, [x0, x0, lsl #2]
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     stnt1w	{ z0.s, z4.s, z8.s, z12.s }, pn8, [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     str	zt0, [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     str	za[w12, 0], [x0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cpp	rctx, x2

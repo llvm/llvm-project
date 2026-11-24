@@ -84,6 +84,10 @@ private:
   static RASignStatus getReturnAddressSignStatus(A &addressSpace, R registers,
                                                  pint_t cfa,
                                                  PrologInfo &prolog);
+
+  __attribute__((target("pauth-lr"))) static pint_t
+  nonHintLRAuthentication(pint_t ptrAuthDiv, pint_t cfa, pint_t returnAddr,
+                          bool BKey);
 #endif
 };
 
@@ -203,6 +207,21 @@ DwarfInstructions<A, R>::getReturnAddressSignStatus(A &addressSpace,
   // bits[1:0] describe how RA is signed.
   assert((raSignState & 0x3) != 3 && "unexpected RA sign state");
   return static_cast<RASignStatus>(raSignState & 0x3);
+}
+
+template <typename A, typename R>
+__attribute__((target("pauth-lr"))) typename A::pint_t
+DwarfInstructions<A, R>::nonHintLRAuthentication(pint_t ptrAuthDiv, pint_t cfa,
+                                                 pint_t returnAddr, bool BKey) {
+  register unsigned long long x15 __asm("x15") = ptrAuthDiv;
+  register unsigned long long x16 __asm("x16") = cfa;
+  register unsigned long long x17 __asm("x17") = returnAddr;
+  if (BKey)
+    asm("autib171615" : "+r"(x17) : "r"(x16), "r"(x15));
+  else
+    asm("autia171615" : "+r"(x17) : "r"(x16), "r"(x15));
+
+  return x17;
 }
 #endif
 
@@ -343,18 +362,27 @@ int DwarfInstructions<A, R>::stepWithDwarf(
         if (RAState == RASignedWithPC) {
           register unsigned long long x15 __asm("x15") =
               prolog.ptrAuthDiversifier;
-          if (cieInfo.addressesSignedWithBKey) {
-            asm("hint 0x27\n\t" // pacm
-                "hint 0xe"
-                : "+r"(x17)
-                : "r"(x16), "r"(x15)); // autib1716
-          } else {
-            asm("hint 0x27\n\t" // pacm
-                "hint 0xc"
-                : "+r"(x17)
-                : "r"(x16), "r"(x15)); // autia1716
+          if (cieInfo.nonHintPAuthFrame)
+            x17 = nonHintLRAuthentication(prolog.ptrAuthDiversifier, cfa,
+                                          returnAddress,
+                                          cieInfo.addressesSignedWithBKey);
+          else {
+            if (cieInfo.addressesSignedWithBKey) {
+              asm("hint 0x27\n\t" // pacm
+                  "hint 0xe"
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15)); // autib1716
+            } else {
+              asm("hint 0x27\n\t" // pacm
+                  "hint 0xc"
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15)); // autia1716
+            }
           }
         } else {
+          assert(!cieInfo.nonHintPAuthFrame &&
+                 "Non-hint space FEAT_PAuth_LR instructions expect"
+                 "RASignedWithPC");
           if (cieInfo.addressesSignedWithBKey)
             asm("hint 0xe" : "+r"(x17) : "r"(x16)); // autib1716
           else
@@ -447,11 +475,21 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
   if (log)
     fprintf(stderr, "evaluateExpression(): length=%" PRIu64 "\n",
             (uint64_t)length);
-  pint_t stack[100];
+  constexpr size_t kStackSize = 100;
+  pint_t stack[kStackSize];
   pint_t *sp = stack;
   *(++sp) = initialStackValue;
 
   while (p < expressionEnd) {
+    // Bounds-check the operand stack. Every opcode below pushes at most one
+    // value (writing at most sp[1]) and, except for DW_OP_pick and DW_OP_rot
+    // (checked at their use), reads/writes no deeper than sp[-1]. Keeping sp
+    // within [&stack[1], &stack[kStackSize - 2]] here therefore bounds every
+    // access to the fixed-size array. Compiler-emitted CFI expressions use tiny
+    // stack depths; violating these bounds means corrupted or malicious unwind
+    // data (e.g. a hostile FDE registered via __register_frame()).
+    if (sp < &stack[1] || sp > &stack[kStackSize - 2])
+      _LIBUNWIND_ABORT("DWARF expression operand stack out of bounds");
     if (log) {
       for (pint_t *t = sp; t > stack; --t) {
         fprintf(stderr, "sp[] = 0x%" PRIx64 "\n", (uint64_t)(*t));
@@ -594,6 +632,8 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
       // pick from
       reg = addressSpace.get8(p);
       p += 1;
+      if (sp - (int)reg < &stack[1])
+        _LIBUNWIND_ABORT("DW_OP_pick index out of bounds");
       value = sp[-(int)reg];
       *(++sp) = value;
       if (log)
@@ -611,6 +651,8 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
 
     case DW_OP_rot:
       // rotate top three
+      if (sp < &stack[3])
+        _LIBUNWIND_ABORT("DW_OP_rot with fewer than three stack entries");
       value = sp[0];
       sp[0] = sp[-1];
       sp[-1] = sp[-2];
@@ -970,6 +1012,8 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
     }
 
   }
+  if (sp < &stack[1])
+    _LIBUNWIND_ABORT("DWARF expression operand stack out of bounds");
   if (log)
     fprintf(stderr, "expression evaluates to 0x%" PRIx64 "\n", (uint64_t)*sp);
   return *sp;

@@ -68,26 +68,23 @@ static std::optional<bool> getWasmGlobalMutable(const GlobalValue *Global,
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
 MCSymbol *
-WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
-  const GlobalValue *Global = MO.getGlobal();
+WebAssemblyMCInstLower::GetGlobalAddressSymbol(const GlobalValue &Global,
+                                               const DebugLoc &DL) const {
+  const TargetMachine &TM = Printer.TM;
+  const Function &CurrentFunc = Printer.MF->getFunction();
   if (!isa<Function>(Global)) {
-    auto *WasmSym = static_cast<MCSymbolWasm *>(Printer.getSymbol(Global));
+    auto *WasmSym = static_cast<MCSymbolWasm *>(Printer.getSymbol(&Global));
     // If the symbol doesn't have an explicit WasmSymbolType yet and the
     // GlobalValue is actually a WebAssembly global, then ensure the symbol is a
     // WASM_SYMBOL_TYPE_GLOBAL.
-    if (WebAssembly::isWasmVarAddressSpace(Global->getAddressSpace()) &&
+    if (WebAssembly::isWasmVarAddressSpace(Global.getAddressSpace()) &&
         !WasmSym->getType()) {
-      const MachineInstr &MI = *MO.getParent();
-      const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
-      const TargetMachine &TM = MF.getTarget();
-      const Function &CurrentFunc = MF.getFunction();
-
       std::optional<bool> Mutable =
-          getWasmGlobalMutable(Global, CurrentFunc, MI.getDebugLoc());
+          getWasmGlobalMutable(&Global, CurrentFunc, DL);
       if (!Mutable.has_value())
         return WasmSym;
 
-      Type *GlobalVT = Global->getValueType();
+      Type *GlobalVT = Global.getValueType();
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
 
@@ -96,14 +93,11 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
     return WasmSym;
   }
 
-  const auto *FuncTy = cast<FunctionType>(Global->getValueType());
-  const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
-  const TargetMachine &TM = MF.getTarget();
-  const Function &CurrentFunc = MF.getFunction();
+  const auto *FuncTy = cast<FunctionType>(Global.getValueType());
 
   SmallVector<MVT, 1> ResultMVTs;
   SmallVector<MVT, 4> ParamMVTs;
-  const auto *const F = dyn_cast<Function>(Global);
+  const auto *const F = dyn_cast<Function>(&Global);
   computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
   auto Signature = signatureFromMVTs(Ctx, ResultMVTs, ParamMVTs);
 
@@ -348,7 +342,8 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_GlobalAddress:
-      MCOp = lowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
+      MCOp = lowerSymbolOperand(
+          MO, GetGlobalAddressSymbol(*MO.getGlobal(), MI->getDebugLoc()));
       break;
     case MachineOperand::MO_ExternalSymbol:
       MCOp = lowerSymbolOperand(MO, GetExternalSymbolSymbol(MO));
@@ -371,7 +366,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
   // Remove all uses of stackified registers to bring the instruction format
-  // into its final stack form used thruout MC, and transition opcodes to
+  // into its final stack form used throughout MC, and transition opcodes to
   // their _S variant.
   // We do this separate from the above code that still may need these
   // registers for e.g. call_indirect signatures.

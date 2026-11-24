@@ -6,7 +6,7 @@ define double @test(double %0) {
 ; CHECK-SAME: double [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul double [[TMP0]], 0.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul double [[TMP5]], 4.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc double [[TMP5]], 4.000000e+00
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd reassoc double [[TMP2]], 0.000000e+00
 ; CHECK-NEXT:    ret double [[TMP7]]
 ;

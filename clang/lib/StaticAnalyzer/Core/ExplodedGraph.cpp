@@ -108,8 +108,8 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
     return false;
 
   // Conditions 5, 6, and 7.
-  ProgramStateRef state = node->getState();
-  ProgramStateRef pred_state = pred->getState();
+  const ProgramState *state = node->getState().get();
+  const ProgramState *pred_state = pred->getState().get();
   if (state->store != pred_state->store || state->GDM != pred_state->GDM ||
       progPoint.getStackFrame() != pred->getStackFrame())
     return false;
@@ -158,7 +158,7 @@ void ExplodedGraph::collectNode(ExplodedNode *node) {
   pred->replaceSuccessor(succ);
   succ->replacePredecessor(pred);
   FreeNodes.push_back(node);
-  Nodes.RemoveNode(node);
+  Nodes.erase(node);
   --NumNodes;
   node->~ExplodedNode();
 }
@@ -388,15 +388,14 @@ const Stmt *ExplodedNode::getCurrentOrPreviousStmtForDiagnostics() const {
 }
 
 ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
-                                     ProgramStateRef State,
-                                     bool IsSink,
-                                     bool* IsNew) {
+                                     const ProgramState *State, bool IsSink,
+                                     bool *IsNew) {
   // Profile 'State' to determine if we already have an existing node.
   llvm::FoldingSetNodeID profile;
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
 
   NodeTy::Profile(profile, L, State, IsSink);
-  NodeTy* V = Nodes.FindNodeOrInsertPos(profile, InsertPos);
+  NodeTy *V = Nodes.lookup(profile, InsertToken);
 
   if (!V) {
     if (!FreeNodes.empty()) {
@@ -415,7 +414,7 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
       ChangedNodes.push_back(V);
 
     // Insert the node into the node set and return it.
-    Nodes.InsertNode(V, InsertPos);
+    Nodes.insert(V, InsertToken);
 
     if (IsNew) *IsNew = true;
   }

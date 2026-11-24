@@ -17,8 +17,6 @@ class TestFrameVarDILBitwise(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Check unary negation
         self.expect_var_path("~(-1)", value="0")
         self.expect_var_path("~~0", value="0")
@@ -107,9 +105,13 @@ class TestFrameVarDILBitwise(TestBase):
 
         # Check that bitwise & is allowed only in full mode
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("i64 & 1", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("i64 & 1", lldb.eDILModeLegacy)
-        full = frame.GetValueForVariablePath("i64 & 1", lldb.eDILModeFull)
+        simple = frame.GetValueForVariablePathWithMode("i64 & 1", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("i64 & 1", lldb.eDILModeLegacy)
+        legacy_other = frame.var_with_mode("i64 & 1", lldb.eDILModeLegacy)
+        full = frame.GetValueForVariablePathWithMode("i64 & 1", lldb.eDILModeFull)
+        full_other = frame.var_with_mode("i64 & 1", lldb.eDILModeFull)
         self.assertFailure(simple.GetError())
         self.assertFailure(legacy.GetError())
+        self.assertFailure(legacy_other.GetError())
         self.assertSuccess(full.GetError())
+        self.assertSuccess(full_other.GetError())

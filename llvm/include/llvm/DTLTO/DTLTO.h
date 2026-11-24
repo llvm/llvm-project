@@ -113,7 +113,7 @@ private:
   /// but before optimization begins. Existing files are overwritten because
   /// they are likely leftovers from a previously terminated linker process and
   /// can be safely replaced.
-  LLVM_ABI Error extractLTOInputs();
+  Error extractLTOInputs();
 
   // Remove temporary files created to enable distribution.
   void cleanup() override;
@@ -366,7 +366,7 @@ private:
 
   // There can be many temporary files to remove. Performing deletion in the
   // background can save a few seconds on Windows hosts.
-  struct BackgroundDeletion : DefaultThreadPool {
+  struct LLVM_ABI BackgroundDeletion : DefaultThreadPool {
     BackgroundDeletion();
     ~BackgroundDeletion();
 

@@ -61,7 +61,8 @@ declare void @llvm.aarch64.prefetch(ptr readonly, i32 immarg, i32 immarg, i32 im
 
 attributes #0 = { inaccessiblemem_or_argmemonly nounwind willreturn }
 
-!0 = !{!"int", !1}
+!0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!"any pointer", !1}
+!4 = !{!"int", !1}

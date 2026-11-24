@@ -172,7 +172,8 @@ def printHistogram(items, slowest_limit, title="Items"):
     else:
         slowest_count = min(slowest_limit, total)
 
-    maxValue = max([v for _, v in items])
+    # Set a default value to prevent the log(0) error from happening.
+    maxValue = max([v for _, v in items]) or 0.55
 
     # Select first "nice" bar height that produces more than 10 bars.
     power = int(math.ceil(math.log(maxValue, 10)))

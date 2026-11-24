@@ -13,7 +13,8 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/simd.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "src/__support/macros/attributes.h"
+#include "test/UnitTest/SIMDMatcher.h"
 
 #include <atomic>
 #include <iostream>
@@ -28,9 +29,10 @@
 //    - FloatType: define floating point type to be used.
 //    - FPBits: fputil::FPBits<FloatType>.
 //    - StorageType: define bit type for the corresponding floating point type.
-//    - uint64_t check(start, stop, rounding_mode): a method to test in given
-//          range for a given rounding mode, which returns the number of
-//          failures.
+//    - uint64_t check(start, stop, rounding_mode): a method to test the
+//    inclusive
+//          range [start, stop] for a given rounding mode, returning the number
+//          of failures.
 // 2. Use LlvmLibcExhaustiveMathTest<Checker> class
 // 3. Call: test_full_range_<RoundingMode>(start, stop)
 //       or test_full_range_all_roundings(start, stop).
@@ -38,23 +40,23 @@ template <typename OutType, typename InType = OutType>
 using ScalarUnaryOp = OutType(InType);
 
 template <typename OutType, typename InType = OutType>
-using VectorUnaryOp =
+using VectorUnaryOp = LIBC_VECTOR_PCS
     LIBC_NAMESPACE::cpp::simd<OutType>(LIBC_NAMESPACE::cpp::simd<InType>);
 
 template <typename OutType, typename InType,
           ScalarUnaryOp<OutType, InType> ScalarFunc,
-          VectorUnaryOp<OutType, InType> VectorFunc>
+          VectorUnaryOp<OutType, InType> VectorFunc, uint64_t TOL = 0>
 struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
   using StorageType = typename FPBits::StorageType;
 
-  // Check in a range, return the number of failures.
+  // Check the inclusive range [start, stop], returning the number of failures.
   uint64_t check(StorageType start, StorageType stop,
                  LIBC_NAMESPACE::fputil::testing::RoundingMode rounding) {
     LIBC_NAMESPACE::fputil::testing::ForceRoundingMode r(rounding);
     if (!r.success)
-      return (stop > start);
+      return (stop >= start);
 
     StorageType bits = start;
     uint64_t failed = 0;
@@ -66,10 +68,16 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       LIBC_NAMESPACE::cpp::simd<OutType> vec_result = VectorFunc(vec_x);
       OutType vec_res = vec_result[0];
       OutType scalar_result = ScalarFunc(x);
-      bool correct = TEST_FP_EQ(scalar_result, vec_res);
+      bool correct = TOL == 0 ? TEST_FP_EQ(scalar_result, vec_res)
+                              : LIBC_NAMESPACE::testing::within_ulp_tolerance(
+                                    scalar_result, vec_res, TOL);
 
       if (!correct) {
-        EXPECT_FP_EQ(scalar_result, vec_res);
+        if constexpr (TOL == 0)
+          EXPECT_FP_EQ(scalar_result, vec_res);
+        else
+          EXPECT_TRUE(LIBC_NAMESPACE::testing::within_ulp_tolerance(
+              scalar_result, vec_res, TOL));
         failed++;
       }
     } while (bits++ < stop);
@@ -101,6 +109,12 @@ struct LlvmLibcExhaustiveMathvecTest
   void test_full_range(LIBC_NAMESPACE::fputil::testing::RoundingMode rounding,
                        StorageType start, StorageType stop) {
     int n_threads = std::thread::hardware_concurrency();
+#ifdef LIBC_TEST_MAX_CONCURRENCY
+    if (n_threads <= 0 || n_threads > LIBC_TEST_MAX_CONCURRENCY)
+      n_threads = LIBC_TEST_MAX_CONCURRENCY;
+#endif
+    if (n_threads < 1)
+      n_threads = 1;
     std::vector<std::thread> thread_list;
     std::mutex mx_cur_val;
     int current_percent = -1;
@@ -138,7 +152,7 @@ struct LlvmLibcExhaustiveMathvecTest
           }
 
           uint64_t failed_in_range =
-              Checker::check(range_begin, range_end, rounding);
+              Checker::check(range_begin, range_end - 1, rounding);
           if (failed_in_range > 0) {
             std::stringstream msg;
             msg << "Test failed for " << std::dec << failed_in_range
@@ -202,20 +216,39 @@ struct LlvmLibcExhaustiveMathvecTest
   static constexpr StorageType STORAGE_MAX =
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
 
-  void test_full_range_RN() { test_full_range_RN(0, STORAGE_MAX); }
+  void test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode rounding) {
+    ASSERT_EQ(Checker::check(STORAGE_MAX, STORAGE_MAX, rounding), uint64_t(0));
+  }
 
-  void test_full_range_RU() { test_full_range_RU(0, STORAGE_MAX); }
+  void test_full_range_RN() {
+    test_full_range_RN(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest);
+  }
 
-  void test_full_range_RD() { test_full_range_RD(0, STORAGE_MAX); }
+  void test_full_range_RU() {
+    test_full_range_RU(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::Upward);
+  }
 
-  void test_full_range_RZ() { test_full_range_RZ(0, STORAGE_MAX); }
+  void test_full_range_RD() {
+    test_full_range_RD(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::Downward);
+  }
+
+  void test_full_range_RZ() {
+    test_full_range_RZ(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::TowardZero);
+  }
 
   void test_full_range_all_roundings() {
-    test_full_range_all_roundings(0, STORAGE_MAX);
+    test_full_range_RN();
+    test_full_range_RU();
+    test_full_range_RD();
+    test_full_range_RZ();
   }
 };
 
 template <typename FloatType, ScalarUnaryOp<FloatType> ScalarFunc,
-          VectorUnaryOp<FloatType> VectorFunc>
+          VectorUnaryOp<FloatType> VectorFunc, uint64_t TOL = 0>
 using LlvmLibcUnaryOpExhaustiveMathvecTest = LlvmLibcExhaustiveMathvecTest<
-    UnaryOpChecker<FloatType, FloatType, ScalarFunc, VectorFunc>>;
+    UnaryOpChecker<FloatType, FloatType, ScalarFunc, VectorFunc, TOL>>;

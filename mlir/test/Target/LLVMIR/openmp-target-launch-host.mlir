@@ -17,8 +17,8 @@
 // CHECK: call void @__kmpc_push_num_teams_51(ptr {{.*}}, i32 {{.*}}, i32 %[[NUM_TEAMS_OUTLINED]], i32 %[[NUM_TEAMS_OUTLINED]], i32 [[NUM_THREADS]])
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @main(%num_teams : i32) {
-    %target_threads = llvm.mlir.constant(20) : i32
-    %teams_threads = llvm.mlir.constant(10) : i32
+    %target_threads = llvm.mlir.constant(20 : i32) : i32
+    %teams_threads = llvm.mlir.constant(10 : i32) : i32
     omp.target kernel_type(generic) thread_limit(%target_threads : i32)
                host_eval(%num_teams -> %arg_teams, %teams_threads -> %arg_teams_threads : i32, i32) {
       omp.teams num_teams(to %arg_teams : i32) thread_limit(%arg_teams_threads : i32) {

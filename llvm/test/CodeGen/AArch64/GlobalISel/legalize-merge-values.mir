@@ -25,9 +25,12 @@ body: |
 name:            test_merge_s16_s8
 body: |
   bb.0:
+    liveins: $w0, $w1
 
     ; CHECK-LABEL: name: test_merge_s16_s8
-    ; CHECK: %a:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(i32) = COPY $w0
     ; CHECK-NEXT: %b:_(i32) = COPY $w1
     ; CHECK-NEXT: %a_t:_(i8) = G_TRUNC %a(i32)
     ; CHECK-NEXT: %b_t:_(i8) = G_TRUNC %b(i32)

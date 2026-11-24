@@ -96,7 +96,7 @@ define float @ret_select_clamp_onlynans(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %not.nan = fcmp ord float %arg, 0.0
-  %select = select i1 %not.nan, float 0x7FF8000000000000, float %arg
+  %select = select i1 %not.nan, float +qnan, float %arg
   ret float %select
 }
 
@@ -109,7 +109,7 @@ define float @clamp_nonfinite_to_normal_olt(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.finite = fcmp olt float %fabs, 0x7FF0000000000000
+  %is.finite = fcmp olt float %fabs, +inf
   %select = select i1 %is.finite, float %arg, float 1024.0
   ret float %select
 }
@@ -123,7 +123,7 @@ define float @clamp_eq_inf_to_pnormal(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   %select = select i1 %is.inf, float 1024.0, float %arg
   ret float %select
 }
@@ -135,7 +135,7 @@ define float @clamp_eq_pinf_to_pnormal(float %arg) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 1.024000e+03, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
-  %is.inf = fcmp oeq float %arg, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %arg, +inf
   %select = select i1 %is.inf, float 1024.0, float %arg
   ret float %select
 }
@@ -147,7 +147,7 @@ define float @clamp_eq_ninf_to_negnormal(float %arg) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float -1.024000e+03, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
-  %is.inf = fcmp oeq float %arg, 0xFFF0000000000000
+  %is.inf = fcmp oeq float %arg, -inf
   %select = select i1 %is.inf, float -1024.0, float %arg
   ret float %select
 }
@@ -161,8 +161,8 @@ define float @clamp_eq_inf_to_nan(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
-  %select = select i1 %is.inf, float 0x7FF8000000000000, float %arg
+  %is.inf = fcmp oeq float %fabs, +inf
+  %select = select i1 %is.inf, float +qnan, float %arg
   ret float %select
 }
 
@@ -187,7 +187,7 @@ define float @isfinite_select_fabs_val_0(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.finite = fcmp olt float %fabs, 0x7FF0000000000000
+  %is.finite = fcmp olt float %fabs, +inf
   %select = select i1 %is.finite, float %fabs, float 1024.0
   ret float %select
 }
@@ -273,7 +273,7 @@ define float @clamp_inf_to_fabs(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   %select = select i1 %is.inf, float %fabs, float %arg
   ret float %select
 }
@@ -287,7 +287,7 @@ define float @not_clamp_inf_to_fabs(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   %select = select i1 %is.inf, float %arg, float %fabs
   ret float %select
 }
@@ -300,7 +300,7 @@ define float @clamp_zero_to_inf(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.zero = fcmp oeq float %arg, 0.0
-  %select = select i1 %is.zero, float 0x7FF0000000000000, float %arg
+  %select = select i1 %is.zero, float +inf, float %arg
   ret float %select
 }
 
@@ -312,7 +312,7 @@ define float @clamp_zero_to_only_inf(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.zero = fcmp oeq float %arg, 0.0
-  %select = select i1 %is.zero, float %arg, float 0x7FF0000000000000
+  %select = select i1 %is.zero, float %arg, float +inf
   ret float %select
 }
 
@@ -324,7 +324,7 @@ define float @clamp_is_class_subnormal_or_inf_to_nan(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.subnormal.or.inf = call i1 @llvm.is.fpclass.f32(float %arg, i32 660)
-  %select = select i1 %is.subnormal.or.inf, float 0x7FF8000000000000, float %arg
+  %select = select i1 %is.subnormal.or.inf, float +qnan, float %arg
   ret float %select
 }
 
@@ -336,7 +336,7 @@ define float @clamp_is_class_subnormal_or_inf_to_nan_swap(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %not.is.subnormal.or.inf = call i1 @llvm.is.fpclass.f32(float %arg, i32 363)
-  %select = select i1 %not.is.subnormal.or.inf, float %arg, float 0x7FF8000000000000
+  %select = select i1 %not.is.subnormal.or.inf, float %arg, float +qnan
   ret float %select
 }
 

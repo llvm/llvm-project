@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp \
-; RUN:   -mcpu=pwr4 -mattr=-altivec -verify-machineinstrs 2>&1 < %s | \
+; RUN:   -mcpu=pwr4 -mattr=-altivec 2>&1 < %s | \
 ; RUN:    FileCheck --check-prefix=CHECK32 %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp \
-; RUN:   -mcpu=pwr4 -mattr=-altivec -verify-machineinstrs 2>&1 < %s | \
+; RUN:   -mcpu=pwr4 -mattr=-altivec 2>&1 < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK64  %s
 
 %struct.Spill = type { [12 x i64 ] }
@@ -46,7 +46,7 @@ entry:
 ; CHECK32-DAG: STW        renamable $r8, 20, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 20
 ; CHECK32-DAG: STW killed renamable $r9, 24, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 24
 ; CHECK32:     renamable $r4 = ADDC killed renamable $r8, killed renamable $r[[REG2]], implicit-def $carry
-; CHECK32:     renamable $r3 = ADDE killed renamable $r7, killed renamable $r[[REG1]], implicit-def dead $carry, implicit killed $carry
+; CHECK32:     renamable $r3 = ADDE killed renamable $r7, killed renamable $r[[REG1]], implicit-def dead $carry, implicit $carry
 ; CHECK32      STW killed renamable $r10, 28, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 28
 ; CHECK32:     BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4
 

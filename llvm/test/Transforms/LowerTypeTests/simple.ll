@@ -35,9 +35,9 @@ target datalayout = "e-p:32:32"
 ; CHECK: @bits_use.{{[0-9]*}} = private alias i8, ptr @bits{{[0-9]*}}
 
 ; CHECK: @a = alias i32, ptr [[G]]
-; CHECK: @b = hidden alias [63 x i32], getelementptr inbounds ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }, ptr [[G]], i32 0, i32 2)
-; CHECK: @c = protected alias i32, getelementptr inbounds ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }, ptr [[G]], i32 0, i32 4)
-; CHECK: @d = alias [2 x i32], getelementptr inbounds ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }, ptr [[G]], i32 0, i32 6)
+; CHECK: @b = hidden alias [63 x i32], getelementptr inbounds (i8, ptr [[G]], i32 4)
+; CHECK: @c = protected alias i32, getelementptr inbounds (i8, ptr [[G]], i32 260)
+; CHECK: @d = alias [2 x i32], getelementptr inbounds (i8, ptr [[G]], i32 264)
 
 ; CHECK: @bits{{[0-9]*}} = private alias i8, ptr [[BA]]
 ; CHECK: @bits.{{[0-9]*}} = private alias i8, ptr [[BA]]

@@ -391,7 +391,7 @@ protected:
     llvm::FoldingSetNodeID ID;
     NewState->get<ConstraintSMT>().Profile(ID);
 
-    unsigned hash = ID.ComputeHash();
+    unsigned hash = ID.computeHash();
     auto I = Cached.find(hash);
     if (I != Cached.end())
       return I->second;

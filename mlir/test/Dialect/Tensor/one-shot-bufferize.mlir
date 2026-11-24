@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only bufferize-function-boundaries" -split-input-file | FileCheck %s --check-prefix=CHECK-ANALYSIS
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -7,6 +8,116 @@
 
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -one-shot-bufferize="unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
+
+// A write to [0, 4) does not conflict with a read from [4, 8), even though
+// tensor.extract_slice itself is alias-only and the actual read is the return.
+
+// CHECK-LABEL: func @disjoint_insert_extract(
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   memref.subview
+//       CHECK:   memref.copy
+//       CHECK:   memref.subview
+//   CHECK-NOT:   memref.alloc
+
+// CHECK-ANALYSIS-LABEL: func @disjoint_insert_extract(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "true"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+func.func @disjoint_insert_extract(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<4xf32>) {
+  %written = tensor.insert_slice %source into %t[0][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %read = tensor.extract_slice %t[4][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  return %written, %read : tensor<8xf32>, tensor<4xf32>
+}
+
+// -----
+
+// A chain of alias-only ops between the extraction and the actual read is
+// traced back to the disjoint subset.
+
+// CHECK-LABEL: func @disjoint_insert_extract_alias_chain(
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   memref.subview
+//       CHECK:   memref.copy
+//       CHECK:   memref.subview
+//   CHECK-NOT:   memref.alloc
+
+// CHECK-ANALYSIS-LABEL: func @disjoint_insert_extract_alias_chain(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "true"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: tensor.cast
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: tensor.cast
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: tensor.cast
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+func.func @disjoint_insert_extract_alias_chain(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<?xf32>) {
+  %written = tensor.insert_slice %source into %t[0][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %extracted = tensor.extract_slice %t[4][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %cast0 = tensor.cast %extracted : tensor<4xf32> to tensor<?xf32>
+  %cast1 = tensor.cast %cast0 : tensor<?xf32> to tensor<4xf32>
+  %cast2 = tensor.cast %cast1 : tensor<4xf32> to tensor<?xf32>
+  return %written, %cast2 : tensor<8xf32>, tensor<?xf32>
+}
+
+// -----
+
+// A write to [0, 4) conflicts with a read from [2, 6).
+
+// CHECK-LABEL: func @overlapping_insert_extract(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+//       CHECK:   memref.copy %{{.*}}, %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @overlapping_insert_extract(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "false"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+func.func @overlapping_insert_extract(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<4xf32>) {
+  %written = tensor.insert_slice %source into %t[0][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %read = tensor.extract_slice %t[2][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  return %written, %read : tensor<8xf32>, tensor<4xf32>
+}
+
+// -----
+
+// Dynamic offsets that cannot be proven disjoint remain conservative.
+
+// CHECK-LABEL: func @unknown_insert_extract(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+//       CHECK:   memref.copy %{{.*}}, %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @unknown_insert_extract(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "false", "none"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none"]
+func.func @unknown_insert_extract(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>, %write_idx: index,
+    %read_idx: index) -> (tensor<8xf32>, tensor<4xf32>) {
+  %written = tensor.insert_slice %source into %t[%write_idx][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %read = tensor.extract_slice %t[%read_idx][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  return %written, %read : tensor<8xf32>, tensor<4xf32>
+}
+
+// -----
 
 // CHECK-LABEL: func private @insert_slice_fun
 //  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,

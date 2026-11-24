@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_parallel(int cond) {
   // CHECK: cir.func{{.*}} @acc_parallel(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
@@ -27,8 +27,7 @@ void acc_parallel(int cond) {
   // CHECK-NEXT: acc.parallel {
   // CHECK-NEXT: cir.scope {
   // CHECK-NEXT: cir.while {
-  // CHECK-NEXT: %[[INT:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[CAST:.*]] = cir.cast int_to_bool %[[INT]]
+  // CHECK-NEXT: %[[CAST:.*]] = cir.const #true
   // CHECK-NEXT: cir.condition(%[[CAST]])
   // CHECK-NEXT: } do {
   // CHECK-NEXT: cir.yield
@@ -56,8 +55,7 @@ void acc_parallel(int cond) {
 
 #pragma acc parallel self(0)
   {}
-  // CHECK-NEXT: %[[ZERO_LITERAL:.*]] = cir.const #cir.int<0> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ZERO_LITERAL]] : !s32i -> !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.const #false
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel self(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.yield
@@ -74,8 +72,7 @@ void acc_parallel(int cond) {
 
 #pragma acc parallel if(1)
   {}
-  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.const #true
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.yield

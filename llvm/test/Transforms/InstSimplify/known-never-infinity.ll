@@ -108,7 +108,7 @@ define i1 @isKnownNeverInfinity_fpext(float %x) {
 ;
   %a = fadd ninf float %x, 1.0
   %e = fpext float %a to double
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -119,7 +119,7 @@ define i1 @isKnownNeverInfinity_fpext_sitofp(i16 %x) {
 ;
   %f = sitofp i16 %x to half
   %e = fpext half %f to double
-  %r = fcmp oeq double %e, 0xfff0000000000000
+  %r = fcmp oeq double %e, -inf
   ret i1 %r
 }
 
@@ -133,7 +133,7 @@ define i1 @isKnownNeverInfinity_fptrunc(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = fptrunc double %a to float
-  %r = fcmp une float %e, 0x7FF0000000000000
+  %r = fcmp une float %e, +inf
   ret i1 %r
 }
 
@@ -145,7 +145,7 @@ define i1 @isNotKnownNeverInfinity_fptrunc(double %unknown) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fptrunc double %unknown to float
-  %r = fcmp une float %e, 0x7FF0000000000000
+  %r = fcmp une float %e, +inf
   ret i1 %r
 }
 
@@ -156,7 +156,7 @@ define i1 @isKnownNeverInfinity_canonicalize(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.canonicalize.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -168,7 +168,7 @@ define i1 @isNotKnownNeverInfinity_canonicalize(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.canonicalize.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -179,7 +179,7 @@ define i1 @isKnownNeverInfinity_fabs(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.fabs.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -191,7 +191,7 @@ define i1 @isNotKnownNeverInfinity_fabs(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.fabs.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -202,7 +202,7 @@ define i1 @isKnownNeverInfinity_fneg(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = fneg double %a
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -214,7 +214,7 @@ define i1 @isNotKnownNeverInfinity_fneg(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fneg double %x
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -225,7 +225,7 @@ define i1 @isKnownNeverInfinity_copysign(double %x, double %sign) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.copysign.f64(double %a, double %sign)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -237,7 +237,7 @@ define i1 @isNotKnownNeverInfinity_copysign(double %x, double %sign) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.copysign.f64(double %x, double %sign)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -248,7 +248,7 @@ define i1 @isKnownNeverInfinity_arithmetic_fence(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.arithmetic.fence.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -260,7 +260,7 @@ define i1 @isNotKnownNeverInfinity_arithmetic_fence(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.arithmetic.fence.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -271,7 +271,7 @@ define i1 @isKnownNeverInfinity_floor(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.floor.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -283,7 +283,7 @@ define i1 @isNotKnownNeverInfinity_floor(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.floor.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -294,7 +294,7 @@ define i1 @isKnownNeverInfinity_ceil(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.ceil.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -306,7 +306,7 @@ define i1 @isNotKnownNeverInfinity_ceil(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.ceil.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -317,7 +317,7 @@ define i1 @isKnownNeverInfinity_trunc(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.trunc.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -329,7 +329,7 @@ define i1 @isNotKnownNeverInfinity_trunc(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.trunc.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -340,7 +340,7 @@ define i1 @isKnownNeverInfinity_rint(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.rint.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -352,7 +352,7 @@ define i1 @isNotKnownNeverInfinity_rint(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.rint.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -363,7 +363,7 @@ define i1 @isKnownNeverInfinity_nearbyint(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.nearbyint.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -375,7 +375,7 @@ define i1 @isNotKnownNeverInfinity_nearbyint(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.nearbyint.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -386,7 +386,7 @@ define i1 @isKnownNeverInfinity_round(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.round.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -398,7 +398,7 @@ define i1 @isNotKnownNeverInfinity_round(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.round.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -409,7 +409,7 @@ define i1 @isKnownNeverInfinity_roundeven(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.roundeven.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -421,40 +421,62 @@ define i1 @isNotKnownNeverInfinity_roundeven(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.roundeven.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
-define i1 @isNotKnownNeverInfinity_fptrunc_round(double %x) {
-; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_fptrunc_round
+define i1 @isNotKnownNeverInfinity_fptrunc_round_downward(double %x) {
+; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_fptrunc_round_downward
+; CHECK-SAME: (double [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.downward")
+  %r = fcmp une float %e, +inf
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_fptrunc_round_upward(double %x) {
+; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_fptrunc_round_upward
 ; CHECK-SAME: (double [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[A]], metadata !"round.downward")
+; CHECK-NEXT:    [[E:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[A]], metadata !"round.upward")
 ; CHECK-NEXT:    [[R:%.*]] = fcmp une float [[E]], +inf
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = fadd ninf double %x, 1.0
-  %e = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.downward")
-  %r = fcmp une float %e, 0x7ff0000000000000
+  %e = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.upward")
+  %r = fcmp une float %e, +inf
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_floor_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_floor_ppcf128
+define i1 @isKnownNeverPosInfinity_floor_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_floor_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, +inf
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegInfinity_floor_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_floor_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], +inf
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_ceil_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_ceil_ppcf128
+define i1 @isKnownNeverPosInfinity_ceil_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_ceil_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[A]])
@@ -463,12 +485,23 @@ define i1 @isKnownNeverInfinity_ceil_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_rint_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_rint_ppcf128
+define i1 @isKnownNeverNegInfinity_ceil_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_ceil_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, -inf
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_rint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_rint_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[A]])
@@ -477,12 +510,26 @@ define i1 @isKnownNeverInfinity_rint_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_nearbyint_ppcf128
+define i1 @isKnownNeverNegInfinity_rint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_rint_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, -inf
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_nearbyint_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[A]])
@@ -491,12 +538,26 @@ define i1 @isKnownNeverInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_round_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_round_ppcf128
+define i1 @isKnownNeverNegInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_nearbyint_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, -inf
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_round_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_round_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[A]])
@@ -505,12 +566,26 @@ define i1 @isKnownNeverInfinity_round_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_roundeven_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_roundeven_ppcf128
+define i1 @isKnownNeverNegInfinity_round_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_round_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, -inf
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_roundeven_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_roundeven_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[A]])
@@ -519,18 +594,43 @@ define i1 @isKnownNeverInfinity_roundeven_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_trunc_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_trunc_ppcf128
+define i1 @isKnownNeverNegInfinity_roundeven_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_roundeven_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, -inf
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_trunc_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_trunc_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegInfinity_trunc_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_trunc_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
@@ -553,7 +653,7 @@ define i1 @isKnownNeverInfinity_minnum(double %x, double %y) {
   %ninf.x = fadd ninf double %x, 1.0
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.minnum.f64(double %ninf.x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -567,7 +667,7 @@ define i1 @isNotKnownNeverInfinity_minnum_lhs(double %x, double %y) {
 ;
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.minnum.f64(double %x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -581,7 +681,7 @@ define i1 @isNotKnownNeverInfinity_minnum_rhs(double %x, double %y) {
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.minnum.f64(double %ninf.x, double %y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -593,7 +693,7 @@ define i1 @isKnownNeverInfinity_maxnum(double %x, double %y) {
   %ninf.x = fadd ninf double %x, 1.0
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.maxnum.f64(double %ninf.x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -607,7 +707,7 @@ define i1 @isNotKnownNeverInfinity_maxnum_lhs(double %x, double %y) {
 ;
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.maxnum.f64(double %x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -621,7 +721,7 @@ define i1 @isNotKnownNeverInfinity_maxnum_rhs(double %x, double %y) {
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.maxnum.f64(double %ninf.x, double %y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -633,7 +733,7 @@ define i1 @isKnownNeverInfinity_minimum(double %x, double %y) {
   %ninf.x = fadd ninf double %x, 1.0
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.minimum.f64(double %ninf.x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -644,7 +744,7 @@ define i1 @isNotKnownNeverPInfinity_minimum_lhs(double %x, double %y) {
 ;
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.minimum.f64(double %x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -658,7 +758,7 @@ define i1 @isNotKnownNeverNInfinity_minimum_lhs(double %x, double %y) {
 ;
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.minimum.f64(double %x, double %ninf.y)
-  %cmp = fcmp une double %op, 0xfff0000000000000
+  %cmp = fcmp une double %op, -inf
   ret i1 %cmp
 }
 
@@ -669,7 +769,7 @@ define i1 @isNotKnownNeverPInfinity_minimum_rhs(double %x, double %y) {
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.minimum.f64(double %ninf.x, double %y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -683,7 +783,7 @@ define i1 @isNotKnownNeverNInfinity_minimum_rhs(double %x, double %y) {
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.minimum.f64(double %ninf.x, double %y)
-  %cmp = fcmp une double %op, 0xfff0000000000000
+  %cmp = fcmp une double %op, -inf
   ret i1 %cmp
 }
 
@@ -695,7 +795,7 @@ define i1 @isKnownNeverInfinity_maximum(double %x, double %y) {
   %ninf.x = fadd ninf double %x, 1.0
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.maximum.f64(double %ninf.x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -709,7 +809,7 @@ define i1 @isNotKnownNeverPInfinity_maximum_lhs(double %x, double %y) {
 ;
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.maximum.f64(double %x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -720,7 +820,7 @@ define i1 @isNotKnownNeverNInfinity_maximum_lhs(double %x, double %y) {
 ;
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.maximum.f64(double %x, double %ninf.y)
-  %cmp = fcmp une double %op, 0xfff0000000000000
+  %cmp = fcmp une double %op, -inf
   ret i1 %cmp
 }
 
@@ -734,7 +834,7 @@ define i1 @isNotKnownNeverPInfinity_maximum_rhs(double %x, double %y) {
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.maximum.f64(double %ninf.x, double %y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -745,7 +845,7 @@ define i1 @isNotKnownNeverNInfinity_maximum_rhs(double %x, double %y) {
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.maximum.f64(double %ninf.x, double %y)
-  %cmp = fcmp une double %op, 0xfff0000000000000
+  %cmp = fcmp une double %op, -inf
   ret i1 %cmp
 }
 
@@ -756,7 +856,7 @@ define i1 @isKnownNeverInfinity_sqrt(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.sqrt.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -768,7 +868,7 @@ define i1 @isNotKnownNeverInfinity_sqrt(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = call double @llvm.sqrt.f64(double %x)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -780,7 +880,7 @@ define i1 @isKnownNeverInfinity_log(double %x) {
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %a = fadd ninf double %x.clamp.zero, 1.0
   %e = call double @llvm.log.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -792,7 +892,7 @@ define i1 @isNotKnownNeverInfinity_log_maybe_negative(double %x) {
 
   %x.not.inf = fadd ninf double %x, 1.0
   %e = call double @llvm.log.f64(double %x.not.inf)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -806,7 +906,7 @@ define i1 @isNotKnownNeverInfinity_log_maybe_inf(double %x) {
 ;
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %e = call double @llvm.log.f64(double %x.clamp.zero)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -820,7 +920,7 @@ define i1 @isKnownNeverNegInfinity_log_maybe_0(double %x) {
 ;
   %a = call ninf double @llvm.sqrt.f64(double %x) ; could be 0.0
   %e = call double @llvm.log.f64(double %a) ; log(0.0) --> -inf
-  %r = fcmp une double %e, 0xfff0000000000000
+  %r = fcmp une double %e, -inf
   ret i1 %r
 }
 
@@ -832,7 +932,7 @@ define i1 @isKnownNeverInfinity_log10(double %x) {
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %a = fadd ninf double %x.clamp.zero, 1.0
   %e = call double @llvm.log10.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -844,7 +944,7 @@ define i1 @isNotKnownNeverInfinity_log10_maybe_negative(double %x) {
 
   %x.not.inf = fadd ninf double %x, 1.0
   %e = call double @llvm.log10.f64(double %x.not.inf)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -858,7 +958,7 @@ define i1 @isNotKnownNeverInfinity_log10_maybe_inf(double %x) {
 ;
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %e = call double @llvm.log10.f64(double %x.clamp.zero)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -872,7 +972,7 @@ define i1 @isKnownNeverNegInfinity_log10_maybe_0(double %x) {
 ;
   %a = call ninf double @llvm.sqrt.f64(double %x) ; could be 0.0
   %e = call double @llvm.log10.f64(double %a) ; log(0.0) --> -inf
-  %r = fcmp une double %e, 0xfff0000000000000
+  %r = fcmp une double %e, -inf
   ret i1 %r
 }
 
@@ -884,7 +984,7 @@ define i1 @isKnownNeverInfinity_log2(double %x) {
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %a = fadd ninf double %x.clamp.zero, 1.0
   %e = call double @llvm.log2.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -896,7 +996,7 @@ define i1 @isNotKnownNeverInfinity_log2_maybe_negative(double %x) {
 
   %x.not.inf = fadd ninf double %x, 1.0
   %e = call double @llvm.log2.f64(double %x.not.inf)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -910,7 +1010,7 @@ define i1 @isNotKnownNeverInfinity_log2_maybe_inf(double %x) {
 ;
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %e = call double @llvm.log2.f64(double %x.clamp.zero)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -924,7 +1024,7 @@ define i1 @isKnownNeverNegInfinity_log2_maybe_0(double %x) {
 ;
   %a = call ninf double @llvm.sqrt.f64(double %x) ; could be 0.0
   %e = call double @llvm.log2.f64(double %a) ; log(0.0) --> -inf
-  %r = fcmp une double %e, 0xfff0000000000000
+  %r = fcmp une double %e, -inf
   ret i1 %r
 }
 
@@ -940,7 +1040,7 @@ define i1 @isNotKnownNeverInfinity_pow(double %x, double %y) {
   %ninf.x = fadd ninf double %x, 1.0
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.pow.f64(double %ninf.x, double %ninf.y)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -954,7 +1054,7 @@ define i1 @isNotKnownNeverInfinity_powi(double %x) {
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.powi.f64.i32(double %ninf.x, i32 2)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -968,7 +1068,7 @@ define i1 @isNotKnownNeverInfinity_exp(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.exp.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -982,7 +1082,7 @@ define i1 @isNotKnownNeverInfinity_exp2(double %x) {
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.exp2.f64(double %a)
-  %r = fcmp une double %e, 0x7ff0000000000000
+  %r = fcmp une double %e, +inf
   ret i1 %r
 }
 
@@ -1000,7 +1100,7 @@ define i1 @isNotKnownNeverInfinity_fma(double %x, double %y, double %z) {
   %ninf.y = fadd ninf double %y, 1.0
   %ninf.z = fadd ninf double %z, 1.0
   %op = call double @llvm.fma.f64(double %ninf.x, double %ninf.y, double %ninf.z)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1018,7 +1118,7 @@ define i1 @isNotKnownNeverInfinity_fmuladd(double %x, double %y, double %z) {
   %ninf.y = fadd ninf double %y, 1.0
   %ninf.z = fadd ninf double %z, 1.0
   %op = call double @llvm.fmuladd.f64(double %ninf.x, double %ninf.y, double %ninf.z)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1032,9 +1132,9 @@ define i1 @not_inf_fabs_select_pzero_or_ninf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float 0.000000e+00, float 0xFFF0000000000000
+  %select = select i1 %cond, float 0.000000e+00, float -inf
   %fabs = call float @llvm.fabs.f32(float %select)
-  %one = fcmp one float %fabs, 0x7FF0000000000000
+  %one = fcmp one float %fabs, +inf
   ret i1 %one
 }
 
@@ -1048,9 +1148,9 @@ define i1 @not_inf_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
-  %one = fcmp one float %fabs, 0x7FF0000000000000
+  %one = fcmp one float %fabs, +inf
   ret i1 %one
 }
 
@@ -1061,9 +1161,9 @@ define i1 @not_ninf_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
-  %one = fcmp one float %fabs, 0xFFF0000000000000
+  %one = fcmp one float %fabs, -inf
   ret i1 %one
 }
 
@@ -1078,10 +1178,10 @@ define i1 @not_ninf_fneg_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %fneg.fabs = fneg float %fabs
-  %one = fcmp one float %fneg.fabs, 0xFFF0000000000000
+  %one = fcmp one float %fneg.fabs, -inf
   ret i1 %one
 }
 
@@ -1092,7 +1192,7 @@ define float @fcmp_ogt_neginf_implies_class_assert(float %arg) {
 ; CHECK-SAME: (float [[ARG:%.*]]) {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %cmp.ogt.neginf = fcmp ogt float %arg, 0xFFF0000000000000
+  %cmp.ogt.neginf = fcmp ogt float %arg, -inf
   %select_1_0 = select i1 %cmp.ogt.neginf, float 1.0, float 0.0
   %mul_by_zero = fmul float %select_1_0, 0.0
   ret float %mul_by_zero
@@ -1103,7 +1203,7 @@ define float @fcmp_ule_neginf_implies_class_assert(float %arg) {
 ; CHECK-SAME: (float [[ARG:%.*]]) {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %cmp.ule.neginf = fcmp ule float %arg, 0xFFF0000000000000
+  %cmp.ule.neginf = fcmp ule float %arg, -inf
   %select_1_0 = select i1 %cmp.ule.neginf, float 1.0, float 0.0
   %mul_by_zero = fmul float %select_1_0, 0.0
   ret float %mul_by_zero
@@ -1114,7 +1214,7 @@ define float @fcmp_oge_neginf_implies_class_assert(float %arg) {
 ; CHECK-SAME: (float [[ARG:%.*]]) {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %cmp.oge.neginf = fcmp oge float %arg, 0xFFF0000000000000
+  %cmp.oge.neginf = fcmp oge float %arg, -inf
   %select_1_0 = select i1 %cmp.oge.neginf, float 1.0, float 0.0
   %mul_by_zero = fmul float %select_1_0, 0.0
   ret float %mul_by_zero
@@ -1125,7 +1225,7 @@ define float @fcmp_ult_neginf_implies_class_assert(float %arg) {
 ; CHECK-SAME: (float [[ARG:%.*]]) {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %cmp.ult.neginf = fcmp ult float %arg, 0xFFF0000000000000
+  %cmp.ult.neginf = fcmp ult float %arg, -inf
   %select_1_0 = select i1 %cmp.ult.neginf, float 1.0, float 0.0
   %mul_by_zero = fmul float %select_1_0, 0.0
   ret float %mul_by_zero
@@ -1138,7 +1238,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_maximum(<4 x double> %x) {
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmaximum.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1152,7 +1252,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_maximum_fail(<4 x double> %x) {
 ;
   %ninf.x = fadd <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmaximum.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1163,7 +1263,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_minimum(<4 x double> %x) {
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1177,7 +1277,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_minimum_fail(<4 x double> %x) {
 ;
   %ninf.x = fadd <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1188,7 +1288,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_fmax(<4 x double> %x) {
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1202,7 +1302,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_fmax_fail(<4 x double> %x) {
 ;
   %ninf.x = fadd <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1213,7 +1313,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_fmin(<4 x double> %x) {
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 
@@ -1227,7 +1327,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_fmin_fail(<4 x double> %x) {
 ;
   %ninf.x = fadd <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> %ninf.x)
-  %cmp = fcmp une double %op, 0x7ff0000000000000
+  %cmp = fcmp une double %op, +inf
   ret i1 %cmp
 }
 

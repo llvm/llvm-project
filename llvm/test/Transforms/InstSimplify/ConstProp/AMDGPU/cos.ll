@@ -122,11 +122,11 @@ define void @test_f32(ptr %p) {
   store volatile float %p1000, ptr %p
   %n1000 = call float @llvm.amdgcn.cos.f32(float -1000.0)
   store volatile float %n1000, ptr %p
-  %pinf = call float @llvm.amdgcn.cos.f32(float 0x7FF0000000000000) ; +inf
+  %pinf = call float @llvm.amdgcn.cos.f32(float +inf) ; +inf
   store volatile float %pinf, ptr %p
-  %ninf = call float @llvm.amdgcn.cos.f32(float 0xFFF0000000000000) ; -inf
+  %ninf = call float @llvm.amdgcn.cos.f32(float -inf) ; -inf
   store volatile float %ninf, ptr %p
-  %nan = call float @llvm.amdgcn.cos.f32(float 0x7FF8000000000000) ; nan
+  %nan = call float @llvm.amdgcn.cos.f32(float +qnan) ; nan
   store volatile float %nan, ptr %p
   ret void
 }
@@ -185,11 +185,11 @@ define void @test_f64(ptr %p) {
   store volatile double %p1000, ptr %p
   %n1000 = call double @llvm.amdgcn.cos.f64(double -1000.0)
   store volatile double %n1000, ptr %p
-  %pinf = call double @llvm.amdgcn.cos.f64(double 0x7FF0000000000000) ; +inf
+  %pinf = call double @llvm.amdgcn.cos.f64(double +inf) ; +inf
   store volatile double %pinf, ptr %p
-  %ninf = call double @llvm.amdgcn.cos.f64(double 0xFFF0000000000000) ; -inf
+  %ninf = call double @llvm.amdgcn.cos.f64(double -inf) ; -inf
   store volatile double %ninf, ptr %p
-  %nan = call double @llvm.amdgcn.cos.f64(double 0x7FF8000000000000) ; nan
+  %nan = call double @llvm.amdgcn.cos.f64(double +qnan) ; nan
   store volatile double %nan, ptr %p
   ret void
 }

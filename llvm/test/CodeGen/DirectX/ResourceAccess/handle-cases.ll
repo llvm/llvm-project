@@ -1,5 +1,4 @@
-; RUN: opt -S -dxil-resource-type -dxil-resource-access -disable-verify \
-; RUN:  -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -dxil-resource-type -dxil-resource-access -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; The file contains examples of hlsl snippets that will generate invalid
 ; looking resource access, either through code-gen or by optimization.

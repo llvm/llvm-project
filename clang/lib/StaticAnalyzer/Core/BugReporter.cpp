@@ -620,17 +620,14 @@ PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     llvm::raw_string_ostream &os, const PathDiagnosticConstruct &C) const {
   // Slow, but probably doesn't matter.
-  if (os.str().empty())
-    os << ' ';
-
+  os << (os.str().empty() ? "Execution " : "execution ");
   const PathDiagnosticLocation &Loc = ExecutionContinues(C);
 
-  if (Loc.asStmt())
-    os << "Execution continues on line "
-       << getSourceManager().getExpansionLineNumber(Loc.asLocation())
-       << '.';
-  else {
-    os << "Execution jumps to the end of the ";
+  if (Loc.asStmt()) {
+    os << "continues on line "
+       << getSourceManager().getExpansionLineNumber(Loc.asLocation());
+  } else {
+    os << "jumps to the end of the ";
     const Decl *D = C.getCurrStackFrame()->getDecl();
     if (isa<ObjCMethodDecl>(D))
       os << "method";
@@ -640,7 +637,6 @@ PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
       assert(isa<BlockDecl>(D));
       os << "anonymous block";
     }
-    os << '.';
   }
 
   return Loc;
@@ -785,9 +781,9 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
 
     switch (S->getStmtClass()) {
     default:
-      os << "No cases match in the switch statement. "
-        "Control jumps to line "
-        << End.asLocation().getExpansionLineNumber();
+      os << "No cases match in the switch statement; "
+            "control jumps to line "
+         << End.asLocation().getExpansionLineNumber();
       break;
     case Stmt::DefaultStmtClass:
       os << "Control jumps to the 'default' case at line "
@@ -821,7 +817,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
     }
     }
   } else {
-    os << "'Default' branch taken. ";
+    os << "'Default' branch taken; ";
     End = ExecutionContinues(os, C);
   }
   return std::make_shared<PathDiagnosticControlFlowPiece>(Start, End, sbuf);
@@ -956,7 +952,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
       std::string sbuf;
       llvm::raw_string_ostream os(sbuf);
 
-      os << "Loop condition is true. ";
+      os << "Loop condition is true; ";
       PathDiagnosticLocation End = ExecutionContinues(os, C);
 
       if (const Stmt *S = End.asStmt())
@@ -972,7 +968,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is false.  Exiting loop"));
+              Start, End, "Loop condition is false; exiting loop"));
     }
     break;
 
@@ -982,7 +978,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
       std::string sbuf;
       llvm::raw_string_ostream os(sbuf);
 
-      os << "Loop condition is false. ";
+      os << "Loop condition is false; ";
       PathDiagnosticLocation End = ExecutionContinues(os, C);
       if (const Stmt *S = End.asStmt())
         End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
@@ -996,7 +992,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is true.  Entering loop body"));
+              Start, End, "Loop condition is true; entering loop body"));
     }
 
     break;
@@ -2188,8 +2184,8 @@ void PathSensitiveBugReport::addVisitor(
   llvm::FoldingSetNodeID ID;
   visitor->Profile(ID);
 
-  void *InsertPos = nullptr;
-  if (CallbacksSet.FindNodeOrInsertPos(ID, InsertPos)) {
+  llvm::FoldingSetInsertToken InsertToken;
+  if (CallbacksSet.lookup(ID, InsertToken)) {
     return;
   }
 
@@ -2985,12 +2981,12 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   R->Profile(ID);
 
   // Lookup the equivance class.  If there isn't one, create it.
-  void *InsertPos;
-  BugReportEquivClass* EQ = EQClasses.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  BugReportEquivClass *EQ = EQClasses.lookup(ID, InsertToken);
 
   if (!EQ) {
     EQ = new BugReportEquivClass(std::move(R));
-    EQClasses.InsertNode(EQ, InsertPos);
+    EQClasses.insert(EQ, InsertToken);
     EQClassesVector.push_back(EQ);
   } else
     EQ->AddReport(std::move(R));
@@ -3301,18 +3297,18 @@ BugReporter::generateDiagnosticForConsumerMap(
 
 static PathDiagnosticCallPiece *
 getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
-                                const SourceManager &SMgr) {
+                                const AnalysisManager &AMgr) {
   SourceLocation CallLoc = CP->callEnter.asLocation();
 
   // If the call is within a macro, don't do anything (for now).
   if (CallLoc.isMacroID())
     return nullptr;
 
-  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
+  assert(AMgr.isInCodeFile(CallLoc) &&
          "The call piece should not be in a header file.");
 
   // Check if CP represents a path through a function outside of the main file.
-  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
+  if (!AMgr.isInCodeFile(CP->callEnterWithin.asLocation()))
     return CP;
 
   const PathPieces &Path = CP->path;
@@ -3322,24 +3318,24 @@ getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
   // Check if the last piece in the callee path is a call to a function outside
   // of the main file.
   if (auto *CPInner = dyn_cast<PathDiagnosticCallPiece>(Path.back().get()))
-    return getFirstStackedCallToHeaderFile(CPInner, SMgr);
+    return getFirstStackedCallToHeaderFile(CPInner, AMgr);
 
   // Otherwise, the last piece is in the main file.
   return nullptr;
 }
 
-static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
+static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD,
+                                              const AnalysisManager &AMgr) {
   if (PD.path.empty())
     return;
 
   PathDiagnosticPiece *LastP = PD.path.back().get();
   assert(LastP);
-  const SourceManager &SMgr = LastP->getLocation().getManager();
 
   // We only need to check if the report ends inside headers, if the last piece
   // is a call piece.
   if (auto *CP = dyn_cast<PathDiagnosticCallPiece>(LastP)) {
-    CP = getFirstStackedCallToHeaderFile(CP, SMgr);
+    CP = getFirstStackedCallToHeaderFile(CP, AMgr);
     if (CP) {
       // Mark the piece.
        CP->setAsLastInMainSourceFile();
@@ -3395,7 +3391,7 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
   const AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
     if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
-      resetDiagnosticLocationToMainFile(*P.second);
+      resetDiagnosticLocationToMainFile(*P.second, Eng.getAnalysisManager());
 
   return Out;
 }
