@@ -26762,6 +26762,7 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
   EVT OutScalarTy = VT.getScalarType();
   bool ValidTypes =
       SourceType != MVT::Other &&
+      SourceType.getSizeInBits() < OutScalarTy.getSizeInBits() &&
       llvm::has_single_bit<uint32_t>(OutScalarTy.getSizeInBits()) &&
       llvm::has_single_bit<uint32_t>(SourceType.getSizeInBits());
 
