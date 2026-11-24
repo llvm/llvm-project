@@ -118,6 +118,10 @@
 // RUN: FileCheck %s -check-prefix=PPC64LE-FREEBSD
 // PPC64LE-FREEBSD: target datalayout = "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
 
+// RUN: %clang_cc1 -triple powerpc64-openbsd -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=PPC64-OPENBSD
+// PPC64-OPENBSD: target datalayout = "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
+
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-LINUX
 // PPC64-LINUX: target datalayout = "E-m:e-Fi64-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"

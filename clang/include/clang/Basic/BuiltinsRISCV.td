@@ -223,14 +223,14 @@ def psra_s_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, unsigned i
 def psra_s_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, unsigned int)">;
 
 // Packed Absolute Value and Absolute Difference (32-bit)
-def pabd_i8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, signed char>, _Vector<4, signed char>)">;
-def pabd_i16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, short>, _Vector<2, short>)">;
+def pabd_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, signed char>, _Vector<4, signed char>)">;
+def pabd_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, short>, _Vector<2, short>)">;
 def pabdu_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
 def pabdu_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
 
 // Packed Absolute Value and Absolute Difference (64-bit)
-def pabd_i8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, signed char>, _Vector<8, signed char>)">;
-def pabd_i16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, short>, _Vector<4, short>)">;
+def pabd_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, signed char>, _Vector<8, signed char>)">;
+def pabd_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, short>, _Vector<4, short>)">;
 def pabdu_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
 def pabdu_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
 

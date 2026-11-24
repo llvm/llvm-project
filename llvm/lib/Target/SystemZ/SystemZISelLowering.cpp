@@ -289,6 +289,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          MVT::i128, Legal);
+
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, MVT::i128, Legal);
     }
   }
 
@@ -503,6 +505,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VT,
                          Legal);
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, VT, Legal);
     }
   }
 
@@ -5730,6 +5733,21 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::s390_vmlhg:
   case Intrinsic::s390_vmlhq:
     return DAG.getNode(ISD::MULHU, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+
+  case Intrinsic::s390_vavgb:
+  case Intrinsic::s390_vavgh:
+  case Intrinsic::s390_vavgf:
+  case Intrinsic::s390_vavgg:
+  case Intrinsic::s390_vavgq:
+    return DAG.getNode(ISD::AVGCEILS, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vavglb:
+  case Intrinsic::s390_vavglh:
+  case Intrinsic::s390_vavglf:
+  case Intrinsic::s390_vavglg:
+  case Intrinsic::s390_vavglq:
+    return DAG.getNode(ISD::AVGCEILU, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
 
   case Intrinsic::s390_vmahb:

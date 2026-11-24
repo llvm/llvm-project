@@ -133,17 +133,6 @@ body: |
     ; GFX8-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
     ; GFX8-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY3]], [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_OR_B32_e64_]]
-    ;
-    ; GFX9-LABEL: name: and_or_s32_sgpr_sgpr_vgpr
-    ; GFX9: liveins: $sgpr0, $sgpr1, $vgpr0
-    ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
-    ; GFX9-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
-    ; GFX9-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY3]], [[COPY2]], implicit $exec
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[V_OR_B32_e64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
     %2:vgpr(i32) = COPY $vgpr0
