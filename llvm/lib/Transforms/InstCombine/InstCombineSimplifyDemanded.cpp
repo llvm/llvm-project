@@ -1985,6 +1985,23 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       PoisonElts = PoisonElts2 & PoisonElts3;
       break;
     }
+    case Intrinsic::vector_shuffle: {
+      // Result element i only depends on mask element i, so the elements
+      // required from the mask are the same as the demanded result elements.
+      simplifyAndSetOp(II, 1, DemandedElts, PoisonElts);
+      // Only those source elements are required which are indexed by the
+      // demanded elements of the mask. So source elements that are not in the
+      // range specified by the following are not required.
+      ConstantRange KnownRange = computeConstantRangeIncludingKnownBits(
+          II->getArgOperand(1), /*ForSigned=*/false, SQ.getWithInstruction(II));
+      // Indexes >= VWidth produce poison, so they don't require any source
+      // elements.
+      unsigned Lo = KnownRange.getUnsignedMin().getLimitedValue(VWidth);
+      unsigned Hi = KnownRange.getUnsignedMax().getLimitedValue(VWidth - 1) + 1;
+      APInt DemandedSrc = APInt::getBitsSet(VWidth, Lo, Hi);
+      simplifyAndSetOp(II, 0, DemandedSrc, PoisonElts3);
+      break;
+    }
     default: {
       // Handle target specific intrinsics
       std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(

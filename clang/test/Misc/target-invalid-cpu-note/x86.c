@@ -202,7 +202,8 @@
 // RUN: not %clang_cc1 -triple i386--- -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=TUNE_X86
 // TUNE_X86: error: unknown target CPU 'not-a-cpu'
 // TUNE_X86-NEXT: note: valid target CPU values are:
-// TUNE_X86-SAME: {{^}} i386
+// TUNE_X86-SAME: {{^}} generic
+// TUNE_X86-SAME: {{^}}, i386
 // TUNE_X86-SAME: {{^}}, i486
 // TUNE_X86-SAME: {{^}}, winchip-c6
 // TUNE_X86-SAME: {{^}}, winchip2
@@ -312,7 +313,8 @@
 // RUN: not %clang_cc1 -triple x86_64--- -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=TUNE_X86_64
 // TUNE_X86_64: error: unknown target CPU 'not-a-cpu'
 // TUNE_X86_64-NEXT: note: valid target CPU values are:
-// TUNE_X86_64-SAME: {{^}} i386
+// TUNE_X86_64-SAME: {{^}} generic
+// TUNE_X86_64-SAME: {{^}}, i386
 // TUNE_X86_64-SAME: {{^}}, i486
 // TUNE_X86_64-SAME: {{^}}, winchip-c6
 // TUNE_X86_64-SAME: {{^}}, winchip2
