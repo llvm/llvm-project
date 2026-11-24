@@ -2384,9 +2384,9 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
 static Value *
 simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
-                                  FastMathFlags FMF, FPClassTest DemandedMask,
-                                  KnownFPClass &Known, const SimplifyQuery &SQ,
-                                  unsigned Depth) {
+                                  RoundingMode RM, FastMathFlags FMF,
+                                  FPClassTest DemandedMask, KnownFPClass &Known,
+                                  const SimplifyQuery &SQ, unsigned Depth) {
   const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
   const fltSemantics &SrcTy =
       I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
@@ -2426,9 +2426,15 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
       SrcDemandedMask |= fcPosSubnormal;
   }
 
-  if (DemandedMask & fcPosInf)
+  // Overflow may saturate to max-normal depending on the rounding mode.
+  const bool PosOverflowIsNeverPosInf =
+      RM == RoundingMode::TowardZero || RM == RoundingMode::TowardNegative;
+  const bool NegOverflowIsNeverNegInf =
+      RM == RoundingMode::TowardZero || RM == RoundingMode::TowardPositive;
+
+  if ((DemandedMask & fcPosInf) && !PosOverflowIsNeverPosInf)
     SrcDemandedMask |= fcPosNormal;
-  if (DemandedMask & fcNegInf)
+  if ((DemandedMask & fcNegInf) && !NegOverflowIsNeverNegInf)
     SrcDemandedMask |= fcNegNormal;
 
   // TODO: This is a conservative approach for determining the actual input and
@@ -2447,7 +2453,7 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                  Depth + 1))
     return &I;
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, RM, DstMode, SrcMode);
   Known.knownNot(~DemandedMask);
 
   return simplifyDemandedFPClassResult(&I, FMF, DemandedMask, Known,
@@ -2935,8 +2941,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return nullptr;
   }
   case Instruction::FPTrunc:
-    return simplifyDemandedUseFPClassFPTrunc(*this, *I, FMF, DemandedMask,
-                                             Known, SQ, Depth);
+    return simplifyDemandedUseFPClassFPTrunc(
+        *this, *I, RoundingMode::NearestTiesToEven, FMF, DemandedMask, Known,
+        SQ, Depth);
   case Instruction::FPExt: {
     const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
     const fltSemantics &SrcTy =
@@ -3547,9 +3554,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       return nullptr;
     }
-    case Intrinsic::fptrunc_round:
-      return simplifyDemandedUseFPClassFPTrunc(*this, *CI, FMF, DemandedMask,
-                                               Known, SQ, Depth);
+    case Intrinsic::fptrunc_round: {
+      Metadata *MD = cast<MetadataAsValue>(CI->getArgOperand(1))->getMetadata();
+      RoundingMode RM =
+          *convertStrToRoundingMode(cast<MDString>(MD)->getString());
+      return simplifyDemandedUseFPClassFPTrunc(*this, *CI, RM, FMF,
+                                               DemandedMask, Known, SQ, Depth);
+    }
     case Intrinsic::canonicalize: {
       Type *EltTy = VTy->getScalarType();
 
