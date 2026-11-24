@@ -15,9 +15,10 @@ define i32 @xor_byte_index_cross_block(ptr %tab, i32 %len, i8 %a, i8 %b) {
 ; CHECK-NEXT:    cmpl %esi, %eax
 ; CHECK-NEXT:    jae .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %in
-; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    movl (%rdi,%rax,4), %eax
+; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %out
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:
   %x = xor i8 %a, %b
@@ -53,8 +54,7 @@ define i32 @xor_byte_index_loop(ptr %data, ptr %tab, i32 %len, i64 %n, ptr %bad)
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    movl %eax, %r10d
 ; CHECK-NEXT:    shrl $8, %r10d
-; CHECK-NEXT:    movl %r9d, %eax
-; CHECK-NEXT:    movzwl (%rsi,%rax,4), %eax
+; CHECK-NEXT:    movzwl (%rsi,%r9,4), %eax
 ; CHECK-NEXT:    xorl %r10d, %eax
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    decq %rcx
