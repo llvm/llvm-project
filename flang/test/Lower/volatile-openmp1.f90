@@ -1,4 +1,5 @@
-! RUN: bbc --strict-fir-volatile-verifier -fopenmp %s -o - | FileCheck %s
+! RUN: bbc --strict-fir-volatile-verifier -fopenmp -fno-openmp-main-program-globals %s -o - | FileCheck %s --check-prefixes=CHECK,OFF --implicit-check-not='fir.global internal @_QFEn{{[[:space:]]}}'
+! RUN: bbc --strict-fir-volatile-verifier -fopenmp %s -o - | FileCheck %s --check-prefixes=CHECK,ON
 program main
 implicit none
 integer,volatile::a
@@ -23,7 +24,8 @@ end program
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFEa") fortran_attrs<volatile> : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
 ! CHECK:           %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_9:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFEn"}>
+! ON:              %[[VAL_9:.*]] = fir.address_of(@_QFEn) : !fir.ref<i32>
+! OFF:             %[[VAL_9:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFEn"}>
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] uniq_name("_QFEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_6]]#0 : i32, !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_10]]#0 : i32, !fir.ref<i32>

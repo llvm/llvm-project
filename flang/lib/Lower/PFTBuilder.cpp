@@ -7,19 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Evaluate/intrinsics.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/dump-parse-tree.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <limits>
+#include <variant>
 
 #define DEBUG_TYPE "flang-pft"
 
@@ -83,6 +90,399 @@ struct UnwrapStmt<parser::UnlabeledStatement<A>> {
 void dumpScope(const semantics::Scope *scope, int depth = -1);
 #endif
 
+/// Names from DO CONCURRENT SHARED lists or references implied by a symbol.
+enum class SymbolVisitKind { SharedLocality, Dependencies };
+
+/// Nodes the caller can handle instead of the default symbol traversal.
+/// Pointers are valid only during the callback.
+using SymbolVisit =
+    std::variant<SymbolVisitKind, const lower::pft::SomeExpr *,
+                 const evaluate::Assignment *, const evaluate::ProcedureRef *>;
+
+/// Collect direct references and user-call arguments. Elemental intrinsics
+/// and both BESSEL_JN/YN forms contribute arguments used to compute values.
+/// Arguments used only for declared type, kind parameters or rank are skipped,
+/// as are other intrinsics, intrinsic-module procedures, constructors and
+/// coarray references.
+struct DirectSymbolVisitor
+    : public evaluate::AllTraverse<DirectSymbolVisitor, true> {
+  using Base = evaluate::AllTraverse<DirectSymbolVisitor, true>;
+  /// The callbacks and intrinsic table must remain valid throughout this
+  /// expression traversal.
+  explicit DirectSymbolVisitor(
+      llvm::function_ref<void(const semantics::Symbol &)> callback,
+      const evaluate::IntrinsicProcTable &intrinsics,
+      llvm::function_ref<bool(const semantics::Symbol &)> inIntrinsicModule)
+      : Base{*this}, callback{callback}, intrinsics{intrinsics},
+        inIntrinsicModule{inIntrinsicModule} {}
+  using Base::operator();
+  /// Stream each direct symbol occurrence without building subtree sets.
+  bool operator()(const semantics::Symbol &symbol) const {
+    callback(symbol);
+    return true;
+  }
+  /// Computed derived constants cannot add direct storage uses.
+  bool operator()(
+      const evaluate::Constant<evaluate::Type<common::TypeCategory::Derived>> &)
+      const {
+    return true;
+  }
+  /// TODO: Collect runtime operands of coindexed references.
+  bool operator()(const evaluate::CoarrayRef &) const { return true; }
+  /// Visit call arguments and a procedure-component base, not the procedure
+  /// name. Intrinsic arguments are filtered below.
+  bool operator()(const evaluate::ProcedureRef &call) const {
+    if (const auto *component = call.proc().GetComponent())
+      if (!(*this)(component->base()))
+        return false;
+    const auto &arguments = call.arguments();
+    if (arguments.empty())
+      return true;
+    // TODO: Classify runtime arguments of other intrinsic procedures before
+    // traversing them.
+    if (const auto *intrinsic = call.proc().GetSpecificIntrinsic()) {
+      const auto &characteristics = intrinsic->characteristics.value();
+      // Classification is by name: the three-argument BESSEL_JN/YN forms are
+      // included with their elemental forms and need all three argument values.
+      if (!characteristics.IsFunction() ||
+          intrinsics.GetIntrinsicClass(intrinsic->name) !=
+              evaluate::IntrinsicClass::elementalFunction)
+        return true;
+      const auto &dummies = characteristics.dummyArguments;
+      auto isInquiryOnly = [](const auto &dummy) {
+        const auto *object =
+            std::get_if<evaluate::characteristics::DummyDataObject>(&dummy.u);
+        return object &&
+               object->attrs.test(evaluate::characteristics::DummyDataObject::
+                                      Attr::OnlyIntrinsicInquiry);
+      };
+      // Folding IZEXT/JZEXT into IAND adds a mask argument without updating
+      // the original parameter list, so argument counts can differ.
+      if (arguments.size() != dummies.size()) {
+        if (llvm::any_of(dummies, isInquiryOnly))
+          return true;
+        return (*this)(arguments);
+      }
+      // Resolved actuals follow dummy order, including keyword arguments.
+      for (auto [argument, dummy] : llvm::zip_equal(arguments, dummies)) {
+        if (isInquiryOnly(dummy))
+          continue;
+        if (!(*this)(argument))
+          return false;
+      }
+      return true;
+    } else if (const auto *symbol = call.proc().GetSymbol()) {
+      if (inIntrinsicModule(*symbol))
+        return true;
+    }
+    return (*this)(arguments);
+  }
+  /// Visit a defined assignment's arguments once, or both intrinsic operands.
+  bool operator()(const evaluate::Assignment &assignment) const {
+    if (const auto *call = std::get_if<evaluate::ProcedureRef>(&assignment.u))
+      return (*this)(*call);
+    return Base::operator()(assignment);
+  }
+  /// TODO: Collect component values and runtime derived-type parameters.
+  bool operator()(const evaluate::StructureConstructor &) const { return true; }
+  /// TODO: Collect array elements and implied-DO bounds; CHARACTER length
+  /// expressions need an explicit visit.
+  template <typename A>
+  bool operator()(const evaluate::ArrayConstructor<A> &) const {
+    return true;
+  }
+
+private:
+  llvm::function_ref<void(const semantics::Symbol &)> callback;
+  const evaluate::IntrinsicProcTable &intrinsics;
+  llvm::function_ref<bool(const semantics::Symbol &)> inIntrinsicModule;
+};
+
+/// Visit symbol references with an optional hook before entering subtrees.
+template <typename A>
+void visitSymbols(const A &node,
+                  llvm::function_ref<void(const semantics::Symbol &)> callback,
+                  llvm::function_ref<bool(SymbolVisit)> preVisit = {});
+
+/// Select small MAIN scalars directly used inside explicit host PARALLEL
+/// regions during PFT construction, before host associations are classified.
+/// Offload constructs and metadirectives conservatively disable selection
+/// for MAIN, so host and device procedures use identical capture layouts.
+class MainGlobalAnalysis {
+public:
+  /// The intrinsic table must outlive the analysis. Disabled analyses skip
+  /// symbol collection and scope traversal.
+  MainGlobalAnalysis(bool enabled,
+                     const evaluate::IntrinsicProcTable &intrinsics)
+      : enabled{enabled}, intrinsics{intrinsics} {}
+  /// Track MAIN and all its internal procedures for scalar collection.
+  void enterFunction(const lower::pft::FunctionLikeUnit &unit) {
+    if (!enabled)
+      return;
+    const auto &scope = unit.getScope();
+    relevant = unit.isMainProgram();
+    if (relevant) {
+      mainScope = &scope;
+      // Bare MAIN SAVE already gives every eligible object global storage.
+      if (scope.hasSAVE()) {
+        enabled = false;
+        relevant = false;
+        return;
+      }
+    }
+    // An internal procedure cannot contain another internal procedure, so
+    // only the immediate PFT parent can be MAIN.
+    if (!relevant && mainScope)
+      if (const auto *host =
+              unit.parent.getIf<lower::pft::FunctionLikeUnit>()) {
+        relevant = host->isMainProgram();
+      }
+    if (relevant && scope.symbol()) {
+      const auto &symbol = *scope.symbol();
+      if (symbol.test(semantics::Symbol::Flag::OmpDeclareTarget))
+        unsupported = true;
+    }
+  }
+  /// Detect offload data directives, DECLARE TARGET and metadirectives.
+  /// TARGET constructs, standalone or combined, are handled by enterOpenMP().
+  void directive(llvm::omp::Directive id) {
+    if (!relevant || unsupported)
+      return;
+    switch (id) {
+    case llvm::omp::Directive::OMPD_metadirective:
+    case llvm::omp::Directive::OMPD_declare_target:
+    case llvm::omp::Directive::OMPD_target_data:
+    case llvm::omp::Directive::OMPD_target_enter_data:
+    case llvm::omp::Directive::OMPD_target_exit_data:
+    case llvm::omp::Directive::OMPD_target_update:
+      unsupported = true;
+      return;
+    default:
+      return;
+    }
+  }
+  /// Track nesting independently of fallback state, keeping entry and exit
+  /// balanced when an unsupported context is encountered inside PARALLEL.
+  void enterOpenMP(const parser::OpenMPConstruct &construct) {
+    if (!relevant)
+      return;
+    bool parallel = false;
+    for (auto leaf : llvm::omp::getLeafConstructsOrSelf(
+             parser::omp::GetOmpDirectiveName(construct).v)) {
+      parallel |= leaf == llvm::omp::Directive::OMPD_parallel;
+      unsupported |= leaf == llvm::omp::Directive::OMPD_target;
+    }
+    parallels.push_back(parallel);
+    parallelDepth += parallel;
+  }
+  /// Restore the enclosing PARALLEL nesting after its PFT construct.
+  void exitOpenMP() {
+    if (relevant) {
+      parallelDepth -= parallels.back();
+      parallels.pop_back();
+    }
+  }
+  /// Visit statements inside PARALLEL, including WHERE/FORALL statements
+  /// without separate PFT entries. OpenMP clause lists are skipped; IF actions
+  /// have their own PFT entries.
+  template <typename A>
+  void collect(const A &node) {
+    if (!relevant || unsupported || !parallelDepth)
+      return;
+    auto collectSymbol = [&](const semantics::Symbol &symbol) {
+      const auto *original = root(symbol);
+      if (&original->owner() == mainScope)
+        objects.insert(original);
+    };
+    auto inIntrinsicModule = [&](const semantics::Symbol &symbol) {
+      return isIntrinsicModuleProcedure(symbol);
+    };
+    DirectSymbolVisitor expressions{collectSymbol, intrinsics,
+                                    inIntrinsicModule};
+    // Use analyzed operands instead of their source names: the source walk
+    // would also collect operands that this analysis deliberately skips.
+    // SHARED locality lists and implicit dependencies do not select storage.
+    auto preVisit = [&](SymbolVisit node) {
+      return common::visit(
+          common::visitors{[](SymbolVisitKind) { return false; },
+                           [&](const auto *expr) {
+                             expressions(*expr);
+                             return false;
+                           }},
+          node);
+    };
+    if constexpr (std::is_same_v<A, lower::pft::Evaluation>) {
+      node.visit([&](const auto &stmt) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(stmt)>,
+                                     parser::IfStmt>)
+          visitSymbols(std::get<parser::ScalarLogicalExpr>(stmt.t),
+                       collectSymbol, preVisit);
+        else if constexpr (lower::pft::isActionStmt<
+                               std::decay_t<decltype(stmt)>> ||
+                           lower::pft::isConstructStmt<
+                               std::decay_t<decltype(stmt)>>)
+          visitSymbols(stmt, collectSymbol, preVisit);
+      });
+    } else {
+      visitSymbols(node, collectSymbol, preVisit);
+    }
+  }
+  /// Return the eligible MAIN scalars after applying storage restrictions.
+  /// Set iteration cannot affect independent decisions or declaration order.
+  llvm::DenseSet<const semantics::Symbol *>
+  finalize(const lower::pft::Program &program) {
+    if (unsupported || objects.empty())
+      return {};
+    const auto candidateCount = objects.size();
+    objects.remove_if([&](const semantics::Symbol *symbol) {
+      return !canUseGlobal(*symbol, program);
+    });
+    if (objects.empty())
+      return {};
+    // EQUIVALENCE members share an allocation; this analysis does not move
+    // whole allocation groups.
+    for (const auto &set : mainScope->equivalenceSets())
+      for (const auto &object : set)
+        if (objects.erase(&object.symbol) && objects.empty())
+          return {};
+    // Semantic analysis fixes OpenMP data sharing. This conservative policy
+    // excludes originals with private/locality copies anywhere in MAIN,
+    // including uncalled procedures, to avoid analyzing each copy's storage.
+    // Exclude NAMELIST members without analyzing their group descriptors.
+    // LocalityReduce uses the original accumulator and can use global storage.
+    const semantics::Symbol::Flags excluded{
+        semantics::Symbol::Flag::OmpPrivate,
+        semantics::Symbol::Flag::OmpFirstPrivate,
+        semantics::Symbol::Flag::OmpLastPrivate,
+        semantics::Symbol::Flag::OmpLinear,
+        semantics::Symbol::Flag::OmpReduction,
+        semantics::Symbol::Flag::OmpInReduction,
+        semantics::Symbol::Flag::OmpGroupPrivate,
+        semantics::Symbol::Flag::OmpCopyPrivate,
+        semantics::Symbol::Flag::OmpPreDetermined,
+        semantics::Symbol::Flag::LocalityLocal,
+        semantics::Symbol::Flag::LocalityLocalInit,
+        semantics::Symbol::Flag::InNamelist};
+    llvm::SmallVector<const semantics::Scope *> scopes{mainScope};
+    while (!scopes.empty()) {
+      const auto *scope = scopes.pop_back_val();
+      // This sweep only removes candidates; stop resolving after exhaustion.
+      for (const auto &[name, symbol] : *scope)
+        if ((symbol->flags() & excluded).any() &&
+            objects.erase(root(*symbol)) && objects.empty())
+          return {};
+      for (const auto &child : scope->children())
+        scopes.push_back(&child);
+    }
+    // When most candidates were rejected, keep a compact table for the
+    // selection that lives throughout lowering.
+    if (objects.size() < candidateCount - objects.size()) {
+      llvm::DenseSet<const semantics::Symbol *> globals(objects.size());
+      globals.insert(objects.begin(), objects.end());
+      return globals;
+    }
+    return std::move(objects);
+  }
+
+private:
+  /// Follow USE/host associations, caching shared parts of their chains.
+  /// Return direct objects and ASSOCIATE entities without a cache lookup.
+  const semantics::Symbol *root(const semantics::Symbol &symbol) {
+    const auto *original = &symbol;
+    llvm::SmallVector<const semantics::Symbol *> path;
+    while (true) {
+      const semantics::Symbol *next;
+      if (const auto *details =
+              original->detailsIf<semantics::HostAssocDetails>())
+        next = &details->symbol();
+      else if (const auto *details =
+                   original->detailsIf<semantics::UseDetails>())
+        next = &details->symbol();
+      else
+        break;
+      if (auto it = roots.find(original); it != roots.end()) {
+        original = it->second;
+        break;
+      }
+      path.push_back(original);
+      original = next;
+    }
+    for (const auto *entry : path)
+      roots.try_emplace(entry, original);
+    return original;
+  }
+  /// True for procedures owned by intrinsic modules. Cache scope ancestry so
+  /// repeated calls do not walk the same parent scopes again.
+  bool isIntrinsicModuleProcedure(const semantics::Symbol &symbol) {
+    const auto *scope = &root(symbol)->owner();
+    llvm::SmallVector<const semantics::Scope *> path;
+    bool intrinsic = false;
+    while (true) {
+      if (auto it = intrinsicScopes.find(scope); it != intrinsicScopes.end()) {
+        intrinsic = it->second;
+        break;
+      }
+      path.push_back(scope);
+      if (scope->IsModule()) {
+        intrinsic = scope->parent().IsIntrinsicModules();
+        break;
+      }
+      if (scope->IsGlobal() || scope->IsIntrinsicModules())
+        break;
+      scope = &scope->parent();
+    }
+    for (const auto *entry : path)
+      intrinsicScopes.try_emplace(entry, intrinsic);
+    return intrinsic;
+  }
+  /// Allow static storage for nonstatic intrinsic MAIN scalars of 1--32 bytes.
+  /// Descriptor-backed objects, Cray pointers and special allocation rules
+  /// require separate handling. Potential name collisions are excluded too.
+  static bool canUseGlobal(const semantics::Symbol &symbol,
+                           const lower::pft::Program &program) {
+    // FIXME: Teach AddDebugInfo to recognize globals behind fir.volatile_cast
+    // before promoting VOLATILE variables, to avoid duplicate local and global
+    // debug entries.
+    // See https://github.com/llvm/llvm-project/issues/238918.
+    if (symbol.attrs().test(semantics::Attr::VOLATILE))
+      return false;
+    const auto name = toStringRef(symbol.name());
+    // Avoid collisions between user globals and generated privatizer names.
+    // FIXME: Remove the privatizer exclusions once naming is fixed.
+    // See https://github.com/llvm/llvm-project/issues/236705.
+    for (llvm::StringRef suffix : lower::privatizerSuffixes)
+      if (name.contains(suffix))
+        return false;
+    // A coarray named x creates a global handle named x_coarray_handle.
+    if (name.ends_with(fir::coarrayHandleSuffix))
+      return false;
+    const auto *object = symbol.detailsIf<semantics::ObjectEntityDetails>();
+    const auto *type = symbol.GetType();
+    return object && !object->IsArray() && type && type->AsIntrinsic() &&
+           semantics::IsSmallMainProgramVariable(symbol) && symbol.size() &&
+           !semantics::IsAllocatableOrPointer(symbol) &&
+           !semantics::IsAutomatic(symbol) &&
+           !lower::symbolIsGlobal(symbol, program) &&
+           !symbol.test(semantics::Symbol::Flag::OmpThreadprivate) &&
+           !symbol.test(semantics::Symbol::Flag::CrayPointer) &&
+           !symbol.test(semantics::Symbol::Flag::CrayPointee) &&
+           !symbol.test(
+               semantics::Symbol::Flag::OmpDeclarativeAllocateDirective) &&
+           !symbol.test(
+               semantics::Symbol::Flag::OmpExecutableAllocateDirective);
+  }
+  bool enabled;
+  const evaluate::IntrinsicProcTable &intrinsics;
+  bool relevant = false;
+  bool unsupported = false;
+  const semantics::Scope *mainScope = nullptr;
+  unsigned parallelDepth = 0;
+  llvm::SmallVector<bool> parallels;
+  llvm::DenseMap<const semantics::Symbol *, const semantics::Symbol *> roots;
+  llvm::DenseMap<const semantics::Scope *, bool> intrinsicScopes;
+  llvm::DenseSet<const semantics::Symbol *> objects;
+};
+
 /// The instantiation of a parse tree visitor (Pre and Post) is extremely
 /// expensive in terms of compile and link time. So one goal here is to
 /// limit the bridge to one such instantiation.
@@ -92,17 +492,41 @@ public:
              const lower::LoweringOptions &loweringOptions)
       : pgm{std::make_unique<lower::pft::Program>(
             semanticsContext.GetCommonBlocks())},
-        semanticsContext{semanticsContext}, loweringOptions{loweringOptions} {
+        semanticsContext{semanticsContext}, loweringOptions{loweringOptions},
+        mainGlobals{
+            loweringOptions.shouldPromoteOpenMPMainProgramScalars() &&
+                semanticsContext.languageFeatures().IsEnabled(
+                    common::LanguageFeature::OpenMP) &&
+                !semanticsContext.langOptions().OpenMPSimd &&
+                !semanticsContext.langOptions().OpenMPIsTargetDevice &&
+                // TODO: Resolve OpenACC/CUDA device routines before choosing
+                // storage, so host and device procedures use matching captures.
+                !semanticsContext.languageFeatures().IsEnabled(
+                    common::LanguageFeature::OpenACC) &&
+                !semanticsContext.languageFeatures().IsEnabled(
+                    common::LanguageFeature::CUDA) &&
+                !semanticsContext.languageFeatures().IsEnabled(
+                    common::LanguageFeature::SaveMainProgram) &&
+                !semanticsContext.languageFeatures().IsEnabled(
+                    common::LanguageFeature::DefaultSave),
+            semanticsContext.intrinsics()} {
     lower::pft::PftNode pftRoot{*pgm.get()};
     pftParentStack.push_back(pftRoot);
   }
 
   /// Get the result
-  std::unique_ptr<lower::pft::Program> result() { return std::move(pgm); }
+  std::unique_ptr<lower::pft::Program> result() {
+    pgm->setMainGlobals(mainGlobals.finalize(*pgm));
+    return std::move(pgm);
+  }
 
   template <typename A>
   constexpr bool Pre(const A &a) {
-    if constexpr (lower::pft::isFunctionLike<A>) {
+    if constexpr (std::is_base_of_v<parser::OmpDirectiveSpecification, A>) {
+      if (currentFunctionUnit && !interfaceBodyLevel)
+        mainGlobals.directive(a.DirId());
+      return true;
+    } else if constexpr (lower::pft::isFunctionLike<A>) {
       return enterFunction(a, semanticsContext);
     } else if constexpr (lower::pft::isConstruct<A> ||
                          lower::pft::isDirective<A>) {
@@ -140,6 +564,11 @@ public:
                 },
             },
             stmt.unwrapped.u);
+      } else if constexpr (std::is_same_v<T, parser::WhereStmt> ||
+                           std::is_same_v<T, parser::ForallStmt>) {
+        // Nested WHERE/FORALL statements have no separate PFT evaluation, so
+        // collect their expressions while visiting the parse tree.
+        mainGlobals.collect(stmt.unwrapped);
       } else if constexpr (std::is_same_v<T, parser::UseStmt>) {
         // Process USE statement for debug info generation
         processUseStmt(stmt.unwrapped);
@@ -523,6 +952,7 @@ private:
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
     currentFunctionUnit = &unit;
+    mainGlobals.enterFunction(unit);
     LLVM_DEBUG(dumpScope(&unit.getScope()));
     return true;
   }
@@ -581,6 +1011,8 @@ private:
   bool enterConstructOrDirective(const A &constructOrDirective) {
     lower::pft::Evaluation &eval = addEvaluation(
         lower::pft::Evaluation{constructOrDirective, pftParentStack.back()});
+    if constexpr (std::is_same_v<A, parser::OpenMPConstruct>)
+      mainGlobals.enterOpenMP(constructOrDirective);
     eval.evaluationList.reset(new lower::pft::EvaluationList);
     pushEvaluationList(eval.evaluationList.get());
     pftParentStack.emplace_back(eval);
@@ -600,6 +1032,8 @@ private:
     rewriteIfGotos();
     rewriteTrailingCycle();
     auto *eval = constructAndDirectiveStack.back();
+    if (eval->isA<parser::OpenMPConstruct>())
+      mainGlobals.exitOpenMP();
     if (eval->isExecutableDirective() && !isOpenMPLoopConstruct(eval)) {
       // A construct at the end of an (unstructured) OpenACC or OpenMP
       // construct region must have an exit target inside the region.
@@ -673,8 +1107,10 @@ private:
     lower::pft::FunctionLikeUnit *owningProcedure = eval.getOwningProcedure();
     evaluationListStack.back()->emplace_back(std::move(eval));
     lower::pft::Evaluation *p = &evaluationListStack.back()->back();
-    if (p->isActionStmt() || p->isConstructStmt() || p->isEndStmt() ||
-        p->isExecutableDirective()) {
+    const bool isActionOrConstruct = p->isActionStmt() || p->isConstructStmt();
+    if (owningProcedure && isActionOrConstruct)
+      mainGlobals.collect(*p);
+    if (isActionOrConstruct || p->isEndStmt() || p->isExecutableDirective()) {
       if (lastLexicalEvaluation) {
         lastLexicalEvaluation->lexicalSuccessor = p;
         p->printIndex = lastLexicalEvaluation->printIndex + 1;
@@ -1396,6 +1832,7 @@ private:
   std::vector<lower::pft::PftNode> pftParentStack;
   const semantics::SemanticsContext &semanticsContext;
   const lower::LoweringOptions &loweringOptions;
+  MainGlobalAnalysis mainGlobals;
 
   llvm::SmallVector<bool> containsStmtStack{};
   lower::pft::ContainedUnitList *containedUnitList{};
@@ -1777,8 +2214,11 @@ bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
 }
 
 /// Is the symbol `sym` a global?
-bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
-  return (semantics::IsSaved(sym) && semantics::CanCUDASymbolBeGlobal(sym)) ||
+bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym,
+                                    const lower::pft::Program &program) {
+  const auto &ultimate = sym.GetUltimate();
+  return ((semantics::IsSaved(ultimate) || program.isMainGlobal(ultimate)) &&
+          semantics::CanCUDASymbolBeGlobal(sym)) ||
          lower::definedInCommonBlock(sym) || semantics::IsNamedConstant(sym);
 }
 
@@ -1796,13 +2236,17 @@ static std::size_t getSymbolAlignment(const semantics::Symbol &sym) {
 /// preserves the order of the symbol table, which is sorted by name. This
 /// analysis may also be done for an individual symbol.
 struct SymbolDependenceAnalysis {
-  explicit SymbolDependenceAnalysis(const semantics::Scope &scope) {
+  explicit SymbolDependenceAnalysis(const semantics::Scope &scope,
+                                    const lower::pft::Program &program)
+      : program{program} {
     analyzeEquivalenceSets(scope);
     for (const auto &iter : scope)
       analyze(iter.second.get());
     finalize();
   }
-  explicit SymbolDependenceAnalysis(const semantics::Symbol &symbol) {
+  explicit SymbolDependenceAnalysis(const semantics::Symbol &symbol,
+                                    const lower::pft::Program &program)
+      : program{program} {
     analyzeEquivalenceSets(symbol.owner());
     analyze(symbol);
     finalize();
@@ -1810,7 +2254,9 @@ struct SymbolDependenceAnalysis {
   /// Analyze the dependencies of a set of module variables that are host
   /// associated (or use associated in host module scopes).
   explicit SymbolDependenceAnalysis(
-      const llvm::SetVector<const semantics::Symbol *> &moduleVariables) {
+      const llvm::SetVector<const semantics::Symbol *> &moduleVariables,
+      const lower::pft::Program &program)
+      : program{program} {
     for (const semantics::Symbol *sym : moduleVariables)
       analyzeLocalEquivalenceSets(sym->owner());
     // Add all aggregate stores to the front of the variable list.
@@ -1884,7 +2330,7 @@ private:
         if (sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated)) {
           aggregateSym = &sym;
         } else {
-          isGlobal |= lower::symbolIsGlobal(sym);
+          isGlobal |= lower::symbolIsGlobal(sym, program);
           start = std::min(sym.offset(), start);
           end = std::max(sym.offset() + sym.size(), end);
           alignment = std::max(alignment, getSymbolAlignment(sym));
@@ -1995,7 +2441,7 @@ private:
       depth = std::max(
           analyze(Fortran::semantics::GetCrayPointer(ultimate)) + 1, depth);
     adjustSize(depth + 1);
-    bool global = lower::symbolIsGlobal(sym);
+    bool global = lower::symbolIsGlobal(sym, program);
     layeredVarList[depth].emplace_back(sym, global, depth);
     if (semantics::IsAllocatable(sym))
       layeredVarList[depth].back().setHeapAlloc();
@@ -2073,6 +2519,8 @@ private:
                                layeredVarList[i].end());
   }
 
+  /// The PFT owns the storage choices and must outlive this analysis.
+  const lower::pft::Program &program;
   llvm::SmallPtrSet<const semantics::Symbol *, 32> seen;
   std::vector<Fortran::lower::pft::VariableList> layeredVarList;
   llvm::SmallPtrSet<const semantics::Symbol *, 32> aliasSyms;
@@ -2135,6 +2583,13 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
   const semantics::Symbol *symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
   scope = symbol->scope();
+}
+
+void Fortran::lower::pft::FunctionLikeUnit::setHostAssociatedSymbols(
+    const llvm::SetVector<const semantics::Symbol *> &symbols) {
+  Program *program = getAncestor<Program>(*this);
+  assert(program && "pft must have a root");
+  hostAssociations.addSymbolsToBind(symbols, *program);
 }
 
 Fortran::lower::HostAssociations &
@@ -2305,18 +2760,15 @@ void Fortran::lower::pft::BlockDataUnit::dump() const {
   llvm::errs() << "block data {\n" << symTab << "\n}\n";
 }
 
-/// Find or create an ordered list of equivalences and variables in \p scope.
-/// The result is cached in \p map.
+/// Find or create ordered records using this Program's storage selection.
 const lower::pft::VariableList &
-lower::pft::getScopeVariableList(const semantics::Scope &scope,
-                                 ScopeVariableListMap &map) {
+lower::pft::Program::getScopeVariableList(const semantics::Scope &scope) {
   LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of scope <" << &scope
                           << "> " << scope.GetName() << "\n");
-  auto iter = map.find(&scope);
-  if (iter == map.end()) {
-    SymbolDependenceAnalysis sda(scope);
-    map.emplace(&scope, sda.getVariableList());
-    iter = map.find(&scope);
+  auto iter = scopeVariableListMap.find(&scope);
+  if (iter == scopeVariableListMap.end()) {
+    SymbolDependenceAnalysis sda(scope, *this);
+    iter = scopeVariableListMap.emplace(&scope, sda.getVariableList()).first;
   }
   return iter->second;
 }
@@ -2324,21 +2776,23 @@ lower::pft::getScopeVariableList(const semantics::Scope &scope,
 /// Create an ordered list of equivalences and variables in \p scope.
 /// The result is not cached.
 lower::pft::VariableList
-lower::pft::getScopeVariableList(const semantics::Scope &scope) {
+lower::pft::getScopeVariableList(const semantics::Scope &scope,
+                                 const Program &program) {
   LLVM_DEBUG(
       llvm::dbgs() << "\ngetScopeVariableList of [sub]program|block scope <"
                    << &scope << "> " << scope.GetName() << "\n");
-  SymbolDependenceAnalysis sda(scope);
+  SymbolDependenceAnalysis sda(scope, program);
   return sda.getVariableList();
 }
 
 /// Create an ordered list of equivalences and variables that \p symbol
 /// depends on (no caching). Include \p symbol at the end of the list.
 lower::pft::VariableList
-lower::pft::getDependentVariableList(const semantics::Symbol &symbol) {
+lower::pft::getDependentVariableList(const semantics::Symbol &symbol,
+                                     const Program &program) {
   LLVM_DEBUG(llvm::dbgs() << "\ngetDependentVariableList of " << &symbol
                           << " - " << symbol << "\n");
-  SymbolDependenceAnalysis sda(symbol);
+  SymbolDependenceAnalysis sda(symbol, program);
   return sda.getVariableList();
 }
 
@@ -2403,23 +2857,54 @@ lower::pft::getHostModuleVariableList(const FunctionLikeUnit &funit) {
                           << funit.getScope().GetName() << "\n");
   llvm::SetVector<const semantics::Symbol *> moduleVariables;
   collectHostAssociatedModuleVariables(funit, moduleVariables);
-  SymbolDependenceAnalysis sda(moduleVariables);
+  const Program *program = getAncestor<Program>(funit);
+  assert(program && "pft must have a root");
+  SymbolDependenceAnalysis sda(moduleVariables, *program);
   return sda.getVariableList();
 }
 
 namespace {
-/// Helper class to find all the symbols referenced in a FunctionLikeUnit.
-/// It defines a parse tree visitor doing a deep visit in all nodes with
-/// symbols (including evaluate::Expr).
+
+/// Visit symbols in source syntax, analyzed expressions and their dependencies.
 struct SymbolVisitor {
+  /// Callbacks must remain valid during the walk. The hook may handle a node;
+  /// returning false skips its default traversal.
+  explicit SymbolVisitor(
+      llvm::function_ref<void(const semantics::Symbol &)> callback,
+      llvm::function_ref<bool(SymbolVisit)> preVisit = {})
+      : callback{callback}, preVisit{preVisit} {}
+
   template <typename A>
   bool Pre(const A &x) {
-    if constexpr (Fortran::parser::HasTypedExpr<A>::value)
+    if constexpr (Fortran::parser::HasTypedExpr<A>::value) {
       // Some parse tree Expr may legitimately be un-analyzed after semantics
       // (for instance PDT component initial value in the PDT definition body).
-      if (const auto *expr = Fortran::semantics::GetExpr(nullptr, x))
+      if (const auto *expr = Fortran::semantics::GetExpr(nullptr, x)) {
+        if (!enter(expr))
+          return false;
         visitExpr(*expr);
+      }
+    } else if constexpr (Fortran::parser::HasTypedAssignment<A>::value) {
+      // Let the hook handle the analyzed assignment. If it does, skip
+      // source operands, which may include names the hook excludes.
+      if (preVisit && x.typedAssignment && x.typedAssignment->v &&
+          !enter(&*x.typedAssignment->v))
+        return false;
+    }
     return true;
+  }
+
+  /// With a hook, offer the analyzed call or skip it if analysis is absent.
+  bool Pre(const parser::CallStmt &call) {
+    if (preVisit && (!call.typedCall || !enter(&*call.typedCall)))
+      return false;
+    return Pre<parser::CallStmt>(call);
+  }
+
+  /// Let the hook skip SHARED locality names, which need no value evaluation.
+  bool Pre(const parser::LocalitySpec::Shared &shared) {
+    return enter(SymbolVisitKind::SharedLocality) &&
+           Pre<parser::LocalitySpec::Shared>(shared);
   }
 
   bool Pre(const Fortran::parser::Name &name) {
@@ -2455,7 +2940,9 @@ struct SymbolVisitor {
   }
 
   void visitSymbol(const Fortran::semantics::Symbol &symbol) {
-    callBack(symbol);
+    callback(symbol);
+    if (!enter(SymbolVisitKind::Dependencies))
+      return;
     // - Visit statement function body since it will be inlined in lowering.
     // - Visit function results specification expressions because allocations
     //   happens on the caller side.
@@ -2505,25 +2992,37 @@ struct SymbolVisitor {
   template <typename A>
   constexpr void Post(const A &) {}
 
-  const std::function<void(const Fortran::semantics::Symbol &)> &callBack;
+private:
+  /// Allow default traversal unless the hook handles or rejects the node.
+  bool enter(SymbolVisit node) const { return !preVisit || preVisit(node); }
+
+  llvm::function_ref<void(const semantics::Symbol &)> callback;
+  llvm::function_ref<bool(SymbolVisit)> preVisit;
 };
+
+template <typename A>
+void visitSymbols(const A &node,
+                  llvm::function_ref<void(const semantics::Symbol &)> callback,
+                  llvm::function_ref<bool(SymbolVisit)> preVisit) {
+  SymbolVisitor visitor{callback, preVisit};
+  parser::Walk(node, visitor);
+}
+
 } // namespace
 
 void Fortran::lower::pft::visitAllSymbols(
     const Fortran::lower::pft::FunctionLikeUnit &funit,
     const std::function<void(const Fortran::semantics::Symbol &)> callBack) {
-  SymbolVisitor visitor{callBack};
   funit.visit([&](const auto &functionParserNode) {
-    parser::Walk(functionParserNode, visitor);
+    visitSymbols(functionParserNode, callBack);
   });
 }
 
 void Fortran::lower::pft::visitAllSymbols(
     const Fortran::lower::pft::Evaluation &eval,
     const std::function<void(const Fortran::semantics::Symbol &)> callBack) {
-  SymbolVisitor visitor{callBack};
   eval.visit([&](const auto &functionParserNode) {
-    parser::Walk(functionParserNode, visitor);
+    visitSymbols(functionParserNode, callBack);
   });
 }
 

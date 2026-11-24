@@ -23,6 +23,7 @@ class AbstractConverter;
 class SymMap;
 namespace pft {
 struct FunctionLikeUnit;
+struct Program;
 struct Variable;
 } // namespace pft
 
@@ -43,8 +44,10 @@ public:
 
   /// Adds a set of Symbols that will be the host associated bindings for this
   /// host procedure.
+  /// Storage classification uses program's selected MAIN globals.
   void addSymbolsToBind(
-      const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols);
+      const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
+      const pft::Program &program);
 
   /// Cache the variable list for a host with captured globals and select the
   /// bindings needed by its internal procedures.

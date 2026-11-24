@@ -24,6 +24,7 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include <cstdint>
+#include <iterator>
 #include <optional>
 #include <type_traits>
 
@@ -786,11 +787,18 @@ void privatizeSymbol(
                              isDynamicallySizedBoxArrayType(allocType);
 
   OpType privatizerOp = [&]() {
+    // Privatization kind encoded in the generated name.
+    enum class PrivatizerKind { Private, FirstPrivate, Linear, Count };
+    static_assert(std::size(privatizerSuffixes) ==
+                  static_cast<unsigned>(PrivatizerKind::Count));
     auto moduleOp = firOpBuilder.getModule();
-    std::string privatizerPrefix =
-        converter.mangleName(*sym) +
-        (emitCopyRegion ? "_firstprivate"
-                        : (isLinear ? "_linear" : "_private"));
+    PrivatizerKind kind = emitCopyRegion ? PrivatizerKind::FirstPrivate
+                          : isLinear     ? PrivatizerKind::Linear
+                                         : PrivatizerKind::Private;
+    std::string privatizerPrefix = converter.mangleName(*sym);
+    llvm::StringRef suffix =
+        privatizerSuffixes[static_cast<unsigned>(kind)].drop_back();
+    privatizerPrefix.append(suffix.data(), suffix.size());
     if (forceHeapAllocation)
       privatizerPrefix += "_heap";
     auto uniquePrivatizerName = fir::getTypeAsString(
