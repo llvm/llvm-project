@@ -838,14 +838,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       // We don't have the ability to slide mask vectors down indexed by their
       // i1 elements; the smallest we can do is i8. Often we are able to bitcast
       // to equivalent i8 vectors.
-      .bitcastIf(
-          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
-              typeIsLegalBoolVec(1, BoolVecTys, ST), ExtractSubvecBitcastPred),
-          [=](const LegalityQuery &Query) {
-            LLT CastTy = LLT::vector(
-                Query.Types[0].getElementCount().divideCoefficientBy(8), 8);
-            return std::pair(0, CastTy);
-          })
+      .bitcastIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+                     typeIsLegalBoolVec(1, BoolVecTys, ST),
+                     ExtractSubvecBitcastPred),
+                 [=](const LegalityQuery &Query) {
+                   LLT CastTy = LLT::vector(
+                       Query.Types[0].getElementCount().divideCoefficientBy(8),
+                       LLT::integer(8));
+                   return std::pair(0, CastTy);
+                 })
       .customIf(LegalityPredicates::any(
           all(typeIsLegalBoolVec(0, BoolVecTys, ST),
               typeIsLegalBoolVec(1, BoolVecTys, ST)),
@@ -1319,7 +1320,7 @@ bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
   // Calculate the new vector type with i8 elements
   unsigned NumElements =
       DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
-  LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
+  LLT NewDataTy = LLT::scalable_vector(NumElements, LLT::integer(8));
 
   Helper.bitcast(MI, 0, NewDataTy);
 
@@ -1564,7 +1565,8 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
     if (BigTyMinElts >= 8 && LitTyMinElts >= 8)
       return Helper.bitcast(
           IS, 0,
-          LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8));
+          LLT::vector(BigTy.getElementCount().divideCoefficientBy(8),
+                      LLT::integer(8)));
 
     // We can't slide this mask vector up indexed by its i1 elements.
     // This poses a problem when we wish to insert a scalable vector which
