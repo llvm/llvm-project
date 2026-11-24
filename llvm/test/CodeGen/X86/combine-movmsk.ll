@@ -555,3 +555,63 @@ define i32 @movmskps_ptest_numelts_mismatch(<16 x i8> %a0) {
   %6 = sext i1 %5 to i32
   ret i32 %6
 }
+
+; Fold movmsk(or(or(ne(a0, b0), ne(a1, b1)), eq(m, 0))) == 0
+; into movmsk(andn(eq(m, 0), and(eq(a0, b0), eq(a1, b1)))) == 0xffff.
+define i1 @movmsk_or_not_andnp_v16i8(<16 x i8> %a0, <16 x i8> %b0, <16 x i8> %a1, <16 x i8> %b1, <16 x i8> %m) {
+; SSE-LABEL: movmsk_or_not_andnp_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqb %xmm3, %xmm2
+; SSE-NEXT:    pxor %xmm1, %xmm2
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: movmsk_or_not_andnp_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpxor %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm4, %xmm1
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpmovmskb %xmm0, %eax
+; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+;
+; ADL-LABEL: movmsk_or_not_andnp_v16i8:
+; ADL:       # %bb.0:
+; ADL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
+; ADL-NEXT:    vpxor %xmm1, %xmm2, %xmm1
+; ADL-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vpcmpeqb %xmm1, %xmm4, %xmm1
+; ADL-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vpmovmskb %xmm0, %eax
+; ADL-NEXT:    testl %eax, %eax
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    retq
+  %ne0 = icmp ne <16 x i8> %a0, %b0
+  %ne1 = icmp ne <16 x i8> %a1, %b1
+  %eqm = icmp eq <16 x i8> %m, zeroinitializer
+  %or0 = or <16 x i1> %ne0, %ne1
+  %or1 = or <16 x i1> %or0, %eqm
+  %bc = bitcast <16 x i1> %or1 to i16
+  %res = icmp eq i16 %bc, 0
+  ret i1 %res
+}
