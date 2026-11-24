@@ -4817,21 +4817,21 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // If we have a sub X, ashr/lshr (X, C), we can avoid losing one
       // known sign bit if ashr or if lshr and X is nonnegative.
       //
-      // Suppose we have
+      // Suppose we have:
       // 1) Y = sub i8 X, ashr (X, C),
       // 2) tmp = ashr (X, C)
       //
-      // For non-undef X,
+      // For non-undef X:
       //
-      // If X >=0, we can conclude: 0 <= tmp <= X
-      // cause of the ashr, the tmp shrinks.
+      // If X >= 0, we can conclude: 0 <= tmp <= X
+      // because ashr keeps tmp nonnegative and no greater than X.
       // Therefore, 0 <= Y <= X.
       //
       // For X < 0, we can conclude X <= tmp <= 0,
-      // cause again the ashr keeps tmp negative but
-      // smaller in magnitude.
+      // because ashr keeps tmp negative but
+      // its magnitude is no greater than that of X.
       //
-      // As an example,
+      // As an example:
       // Tmp = ashr i4 -8, 1
       // -8 == 1000, becomes 1100 = -4
       //
@@ -4850,9 +4850,12 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if ((match(U->getOperand(1), m_AShr(m_Specific(X), m_Value())) &&
            isGuaranteedNotToBeUndef(U->getOperand(0), Q.AC, Q.CtxI, Q.DT,
                                     Depth + 1)) ||
-          (match(U->getOperand(1), m_LShr(m_Specific(X), m_Value()))) &&
-              isKnownNonNegative(X, Q, Depth + 1)) {
-        return ComputeNumSignBits(X, DemandedElts, Q, Depth + 1);
+          (match(U->getOperand(1), m_LShr(m_Specific(X), m_Value())) &&
+           computeKnownBits(X, DemandedElts, Q, Depth + 1).isNonNegative())) {
+        Tmp = ComputeNumSignBits(X, DemandedElts, Q, Depth + 1);
+        if (Tmp == 1)
+          break;
+        return Tmp;
       }
 
       Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Q, Depth + 1);
