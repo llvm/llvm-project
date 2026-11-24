@@ -12,7 +12,7 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[ADDRSPACE_CAST:%[0-9]+]]:_(p3) = nonnull G_ADDRSPACE_CAST [[COPY]](p0)
+    ; CHECK-NEXT: [[ADDRSPACE_CAST:%[0-9]+]]:_(p3) = G_ADDRSPACE_CAST [[COPY]](p0)
     ; CHECK-NEXT: $vgpr0 = COPY [[ADDRSPACE_CAST]](p3)
     ; CHECK-NEXT: $vgpr1 = COPY [[ADDRSPACE_CAST]](p3)
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1

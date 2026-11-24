@@ -135,7 +135,7 @@ public:
 
   static constexpr uint32_t getPoisonGeneratingFlags() {
     return NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg |
-           FmNoNans | FmNoInfs | SameSign | InBounds;
+           FmNoNans | FmNoInfs | SameSign | InBounds | NonNull;
   }
 
 private:
