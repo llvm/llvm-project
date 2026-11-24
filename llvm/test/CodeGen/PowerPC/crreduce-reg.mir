@@ -92,7 +92,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $carry
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[CMPLWI:%[0-9]+]]:crrc = CMPLWI [[COPY3]], 0
-  ; CHECK-NEXT:   BC killed [[CMPLWI]].sub_gt, %bb.2
+  ; CHECK-NEXT:   BC [[CMPLWI]].sub_gt, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -121,7 +121,7 @@ body:             |
     %7:crbitrc = CRAND %5.sub_eq, %6.sub_gt
     %8:gprc_and_gprc_nor0 = LI 0
     %9:gprc_and_gprc_nor0 = LI 1
-    BC killed %7, %bb.2
+    BC %7, %bb.2
 
   bb.1:
     successors: %bb.2
