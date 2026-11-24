@@ -136,13 +136,13 @@ static lto::Config createConfig(Ctx &ctx) {
   c.StatsFile = std::string(ctx.arg.optStatsFilename);
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
-  for (StringRef arg : ctx.arg.passPluginArgs)
-    c.PassPluginArgs.push_back(std::string(arg));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.DwoDir = std::string(ctx.arg.dwoDir);
 
   for (PassPlugin &plugin : ctx.arg.passPlugins)
     c.LoadedPassPlugins.push_back(&plugin);
+  for (StringRef arg : ctx.arg.passPluginArgs)
+    c.PassPluginArgs.push_back(std::string(arg));
 
   c.HasWholeProgramVisibility = ctx.arg.ltoWholeProgramVisibility;
   c.ValidateAllVtablesHaveTypeInfos =
