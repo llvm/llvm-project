@@ -69,7 +69,7 @@ protected:
   const ABIType *V1I128;
   const llvm::abi::VectorType *SVInt32;
   const llvm::abi::VectorType *SVBool;
-  const llvm::abi::VectorType *SVCount;
+  const llvm::abi::SveCountType *SVCount;
   const llvm::abi::VectorType *SVFloat64;
   const llvm::abi::VectorType *FixedSVInt8;
   const llvm::abi::VectorType *FixedSVInt32;
@@ -137,8 +137,7 @@ protected:
         SVBool(TB.getVectorType(Bool, llvm::ElementCount::getScalable(16),
                                 llvm::Align(2),
                                 llvm::abi::VectorKind::SVEPredicate)),
-        SVCount(TB.getScalablePredicateOrCountVectorType(
-            llvm::Align(2), llvm::abi::VectorKind::SVECount)),
+        SVCount(TB.getSveCountType(llvm::Align(2))),
         SVFloat64(TB.getVectorType(F64, llvm::ElementCount::getScalable(2),
                                    llvm::Align(16),
                                    llvm::abi::VectorKind::SVEData)),
