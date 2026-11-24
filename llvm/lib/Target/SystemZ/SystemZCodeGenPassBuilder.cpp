@@ -23,8 +23,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EnableMachineCombinerPass;
-
 namespace {
 
 class SystemZCodeGenPassBuilder : public CodeGenPassBuilder {
@@ -54,6 +52,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     flushFPMsToMPM(PMW);
@@ -79,7 +79,7 @@ Error SystemZCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
 void SystemZCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
 
-  if (EnableMachineCombinerPass)
+  if (getTM().getCLOpts().machine_combiner)
     addMachineFunctionPass(MachineCombinerPass(), PMW);
 }
 
@@ -155,8 +155,6 @@ void SystemZCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void SystemZCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(SystemZAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void SystemZTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SystemZPassRegistry.def"

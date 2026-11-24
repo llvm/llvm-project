@@ -21,8 +21,9 @@ def Test_Dialect : Dialect {
   let hasRegionResultAttrVerify = 1;
   let hasOperationInterfaceFallback = 1;
   let hasNonDefaultDestructor = 1;
+  let hasTypes = 1;
   let useDefaultTypePrinterParser = 0;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
   let isExtensible = 1;
   let dependentDialects = [
     "::mlir::DLTIDialect",

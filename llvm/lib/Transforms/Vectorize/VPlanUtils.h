@@ -299,8 +299,9 @@ class VPSCEVExpander {
       InsertedExpressions;
 
   /// Try to find a loop-invariant IR value in the plan's entry block whose
-  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
-  /// if none is found.
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, an in-IR
+  /// VPExpandSCEVRecipe if reuse requires dropping flags, or nullptr if none
+  /// is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
 
   /// Returns true if \p S can be expanded in IR, hoisted out of HoistOutOf.
@@ -462,11 +463,7 @@ public:
   /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
   /// \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-    return map_range(
-        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
+    return map_range(Range, CastTo<BlockTy>);
   }
 
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB

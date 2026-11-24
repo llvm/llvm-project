@@ -246,13 +246,6 @@ struct TypeInfer {
   /// otherwise.
 
   bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In) const;
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT InVT) const {
-    return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
-  }
-  bool MergeInTypeInfo(TypeSetByHwMode &Out,
-                       const ValueTypeByHwMode &InVT) const {
-    return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
-  }
 
   /// Reduce the set \p Out to have at most one element for each mode.
   bool forceArbitrary(TypeSetByHwMode &Out);
@@ -1031,7 +1024,6 @@ public:
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
-  unsigned getNumImpResults() const { return ImpResults.size(); }
   ArrayRef<const Record *> getImpResults() const { return ImpResults; }
 
   const Record *getResult(unsigned RN) const {
@@ -1042,11 +1034,6 @@ public:
   const Record *getOperand(unsigned ON) const {
     assert(ON < Operands.size());
     return Operands[ON];
-  }
-
-  const Record *getImpResult(unsigned RN) const {
-    assert(RN < ImpResults.size());
-    return ImpResults[RN];
   }
 
   TreePatternNodePtr getSrcPattern() const { return SrcPattern; }

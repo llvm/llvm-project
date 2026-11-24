@@ -159,6 +159,24 @@ createABIClassifier(cir::CallConvTarget target,
   llvm_unreachable("an unset driver mode is rejected before this point");
 }
 
+static std::unique_ptr<CIRABIRewriteContext>
+createABIRewriteContext(cir::CallConvTarget target, ModuleOp modOp,
+                        const DataLayout &dl, bool enableNoundefAttrs) {
+  switch (target) {
+  case cir::CallConvTarget::X86_64:
+    return createX86_64ABIRewriteContext(modOp, dl, enableNoundefAttrs);
+  case cir::CallConvTarget::AMDGPU:
+    return createAMDGPUABIRewriteContext(modOp, dl, enableNoundefAttrs);
+  case cir::CallConvTarget::None:
+  case cir::CallConvTarget::Test:
+  case cir::CallConvTarget::SPIRV:
+  case cir::CallConvTarget::AArch64:
+    return std::make_unique<CIRABIRewriteContext>(modOp, dl,
+                                                  enableNoundefAttrs);
+  }
+  llvm_unreachable("unhandled CallConvTarget");
+}
+
 namespace {
 
 /// Find the cir.func declaration matching a direct cir.call / cir.try_call
@@ -207,8 +225,22 @@ void CallConvLoweringPass::runOnOperation() {
   bool enableNoundefAttrs =
       !loweringOpts || loweringOpts.getEnableNoundefAttrs();
 
+  // FIXME: MLIR translation currently crashes on CC-lowered CIR module
+  // for some spirv* triples due to some MLIR/OpenMP dialect gaps,
+  // thus temporarily report error for OpenMP device code with
+  // spirv target until the fix lands in MLIR.
+  if (target == cir::CallConvTarget::SPIRV && loweringOpts &&
+      loweringOpts.getOpenmpIsTargetDevice()) {
+    moduleOp.emitOpError() << "OpenMP device code with SPIR-V target "
+                              "is not yet supported";
+    signalPassFailure();
+    return;
+  }
+
   DataLayout dl(moduleOp);
-  CIRABIRewriteContext rewriteCtx(moduleOp, dl, enableNoundefAttrs);
+  std::unique_ptr<CIRABIRewriteContext> rewriteCtxOwner =
+      createABIRewriteContext(target, moduleOp, dl, enableNoundefAttrs);
+  CIRABIRewriteContext &rewriteCtx = *rewriteCtxOwner;
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
   // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this
