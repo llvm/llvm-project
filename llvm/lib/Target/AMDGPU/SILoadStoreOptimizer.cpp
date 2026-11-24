@@ -40,6 +40,19 @@
 //  global_load_dwordx2 v[5:6], v[5:6], off
 //  global_load_dwordx2 v[0:1], v[5:6], off offset:2048
 //
+// For DS instructions it gives addresses that are one register plus constants
+// too large for the 16-bit offset a shared base per 64 KiB window, as happens
+// with more than 64 KiB of statically allocated LDS.
+// E.g.
+//  v_add_u32_e32 v1, 0x11170, v0
+//  v_add_u32_e32 v2, 0x11270, v0
+//  ds_read_b64 v[4:5], v1
+//  ds_read_b64 v[6:7], v2
+// =>
+//  v_add_u32_e32 v1, 0x11170, v0
+//  ds_read_b64 v[4:5], v1
+//  ds_read_b64 v[6:7], v1 offset:256
+//
 // Future improvements:
 //
 // - This is currently missing stores of constants because loading
@@ -61,6 +74,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -297,6 +311,11 @@ private:
   bool promoteConstantOffsetToImm(MachineInstr &CI,
                                   MemInfoMap &Visited,
                                   SmallPtrSet<MachineInstr *, 4> &Promoted) const;
+  bool getDSBaseAndOffset(const MachineInstr &MI, Register &Base,
+                          int64_t &Offset) const;
+  /// Gives DS accesses whose constant offsets from a common register exceed
+  /// the 16-bit DS offset a shared base per 64 KiB window.
+  bool shareLargeDSOffsetBases(MachineBasicBlock &MBB) const;
   void addInstToMergeableList(const CombineInfo &CI,
                   std::list<std::list<CombineInfo> > &MergeableInsts) const;
 
@@ -2689,6 +2708,142 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   return false;
 }
 
+// Decompose the address of an LDS access as a VGPR Base plus a constant
+// Offset, looking through one constant add.
+bool SILoadStoreOptimizer::getDSBaseAndOffset(const MachineInstr &MI,
+                                              Register &Base,
+                                              int64_t &Offset) const {
+  if (!SIInstrInfo::isDS(MI) || !MI.mayLoadOrStore() ||
+      MI.memoperands_empty() ||
+      any_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+        return MMO->getAddrSpace() != AMDGPUAS::LOCAL_ADDRESS;
+      }))
+    return false;
+
+  // The offset of ds_*_src2, which has neither data nor a result, encodes a
+  // second address rather than a displacement.
+  if (!AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::vdst) &&
+      !AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::data0))
+    return false;
+
+  const MachineOperand *Addr = TII->getNamedOperand(MI, AMDGPU::OpName::addr);
+  const MachineOperand *OffsetOp =
+      TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+  if (!Addr || !OffsetOp || !Addr->getReg().isVirtual() || Addr->getSubReg() ||
+      Addr->isUndef())
+    return false;
+
+  Base = Addr->getReg();
+  // The 16-bit offset is an i16 immediate, so 65535 reads back as -1.
+  Offset = static_cast<uint16_t>(OffsetOp->getImm());
+
+  MachineInstr *Def = MRI->getVRegDef(Base);
+  MemAddress DefAddr;
+  if (Def && Def->getOpcode() == AMDGPU::V_ADD_U32_e64 &&
+      processBaseWithConstOffset32(Def, DefAddr) && !DefAddr.Base.LoSubReg &&
+      DefAddr.Offset >= 0 && DefAddr.Base.LoReg.isVirtual() &&
+      none_of(Def->uses(), [](const MachineOperand &MO) {
+        return MO.isReg() && MO.isUndef();
+      })) {
+    Base = DefAddr.Base.LoReg;
+    Offset += DefAddr.Offset;
+  }
+  return true;
+}
+
+// Group the block's LDS accesses by base register, cover each group's sorted
+// offsets greedily with 64 KiB windows that start at the smallest uncovered
+// offset rounded down to 16 bytes, and address each window from one new base.
+// Greedy covering gives the minimum number of windows. Windows that start at
+// the base register itself, windows with a single access, and windows whose
+// accesses already use one address register are left alone.
+bool SILoadStoreOptimizer::shareLargeDSOffsetBases(
+    MachineBasicBlock &MBB) const {
+  // Without more LDS than the DS offset field covers, no in-bounds address
+  // has a constant that does not fit the offset.
+  if (isUInt<16>(STM->getAddressableLocalMemorySize() - 1))
+    return false;
+
+  struct DSAccess {
+    MachineInstr *MI;
+    int64_t Offset;
+    unsigned Order;
+  };
+  // A VALU add only writes the lanes enabled where it is placed, so accesses
+  // separated by a write to EXEC are not grouped.
+  MapVector<std::pair<Register, unsigned>, SmallVector<DSAccess, 8>> Groups;
+  unsigned Order = 0;
+  unsigned ExecRegion = 0;
+  for (MachineInstr &MI : MBB) {
+    if (MI.modifiesRegister(AMDGPU::EXEC, TRI))
+      ++ExecRegion;
+    Register Base;
+    int64_t Offset;
+    if (getDSBaseAndOffset(MI, Base, Offset))
+      Groups[{Base, ExecRegion}].push_back({&MI, Offset, Order++});
+  }
+
+  bool Modified = false;
+  for (auto &[Key, Accesses] : Groups) {
+    Register Base = Key.first;
+    if (all_of(Accesses,
+               [](const DSAccess &A) { return isUInt<16>(A.Offset); }))
+      continue;
+    llvm::sort(Accesses, [](const DSAccess &A, const DSAccess &B) {
+      return std::tie(A.Offset, A.Order) < std::tie(B.Offset, B.Order);
+    });
+
+    // Rounding the base to the widest DS access keeps each rebased offset as
+    // aligned as the original constant, which ds_read2/ds_write2 merging needs.
+    constexpr uint64_t BaseAlign = 16;
+    ArrayRef<DSAccess> Rest(Accesses);
+    while (!Rest.empty()) {
+      int64_t WindowBase = isUInt<16>(Rest.front().Offset)
+                               ? 0
+                               : alignDown(Rest.front().Offset, BaseAlign);
+      ArrayRef<DSAccess> Window = Rest.take_while(
+          [&](const DSAccess &A) { return isUInt<16>(A.Offset - WindowBase); });
+      Rest = Rest.drop_front(Window.size());
+
+      Register FirstAddr =
+          TII->getNamedOperand(*Window.front().MI, AMDGPU::OpName::addr)
+              ->getReg();
+      if (WindowBase == 0 || Window.size() < 2 ||
+          all_of(Window.drop_front(), [&](const DSAccess &A) {
+            return TII->getNamedOperand(*A.MI, AMDGPU::OpName::addr)
+                       ->getReg() == FirstAddr;
+          }))
+        continue;
+
+      MachineInstr &First =
+          *min_element(Window, [](const DSAccess &A, const DSAccess &B) {
+             return A.Order < B.Order;
+           })->MI;
+      const DebugLoc &DL = First.getDebugLoc();
+      Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(MBB, First, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
+          .addImm(WindowBase);
+      Register NewBase = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      TII->getAddNoCarry(MBB, First, DL, NewBase)
+          .addReg(ImmReg)
+          .addReg(Base)
+          .addImm(0); // clamp bit
+      MRI->clearKillFlags(Base);
+
+      for (const DSAccess &A : Window) {
+        MachineOperand *Addr =
+            TII->getNamedOperand(*A.MI, AMDGPU::OpName::addr);
+        Addr->setReg(NewBase);
+        Addr->setIsKill(false);
+        TII->getNamedOperand(*A.MI, AMDGPU::OpName::offset)
+            ->setImm(A.Offset - WindowBase);
+      }
+      Modified = true;
+    }
+  }
+  return Modified;
+}
+
 void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
                  std::list<std::list<CombineInfo> > &MergeableInsts) const {
   for (std::list<CombineInfo> &AddrList : MergeableInsts) {
@@ -2964,6 +3119,8 @@ bool SILoadStoreOptimizer::run(MachineFunction &MF) {
   MemInfoMap Visited;
 
   for (MachineBasicBlock &MBB : MF) {
+    Modified |= shareLargeDSOffsetBases(MBB);
+
     MachineBasicBlock::iterator SectionEnd;
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          I = SectionEnd) {

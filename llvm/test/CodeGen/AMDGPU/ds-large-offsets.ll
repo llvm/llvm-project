@@ -9,19 +9,16 @@ declare <4 x i16> @llvm.amdgcn.ds.read.tr16.b64.v4i16.p3(ptr addrspace(3))
 
 define amdgpu_kernel void @shared_lds_base(ptr addrspace(1) %out) {
 ; SDAG-LABEL: shared_lds_base:
-; SDAG:    v_add_u32_e32 v2, 0x10100, v4
-; SDAG:    ds_read_b64_tr_b16 v[0:1], v0
-; SDAG:    ds_read_b64_tr_b16 v[2:3], v2
-; SDAG:    v_add_u32_e32 v4, 0x12200, v4
-; SDAG:    ds_read_b64_tr_b16 v[4:5], v4
+; SDAG:    v_add_u32_e32 v4, 0x10100, v0
+; SDAG:    ds_read_b64_tr_b16 v[0:1], v1
+; SDAG:    ds_read_b64_tr_b16 v[2:3], v4
+; SDAG:    ds_read_b64_tr_b16 v[4:5], v4 offset:8448
 ;
 ; GISEL-LABEL: shared_lds_base:
-; GISEL:    v_add_u32_e32 v0, 0x10000, v4
-; GISEL:    v_add_u32_e32 v2, 0x10100, v4
-; GISEL:    ds_read_b64_tr_b16 v[0:1], v0
-; GISEL:    ds_read_b64_tr_b16 v[2:3], v2
-; GISEL:    v_add_u32_e32 v4, 0x12200, v4
-; GISEL:    ds_read_b64_tr_b16 v[4:5], v4
+; GISEL:    v_add_u32_e32 v4, 0x10000, v0
+; GISEL:    ds_read_b64_tr_b16 v[0:1], v4
+; GISEL:    ds_read_b64_tr_b16 v[2:3], v4 offset:256
+; GISEL:    ds_read_b64_tr_b16 v[4:5], v4 offset:8704
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %lane = and i32 %id, 63
   %idx = shl i32 %lane, 4
@@ -42,12 +39,10 @@ define amdgpu_kernel void @shared_lds_base(ptr addrspace(1) %out) {
 ; X + 144448.
 define amdgpu_kernel void @unaligned_anchor(ptr addrspace(1) %out) {
 ; CHECK-LABEL: unaligned_anchor:
-; CHECK:    v_add_u32_e32 v0, 0x23448, v4
-; CHECK:    v_add_u32_e32 v2, 0x23548, v4
-; CHECK:    ds_read_b64_tr_b16 v[0:1], v0
-; CHECK:    ds_read_b64_tr_b16 v[2:3], v2
-; CHECK:    v_add_u32_e32 v4, 0x25228, v4
-; CHECK:    ds_read_b64_tr_b16 v[4:5], v4
+; CHECK:    v_add_u32_e32 v4, 0x23440, v0
+; CHECK:    ds_read_b64_tr_b16 v[0:1], v4 offset:8
+; CHECK:    ds_read_b64_tr_b16 v[2:3], v4 offset:264
+; CHECK:    ds_read_b64_tr_b16 v[4:5], v4 offset:7656
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %lane = and i32 %id, 63
   %idx = shl i32 %lane, 4
@@ -66,23 +61,12 @@ define amdgpu_kernel void @unaligned_anchor(ptr addrspace(1) %out) {
 
 ; Two buffers 8 KiB apart on one lane base fit in a single 64 KiB window.
 define amdgpu_kernel void @two_buffers(ptr addrspace(1) %out) {
-; SDAG-LABEL: two_buffers:
-; SDAG:    v_add_u32_e32 v2, 0x21340, v0
-; SDAG:    v_add_u32_e32 v6, 0x23440, v0
-; SDAG:    ds_read_b64_tr_b16 v[0:1], v2
-; SDAG:    ds_read_b64_tr_b16 v[2:3], v2 offset:256
-; SDAG:    ds_read_b64_tr_b16 v[4:5], v6
-; SDAG:    ds_read_b64_tr_b16 v[6:7], v6 offset:256
-;
-; GISEL-LABEL: two_buffers:
-; GISEL:    v_add_u32_e32 v1, 0x21340, v0
-; GISEL:    v_add_u32_e32 v2, 0x21440, v0
-; GISEL:    v_add_u32_e32 v4, 0x23440, v0
-; GISEL:    v_add_u32_e32 v6, 0x23540, v0
-; GISEL:    ds_read_b64_tr_b16 v[0:1], v1
-; GISEL:    ds_read_b64_tr_b16 v[2:3], v2
-; GISEL:    ds_read_b64_tr_b16 v[4:5], v4
-; GISEL:    ds_read_b64_tr_b16 v[6:7], v6
+; CHECK-LABEL: two_buffers:
+; CHECK:    v_add_u32_e32 v6, 0x21340, v0
+; CHECK:    ds_read_b64_tr_b16 v[0:1], v6
+; CHECK:    ds_read_b64_tr_b16 v[2:3], v6 offset:256
+; CHECK:    ds_read_b64_tr_b16 v[4:5], v6 offset:8448
+; CHECK:    ds_read_b64_tr_b16 v[6:7], v6 offset:8704
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %lane = and i32 %id, 63
   %idx = shl i32 %lane, 4
@@ -105,10 +89,9 @@ define amdgpu_kernel void @two_buffers(ptr addrspace(1) %out) {
 ; Offsets on both sides of a 64 KiB boundary still share one base.
 define amdgpu_kernel void @crosses_64k(ptr addrspace(1) %out) {
 ; CHECK-LABEL: crosses_64k:
-; CHECK:    v_add_u32_e32 v1, 0x1ffb8, v0
-; CHECK:    v_add_u32_e32 v2, 0x203a0, v0
-; CHECK:    ds_read_b64_tr_b16 v[0:1], v1
-; CHECK:    ds_read_b64_tr_b16 v[2:3], v2
+; CHECK:    v_add_u32_e32 v2, 0x1ffb0, v0
+; CHECK:    ds_read_b64_tr_b16 v[0:1], v2 offset:8
+; CHECK:    ds_read_b64_tr_b16 v[2:3], v2 offset:1008
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %lane = and i32 %id, 63
   %idx = shl i32 %lane, 4
@@ -125,12 +108,11 @@ define amdgpu_kernel void @crosses_64k(ptr addrspace(1) %out) {
 ; Offsets spanning more than 64 KiB need two windows.
 define amdgpu_kernel void @spans_over_64k(ptr addrspace(1) %out) {
 ; CHECK-LABEL: spans_over_64k:
-; CHECK:    v_add_u32_e32 v0, 0x11170, v4
-; CHECK:    v_add_u32_e32 v2, 0x222e0, v4
-; CHECK:    ds_read_b64_tr_b16 v[0:1], v0
-; CHECK:    ds_read_b64_tr_b16 v[2:3], v2
-; CHECK:    v_add_u32_e32 v4, 0x249f0, v4
-; CHECK:    ds_read_b64_tr_b16 v[4:5], v4
+; CHECK:    v_add_u32_e32 v1, 0x11170, v0
+; CHECK:    v_add_u32_e32 v4, 0x222e0, v0
+; CHECK:    ds_read_b64_tr_b16 v[0:1], v1
+; CHECK:    ds_read_b64_tr_b16 v[2:3], v4
+; CHECK:    ds_read_b64_tr_b16 v[4:5], v4 offset:10000
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %lane = and i32 %id, 63
   %idx = shl i32 %lane, 4
@@ -175,13 +157,10 @@ define amdgpu_kernel void @read2_pair(ptr addrspace(1) %out) {
 ; merge into ds_read2_b32.
 define amdgpu_kernel void @load_store(ptr addrspace(1) %out) {
 ; CHECK-LABEL: load_store:
-; CHECK:    v_add_u32_e32 v1, 0x1ffb8, v0
-; CHECK:    v_add_u32_e32 v2, 0x203a0, v0
-; CHECK:    ds_read_b32 v1, v1
-; CHECK:    ds_read_b32 v2, v2
-; CHECK:    v_add_u32_e32 v0, 0x20788, v0
-; CHECK:    v_add_u32_e32 v1, v1, v2
-; CHECK:    ds_write_b32 v0, v1
+; CHECK:    v_add_u32_e32 v2, 0x1ffb0, v0
+; CHECK:    ds_read2_b32 v[0:1], v2 offset0:2 offset1:252
+; CHECK:    v_add_u32_e32 v0, v0, v1
+; CHECK:    ds_write_b32 v2, v0 offset:2008
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %lane = and i32 %id, 63
   %idx = shl i32 %lane, 4
