@@ -2,8 +2,10 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 --regalloc=greedy -verify-machineinstrs < %s | FileCheck --check-prefix=GREEDY_RA %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 --regalloc=fast -verify-machineinstrs < %s | FileCheck --check-prefix=FAST_RA %s
 
-; No -O0 RUN line: -O0 picks memory for "rm", which a direct output like the
-; ones below can't use (see inline-asm-direct-mem-output-error.ll).
+; The -O0 RUN line tests the optimization level: at -O0 an "rm" input still
+; picks memory, and only an output takes a register for the fast register
+; allocator to fold.
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 -O0 -verify-machineinstrs < %s | FileCheck --check-prefix=O0 %s
 
 ; The asm clobbers rax/rbx/rbp/r10-r15, leaving six of the 15 GPRs for its
 ; register operands, and its six "r" inputs take all of them. The "=&rm"
@@ -85,6 +87,44 @@ define i64 @test_rm_output_pressure(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_rm_output_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    #APP # 8-byte Folded Spill
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   %0 = call i64 asm sideeffect "# $0 $1 $2 $3 $4 $5 $6",
       "=&rm,r,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -172,6 +212,47 @@ define void @test_rm_same_value_twice_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_rm_same_value_twice_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movq %rdi, %rax
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; O0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    #APP
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) %rsi %rdx %rcx %r8 %r9 %rdi
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   call void asm sideeffect "# $0 $1 $2 $3 $4 $5 $6 $7",
       "rm,rm,r,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -265,6 +346,50 @@ define i64 @test_rm_before_tied_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i64 %d,
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_rm_before_tied_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdi, %rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; O0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    #APP
+; O0-NEXT:    # %rcx -{{[0-9]+}}(%rsp) %rsi %rdx %rdi %r8 %r9 %rcx
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   %r = call i64 asm sideeffect "# $0 $1 $2 $3 $4 $5 $6 $7",
       "=r,rm,r,r,r,r,r,0,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -368,6 +493,51 @@ define { i64, i64 } @test_two_tied_rm_pressure(i64 %x, i64 %y, i64 %a, i64 %b, i
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_two_tied_rm_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:    movq %rsi, %rdx
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rdi, %rax
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    #APP # 8-byte Folded Reload
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) %rdx %rcx %rsi %r8 %r9 %rdi
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   %r = call { i64, i64 } asm sideeffect "# $0 $1 $2 $3 $4 $5 $6",
       "=rm,=rm,r,r,r,r,r,0,1,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -454,6 +624,45 @@ define i64 @test_rm_output_shares_input_register(i64 %a, i64 %b, i64 %c, i64 %d,
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_rm_output_shares_input_register:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    #APP
+; O0-NEXT:    # %rcx %rdi %rsi %rdx %rcx %r8 %r9
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   %0 = call i64 asm sideeffect "# $0 $1 $2 $3 $4 $5 $6",
       "=rm,r,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -550,6 +759,52 @@ define void @test_rm_mixed_widths_pressure(i32 %x0, i32 %x1, i32 %x2, i32 %x3, i
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_rm_mixed_widths_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    .cfi_offset %rbx, -48
+; O0-NEXT:    .cfi_offset %r12, -40
+; O0-NEXT:    .cfi_offset %r13, -32
+; O0-NEXT:    .cfi_offset %r14, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movl %ecx, %r10d
+; O0-NEXT:    movl %edx, %r11d
+; O0-NEXT:    movl %esi, %ebx
+; O0-NEXT:    movl %edi, %ebp
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; O0-NEXT:    movl %ebp, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    movl %ebx, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    movl %r11d, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    movl %r10d, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    movl %r8d, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    #APP
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) %r9 %rax %rcx %rdx %rsi %rdi
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   call void asm sideeffect "# $0 $1 $2 $3 $4 $5 $6 $7 $8 $9 $10",
       "rm,rm,rm,rm,rm,r,r,r,r,r,r,~{rbx},~{rbp},~{r12},~{r13},~{r14}"
@@ -637,6 +892,47 @@ define void @test_rm_and_r_same_value_pressure(i64 %x, i64 %y, i64 %a, i64 %b, i
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_rm_and_r_same_value_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movq %rsi, %rax
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; O0-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    #APP
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) %rdi -{{[0-9]+}}(%rsp) %rdx %rcx %r8 %r9 %rsi
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   call void asm sideeffect "# $0 $1 $2 $3 $4 $5 $6 $7",
       "rm,r,rm,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -725,6 +1021,46 @@ define void @test_g_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_g_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movq %rdi, %rax
+; O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; O0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    #APP
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) $42 %rsi %rdx %rcx %r8 %r9 %rdi
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   call void asm sideeffect "# $0 $1 $2 $3 $4 $5 $6 $7",
       "imr,imr,r,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -812,6 +1148,47 @@ define i64 @test_tied_and_untied_same_value(i64 %v, i64 %a, i64 %b, i64 %c, i64 
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_tied_and_untied_same_value:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movq %rdi, %rax
+; O0-NEXT:    movq %rax, %rdi
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    #APP # 8-byte Folded Reload
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9 -{{[0-9]+}}(%rsp)
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   %r = call i64 asm sideeffect "# $0 $1 $2 $3 $4 $5 $6 $7",
       "=rm,r,r,r,r,r,r,0,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
@@ -904,6 +1281,48 @@ define i64 @test_rm_rematerializable_pressure(i64 %a, i64 %b, i64 %c, i64 %d, i6
 ; FAST_RA-NEXT:    popq %rbp
 ; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
 ; FAST_RA-NEXT:    retq
+;
+; O0-LABEL: test_rm_rematerializable_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdi, %rax
+; O0-NEXT:    addq $100, %rax
+; O0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; O0-NEXT:    #APP
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
 entry:
   %v = add i64 %a, 100
   call void asm sideeffect "# $0 $1 $2 $3 $4 $5 $6",

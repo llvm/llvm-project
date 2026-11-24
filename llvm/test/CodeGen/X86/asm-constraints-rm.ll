@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 --regalloc=greedy < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 --regalloc=fast < %s | FileCheck %s
 ; The -O0 RUN line tests the optimization level, not the instruction selector
-; (X86 lowers inline asm with SelectionDAG either way): "rm" prefers a
-; register only above -O0.
+; (X86 lowers inline asm with SelectionDAG either way): an "rm" input prefers
+; a register only above -O0.
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 -O0 < %s \
 ; RUN:   | FileCheck --check-prefix=O0 %s
 
