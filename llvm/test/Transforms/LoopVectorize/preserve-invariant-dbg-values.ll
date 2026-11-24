@@ -15,6 +15,8 @@ define void @invariant_fragments(ptr noalias %out, i64 %left, i64 %right) !dbg !
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:      #dbg_value(i64 [[MASK]], [[META8:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64), [[DBG7]])
+; CHECK-NEXT:      #dbg_value(i64 32, [[META8]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), [[DBG7]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <4 x i64> [[BROADCAST_SPLAT]], [[VEC_IND]], !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i64> [[TMP0]], splat (i64 1), !dbg [[DBG7]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[OUT]], i64 [[INDEX1]], !dbg [[DBG7]]
@@ -22,7 +24,7 @@ define void @invariant_fragments(ptr noalias %out, i64 %left, i64 %right) !dbg !
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32, !dbg [[DBG7]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG7]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG7]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]], !dbg [[DBG7]]
 ; CHECK:       [[EXIT]]:
@@ -51,7 +53,7 @@ exit:
 ; Identical dbg_values are kept once.
 define void @duplicate(ptr noalias %out, i64 %x) !dbg !20 {
 ; CHECK-LABEL: define void @duplicate(
-; CHECK-SAME: ptr noalias [[OUT:%.*]], i64 [[X:%.*]]) !dbg [[DBG11:![0-9]+]] {
+; CHECK-SAME: ptr noalias [[OUT:%.*]], i64 [[X:%.*]]) !dbg [[DBG14:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -60,11 +62,12 @@ define void @duplicate(ptr noalias %out, i64 %x) !dbg !20 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:      #dbg_value(i64 [[X]], [[META15:![0-9]+]], !DIExpression(), [[META17:![0-9]+]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[OUT]], i64 [[INDEX1]]
 ; CHECK-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -90,7 +93,7 @@ exit:
 ; A variable that also has a loop-varying location is not kept.
 define void @varying(ptr noalias %out, i64 %x) !dbg !30 {
 ; CHECK-LABEL: define void @varying(
-; CHECK-SAME: ptr noalias [[OUT:%.*]], i64 [[X:%.*]]) !dbg [[DBG13:![0-9]+]] {
+; CHECK-SAME: ptr noalias [[OUT:%.*]], i64 [[X:%.*]]) !dbg [[DBG19:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -103,7 +106,7 @@ define void @varying(ptr noalias %out, i64 %x) !dbg !30 {
 ; CHECK-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -129,7 +132,7 @@ exit:
 ; A variable with different invariant values in the loop is not kept.
 define void @conflicting(ptr noalias %out, i64 %x, i64 %y) !dbg !40 {
 ; CHECK-LABEL: define void @conflicting(
-; CHECK-SAME: ptr noalias [[OUT:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) !dbg [[DBG15:![0-9]+]] {
+; CHECK-SAME: ptr noalias [[OUT:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) !dbg [[DBG21:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -142,7 +145,7 @@ define void @conflicting(ptr noalias %out, i64 %x, i64 %y) !dbg !40 {
 ; CHECK-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -197,13 +200,19 @@ exit:
 ; CHECK: [[META5]] = !{null}
 ; CHECK: [[DBG6]] = !DILocation(line: 2, column: 3, scope: [[DBG3]])
 ; CHECK: [[DBG7]] = !DILocation(line: 3, column: 5, scope: [[DBG3]])
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
-; CHECK: [[META9]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META10]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[DBG11]] = distinct !DISubprogram(name: "duplicate", scope: [[META1]], file: [[META1]], line: 10, type: [[META4]], scopeLine: 10, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
-; CHECK: [[DBG13]] = distinct !DISubprogram(name: "varying", scope: [[META1]], file: [[META1]], line: 20, type: [[META4]], scopeLine: 20, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META9]], [[META10]]}
-; CHECK: [[DBG15]] = distinct !DISubprogram(name: "conflicting", scope: [[META1]], file: [[META1]], line: 30, type: [[META4]], scopeLine: 30, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META9]], [[META10]]}
+; CHECK: [[META8]] = !DILocalVariable(name: "pair", scope: [[DBG3]], file: [[META1]], line: 3, type: [[META9:![0-9]+]])
+; CHECK: [[META9]] = !DICompositeType(tag: DW_TAG_structure_type, name: "mask_pair", file: [[META1]], line: 1, size: 128, elements: [[META10:![0-9]+]])
+; CHECK: [[META10]] = !{}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META12:![0-9]+]], [[META13:![0-9]+]]}
+; CHECK: [[META12]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META13]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[DBG14]] = distinct !DISubprogram(name: "duplicate", scope: [[META1]], file: [[META1]], line: 10, type: [[META4]], scopeLine: 10, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; CHECK: [[META15]] = !DILocalVariable(name: "a", scope: [[DBG14]], file: [[META1]], line: 11, type: [[META16:![0-9]+]])
+; CHECK: [[META16]] = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+; CHECK: [[META17]] = !DILocation(line: 11, column: 1, scope: [[DBG14]])
+; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META12]], [[META13]]}
+; CHECK: [[DBG19]] = distinct !DISubprogram(name: "varying", scope: [[META1]], file: [[META1]], line: 20, type: [[META4]], scopeLine: 20, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META12]], [[META13]]}
+; CHECK: [[DBG21]] = distinct !DISubprogram(name: "conflicting", scope: [[META1]], file: [[META1]], line: 30, type: [[META4]], scopeLine: 30, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META12]], [[META13]]}
 ;.
