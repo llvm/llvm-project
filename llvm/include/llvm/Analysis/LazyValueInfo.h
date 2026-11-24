@@ -96,9 +96,8 @@ namespace llvm {
 
     /// Return the ConstantRange constraint that is known to hold for the value
     /// at a specific use-site.
-    LLVM_ABI ConstantRange getConstantRangeAtUse(
-        const Use &U, bool UndefAllowed,
-        SmallVectorImpl<DbgVariableRecord *> *DebugUsers = nullptr);
+    LLVM_ABI ConstantRange getConstantRangeAtUse(const Use &U,
+                                                 bool UndefAllowed);
 
     /// Determine whether the specified value is known to be a
     /// constant on the specified edge.  Return null if not.
