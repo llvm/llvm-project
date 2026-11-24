@@ -257,10 +257,10 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
     break;
 
   case RecurKind::FMax:
-    RK = Sel ? RecurKind::FMaxSelect : RecurKind::FMaxNum;
+    RK = Sel ? RecurKind::FMaxSelectNoFMF : RecurKind::FMaxNum;
     break;
   case RecurKind::FMin:
-    RK = Sel ? RecurKind::FMinSelect : RecurKind::FMinNum;
+    RK = Sel ? RecurKind::FMinSelectNoFMF : RecurKind::FMinNum;
     break;
   default:
     return std::nullopt;

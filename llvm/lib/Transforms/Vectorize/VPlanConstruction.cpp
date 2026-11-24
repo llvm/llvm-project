@@ -1867,7 +1867,7 @@ static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinOrMaxCompareValue =
       [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
-    if (RecurrenceDescriptor::isFPMinMaxSelectRecurrenceKind(
+    if (RecurrenceDescriptor::isFPMinMaxSelectNoFMFRecurrenceKind(
             RedPhiR->getRecurrenceKind())) {
       // TODO: Support non-constant and NaN start values.
       auto *StartC = dyn_cast<VPConstant>(RedPhiR->getStartValue());
@@ -1875,8 +1875,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
           StartC->getConstant()->isNaN())
         return nullptr;
 
-      // FMinSelect/FMaxSelect must select between RedPhiR and the new element
-      // Op, based on a compare of the two.
+      // FMinSelectNoFMF/FMaxSelectNoFMF must select between RedPhiR and the new
+      // element Op, based on a compare of the two.
       VPValue *Op, *A, *B;
       if (match(RedPhiR->getBackedgeValue(),
                 m_Select(m_c_Cmp(m_Specific(RedPhiR), m_VPValue(Op)),
@@ -1924,7 +1924,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     }
     RecurKind Kind = Cur->getRecurrenceKind();
     if (!RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind) &&
-        !RecurrenceDescriptor::isFPMinMaxSelectRecurrenceKind(Kind)) {
+        !RecurrenceDescriptor::isFPMinMaxSelectNoFMFRecurrenceKind(Kind)) {
       HasUnsupportedPhi = true;
       continue;
     }
@@ -1975,7 +1975,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     // For select-based min/max, insert the freeze before the compare, which
     // also uses MinOrMaxOp.
     VPRecipeBase *CmpR = MinOrMaxR;
-    if (RecurrenceDescriptor::isFPMinMaxSelectRecurrenceKind(
+    if (RecurrenceDescriptor::isFPMinMaxSelectNoFMFRecurrenceKind(
             Phi->getRecurrenceKind()))
       CmpR = MinOrMaxR->getOperand(0)->getDefiningRecipe();
     VPInstruction *Freeze = VPBuilder(CmpR).createFreeze(MinOrMaxOp);
@@ -1990,7 +1990,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   for (const auto &[RedPhiR, MinOrMaxOp] : MinOrMaxNumReductionsToHandle) {
     VPValue *RedNaNLanes =
         LatchBuilder.createFCmp(CmpInst::FCMP_UNO, MinOrMaxOp, MinOrMaxOp);
-    if (RecurrenceDescriptor::isFPMinMaxSelectRecurrenceKind(
+    if (RecurrenceDescriptor::isFPMinMaxSelectNoFMFRecurrenceKind(
             RedPhiR->getRecurrenceKind())) {
       // Without NaNs, select-based min/max can only pick a different value
       // than the scalar loop if zeros of both signs are combined. Exit on -0.0
@@ -2023,7 +2023,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   for (const auto &[RedPhiR, _] : MinOrMaxNumReductionsToHandle) {
     RecurKind Kind = RedPhiR->getRecurrenceKind();
     assert((RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind) ||
-            RecurrenceDescriptor::isFPMinMaxSelectRecurrenceKind(Kind)) &&
+            RecurrenceDescriptor::isFPMinMaxSelectNoFMFRecurrenceKind(Kind)) &&
            "unsupported reduction");
 
     // If we exit early due to NaNs or signed zeros, compute the final reduction
@@ -2038,7 +2038,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     // The reduced lanes cannot be NaN, as the start value is not NaN and NaN
     // inputs exit early. Set nnan on the result, so combining lanes does not
     // need fmin/fmax libcalls, which may not be available.
-    if (RecurrenceDescriptor::isFPMinMaxSelectRecurrenceKind(Kind)) {
+    if (RecurrenceDescriptor::isFPMinMaxSelectNoFMFRecurrenceKind(Kind)) {
       for (VPUser *U : RedPhiR->users())
         if (match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
           cast<VPRecipeWithIRFlags>(U)->dropPoisonGeneratingFlags();
