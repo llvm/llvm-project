@@ -35,9 +35,13 @@ getCallConvTarget(const llvm::Triple &triple,
       triple.getArch() != llvm::Triple::aarch64_32)
     return CallConvTarget::AArch64;
   bool isHLSL = loweringLangOpts && loweringLangOpts.getHlsl();
+  bool isOpenMPDevice =
+      loweringLangOpts && loweringLangOpts.getOpenmpIsTargetDevice();
   // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
   // promotion rules and resource types are not modeled yet.
-  if (triple.isSPIRV() && triple.getVendor() != llvm::Triple::AMD && !isHLSL)
+  // FIXME: Lower OpenMP device code once MLIR can translate it afterwards.
+  if (triple.isSPIRV() && triple.getVendor() != llvm::Triple::AMD && !isHLSL &&
+      !isOpenMPDevice)
     return CallConvTarget::SPIRV;
   return CallConvTarget::None;
 }

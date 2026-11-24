@@ -1,6 +1,7 @@
 // Checks how non-kernel SPIR-V functions pass arguments.
 
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fexperimental-abi-lowering -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="not yet implemented"
 // RUN: %if cir-enabled %{ %clang_cc1 -triple spirv64-unknown-unknown -fclangir -emit-llvm %s -o - | FileCheck %s %}
 
 typedef struct {} empty_t;

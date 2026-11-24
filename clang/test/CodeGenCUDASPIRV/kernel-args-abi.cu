@@ -2,6 +2,7 @@
 // space is Generic.
 
 // RUN: %clang_cc1 -fcuda-is-device -triple spirv64 -x cuda -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fcuda-is-device -triple spirv64 -x cuda -fexperimental-abi-lowering -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="not yet implemented"
 // RUN: %if cir-enabled %{ %clang_cc1 -fcuda-is-device -triple spirv64 -x cuda -fclangir -emit-llvm %s -o - | FileCheck %s %}
 
 #define __device__ __attribute__((device))
