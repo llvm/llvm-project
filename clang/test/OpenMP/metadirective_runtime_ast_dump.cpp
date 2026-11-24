@@ -80,6 +80,24 @@ void ordered_doacross(int flag, int n) {
   }
 }
 
+// 'scan' is standalone, so the statement stays outside the variants.
+// CHECK-LABEL: FunctionDecl {{.*}} scan_variant
+// CHECK:      OMPMetaDirective
+// CHECK-NEXT: OMPScanDirective
+// CHECK:      NullStmt
+// CHECK-NEXT: BinaryOperator {{.*}} 'bool' '>'
+// CHECK:      {{^[ |]*}}`-<<<NULL>>>
+// CHECK-NEXT: {{^[ |]*}}`-BinaryOperator {{.*}} 'int' lvalue '='
+void scan_variant(int *a, int n) {
+  int x = 0;
+#pragma omp simd reduction(inscan, + : x)
+  for (int i = 0; i < n; ++i) {
+    x += a[i];
+#pragma omp metadirective when(user={condition(n > 0)}: scan inclusive(x))
+    a[i] = x;
+  }
+}
+
 // Without 'otherwise', the implicit variant runs the shared statement.
 // CHECK-LABEL: FunctionDecl {{.*}} no_otherwise
 // CHECK:      OMPMetaDirective

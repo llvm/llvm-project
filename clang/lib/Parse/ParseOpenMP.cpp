@@ -75,7 +75,8 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
   return Kind;
 }
 
-static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
+static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P,
+                                                    bool CheckVersion = true) {
   static const DirectiveNameParser DirParser;
 
   const DirectiveNameParser::State *S = DirParser.initial();
@@ -98,14 +99,16 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
       std::string TS = P.getPreprocessor().getSpelling(Tok);
       S = DirParser.consume(S, TS);
       if (S == nullptr)
-        return checkOpenMPDirectiveName(P, Loc, DKind, Concat);
+        return CheckVersion ? checkOpenMPDirectiveName(P, Loc, DKind, Concat)
+                            : DKind;
       Concat += ' ' + TS;
       P.ConsumeToken();
     }
   }
 
   assert(S && "Should have exited early");
-  return checkOpenMPDirectiveName(P, Loc, S->Value, Concat);
+  return CheckVersion ? checkOpenMPDirectiveName(P, Loc, S->Value, Concat)
+                      : S->Value;
 }
 
 static DeclarationName parseOpenMPReductionId(Parser &P) {
@@ -2682,11 +2685,16 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // Note if a variant uses the statement after the pragma. 'ordered' uses
       // it unless it has a 'depend' or 'doacross' clause.
       OpenMPDirectiveKind VariantKind =
-          Tok.is(tok::r_paren) ? OMPD_unknown : parseOpenMPDirectiveKind(*this);
+          Tok.is(tok::r_paren)
+              ? OMPD_unknown
+              : parseOpenMPDirectiveKind(*this, /*CheckVersion=*/false);
+      Association Assoc = VariantKind != OMPD_unknown
+                              ? getDirectiveAssociation(VariantKind)
+                              : Association::None;
       bool TakesStmt =
           VariantKind == OMPD_ordered_standalone ||
-          (VariantKind != OMPD_unknown &&
-           getDirectiveAssociation(VariantKind) != Association::None);
+          VariantKind == OMPD_section || Assoc == Association::Block ||
+          Assoc == Association::LoopNest || Assoc == Association::LoopSequence;
 
       // Skip Directive for now. We will parse directive in the second iteration
       int paren = 0;

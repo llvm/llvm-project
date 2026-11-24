@@ -2437,7 +2437,8 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
   SmallVector<unsigned, 4> VariantIdx;
   SmallVector<unsigned, 4> ConditionIds;
   SmallVector<std::pair<llvm::FoldingSetNodeID, unsigned>, 4> CondProfiles;
-  SmallVector<const Expr *, 4> RuntimeConds(Variants.size(), nullptr);
+  SmallVector<std::pair<const Expr *, bool>, 4> RuntimeConds(Variants.size(),
+                                                             {nullptr, false});
   unsigned NextCondId = 1;
   std::optional<unsigned> Fallback;
   for (auto [I, TI] : llvm::enumerate(S.traitInfos())) {
@@ -2447,20 +2448,36 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
     }
     llvm::omp::VariantMatchInfo &VMI = VMIs.emplace_back();
     TI->getAsVariantMatchInfo(getContext(), VMI);
+    bool IsMatchAny = VMI.RequiredTraits.test(
+        unsigned(llvm::omp::TraitProperty::implementation_extension_match_any));
+    bool IsMatchNone = VMI.RequiredTraits.test(unsigned(
+        llvm::omp::TraitProperty::implementation_extension_match_none));
     // Non-constant conditions are checked at runtime; treat them as true here.
+    // match_none runs the variant when the condition is false. match_any needs
+    // no check if the other traits already match.
     // Pure identical conditions share an id; 0 means no runtime condition.
     unsigned Id = 0;
     if (const Expr *Cond = Conditions[I]) {
       std::optional<llvm::APSInt> ConstVal =
           Cond->getIntegerConstantExpr(getContext());
-      if (!ConstVal || !ConstVal->isZero()) {
+      if (ConstVal) {
+        if (!ConstVal->isZero()) {
+          VMI.RequiredTraits.reset(
+              unsigned(llvm::omp::TraitProperty::user_condition_false));
+          VMI.RequiredTraits.set(
+              unsigned(llvm::omp::TraitProperty::user_condition_true));
+        }
+      } else if (IsMatchNone) {
+        RuntimeConds[I] = {Cond, /*Negated=*/true};
+      } else if (!IsMatchAny ||
+                 !llvm::omp::isVariantApplicableInContext(VMI, OMPCtx)) {
         VMI.RequiredTraits.reset(
             unsigned(llvm::omp::TraitProperty::user_condition_false));
         VMI.RequiredTraits.set(
             unsigned(llvm::omp::TraitProperty::user_condition_true));
+        RuntimeConds[I] = {Cond, /*Negated=*/false};
       }
-      if (!ConstVal) {
-        RuntimeConds[I] = Cond;
+      if (RuntimeConds[I].first) {
         if (Cond->HasSideEffects(getContext())) {
           Id = NextCondId++;
         } else {
@@ -2488,13 +2505,14 @@ void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
            VMIs, OMPCtx, ConditionIds)) {
     unsigned I = VariantIdx[Idx];
     // Without a condition the variant always applies; later ones never run.
-    const Expr *Cond = RuntimeConds[I];
+    auto [Cond, Negated] = RuntimeConds[I];
     if (!Cond) {
       Fallback = I;
       break;
     }
     llvm::BasicBlock *ElseBB = createBasicBlock("omp.metadirective.else");
-    EmitBranchOnBoolExpr(Cond, VariantBBs[I], ElseBB, /*TrueCount=*/0);
+    EmitBranchOnBoolExpr(Cond, Negated ? ElseBB : VariantBBs[I],
+                         Negated ? VariantBBs[I] : ElseBB, /*TrueCount=*/0);
     EmitBlock(ElseBB);
   }
   EmitBranch(Fallback ? VariantBBs[*Fallback] : EndBB);

@@ -344,6 +344,46 @@ void const_true(int a) {
   bar();
 }
 
+// match_none: the variant runs when the condition is false.
+// CHECK-LABEL: define {{.*}}void @_Z10match_nonei(
+// CHECK:       br i1 {{.*}}, label %[[ELSE:omp.metadirective.else[0-9]*]], label %[[WHEN:omp.metadirective.variant[0-9]*]]
+// CHECK:       [[ELSE]]:
+// CHECK-NEXT:  br label %[[OTHER:omp.metadirective.variant[0-9]*]]
+// CHECK:       [[WHEN]]:
+// CHECK-NEXT:  call {{.*}}@__kmpc_fork_call(
+// CHECK:       [[OTHER]]:
+// CHECK:       call i32 @__kmpc_single(
+void match_none(int a) {
+#pragma omp metadirective when(implementation={extension(match_none)}, \
+    user={condition(a)}: parallel) otherwise(single)
+  bar();
+}
+
+// match_any: vendor(llvm) matches, so the condition is not checked.
+// CHECK-LABEL: define {{.*}}void @_Z16match_any_statici(
+// CHECK-NOT:   load i32, ptr %a.addr
+// CHECK:       br label %[[WHEN:omp.metadirective.variant[0-9]*]]
+// CHECK:       [[WHEN]]:
+// CHECK-NEXT:  call {{.*}}@__kmpc_fork_call(
+void match_any_static(int a) {
+#pragma omp metadirective when(implementation={vendor(llvm), \
+    extension(match_any)}, user={condition(a)}: parallel) otherwise(single)
+  bar();
+}
+
+// match_any: vendor(amd) does not match, so the condition decides.
+// CHECK-LABEL: define {{.*}}void @_Z14match_any_condi(
+// CHECK:       [[A:%.*]] = load i32, ptr %a.addr
+// CHECK-NEXT:  icmp ne i32 [[A]], 0
+// CHECK-NEXT:  br i1 {{.*}}, label %[[WHEN:omp.metadirective.variant[0-9]*]], label %
+// CHECK:       [[WHEN]]:
+// CHECK-NEXT:  call {{.*}}@__kmpc_fork_call(
+void match_any_cond(int a) {
+#pragma omp metadirective when(implementation={vendor(amd), \
+    extension(match_any)}, user={condition(a)}: parallel) otherwise(single)
+  bar();
+}
+
 // 'target update' is standalone: it runs the shared statement.
 // CHECK-LABEL: define {{.*}}void @_Z13target_updateiPi(
 // CHECK:       br i1 {{.*}}, label %[[WHEN:omp.metadirective.variant[0-9]*]], label %

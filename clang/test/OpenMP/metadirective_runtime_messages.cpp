@@ -68,3 +68,11 @@ void shared_decl_scope(int flag) {
   S s;
   s.use(); // expected-error {{use of undeclared identifier 's'}}
 }
+
+// The future spelling warning is reported once.
+void future_spelling(int flag) {
+#pragma omp parallel
+  {
+#pragma omp metadirective when(user={condition(flag)}: cancellation_point parallel) otherwise(nothing) // expected-warning {{directive spelling 'cancellation_point' is introduced in a later OpenMP version}}
+  }
+}
