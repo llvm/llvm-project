@@ -690,7 +690,7 @@ TEST(LlvmLibcRegexExprTest, TwoSpineAltMergeSpillAndCommutativity) {
 TEST(LlvmLibcRegexExprTest, AltCoalesceCascadesBetweenKeptAndTail) {
   ExprBuilder b;
 
-  // Absorbing ε in kept widens a{1,3} -> a{0,3}, unlocking b{1,2}·a{0,3}:
+  // Absorbing earlier ε widens a{1,3} -> a{0,3}, unlocking later b{1,2}·a{0,3}:
   //   a{2,3} | (ε | a | b{1,2}·a{0,3}) -> b{0,2}·a{0,3}.
   const ExprId concat_spine = b.alt(EMPTY_STR_ID, b.lit('a'),
                                     b.cat(b.rep('b', 1, 2), b.rep('a', 0, 3)));
@@ -698,7 +698,7 @@ TEST(LlvmLibcRegexExprTest, AltCoalesceCascadesBetweenKeptAndTail) {
   EXPECT_EQ(b.alt(b.rep('a', 2, 3), concat_spine), concat_want);
   EXPECT_EQ(b.alt(concat_spine, b.rep('a', 2, 3)), concat_want);
 
-  // Absorbing ε turns a{1,∞} into a*, unlocking b{1,2}·a* in tail:
+  // Absorbing earlier ε turns a{1,∞} into a*, unlocking later b{1,2}·a*:
   //   a{2,2} | (ε | a | a{3,∞} | b{1,2}·a*) -> b{0,2}·a*.
   const ExprId star_spine =
       b.alt(EMPTY_STR_ID, b.lit('a'), b.rep('a', 3, REPEAT_INF),
@@ -706,14 +706,15 @@ TEST(LlvmLibcRegexExprTest, AltCoalesceCascadesBetweenKeptAndTail) {
   EXPECT_EQ(b.alt(b.rep('a', 2, 2), star_spine),
             b.cat(b.rep('b', 0, 2), b.star('a')));
 
-  // Absorbing ε widens a{1,3} -> a{0,3}, unlocking nested (a{0,3}){2,3}:
+  // Absorbing earlier ε widens a{1,3} -> a{0,3}, unlocking nested
+  // (a{0,3}){2,3}:
   //   a{2,3} | (ε | a | (a{0,3}){2,3}) -> (a{0,3}){1,3}.
   const ExprId a_0_3 = b.rep('a', 0, 3);
   const ExprId nested_spine =
       b.alt(EMPTY_STR_ID, b.lit('a'), b.rep(a_0_3, 2, 3));
   EXPECT_EQ(b.alt(b.rep('a', 2, 3), nested_spine), b.rep(a_0_3, 1, 3));
 
-  // Skipping a non-matching tail branch moves m from tail into kept:
+  // Preserving an unrelated middle branch m while bridging z{1,2} and z{5,6}:
   //   (z{1,2} | m | z{5,6}) | z{3,4} -> m | z{1,6}.
   const ExprId z_1_2 = b.rep('z', 1, 2);
   const ExprId m = b.lit('m');
@@ -726,8 +727,8 @@ TEST(LlvmLibcRegexExprTest, AltCoalesceCascadesBetweenKeptAndTail) {
 
 TEST(LlvmLibcRegexExprTest, AltCoalescedBranchPlacement) {
   ExprBuilder b;
-  // Intern in ascending ExprId order (a < b* < d < b{2,3} < f < b{1,3}) so each
-  // case exercises one placement slot in splice_into_sorted_spine.
+  // Intern in ascending ExprId order (a < b* < d < b{2,3} < f < b{1,3}) so
+  // coalesced results land at each sorted position along the spine.
   const ExprId a = b.lit('a');
   const ExprId star_b = b.star('b');
   const ExprId d = b.lit('d');
@@ -740,19 +741,21 @@ TEST(LlvmLibcRegexExprTest, AltCoalescedBranchPlacement) {
   ASSERT_LT(b_2_3, f);
   ASSERT_LT(f, b_1_3);
 
-  // Before kept: (d | b{2,3}) | b* -> b* | d.
+  // Coalesced branch lands at the front: (d | b{2,3}) | b* -> b* | d.
   EXPECT_EQ(b.alt(b.alt(d, b_2_3), star_b), b.alt(star_b, d));
 
-  // Inside kept (empty tail and non-empty tail):
+  // Coalesced branch lands between earlier skipped branches:
   //   (a | d | b{2,3}) | b*     -> a | b* | d
   //   (a | d | b{2,3} | f) | b* -> a | b* | d | f
   EXPECT_EQ(b.alt(b.alt(a, d, b_2_3), star_b), b.alt(a, star_b, d));
   EXPECT_EQ(b.alt(b.alt(a, d, b_2_3, f), star_b), b.alt(a, star_b, d, f));
 
-  // Into non-empty tail: (a | b{2,3} | f) | b -> a | f | b{1,3}.
+  // Coalesced branch sorts past a later branch:
+  //   (a | b{2,3} | f) | b -> a | f | b{1,3}.
   EXPECT_EQ(b.alt(b.alt(a, b_2_3, f), b.lit('b')), b.alt(a, f, b_1_3));
 
-  // Between kept and non-empty tail (k < c{0,5} < c{0,2} < w < c{3,5}).
+  // Coalesced branch lands right between skipped and remaining branches
+  // (k < c{0,5} < c{0,2} < w < c{3,5}).
   const ExprId k = b.lit('k');
   const ExprId c_0_5 = b.rep('c', 0, 5);
   const ExprId c_0_2 = b.rep('c', 0, 2);
@@ -763,8 +766,8 @@ TEST(LlvmLibcRegexExprTest, AltCoalescedBranchPlacement) {
   EXPECT_EQ(b.alt(c_3_5, b.alt(c_0_2, w)), b.alt(c_0_5, w));
   EXPECT_EQ(b.alt(c_3_5, b.alt(k, c_0_2, w)), b.alt(k, c_0_5, w));
 
-  // Exact boundary acc == head(tail), plain (q*) and repeat-bearing
-  // ((q{2,3})*): (R{0,3}){0,1} | (R{0,3}){2,∞} unwraps to R* == head(tail).
+  // Coalescing unwraps to a branch already later in the spine (q* and
+  // (q{2,3})*): (R{0,3}){0,1} | ((R{0,3}){2,∞} | R*) -> R*.
   const ExprId q_0_3 = b.rep('q', 0, 3);
   const ExprId q03_2_inf = b.rep(q_0_3, 2, REPEAT_INF);
   const ExprId star_q = b.star('q');
@@ -778,7 +781,8 @@ TEST(LlvmLibcRegexExprTest, AltCoalescedBranchPlacement) {
   ASSERT_LT(r03_2_inf, star_q23);
   EXPECT_EQ(b.alt(b.rep(r_0_3, 0, 1), b.alt(r03_2_inf, star_q23)), star_q23);
 
-  // Absorbing a duplicate branch already in kept (p* < (p{0,3}){2,∞}).
+  // Coalescing unwraps to a branch already earlier in the spine
+  // (p* < (p{0,3}){2,∞}): (p{0,3}){0,1} | (p* | (p{0,3}){2,∞}) -> p*.
   const ExprId star_p = b.star('p');
   const ExprId p_0_3 = b.rep('p', 0, 3);
   const ExprId p03_2_inf = b.rep(p_0_3, 2, REPEAT_INF);
