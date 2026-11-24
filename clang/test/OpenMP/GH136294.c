@@ -39,6 +39,8 @@
 // CHECK-DAG: [[GLOBAL_TYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 17592186044418]
 // CHECK-DAG: [[ELEMENT_SIZES:@.+]] = private unnamed_addr constant [1 x i64] [i64 3]
 // CHECK-DAG: [[ELEMENT_TYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 17592186044417]
+// Combined struct entry, two members MEMBER_OF(1) | TO, section TO | NON_CONTIG.
+// CHECK-DAG: [[MIXED_TYPES:@.+]] = private unnamed_addr constant [4 x i64] [i64 0, i64 281474976710657, i64 281474976710657, i64 17592186044417]
 
 void exch_data(double *a, int nx, int ny);
 
@@ -55,8 +57,7 @@ void array_ing(double *a, int nx, int ny) {
 
     // The base pointer is the value of 'a'; the dimensions of the shape are
     // evaluated like the sizes of a variable length array.
-    // CHECK:      load ptr, ptr [[A_ADDR]],
-    // CHECK-NEXT: [[BP:%.+]] = load ptr, ptr [[A_ADDR]],
+    // CHECK:      [[BP:%.+]] = load ptr, ptr [[A_ADDR]],
     // CHECK-NEXT: [[NX:%.+]] = load i32, ptr [[NX_ADDR]],
     // CHECK-NEXT: [[NX_64:%.+]] = zext i32 [[NX]] to i64
     // CHECK-NEXT: [[NY:%.+]] = load i32, ptr [[NY_ADDR]],
@@ -78,7 +79,6 @@ void array_ing(double *a, int nx, int ny) {
 
     // The second list item, &a[0][ny] of the shaped array; its own shaping
     // expression evaluates the dimensions again.
-    // CHECK-NEXT: load ptr, ptr [[A_ADDR]],
     // CHECK-NEXT: [[BP2:%.+]] = load ptr, ptr [[A_ADDR]],
     // CHECK-NEXT: [[NY_C:%.+]] = load i32, ptr [[NY_ADDR]],
     // CHECK-NEXT: [[NY_IDX:%.+]] = sext i32 [[NY_C]] to i64
@@ -208,8 +208,7 @@ void vla_control(int nx, int ny) {
 // CHECK:       store ptr %p, ptr [[P_ADDR:%.+]],
 void const_dims(double *p) {
   // &p[0][1] of the shaped double[3][4].
-  // CHECK:      load ptr, ptr [[P_ADDR]],
-  // CHECK-NEXT: [[CBP:%.+]] = load ptr, ptr [[P_ADDR]],
+  // CHECK:      [[CBP:%.+]] = load ptr, ptr [[P_ADDR]],
   // CHECK-NEXT: [[CP:%.+]] = load ptr, ptr [[P_ADDR]],
   // CHECK-NEXT: [[CROW0:%.+]] = getelementptr inbounds nuw [4 x double], ptr [[CP]], i64 0
   // CHECK-NEXT: [[CDECAY:%.+]] = getelementptr inbounds [4 x double], ptr [[CROW0]], i64 0, i64 0
@@ -300,6 +299,55 @@ void clauses(double *p, int n, int m, int dev) {
 #pragma omp target update to((([n][m])p)[0:n][1]) if(n > 2) device(dev) nowait
 #pragma omp task depend(in : (([n][m])p)[0:n][1]) affinity((([n][m])p)[0:n][1])
   ;
+}
+
+// Fewer sections than dimensions: the descriptor element is a row of k doubles.
+// CHECK-LABEL: define {{.*}}void @partial_depth(
+// CHECK:       store i32 %k, ptr [[K_ADDR:%.+]],
+void partial_depth(double *p, int n, int m, int k) {
+  // CHECK:      [[K:%.+]] = load i32, ptr [[K_ADDR]],
+  // CHECK-NEXT: [[K64:%.+]] = zext i32 [[K]] to i64
+  // The entry size and the descriptor each compute the row size.
+  // CHECK:      mul nuw i64 [[K64]], 8
+  // CHECK:      [[ROW:%.+]] = mul nuw i64 [[K64]], 8
+  // CHECK:      store i64 [[ROW]], ptr
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
+#pragma omp target update from((([n][m][k])p)[0:n][1])
+}
+
+// Rows in depend and affinity: the size extends over the whole last row.
+// CHECK-LABEL: define {{.*}}void @row_sections(
+void row_sections(double *p, int n, int m) {
+  // CHECK:      [[RS_ROW:%.+]] = mul nuw i64 %{{.+}}, 8
+  // CHECK-NEXT: [[RS_END:%.+]] = getelementptr i8, ptr %{{.+}}, i64 [[RS_ROW]]
+  // CHECK-NEXT: [[RS_END_INT:%.+]] = ptrtoaddr ptr [[RS_END]] to i64
+  // CHECK-NEXT: [[RS_BEGIN_INT:%.+]] = ptrtoaddr ptr %{{.+}} to i64
+  // CHECK-NEXT: [[RS_SIZE:%.+]] = sub nuw i64 [[RS_END_INT]], [[RS_BEGIN_INT]]
+  // CHECK:      store i64 [[RS_SIZE]], ptr
+#pragma omp task depend(in : (([n][m])p)[0:n]) affinity((([n][m])p)[0:n])
+  ;
+}
+
+// The base pointer is the shifted pointer, not 'p'.
+// CHECK-LABEL: define {{.*}}void @offset_base(
+void offset_base(double *p) {
+  // CHECK:      [[OB_BASE:%.+]] = getelementptr inbounds{{.*}} double, ptr %{{.+}}, i64 8
+  // CHECK:      store ptr [[OB_BASE]], ptr
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
+#pragma omp target update to((([2][4])(p + 8))[0:2][1])
+}
+
+struct T {
+  int i;
+  float x;
+  double *p;
+};
+
+// The shaped section is not part of the combined entry of the struct.
+// CHECK-LABEL: define {{.*}}void @member_and_shaped(
+void member_and_shaped(struct T t, int n, int m) {
+  // CHECK: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 4, ptr %{{.+}}, ptr %{{.+}}, ptr %{{.+}}, ptr [[MIXED_TYPES]], ptr null, ptr null)
+#pragma omp target update to(t.i, t.x, (([n][m])t.p)[0:n][1])
 }
 
 #endif // HEADER

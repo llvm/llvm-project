@@ -3934,9 +3934,17 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
                  dyn_cast<ArraySectionExpr>(E->IgnoreParenImpCasts())) {
     LValue UpAddrLVal = CGF.EmitArraySectionExpr(ASE, /*IsLowerBound=*/false);
     Address UpAddrAddress = UpAddrLVal.getAddress();
-    llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
-        UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
-        /*Idx0=*/1);
+    llvm::Value *UpAddr;
+    // The address holds the innermost element of a variable length array
+    // element; step over the whole element, whose size is a run time value.
+    if (UpAddrLVal.getType()->isVariableArrayType())
+      UpAddr =
+          CGF.Builder.CreateGEP(CGF.Int8Ty, UpAddrAddress.emitRawPointer(CGF),
+                                CGF.getTypeSize(UpAddrLVal.getType()));
+    else
+      UpAddr = CGF.Builder.CreateConstGEP1_32(UpAddrAddress.getElementType(),
+                                              UpAddrAddress.emitRawPointer(CGF),
+                                              /*Idx0=*/1);
     SizeVal = CGF.Builder.CreatePtrDiff(UpAddr, Addr, "", /*IsNUW=*/true);
   } else {
     SizeVal = CGF.getTypeSize(Ty);
@@ -8456,18 +8464,17 @@ private:
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
-      // A non-contiguous section of a shaped array is transferred on its own:
-      // the shaped pointer is its base pointer, whatever expression (member,
-      // subscript, global) yields it.
+      // A non-contiguous section of a shaped array is based on the shaped
+      // pointer. The attach pointer provides it, except after pointer
+      // arithmetic (e.g. `([n])(p + 10)`), which the attach pointer skips.
       if (OAShE && Next != CE && IsNonContiguous) {
-        BP = Address(
-            CGF.EmitScalarExpr(OAShE->getBase()),
-            CGF.ConvertTypeForMem(
-                OAShE->getBase()->getType()->getPointeeType()),
-            CGF.getContext().getTypeAlignInChars(OAShE->getBase()->getType()));
-        EncounteredME = nullptr;
-        ShouldBeMemberOf = false;
-        FirstPointerInComplexData = false;
+        if (!BP.isValid() ||
+            isa<BinaryOperator>(OAShE->getBase()->IgnoreParenImpCasts()))
+          BP = Address(CGF.EmitScalarExpr(OAShE->getBase()),
+                       CGF.ConvertTypeForMem(
+                           OAShE->getBase()->getType()->getPointeeType()),
+                       CGF.getContext().getTypeAlignInChars(
+                           OAShE->getBase()->getType()));
         continue;
       }
       // An array shaping expression maps the shaped storage only as the whole
@@ -8769,7 +8776,7 @@ private:
     MapValuesArrayTy CurCounts;
     MapValuesArrayTy CurStrides = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     MapValuesArrayTy DimSizes{llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
-    uint64_t ElementTypeSize;
+    llvm::Value *ElementTypeSize = nullptr;
 
     // Components past an array shaping expression belong to the shaped pointer
     // base, not to dimensions of the shaped array.
@@ -8839,10 +8846,12 @@ private:
           // level of indirection.
           if (&Component != &*Components.begin())
             ElementType = ElementType->getPointeeOrArrayElementType();
-          ElementTypeSize =
-              Context.getTypeSizeInChars(ElementType).getQuantity();
-          CurCounts.push_back(
-              llvm::ConstantInt::get(CGF.Int64Ty, ElementTypeSize));
+          // The element may be a variable length array (a section of fewer
+          // dimensions than the array), whose size is a run time value.
+          ElementTypeSize = CGF.Builder.CreateIntCast(
+              CGF.getTypeSize(QualType(ElementType, 0)), CGF.Int64Ty,
+              /*isSigned=*/false);
+          CurCounts.push_back(ElementTypeSize);
         }
       }
       // Get dimension value except for the last dimension since we don't need
@@ -8861,8 +8870,8 @@ private:
     // Skip the dummy dimension since we have already have its information.
     auto *DI = DimSizes.begin() + 1;
     // Product of dimension.
-    llvm::Value *DimProd =
-        llvm::ConstantInt::get(CGF.CGM.Int64Ty, ElementTypeSize);
+    assert(ElementTypeSize && "Element size of the section is not known");
+    llvm::Value *DimProd = ElementTypeSize;
 
     // Collect info for non-contiguous. Notice that offset, count, and stride
     // are only meaningful for array-section, so we insert a null for anything

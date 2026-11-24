@@ -81,6 +81,8 @@ struct S8 {
     double marr[10][5][10];
 #pragma omp target update to(marr [0:1][2:4][1:2]) // le45-error {{array section does not specify contiguous storage}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
     {}
+#pragma omp target update to(([2])this) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to((([2])this)[0:1], (([2])this->ptr)[0:1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   }
 };
 
@@ -254,6 +256,8 @@ int main(int argc, char **argv) {
 #pragma omp target update to((([2])fp)[0:1]) // le51-error {{expected expression with a pointer to a complete type as a base of an array shaping operation}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(x, (([2][10])s7.p)[0:2][1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}}
 #pragma omp target update to((([2][10])BB)[0:2][1]) // le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to((([2][10])BB[1])[0:][1]) // le51-error {{array section does not specify length for outermost dimension}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update from(s7.i) to(s7.x) to(s7.i) // expected-error {{variable can appear only once in OpenMP 'target update' construct}} expected-note {{used here}}
 #pragma omp target update to(present: (([2][10])m)[0:2][1]) // le45-error {{use of undeclared identifier 'present'}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target data map(to: (([10])m)[0:10]) // le51-error {{OpenMP array shaping operation is not allowed here}} le45-error {{expected variable name or 'this' in lambda capture list}} le45-error {{expected ')'}} le45-note {{to match this '('}}
   {}

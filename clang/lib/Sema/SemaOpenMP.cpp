@@ -140,11 +140,11 @@ private:
   using LCDeclInfo = std::pair<unsigned, VarDecl *>;
   using LoopControlVariablesMapTy =
       llvm::SmallDenseMap<const ValueDecl *, LCDeclInfo, 8>;
-  /// Struct that associates a component with the clause kind where they are
-  /// found.
+  /// Struct that associates component lists with the clause kinds where they
+  /// are found.
   struct MappedExprComponentTy {
     OMPClauseMappableExprCommon::MappableExprComponentLists Components;
-    OpenMPClauseKind Kind = OMPC_unknown;
+    SmallVector<OpenMPClauseKind, 8> Kinds;
   };
   using MappedExprComponentsTy =
       llvm::DenseMap<const ValueDecl *, MappedExprComponentTy>;
@@ -1083,9 +1083,9 @@ public:
     for (; SI != SE; ++SI) {
       auto MI = SI->MappedExprComponents.find(VD);
       if (MI != SI->MappedExprComponents.end())
-        for (OMPClauseMappableExprCommon::MappableExprComponentListRef L :
-             MI->second.Components)
-          if (Check(L, MI->second.Kind))
+        for (auto [L, K] :
+             llvm::zip_equal(MI->second.Components, MI->second.Kinds))
+          if (Check(L, K))
             return true;
     }
     return false;
@@ -1105,9 +1105,9 @@ public:
     const SharingMapTy &StackElem = getStackElemAtLevel(Level);
     auto MI = StackElem.MappedExprComponents.find(VD);
     if (MI != StackElem.MappedExprComponents.end())
-      for (OMPClauseMappableExprCommon::MappableExprComponentListRef L :
-           MI->second.Components)
-        if (Check(L, MI->second.Kind))
+      for (auto [L, K] :
+           llvm::zip_equal(MI->second.Components, MI->second.Kinds))
+        if (Check(L, K))
           return true;
     return false;
   }
@@ -1122,7 +1122,7 @@ public:
     // Create new entry and append the new components there.
     MEC.Components.resize(MEC.Components.size() + 1);
     MEC.Components.back().append(Components.begin(), Components.end());
-    MEC.Kind = WhereFoundClauseKind;
+    MEC.Kinds.push_back(WhereFoundClauseKind);
   }
 
   unsigned getNestingLevel() const {
@@ -24908,10 +24908,16 @@ public:
       return false;
     }
 
+    // The shaped 'this' pointer is the base of the list item.
+    if (const auto *TE = dyn_cast<CXXThisExpr>(Base->IgnoreParenCasts())) {
+      assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
+      RelevantExpr = TE;
+    }
+
     // Record the component - we don't have any declaration associated.
     Components.emplace_back(E, nullptr, IsNonContiguous);
 
-    return Visit(Base->IgnoreParenImpCasts());
+    return RelevantExpr || Visit(Base->IgnoreParenImpCasts());
   }
 
   bool VisitUnaryOperator(UnaryOperator *UO) {
@@ -24995,18 +25001,20 @@ static const Expr *checkMapClauseExpressionBase(
     // Check if the highest dimension array section has length specified
     if (SemaRef.getLangOpts().OpenMP >= 50 && !CurComponents.empty() &&
         (CKind == OMPC_to || CKind == OMPC_from)) {
-      auto CI = CurComponents.rbegin();
-      auto CE = CurComponents.rend();
-      for (; CI != CE; ++CI) {
-        const Expr *E = CI->getAssociatedExpression();
-        if (!isa<ArraySectionExpr, ArraySubscriptExpr>(E))
-          continue;
-        // The outermost dimension is a single element or has a length.
-        const auto *OASE = dyn_cast<ArraySectionExpr>(E);
-        if (!OASE || OASE->getColonLocFirst().isInvalid() || OASE->getLength())
-          break;
-        SemaRef.Diag(ELoc, diag::err_array_section_does_not_specify_length)
-            << ERange;
+      // The outermost dimension is the last array expression of the leading
+      // run; a subscript in the base (e.g. 'pp[3]') is not a dimension.
+      auto It = llvm::find_if_not(
+          CurComponents,
+          [](const OMPClauseMappableExprCommon::MappableComponent &C) {
+            return isa<ArraySectionExpr, ArraySubscriptExpr>(
+                C.getAssociatedExpression());
+          });
+      if (It != CurComponents.begin()) {
+        const auto *OASE = dyn_cast<ArraySectionExpr>(
+            std::prev(It)->getAssociatedExpression());
+        if (OASE && OASE->getColonLocFirst().isValid() && !OASE->getLength())
+          SemaRef.Diag(ELoc, diag::err_array_section_does_not_specify_length)
+              << ERange;
       }
     }
     return Checker.getFoundBase();

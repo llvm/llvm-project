@@ -1180,8 +1180,14 @@ OMPClauseMappableExprCommon::findAttachPtrExpr(
 
   // Only check for non-contiguous sections on target_update, since we can
   // assume array-sections are contiguous on maps on other constructs, even if
-  // we are not sure of it at compile-time, like for a[1:x][2].
-  if (Components.back().isNonContiguous() && CurDirKind == OMPD_target_update)
+  // we are not sure of it at compile-time, like for a[1:x][2]. A shaped
+  // pointer is the base pointer of its non-contiguous sections, though.
+  bool HasArrayShaping =
+      llvm::any_of(Components, [](const MappableComponent &Component) {
+        return isa<OMPArrayShapingExpr>(Component.getAssociatedExpression());
+      });
+  if (Components.back().isNonContiguous() && CurDirKind == OMPD_target_update &&
+      !HasArrayShaping)
     return {nullptr, std::nullopt};
 
   // To find the attach base-pointer, we start with the second component,
