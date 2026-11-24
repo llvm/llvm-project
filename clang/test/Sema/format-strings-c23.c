@@ -42,6 +42,9 @@ void t1(int i, int8_t i8, uint8_t u8, int16_t i16, uint16_t u16, int32_t i32,
   printf("%wf32d", 1.0); // expected-warning{{format specifies type 'int_fast32_t' (aka 'int') but the argument has type 'double'}}
   printf("%wf32u", 1.0); // expected-warning{{format specifies type 'uint_fast32_t' (aka 'unsigned int') but the argument has type 'double'}}
   printf("%w18446744073709551616d", i32); // expected-warning{{invalid conversion specifier '1'}}
+  printf("%w4294967296d", i32); // expected-warning{{invalid conversion specifier '4'}}
+  printf("%w32", i32);          // expected-warning{{incomplete format specifier}}
+  printf("%wf32", i32);         // expected-warning{{incomplete format specifier}}
 }
 
 void t2(int8_t *i8_ptr, int16_t *i16_ptr, int32_t *i32_ptr,

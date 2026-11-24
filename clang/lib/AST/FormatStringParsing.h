@@ -18,9 +18,20 @@
 #include "clang/AST/FormatString.h"
 #include "clang/AST/Type.h"
 
+namespace llvm {
+class TextEncodingConverter;
+} // namespace llvm
+
 namespace clang {
 
 class LangOptions;
+
+/// Creates a TextEncodingConverter for format string character comparisons.
+/// On z/OS format strings are IBM-1047 encoded, so each byte must be converted
+/// to UTF-8 before comparing against ASCII specifier characters.
+/// On all other targets a no-op converter is returned.
+/// Create this once per format string parse and pass it through.
+llvm::TextEncodingConverter createFormatStrConverter(const TargetInfo &Target);
 
 template <typename T> class UpdateOnReturn {
   T &ValueToUpdate;

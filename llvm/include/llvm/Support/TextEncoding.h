@@ -138,6 +138,16 @@ public:
       return std::string(Result);
     return EC;
   }
+
+  // This method is used in format string handling and is only intended
+  // to support basic charsets, not multibyte characters.
+  char convertBasicChar(char SingleChar) const {
+    SmallString<1> Result;
+    auto EC = Converter->convert(StringRef(&SingleChar, 1), Result);
+    if (!EC)
+      return Result[0];
+    return '\0';
+  }
 };
 
 } // namespace llvm
