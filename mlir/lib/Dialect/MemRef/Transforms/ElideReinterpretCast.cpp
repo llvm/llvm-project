@@ -46,7 +46,7 @@ struct ResultNonUnitDimsAndOffsetsForRC {
 
 /// Returns delinearized offset indices for a static reinterpret_cast offset of
 /// an identity-layout source.
-static std::optional<SmallVector<int64_t>>
+static SmallVector<int64_t>
 delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
   ArrayRef<int64_t> rcOffsets = rc.getStaticOffsets();
   MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
@@ -554,7 +554,7 @@ getWindowOffsets(memref::ReinterpretCastOp rc) {
       computeStrides(srcTy.getShape()) != rc.getStaticStrides())
     return std::nullopt;
 
-  SmallVector<int64_t> offs = *delinearizeStaticRCOffset(rc);
+  SmallVector<int64_t> offs = delinearizeStaticRCOffset(rc);
   for (auto [off, resSize, srcSize] :
        llvm::zip_equal(offs, resTy.getShape(), srcTy.getShape()))
     if (off + resSize > srcSize)

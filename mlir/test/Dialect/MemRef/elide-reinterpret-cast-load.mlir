@@ -271,94 +271,100 @@ func.func private @collapse_3d_moved_unit_dims(%i : index, %j : index,
   return
 }
 
-// CHECK-LABEL: func.func private @window_last_row(
-// CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
+/// The window shrinks the source at a zero offset, so the load indices stay
+/// unshifted.
+// CHECK-LABEL: func.func private @window_zero_offset(
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32>) {
-func.func private @window_last_row(%j : index, %src : memref<17x100xf32>) {
-  %idx = arith.constant 0 : index
+func.func private @window_zero_offset(%src : memref<17x100xf32>) {
+  // CHECK-DAG:   %[[IDX_1:.*]] = arith.constant 1 : index
+  // CHECK-DAG:   %[[IDX_3:.*]] = arith.constant 3 : index
+  %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [1600], sizes: [1, 100], strides: [100, 1]
-    : memref<17x100xf32> to memref<1x100xf32, strided<[100, 1], offset: 1600>>
-  // CHECK:       %[[ROW:.*]] = arith.constant 16 : index
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[ROW]], %[[J]]] : memref<17x100xf32>
-  %0 = memref.load %reinterpret_cast[%idx, %j]
-    : memref<1x100xf32, strided<[100, 1], offset: 1600>>
+    to offset: [0], sizes: [4, 50], strides: [100, 1]
+    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[IDX_1]], %[[IDX_3]]] : memref<17x100xf32>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_3]
+    : memref<4x50xf32, strided<[100, 1]>>
   return
 }
 
-// CHECK-LABEL: func.func private @window_leading_rows(
-// CHECK-SAME:    %[[I:[A-Za-z0-9_]+]]: index
-// CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
+/// Same as @window_zero_offset, but offset along dim 0 up to the source bound.
+// CHECK-LABEL: func.func private @window_single_dim_offset(
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32>) {
-func.func private @window_leading_rows(%i : index, %j : index,
-    %src : memref<17x100xf32>) {
+func.func private @window_single_dim_offset(%src : memref<17x100xf32>) {
+  // CHECK-DAG:   %[[IDX_3:.*]] = arith.constant 3 : index
+  %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [0], sizes: [4, 100], strides: [100, 1]
-    : memref<17x100xf32> to memref<4x100xf32, strided<[100, 1]>>
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[I]], %[[J]]] : memref<17x100xf32>
-  %0 = memref.load %reinterpret_cast[%i, %j]
-    : memref<4x100xf32, strided<[100, 1]>>
+    to offset: [1300], sizes: [4, 50], strides: [100, 1]
+    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1], offset: 1300>>
+  // CHECK:       %[[C14:.*]] = arith.constant 14 : index
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C14]], %[[IDX_3]]] : memref<17x100xf32>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_3]
+    : memref<4x50xf32, strided<[100, 1], offset: 1300>>
   return
 }
 
-// CHECK-LABEL: func.func private @window_column_range(
-// CHECK-SAME:    %[[I:[A-Za-z0-9_]+]]: index
-// CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
+/// Same as @window_single_dim_offset, but also offset along dim 1.
+// CHECK-LABEL: func.func private @window_multi_dim_offset(
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32>) {
-func.func private @window_column_range(%i : index, %j : index,
-    %src : memref<17x100xf32>) {
+func.func private @window_multi_dim_offset(%src : memref<17x100xf32>) {
+  %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [13], sizes: [17, 50], strides: [100, 1]
-    : memref<17x100xf32> to memref<17x50xf32, strided<[100, 1], offset: 13>>
-  // CHECK:       %[[C13:.*]] = arith.constant 13 : index
-  // CHECK:       %[[J13:.*]] = arith.addi %[[J]], %[[C13]] : index
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[I]], %[[J13]]] : memref<17x100xf32>
-  %0 = memref.load %reinterpret_cast[%i, %j]
-    : memref<17x50xf32, strided<[100, 1], offset: 13>>
+    to offset: [1350], sizes: [4, 50], strides: [100, 1]
+    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1], offset: 1350>>
+  // CHECK-DAG:   %[[C14:.*]] = arith.constant 14 : index
+  // CHECK-DAG:   %[[C53:.*]] = arith.constant 53 : index
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C14]], %[[C53]]] : memref<17x100xf32>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_3]
+    : memref<4x50xf32, strided<[100, 1], offset: 1350>>
   return
 }
 
-// CHECK-LABEL: func.func private @window_tile(
+/// Same as @window_multi_dim_offset, but with dynamic load indices.
+// CHECK-LABEL: func.func private @window_dynamic_index(
 // CHECK-SAME:    %[[I:[A-Za-z0-9_]+]]: index
 // CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32>) {
-func.func private @window_tile(%i : index, %j : index,
+func.func private @window_dynamic_index(%i : index, %j : index,
     %src : memref<17x100xf32>) {
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [813], sizes: [4, 50], strides: [100, 1]
-    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1], offset: 813>>
-  // CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
+    to offset: [1350], sizes: [4, 50], strides: [100, 1]
+    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1], offset: 1350>>
   // CHECK-DAG:   %[[C13:.*]] = arith.constant 13 : index
-  // CHECK-DAG:   %[[I8:.*]] = arith.addi %[[I]], %[[C8]] : index
-  // CHECK-DAG:   %[[J13:.*]] = arith.addi %[[J]], %[[C13]] : index
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[I8]], %[[J13]]] : memref<17x100xf32>
+  // CHECK-DAG:   %[[C50:.*]] = arith.constant 50 : index
+  // CHECK-DAG:   %[[I13:.*]] = arith.addi %[[I]], %[[C13]] : index
+  // CHECK-DAG:   %[[J50:.*]] = arith.addi %[[J]], %[[C50]] : index
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[I13]], %[[J50]]] : memref<17x100xf32>
   %0 = memref.load %reinterpret_cast[%i, %j]
-    : memref<4x50xf32, strided<[100, 1], offset: 813>>
+    : memref<4x50xf32, strided<[100, 1], offset: 1350>>
   return
 }
 
-// CHECK-LABEL: func.func private @window_3d_tile(
-// CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
+/// Multi-dim offset on the source of @expand_3d_moved_unit_dims.
+// CHECK-LABEL: func.func private @window_3d_multi_dim_offset(
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x3x22x3xf32>) {
-func.func private @window_3d_tile(%j : index, %src : memref<1x3x22x3xf32>) {
-  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+func.func private @window_3d_multi_dim_offset(%src : memref<1x3x22x3xf32>) {
+  // CHECK-DAG:   %[[IDX_0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[IDX_1:.*]] = arith.constant 1 : index
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
     to offset: [81], sizes: [1, 2, 10, 3], strides: [198, 66, 3, 1]
     : memref<1x3x22x3xf32>
       to memref<1x2x10x3xf32, strided<[198, 66, 3, 1], offset: 81>>
   // CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-  // CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
-  // CHECK-DAG:   %[[J5:.*]] = arith.addi %[[J]], %[[C5]] : index
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C2]], %[[J5]], %[[C1]]] : memref<1x3x22x3xf32>
-  %0 = memref.load %reinterpret_cast[%idx_0, %idx_1, %j, %idx_1]
+  // CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[IDX_0]], %[[C2]], %[[C8]], %[[IDX_1]]] : memref<1x3x22x3xf32>
+  %0 = memref.load %reinterpret_cast[%idx_0, %idx_1, %idx_3, %idx_1]
     : memref<1x2x10x3xf32, strided<[198, 66, 3, 1], offset: 81>>
   return
 }
@@ -383,61 +389,71 @@ func.func private @negative_nonzero_offset(
   return
 }
 
+/// Same as @window_single_dim_offset, but the window ends past the source
+/// bound.
 // CHECK-LABEL: func.func private @negative_window_out_of_bounds(
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32>) {
 func.func private @negative_window_out_of_bounds(%src : memref<17x100xf32>) {
-  %idx = arith.constant 0 : index
+  %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [60], sizes: [4, 50], strides: [100, 1]
-    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1], offset: 60>>
+    to offset: [1400], sizes: [4, 50], strides: [100, 1]
+    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1], offset: 1400>>
   // CHECK:       memref.load %[[RC]]
-  %0 = memref.load %reinterpret_cast[%idx, %idx]
-    : memref<4x50xf32, strided<[100, 1], offset: 60>>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_3]
+    : memref<4x50xf32, strided<[100, 1], offset: 1400>>
   return
 }
 
+/// Same as @window_zero_offset, but with non-identity strides.
 // CHECK-LABEL: func.func private @negative_window_strides_mismatch(
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32>) {
 func.func private @negative_window_strides_mismatch(%src : memref<17x100xf32>) {
-  %idx = arith.constant 1 : index
+  %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
   %reinterpret_cast = memref.reinterpret_cast %src
     to offset: [0], sizes: [4, 50], strides: [200, 1]
     : memref<17x100xf32> to memref<4x50xf32, strided<[200, 1]>>
   // CHECK:       memref.load %[[RC]]
-  %0 = memref.load %reinterpret_cast[%idx, %idx]
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_3]
     : memref<4x50xf32, strided<[200, 1]>>
   return
 }
 
+/// Same as @window_single_dim_offset, but the offset starts past the source
+/// end.
 // CHECK-LABEL: func.func private @negative_window_offset_past_end(
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32>) {
 func.func private @negative_window_offset_past_end(%src : memref<17x100xf32>) {
-  %idx = arith.constant 0 : index
+  %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [1700], sizes: [1, 1], strides: [100, 1]
-    : memref<17x100xf32> to memref<1x1xf32, strided<[100, 1], offset: 1700>>
+    to offset: [1700], sizes: [4, 50], strides: [100, 1]
+    : memref<17x100xf32> to memref<4x50xf32, strided<[100, 1], offset: 1700>>
   // CHECK:       memref.load %[[RC]]
-  %0 = memref.load %reinterpret_cast[%idx, %idx]
-    : memref<1x1xf32, strided<[100, 1], offset: 1700>>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_3]
+    : memref<4x50xf32, strided<[100, 1], offset: 1700>>
   return
 }
 
+/// Same as @window_multi_dim_offset, but with a non-identity source layout.
 // CHECK-LABEL: func.func private @negative_window_non_identity_source(
 // CHECK-SAME:    %[[SRC:.*]]: memref<17x100xf32, strided<[100, 1], offset: 5>>) {
 func.func private @negative_window_non_identity_source(
     %src : memref<17x100xf32, strided<[100, 1], offset: 5>>) {
-  %idx = arith.constant 0 : index
+  %idx_1 = arith.constant 1 : index
+  %idx_3 = arith.constant 3 : index
   // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [813], sizes: [4, 50], strides: [100, 1]
+    to offset: [1350], sizes: [4, 50], strides: [100, 1]
     : memref<17x100xf32, strided<[100, 1], offset: 5>>
-      to memref<4x50xf32, strided<[100, 1], offset: 813>>
+      to memref<4x50xf32, strided<[100, 1], offset: 1350>>
   // CHECK:       memref.load %[[RC]]
-  %0 = memref.load %reinterpret_cast[%idx, %idx]
-    : memref<4x50xf32, strided<[100, 1], offset: 813>>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_3]
+    : memref<4x50xf32, strided<[100, 1], offset: 1350>>
   return
 }
 
