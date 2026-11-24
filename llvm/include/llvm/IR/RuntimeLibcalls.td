@@ -1097,9 +1097,24 @@ multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
 }
 
 // AArch64 calls
-def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def SC_MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned, WriteOnly], [NoAlias, ReadOnly]];
+}
+
+def SC_MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
+}
+
+def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[Returned, WriteOnly]];
+}
+
 def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemReadOnly;
