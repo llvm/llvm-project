@@ -52,7 +52,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
   // all of the nops required as part of the alignment operation. In the cases
   // when no nops are added then The fragment is still created but it remains
   // empty.
-  emitCodeAlignment(Align(64), &STI, 4);
+  emitCodeAlignment(Align(64), STI, 4);
 
   // Emit the instruction.
   // Since the previous emit created a new fragment then adding this instruction
@@ -189,7 +189,7 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
 // MCExpr and has the flag PPC::S_PCREL_OPT. After that we just
 // look at the opcode and in the case of PLDpc we will return true. For the load
 // (or store) this function will return false indicating it has found the second
-// instruciton in the pair.
+// instruction in the pair.
 std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
                                                  const MCSubtargetInfo &STI) {
   // Need at least two operands.

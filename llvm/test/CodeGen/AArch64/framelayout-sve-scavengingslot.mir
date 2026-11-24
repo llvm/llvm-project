@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog -mattr=+sve %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prolog-epilog -mattr=+sve %s -o - | FileCheck %s
 ---
 # This test verifies that the emergency scavenging slot is located near the SP/BP.
 name: LateScavengingSlot
@@ -11,7 +11,6 @@ name: LateScavengingSlot
 # CHECK-NEXT: $[[SCRATCH]] = ADDVL_XXI $fp, -1
 # CHECK-NEXT: STRXui $x0, killed $[[SCRATCH]], 0
 # CHECK: bb.1:
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:

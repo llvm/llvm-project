@@ -423,7 +423,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   if (Base) {
     Type = mergeTypeForSet(Type, Base->getType());
   }
-  uint8_t Info = (Binding << 4) | Type;
+  uint8_t Info = ELF::getSymbolInfo(Binding, Type);
 
   // Other and Visibility share the same byte with Visibility using the lower
   // 2 bits
@@ -457,7 +457,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   if (ESize) {
     int64_t Res;
     if (!ESize->evaluateKnownAbsolute(Res, Asm))
-      report_fatal_error("Size expression must be absolute.");
+      report_fatal_error("size expression must be absolute");
     Size = Res;
   }
 
@@ -610,8 +610,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     for (; FileNameIt != FileNames.end() && FileNameIt->second <= MSD.Order;
          ++FileNameIt) {
       Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                         ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                         ELF::SHN_ABS, true);
+                         ELF::getSymbolInfo(ELF::STB_LOCAL, ELF::STT_FILE), 0,
+                         0, ELF::STV_DEFAULT, ELF::SHN_ABS, true);
       ++Index;
     }
 
@@ -623,8 +623,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
   }
   for (; FileNameIt != FileNames.end(); ++FileNameIt) {
     Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                       ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                       ELF::SHN_ABS, true);
+                       ELF::getSymbolInfo(ELF::STB_LOCAL, ELF::STT_FILE), 0, 0,
+                       ELF::STV_DEFAULT, ELF::SHN_ABS, true);
     ++Index;
   }
 
@@ -867,6 +867,7 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
                                    uint64_t Size, const MCSectionELF &Section) {
   uint64_t sh_link = 0;
   uint64_t sh_info = 0;
+  uint64_t EntrySize = Section.getEntrySize();
 
   switch(Section.getType()) {
   default:
@@ -901,6 +902,14 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
     sh_link = SymbolTableIndex;
     sh_info = GroupSymbolIndex;
     break;
+
+  case ELF::SHT_INIT_ARRAY:
+  case ELF::SHT_FINI_ARRAY:
+  case ELF::SHT_PREINIT_ARRAY:
+    // Match GAS, which uses the pointer size regardless of sh_size.
+    if (!EntrySize)
+      EntrySize = is64Bit() ? 8 : 4;
+    break;
   }
 
   if (Section.getFlags() & ELF::SHF_LINK_ORDER) {
@@ -914,7 +923,7 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
   writeSectionHeaderEntry(StrTabBuilder.getOffset(Section.getName()),
                           Section.getType(), Section.getFlags(), 0, Offset,
                           Size, sh_link, sh_info, Section.getAlign(),
-                          Section.getEntrySize());
+                          EntrySize);
 }
 
 void ELFWriter::writeSectionHeaders() {

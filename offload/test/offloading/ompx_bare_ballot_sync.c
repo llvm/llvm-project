@@ -4,6 +4,7 @@
 // XFAIL: intelgpu
 
 #include <assert.h>
+#include <omp.h>
 #include <ompx.h>
 #include <stdint.h>
 #include <stdio.h>

@@ -11,20 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/PHITransAddr.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
-
-static cl::opt<bool> EnableAddPhiTranslation(
-    "gvn-add-phi-translation", cl::init(false), cl::Hidden,
-    cl::desc("Enable phi-translation of add instructions"));
+using namespace llvm::PatternMatch;
 
 static bool canPHITrans(Instruction *Inst) {
   if (isa<PHINode>(Inst) || isa<GetElementPtrInst>(Inst) || isa<CastInst>(Inst))
@@ -129,7 +128,8 @@ static void RemoveInstInputs(Value *V,
 
 Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
                                       BasicBlock *PredBB,
-                                      const DominatorTree *DT) {
+                                      const DominatorTree *DT, Value *Cond,
+                                      bool CondVal) {
   // If this is a non-instruction value, it can't require PHI translation.
   Instruction *Inst = dyn_cast<Instruction>(V);
   if (!Inst) return V;
@@ -152,8 +152,19 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     InstInputs.erase(find(InstInputs, Inst));
 
     // If this is a PHI, go ahead and translate it.
-    if (PHINode *PN = dyn_cast<PHINode>(Inst))
-      return addAsInput(PN->getIncomingValueForBlock(PredBB));
+    if (PHINode *PN = dyn_cast<PHINode>(Inst)) {
+      Value *Incoming = PN->getIncomingValueForBlock(PredBB);
+      // If the incoming value on this edge is a select on the condition we are
+      // resolving, fold it to the requested side. This is what lets us obtain
+      // the two distinct addresses referenced by a select-dependent load along
+      // a backedge (e.g. min/max idioms).
+      if (Cond)
+        if (auto *SI = dyn_cast<SelectInst>(Incoming))
+          if (SI->getCondition() == Cond)
+            return addAsInput(CondVal ? SI->getTrueValue()
+                                      : SI->getFalseValue());
+      return addAsInput(Incoming);
+    }
 
     // If this is a non-phi value, and it is analyzable, we can incorporate it
     // into the expression by making all instruction operands be inputs.
@@ -171,7 +182,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   // operands need to be phi translated, and if so, reconstruct it.
 
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    Value *PHIIn = translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT);
+    Value *PHIIn =
+        translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT, Cond, CondVal);
     if (!PHIIn) return nullptr;
     if (PHIIn == Cast->getOperand(0))
       return Cast;
@@ -186,13 +198,18 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     }
 
     // Otherwise we have to see if a casted version of the incoming pointer
-    // is available.  If so, we can use it, otherwise we have to fail.
-    for (User *U : PHIIn->users()) {
-      if (CastInst *CastI = dyn_cast<CastInst>(U))
-        if (CastI->getOpcode() == Cast->getOpcode() &&
-            CastI->getType() == Cast->getType() &&
-            (!DT || DT->dominates(CastI->getParent(), PredBB)))
-          return CastI;
+    // is available.  If so, we can use it, otherwise we have to fail.  Don't
+    // scan the use list of a constant: ConstantData has no use list, and
+    // other constants may be used from different functions, whose blocks are
+    // not in this function's DominatorTree.
+    if (!isa<Constant>(PHIIn)) {
+      for (User *U : PHIIn->users()) {
+        if (CastInst *CastI = dyn_cast<CastInst>(U))
+          if (CastI->getOpcode() == Cast->getOpcode() &&
+              CastI->getType() == Cast->getType() &&
+              (!DT || DT->dominates(CastI->getParent(), PredBB)))
+            return CastI;
+      }
     }
     return nullptr;
   }
@@ -202,7 +219,7 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     SmallVector<Value*, 8> GEPOps;
     bool AnyChanged = false;
     for (Value *Op : GEP->operands()) {
-      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT);
+      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT, Cond, CondVal);
       if (!GEPOp) return nullptr;
 
       AnyChanged |= GEPOp != Op;
@@ -249,7 +266,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     bool isNSW = cast<BinaryOperator>(Inst)->hasNoSignedWrap();
     bool isNUW = cast<BinaryOperator>(Inst)->hasNoUnsignedWrap();
 
-    Value *LHS = translateSubExpr(Inst->getOperand(0), CurBB, PredBB, DT);
+    Value *LHS =
+        translateSubExpr(Inst->getOperand(0), CurBB, PredBB, DT, Cond, CondVal);
     if (!LHS) return nullptr;
 
     // If the PHI translated LHS is an add of a constant, fold the immediates.
@@ -317,6 +335,92 @@ Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
         Addr = nullptr;
 
   return Addr;
+}
+
+SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
+                                                     BasicBlock *PredBB,
+                                                     const DominatorTree *DT,
+                                                     Value *Cond) {
+  assert(Cond && "expected a non-null select condition");
+  assert(verify() && "Invalid PHITransAddr!");
+
+  if (!DT || !DT->isReachableFromEntry(PredBB))
+    return {nullptr, nullptr};
+
+  auto TranslateSide = [&](bool CondVal) -> Value * {
+    // Work on a copy so that the original address state is preserved and the
+    // other side can be translated independently.
+    PHITransAddr Tmp(*this);
+    if (Value *V =
+            Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal))
+      return V;
+    // A syntactic match misses addresses built from a differently shaped GEP
+    // chain. Compare decomposed offsets instead.
+    return findAvailableSelectArmAddr(Cond, CurBB, PredBB, DT, CondVal);
+  };
+
+  return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
+}
+
+Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
+                                                BasicBlock *PredBB,
+                                                const DominatorTree *DT,
+                                                bool CondVal) const {
+  assert(DT && "Select-arm translation requires a dominator tree.");
+  LinearExpression Target = decomposeLinearExpression(DL, Addr);
+  Value *Base = Target.BasePtr;
+  if (!Target.Index || !Base->hasUseList())
+    return nullptr;
+  if (auto *BaseI = dyn_cast<Instruction>(Base);
+      BaseI && BaseI->getParent() == CurBB)
+    return nullptr;
+
+  // Translate the index along the edge and fold its constant addends into the
+  // offset. GEP offset arithmetic wraps, so no-wrap flags are not required.
+  PHITransAddr IndexAddr(Target.Index, DL, AC);
+  Value *Index = IndexAddr.translateSubExpr(Target.Index, CurBB, PredBB, DT,
+                                            Cond, CondVal);
+  if (!Index)
+    return nullptr;
+  Value *X;
+  const APInt *C;
+  while (match(Index, m_AddLike(m_Value(X), m_APInt(C)))) {
+    Target.Offset += Target.Scale * *C;
+    Index = X;
+  }
+  Target.Index = Index;
+
+  // Look for an available GEP chain over the same base with an equal linear
+  // expression.
+  static constexpr unsigned MaxGEPsToVisit = 32;
+  unsigned NumScanned = 0;
+  SmallVector<Value *, 8> Worklist = {Base};
+  while (!Worklist.empty()) {
+    Value *Ptr = Worklist.pop_back_val();
+    for (User *U : Ptr->users()) {
+      auto *GEPI = dyn_cast<GetElementPtrInst>(U);
+      // Skip vector GEPs: decomposeLinearExpression requires a scalar pointer.
+      if (!GEPI || GEPI->getType() != Addr->getType() ||
+          GEPI->getFunction() != CurBB->getParent() ||
+          !DT->dominates(GEPI->getParent(), PredBB))
+        continue;
+      if (++NumScanned > MaxGEPsToVisit)
+        return nullptr;
+      LinearExpression E = decomposeLinearExpression(DL, GEPI);
+      if (E.BasePtr == Base && E.Index == Target.Index &&
+          E.Scale == Target.Scale && E.Offset == Target.Offset)
+        return GEPI;
+      Worklist.push_back(GEPI);
+    }
+  }
+  return nullptr;
+}
+
+SelectInst *PHITransAddr::getSelect() const {
+  for (Instruction *I : InstInputs)
+    if (auto *SI = dyn_cast<SelectInst>(I))
+      return SI;
+  return nullptr;
 }
 
 /// PHITranslateWithInsertion - PHI translate this value into the specified
@@ -400,8 +504,9 @@ Value *PHITransAddr::insertTranslatedSubExpr(
   }
 
   // Handle add with a constant RHS.
-  if (EnableAddPhiTranslation && Inst->getOpcode() == Instruction::Add &&
-      isa<ConstantInt>(Inst->getOperand(1))) {
+  if (Inst->getOpcode() == Instruction::Add &&
+      isa<ConstantInt>(Inst->getOperand(1)) &&
+      getAnalysisOptions(Inst->getContext()).gvn_add_phi_translation) {
 
     // FIXME: This code works, but it is unclear that we actually want to insert
     // a big chain of computation in order to make a value available in a block.

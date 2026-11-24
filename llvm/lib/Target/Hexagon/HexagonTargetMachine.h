@@ -17,14 +17,29 @@
 #include "HexagonSubtarget.h"
 #include "HexagonTargetObjectFile.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
+
+enum class QFloatMode { StrictIEEE, IEEE, Lossy, Legacy };
 
 class HexagonTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   HexagonSubtarget Subtarget;
   mutable StringMap<std::unique_ptr<HexagonSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<HexagonSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   HexagonTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -33,6 +48,7 @@ public:
                        std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
   ~HexagonTargetMachine() override;
+  const HexagonSubtarget *getHexagonSubtarget() const { return &Subtarget; }
   const HexagonSubtarget *getSubtargetImpl(const Function &F) const override;
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
@@ -55,7 +71,8 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     return true;
   }
   ScheduleDAGInstrs *

@@ -8,11 +8,11 @@
 ; RUN:     < %s | FileCheck %s --check-prefixes=P9BE
 
 ; RUN: llc -mcpu=pwr9 -O3 -verify-machineinstrs -ppc-vsr-nums-as-vr \
-; RUN:     -mtriple=powerpc64-ibm-aix-xcoff --code-model=small -vec-extabi \
+; RUN:     -mtriple=powerpc64-ibm-aix-xcoff --code-model=small -target-abi=vec-extabi \
 ; RUN:     < %s | FileCheck %s --check-prefixes=P9BE-AIX
 
 ; RUN: llc -mcpu=pwr9 -O3 -verify-machineinstrs -ppc-vsr-nums-as-vr \
-; RUN:     -mtriple=powerpc-ibm-aix-xcoff -vec-extabi \
+; RUN:     -mtriple=powerpc-ibm-aix-xcoff -target-abi=vec-extabi \
 ; RUN:     < %s | FileCheck %s --check-prefixes=P9BE-AIX32
 
 define void @test64(ptr nocapture readonly %pix2, i32 signext %i_pix2) {

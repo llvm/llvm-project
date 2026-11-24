@@ -60,7 +60,7 @@
 # CHECK-NEXT:           ]
 # CHECK-NEXT:           EpilogOffset: +0x1E
 # CHECK-NEXT:           NumberOfOps: 0
-# CHECK-NEXT:           (inherits from previous epilog: FirstOp=0x0, IpOffsetOfLastInstruction=0x6, 3 ops)
+# CHECK-NEXT:           (inherits from base epilog: FirstOp=0x0, IpOffsetOfLastInstruction=0x6, 3 ops)
 # CHECK-NEXT:         }
 # CHECK-NEXT:         Epilog [2] {
 # CHECK-NEXT:           Flags [ (0x0)

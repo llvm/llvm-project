@@ -49,7 +49,7 @@ void disableUnsupportedOptions(CompilerInvocation &CI) {
   // our compiler invocation set-up doesn't seem to work with it (leading
   // assertions in VerifyDiagnosticConsumer).
   CI.getDiagnosticOpts().VerifyDiagnostics = false;
-  CI.getDiagnosticOpts().ShowColors = false;
+  CI.getDiagnosticOpts().setShowColors(ShowColorsKind::Off);
 
   // Disable any dependency outputting, we don't want to generate files or write
   // to stdout/stderr.
@@ -121,7 +121,8 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   // createInvocationFromCommandLine sets DisableFree.
   CI->getFrontendOpts().DisableFree = false;
   CI->getLangOpts().CommentOpts.ParseAllComments = true;
-  CI->getLangOpts().RetainCommentsFromSystemHeaders = true;
+  CI->getLangOpts().CommentOpts.RetainComments = true;
+  CI->getLangOpts().CommentOpts.RetainCommentsFromSystemHeaders = true;
 
   disableUnsupportedOptions(*CI);
   return CI;

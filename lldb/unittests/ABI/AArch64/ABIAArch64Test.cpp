@@ -51,9 +51,9 @@ TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
   using Register = DynamicRegisterInfo::Register;
 
   Register pc;
-  pc.name = ConstString("pc");
-  pc.alt_name = ConstString();
-  pc.set_name = ConstString("GPR");
+  pc.name = "pc";
+  pc.alt_name = "";
+  pc.set_name = "GPR";
   std::vector<Register> regs{pc};
 
   abi_sp->AugmentRegisterInfo(regs);
@@ -64,6 +64,23 @@ TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
   EXPECT_EQ(new_pc.set_name, pc.set_name);
   EXPECT_EQ(new_pc.regnum_ehframe, arm64_ehframe::pc);
   EXPECT_EQ(new_pc.regnum_dwarf, arm64_dwarf::pc);
+}
+
+TEST_P(ABIAArch64TestFixture, AugmentRegisterInfoThreadPointer) {
+  ABISP abi_sp = ABI::FindPlugin(ProcessSP(), ArchSpec(GetParam()));
+  ASSERT_TRUE(abi_sp);
+  using Register = DynamicRegisterInfo::Register;
+
+  Register tpidr;
+  tpidr.name = "tpidr";
+  tpidr.set_name = "GPR";
+  std::vector<Register> regs{tpidr};
+
+  abi_sp->AugmentRegisterInfo(regs);
+
+  ASSERT_EQ(regs.size(), 1U);
+  EXPECT_EQ(regs[0].regnum_generic,
+            static_cast<uint32_t>(LLDB_REGNUM_GENERIC_TP));
 }
 
 INSTANTIATE_TEST_SUITE_P(ABIAArch64Tests, ABIAArch64TestFixture,

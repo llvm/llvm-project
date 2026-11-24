@@ -58,71 +58,71 @@ define i32 @csr6_alloc16(ptr %argv) {
 ;
 ; LIN-LABEL: csr6_alloc16:
 ; LIN:       # %bb.0: # %entry
-; LIN-NEXT:    pushq %rax
+; LIN-NEXT:    pushq %rbp
 ; LIN-NEXT:    .cfi_def_cfa_offset 16
-; LIN-NEXT:    push2 %r15, %rbp
+; LIN-NEXT:    push2 %r14, %r15
 ; LIN-NEXT:    .cfi_def_cfa_offset 32
-; LIN-NEXT:    push2 %r13, %r14
+; LIN-NEXT:    push2 %r12, %r13
 ; LIN-NEXT:    .cfi_def_cfa_offset 48
-; LIN-NEXT:    push2 %rbx, %r12
-; LIN-NEXT:    .cfi_def_cfa_offset 64
-; LIN-NEXT:    subq $32, %rsp
-; LIN-NEXT:    .cfi_def_cfa_offset 96
-; LIN-NEXT:    .cfi_offset %rbx, -64
-; LIN-NEXT:    .cfi_offset %r12, -56
-; LIN-NEXT:    .cfi_offset %r13, -48
-; LIN-NEXT:    .cfi_offset %r14, -40
-; LIN-NEXT:    .cfi_offset %r15, -32
-; LIN-NEXT:    .cfi_offset %rbp, -24
+; LIN-NEXT:    pushq %rbx
+; LIN-NEXT:    .cfi_def_cfa_offset 56
+; LIN-NEXT:    subq $24, %rsp
+; LIN-NEXT:    .cfi_def_cfa_offset 80
+; LIN-NEXT:    .cfi_offset %rbx, -56
+; LIN-NEXT:    .cfi_offset %r12, -48
+; LIN-NEXT:    .cfi_offset %r13, -40
+; LIN-NEXT:    .cfi_offset %r14, -32
+; LIN-NEXT:    .cfi_offset %r15, -24
+; LIN-NEXT:    .cfi_offset %rbp, -16
 ; LIN-NEXT:    #APP
 ; LIN-NEXT:    #NO_APP
 ; LIN-NEXT:    xorl %ecx, %ecx
 ; LIN-NEXT:    xorl %eax, %eax
 ; LIN-NEXT:    callq *%rcx
-; LIN-NEXT:    addq $32, %rsp
-; LIN-NEXT:    .cfi_def_cfa_offset 64
-; LIN-NEXT:    pop2 %r12, %rbx
+; LIN-NEXT:    addq $24, %rsp
+; LIN-NEXT:    .cfi_def_cfa_offset 56
+; LIN-NEXT:    popq %rbx
 ; LIN-NEXT:    .cfi_def_cfa_offset 48
-; LIN-NEXT:    pop2 %r14, %r13
+; LIN-NEXT:    pop2 %r13, %r12
 ; LIN-NEXT:    .cfi_def_cfa_offset 32
-; LIN-NEXT:    pop2 %rbp, %r15
+; LIN-NEXT:    pop2 %r15, %r14
 ; LIN-NEXT:    .cfi_def_cfa_offset 16
-; LIN-NEXT:    popq %rax
+; LIN-NEXT:    popq %rbp
 ; LIN-NEXT:    .cfi_def_cfa_offset 8
 ; LIN-NEXT:    retq
 ;
 ; LIN-PPX-LABEL: csr6_alloc16:
 ; LIN-PPX:       # %bb.0: # %entry
-; LIN-PPX-NEXT:    pushq %rax
+; LIN-PPX-NEXT:    pushp %rbp
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 16
-; LIN-PPX-NEXT:    push2p %r15, %rbp
+; LIN-PPX-NEXT:    push2p %r14, %r15
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 32
-; LIN-PPX-NEXT:    push2p %r13, %r14
+; LIN-PPX-NEXT:    push2p %r12, %r13
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 48
-; LIN-PPX-NEXT:    push2p %rbx, %r12
-; LIN-PPX-NEXT:    .cfi_def_cfa_offset 64
-; LIN-PPX-NEXT:    subq $32, %rsp
-; LIN-PPX-NEXT:    .cfi_def_cfa_offset 96
-; LIN-PPX-NEXT:    .cfi_offset %rbx, -64
-; LIN-PPX-NEXT:    .cfi_offset %r12, -56
-; LIN-PPX-NEXT:    .cfi_offset %r13, -48
-; LIN-PPX-NEXT:    .cfi_offset %r14, -40
-; LIN-PPX-NEXT:    .cfi_offset %r15, -32
-; LIN-PPX-NEXT:    .cfi_offset %rbp, -24
+; LIN-PPX-NEXT:    pushp %rbx
+; LIN-PPX-NEXT:    .cfi_def_cfa_offset 56
+; LIN-PPX-NEXT:    subq $24, %rsp
+; LIN-PPX-NEXT:    .cfi_def_cfa_offset 80
+; LIN-PPX-NEXT:    .cfi_offset %rbx, -56
+; LIN-PPX-NEXT:    .cfi_offset %r12, -48
+; LIN-PPX-NEXT:    .cfi_offset %r13, -40
+; LIN-PPX-NEXT:    .cfi_offset %r14, -32
+; LIN-PPX-NEXT:    .cfi_offset %r15, -24
+; LIN-PPX-NEXT:    .cfi_offset %rbp, -16
 ; LIN-PPX-NEXT:    #APP
 ; LIN-PPX-NEXT:    #NO_APP
 ; LIN-PPX-NEXT:    xorl %ecx, %ecx
 ; LIN-PPX-NEXT:    xorl %eax, %eax
 ; LIN-PPX-NEXT:    callq *%rcx
-; LIN-PPX-NEXT:    addq $32, %rsp
-; LIN-PPX-NEXT:    .cfi_def_cfa_offset 64
-; LIN-PPX-NEXT:    pop2p %r12, %rbx
+; LIN-PPX-NEXT:    addq $24, %rsp
+; LIN-PPX-NEXT:    .cfi_def_cfa_offset 56
+; LIN-PPX-NEXT:    popp %rbx
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 48
-; LIN-PPX-NEXT:    pop2p %r14, %r13
+; LIN-PPX-NEXT:    pop2p %r13, %r12
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 32
-; LIN-PPX-NEXT:    pop2p %rbp, %r15
+; LIN-PPX-NEXT:    pop2p %r15, %r14
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 16
-; LIN-PPX-NEXT:    popq %rax
+; LIN-PPX-NEXT:    popp %rbp
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 8
 ; LIN-PPX-NEXT:    retq
 ;
@@ -162,19 +162,18 @@ define i32 @csr6_alloc16(ptr %argv) {
 ;
 ; WIN-LABEL: csr6_alloc16:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    pushq %rax
-; WIN-NEXT:    .seh_pushreg %rax
-; WIN-NEXT:    push2 %r14, %r15
+; WIN-NEXT:    pushq %r15
 ; WIN-NEXT:    .seh_pushreg %r15
+; WIN-NEXT:    push2 %r13, %r14
 ; WIN-NEXT:    .seh_pushreg %r14
-; WIN-NEXT:    push2 %r12, %r13
 ; WIN-NEXT:    .seh_pushreg %r13
+; WIN-NEXT:    push2 %rbp, %r12
 ; WIN-NEXT:    .seh_pushreg %r12
-; WIN-NEXT:    push2 %rbx, %rbp
 ; WIN-NEXT:    .seh_pushreg %rbp
+; WIN-NEXT:    pushq %rbx
 ; WIN-NEXT:    .seh_pushreg %rbx
-; WIN-NEXT:    subq $64, %rsp
-; WIN-NEXT:    .seh_stackalloc 64
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    .seh_stackalloc 56
 ; WIN-NEXT:    .seh_endprologue
 ; WIN-NEXT:    #APP
 ; WIN-NEXT:    #NO_APP
@@ -182,30 +181,29 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-NEXT:    callq *%rax
 ; WIN-NEXT:    nop
 ; WIN-NEXT:    .seh_startepilogue
-; WIN-NEXT:    addq $64, %rsp
-; WIN-NEXT:    pop2 %rbp, %rbx
-; WIN-NEXT:    pop2 %r13, %r12
-; WIN-NEXT:    pop2 %r15, %r14
-; WIN-NEXT:    popq %rax
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    popq %rbx
+; WIN-NEXT:    pop2 %r12, %rbp
+; WIN-NEXT:    pop2 %r14, %r13
+; WIN-NEXT:    popq %r15
 ; WIN-NEXT:    .seh_endepilogue
 ; WIN-NEXT:    retq
 ; WIN-NEXT:    .seh_endproc
 ;
 ; WIN-PPX-LABEL: csr6_alloc16:
 ; WIN-PPX:       # %bb.0: # %entry
-; WIN-PPX-NEXT:    pushq %rax
-; WIN-PPX-NEXT:    .seh_pushreg %rax
-; WIN-PPX-NEXT:    push2p %r14, %r15
+; WIN-PPX-NEXT:    pushp %r15
 ; WIN-PPX-NEXT:    .seh_pushreg %r15
+; WIN-PPX-NEXT:    push2p %r13, %r14
 ; WIN-PPX-NEXT:    .seh_pushreg %r14
-; WIN-PPX-NEXT:    push2p %r12, %r13
 ; WIN-PPX-NEXT:    .seh_pushreg %r13
+; WIN-PPX-NEXT:    push2p %rbp, %r12
 ; WIN-PPX-NEXT:    .seh_pushreg %r12
-; WIN-PPX-NEXT:    push2p %rbx, %rbp
 ; WIN-PPX-NEXT:    .seh_pushreg %rbp
+; WIN-PPX-NEXT:    pushp %rbx
 ; WIN-PPX-NEXT:    .seh_pushreg %rbx
-; WIN-PPX-NEXT:    subq $64, %rsp
-; WIN-PPX-NEXT:    .seh_stackalloc 64
+; WIN-PPX-NEXT:    subq $56, %rsp
+; WIN-PPX-NEXT:    .seh_stackalloc 56
 ; WIN-PPX-NEXT:    .seh_endprologue
 ; WIN-PPX-NEXT:    #APP
 ; WIN-PPX-NEXT:    #NO_APP
@@ -213,11 +211,11 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-PPX-NEXT:    callq *%rax
 ; WIN-PPX-NEXT:    nop
 ; WIN-PPX-NEXT:    .seh_startepilogue
-; WIN-PPX-NEXT:    addq $64, %rsp
-; WIN-PPX-NEXT:    pop2p %rbp, %rbx
-; WIN-PPX-NEXT:    pop2p %r13, %r12
-; WIN-PPX-NEXT:    pop2p %r15, %r14
-; WIN-PPX-NEXT:    popq %rax
+; WIN-PPX-NEXT:    addq $56, %rsp
+; WIN-PPX-NEXT:    popp %rbx
+; WIN-PPX-NEXT:    pop2p %r12, %rbp
+; WIN-PPX-NEXT:    pop2p %r14, %r13
+; WIN-PPX-NEXT:    popp %r15
 ; WIN-PPX-NEXT:    .seh_endepilogue
 ; WIN-PPX-NEXT:    retq
 ; WIN-PPX-NEXT:    .seh_endproc

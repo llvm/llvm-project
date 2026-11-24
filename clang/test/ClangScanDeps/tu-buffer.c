@@ -35,7 +35,9 @@ module addition { header "addition.h" }
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -tu-buffer-path %t/tu.c > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s --check-prefix=CHECK
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,clang-modulemap-file,context-hash,file-deps,name,clang-context-hash,input-file \
+// RUN:   | FileCheck -DPREFIX=%/t %s --check-prefix=CHECK
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -47,8 +49,6 @@ module addition { header "addition.h" }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
@@ -64,8 +64,6 @@ module addition { header "addition.h" }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
@@ -77,8 +75,6 @@ module addition { header "addition.h" }
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
@@ -98,8 +94,6 @@ module addition { header "addition.h" }
 // CHECK-NEXT:               "module-name": "root"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],
-// CHECK-NEXT:           "command-line": [
-// CHECK:                ],
 // CHECK:                "file-deps": [
 // CHECK-NEXT:             [[PREFIX]]/tu.c
 // CHECK-NEXT:           ],

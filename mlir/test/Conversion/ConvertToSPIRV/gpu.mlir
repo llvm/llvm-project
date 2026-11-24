@@ -1,16 +1,16 @@
-// RUN: mlir-opt -test-convert-to-spirv -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-convert-to-spirv -split-input-file -verify-diagnostics %s | FileCheck %s
 
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
 } {
 
+// GroupNonUniform ops only support Subgroup scope, so a Workgroup-scope
+// non-uniform gpu.all_reduce fails to legalize.
 gpu.module @kernels {
-  // CHECK-LABEL: spirv.func @all_reduce
-  // CHECK-SAME: (%[[ARG0:.*]]: f32)
-  // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %[[ARG0]] : f32 -> f32
   gpu.func @all_reduce(%arg0 : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{functions in 'spirv.module' can only contain spirv.* ops}}
     %reduced = gpu.all_reduce add %arg0 {} : (f32) -> (f32)
     gpu.return
   }
@@ -55,12 +55,12 @@ module attributes {
   gpu.module @kernels {
     gpu.func @load_store(%arg0: memref<12x4xf32, #spirv.storage_class<StorageBuffer>>, %arg1: memref<12x4xf32, #spirv.storage_class<StorageBuffer>>, %arg2: memref<12x4xf32, #spirv.storage_class<StorageBuffer>>, %arg3: index, %arg4: index, %arg5: index, %arg6: index) kernel
       attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-      // CHECK: %[[PTR1:.*]] = spirv.AccessChain %[[ARG0]]
+      // CHECK: %[[PTR1:.*]] = spirv.InBoundsAccessChain %[[ARG0]]
       // CHECK-NEXT: spirv.Load "StorageBuffer" %[[PTR1]]
-      // CHECK: %[[PTR2:.*]] = spirv.AccessChain %[[ARG1]]
+      // CHECK: %[[PTR2:.*]] = spirv.InBoundsAccessChain %[[ARG1]]
       // CHECK-NEXT: spirv.Load "StorageBuffer" %[[PTR2]]
       // CHECK: spirv.FAdd
-      // CHECK: %[[PTR3:.*]] = spirv.AccessChain %[[ARG2]]
+      // CHECK: %[[PTR3:.*]] = spirv.InBoundsAccessChain %[[ARG2]]
       // CHECK-NEXT: spirv.Store "StorageBuffer" %[[PTR3]]
       %0 = gpu.block_id x
       %1 = gpu.block_id y

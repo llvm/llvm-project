@@ -176,7 +176,7 @@ ToolChain::RuntimeLibType OHOS::GetRuntimeLibType(
     const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt" && Value != "platform")
+    if (Value != "compiler-rt" && Value != "platform" && Value != "none")
       getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
           << Value << "OHOS";
   }
@@ -380,10 +380,9 @@ void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
 }
 
 SanitizerMask
-OHOS::getSupportedSanitizers(StringRef BoundArch,
+OHOS::getSupportedSanitizers(BoundArch BA,
                              Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

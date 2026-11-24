@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
@@ -30,11 +31,34 @@
 using namespace mlir;
 using namespace mlir::func;
 
+namespace {
+struct FuncDialectBytecodeInterface : BytecodeDialectInterface {
+  using BytecodeDialectInterface::BytecodeDialectInterface;
+
+  void writeVersion(DialectBytecodeWriter &writer) const override {
+    writer.writeVarInt(1);
+  }
+
+  std::unique_ptr<DialectVersion>
+  readVersion(DialectBytecodeReader &reader) const override {
+    uint64_t version;
+    if (failed(reader.readVarInt(version)))
+      return nullptr;
+    if (version != 1) {
+      reader.emitError("unsupported func dialect bytecode version");
+      return nullptr;
+    }
+    return std::make_unique<DialectVersion>();
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // FuncDialect
 //===----------------------------------------------------------------------===//
 
 void FuncDialect::initialize() {
+  addInterfaces<FuncDialectBytecodeInterface>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
@@ -62,7 +86,7 @@ Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
@@ -71,28 +95,7 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                          << "' does not reference a valid function";
 
   // Verify that the operand and result types match the callee.
-  auto fnType = fn.getFunctionType();
-  if (fnType.getNumInputs() != getNumOperands())
-    return emitOpError("incorrect number of operands for callee");
-
-  for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
-    if (getOperand(i).getType() != fnType.getInput(i))
-      return emitOpError("operand type mismatch: expected operand type ")
-             << fnType.getInput(i) << ", but provided "
-             << getOperand(i).getType() << " for operand number " << i;
-
-  if (fnType.getNumResults() != getNumResults())
-    return emitOpError("incorrect number of results for callee");
-
-  for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
-    if (getResult(i).getType() != fnType.getResult(i)) {
-      auto diag = emitOpError("result type mismatch at index ") << i;
-      diag.attachNote() << "      op result types: " << getResultTypes();
-      diag.attachNote() << "function result types: " << fnType.getResults();
-      return diag;
-    }
-
-  return success();
+  return call_interface_impl::verifyCallOpInterface(*this, fn);
 }
 
 FunctionType CallOp::getCalleeType() {
@@ -107,14 +110,17 @@ FunctionType CallOp::getCalleeType() {
 LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
                                            PatternRewriter &rewriter) {
   // Check that the callee is a constant callee.
-  SymbolRefAttr calledFn;
+  FlatSymbolRefAttr calledFn;
   if (!matchPattern(indirectCall.getCallee(), m_Constant(&calledFn)))
     return failure();
 
-  // Replace with a direct call.
-  rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn,
-                                      indirectCall.getResultTypes(),
-                                      indirectCall.getArgOperands());
+  // Replace with a direct call, preserving the call-site attributes.
+  auto directCall = CallOp::create(
+      rewriter, indirectCall.getLoc(), indirectCall.getResultTypes(), calledFn,
+      indirectCall.getArgOperands(), indirectCall.getArgAttrsAttr(),
+      indirectCall.getResAttrsAttr());
+  directCall->setDiscardableAttrs(indirectCall->getDiscardableAttrDictionary());
+  rewriter.replaceOp(indirectCall, directCall.getResults());
   return success();
 }
 
@@ -157,6 +163,35 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
 // FuncOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult FuncOp::readProperties(DialectBytecodeReader &reader,
+                                     OperationState &state) {
+  auto &properties = state.getOrAddProperties<Properties>();
+  // Preserve the pre-DLTI field order for unversioned bytecode.
+  if (failed(reader.readOptionalAttribute(properties.arg_attrs)) ||
+      failed(reader.readAttribute(properties.function_type)) ||
+      failed(reader.readOptionalAttribute(properties.no_inline)) ||
+      failed(reader.readOptionalAttribute(properties.res_attrs)) ||
+      failed(reader.readAttribute(properties.sym_name)) ||
+      failed(reader.readOptionalAttribute(properties.sym_visibility)))
+    return failure();
+
+  if (failed(reader.getDialectVersion<FuncDialect>()))
+    return success();
+  return reader.readOptionalAttribute(properties.dlti);
+}
+
+void FuncOp::writeProperties(DialectBytecodeWriter &writer) {
+  Properties &properties = getProperties();
+  writer.writeOptionalAttribute(properties.arg_attrs);
+  writer.writeAttribute(properties.function_type);
+  writer.writeOptionalAttribute(properties.no_inline);
+  writer.writeOptionalAttribute(properties.res_attrs);
+  writer.writeAttribute(properties.sym_name);
+  writer.writeOptionalAttribute(properties.sym_visibility);
+  if (writer.getBytecodeVersion() >= bytecode::kDialectVersioning)
+    writer.writeOptionalAttribute(properties.dlti);
+}
+
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs) {
   OpBuilder builder(location->getContext());
@@ -180,8 +215,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
                    ArrayRef<DictionaryAttr> argAttrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(name));
+  state.getOrAddProperties<Properties>().sym_name = builder.getStringAttr(name);
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
@@ -217,16 +251,16 @@ void FuncOp::print(OpAsmPrinter &p) {
 void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<StringAttr, Attribute> newAttrMap;
-  for (const auto &attr : dest->getAttrs())
+  for (const auto &attr : dest->getDiscardableAttrDictionary().getValue())
     newAttrMap.insert({attr.getName(), attr.getValue()});
-  for (const auto &attr : (*this)->getAttrs())
+  for (const auto &attr : (*this)->getDiscardableAttrDictionary().getValue())
     newAttrMap.insert({attr.getName(), attr.getValue()});
 
   auto newAttrs = llvm::map_to_vector(
       newAttrMap, [](std::pair<StringAttr, Attribute> attrPair) {
         return NamedAttribute(attrPair.first, attrPair.second);
       });
-  dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs));
+  dest->setDiscardableAttrs(DictionaryAttr::get(getContext(), newAttrs));
 
   // Clone the body.
   getBody().cloneInto(&dest.getBody(), mapper);
@@ -299,7 +333,7 @@ LogicalResult FuncOp::verifyRegions() {
     if (!returnOp)
       continue;
     auto operands =
-        returnOp.getMutableSuccessorOperands(RegionSuccessor::parent());
+        returnOp.getMutableSuccessorOperands(RegionSuccessor(getOperation()));
     if (operands.size() != resultTypes.size())
       return returnOp->emitOpError("has ")
              << operands.size() << " operands, but enclosing function (@"

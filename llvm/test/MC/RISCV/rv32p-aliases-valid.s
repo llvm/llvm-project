@@ -286,3 +286,7 @@ li t3, 0x81008100
 # CHECK-S-OBJ-NOALIAS: lui t4, 524296
 # CHECK-S-OBJ: lui t4, 524296
 li t4, 0x80008000
+
+# CHECK-S-OBJ-NOALIAS: padd.dw a0, zero, s0
+# CHECK-S-OBJ: mvd a0, s0
+mvd a0, s0

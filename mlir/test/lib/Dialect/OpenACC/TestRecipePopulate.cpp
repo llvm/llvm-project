@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -62,7 +62,7 @@ void TestRecipePopulatePass::runOnOperation() {
   SmallVector<std::tuple<Operation *, Value, std::string>> testVars;
 
   module.walk([&](Operation *op) {
-    if (auto varName = op->getAttrOfType<StringAttr>("test.var")) {
+    if (auto varName = op->getDiscardableAttrOfType<StringAttr>("test.var")) {
       for (auto result : op->getResults()) {
         testVars.push_back({op, result, varName.str()});
       }

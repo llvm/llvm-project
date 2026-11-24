@@ -529,6 +529,8 @@ task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err) {
     DNBError err;
     mach_port_t task_self = mach_task_self();
     task_t task = TASK_NULL;
+    uint32_t interval = k_usec_delay;
+
     for (uint32_t i = 0; i < k_num_retries; i++) {
       DNBLog("[LaunchAttach] (%d) about to task_for_pid(%d)", getpid(), pid);
       err = ::task_for_pid(task_self, pid, &task);
@@ -556,7 +558,12 @@ task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err) {
       }
 
       // Sleep a bit and try again
-      ::usleep(k_usec_delay);
+      // Use an increasing interval so that if there's a short term traffic
+      // jam, we skip past rather than exacerbating it.  We see this sequence
+      // timing out occasionally on heavily loaded bots, seemingly because the
+      // syspolicyd isn't keeping up.
+      interval += k_usec_delay * i;
+      ::usleep(interval);
     }
   }
   return TASK_NULL;

@@ -12,17 +12,17 @@
 class Base {
   public:
     // FT-LABEL: define {{.*}} @_ZN4Base2vfEPc(
-    // FT-SAME: {{.*}} !type [[F_TVF:![0-9]+]]
+    // FT-SAME: {{.*}} !callgraph [[F_TVF:![0-9]+]]
     virtual int vf(char *a) { return 0; };
   };
   
   class Derived : public Base {
   public:
-    // FT: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !type [[F_TVF]]
+    // FT: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !callgraph [[F_TVF]]
     int vf(char *a) override { return 1; };
   };
   
-  // FT: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
+  // FT: [[F_TVF]] = !{!"_ZTSFiPcE"}
   
   ////////////////////////////////////////////////////////////////////////////////
   // Callsites (check for indirect callsite operand bundles)
@@ -53,4 +53,4 @@ class Base {
   }
 
   // CST: [[F_TVF_CT]] = !{[[F_TVF:![0-9]+]]}
-  // CST: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
+  // CST: [[F_TVF]] = !{!"_ZTSFiPcE"}

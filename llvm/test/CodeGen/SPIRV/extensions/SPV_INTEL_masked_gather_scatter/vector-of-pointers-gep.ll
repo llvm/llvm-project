@@ -15,6 +15,7 @@
 ; CHECK-DAG: %[[#VI64_4:]] = OpTypeVector %[[#I64]] 4
 ; CHECK-DAG: %[[#UNDEF4:]] = OpUndef %[[#VPTR4]]
 ; CHECK-DAG: %[[#NULL4:]] = OpConstantNull %[[#VI64_4]]
+; CHECK-DAG: %[[#IDXS:]] = OpConstantComposite %[[#VI64_2]] %[[#ONE]] %[[#TWO]]
 
 ; The <1 x ptr> GEP collapses to a single scalar OpPtrAccessChain; no
 ; vector-of-pointers value is materialized.
@@ -92,10 +93,12 @@ define spir_kernel void @test_vector_gep_v4(ptr addrspace(1) %p, ptr addrspace(1
 ; CHECK-NEXT: %[[#OUTV:]] = OpFunctionParameter %[[#PTR]]
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: %[[#EXPV_0:]] = OpCompositeExtract %[[#PTR]] %[[#PV]] 0
-; CHECK-NEXT: %[[#GEPV_0:]] = OpPtrAccessChain %[[#PTR]] %[[#EXPV_0]] %[[#ONE]]
+; CHECK-NEXT: %[[#IDXV_0:]] = OpCompositeExtract %[[#I64]] %[[#IDXS]] 0
+; CHECK-NEXT: %[[#GEPV_0:]] = OpPtrAccessChain %[[#PTR]] %[[#EXPV_0]] %[[#IDXV_0]]
 ; CHECK-NEXT: %[[#INSV_0:]] = OpCompositeInsert %[[#VPTR2]] %[[#GEPV_0]] %[[#UNDEF2]] 0
 ; CHECK-NEXT: %[[#EXPV_1:]] = OpCompositeExtract %[[#PTR]] %[[#PV]] 1
-; CHECK-NEXT: %[[#GEPV_1:]] = OpPtrAccessChain %[[#PTR]] %[[#EXPV_1]] %[[#TWO]]
+; CHECK-NEXT: %[[#IDXV_1:]] = OpCompositeExtract %[[#I64]] %[[#IDXS]] 1
+; CHECK-NEXT: %[[#GEPV_1:]] = OpPtrAccessChain %[[#PTR]] %[[#EXPV_1]] %[[#IDXV_1]]
 ; CHECK-NEXT: %[[#INSV_1:]] = OpCompositeInsert %[[#VPTR2]] %[[#GEPV_1]] %[[#INSV_0]] 1
 ; CHECK-NEXT: %[[#ELTV:]] = OpCompositeExtract %[[#PTR]] %[[#INSV_1]] 0
 ; CHECK-NEXT: %[[#VALV:]] = OpLoad %[[#I32]] %[[#ELTV]]

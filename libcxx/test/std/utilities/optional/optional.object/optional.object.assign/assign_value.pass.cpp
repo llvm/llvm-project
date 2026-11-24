@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <cassert>
 #include <memory>
+#include <utility>
 
 #include "test_macros.h"
 #include "archetypes.h"

@@ -8,8 +8,9 @@
 
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
@@ -142,7 +143,7 @@ static bool allUsesHaveSourceMods(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool mayIgnoreSignedZero(MachineInstr &MI) {
+static bool mayIgnoreSignedZero(const MachineInstr &MI) {
   return MI.getFlag(MachineInstr::MIFlag::FmNsz);
 }
 
@@ -170,6 +171,15 @@ static bool isConstantCostlierToNegate(MachineInstr &MI, Register Reg,
       return true;
   }
   return false;
+}
+
+bool AMDGPUCombinerHelper::canIgnoreLegacyMinMaxTies(const MachineInstr &MI,
+                                                     Register LHS,
+                                                     Register RHS) const {
+  if (mayIgnoreSignedZero(MI))
+    return true;
+  return VT &&
+         (VT->isKnownNeverLogicalZero(LHS) || VT->isKnownNeverLogicalZero(RHS));
 }
 
 static unsigned inverseMinMax(unsigned Opc) {
@@ -215,14 +225,21 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   }
 
   switch (MatchInfo->getOpcode()) {
+  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
+  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
+    if (isConstantCostlierToNegate(*MatchInfo,
+                                   MatchInfo->getOperand(2).getReg(), MRI))
+      return false;
+    // Swapping min<->max flips which operand a signed zero tie selects.
+    return canIgnoreLegacyMinMaxTies(*MatchInfo,
+                                     MatchInfo->getOperand(1).getReg(),
+                                     MatchInfo->getOperand(2).getReg());
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
   case AMDGPU::G_FMAXIMUM:
-  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
-  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     // 0 doesn't have a negated inline immediate.
     return !isConstantCostlierToNegate(*MatchInfo,
                                        MatchInfo->getOperand(2).getReg(), MRI);
@@ -401,18 +418,39 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool AMDGPUCombinerHelper::matchFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  Register Round = Fptrunc.getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(Round))
+    return false;
+
+  LLT SrcTy = MRI.getType(Fptrunc.getOperand(1).getReg());
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_FABS, {SrcTy}});
+}
+
+void AMDGPUCombinerHelper::applyFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  // fabs (fptrunc x) -> fptrunc (fabs x)
+  Register Dst = Fabs.getOperand(0).getReg();
+  Register Src = Fptrunc.getOperand(1).getReg();
+  Builder.setInstrAndDebugLoc(Fabs);
+  Register Abs =
+      Builder.buildFAbs(MRI.getType(Src), Src, Fabs.getFlags()).getReg(0);
+  Builder.buildFPTrunc(Dst, Abs, Fptrunc.getFlags());
+  Fabs.eraseFromParent();
+}
+
 // TODO: Should return converted value / extension source and avoid introducing
 // intermediate fptruncs in the apply function.
 static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
                                   Register Reg) {
-  const MachineInstr *Def = MRI.getVRegDef(Reg);
-  if (Def->getOpcode() == TargetOpcode::G_FPEXT) {
-    Register SrcReg = Def->getOperand(1).getReg();
-    return MRI.getType(SrcReg) == LLT::scalar(16);
-  }
+  Register SrcReg;
+  if (mi_match(Reg, MRI, m_GFPExt(m_Reg(SrcReg))))
+    return MRI.getType(SrcReg) == LLT::float16();
 
-  if (Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
-    APFloat Val = Def->getOperand(1).getFPImm()->getValueAPF();
+  const ConstantFP *FPImm;
+  if (mi_match(Reg, MRI, m_GFCst(FPImm))) {
+    APFloat Val = FPImm->getValueAPF();
     bool LosesInfo = true;
     Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
     return !LosesInfo;
@@ -427,7 +465,9 @@ bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src2) const {
   assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC);
   Register SrcReg = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::scalar(32))
+  if (MRI.getType(MI.getOperand(0).getReg()) != LLT::float16())
+    return false;
+  if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::float32())
     return false;
 
   return isFPExtFromF16OrConst(MRI, Src0) && isFPExtFromF16OrConst(MRI, Src1) &&
@@ -440,9 +480,9 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src2) const {
   // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
   // sources.
-  Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);
-  Src1 = Builder.buildFPTrunc(LLT::scalar(16), Src1).getReg(0);
-  Src2 = Builder.buildFPTrunc(LLT::scalar(16), Src2).getReg(0);
+  Src0 = Builder.buildFPTrunc(LLT::float16(), Src0).getReg(0);
+  Src1 = Builder.buildFPTrunc(LLT::float16(), Src1).getReg(0);
+  Src2 = Builder.buildFPTrunc(LLT::float16(), Src2).getReg(0);
 
   LLT Ty = MRI.getType(Src0);
   auto A1 = Builder.buildFMinNumIEEE(Ty, Src0, Src1);
@@ -464,21 +504,21 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   LLT ScalarDestTy = DestTy.getScalarType();
 
   // TODO: Expected float type in ScalarDestTy
-  if ((ScalarDestTy != LLT::scalar(64) && ScalarDestTy != LLT::scalar(32) &&
-       ScalarDestTy != LLT::scalar(16)) ||
+  if ((ScalarDestTy != LLT::float64() && ScalarDestTy != LLT::float32() &&
+       ScalarDestTy != LLT::float16()) ||
       !MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))
     return false;
 
   Register SelectCondReg = Sel.getOperand(1).getReg();
-  MachineInstr *SelectTrue = MRI.getVRegDef(Sel.getOperand(2).getReg());
-  MachineInstr *SelectFalse = MRI.getVRegDef(Sel.getOperand(3).getReg());
+  Register SelectTrueReg = Sel.getOperand(2).getReg();
+  Register SelectFalseReg = Sel.getOperand(3).getReg();
 
   const auto SelectTrueVal =
-      isConstantOrConstantSplatVectorFP(*SelectTrue, MRI);
+      isConstantOrConstantSplatVectorFP(SelectTrueReg, MRI);
   if (!SelectTrueVal)
     return false;
   const auto SelectFalseVal =
-      isConstantOrConstantSplatVectorFP(*SelectFalse, MRI);
+      isConstantOrConstantSplatVectorFP(SelectFalseReg, MRI);
   if (!SelectFalseVal)
     return false;
 
@@ -487,7 +527,7 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
 
   // For f32, only non-inline constants should be transformed.
   // TODO: Expected float32
-  if (ScalarDestTy == LLT::scalar(32) && TII.isInlineConstant(*SelectTrueVal) &&
+  if (ScalarDestTy == LLT::float32() && TII.isInlineConstant(*SelectTrueVal) &&
       TII.isInlineConstant(*SelectFalseVal))
     return false;
 
@@ -499,7 +539,7 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     return false;
 
   MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
-    LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+    LLT IntDestTy = DestTy.changeElementType(LLT::integer(32));
     auto NewSel = Builder.buildSelect(
         IntDestTy, SelectCondReg,
         Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
@@ -531,4 +571,212 @@ bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
 
   // Check if low 32 bits or high 32 bits are all ones.
   return MaskLen >= 32 && ((MaskIdx == 0) || (MaskIdx == 64 - MaskLen));
+}
+
+bool AMDGPUCombinerHelper::matchBinopWith32BitMask(Register X,
+                                                   Register Y) const {
+  // If both operands are constants, constant_fold_binop can fold the whole
+  // binop to a single constant, which is strictly better than narrowing it
+  // into two s32 ops. Bail so the fold is not preempted.
+  if (getIConstantVRegValWithLookThrough(X, MRI) &&
+      getIConstantVRegValWithLookThrough(Y, MRI))
+    return false;
+  return matchConstantIs32BitMask(X) || matchConstantIs32BitMask(Y);
+}
+
+bool AMDGPUCombinerHelper::isCarryLikeBool(Register Reg, unsigned Depth) const {
+  constexpr unsigned MaxDepth = 6;
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (!Def || Depth > MaxDepth)
+    return false;
+
+  switch (Def->getOpcode()) {
+  case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_IS_FPCLASS:
+    return true;
+  case TargetOpcode::G_INTRINSIC:
+    return cast<GIntrinsic>(Def)->is(Intrinsic::amdgcn_class);
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_USUBE:
+    return Def->getOperand(1).getReg() == Reg;
+  case TargetOpcode::G_XOR:
+    // A not of a carry-like boolean.
+    if (mi_match(Def->getOperand(2).getReg(), MRI, m_AllOnesInt()))
+      return isCarryLikeBool(Def->getOperand(1).getReg(), Depth + 1);
+    [[fallthrough]];
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+    return isCarryLikeBool(Def->getOperand(1).getReg(), Depth + 1) &&
+           isCarryLikeBool(Def->getOperand(2).getReg(), Depth + 1);
+  default:
+    return false;
+  }
+}
+
+static bool isBoolType(LLT Ty) { return Ty.isScalar(1); }
+
+bool AMDGPUCombinerHelper::isFoldableCarryExt(Register Reg, Register *Carry,
+                                              bool *IsSExt) const {
+  Register Src;
+  bool SExt;
+  // The high bits of an anyext are undefined, so it can be treated as a zext.
+  if (mi_match(Reg, MRI, m_any_of(m_GZExt(m_Reg(Src)), m_GAnyExt(m_Reg(Src)))))
+    SExt = false;
+  else if (mi_match(Reg, MRI, m_GSExt(m_Reg(Src))))
+    SExt = true;
+  else
+    return false;
+
+  // Any other boolean must first be copied to SCC or VCC, which costs about
+  // as much as the extension.
+  if (!isBoolType(MRI.getType(Src)) || !MRI.hasOneNonDBGUse(Reg) ||
+      !isCarryLikeBool(Src))
+    return false;
+  if (Carry)
+    *Carry = Src;
+  if (IsSExt)
+    *IsSExt = SExt;
+  return true;
+}
+
+bool AMDGPUCombinerHelper::matchConditionalCarryOp(
+    MachineInstr &MI, ConditionalCarryOp &MatchInfo) const {
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (!Ty.isScalar() || Ty.isFloat())
+    return false;
+  unsigned Size = Ty.getSizeInBits();
+  // Most 16/32-bit cases come from div/rem legalization, and the legalizer
+  // splits a 64-bit add on most subtargets, hiding the x +/- 1 operand.
+  if (isPreLegalize() ? Size != 64 : (Size != 16 && Size != 32))
+    return false;
+
+  // A uniform 64-bit add or select does not clobber SCC on a subtarget with
+  // 64-bit scalar adds, but the two carry ops that replace it do, so a
+  // condition with other users would have to be saved and restored.
+  // Uniformity is not known before legalization, so a condition with other
+  // users is rejected for all 64-bit types on such a subtarget.
+  bool NeedsSingleUseCarry = Size == 64 && STI.hasScalarAddSub64();
+
+  // The base is folded into the add/sub-with-carry, so a known zero base is
+  // better left to the identity combines.
+  auto IsZero = [&](Register Reg) {
+    return mi_match(Reg, MRI, m_SpecificICst(0));
+  };
+
+  // Ext is a zext or sext of a boolean that is used as an addend of an add
+  // (IsAddRoot) or as the subtrahend of a sub.
+  auto MatchExt = [&](Register Ext, Register Base, bool IsAddRoot) {
+    Register Carry;
+    bool IsSExt;
+    if (IsZero(Base) || !isFoldableCarryExt(Ext, &Carry, &IsSExt) ||
+        (NeedsSingleUseCarry && !MRI.hasOneNonDBGUse(Carry)))
+      return false;
+    MatchInfo = {IsAddRoot != IsSExt, /*K=*/0, Base, Carry};
+    return true;
+  };
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_ADD: {
+    Register LHS = MI.getOperand(1).getReg();
+    Register RHS = MI.getOperand(2).getReg();
+    // When both operands are carries, fold only the right one, so that the
+    // two carries do not have to be live at the same time.
+    return MatchExt(RHS, LHS, /*IsAddRoot=*/true) ||
+           MatchExt(LHS, RHS, /*IsAddRoot=*/true);
+  }
+  case TargetOpcode::G_SUB:
+    return MatchExt(MI.getOperand(2).getReg(), MI.getOperand(1).getReg(),
+                    /*IsAddRoot=*/false);
+  case TargetOpcode::G_SELECT: {
+    Register Cond = MI.getOperand(1).getReg();
+    Register TrueReg = MI.getOperand(2).getReg();
+    Register FalseReg = MI.getOperand(3).getReg();
+    if (!isBoolType(MRI.getType(Cond)) ||
+        (NeedsSingleUseCarry && !MRI.hasOneNonDBGUse(Cond)))
+      return false;
+
+    // The select already needs its condition in SCC or VCC, which is the
+    // form that the carry-in operand needs, so any condition is accepted.
+    // Unlike in SelectionDAG, a uniform condition with other users is
+    // already saved in an SGPR and copied back to SCC for each user, so a
+    // 16-bit or 32-bit carry op does not add a save and restore.
+    auto MatchStep = [&](Register Step, Register Base, bool StepIfTrue) {
+      if (!MRI.hasOneNonDBGUse(Step))
+        return false;
+      int64_t Imm;
+      Register Narrow;
+      if (mi_match(Step, MRI, m_GAnyExt(m_Reg(Narrow)))) {
+        // A narrow select that was widened by the legalizer:
+        //   (select c, (anyext (add (trunc x), Imm)), x)
+        // The high bits of the anyext are undefined, so x + Imm can replace
+        // the step.
+        if (!MRI.hasOneNonDBGUse(Narrow) ||
+            !mi_match(Narrow, MRI,
+                      m_GAdd(m_GTrunc(m_SpecificReg(Base)), m_ICst(Imm))))
+          return false;
+      } else if (!mi_match(Step, MRI,
+                           m_GAdd(m_SpecificReg(Base), m_ICst(Imm)))) {
+        return false;
+      }
+      if (Imm != 1 && Imm != -1)
+        return false;
+      // (select c, x + Imm, x) = x + Imm * c
+      // (select c, x, x + Imm) = x + Imm - Imm * c
+      if (StepIfTrue)
+        MatchInfo = {Imm == 1, /*K=*/0, Base, Cond};
+      else
+        MatchInfo = {Imm == -1, /*K=*/-1, Base, Cond};
+      return true;
+    };
+    return MatchStep(TrueReg, FalseReg, /*StepIfTrue=*/true) ||
+           MatchStep(FalseReg, TrueReg, /*StepIfTrue=*/false);
+  }
+  default:
+    return false;
+  }
+}
+
+void AMDGPUCombinerHelper::applyConditionalCarryOp(
+    MachineInstr &MI, const ConditionalCarryOp &MatchInfo) const {
+  assert((MatchInfo.K == 0 || MatchInfo.K == -1) &&
+         "unexpected conditional carry op constant");
+  Builder.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT Ty32 = Ty.changeElementSize(32);
+  LLT CarryTy = MRI.getType(MatchInfo.Carry);
+  unsigned Opc =
+      MatchInfo.IsAdd ? TargetOpcode::G_UADDE : TargetOpcode::G_USUBE;
+  Register K = Builder.buildConstant(Ty32, MatchInfo.K).getReg(0);
+
+  switch (Ty.getSizeInBits()) {
+  case 16: {
+    // Only the low 16 bits of the 32-bit result are used.
+    auto Base = Builder.buildAnyExt(Ty32, MatchInfo.Base);
+    auto Op =
+        Builder.buildInstr(Opc, {Ty32, CarryTy}, {Base, K, MatchInfo.Carry});
+    Builder.buildTrunc(Dst, Op.getReg(0));
+    break;
+  }
+  case 32:
+    Builder.buildInstr(Opc, {Dst, CarryTy},
+                       {MatchInfo.Base, K, MatchInfo.Carry});
+    break;
+  case 64: {
+    // K is 0 or -1, so both halves of the 64-bit constant are K.
+    auto Base = Builder.buildUnmerge(Ty32, MatchInfo.Base);
+    auto Lo = Builder.buildInstr(Opc, {Ty32, CarryTy},
+                                 {Base.getReg(0), K, MatchInfo.Carry});
+    auto Hi = Builder.buildInstr(Opc, {Ty32, CarryTy},
+                                 {Base.getReg(1), K, Lo.getReg(1)});
+    Builder.buildMergeLikeInstr(Dst, {Lo.getReg(0), Hi.getReg(0)});
+    break;
+  }
+  default:
+    llvm_unreachable("unexpected conditional carry op type");
+  }
+  MI.eraseFromParent();
 }

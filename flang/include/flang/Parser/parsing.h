@@ -15,6 +15,7 @@
 #include "parse-tree.h"
 #include "provenance.h"
 #include "flang/Parser/preprocessor.h"
+#include "flang/Support/LangOptions.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
@@ -42,7 +43,8 @@ public:
   void DumpCookedChars(llvm::raw_ostream &) const;
   void DumpProvenance(llvm::raw_ostream &) const;
   void DumpParsingLog(llvm::raw_ostream &) const;
-  void Parse(llvm::raw_ostream &debugOutput);
+  void Parse(
+      llvm::raw_ostream &debugOutput, const common::LangOptions &langOptions);
   void ClearLog();
 
   void EmitMessage(llvm::raw_ostream &o, const char *at,

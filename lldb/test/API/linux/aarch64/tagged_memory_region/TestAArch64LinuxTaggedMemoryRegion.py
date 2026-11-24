@@ -14,7 +14,7 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
 
     # AArch64 Linux always enables the top byte ignore feature
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_mte_regions(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)

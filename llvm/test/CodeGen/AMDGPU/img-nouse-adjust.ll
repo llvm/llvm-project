@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before=amdgpu-isel -stop-after=amdgpu-isel < %s | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before=amdgpu-isel -stop-after=amdgpu-isel -enable-new-pm < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -mtriple=amdgpu9.00 -start-before=amdgpu-isel -stop-after=amdgpu-isel < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -mtriple=amdgpu9.00 -start-before=amdgpu-isel -stop-after=amdgpu-isel -enable-new-pm < %s | FileCheck %s --check-prefix=GCN
 
 ; We're really just checking for no crashes
 ; The feature we're testing for in AdjustWriteMask leaves the image_load as an instruction just post amdgpu-isel

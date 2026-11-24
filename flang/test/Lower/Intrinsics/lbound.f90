@@ -48,7 +48,7 @@ subroutine lbound_test_3(a, dim, res)
   real, dimension(2:10, 3:*) :: a
   integer(8):: dim, res
 ! CHECK:  %[[VAL_0:.*]] = fir.assumed_size_extent : index
-! CHECK:  %[[DIM:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlbound_test_3Edim"}
+! CHECK:  %[[DIM:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFlbound_test_3Edim")
 ! CHECK:  %[[DIM_VAL:.*]] = fir.load %[[DIM]]#0 : !fir.ref<i64>
 ! CHECK:  %[[SHAPESHIFT:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_0]] : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:         %[[EMBOX:.*]] = fir.embox %{{.*}}(%[[SHAPESHIFT]]) : (!fir.ref<!fir.array<9x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<9x?xf32>>
@@ -69,8 +69,8 @@ end subroutine
 subroutine lbound_test_4(a, dim, l1, u1, l2, u2)
   integer(8):: dim, l1, u1, l2, u2
 ! CHECK:  %[[TMP:.*]] = fir.alloca !fir.array<2xi32>
-! CHECK-DAG:  %[[L1:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {uniq_name = "_QFlbound_test_4El1"}
-! CHECK-DAG:  %[[L2:.*]]:2 = hlfir.declare %[[VAL_4]] {{.*}} {uniq_name = "_QFlbound_test_4El2"}
+! CHECK-DAG:  %[[L1:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} uniq_name("_QFlbound_test_4El1")
+! CHECK-DAG:  %[[L2:.*]]:2 = hlfir.declare %[[VAL_4]] {{.*}} uniq_name("_QFlbound_test_4El2")
   real, dimension(l1:u1, l2:u2) :: a
 ! BeginExternalListOutput
 ! CHECK:  %[[L1_VAL:.*]] = fir.load %[[L1]]#0 : !fir.ref<i64>
@@ -94,7 +94,7 @@ subroutine lbound_test_4(a, dim, l1, u1, l2, u2)
 ! CHECK:  fir.store %[[LB2_I32]] to %[[COORD2]] : !fir.ref<i32>
 ! CHECK:  %[[c2:.*]] = arith.constant 2 : index
 ! CHECK:  %[[SHAPE:.*]] = fir.shape %[[c2]] : (index) -> !fir.shape<1>
-! CHECK:  %[[TMPDECL:.*]]:2 = hlfir.declare %[[TMP]](%[[SHAPE]]) {uniq_name = ".tmp.intrinsic_result"}
+! CHECK:  %[[TMPDECL:.*]]:2 = hlfir.declare %[[TMP]](%[[SHAPE]]) uniq_name(".tmp.intrinsic_result")
 ! CHECK:  %[[EXPR:.*]] = hlfir.as_expr %[[TMPDECL]]#0 move %{{.*}} : (!fir.ref<!fir.array<2xi32>>, i1) -> !hlfir.expr<2xi32>
 ! CHECK:  %[[ASSOC:.*]]:3 = hlfir.associate %[[EXPR]](%[[SHAPE]]) {adapt.valuebyref}
 ! CHECK:  %[[EMBOX:.*]] = fir.embox %[[ASSOC]]#0(%{{.*}}) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>

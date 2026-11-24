@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -62,7 +63,7 @@ const uint64_t NOMORE_ICP_MAGICNUM = -1;
 ///
 /// This is a root class for typeless data in the IR.
 class Metadata {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
 
   /// RTTI.
   const unsigned char SubclassID;
@@ -182,7 +183,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Metadata &MD) {
 /// Notably, this is the only thing in either hierarchy that is allowed to
 /// reference \a LocalAsMetadata.
 class MetadataAsValue : public Value {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
 
   Metadata *MD;
@@ -225,13 +226,15 @@ protected:
   // restructure the DbgVariableRecord class then we can template parameterize
   // this array size.
   std::array<Metadata *, 3> DebugValues;
+  // The slot holding the DIAssignID of a dbg_assign record.
+  static constexpr size_t AssignIDIdx = 2;
 
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
 public:
   LLVM_ABI DbgVariableRecord *getUser();
   LLVM_ABI const DbgVariableRecord *getUser() const;
-  /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
+  /// To be called by ReplaceableUses::replaceAllUsesWith, where `Old`
   /// is a pointer to one of the pointers in `DebugValues` (so should be type
   /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
   /// *Old.
@@ -388,25 +391,23 @@ private:
 /// Most metadata cannot be RAUW'ed.  This is a shared implementation of
 /// use-lists and associated API for the three that support it (
 /// \a ValueAsMetadata, \a TempMDNode, and \a DIArgList).
-class ReplaceableMetadataImpl {
+class ReplaceableUses {
   friend class MetadataTracking;
 
 public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
 private:
-  LLVMContext &Context;
   uint64_t NextIndex = 0;
   SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
 
-public:
-  ReplaceableMetadataImpl(LLVMContext &Context) : Context(Context) {}
-
-  ~ReplaceableMetadataImpl() {
+protected:
+  ~ReplaceableUses() {
     assert(UseMap.empty() && "Cannot destroy in-use replaceable metadata");
   }
 
-  LLVMContext &getContext() const { return Context; }
+public:
+  ReplaceableUses &operator=(const ReplaceableUses &) = delete;
 
   /// Replace all uses of this with MD.
   ///
@@ -437,15 +438,27 @@ private:
   ///
   /// If this is an unresolved MDNode, RAUW support will be created on-demand.
   /// ValueAsMetadata always has RAUW support.
-  static ReplaceableMetadataImpl *getOrCreate(Metadata &MD);
+  static ReplaceableUses *getOrCreate(Metadata &MD);
 
   /// Get RAUW support on MD, if it exists.
-  static ReplaceableMetadataImpl *getIfExists(Metadata &MD);
+  static ReplaceableUses *getIfExists(Metadata &MD);
 
   /// Check whether this node will support RAUW.
   ///
   /// Returns \c true unless getOrCreate() would return null.
   static bool isReplaceable(const Metadata &MD);
+};
+
+/// Replaceable metadata that remembers its \a LLVMContext, for owners with no
+/// other route to it.
+class ReplaceableUsesWithContext : public ReplaceableUses {
+  LLVMContext &Context;
+
+public:
+  explicit ReplaceableUsesWithContext(LLVMContext &Context)
+      : Context(Context) {}
+
+  LLVMContext &getContext() const { return Context; }
 };
 
 /// Value wrapper in the Metadata hierarchy.
@@ -456,20 +469,19 @@ private:
 /// Because of full uniquing support, each value is only wrapped by a single \a
 /// ValueAsMetadata object, so the lookup maps are far more efficient than
 /// those using ValueHandleBase.
-class ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
-  friend class ReplaceableMetadataImpl;
+class ValueAsMetadata : public Metadata, ReplaceableUses {
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
 
   Value *V;
 
   /// Drop users without RAUW (during teardown).
   void dropUsers() {
-    ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
+    ReplaceableUses::resolveAllUses(/* ResolveUsers */ false);
   }
 
 protected:
-  ValueAsMetadata(unsigned ID, Value *V)
-      : Metadata(ID, Uniqued), ReplaceableMetadataImpl(V->getContext()), V(V) {
+  ValueAsMetadata(unsigned ID, Value *V) : Metadata(ID, Uniqued), V(V) {
     assert(V && "Expected valid value");
   }
 
@@ -501,10 +513,10 @@ public:
   LLVMContext &getContext() const { return V->getContext(); }
 
   SmallVector<Metadata *> getAllArgListUsers() {
-    return ReplaceableMetadataImpl::getAllArgListUsers();
+    return ReplaceableUses::getAllArgListUsers();
   }
   SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
-    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
+    return ReplaceableUses::getAllDbgVariableRecordUsers();
   }
 
   LLVM_ABI static void handleDeletion(Value *V);
@@ -517,7 +529,7 @@ protected:
   /// \a Value gets RAUW'ed and the target already exists, this is used to
   /// merge the two metadata nodes.
   void replaceAllUsesWith(Metadata *MD) {
-    ReplaceableMetadataImpl::replaceAllUsesWith(MD);
+    ReplaceableUses::replaceAllUsesWith(MD);
   }
 
 public:
@@ -797,9 +809,10 @@ struct AAMDNodes {
   // Shift tbaa.struct Metadata node to start off bytes later
   LLVM_ABI static MDNode *shiftTBAAStruct(MDNode *M, size_t off);
 
-  // Extend tbaa Metadata node to apply to a series of bytes of length len.
-  // A size of -1 denotes an unknown size.
-  LLVM_ABI static MDNode *extendToTBAA(MDNode *TBAA, ssize_t len);
+  // Extend tbaa Metadata node to apply to a series of bytes of length Len.
+  // A size of std::nullopt denotes an unknown size.
+  LLVM_ABI static MDNode *extendToTBAA(MDNode *TBAA,
+                                       std::optional<uint64_t> Len);
 
   /// Given two sets of AAMDNodes that apply to the same pointer,
   /// give the best AAMDNodes that are compatible with both (i.e. a set of
@@ -831,9 +844,9 @@ struct AAMDNodes {
   }
 
   /// Create a new AAMDNode that describes this AAMDNode after extending it to
-  /// apply to a series of bytes of length Len. A size of -1 denotes an unknown
-  /// size.
-  AAMDNodes extendTo(ssize_t Len) const {
+  /// apply to a series of bytes of length Len. A size of std::nullopt denotes
+  /// an unknown size.
+  AAMDNodes extendTo(std::optional<uint64_t> Len) const {
     AAMDNodes Result;
     Result.TBAA = TBAA ? extendToTBAA(TBAA, Len) : nullptr;
     // tbaa.struct contains (offset, size, type) triples. Extending the length
@@ -845,6 +858,10 @@ struct AAMDNodes {
     Result.NoAliasAddrSpace = NoAliasAddrSpace;
     return Result;
   }
+
+  /// Like extendTo(std::optional<uint64_t>), using the value of \p Size if it
+  /// is a constant integer and an unknown size otherwise.
+  LLVM_ABI AAMDNodes extendTo(Value *Size) const;
 
   /// Given two sets of AAMDNodes applying to potentially different locations,
   /// determine the best AAMDNodes that apply to both.
@@ -964,14 +981,14 @@ template <> struct simplify_type<const MDOperand> {
 /// Pointer to the context, with optional RAUW support.
 ///
 /// Either a raw (non-null) pointer to the \a LLVMContext, or an owned pointer
-/// to \a ReplaceableMetadataImpl (which has a reference to \a LLVMContext).
+/// to \a ReplaceableUsesWithContext.
 class ContextAndReplaceableUses {
-  PointerUnion<LLVMContext *, ReplaceableMetadataImpl *> Ptr;
+  PointerUnion<LLVMContext *, ReplaceableUsesWithContext *> Ptr;
 
 public:
   ContextAndReplaceableUses(LLVMContext &Context) : Ptr(&Context) {}
   ContextAndReplaceableUses(
-      std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses)
+      std::unique_ptr<ReplaceableUsesWithContext> ReplaceableUses)
       : Ptr(ReplaceableUses.release()) {
     assert(getReplaceableUses() && "Expected non-null replaceable uses");
   }
@@ -987,7 +1004,7 @@ public:
 
   /// Whether this contains RAUW support.
   bool hasReplaceableUses() const {
-    return isa<ReplaceableMetadataImpl *>(Ptr);
+    return isa<ReplaceableUsesWithContext *>(Ptr);
   }
 
   LLVMContext &getContext() const {
@@ -996,16 +1013,17 @@ public:
     return *cast<LLVMContext *>(Ptr);
   }
 
-  ReplaceableMetadataImpl *getReplaceableUses() const {
+  ReplaceableUsesWithContext *getReplaceableUses() const {
     if (hasReplaceableUses())
-      return cast<ReplaceableMetadataImpl *>(Ptr);
+      return cast<ReplaceableUsesWithContext *>(Ptr);
     return nullptr;
   }
 
   /// Ensure that this has RAUW support, and then return it.
-  ReplaceableMetadataImpl *getOrCreateReplaceableUses() {
+  ReplaceableUsesWithContext *getOrCreateReplaceableUses() {
     if (!hasReplaceableUses())
-      makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(getContext()));
+      makeReplaceable(
+          std::make_unique<ReplaceableUsesWithContext>(getContext()));
     return getReplaceableUses();
   }
 
@@ -1014,7 +1032,7 @@ public:
   /// Make this replaceable, taking ownership of \c ReplaceableUses (which must
   /// not be null).
   void
-  makeReplaceable(std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses) {
+  makeReplaceable(std::unique_ptr<ReplaceableUsesWithContext> ReplaceableUses) {
     assert(ReplaceableUses && "Expected non-null replaceable uses");
     assert(&ReplaceableUses->getContext() == &getContext() &&
            "Expected same context");
@@ -1025,9 +1043,9 @@ public:
   /// Drop RAUW support.
   ///
   /// Cede ownership of RAUW support, returning it.
-  std::unique_ptr<ReplaceableMetadataImpl> takeReplaceableUses() {
+  std::unique_ptr<ReplaceableUsesWithContext> takeReplaceableUses() {
     assert(hasReplaceableUses() && "Expected to own replaceable uses");
-    std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses(
+    std::unique_ptr<ReplaceableUsesWithContext> ReplaceableUses(
         getReplaceableUses());
     Ptr = &ReplaceableUses->getContext();
     return ReplaceableUses;
@@ -1067,7 +1085,7 @@ struct TempMDNodeDeleter {
 ///
 /// Clients can add operands to resizable MDNodes using push_back().
 class MDNode : public Metadata {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
   friend class DIAssignID;
 
@@ -1079,11 +1097,11 @@ class MDNode : public Metadata {
   /// Explicity set alignment because bitfields by default have an
   /// alignment of 1 on z/OS.
   struct alignas(alignof(size_t)) Header {
-    size_t IsResizable : 1;
-    size_t IsLarge : 1;
-    size_t SmallSize : 4;
-    size_t SmallNumOps : 4;
-    size_t : sizeof(size_t) * CHAR_BIT - 10;
+    uint32_t IsResizable : 1;
+    uint32_t IsLarge : 1;
+    uint32_t SmallSize : 4;
+    uint32_t SmallNumOps : 4;
+    uint32_t MetadataPrintID;
 
     unsigned NumUnresolved = 0;
     using LargeStorageVector = SmallVector<MDOperand, 0>;
@@ -1252,15 +1270,7 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
-  bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
-
-  /// Check if this is a valid generalized type metadata node.
-  bool hasGeneralizedMDString() {
-    if (getNumOperands() < 2 || !isa<MDString>(getOperand(1)))
-      return false;
-    return cast<MDString>(getOperand(1))->getString().ends_with(".generalized");
-  }
+  bool isReplaceable() const { return isTemporary(); }
 
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
@@ -1473,6 +1483,12 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+  LLVM_ABI static MDNode *getMergedCalleesMetadata(MDNode *A, MDNode *B);
+  /// Merge !pcsections of two merged instructions: the result requests every
+  /// section that either requests.
+  LLVM_ABI static MDNode *getMergedPCSectionsMetadata(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMergedAllocTokenMetadata(const MDNode *A,
+                                                      const MDNode *B);
 
   /// Convert !captures metadata to CaptureComponents. MD may be nullptr.
   LLVM_ABI static CaptureComponents toCaptureComponents(const MDNode *MD);
@@ -1553,6 +1569,17 @@ public:
   /// Shrink the operands by 1.
   void pop_back() { resize(getNumOperands() - 1); }
 
+  /// Filter out tuple elements that do not satisfy predicate.
+  /// Return this if no elements should be filtered out (without re-uniquing).
+  template <typename T> MDTuple *filter(T &&Pred) {
+    ArrayRef<MDOperand> Ops = operands();
+    // Exit if no nodes should be removed.
+    if (llvm::all_of(Ops, Pred))
+      return this;
+    return get(getContext(),
+               to_vector_of<Metadata *>(llvm::make_filter_range(Ops, Pred)));
+  }
+
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == MDTupleKind;
   }
@@ -1578,6 +1605,36 @@ TempMDTuple MDNode::getTemporary(LLVMContext &Context,
 void TempMDNodeDeleter::operator()(MDNode *Node) const {
   MDNode::deleteTemporary(Node);
 }
+
+/// Wrapper around alias scope domain metedata to allow accessing their fields,
+/// including surfacing the optional `i1 disjoint` parameter, hiding the details
+/// of the metadata encoding.
+class AliasScopeDomainNode {
+  const MDNode *Node = nullptr;
+
+public:
+  AliasScopeDomainNode() = default;
+  explicit AliasScopeDomainNode(const MDNode *N) : Node(N) {}
+
+  /// Get the MDNode for this AliasScopeDomainNode.
+  const MDNode *getNode() const { return Node; }
+
+  /// Get the optional human-readable description of this domain or the empty
+  /// string otherwise.
+  StringRef getDescription() const {
+    if (Node->getNumOperands() > 2)
+      if (MDString *N = dyn_cast_or_null<MDString>(Node->getOperand(2)))
+        return N->getString();
+    return StringRef();
+  }
+
+  /// Return true if this domain has disjoint scopes.
+  bool hasDisjointScopes() const {
+    const Constant *Disjoint =
+        mdconst::dyn_extract_or_null<Constant>(Node->getOperand(1));
+    return Disjoint && Disjoint->isOneValue();
+  }
+};
 
 /// This is a simple wrapper around an MDNode which provides a higher-level
 /// interface by hiding the details of how alias analysis information is encoded

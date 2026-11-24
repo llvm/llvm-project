@@ -4,8 +4,9 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class ExprXValuePrintingTestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Printing an xvalue should work."""
         self.build()

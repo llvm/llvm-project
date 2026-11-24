@@ -355,8 +355,11 @@ void LanaiDAGToDAGISel::selectFrameIndex(SDNode *Node) {
   ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, VT, TFI, Imm));
 }
 
+LanaiISelDAGToDAGPass::LanaiISelDAGToDAGPass(LanaiTargetMachine &TM)
+    : SelectionDAGISelPass(std::make_unique<LanaiDAGToDAGISel>(TM)) {}
+
 // createLanaiISelDag - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
-FunctionPass *llvm::createLanaiISelDag(LanaiTargetMachine &TM) {
+FunctionPass *llvm::createLanaiISelDagLegacyPass(LanaiTargetMachine &TM) {
   return new LanaiDAGToDAGISelLegacy(TM);
 }

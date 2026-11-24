@@ -12,6 +12,8 @@
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include <memory>
@@ -20,8 +22,7 @@
 namespace llvm {
 namespace sampleprof {
 
-using ProbeCounterMap =
-    std::unordered_map<const MCDecodedPseudoProbe *, uint64_t>;
+using ProbeCounterMap = DenseMap<const MCDecodedPseudoProbe *, uint64_t>;
 
 // This base class for profile generation of sample-based PGO. We reuse all
 // structures relating to function profiles and profile writers as seen in
@@ -128,11 +129,11 @@ protected:
   void collectProfiledFunctions();
 
   bool collectFunctionsFromRawProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions);
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions);
 
   // Collect profiled Functions for llvm sample profile input.
   virtual bool collectFunctionsFromLLVMProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) = 0;
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) = 0;
 
   // List of function prefix to filter out.
   static constexpr const char *FuncPrefixsToFilter[] = {"__cxx_global_var_init",
@@ -186,7 +187,7 @@ private:
   void postProcessProfiles();
   void trimColdProfiles(uint64_t ColdCntThreshold);
   bool collectFunctionsFromLLVMProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) override;
 };
 
 class CSProfileGenerator : public ProfileGeneratorBase {
@@ -367,7 +368,7 @@ private:
   void computeSummaryAndThreshold();
 
   bool collectFunctionsFromLLVMProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) override;
 
   void initializeMissingFrameInferrer();
 
@@ -381,7 +382,9 @@ private:
   // The container for holding the FunctionSamples used by context trie.
   std::list<FunctionSamples> FSamplesList;
 
-  // Underlying context table serves for sample profile writer.
+  // Underlying context table serves for sample profile writer. SampleContexts
+  // in the output profile hold ArrayRefs into the stored vectors, so the
+  // elements' addresses must be stable: keep std::unordered_set.
   std::unordered_set<SampleContextFrameVector, SampleContextFrameHash> Contexts;
 
   SampleContextTracker ContextTracker;

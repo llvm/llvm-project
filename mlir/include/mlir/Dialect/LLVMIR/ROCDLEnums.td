@@ -32,6 +32,21 @@ class ROCDL_I32BitEnum<string name, string summary,
   let cppNamespace = "::mlir::ROCDL";
 }
 
+//===----------------------------------------------------------------------===//
+// Buffer out-of-bounds mode enum.
+//===----------------------------------------------------------------------===//
+
+// Keep these values in sync with OOBFlagValue in AMDGPUTargetMachine.cpp and
+// the LLVM IR verifier's AMDGPU module flag checks.
+def ROCDL_BufferOOBModeAny : I32EnumCase<"Any", 0, "any">;
+def ROCDL_BufferOOBModeRelaxed : I32EnumCase<"Relaxed", 1, "relaxed">;
+def ROCDL_BufferOOBModeStrict : I32EnumCase<"Strict", 2, "strict">;
+
+def ROCDL_BufferOOBMode :
+    ROCDL_I32Enum<"BufferOOBMode", "ROCDL buffer out-of-bounds mode",
+                  [ROCDL_BufferOOBModeAny, ROCDL_BufferOOBModeRelaxed,
+                   ROCDL_BufferOOBModeStrict]>;
+
 def ROCDL_MFMAPermB : ROCDL_I32Enum<"MFMAPermB",
     "permutations of the lanes storing B in an MFMA",
     [
@@ -143,6 +158,31 @@ def ROCDL_SchedGroupMask : ROCDL_I32BitEnum<"SchedGroupMask",
       ROCDL_SchedGroupMaskAll
     ]> {
   let printBitEnumPrimaryGroups = 1;
+  let printBitEnumQuoted = 0;
+}
+
+// Mirrors llvm::AMDGPU::AsyncStages. The
+// zero mask names every stage rather than none.
+def ROCDL_AsyncStagesAll : I32BitEnumCaseNone<"all">;
+def ROCDL_AsyncStagesTensor : I32BitEnumCaseBit<"tensor", 0>;
+def ROCDL_AsyncStagesGlobalLoadAsyncToLDS
+    : I32BitEnumCaseBit<"global_load_async_to_lds", 1>;
+def ROCDL_AsyncStagesGlobalLoadAsyncToLDSMcast
+    : I32BitEnumCaseBit<"global_load_async_to_lds_mcast", 2>;
+def ROCDL_AsyncStagesGlobalStoreAsyncFromLDS
+    : I32BitEnumCaseBit<"global_store_async_from_lds", 3>;
+def ROCDL_AsyncStagesBufferGlobalLoad
+    : I32BitEnumCaseBit<"buffer_global_load", 5>;
+def ROCDL_AsyncStages : ROCDL_I32BitEnum<"AsyncStages",
+    "async stage mask for asyncmark and wait.asyncmark",
+    [
+      ROCDL_AsyncStagesAll,
+      ROCDL_AsyncStagesTensor,
+      ROCDL_AsyncStagesGlobalLoadAsyncToLDS,
+      ROCDL_AsyncStagesGlobalLoadAsyncToLDSMcast,
+      ROCDL_AsyncStagesGlobalStoreAsyncFromLDS,
+      ROCDL_AsyncStagesBufferGlobalLoad
+    ]> {
   let printBitEnumQuoted = 0;
 }
 

@@ -48,7 +48,7 @@ C c : register(t10);
 
 // Check that c.BufOne is initialized from binding with counter
 //
-// CHECK: define internal void @__cxx_global_var_init.3()
+// CHECK: define internal void @__cxx_global_var_init.{{[0-9]+}}()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::StructuredBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)

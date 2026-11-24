@@ -17,11 +17,13 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/TextEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/TextEncoding.h"
 
 namespace clang {
 
@@ -233,6 +235,7 @@ class StringLiteralParser {
   const LangOptions &Features;
   const TargetInfo &Target;
   DiagnosticsEngine *Diags;
+  TextEncoding *TE;
 
   unsigned MaxTokenLength;
   unsigned SizeBound;
@@ -244,19 +247,21 @@ class StringLiteralParser {
   unsigned UDSuffixToken;
   unsigned UDSuffixOffset;
   StringLiteralEvalMethod EvalMethod;
+  ConversionAction Action;
 
 public:
-  StringLiteralParser(ArrayRef<Token> StringToks, Preprocessor &PP,
-                      StringLiteralEvalMethod StringMethod =
-                          StringLiteralEvalMethod::Evaluated);
+  StringLiteralParser(
+      ArrayRef<Token> StringToks, Preprocessor &PP,
+      StringLiteralEvalMethod StringMethod = StringLiteralEvalMethod::Evaluated,
+      ConversionAction Action = CA_NoConversion);
   StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
                       const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
-      : SM(sm), Features(features), Target(target), Diags(diags),
+      : SM(sm), Features(features), Target(target), Diags(diags), TE(nullptr),
         MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
         ResultPtr(ResultBuf.data()),
-        EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),
-        Pascal(false) {
+        EvalMethod(StringLiteralEvalMethod::Evaluated), Action(CA_NoConversion),
+        hadError(false), Pascal(false) {
     init(StringToks);
   }
 
@@ -307,7 +312,8 @@ public:
 private:
   void init(ArrayRef<Token> StringToks);
   bool CopyStringFragment(const Token &Tok, const char *TokBegin,
-                          StringRef Fragment);
+                          StringRef Fragment,
+                          llvm::TextEncodingConverter *Converter);
   void DiagnoseLexingError(SourceLocation Loc);
 };
 

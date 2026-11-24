@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}v_and_i64_br:
 ; SI: s_and_b64

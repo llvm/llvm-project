@@ -1141,9 +1141,12 @@ multiclass SiFive7WriteResBase<int VLEN,
     let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm : LMULWriteResMX<"WriteVSlideUpX",   [VCQ, VA1], mx, IsWorstCase>;
       defm : LMULWriteResMX<"WriteVSlideDownX", [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVSlideI",     [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVISlide1X",   [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVFSlide1F",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVSlideUpI",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVSlideDownI", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVISlide1Up",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVISlide1Down", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVFSlide1Up",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVFSlide1Down", [VCQ, VA1], mx, IsWorstCase>;
     }
   }
 

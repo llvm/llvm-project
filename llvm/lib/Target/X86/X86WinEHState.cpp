@@ -313,7 +313,7 @@ void WinEHStateFnPassImpl::emitExceptionRegistrationRecord(Function *F) {
   assert(Personality == EHPersonality::MSVC_CXX ||
          Personality == EHPersonality::MSVC_X86SEH);
 
-  IRBuilder<> Builder(&F->getEntryBlock(), F->getEntryBlock().begin());
+  IRBuilder<> Builder(F->getEntryBlock().begin());
   Type *Int8PtrType = Builder.getPtrTy();
   Type *Int32Ty = Builder.getInt32Ty();
   Type *VoidTy = Builder.getVoidTy();

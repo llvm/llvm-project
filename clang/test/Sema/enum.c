@@ -243,4 +243,33 @@ void fooinc23() {
 
 }
 
+// GH208163: when incrementing a _BitInt enumerator overflows, the next
+// enumerator should get a standard integer type, not the _BitInt type.
+// C23 6.7.3.3p12 excludes bit-precise types when picking the larger type.
+void fooinc23bitint() {
+  enum E5 {
+    V8 = 4294967295wb, // max of signed _BitInt(33)
+    V9,
+    V8InsideIsBitInt = _Generic(V8, _BitInt(33) : 1, default : 0),
+    V9InsideIsLong = _Generic(V9, long : 1, default : 0)
+  };
+
+  enum E6 {
+    V10 = 8589934591uwb, // max of unsigned _BitInt(33)
+    V11,
+    V11InsideIsULong = _Generic(V11, unsigned long : 1, default : 0)
+  };
+
+  enum E7 {
+    V12 = 9223372036854775807wb, // max of signed _BitInt(64)
+    V13 // expected-warning {{incremented enumerator value 9223372036854775808 is not representable in the largest integer type}}
+  };
+
+  _Static_assert(V8InsideIsBitInt == 1);
+  _Static_assert(V9InsideIsLong == 1);
+  _Static_assert(V9 == 4294967296wb);
+  _Static_assert(V11InsideIsULong == 1);
+  _Static_assert(V11 == 8589934592uwb);
+}
+
 #endif // __STDC_VERSION__ >= 202311L

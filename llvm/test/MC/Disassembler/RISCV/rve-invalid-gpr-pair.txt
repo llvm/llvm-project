@@ -1,0 +1,33 @@
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+e,+zilsd -M no-aliases %s 2>%t.err \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,RVE
+# RUN: FileCheck %s --check-prefix=RVE-ERR < %t.err
+# RUN: llvm-mc -disassemble -triple=riscv32 -mattr=+zilsd -M no-aliases %s \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,RVI
+
+# GPR pairs using registers x16-x31 are not valid with RVE.
+
+[0x03,0x37,0x05,0x00]
+# CHECK: ld a4, 0(a0)
+
+[0x03,0x38,0x05,0x00]
+# RVE-ERR: :[[@LINE-1]]:2: warning: invalid instruction encoding
+# RVE-NOT: ld a6, 0(a0)
+# RVI: ld a6, 0(a0)
+
+[0x03,0x3f,0x05,0x00]
+# RVE-ERR: :[[@LINE-1]]:2: warning: invalid instruction encoding
+# RVE-NOT: ld t5, 0(a0)
+# RVI: ld t5, 0(a0)
+
+[0x23,0x30,0xe5,0x00]
+# CHECK: sd a4, 0(a0)
+
+[0x23,0x30,0x05,0x01]
+# RVE-ERR: :[[@LINE-1]]:2: warning: invalid instruction encoding
+# RVE-NOT: sd a6, 0(a0)
+# RVI: sd a6, 0(a0)
+
+[0x23,0x30,0xe5,0x01]
+# RVE-ERR: :[[@LINE-1]]:2: warning: invalid instruction encoding
+# RVE-NOT: sd t5, 0(a0)
+# RVI: sd t5, 0(a0)

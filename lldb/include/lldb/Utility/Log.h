@@ -31,6 +31,9 @@
 
 namespace llvm {
 class raw_ostream;
+namespace json {
+class Object;
+}
 }
 // Logging Options
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
@@ -41,6 +44,7 @@ class raw_ostream;
 #define LLDB_LOG_OPTION_BACKTRACE (1U << 7)
 #define LLDB_LOG_OPTION_APPEND (1U << 8)
 #define LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION (1U << 9)
+#define LLDB_LOG_OPTION_JSON (1U << 10)
 
 // Logging Functions
 namespace lldb_private {
@@ -194,22 +198,20 @@ public:
   static void Register(llvm::StringRef name, Channel &channel);
   static void Unregister(llvm::StringRef name);
 
-  static bool
+  static llvm::Error
   EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
                    uint32_t log_options, llvm::StringRef channel,
-                   llvm::ArrayRef<const char *> categories,
-                   llvm::raw_ostream &error_stream);
+                   llvm::ArrayRef<const char *> categories);
 
-  static bool DisableLogChannel(llvm::StringRef channel,
-                                llvm::ArrayRef<const char *> categories,
-                                llvm::raw_ostream &error_stream);
+  static llvm::Error DisableLogChannel(llvm::StringRef channel,
+                                       llvm::ArrayRef<const char *> categories);
 
   static bool DumpLogChannel(llvm::StringRef channel,
                              llvm::raw_ostream &output_stream,
                              llvm::raw_ostream &error_stream);
 
-  static bool ListChannelCategories(llvm::StringRef channel,
-                                    llvm::raw_ostream &stream);
+  static llvm::Expected<std::string>
+  ListChannelCategories(llvm::StringRef channel);
 
   /// Returns the list of log channels.
   static std::vector<llvm::StringRef> ListChannels();
@@ -288,7 +290,11 @@ private:
 
   void WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                    llvm::StringRef function);
+  void WriteJSONHeader(llvm::json::Object &obj, llvm::StringRef file,
+                       llvm::StringRef function);
   void WriteMessage(llvm::StringRef message);
+  void EmitJSONMessage(llvm::StringRef file, llvm::StringRef function,
+                       llvm::StringRef message);
 
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);
@@ -309,9 +315,14 @@ private:
 
   static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);
-  static Log::MaskType GetFlags(llvm::raw_ostream &stream,
-                                const ChannelMap::value_type &entry,
-                                llvm::ArrayRef<const char *> categories);
+
+  /// Convert an array of category names into a set of category flags.
+  /// Returns a bitmask of categories, or an error message in the case that
+  /// at least one category name was not recognised. All unknown category names
+  /// are included in the error.
+  static llvm::Expected<Log::MaskType>
+  GetFlags(const ChannelMap::value_type &entry,
+           llvm::ArrayRef<const char *> categories);
 
   Log(const Log &) = delete;
   void operator=(const Log &) = delete;

@@ -71,8 +71,6 @@ public:
     return TT.isOSBinFormatMachO();
   }
 
-  unsigned getMachineSoImmOpValue(unsigned SoImm) const;
-
   // getBinaryCodeForInstr - TableGen'erated function for getting the
   // binary encoding for an instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -379,10 +377,6 @@ public:
   unsigned getShiftRight64Imm(const MCInst &MI, unsigned Op,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const;
-
-  unsigned getThumbSRImmOpValue(const MCInst &MI, unsigned Op,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
 
   unsigned NEONThumb2DataIPostEncoder(const MCInst &MI,
                                       unsigned EncodedValue,
@@ -1781,8 +1775,8 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
   // LDM/STM:
   //   {15-0}  = Bitfield of GPRs.
   MCRegister Reg = MI.getOperand(Op).getReg();
-  bool SPRRegs = ARMMCRegisterClasses[ARM::SPRRegClassID].contains(Reg);
-  bool DPRRegs = ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg);
+  bool SPRRegs = getARMMCRegisterClass(ARM::SPRRegClassID).contains(Reg);
+  bool DPRRegs = getARMMCRegisterClass(ARM::DPRRegClassID).contains(Reg);
 
   unsigned Binary = 0;
 
@@ -1802,9 +1796,9 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
       NumRegs = 0;
       for (unsigned I = Op, E = MI.getNumOperands(); I < E; ++I) {
         Reg = MI.getOperand(I).getReg();
-        if (ARMMCRegisterClasses[ARM::SPRRegClassID].contains(Reg))
+        if (getARMMCRegisterClass(ARM::SPRRegClassID).contains(Reg))
           NumRegs += 1;
-        else if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg))
+        else if (getARMMCRegisterClass(ARM::DPRRegClassID).contains(Reg))
           NumRegs += 2;
       }
     }

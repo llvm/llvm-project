@@ -10,7 +10,7 @@ define <4 x i32> @elem_add(ptr %p, <4 x i32> %v) {
 
 define <4 x float> @elem_fadd(ptr %p, <4 x float> %v) {
 ; CHECK-LABEL: @elem_fadd(
-; CHECK: %old = atomicrmw elementwise fadd ptr %p, <4 x float> %v seq_cst, align 16
-  %old = atomicrmw elementwise fadd ptr %p, <4 x float> %v seq_cst
+; CHECK: %old = atomicrmw elementwise fadd ptr %p, <4 x float> %v acq_rel, align 16
+  %old = atomicrmw elementwise fadd ptr %p, <4 x float> %v acq_rel
   ret <4 x float> %old
 }

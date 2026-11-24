@@ -206,9 +206,6 @@ private:
     /// Number of bytes allocated in the prologue for all local stack objects.
     unsigned FrameSize = 0;
 
-    /// Number of bytes of parameters on the stack.
-    unsigned ParamSize = 0;
-
     /// Number of bytes pushed to save CSRs.
     unsigned CSRSize = 0;
 
@@ -252,6 +249,8 @@ private:
   // belong in. A null local scope represents the global scope.
   typedef SmallVector<CVGlobalVariable, 1> GlobalVariableList;
   DenseMap<const DIScope*, std::unique_ptr<GlobalVariableList> > ScopeGlobals;
+  DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
+      GlobalMap;
 
   // Array of global variables which  need to be emitted into a COMDAT section.
   SmallVector<CVGlobalVariable, 1> ComdatVariables;
@@ -404,6 +403,8 @@ private:
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
   void collectGlobalVariableInfo();
+  void
+  collectGlobalOrStaticLocalVariableInfo(const DIGlobalVariableExpression *GVE);
   void collectVariableInfo(const DISubprogram *SP);
 
   void collectVariableInfoFromMFTable(DenseSet<InlinedEntity> &Processed);

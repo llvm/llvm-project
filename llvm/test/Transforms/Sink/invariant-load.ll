@@ -87,6 +87,49 @@ exit:
   ret void
 }
 
+define <4 x i32> @sink_masked_load_with_metadata(ptr %p, <4 x i1> %mask, <4 x i32> %passthru, i1 %cond) {
+; CHECK-LABEL: @sink_masked_load_with_metadata(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
+; CHECK:       block:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[VAL:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[P:%.*]], <4 x i1> [[MASK:%.*]], <4 x i32> [[PASSTHRU:%.*]]), !invariant.load [[META0]]
+; CHECK-NEXT:    ret <4 x i32> [[VAL]]
+;
+entry:
+  %val = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %p, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
+  br i1 %cond, label %block, label %end
+
+block:
+  br label %end
+
+end:
+  ret <4 x i32> %val
+}
+
+define i32 @sink_read_register_with_metadata(i1 %cond) {
+; CHECK-LABEL: @sink_read_register_with_metadata(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
+; CHECK:       block:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.read_register.i32(metadata [[META1:![0-9]+]]), !invariant.load [[META0]]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %val = call i32 @llvm.read_register.i32(metadata !1), !invariant.load !0
+  br i1 %cond, label %block, label %end
+
+block:
+  br label %end
+
+end:
+  ret i32 %val
+}
+
 declare void @fn()
 
 !0 = !{}
+!1 = !{!"reg"}

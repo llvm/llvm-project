@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=asan -S | FileCheck %s
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 ; Here we check that the global redzone sizes grow with the object size
 ; for objects in global address space.

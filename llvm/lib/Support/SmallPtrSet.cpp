@@ -44,16 +44,21 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
     Grow(CurArraySize < 64 ? 128 : CurArraySize * 2);
   }
 
-  // Okay, we know we have space.  Find a hash bucket.
-  const void **Bucket = const_cast<const void**>(FindBucketFor(Ptr));
-  if (*Bucket == Ptr)
-    return {Bucket, false}; // Already inserted, good.
+  // Find the first empty bucket or Ptr itself on the probe chain.
+  unsigned Mask = CurArraySize - 1;
+  unsigned I = DenseMapInfo<void *>::getHashValue(Ptr) & Mask;
+  const void **Array = CurArray;
+  while (Array[I] != getEmptyMarker()) {
+    if (Array[I] == Ptr)
+      return {Array + I, false};
+    I = (I + 1) & Mask;
+  }
 
-  // Otherwise, insert it.
+  // Insert into the empty bucket.
   ++NumEntries;
-  *Bucket = Ptr;
+  Array[I] = Ptr;
   incrementEpoch();
-  return {Bucket, true};
+  return {Array + I, true};
 }
 
 const void *const *SmallPtrSetImplBase::doFind(const void *Ptr) const {
@@ -66,19 +71,6 @@ const void *const *SmallPtrSetImplBase::doFind(const void *Ptr) const {
     if (LLVM_LIKELY(*Bucket == getEmptyMarker()))
       return nullptr;
     BucketNo = (BucketNo + 1) & Mask;
-  }
-}
-
-const void *const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
-  unsigned Mask = CurArraySize - 1;
-  unsigned Bucket = DenseMapInfo<void *>::getHashValue(Ptr) & Mask;
-  const void *const *Array = CurArray;
-  while (true) {
-    if (LLVM_LIKELY(Array[Bucket] == getEmptyMarker()))
-      return Array + Bucket;
-    if (LLVM_LIKELY(Array[Bucket] == Ptr))
-      return Array + Bucket;
-    Bucket = (Bucket + 1) & Mask;
   }
 }
 
@@ -114,10 +106,16 @@ void SmallPtrSetImplBase::Grow(unsigned NewSize) {
   memset(CurArray, -1, NewSize*sizeof(void*));
 
   // Copy over all valid entries.
-  for (const void *&Bucket : OldBuckets) {
-    // Copy over the element if it is valid.
-    if (Bucket != getEmptyMarker())
-      *const_cast<void **>(FindBucketFor(Bucket)) = const_cast<void *>(Bucket);
+  unsigned Mask = CurArraySize - 1;
+  for (const void *Ptr : OldBuckets) {
+    if (Ptr == getEmptyMarker())
+      continue;
+    // Find the first empty bucket on this key's probe chain; there is no equal
+    // key, so nothing to compare against.
+    unsigned I = DenseMapInfo<void *>::getHashValue(Ptr) & Mask;
+    while (NewBuckets[I] != getEmptyMarker())
+      I = (I + 1) & Mask;
+    NewBuckets[I] = Ptr;
   }
 
   if (!WasSmall)
@@ -200,6 +198,8 @@ void SmallPtrSetImplBase::moveHelper(const void **SmallStorage,
                                      const void **RHSSmallStorage,
                                      SmallPtrSetImplBase &&RHS) {
   assert(&RHS != this && "Self-move should be handled by the caller.");
+  incrementEpoch();
+  RHS.incrementEpoch();
 
   if (RHS.isSmall()) {
     // Copy a small RHS rather than moving.
@@ -225,6 +225,8 @@ void SmallPtrSetImplBase::swap(const void **SmallStorage,
                                const void **RHSSmallStorage,
                                SmallPtrSetImplBase &RHS) {
   if (this == &RHS) return;
+  incrementEpoch();
+  RHS.incrementEpoch();
 
   // We can only avoid copying elements if neither set is small.
   if (!this->isSmall() && !RHS.isSmall()) {

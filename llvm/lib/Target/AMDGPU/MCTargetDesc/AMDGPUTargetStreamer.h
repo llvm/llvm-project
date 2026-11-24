@@ -54,10 +54,11 @@ struct InfoSectionData {
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
   AMDGPUPALMetadata PALMetadata;
+  bool AMDGCNTargetEmitted = false;
 
 protected:
   // TODO: Move HSAMetadataStream to AMDGPUTargetStreamer.
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
+  std::optional<AMDGPU::TargetID> TargetID;
   unsigned CodeObjectVersion;
 
   MCContext &getContext() const { return Streamer.getContext(); }
@@ -72,6 +73,17 @@ public:
   AMDGPUPALMetadata *getPALMetadata() { return &PALMetadata; }
 
   virtual void EmitDirectiveAMDGCNTarget(){};
+
+  /// Emit the .amdgcn_target directive unless it has already been emitted to
+  /// this streamer. The code generator and the parsers for any inline assembly
+  /// in the module share one streamer, and the directive must appear only once
+  /// per output file.
+  void emitDirectiveAMDGCNTargetOnce() {
+    if (AMDGCNTargetEmitted)
+      return;
+    AMDGCNTargetEmitted = true;
+    EmitDirectiveAMDGCNTarget();
+  }
 
   virtual void EmitDirectiveAMDHSACodeObjectVersion(unsigned COV) {
     CodeObjectVersion = COV;
@@ -130,25 +142,14 @@ public:
 
   virtual void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) {}
 
-  static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
-  const std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() const {
+  const std::optional<AMDGPU::TargetID> &getTargetID() const {
     return TargetID;
   }
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() {
-    return TargetID;
-  }
-  void initializeTargetID(const MCSubtargetInfo &STI) {
-    assert(TargetID == std::nullopt && "TargetID can only be initialized once");
-    TargetID.emplace(STI);
-  }
-  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
-    initializeTargetID(STI);
-
-    assert(getTargetID() != std::nullopt && "TargetID is None");
-    getTargetID()->setTargetIDFromFeaturesString(FeatureString);
-  }
+  std::optional<AMDGPU::TargetID> &getTargetID() { return TargetID; }
+  void initializeTargetID(const MCSubtargetInfo &STI,
+                          bool ApplyFeatureString = false);
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {

@@ -14,7 +14,7 @@
 #include "TypeDetail.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -181,15 +181,12 @@ LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
 llvm::TypeSize
 LLVMArrayType::getTypeSizeInBits(const DataLayout &dataLayout,
                                  DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(kBitsInByte *
-                                  getTypeSize(dataLayout, params));
+  return getTypeSize(dataLayout, params) * kBitsInByte;
 }
 
 llvm::TypeSize LLVMArrayType::getTypeSize(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
-  return llvm::alignTo(dataLayout.getTypeSize(getElementType()),
-                       dataLayout.getTypeABIAlignment(getElementType())) *
-         getNumElements();
+  return dataLayout.getTypeAllocSize(getElementType()) * getNumElements();
 }
 
 uint64_t LLVMArrayType::getABIAlignment(const DataLayout &dataLayout,
@@ -201,6 +198,34 @@ uint64_t
 LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
                                      DataLayoutEntryListRef params) const {
   return dataLayout.getTypePreferredAlignment(getElementType());
+}
+
+//===----------------------------------------------------------------------===//
+// LLVMByteType
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+LLVMByteType::getTypeSizeInBits(const DataLayout &dataLayout,
+                                DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getBitWidth());
+}
+
+uint64_t LLVMByteType::getABIAlignment(const DataLayout &dataLayout,
+                                       DataLayoutEntryListRef params) const {
+  return llvm::PowerOf2Ceil(llvm::divideCeil(getBitWidth(), kBitsInByte));
+}
+
+LogicalResult LLVMByteType::verify(function_ref<InFlightDiagnostic()> emitError,
+                                   unsigned bitWidth) {
+  if (bitWidth == 0)
+    return emitError() << "bitwidth must be greater than 0";
+
+  // Mirror LLVM IR, which limits the bit width to fit in 23 bits.
+  constexpr unsigned kMaxBitWidth = 1 << 23;
+  if (bitWidth >= kMaxBitWidth)
+    return emitError() << "bitwidth must be less than " << kMaxBitWidth
+                       << ", but got " << bitWidth;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -391,8 +416,8 @@ bool LLVMPointerType::areCompatible(
       });
     }
     if (it != oldLayout.end()) {
-      size = *extractPointerSpecValue(*it, PtrDLEntryPos::Size);
-      abi = *extractPointerSpecValue(*it, PtrDLEntryPos::Abi);
+      size = *extractPointerSpecValue(it->getValue(), PtrDLEntryPos::Size);
+      abi = *extractPointerSpecValue(it->getValue(), PtrDLEntryPos::Abi);
     }
 
     Attribute newSpec = llvm::cast<DenseIntElementsAttr>(newEntry.getValue());
@@ -524,27 +549,51 @@ LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+/// Returns the byte offset of the element of the specified structure at the
+/// given index and the strictest alignment requirement of the elements up to
+/// the index. For the index past the last element it thus returns the size and
+/// alignment of the whole structure.
+static uint64_t getOffsetAndAlignment(const DataLayout &dataLayout,
+                                      LLVMStructType structType, unsigned index,
+                                      uint64_t &structAlignment) {
+  uint64_t offset = 0;
+  structAlignment = 1;
+  for (auto [i, element] : llvm::enumerate(structType.getBody())) {
+    // Align the element unless the structure is packed.
+    uint64_t elementAlignment = dataLayout.getTypeABIAlignment(element);
+    if (!structType.isPacked()) {
+      offset = llvm::alignTo(offset, elementAlignment);
+
+      // The structure alignment is the strictest alignment of its
+      // elements.
+      structAlignment = std::max(structAlignment, elementAlignment);
+    }
+    if (i == index)
+      return offset;
+
+    // Each element gets its allocation size, even in packed structures.
+    offset += dataLayout.getTypeAllocSize(element);
+  }
+  return offset;
+}
+
+uint64_t LLVMStructType::getElementOffset(const DataLayout &dataLayout,
+                                          unsigned index) const {
+  assert(index < getBody().size() && "expected a valid struct element index");
+  uint64_t structAlignment;
+  return getOffsetAndAlignment(dataLayout, *this, index, structAlignment);
+}
+
 llvm::TypeSize
 LLVMStructType::getTypeSizeInBits(const DataLayout &dataLayout,
                                   DataLayoutEntryListRef params) const {
-  auto structSize = llvm::TypeSize::getFixed(0);
-  uint64_t structAlignment = 1;
-  for (Type element : getBody()) {
-    uint64_t elementAlignment =
-        isPacked() ? 1 : dataLayout.getTypeABIAlignment(element);
-    // Add padding to the struct size to align it to the abi alignment of the
-    // element type before than adding the size of the element.
-    structSize = llvm::alignTo(structSize, elementAlignment);
-    structSize += dataLayout.getTypeSize(element);
-
-    // The alignment requirement of a struct is equal to the strictest alignment
-    // requirement of its elements.
-    structAlignment = std::max(elementAlignment, structAlignment);
-  }
+  uint64_t structAlignment;
+  uint64_t structSize = getOffsetAndAlignment(
+      dataLayout, *this, getBody().size(), structAlignment);
   // At the end, add padding to the struct to satisfy its own alignment
   // requirement. Otherwise structs inside of arrays would be misaligned.
   structSize = llvm::alignTo(structSize, structAlignment);
-  return structSize * kBitsInByte;
+  return llvm::TypeSize::getFixed(structSize * kBitsInByte);
 }
 
 namespace {
@@ -713,6 +762,57 @@ const llvm::fltSemantics &LLVMPPCFP128Type::getFloatSemantics() const {
 }
 
 //===----------------------------------------------------------------------===//
+// Interfaces for destructurable types
+//===----------------------------------------------------------------------===//
+
+std::optional<DenseMap<Attribute, Type>>
+LLVM::LLVMStructType::getSubelementIndexMap() const {
+  // Empty structs have no sub-elements and cannot be destructured.
+  if (getBody().empty())
+    return std::nullopt;
+  Type i32 = IntegerType::get(getContext(), 32);
+  DenseMap<Attribute, Type> destructured;
+  for (const auto &[index, elemType] : llvm::enumerate(getBody()))
+    destructured.insert({IntegerAttr::get(i32, index), elemType});
+  return destructured;
+}
+
+Type LLVM::LLVMStructType::getTypeAtIndex(Attribute index) const {
+  auto indexAttr = llvm::dyn_cast<IntegerAttr>(index);
+  if (!indexAttr || !indexAttr.getType().isInteger(32))
+    return {};
+  int32_t indexInt = indexAttr.getInt();
+  ArrayRef<Type> body = getBody();
+  if (indexInt < 0 || body.size() <= static_cast<uint32_t>(indexInt))
+    return {};
+  return body[indexInt];
+}
+
+std::optional<DenseMap<Attribute, Type>>
+LLVM::LLVMArrayType::getSubelementIndexMap() const {
+  constexpr size_t maxArraySizeForDestructuring = 16;
+  if (getNumElements() > maxArraySizeForDestructuring)
+    return {};
+  int32_t numElements = getNumElements();
+
+  Type i32 = IntegerType::get(getContext(), 32);
+  DenseMap<Attribute, Type> destructured;
+  for (int32_t index = 0; index < numElements; ++index)
+    destructured.insert({IntegerAttr::get(i32, index), getElementType()});
+  return destructured;
+}
+
+Type LLVM::LLVMArrayType::getTypeAtIndex(Attribute index) const {
+  auto indexAttr = llvm::dyn_cast<IntegerAttr>(index);
+  if (!indexAttr || !indexAttr.getType().isInteger(32))
+    return {};
+  int32_t indexInt = indexAttr.getInt();
+  if (indexInt < 0 || getNumElements() <= static_cast<uint32_t>(indexInt))
+    return {};
+  return getElementType();
+}
+
+//===----------------------------------------------------------------------===//
 // Utility functions.
 //===----------------------------------------------------------------------===//
 
@@ -737,6 +837,7 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       Float80Type,
       Float128Type,
       LLVMArrayType,
+      LLVMByteType,
       LLVMFunctionType,
       LLVMLabelType,
       LLVMMetadataType,
@@ -800,6 +901,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             Float64Type,
             Float80Type,
             Float128Type,
+            LLVMByteType,
             LLVMLabelType,
             LLVMMetadataType,
             LLVMPPCFP128Type,
@@ -856,7 +958,8 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
     if (auto intType = llvm::dyn_cast<IntegerType>(elementType))
       return intType.isSignless();
     return llvm::isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
-                     Float80Type, Float128Type, LLVMPointerType>(elementType) ||
+                     Float80Type, Float128Type, LLVMByteType, LLVMPointerType>(
+               elementType) ||
            isCompatiblePtrType(elementType);
   }
   return false;
@@ -906,6 +1009,9 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case([](IntegerType intTy) {
         return llvm::TypeSize::getFixed(intTy.getWidth());
       })
+      .Case([](LLVMByteType byteTy) {
+        return llvm::TypeSize::getFixed(byteTy.getBitWidth());
+      })
       .Case<LLVMPPCFP128Type>(
           [](Type) { return llvm::TypeSize::getFixed(128); })
       .Case([](VectorType t) {
@@ -924,17 +1030,6 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
             "unexpected missing support for primitive type");
         return llvm::TypeSize::getFixed(0);
       });
-}
-
-//===----------------------------------------------------------------------===//
-// LLVMDialect
-//===----------------------------------------------------------------------===//
-
-void LLVMDialect::registerTypes() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
-      >();
 }
 
 Type LLVMDialect::parseType(DialectAsmParser &parser) const {

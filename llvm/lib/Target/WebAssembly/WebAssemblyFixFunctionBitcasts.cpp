@@ -23,11 +23,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,7 +38,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-fix-function-bitcasts"
 
 namespace {
-class FixFunctionBitcasts final : public ModulePass {
+class WebAssemblyFixFunctionBitcastsLegacy final : public ModulePass {
   StringRef getPassName() const override {
     return "WebAssembly Fix Function Bitcasts";
   }
@@ -50,16 +52,16 @@ class FixFunctionBitcasts final : public ModulePass {
 
 public:
   static char ID;
-  FixFunctionBitcasts() : ModulePass(ID) {}
+  WebAssemblyFixFunctionBitcastsLegacy() : ModulePass(ID) {}
 };
 } // End anonymous namespace
 
-char FixFunctionBitcasts::ID = 0;
-INITIALIZE_PASS(FixFunctionBitcasts, DEBUG_TYPE,
+char WebAssemblyFixFunctionBitcastsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyFixFunctionBitcastsLegacy, DEBUG_TYPE,
                 "Fix mismatching bitcasts for WebAssembly", false, false)
 
-ModulePass *llvm::createWebAssemblyFixFunctionBitcasts() {
-  return new FixFunctionBitcasts();
+ModulePass *llvm::createWebAssemblyFixFunctionBitcastsLegacyPass() {
+  return new WebAssemblyFixFunctionBitcastsLegacy();
 }
 
 // Recursively descend the def-use lists from V to find non-bitcast users of
@@ -220,7 +222,7 @@ static bool shouldFixMainFunction(FunctionType *FuncTy, FunctionType *MainTy) {
          !FuncTy->isVarArg();
 }
 
-bool FixFunctionBitcasts::runOnModule(Module &M) {
+static bool fixFunctionBitcasts(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Fix Function Bitcasts **********\n");
 
   Function *Main = nullptr;
@@ -297,4 +299,15 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
   }
 
   return true;
+}
+
+bool WebAssemblyFixFunctionBitcastsLegacy::runOnModule(Module &M) {
+  return fixFunctionBitcasts(M);
+}
+
+PreservedAnalyses
+WebAssemblyFixFunctionBitcastsPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  return fixFunctionBitcasts(M)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

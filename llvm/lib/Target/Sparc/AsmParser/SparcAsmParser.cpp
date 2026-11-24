@@ -39,6 +39,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <string>
 
 using namespace llvm;
 
@@ -81,6 +82,8 @@ class SparcAsmParser : public MCTargetAsmParser {
   bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   ParseStatus parseDirective(AsmToken DirectiveID) override;
+  bool parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E);
+  bool parseDataExpr(const MCExpr *&Res) override;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -122,11 +125,9 @@ class SparcAsmParser : public MCTargetAsmParser {
   // returns true if Tok is matched to a register and returns register in RegNo.
   MCRegister matchRegisterName(const AsmToken &Tok, unsigned &RegKind);
 
-  bool matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
+  ParseStatus matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
 
-  bool is64Bit() const {
-    return getSTI().getTargetTriple().getArch() == Triple::sparcv9;
-  }
+  bool is64Bit() const { return getSTI().getTargetTriple().isSPARC64(); }
 
   bool expandSET(MCInst &Inst, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
@@ -1044,6 +1045,27 @@ ParseStatus SparcAsmParser::parseDirective(AsmToken DirectiveID) {
     Parser.eatToEndOfStatement();
     return ParseStatus::Success;
   }
+  if (IDVal == ".seg") {
+    std::string Name;
+    if (Parser.parseEscapedString(Name) || Parser.parseEOL())
+      return ParseStatus::Failure;
+
+    MCSection *Section;
+    uint32_t Subsection = 0;
+    const MCObjectFileInfo *MCOFI = getContext().getObjectFileInfo();
+    if (Name == "text") {
+      Section = MCOFI->getTextSection();
+    } else if (Name == "data" || Name == "data1") {
+      Section = MCOFI->getDataSection();
+      Subsection = Name == "data1" ? 1 : 0;
+    } else if (Name == "bss") {
+      Section = MCOFI->getBSSSection();
+    } else {
+      return Error(DirectiveID.getLoc(), "unknown segment type");
+    }
+    getStreamer().switchSection(Section, Subsection);
+    return ParseStatus::Success;
+  }
 
   // Let the MC layer to handle other directives.
   return ParseStatus::NoMatch;
@@ -1468,15 +1490,20 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
         Op = SparcOperand::CreateReg(Reg, RegKind, S, E);
       break;
     }
-    if (matchSparcAsmModifiers(EVal, E)) {
+    ParseStatus Res = matchSparcAsmModifiers(EVal, E);
+    if (Res.isSuccess()) {
       E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       Op = SparcOperand::CreateImm(EVal, S, E);
+    } else if (Res.isNoMatch()) {
+      // Neither a register name nor a relocation specifier.
+      Error(getLoc(), "invalid register name");
     }
     break;
   }
 
   case AsmToken::Plus:
   case AsmToken::Minus:
+  case AsmToken::Tilde:
   case AsmToken::Integer:
   case AsmToken::LParen:
   case AsmToken::Dot:
@@ -1589,9 +1616,9 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
   // Not all registers and their spellings are modeled in td files.
 
   // %r0 - %r31
-  int64_t RegNo = 0;
+  unsigned RegNo;
   if (Name.starts_with_insensitive("r") &&
-      !Name.substr(1, 2).getAsInteger(10, RegNo) && RegNo < 31) {
+      !Name.drop_front().getAsInteger(10, RegNo) && RegNo <= 31) {
     RegKind = SparcOperand::rk_IntReg;
     return IntRegs[RegNo];
   }
@@ -1703,19 +1730,20 @@ SparcAsmParser::adjustPICRelocation(uint16_t RelType, const MCExpr *subExpr) {
   return MCSpecifierExpr::create(subExpr, RelType, getContext());
 }
 
-bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
-                                            SMLoc &EndLoc) {
+ParseStatus SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
+                                                   SMLoc &EndLoc) {
+  // A relocation specifier is an identifier followed by '('.
   AsmToken Tok = Parser.getTok();
-  if (!Tok.is(AsmToken::Identifier))
-    return false;
+  if (!Tok.is(AsmToken::Identifier) ||
+      !getLexer().peekTok().is(AsmToken::LParen))
+    return ParseStatus::NoMatch;
 
   StringRef name = Tok.getString();
 
   auto VK = Sparc::parseSpecifier(name);
   switch (VK) {
   case 0:
-    Error(getLoc(), "invalid relocation specifier");
-    return false;
+    return Error(getLoc(), "invalid relocation specifier");
 
   case ELF::R_SPARC_GOTDATA_OP:
   case ELF::R_SPARC_TLS_GD_ADD:
@@ -1726,24 +1754,48 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
   case ELF::R_SPARC_TLS_LDM_ADD:
   case ELF::R_SPARC_TLS_LDM_CALL:
   case ELF::R_SPARC_TLS_LDO_ADD:
-    // These are special-cased at tablegen level.
-    return false;
+    // These are special-cased at tablegen level and are only valid as the
+    // trailing relocation operand, see parseTailRelocSym.
+    return Error(getLoc(), "unexpected relocation specifier");
 
   default:
     break;
   }
 
   Parser.Lex(); // Eat the identifier.
-  if (Parser.getTok().getKind() != AsmToken::LParen)
-    return false;
-
   Parser.Lex(); // Eat the LParen token.
   const MCExpr *subExpr;
   if (Parser.parseParenExpression(subExpr, EndLoc))
-    return false;
+    return ParseStatus::Failure;
 
   EVal = adjustPICRelocation(VK, subExpr);
-  return true;
+  return ParseStatus::Success;
+}
+
+bool SparcAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
+  SMLoc Loc = getLoc();
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return TokError("expected '%' relocation specifier");
+  auto Spec = Sparc::parseDataSpecifier(Parser.getTok().getIdentifier());
+  if (!Spec)
+    return TokError("invalid relocation specifier");
+
+  Parser.Lex();
+  if (parseToken(AsmToken::LParen, "expected '('"))
+    return true;
+
+  const MCExpr *SubExpr;
+  if (Parser.parseParenExpression(SubExpr, E))
+    return true;
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), Loc);
+  return false;
+}
+
+bool SparcAsmParser::parseDataExpr(const MCExpr *&Res) {
+  SMLoc EndLoc;
+  if (parseOptionalToken(AsmToken::Percent))
+    return parseExprWithSpecifier(Res, EndLoc);
+  return Parser.parseExpression(Res);
 }
 
 bool SparcAsmParser::isPossibleExpression(const AsmToken &Token) {

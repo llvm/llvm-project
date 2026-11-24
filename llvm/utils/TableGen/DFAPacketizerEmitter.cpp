@@ -18,6 +18,7 @@
 #include "Common/CodeGenTarget.h"
 #include "DFAEmitter.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
@@ -28,7 +29,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #define DEBUG_TYPE "dfa-emitter"
@@ -217,17 +217,16 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
   CodeGenTarget CGT(Records);
   CodeGenSchedModels CGS(Records, CGT);
 
-  std::unordered_map<std::string, std::vector<const CodeGenProcModel *>>
-      ItinsByNamespace;
+  StringMap<std::vector<const CodeGenProcModel *>> ItinsByNamespace;
   for (const CodeGenProcModel &ProcModel : CGS.procModels()) {
     if (ProcModel.hasItineraries()) {
       auto NS = ProcModel.ItinsDef->getValueAsString("PacketizerNamespace");
-      ItinsByNamespace[NS.str()].push_back(&ProcModel);
+      ItinsByNamespace[NS].push_back(&ProcModel);
     }
   }
 
   for (auto &KV : ItinsByNamespace)
-    emitForItineraries(OS, KV.second, KV.first);
+    emitForItineraries(OS, KV.second, KV.first().str());
   OS << "} // end namespace llvm\n";
 }
 

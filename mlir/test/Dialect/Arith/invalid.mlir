@@ -32,6 +32,14 @@ func.func @non_signless_constant() {
 
 // -----
 
+func.func @non_signless_tensor_constant() {
+  // expected-error @+1 {{'arith.constant' op integer return type must be signless}}
+  %0 = arith.constant dense<[10, 20]> : tensor<2xui8>
+  return
+}
+
+// -----
+
 func.func @complex_constant_wrong_attribute_type() {
   // expected-error @+1 {{'arith.constant' op failed to verify that all of {value, result} have same type}}
   %0 = "arith.constant" () {value = 1.0 : f32} : () -> complex<f32>
@@ -43,6 +51,14 @@ func.func @complex_constant_wrong_attribute_type() {
 func.func @non_signless_constant() {
   // expected-error @+1 {{'arith.constant' op integer return type must be signless}}
   %0 = arith.constant 0 : si32
+  return
+}
+
+// -----
+
+func.func @non_signless_vector_constant() {
+  // expected-error @+1 {{'arith.constant' op integer return type must be signless}}
+  %0 = arith.constant dense<[0, 1]> : vector<2xsi32>
   return
 }
 

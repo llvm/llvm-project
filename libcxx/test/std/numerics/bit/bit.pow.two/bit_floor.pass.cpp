@@ -140,9 +140,8 @@ int main(int, char**)
     test<std::size_t>();
 
     // _BitInt tests. Width tiers follow C23 7.18.2.5.
-    // bit_floor uses numeric_limits::digits via __bit_log2, so only
-    // byte-aligned widths are safe.
-#if TEST_HAS_EXTENSION(bit_int)
+    // bit_floor depends on numeric_limits::digits, so only byte-aligned widths.
+#if TEST_HAS_BITINT
     {
       using T32 = unsigned _BitInt(32);
       using T64 = unsigned _BitInt(64);
@@ -200,7 +199,7 @@ int main(int, char**)
       assert(std::bit_floor(T256(~T256(0))) == T256(T256(1) << 255));
     }
 #  endif
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

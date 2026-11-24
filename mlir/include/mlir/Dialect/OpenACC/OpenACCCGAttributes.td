@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 //
 // Defines OpenACC codegen attributes (GPU parallel dimensions used for
-// privatization, barrier management, and loop work-sharing).
+// privatization, barrier management, and loop work-sharing, active
+// parallel dimensions for predication analysis, and loop chunk size).
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef OPENACCCG_ATTRIBUTES
 #define OPENACCCG_ATTRIBUTES
+
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 
 def OpenACC_GPUParallelDimAttr : OpenACC_Attr<"GPUParallelDim", "par_dim"> {
   let summary = "GPU parallel dimension for use in OpenACC parallelism assignment.";
@@ -89,6 +92,58 @@ def OpenACC_GPUParallelDimsAttr : OpenACC_Attr<"GPUParallelDims", "par_dims"> {
     bool hasOnlyThreadXLevel() const;
   }];
   let hasCustomAssemblyFormat = 1;
+}
+
+def OpenACC_GPUBlockRedundantAttr
+    : OpenACC_Attr<"GPUBlockRedundant", "gpu_block_redundant"> {
+  let summary = "Loop runs redundantly across all thread blocks.";
+  let description = [{
+    Marks an op that executes redundantly on every thread block and therefore
+    must not be assigned block/grid-level work-sharing. Only thread-level
+    parallelism may be assigned, and during GPU code generation its enclosing
+    block dimensions are treated as active (not predicated away).
+  }];
+}
+
+def OpenACC_ChunkSizeAttr : OpenACC_Attr<"ChunkSize", "chunk_size"> {
+  let summary = "Static gang chunk size for an OpenACC loop.";
+  let description = [{
+    Records the constant chunk size from an OpenACC `gang(static:N)` clause.
+  }];
+  let parameters = (ins "int64_t":$chunk_size);
+  let assemblyFormat = "`<` $chunk_size `>`";
+}
+
+def OpenACC_ActiveParDimsAttr
+    : OpenACC_Attr<"ActiveParDims", "active_par_dims"> {
+  let summary = "Active GPU parallel dimensions for an OpenACC operation.";
+  let description = [{
+    Ordered list of GPU parallel dimensions that are active (not predicated
+    away) for an operation. Distinct from ownership `par_dims`: ownership
+    records which dimensions a privatization or reduction is associated with,
+    while active dimensions record which launch dimensions execute the op
+    without predication. Used by privatization / private_local analysis ahead
+    of GPU code generation.
+  }];
+  let parameters = (ins ArrayRefParameter<"::mlir::acc::GPUParallelDimAttr">:$array);
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc.offload_packager
+//===----------------------------------------------------------------------===//
+
+def OpenACC_OffloadPackagerAttr
+    : OpenACC_Attr<"OffloadPackager", "offload_packager",
+                   [OffloadingTranslationAttrTrait]> {
+  let summary = "Offloading handler that embeds the device image in the host";
+  let description = [{
+    Offloading handler for `gpu.module` and `gpu.binary` operations.  The LLVM
+    IR translation wraps each object of a `gpu.binary` in an LLVM offloading
+    binary of kind OpenACC and places it in the `.llvm.offloading` section of
+    the host object. This format is supported by the  offloading linker wrapper
+    which inserts the registration with the OpenACC runtime libacctarget.
+  }];
 }
 
 #endif // OPENACCCG_ATTRIBUTES

@@ -3,7 +3,7 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
 // CHECK-LABEL: test_cosh_half
@@ -56,4 +56,10 @@ float3 test_cosh_float3 ( float3 p0 ) {
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.cosh.v4f32
 float4 test_cosh_float4 ( float4 p0 ) {
   return cosh ( p0 );
+}
+
+// CHECK-LABEL: test_cosh_float5
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.cosh.v5f32
+vector<float, 5> test_cosh_float5(vector<float, 5> p0) {
+  return cosh(p0);
 }

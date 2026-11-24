@@ -1,4 +1,4 @@
-; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<thinlto>" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="assign-guid,embed-bitcode<thinlto>" -S | FileCheck %s
 
 ; CHECK-NOT: $_ZTV3Foo = comdat any
 $_ZTV3Foo = comdat any

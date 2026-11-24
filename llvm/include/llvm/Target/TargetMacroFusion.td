@@ -103,18 +103,39 @@ def OneUse : OneUsePred;
 // ```
 //
 // `IsCommutable` means whether we should handle commutable operands.
-class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
-  : SubtargetFeature<"fusion-" # name, fieldName, "true", desc> {
+//
+// `RunPreRA` and `RunPostRA` control in which scheduling stage the fusion
+// is allowed to fire. MacroFusion runs in both the pre-RA and post-RA machine
+// schedulers; by default a fusion participates in both. Setting one of them to
+// `false` makes the generated predicator return `false` early during that
+// stage (detected via the `NoVRegs` machine function property). At least one
+// of the two must be `true`.
+class FusionPredicates<list<FusionPredicate> predicates> {
   list<FusionPredicate> Predicates = predicates;
   bit IsCommutable = 0;
+  bit RunPreRA = true;
+  bit RunPostRA = true;
+}
+
+class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
+  : SubtargetFeature<"fusion-" # name, fieldName, "true", desc>,
+    FusionPredicates<predicates> {
+  let InlineBehavior = InlineIgnore;
+}
+
+// Fusion predicates for the subtarget feature `feature`. The generated
+// predicator is named after the feature.
+class FusionFor<SubtargetFeature feature, list<FusionPredicate> predicates>
+  : FusionPredicates<predicates> {
+  SubtargetFeature Feature = feature;
 }
 
 // The generated predicator will be like:
 // ```
-// bool isNAME(const TargetInstrInfo &TII,
-//             const TargetSubtargetInfo &STI,
-//             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
+// bool isFEATURE(const TargetInstrInfo &TII,
+//                const TargetSubtargetInfo &STI,
+//                const MachineInstr *FirstMI,
+//                const MachineInstr &SecondMI) {
 //   auto &MRI = SecondMI.getMF()->getRegInfo();
 //   /* Prolog */
 //   /* Predicate for `SecondMI` */
@@ -127,22 +148,42 @@ class Fusion<string name, string fieldName, string desc, list<FusionPredicate> p
 //   return true;
 // }
 // ```
+//
+// where FEATURE is the name of the `SimpleFusion` or the feature of the
+// `SimpleFusionFor`.
+class SimpleFusionPredicates<MCInstPredicate firstPred,
+                             MCInstPredicate secondPred,
+                             list<FusionPredicate> prolog,
+                             list<FusionPredicate> epilog> {
+  list<FusionPredicate> Predicates =
+    !listconcat(
+      prolog,
+      [
+        SecondFusionPredicateWithMCInstPredicate<secondPred>,
+        WildcardTrue,
+        FirstFusionPredicateWithMCInstPredicate<firstPred>,
+        SecondInstHasSameReg<0, 1>,
+        OneUse,
+        TieReg<0, 1>,
+      ],
+      epilog);
+}
+
 class SimpleFusion<string name, string fieldName, string desc,
                    MCInstPredicate firstPred, MCInstPredicate secondPred,
                    list<FusionPredicate> prolog = [],
                    list<FusionPredicate> epilog = []>
   : Fusion<name, fieldName, desc,
-           !listconcat(
-              prolog,
-              [
-                SecondFusionPredicateWithMCInstPredicate<secondPred>,
-                WildcardTrue,
-                FirstFusionPredicateWithMCInstPredicate<firstPred>,
-                SecondInstHasSameReg<0, 1>,
-                OneUse,
-                TieReg<0, 1>,
-              ],
-              epilog)>;
+           SimpleFusionPredicates<firstPred, secondPred, prolog,
+                                  epilog>.Predicates>;
+
+class SimpleFusionFor<SubtargetFeature feature,
+                      MCInstPredicate firstPred, MCInstPredicate secondPred,
+                      list<FusionPredicate> prolog = [],
+                      list<FusionPredicate> epilog = []>
+  : FusionFor<feature,
+              SimpleFusionPredicates<firstPred, secondPred, prolog,
+                                     epilog>.Predicates>;
 
 class SingleFusion<string name, string fieldName, string desc,
                    Instruction firstInst, Instruction secondInst,

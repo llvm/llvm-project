@@ -63,28 +63,18 @@ enum RelExpr {
   R_RELAX_HINT,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
-  R_RELAX_TLS_GD_TO_IE,
-  R_RELAX_TLS_GD_TO_IE_GOT_OFF,
-  R_RELAX_TLS_GD_TO_IE_GOTPLT,
-  R_RELAX_TLS_GD_TO_LE,
-  R_RELAX_TLS_GD_TO_LE_NEG,
-  R_RELAX_TLS_IE_TO_LE,
-  R_RELAX_TLS_LD_TO_LE,
   R_SIZE,
   R_TPREL,
   R_TPREL_NEG,
   R_TLSDESC,
-  R_TLSDESC_CALL,
   R_TLSDESC_PC,
   R_TLSDESC_GOTPLT,
   R_TLSGD_GOT,
   R_TLSGD_GOTPLT,
   R_TLSGD_PC,
-  R_TLSIE_HINT,
   R_TLSLD_GOT,
   R_TLSLD_GOTPLT,
   R_TLSLD_GOT_OFF,
-  R_TLSLD_HINT,
   R_TLSLD_PC,
 
   // The following is abstract relocation types used for only one target.
@@ -152,7 +142,7 @@ void printLocation(ELFSyncStream &s, InputSectionBase &sec, const Symbol &sym,
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations(Ctx &ctx);
+void scanRelocations(Ctx &ctx);
 template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
 void reportUndefinedSymbols(Ctx &);
 bool maybeReportUndefined(Ctx &, Undefined &sym, InputSectionBase &sec,
@@ -297,11 +287,6 @@ template <bool is64> struct RelocsCrel {
       if (--count)
         step();
       return *this;
-    }
-    // For RelocScan::scan when TLS relocations consume multiple entries.
-    void operator+=(size_t n) {
-      for (; n; --n)
-        operator++();
     }
   };
 

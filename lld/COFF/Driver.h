@@ -33,7 +33,7 @@ using llvm::COFF::MachineTypes;
 using llvm::COFF::WindowsSubsystem;
 using std::optional;
 
-class COFFOptTable : public llvm::opt::GenericOptTable {
+class COFFOptTable : public llvm::opt::OptTable {
 public:
   COFFOptTable();
 };
@@ -83,6 +83,7 @@ public:
   void addFile(InputFile *file);
 
   void addClangLibSearchPaths(const std::string &argv0);
+  void addClangPerTargetRuntimeDirSearchPaths();
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
@@ -124,6 +125,10 @@ private:
   uint64_t getDefaultImageBase();
 
   bool isDecorated(StringRef sym);
+
+  InputFile *addObjectFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                           StringRef archiveName, uint64_t offsetInArchive,
+                           bool lazy);
 
   std::string getMapFile(const llvm::opt::InputArgList &args,
                          llvm::opt::OptSpecifier os,
@@ -200,6 +205,7 @@ private:
   llvm::SmallString<128> universalCRTLibPath;
   int sdkMajor = 0;
   llvm::SmallString<128> windowsSdkLibPath;
+  std::string clangRuntimeLibDir;
 
   // For linkreprofullpathrsp
   std::unique_ptr<llvm::raw_fd_ostream> reproFile;

@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmaximumf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/fmaximumf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, fmaximumf128, (float128 x, float128 y)) {
-  return math::fmaximumf128(x, y);
+  return cpp::bit_cast<float128>(math::fmaximumf128(
+      cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

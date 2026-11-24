@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;scops>' -polly-print-scops -tailcallopt -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NOLICM
+; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;scops>' -plugin-arg=Polly,-polly-print-scops -tailcallopt -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NOLICM
 
 ;    void foo(int n, float A[static const restrict n], float x) {
 ;      //      (0)

@@ -81,6 +81,7 @@ TEST(DarwinSDKInfo, VersionMappingParseError) {
 TEST(DarwinSDKInfo, PlatformPrefix) {
   llvm::json::Object SDKSettings({{"CanonicalName", "macosx26.0"},
                                   {"Version", "26.0"},
+                                  {"DefaultDeploymentTarget", "26.0"},
                                   {"MaximumDeploymentTarget", "26.0.99"}});
   llvm::json::Object SupportedTargets;
   llvm::json::Object MacOS({{"Archs", {"x86_64", "arm64"}},
@@ -107,10 +108,9 @@ TEST(DarwinSDKInfo, PlatformPrefix) {
   ASSERT_TRUE(SDKInfo);
   EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-macos26.0")),
             "/System/macOSSupport");
-  // The triple's architecture doesn't matter.
-  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("ppc-apple-macos26.0")),
-            "/System/macOSSupport");
-  // OSes that aren't specified in the SDK never get a system prefix.
+  // When there are multiple system prefixes, non-matching triples don't get a
+  // system prefix.
+  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("ppc-apple-macos26.0")), "");
   EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-ios26.0")), "");
   // /System/iOSSupport is not a system prefix, and is ignored.
   EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-ios26.0-macabi")),
@@ -124,6 +124,7 @@ TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {
   llvm::json::Object Obj;
   Obj["CanonicalName"] = "macosx11.0";
   Obj["Version"] = "11.0";
+  Obj["DefaultDeploymentTarget"] = "11.0";
   Obj["MaximumDeploymentTarget"] = "11.99";
   llvm::json::Object VersionMap;
   VersionMap["10.15"] = "13.1";
@@ -171,6 +172,7 @@ TEST(DarwinSDKInfoTest, ParseAndTestMappingIOSDerived) {
   llvm::json::Object Obj;
   Obj["CanonicalName"] = "appletvos15.0";
   Obj["Version"] = "15.0";
+  Obj["DefaultDeploymentTarget"] = "15.0";
   Obj["MaximumDeploymentTarget"] = "15.0.99";
   llvm::json::Object VersionMap;
   VersionMap["10.0"] = "10.0";

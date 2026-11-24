@@ -67,7 +67,7 @@ LIBC_INLINE constexpr FloatFloat atan_eval(const FloatFloat &x) {
   // c0 ~ - x_hi^2 / 3
   float c0 = -0x1.555556p-2f * x_hi_sq;
   // c1 ~ x_lo * (1 - x_hi^2)
-  float c1 = fputil::multiply_add(x_hi_sq, -x.lo, x.lo);
+  float c1 = fputil::sub_multiply(x.lo, x_hi_sq, x.lo);
   // p.lo ~ - x_hi^3 / 3 + x_lo * (1 - x_hi*2)
   p.lo = fputil::multiply_add(x.hi, c0, c1);
   return p;
@@ -134,7 +134,7 @@ LIBC_INLINE constexpr float atan2f(float y, float x) {
   constexpr FloatFloat MPI = {0x1.777a5cp-24f, -0x1.921fb6p1f};
   constexpr FloatFloat PI_OVER_4 = {-0x1.777a5cp-26f, 0x1.921fb6p-1f};
   constexpr FloatFloat PI_OVER_2 = {-0x1.777a5cp-25f, 0x1.921fb6p0f};
-  constexpr FloatFloat MPI_OVER_2 = {-0x1.777a5cp-25f, 0x1.921fb6p0f};
+  constexpr FloatFloat MPI_OVER_2 = {0x1.777a5cp-25f, -0x1.921fb6p0f};
   constexpr FloatFloat THREE_PI_OVER_4 = {-0x1.99bc5cp-28f, 0x1.2d97c8p1f};
   // Adjustment for constant term:
   //   CONST_ADJ[x_sign][y_sign][recip]

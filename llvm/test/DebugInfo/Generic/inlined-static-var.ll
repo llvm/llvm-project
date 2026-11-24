@@ -59,17 +59,17 @@ define dso_local i32 @_Z3foov() !dbg !26 {
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "B", scope: !2, file: !3, line: 5, type: !6, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "not_removed", linkageName: "_Z11not_removedv", scope: !3, file: !3, line: 5, type: !4, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !13)
+!2 = distinct !DISubprogram(name: "not_removed", linkageName: "_Z11not_removedv", scope: !3, file: !3, line: 5, type: !4, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !9)
 !3 = !DIFile(filename: "example.cpp", directory: "")
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6}
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!7 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !8, producer: "clang version 14.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !9, splitDebugInlining: false, nameTableKind: None)
+!7 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !8, producer: "clang version 14.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !8 = !DIFile(filename: "example.cpp", directory: "")
-!9 = !{!0, !10}
+!9 = !{!0}
 !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
 !11 = distinct !DIGlobalVariable(name: "A", scope: !12, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
-!12 = distinct !DISubprogram(name: "removed", linkageName: "_Z7removedv", scope: !3, file: !3, line: 2, type: !4, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !13)
+!12 = distinct !DISubprogram(name: "removed", linkageName: "_Z7removedv", scope: !3, file: !3, line: 2, type: !4, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !7, retainedNodes: !33)
 !13 = !{}
 !14 = !{i32 7, !"Dwarf Version", i32 4}
 !15 = !{i32 2, !"Debug Info Version", i32 3}
@@ -90,3 +90,4 @@ define dso_local i32 @_Z3foov() !dbg !26 {
 !30 = distinct !DILocation(line: 7, column: 32, scope: !26)
 !31 = !DILocation(line: 7, column: 30, scope: !26)
 !32 = !DILocation(line: 7, column: 13, scope: !26)
+!33 = !{!10}

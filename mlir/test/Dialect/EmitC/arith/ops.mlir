@@ -1,4 +1,4 @@
-// RUN: mlir-opt -arith-expand -convert-arith-to-emitc %s | FileCheck %s
+// RUN: mlir-opt -arith-expand="include-min-max-f=true include-min-max-i=true" -convert-arith-to-emitc %s | FileCheck %s
 
 /// This file checks the combined `-arith-expand | -convert-arith-to-emitc`
 /// pipeline with intentionally minimal FileCheck coverage.

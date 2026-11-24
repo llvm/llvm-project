@@ -446,10 +446,18 @@ void IRNumberingState::number(Operation &op) {
   // not used, we need to number also the merged dictionary containing both the
   // inherent and discardable attribute.
   DictionaryAttr dictAttr;
-  if (config.getDesiredBytecodeVersion() >= bytecode::kNativePropertiesEncoding)
+  if (config.getDesiredBytecodeVersion() >=
+          bytecode::kNativePropertiesEncoding ||
+      !op.getPropertiesStorage())
     dictAttr = op.getRawDictionaryAttrs();
-  else
-    dictAttr = op.getAttrDictionary();
+  else {
+    NamedAttrList attrs;
+    op.getName().walkInherentAttrs(&op, [&](StringRef name, Attribute &attr) {
+      attrs.append(name, attr);
+    });
+    attrs.append(op.getDiscardableAttrDictionary().getValue());
+    dictAttr = attrs.getDictionary(op.getContext());
+  }
   // Only number the operation's dictionary if it isn't empty.
   if (!dictAttr.empty())
     number(dictAttr);
@@ -512,29 +520,30 @@ void IRNumberingState::number(Type type) {
   numbering->dialect = &numberDialect(&type.getDialect());
 
   // If this type will be emitted using the bytecode format, perform a dummy
-  // writing to number any nested components.
-  // TODO: We don't allow custom encodings for mutable types right now.
-  if (!type.hasTrait<TypeTrait::IsMutable>()) {
-    // Try overriding emission with callbacks.
-    for (const auto &callback : config.getTypeWriterCallbacks()) {
-      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
-      // The client has the ability to override the group name through the
-      // callback.
-      std::optional<StringRef> groupNameOverride;
-      if (succeeded(callback->write(type, groupNameOverride, writer))) {
-        if (groupNameOverride.has_value())
-          numbering->dialect = &numberDialect(*groupNameOverride);
-        return;
-      }
+  // writing to number any nested components. Mutable types are allowed: the
+  // numbering above inserts `type` into the map *before* this point, so a
+  // nested reference back to it hits the early return at the top of this
+  // function, and the reader side breaks the same cycle with
+  // DialectBytecodeReader::tryStartCyclicRead.
+  // Try overriding emission with callbacks.
+  for (const auto &callback : config.getTypeWriterCallbacks()) {
+    NumberingDialectWriter writer(*this, config.getDialectVersionMap());
+    // The client has the ability to override the group name through the
+    // callback.
+    std::optional<StringRef> groupNameOverride;
+    if (succeeded(callback->write(type, groupNameOverride, writer))) {
+      if (groupNameOverride.has_value())
+        numbering->dialect = &numberDialect(*groupNameOverride);
+      return;
     }
+  }
 
-    // If this attribute will be emitted using the bytecode format, perform a
-    // dummy writing to number any nested components.
-    if (const auto *interface = numbering->dialect->interface) {
-      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
-      if (succeeded(interface->writeType(type, writer)))
-        return;
-    }
+  // If this attribute will be emitted using the bytecode format, perform a
+  // dummy writing to number any nested components.
+  if (const auto *interface = numbering->dialect->interface) {
+    NumberingDialectWriter writer(*this, config.getDialectVersionMap());
+    if (succeeded(interface->writeType(type, writer)))
+      return;
   }
   // If this type will be emitted using the fallback, number the nested dialect
   // resources. We don't number everything (e.g. no nested attributes/types),

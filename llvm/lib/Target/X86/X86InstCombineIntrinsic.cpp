@@ -496,16 +496,14 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   return Builder.CreateTrunc(Shuffle, ResTy);
 }
 
-static Value *simplifyX86pmulh(IntrinsicInst &II,
-                               InstCombiner::BuilderTy &Builder, bool IsSigned,
-                               bool IsRounding) {
+static Value *simplifyX86pmulhrsw(IntrinsicInst &II,
+                                  InstCombiner::BuilderTy &Builder) {
   Value *Arg0 = II.getArgOperand(0);
   Value *Arg1 = II.getArgOperand(1);
   auto *ResTy = cast<FixedVectorType>(II.getType());
   auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
   assert(ArgTy == ResTy && ResTy->getScalarSizeInBits() == 16 &&
          "Unexpected PMULH types");
-  assert((!IsRounding || IsSigned) && "PMULHRS instruction must be signed");
 
   // Multiply by undef -> zero (NOT undef!) as other arg could still be zero.
   if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
@@ -515,42 +513,24 @@ static Value *simplifyX86pmulh(IntrinsicInst &II,
   if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
     return ConstantAggregateZero::get(ResTy);
 
-  // Multiply by one.
-  if (!IsRounding) {
-    if (match(Arg0, m_One()))
-      return IsSigned ? Builder.CreateAShr(Arg1, 15)
-                      : ConstantAggregateZero::get(ResTy);
-    if (match(Arg1, m_One()))
-      return IsSigned ? Builder.CreateAShr(Arg0, 15)
-                      : ConstantAggregateZero::get(ResTy);
-  }
-
   // Constant folding.
   if (!isa<Constant>(Arg0) || !isa<Constant>(Arg1))
     return nullptr;
 
   // Extend to twice the width and multiply.
-  auto Cast =
-      IsSigned ? Instruction::CastOps::SExt : Instruction::CastOps::ZExt;
   auto *ExtTy = FixedVectorType::getExtendedElementVectorType(ArgTy);
-  Value *LHS = Builder.CreateCast(Cast, Arg0, ExtTy);
-  Value *RHS = Builder.CreateCast(Cast, Arg1, ExtTy);
+  Value *LHS = Builder.CreateSExt(Arg0, ExtTy);
+  Value *RHS = Builder.CreateSExt(Arg1, ExtTy);
   Value *Mul = Builder.CreateMul(LHS, RHS);
 
-  if (IsRounding) {
-    // PMULHRSW: truncate to vXi18 of the most significant bits, add one and
-    // extract bits[16:1].
-    auto *RndEltTy = IntegerType::get(ExtTy->getContext(), 18);
-    auto *RndTy = FixedVectorType::get(RndEltTy, ExtTy);
-    Mul = Builder.CreateLShr(Mul, 14);
-    Mul = Builder.CreateTrunc(Mul, RndTy);
-    Mul = Builder.CreateAdd(Mul, ConstantInt::get(RndTy, 1));
-    Mul = Builder.CreateLShr(Mul, 1);
-  } else {
-    // PMULH/PMULHU: extract the vXi16 most significant bits.
-    Mul = Builder.CreateLShr(Mul, 16);
-  }
-
+  // PMULHRSW: truncate to vXi18 of the most significant bits, add one and
+  // extract bits[16:1].
+  auto *RndEltTy = IntegerType::get(ExtTy->getContext(), 18);
+  auto *RndTy = FixedVectorType::get(RndEltTy, ExtTy);
+  Mul = Builder.CreateLShr(Mul, 14);
+  Mul = Builder.CreateTrunc(Mul, RndTy);
+  Mul = Builder.CreateAdd(Mul, ConstantInt::get(RndTy, 1));
+  Mul = Builder.CreateLShr(Mul, 1);
   return Builder.CreateTrunc(Mul, ResTy);
 }
 
@@ -2259,94 +2239,6 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // TODO should we convert this to an AND if the RHS is constant?
     }
     break;
-  case Intrinsic::x86_bmi_pext_32:
-  case Intrinsic::x86_bmi_pext_64:
-    if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
-        return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
-      }
-      if (MaskC->isAllOnesValue()) {
-        return IC.replaceInstUsesWith(II, II.getArgOperand(0));
-      }
-
-      unsigned MaskIdx, MaskLen;
-      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
-        // any single contingous sequence of 1s anywhere in the mask simply
-        // describes a subset of the input bits shifted to the appropriate
-        // position.  Replace with the straight forward IR.
-        Value *Input = II.getArgOperand(0);
-        Value *Masked = IC.Builder.CreateAnd(Input, II.getArgOperand(1));
-        Value *ShiftAmt = ConstantInt::get(II.getType(), MaskIdx);
-        Value *Shifted = IC.Builder.CreateLShr(Masked, ShiftAmt);
-        return IC.replaceInstUsesWith(II, Shifted);
-      }
-
-      if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
-        uint64_t Src = SrcC->getZExtValue();
-        uint64_t Mask = MaskC->getZExtValue();
-        uint64_t Result = 0;
-        uint64_t BitToSet = 1;
-
-        while (Mask) {
-          // Isolate lowest set bit.
-          uint64_t BitToTest = Mask & -Mask;
-          if (BitToTest & Src)
-            Result |= BitToSet;
-
-          BitToSet <<= 1;
-          // Clear lowest set bit.
-          Mask &= Mask - 1;
-        }
-
-        return IC.replaceInstUsesWith(II,
-                                      ConstantInt::get(II.getType(), Result));
-      }
-    }
-    break;
-  case Intrinsic::x86_bmi_pdep_32:
-  case Intrinsic::x86_bmi_pdep_64:
-    if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
-        return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
-      }
-      if (MaskC->isAllOnesValue()) {
-        return IC.replaceInstUsesWith(II, II.getArgOperand(0));
-      }
-
-      unsigned MaskIdx, MaskLen;
-      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
-        // any single contingous sequence of 1s anywhere in the mask simply
-        // describes a subset of the input bits shifted to the appropriate
-        // position.  Replace with the straight forward IR.
-        Value *Input = II.getArgOperand(0);
-        Value *ShiftAmt = ConstantInt::get(II.getType(), MaskIdx);
-        Value *Shifted = IC.Builder.CreateShl(Input, ShiftAmt);
-        Value *Masked = IC.Builder.CreateAnd(Shifted, II.getArgOperand(1));
-        return IC.replaceInstUsesWith(II, Masked);
-      }
-
-      if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
-        uint64_t Src = SrcC->getZExtValue();
-        uint64_t Mask = MaskC->getZExtValue();
-        uint64_t Result = 0;
-        uint64_t BitToTest = 1;
-
-        while (Mask) {
-          // Isolate lowest set bit.
-          uint64_t BitToSet = Mask & -Mask;
-          if (BitToTest & Src)
-            Result |= BitToSet;
-
-          BitToTest <<= 1;
-          // Clear lowest set bit;
-          Mask &= Mask - 1;
-        }
-
-        return IC.replaceInstUsesWith(II,
-                                      ConstantInt::get(II.getType(), Result));
-      }
-    }
-    break;
 
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
@@ -2538,7 +2430,10 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           // Extract the lowest element from the passthru operand.
           Value *Passthru =
               IC.Builder.CreateExtractElement(II.getArgOperand(2), (uint64_t)0);
-          V = IC.Builder.CreateSelect(Mask, V, Passthru);
+          // The condition is derived from the mask, so we cannot infer branch
+          // weights without value profile information. Thus mark it unknown.
+          V = IC.Builder.CreateSelectWithUnknownProfile(Mask, V, Passthru,
+                                                        DEBUG_TYPE);
         }
 
         // Insert the result back into the original argument 0.
@@ -2722,26 +2617,10 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
-  case Intrinsic::x86_sse2_pmulh_w:
-  case Intrinsic::x86_avx2_pmulh_w:
-  case Intrinsic::x86_avx512_pmulh_w_512:
-    if (Value *V = simplifyX86pmulh(II, IC.Builder, true, false)) {
-      return IC.replaceInstUsesWith(II, V);
-    }
-    break;
-
-  case Intrinsic::x86_sse2_pmulhu_w:
-  case Intrinsic::x86_avx2_pmulhu_w:
-  case Intrinsic::x86_avx512_pmulhu_w_512:
-    if (Value *V = simplifyX86pmulh(II, IC.Builder, false, false)) {
-      return IC.replaceInstUsesWith(II, V);
-    }
-    break;
-
   case Intrinsic::x86_ssse3_pmul_hr_sw_128:
   case Intrinsic::x86_avx2_pmul_hr_sw:
   case Intrinsic::x86_avx512_pmul_hr_sw_512:
-    if (Value *V = simplifyX86pmulh(II, IC.Builder, true, true)) {
+    if (Value *V = simplifyX86pmulhrsw(II, IC.Builder)) {
       return IC.replaceInstUsesWith(II, V);
     }
     break;
@@ -3449,12 +3328,6 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     break;
   }
 
-  case Intrinsic::x86_sse2_pmulh_w:
-  case Intrinsic::x86_avx2_pmulh_w:
-  case Intrinsic::x86_avx512_pmulh_w_512:
-  case Intrinsic::x86_sse2_pmulhu_w:
-  case Intrinsic::x86_avx2_pmulhu_w:
-  case Intrinsic::x86_avx512_pmulhu_w_512:
   case Intrinsic::x86_ssse3_pmul_hr_sw_128:
   case Intrinsic::x86_avx2_pmul_hr_sw:
   case Intrinsic::x86_avx512_pmul_hr_sw_512: {

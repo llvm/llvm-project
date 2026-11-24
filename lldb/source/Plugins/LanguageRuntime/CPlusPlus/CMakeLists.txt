@@ -1,7 +1,9 @@
 add_lldb_library(lldbPluginCPPRuntime PLUGIN
   CommandObjectCPlusPlus.cpp
+  CommonABIRuntime.cpp
   CPPLanguageRuntime.cpp
   ItaniumABIRuntime.cpp
+  MicrosoftABIRuntime.cpp
   VerboseTrapFrameRecognizer.cpp
 
   LINK_LIBS

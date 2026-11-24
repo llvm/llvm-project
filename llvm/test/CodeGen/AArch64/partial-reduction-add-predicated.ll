@@ -126,12 +126,11 @@ define <4 x float> @predicated_fpext_fmul_fixed_length(<4 x float> %acc, <8 x i1
 ; CHECK-LABEL: predicated_fpext_fmul_fixed_length:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    movi v3.8h, #60, lsl #8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    shl v1.8h, v1.8h, #15
 ; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
-; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    and z1.h, z1.h, #0x3c00
 ; CHECK-NEXT:    fdot z0.s, z2.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret

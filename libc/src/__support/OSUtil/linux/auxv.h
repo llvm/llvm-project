@@ -9,19 +9,21 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AUXV_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AUXV_H
 
+#include "hdr/errno_macros.h"    // For EINTR
 #include "hdr/fcntl_macros.h"    // For open flags
 #include "hdr/sys_auxv_macros.h" // For AT_ macros
 #include "hdr/sys_mman_macros.h" // For mmap flags
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/prctl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/callonce.h"
 
-#include <linux/param.h>  // For EXEC_PAGESIZE
-#include <linux/prctl.h>  // For prctl
-#include <sys/syscall.h>  // For syscall numbers
+#include <linux/param.h> // For EXEC_PAGESIZE
+#include <linux/prctl.h> // For prctl
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -103,10 +105,10 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
 // Attempt 1: use PRCTL to get the auxv.
 // We guarantee that the vector is always padded with AT_NULL entries.
 #ifdef PR_GET_AUXV
-  long prctl_ret = syscall_impl<long>(SYS_prctl, PR_GET_AUXV,
-                                      reinterpret_cast<unsigned long>(vector),
-                                      avaiable_size, 0, 0);
-  if (prctl_ret >= 0) {
+  auto prctl_ret = linux_syscalls::prctl(
+      PR_GET_AUXV, reinterpret_cast<unsigned long>(vector), avaiable_size, 0,
+      0);
+  if (prctl_ret) {
     entries = vector;
     return;
   }
@@ -122,18 +124,20 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
   uint8_t *cursor = reinterpret_cast<uint8_t *>(vector);
   bool has_error = false;
   while (avaiable_size != 0) {
-    long bytes_read =
-        syscall_impl<long>(SYS_read, fd.value(), cursor, avaiable_size);
-    if (bytes_read <= 0) {
-      if (bytes_read == -EINTR)
+    ErrorOr<ssize_t> bytes_read =
+        linux_syscalls::read(fd.value(), cursor, avaiable_size);
+    if (!bytes_read.has_value()) {
+      if (bytes_read.error() == EINTR)
         continue;
-      has_error = bytes_read < 0;
+      has_error = true;
       break;
     }
-    avaiable_size -= bytes_read;
-    cursor += bytes_read;
+    if (bytes_read.value() == 0)
+      break;
+    avaiable_size -= bytes_read.value();
+    cursor += bytes_read.value();
   }
-  syscall_impl<long>(SYS_close, fd.value());
+  linux_syscalls::close(fd.value());
   if (has_error) {
     linux_syscalls::munmap(vector, AUXV_MMAP_SIZE);
     return;

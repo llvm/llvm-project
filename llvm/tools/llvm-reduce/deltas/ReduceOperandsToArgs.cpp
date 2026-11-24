@@ -34,7 +34,8 @@ static bool canReduceUse(Use &Op) {
     return false;
 
   // Don't pass labels/metadata as arguments.
-  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isTokenTy())
+  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isTokenTy() ||
+      Ty->isX86_AMXTy())
     return false;
 
   // No need to replace values that are already arguments.
@@ -52,6 +53,10 @@ static bool canReduceUse(Use &Op) {
 
   // lifetime.start/lifetime.end require alloca argument.
   if (isa<LifetimeIntrinsic>(Op.getUser()))
+    return false;
+
+  // Landing pad clauses must remain constants.
+  if (isa<LandingPadInst>(Op.getUser()))
     return false;
 
   return true;

@@ -83,7 +83,7 @@ multiclass avx10_minmax_packed_base<string OpStr, X86VectorVTInfo VTI, SDNode Op
 }
 
 multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
-  let Uses = []<Register>, mayRaiseFPException = 0 in
+  let Predicates = [HasAVX10_2], Uses = []<Register>, mayRaiseFPException = 0 in
     defm Zrrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info512, (outs VTI.info512.RC:$dst),
                                 (ins VTI.info512.RC:$src1, VTI.info512.RC:$src2, i32u8imm:$src3), OpStr,
                                 "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
@@ -1002,8 +1002,8 @@ defm VADDBF16 : avx10_fp_binop_bf16<0x58, "vadd", fadd, SchedWriteFAddSizes, 1>;
 defm VSUBBF16 : avx10_fp_binop_bf16<0x5C, "vsub", fsub, SchedWriteFAddSizes, 0>;
 defm VMULBF16 : avx10_fp_binop_bf16<0x59, "vmul", fmul, SchedWriteFMulSizes, 1>;
 defm VDIVBF16 : avx10_fp_binop_bf16<0x5E, "vdiv", fdiv, SchedWriteFDivSizes, 0>;
-defm VMINBF16 : avx10_fp_binop_bf16<0x5D, "vmin", X86fmin, SchedWriteFCmpSizes, 0>;
-defm VMAXBF16 : avx10_fp_binop_bf16<0x5F, "vmax", X86fmax, SchedWriteFCmpSizes, 0>;
+defm VMINBF16 : avx10_fp_binop_bf16<0x5D, "vmin", pseudo_fmin, SchedWriteFCmpSizes, 0>;
+defm VMAXBF16 : avx10_fp_binop_bf16<0x5F, "vmax", pseudo_fmax, SchedWriteFCmpSizes, 0>;
 }
 
 // VCOMISBF16

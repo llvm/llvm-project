@@ -20,6 +20,14 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(
   switch (ID) {
   case Intrinsic::dx_wave_readlane:
     return ScalarOpdIdx == 1;
+  case Intrinsic::dx_wave_multi_prefix_bit_and:
+  case Intrinsic::dx_wave_multi_prefix_bit_or:
+  case Intrinsic::dx_wave_multi_prefix_bit_xor:
+  case Intrinsic::dx_wave_multi_prefix_product:
+  case Intrinsic::dx_wave_multi_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_sum:
+  case Intrinsic::dx_wave_multi_prefix_usum:
+    return ScalarOpdIdx >= 1 && ScalarOpdIdx <= 4;
   default:
     return false;
   }
@@ -32,6 +40,7 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   case Intrinsic::dx_firstbitlow:
   case Intrinsic::dx_firstbitshigh:
   case Intrinsic::dx_firstbituhigh:
+  case Intrinsic::dx_isfinite:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_legacyf16tof32:
@@ -43,4 +52,11 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
     // otherwise
     return OpdIdx == -1;
   }
+}
+
+unsigned DirectXTTIImpl::getMinimumLookupTableEntryBitWidth() const {
+  // DXIL does not support i8, so switch lookup tables must not be narrowed
+  // below the minimum legal integer width. When native 16-bit types are
+  // enabled (-enable-16bit-types) the minimum is i16, otherwise it is i32.
+  return HasNativeLowPrecision ? 16 : 32;
 }

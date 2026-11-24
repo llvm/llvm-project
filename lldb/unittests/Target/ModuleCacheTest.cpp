@@ -138,7 +138,7 @@ TEST_F(ModuleCacheTest, GetAndPutUuidExists) {
 
   FileSpec uuid_view = GetUuidView(test_cache_dir);
   std::error_code ec =
-      llvm::sys::fs::create_directories(uuid_view.GetDirectory().GetCString());
+      llvm::sys::fs::create_directories(uuid_view.GetDirectory());
   ASSERT_FALSE(ec);
   ec = llvm::sys::fs::copy_file(s_test_executable, uuid_view.GetPath().c_str());
   ASSERT_FALSE(ec);

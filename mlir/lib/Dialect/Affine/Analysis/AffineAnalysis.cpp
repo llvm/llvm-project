@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -134,6 +135,21 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
 }
 
+/// Returns true if all memory effects of `op` free memory that is allocated
+/// locally to `enclosingOp`.
+static bool freesOnlyLocallyDefined(Operation *op, Operation *enclosingOp) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  memOp.getEffects(effects);
+  return !effects.empty() &&
+         llvm::all_of(effects, [&](const MemoryEffects::EffectInstance &e) {
+           return isa<MemoryEffects::Free>(e.getEffect()) && e.getValue() &&
+                  isLocallyDefined(e.getValue(), enclosingOp);
+         });
+}
+
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
   if (llvm::any_of(forOp.getResultTypes(), llvm::IsaPred<BaseMemRefType>))
@@ -152,9 +168,11 @@ bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
         loadAndStoreOps.push_back(op);
     } else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
                !hasSingleEffect<MemoryEffects::Allocate>(op) &&
-               !isMemoryEffectFree(op)) {
+               !freesOnlyLocallyDefined(op, forOp) && !isMemoryEffectFree(op)) {
       // Alloc-like ops inside `forOp` are fine (they don't impact parallelism)
       // as long as they don't escape the loop (which has been checked above).
+      // So are dealloc-like ops freeing such allocations. Freeing other memory
+      // may race with accesses to it from other iterations.
       return WalkResult::interrupt();
     }
 
@@ -455,15 +473,11 @@ static void computeDirectionVector(
   }
 }
 
-LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
-  // Create set corresponding to domain of access.
-  FlatAffineValueConstraints domain;
-  if (failed(getOpIndexSet(opInst, &domain)))
-    return failure();
-
+LogicalResult
+mlir::affine::getAccessRelation(const AffineValueMap &accessValueMap,
+                                const FlatAffineValueConstraints &domain,
+                                IntegerRelation &rel) {
   // Get access relation from access map.
-  AffineValueMap accessValueMap;
-  getAccessMap(&accessValueMap);
   if (failed(getRelationFromMap(accessValueMap, rel)))
     return failure();
 
@@ -501,6 +515,17 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
                      VarKind::Domain);
 
   return success();
+}
+
+LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
+  // Create set corresponding to domain of access.
+  FlatAffineValueConstraints domain;
+  if (failed(getOpIndexSet(opInst, &domain)))
+    return failure();
+
+  AffineValueMap accessValueMap;
+  getAccessMap(&accessValueMap);
+  return mlir::affine::getAccessRelation(accessValueMap, domain, rel);
 }
 
 // Populates 'accessMap' with composition of AffineApplyOps reachable from
@@ -650,16 +675,29 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   // Note: this check is skipped if 'allowRAR' is true, because RAR deps
   // can exist irrespective of lexicographic ordering b/w src and dst.
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
-  assert(loopDepth <= numCommonLoops + 1);
+  assert(loopDepth <= numCommonLoops + 1 && "Invalid depth");
   if (!allowRAR && loopDepth > numCommonLoops &&
       !srcAppearsBeforeDstInAncestralBlock(srcAccess, dstAccess)) {
     return DependenceResult::NoDependence;
   }
 
+  return checkAccessDependence(std::move(srcRel), std::move(dstRel), loopDepth,
+                               dependenceConstraints, dependenceComponents);
+}
+
+DependenceResult mlir::affine::checkAccessDependence(
+    IntegerRelation &&srcRel, IntegerRelation &&dstRel, unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints,
+    SmallVector<DependenceComponent, 2> *dependenceComponents) {
+  FlatAffineValueConstraints srcDomain(srcRel.getDomainSet());
+  FlatAffineValueConstraints dstDomain(dstRel.getDomainSet());
+  assert(loopDepth <= getNumCommonLoops(srcDomain, dstDomain) + 1 &&
+         "Invalid depth");
+
   // Compute the dependence relation by composing `srcRel` with the inverse of
-  // `dstRel`. Doing this builds a relation between iteration domain of
-  // `srcAccess` to the iteration domain of `dstAccess` which access the same
-  // memory locations.
+  // `dstRel`. Doing this builds a relation between the iteration domain of the
+  // source access to the iteration domain of the destination access which
+  // access the same memory locations.
   dstRel.inverse();
   // For 0-d spaces, there will be no IDs. Enable if that's the case.
   if (!dstRel.getSpace().isUsingIds())
@@ -686,9 +724,8 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   LLVM_DEBUG(llvm::dbgs() << "Dependence polyhedron:\n");
   LLVM_DEBUG(dependenceDomain.dump());
 
-  FlatAffineValueConstraints result(dependenceDomain);
   if (dependenceConstraints)
-    *dependenceConstraints = result;
+    *dependenceConstraints = FlatAffineValueConstraints(dependenceDomain);
   return DependenceResult::HasDependence;
 }
 
@@ -720,7 +757,7 @@ void mlir::affine::getDependenceComponents(
             srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &depComps);
         if (hasDependence(result))
-          depCompsVec->push_back(depComps);
+          depCompsVec->push_back(std::move(depComps));
       }
     }
   }

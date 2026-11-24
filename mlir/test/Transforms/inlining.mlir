@@ -28,7 +28,7 @@ func.func @noinline_with_arg(%arg0 : i32) -> i32 {
   // CHECK-NEXT: func_with_arg
   // CHECK-NEXT: return
 
-  %0 = call @func_with_arg(%arg0) {no_inline} : (i32) -> i32
+  %0 = call @func_with_arg(%arg0) <no_inline> : (i32) -> i32
   return %0 : i32
 }
 
@@ -419,4 +419,20 @@ func.func @inline_functional_region_multiblock(%arg0: i32) -> i32 {
   }) : () -> ((i32) -> i32)
   %0 = call_indirect %fn(%arg0) : (i32) -> i32
   return %0 : i32
+}
+
+// A func.func callee that ends in ub.unreachable must not take the single-block
+// fast path, which would erase the terminator.
+func.func @func_with_ub_unreachable() {
+  ub.unreachable
+}
+
+// CHECK-LABEL: func @inline_ub_unreachable(
+func.func @inline_ub_unreachable() {
+  // CHECK-NOT:  call
+  // CHECK:      ub.unreachable
+  // CHECK-NEXT: ^{{.*}}:
+  // CHECK-NEXT: return
+  call @func_with_ub_unreachable() : () -> ()
+  return
 }

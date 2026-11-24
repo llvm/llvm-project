@@ -105,6 +105,7 @@ def ObjCInterfaceType : TypeNode<ObjCObjectType>, AlwaysCanonical;
 def ObjCObjectPointerType : TypeNode<Type>;
 def BoundsAttributedType : TypeNode<Type, 1>;
 def CountAttributedType : TypeNode<BoundsAttributedType>, NeverCanonical;
+def LateParsedAttrType : TypeNode<Type>, NeverCanonical;
 def PipeType : TypeNode<Type>;
 def AtomicType : TypeNode<Type>;
 def BitIntType : TypeNode<Type>;

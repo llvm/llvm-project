@@ -1,10 +1,12 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++11 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
-// RUN:   -target-cpu gfx906 | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu9.06-amd-amdhsa -fcuda-is-device -x hip %s   -std=c++11 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - | FileCheck %s %}
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++11 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
-// RUN:   -target-cpu gfx906 | FileCheck -check-prefix=NEGCHK %s
+// RUN: | FileCheck -check-prefix=NEGCHK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu9.06-amd-amdhsa -fcuda-is-device -x hip %s   -std=c++11 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - | FileCheck -check-prefix=NEGCHK %s %}
 
 #include "Inputs/cuda.h"
 

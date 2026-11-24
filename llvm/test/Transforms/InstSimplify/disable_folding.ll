@@ -31,9 +31,10 @@ define float @test_llvm_sin() {
 }
 
 ; Should not be folded, even when -disable-fp-call-folding is not set, as it is marked as strictfp.
-define float @test_fmax_ftz_nan_f_strictfp() {
-; CHECK-LABEL: define float @test_fmax_ftz_nan_f_strictfp() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fmax.ftz.nan.f(float 1.250000e+00, float -2.000000e+00) #[[ATTR1:[0-9]+]]
+define float @test_fmax_ftz_nan_f_strictfp() #1 {
+; CHECK-LABEL: define float @test_fmax_ftz_nan_f_strictfp(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fmax.ftz.nan.f(float 1.250000e+00, float -2.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.nvvm.fmax.ftz.nan.f(float 1.25, float -2.0) #1
@@ -42,9 +43,10 @@ define float @test_fmax_ftz_nan_f_strictfp() {
 
 ; Check that strictfp disables folding for LLVM math intrinsics like sin.f32
 ; even when -disable-fp-call-folding is not set.
-define float @test_llvm_sin_strictfp() {
-; CHECK-LABEL: define float @test_llvm_sin_strictfp() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.sin.f32(float 5.000000e-01) #[[ATTR1]]
+define float @test_llvm_sin_strictfp() #1 {
+; CHECK-LABEL: define float @test_llvm_sin_strictfp(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.sin.f32(float 5.000000e-01) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.sin.f32(float 0.5) #1

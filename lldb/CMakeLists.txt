@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.31.0)
 set(LLVM_SUBPROJECT_TITLE "LLDB")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -49,7 +49,6 @@ if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
 endif()
 
 if (WIN32)
-  add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
   if (NOT MSVC)
     # _BSD_SOURCE is required for MinGW's getopt.h to define optreset
     add_definitions(-D_BSD_SOURCE)
@@ -101,12 +100,22 @@ if (LLDB_ENABLE_PYTHON)
   if(WIN32)
     # On Windows, FindPython3 doesn't reliably expose the runtime DLL path,
     # only the import library. CPython's DLL naming is standard.
-    if(MINGW)
-      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-          "libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dll")
+    if(LLDB_ENABLE_PYTHON_LIMITED_API)
+      if(MINGW)
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "libpython${Python3_VERSION_MAJOR}.dll")
+      else()
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "python${Python3_VERSION_MAJOR}.dll")
+      endif()
     else()
-      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-          "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
+      if(MINGW)
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dll")
+      else()
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
+      endif()
     endif()
     message(STATUS "LLDB Python runtime DLL: ${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME} "
                    "(Python3_VERSION=${Python3_VERSION}, "

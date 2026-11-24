@@ -19,8 +19,6 @@
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -46,15 +44,14 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   unsigned IsBSS : 1;
 
   // Indicates that the PR symbol needs to set the length of the section to a
-  // non-zero value. This is only a problem with the ADA PR - the binder will
-  // generate an error in this case.
+  // non-zero value. The binder rejects zero-length PR sections. This applies
+  // to the ADA PR and to BSS PRs for zero-size symbols.
   unsigned RequiresNonZeroLength : 1;
 
   // Set to true if the section definition was already emitted.
   mutable unsigned Emitted : 1;
 
   friend class MCContext;
-  friend class MCAsmInfoGOFF;
   friend class MCSymbolGOFF;
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
@@ -98,6 +95,17 @@ public:
     assert(isED() && "Not a ED section");
     return EDAttributes;
   }
+
+  // Returns the ESD alignment value for the ED section, computed from the
+  // MCSection alignment. Only defined for ED sections.
+  GOFF::ESDAlignment getEDAlignment() const {
+    assert(isED() && "Not a ED section");
+    uint8_t Log = Log2(getAlign());
+    if (Log > GOFF::ESD_ALIGN_4Kpage)
+      reportFatalUsageError("Unsupported alignment");
+    return static_cast<GOFF::ESDAlignment>(Log);
+  }
+
   GOFF::PRAttr getPRAttributes() const {
     assert(isPR() && "Not a PR section");
     return PRAttributes;
@@ -115,6 +123,10 @@ public:
   }
 
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
+  void setRequiresNonZeroLength() { RequiresNonZeroLength = true; }
+
+  bool isEmitted() const { return Emitted; }
+  void setEmitted() const { Emitted = true; }
 
   void setName(StringRef SectionName) { Name = SectionName; }
 

@@ -211,7 +211,10 @@ declare float @llvm.maxnum.f32(float, float)
 ; CHECK: OpFunction
 ; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
 ; CHECK: %[[#y:]] = OpFunctionParameter %[[#]]
-; CHECK: %[[#res:]] = OpExtInst %[[#]] %[[#]] fmin %[[#x]] %[[#y]]
+; CHECK: %[[#minmax:]] = OpExtInst %[[#var1]] %[[#extinst_id]] fmin %[[#x]] %[[#y]]
+; CHECK: %[[#signed:]] = OpExtInst %[[#var1]] %[[#extinst_id]] copysign %[[#minmax]] %[[#]]
+; CHECK: %[[#uno:]] = OpUnordered %[[#]] %[[#x]] %[[#y]]
+; CHECK: %[[#res:]] = OpSelect %[[#var1]] %[[#uno]] %[[#]] %[[#signed]]
 ; CHECK: OpReturnValue %[[#res]]
 
 define spir_func float @TestMinimum(float %x, float %y) {
@@ -225,7 +228,10 @@ declare float @llvm.minimum.f32(float, float)
 ; CHECK: OpFunction
 ; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
 ; CHECK: %[[#y:]] = OpFunctionParameter %[[#]]
-; CHECK: %[[#res:]] = OpExtInst %[[#]] %[[#]] fmax %[[#x]] %[[#y]]
+; CHECK: %[[#minmax:]] = OpExtInst %[[#var1]] %[[#extinst_id]] fmax %[[#x]] %[[#y]]
+; CHECK: %[[#signed:]] = OpExtInst %[[#var1]] %[[#extinst_id]] copysign %[[#minmax]] %[[#]]
+; CHECK: %[[#uno:]] = OpUnordered %[[#]] %[[#x]] %[[#y]]
+; CHECK: %[[#res:]] = OpSelect %[[#var1]] %[[#uno]] %[[#]] %[[#signed]]
 ; CHECK: OpReturnValue %[[#res]]
 
 define spir_func float @TestMaximum(float %x, float %y) {
@@ -399,6 +405,42 @@ if.end:
   br label %return
 
 return:
+  ret void
+}
+
+; Only the fractional part is used, so the integral part must not be loaded
+; back from the scratch pointer.
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#fracPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK-NOT: OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#fracPtr]] %[[#frac]]
+; CHECK: OpFunctionEnd
+define void @TestModfFracOnly(double %d, ptr addrspace(1) %frac) {
+entry:
+  %0 = tail call { double, double } @llvm.modf.f64(double %d)
+  %1 = extractvalue { double, double } %0, 0
+  store double %1, ptr addrspace(1) %frac, align 8
+  ret void
+}
+
+; Only the integral part is used, so it must still be loaded back from the
+; scratch pointer.
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#integralPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK: %[[#integral:]] = OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#integralPtr]] %[[#integral]]
+; CHECK: OpFunctionEnd
+define void @TestModfIntegralOnly(double %d, ptr addrspace(1) %integral) {
+entry:
+  %0 = tail call { double, double } @llvm.modf.f64(double %d)
+  %1 = extractvalue { double, double } %0, 1
+  store double %1, ptr addrspace(1) %integral, align 8
   ret void
 }
 

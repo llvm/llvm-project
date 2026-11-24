@@ -14,6 +14,12 @@
 ; RUN:   -nvvm-reflect-add __CUSTOM_VALUE=42 %s -S \
 ; RUN:   | FileCheck %s --check-prefixes=COMMON,CUSTOM-PRESENT
 
+; Comma-separated lists accumulate across occurrences, with the last winning.
+; RUN: opt -passes=nvvm-reflect -mtriple=nvptx-nvidia-cuda \
+; RUN:   -nvvm-reflect-add=__CUDA_FTZ=1,__CUDA_ARCH=350 \
+; RUN:   -nvvm-reflect-add=__CUDA_FTZ=0,__CUSTOM_VALUE=42 %s -S \
+; RUN:   | FileCheck %s --check-prefixes=COMMON,FTZ0,ARCH350,CUSTOM-PRESENT
+
 ; To ensure that command line options override module options, create a copy of this test file 
 ; with module options appended and rerun some tests.
 

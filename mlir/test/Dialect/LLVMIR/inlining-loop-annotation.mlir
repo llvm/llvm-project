@@ -42,7 +42,7 @@ llvm.func @callee() {
   llvm.br ^head
 ^head:
   %c = llvm.call @cond() : () -> i1
-  llvm.cond_br %c, ^head, ^exit {loop_annotation = #loopMD}
+  llvm.cond_br %c, ^head, ^exit loop_annotation = #loopMD
 ^exit:
   llvm.return
 }
@@ -50,7 +50,7 @@ llvm.func @callee() {
 // CHECK: @loop_annotation
 llvm.func @loop_annotation() {
   // CHECK: llvm.cond_br
-  // CHECK-SAME: {loop_annotation = #[[LOOP_ANNOT]]
+  // CHECK-SAME: loop_annotation = #[[LOOP_ANNOT]]
   llvm.call @callee() : () -> () loc(#call_loc)
   llvm.return
 } loc(#caller_loc)

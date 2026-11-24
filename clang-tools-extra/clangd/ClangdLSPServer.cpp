@@ -41,7 +41,6 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -1003,23 +1002,29 @@ static std::vector<SymbolInformation>
 flattenSymbolHierarchy(llvm::ArrayRef<DocumentSymbol> Symbols,
                        const URIForFile &FileURI) {
   std::vector<SymbolInformation> Results;
-  std::function<void(const DocumentSymbol &, llvm::StringRef)> Process =
-      [&](const DocumentSymbol &S, std::optional<llvm::StringRef> ParentName) {
-        SymbolInformation SI;
-        SI.containerName = std::string(ParentName ? "" : *ParentName);
-        SI.name = S.name;
-        SI.kind = S.kind;
-        SI.location.range = S.range;
-        SI.location.uri = FileURI;
+  struct SymbolHierarchyFlattener {
+    const URIForFile &FileURI;
+    std::vector<SymbolInformation> &Results;
 
-        Results.push_back(std::move(SI));
-        std::string FullName =
-            !ParentName ? S.name : (ParentName->str() + "::" + S.name);
-        for (auto &C : S.children)
-          Process(C, /*ParentName=*/FullName);
-      };
-  for (auto &S : Symbols)
-    Process(S, /*ParentName=*/"");
+    void append(const DocumentSymbol &S,
+                std::optional<llvm::StringRef> ParentName) {
+      SymbolInformation SI;
+      SI.containerName = std::string(ParentName ? "" : *ParentName);
+      SI.name = S.name;
+      SI.kind = S.kind;
+      SI.location.range = S.range;
+      SI.location.uri = FileURI;
+
+      Results.push_back(std::move(SI));
+      std::string FullName =
+          !ParentName ? S.name : (ParentName->str() + "::" + S.name);
+      for (const DocumentSymbol &C : S.children)
+        append(C, /*ParentName=*/FullName);
+    }
+  };
+  SymbolHierarchyFlattener Flattener{FileURI, Results};
+  for (const DocumentSymbol &S : Symbols)
+    Flattener.append(S, /*ParentName=*/"");
   return Results;
 }
 
@@ -1655,7 +1660,7 @@ void ClangdLSPServer::onAST(const ASTParams &Params,
 }
 
 ClangdLSPServer::ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
-                                 const ClangdLSPServer::Options &Opts)
+                                 ClangdLSPServer::Options &&Opts)
     : ShouldProfile(/*Period=*/std::chrono::minutes(5),
                     /*Delay=*/std::chrono::minutes(1)),
       ShouldCleanupMemory(/*Period=*/std::chrono::minutes(1),
@@ -1663,12 +1668,13 @@ ClangdLSPServer::ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
       BackgroundContext(Context::current().clone()), Transp(Transp),
       MsgHandler(new MessageHandler(*this)), TFS(TFS),
       SupportedSymbolKinds(defaultSymbolKinds()),
-      SupportedCompletionItemKinds(defaultCompletionItemKinds()), Opts(Opts) {
-  if (Opts.ConfigProvider) {
-    assert(!Opts.ContextProvider &&
+      SupportedCompletionItemKinds(defaultCompletionItemKinds()),
+      Opts(std::move(Opts)) {
+  if (this->Opts.ConfigProvider) {
+    assert(!this->Opts.ContextProvider &&
            "Only one of ConfigProvider and ContextProvider allowed!");
     this->Opts.ContextProvider = ClangdServer::createConfiguredContextProvider(
-        Opts.ConfigProvider, this);
+        this->Opts.ConfigProvider.get(), this);
   }
   LSPBinder Bind(this->Handlers, *this);
   Bind.method("initialize", this, &ClangdLSPServer::onInitialize);

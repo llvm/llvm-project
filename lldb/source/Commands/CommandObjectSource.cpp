@@ -146,7 +146,7 @@ protected:
     assert(target && "target guaranteed by eCommandRequiresTarget");
     uint32_t num_matches = 0;
     // Dump all the line entries for the file in the list.
-    ConstString last_module_file_name;
+    llvm::StringRef last_module_file_name;
     for (const SymbolContext &sc : sc_list) {
       if (sc.comp_unit) {
         Module *module = sc.module_sp.get();
@@ -168,8 +168,8 @@ protected:
           continue;
 
         // Print a new header if the module changed.
-        ConstString module_file_name = module->GetFileSpec().GetFilename();
-        assert(module_file_name);
+        llvm::StringRef module_file_name = module->GetFileSpec().GetFilename();
+        assert(!module_file_name.empty());
         if (module_file_name != last_module_file_name) {
           if (num_matches > 0)
             strm << "\n\n";
@@ -202,8 +202,8 @@ protected:
     uint32_t num_matches = 0;
     assert(module);
     if (cu) {
-      assert(file_spec.GetFilename().AsCString(nullptr));
-      bool has_path = (file_spec.GetDirectory().AsCString(nullptr) != nullptr);
+      assert(!file_spec.GetFilename().empty());
+      bool has_path = !file_spec.GetDirectory().empty();
       const SupportFileList &cu_file_list = cu->GetSupportFiles();
       size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
       if (file_idx != UINT32_MAX) {
@@ -213,8 +213,8 @@ protected:
 
         // Dump all matching lines at or above start_line for the file in the
         // CU.
-        ConstString file_spec_name = file_spec.GetFilename();
-        ConstString module_file_name = module->GetFileSpec().GetFilename();
+        llvm::StringRef file_spec_name = file_spec.GetFilename();
+        llvm::StringRef module_file_name = module->GetFileSpec().GetFilename();
         bool cu_header_printed = false;
         uint32_t line = start_line;
         while (true) {
@@ -369,7 +369,7 @@ protected:
   // the option.
   bool DumpLinesInFunctions(CommandReturnObject &result) {
     SymbolContextList sc_list_funcs;
-    ConstString name(m_options.symbol_name);
+    llvm::StringRef name = m_options.symbol_name;
     SymbolContextList sc_list_lines;
     Target *target = GetTarget();
     assert(target && "target guaranteed by eCommandRequiresTarget");
@@ -753,11 +753,11 @@ protected:
     bool operator<(const SourceInfo &rhs) const {
       if (function.GetCString() < rhs.function.GetCString())
         return true;
-      if (line_entry.GetFile().GetDirectory().GetCString() <
-          rhs.line_entry.GetFile().GetDirectory().GetCString())
+      if (line_entry.GetFile().GetDirectory() <
+          rhs.line_entry.GetFile().GetDirectory())
         return true;
-      if (line_entry.GetFile().GetFilename().GetCString() <
-          rhs.line_entry.GetFile().GetFilename().GetCString())
+      if (line_entry.GetFile().GetFilename() <
+          rhs.line_entry.GetFile().GetFilename())
         return true;
       if (line_entry.line < rhs.line_entry.line)
         return true;
@@ -851,7 +851,7 @@ protected:
   // these somewhere, there should probably be a module-filter-list that can be
   // passed to the various ModuleList::Find* calls, which would either be a
   // vector of string names or a ModuleSpecList.
-  void FindMatchingFunctions(Target &target, ConstString name,
+  void FindMatchingFunctions(Target &target, llvm::StringRef name,
                              SymbolContextList &sc_list) {
     // Displaying the source for a symbol:
     if (m_options.num_lines == 0)
@@ -881,7 +881,7 @@ protected:
     }
   }
 
-  void FindMatchingFunctionSymbols(Target &target, ConstString name,
+  void FindMatchingFunctionSymbols(Target &target, llvm::StringRef name,
                                    SymbolContextList &sc_list) {
     const size_t num_modules = m_options.modules.size();
     if (num_modules > 0) {
@@ -907,7 +907,7 @@ protected:
     assert(target && "target guaranteed by eCommandRequiresTarget");
     if (!m_options.symbol_name.empty()) {
       SymbolContextList sc_list;
-      ConstString name(m_options.symbol_name);
+      llvm::StringRef name = m_options.symbol_name;
 
       // Displaying the source for a symbol. Search for function named name.
       FindMatchingFunctions(*target, name, sc_list);

@@ -7,6 +7,27 @@
 @e = global i32 0, align 4
 @a = global i32 0, align 4
 
+; All-zero branch weights give no probability to derive, and their sum would be
+; a division-by-zero denominator. Say the profile is unknown instead of
+; deriving one from them.
+; CHECK-LABEL: @zero_branch_weights
+; CHECK:         br i1 %cond.fr{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[UNK:[0-9]+]]
+define i32 @zero_branch_weights(i1 %c, i1 %d) !prof !0 {
+entry:
+  br i1 %d, label %a, label %b
+
+a:
+  br label %join
+
+b:
+  br label %join
+
+join:
+  %p = phi i1 [ true, %a ], [ %c, %b ]
+  %s = select i1 %p, i32 0, i32 2, !prof !3
+  ret i32 %s
+}
+
 ; CHECK-LABEL: @test
 define i32 @test() !prof !0 {
 bb:
@@ -53,6 +74,8 @@ bb18:
 !0 = !{!"function_entry_count", i64 10}
 !1 = !{!"branch_weights", i32 5, i32 5}
 !2 = !{!"branch_weights", i32 0, i32 10}
+!3 = !{!"branch_weights", i32 0, i32 0}
 
 ; CHECK: br i1 %cond.fr{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[MD:[0-9]+]]
+; CHECK: ![[UNK]] = !{!"unknown", !"jump-threading"}
 ; CHECK: ![[MD]] = !{!"branch_weights", i32 0, i32 -2147483648}

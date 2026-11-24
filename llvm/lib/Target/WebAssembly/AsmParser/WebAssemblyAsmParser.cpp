@@ -291,7 +291,6 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   std::vector<Nested> NestingStack;
 
   MCSymbolWasm *DefaultFunctionTable = nullptr;
-  MCSymbol *LastFunctionLabel = nullptr;
 
   bool Is64;
 
@@ -305,18 +304,7 @@ public:
       : MCTargetAsmParser(STI, MII), Parser(Parser), Lexer(Parser.getLexer()),
         Is64(STI.getTargetTriple().isArch64Bit()), TC(Parser, MII, Is64),
         SkipTypeCheck(Parser.getContext().getTargetOptions().MCNoTypeCheck) {
-    FeatureBitset FBS = ComputeAvailableFeatures(STI.getFeatureBits());
-
-    // bulk-memory implies bulk-memory-opt
-    if (FBS.test(WebAssembly::FeatureBulkMemory)) {
-      FBS.set(WebAssembly::FeatureBulkMemoryOpt);
-    }
-    // reference-types implies call-indirect-overlong
-    if (FBS.test(WebAssembly::FeatureReferenceTypes)) {
-      FBS.set(WebAssembly::FeatureCallIndirectOverlong);
-    }
-
-    setAvailableFeatures(FBS);
+    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
     // Don't type check if this is inline asm, since that is a naked sequence of
     // instructions without a function/locals decl.
     auto &SM = Parser.getSourceManager();
@@ -525,9 +513,10 @@ public:
                   .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
                   .Default(-1);
       if (Order != -1) {
-        if (!STI->checkFeatures("+relaxed-atomics"))
-          return error("memory ordering requires relaxed-atomics feature: ",
-                       Tok);
+        if (!STI->checkFeatures("+acquire-release-atomics"))
+          return error(
+              "memory ordering requires acquire-release-atomics feature: ",
+              Tok);
         Parser.Lex();
       } else {
         Order = wasm::WASM_MEM_ORDER_SEQ_CST;
@@ -1116,7 +1105,6 @@ public:
           push(Function);
         }
         CurrentState = FunctionStart;
-        LastFunctionLabel = WasmSym;
       }
       auto *Signature = Ctx.createWasmSignature();
       if (parseSignature(Signature))
@@ -1383,7 +1371,6 @@ public:
       //   ...  . Not this line, which can contain any instruction
       ensureEmptyNestingStack(IDLoc);
       CurrentState = FunctionLabel;
-      LastFunctionLabel = Symbol;
       push(Function);
     }
   }

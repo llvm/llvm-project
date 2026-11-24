@@ -11,7 +11,9 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/ThreadCollection.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "Utils.h"
 
@@ -60,7 +62,7 @@ const char *SBSaveCoreOptions::GetPluginName() const {
   const auto name = m_opaque_up->GetPluginName();
   if (!name)
     return nullptr;
-  return lldb_private::ConstString(name.value()).GetCString();
+  return lldb_private::StringPool::GetSystemPool().Intern(name.value());
 }
 
 SBFileSpec SBSaveCoreOptions::GetOutputFile() const {

@@ -98,6 +98,13 @@ StructuredBuffer<float> SB[10];
 [[vk::binding(2)]]
 StructuredBuffer<float> SB2[10];
 
+// Regression test: the register attribute's SourceRange should span the
+// full `register(...)` construct (not just the `register` keyword), so
+// that clangd hover works when the cursor is inside the argument list.
+// CHECK: VarDecl {{.*}} rangeTest 'RWBuffer<float>':'hlsl::RWBuffer<float>'
+// CHECK: HLSLResourceBindingAttr {{.*}} "u7" "space0"
+RWBuffer<float> rangeTest : register(u7);
+
 // $Globals should have implicit binding attribute added by SemaHLSL
 // CHECK: HLSLBufferDecl {{.*}} implicit cbuffer $Globals
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"

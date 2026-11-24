@@ -53,16 +53,30 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Remarks.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace mlir {
 namespace acc {
+
+/// How the name of a variable is to be rendered.
+struct VariableNameConfig {
+  /// Render the name the source language spells, which is the name a message
+  /// to the user states. When false, the name the variable is emitted under is
+  /// rendered instead - for a global the symbol it is addressed through -
+  /// which is the name it is resolved against the symbols of a binary by. Only
+  /// a language that uniques or mangles the names of its variables spells the
+  /// two differently.
+  bool preferDemangledName = true;
+};
 
 namespace detail {
 /// This class contains internal trait classes used by OpenACCSupport.
@@ -74,7 +88,7 @@ struct OpenACCSupportTraits {
     virtual ~Concept() = default;
 
     /// Get the variable name for a given MLIR value.
-    virtual std::string getVariableName(Value v) = 0;
+    virtual std::string getVariableName(Value v, VariableNameConfig config) = 0;
 
     /// Get the recipe name for a given kind, type and value.
     virtual std::string getRecipeName(RecipeKind kind, Type type,
@@ -96,11 +110,17 @@ struct OpenACCSupportTraits {
                                   Operation **definingOpPtr) = 0;
 
     /// Check if a value use is legal in an OpenACC region.
-    virtual bool isValidValueUse(Value v, mlir::Region &region) = 0;
+    virtual bool isValidValueUse(Value v, mlir::Region &region,
+                                 SymbolTableCollection *symbolTables) = 0;
 
     /// Get or optionally create a GPU module in the given module.
     virtual std::optional<gpu::GPUModuleOp>
     getOrCreateGPUModule(ModuleOp mod, bool create, llvm::StringRef name) = 0;
+
+    /// Returns the size and ABI alignment in bytes for \p ty.
+    virtual std::optional<TypeSizeAndAlignment>
+    getTypeSizeAndAlignment(Type ty, ModuleOp module,
+                            OpenACCSupport &support) = 0;
   };
 
   /// SFINAE helpers to detect if implementation has optional methods
@@ -118,8 +138,15 @@ struct OpenACCSupportTraits {
   using isValidValueUse_t =
       decltype(std::declval<ImplT>().isValidValueUse(std::declval<Args>()...));
 
+  /// An implementation may take the symbol table cache or, for compatibility,
+  /// only the value and the region.
   template <typename ImplT>
   using has_isValidValueUse =
+      llvm::is_detected<isValidValueUse_t, ImplT, Value, Region &,
+                        SymbolTableCollection *>;
+
+  template <typename ImplT>
+  using has_isValidValueUseNoSymbolTables =
       llvm::is_detected<isValidValueUse_t, ImplT, Value, Region &>;
 
   template <typename ImplT, typename... Args>
@@ -141,6 +168,16 @@ struct OpenACCSupportTraits {
       llvm::is_detected<getOrCreateGPUModule_t, ImplT, ModuleOp, bool,
                         llvm::StringRef>;
 
+  template <typename ImplT, typename... Args>
+  using getTypeSizeAndAlignment_t =
+      decltype(std::declval<ImplT>().getTypeSizeAndAlignment(
+          std::declval<Args>()...));
+
+  template <typename ImplT>
+  using has_getTypeSizeAndAlignment =
+      llvm::is_detected<getTypeSizeAndAlignment_t, ImplT, Type, ModuleOp,
+                        OpenACCSupport &>;
+
   /// This class wraps a concrete OpenACCSupport implementation and forwards
   /// interface calls to it. This provides type erasure, allowing different
   /// implementation types to be used interchangeably without inheritance.
@@ -152,8 +189,8 @@ struct OpenACCSupportTraits {
     explicit Model(ImplT &&impl) : impl(std::forward<ImplT>(impl)) {}
     ~Model() override = default;
 
-    std::string getVariableName(Value v) final {
-      return impl.getVariableName(v);
+    std::string getVariableName(Value v, VariableNameConfig config) final {
+      return impl.getVariableName(v, config);
     }
 
     std::string getRecipeName(RecipeKind kind, Type type, Value var) final {
@@ -181,11 +218,14 @@ struct OpenACCSupportTraits {
         return acc::isValidSymbolUse(user, symbol, definingOpPtr);
     }
 
-    bool isValidValueUse(Value v, Region &region) final {
+    bool isValidValueUse(Value v, Region &region,
+                         SymbolTableCollection *symbolTables) final {
       if constexpr (has_isValidValueUse<ImplT>::value)
+        return impl.isValidValueUse(v, region, symbolTables);
+      else if constexpr (has_isValidValueUseNoSymbolTables<ImplT>::value)
         return impl.isValidValueUse(v, region);
       else
-        return acc::isValidValueUse(v, region);
+        return acc::isValidValueUse(v, region, symbolTables);
     }
 
     std::optional<gpu::GPUModuleOp>
@@ -195,6 +235,15 @@ struct OpenACCSupportTraits {
         return impl.getOrCreateGPUModule(mod, create, name);
       else
         return acc::getOrCreateGPUModule(mod, create, name);
+    }
+
+    std::optional<TypeSizeAndAlignment>
+    getTypeSizeAndAlignment(Type ty, ModuleOp module,
+                            OpenACCSupport &support) final {
+      if constexpr (has_getTypeSizeAndAlignment<ImplT>::value)
+        return impl.getTypeSizeAndAlignment(ty, module, support);
+      else
+        return acc::getTypeSizeAndAlignment(ty, module, &support);
     }
 
   private:
@@ -225,11 +274,15 @@ public:
         std::make_unique<Model<AnalysisT>>(std::forward<AnalysisT>(analysis));
   }
 
-  /// Get the variable name for a given value.
+  /// Get the variable name for a given value. Which of the names a variable
+  /// goes by is a question only an implementation that knows the source
+  /// language can answer, so the default implementation returns the one name
+  /// the IR states regardless of \p config.
   ///
   /// \param v The MLIR value to get the variable name for.
+  /// \param config Which of the names of the variable to return.
   /// \return The variable name, or an empty string if unavailable.
-  std::string getVariableName(Value v);
+  std::string getVariableName(Value v, VariableNameConfig config = {});
 
   /// Get the recipe name for a given type and value.
   ///
@@ -247,7 +300,11 @@ public:
   /// \param message The message to report.
   /// \return An in-flight diagnostic object that can be used to report the
   ///         unsupported case.
-  InFlightDiagnostic emitNYI(Location loc, const Twine &message);
+  InFlightDiagnostic emitNYI(Location loc, const Twine &message) {
+    if (impl)
+      return impl->emitNYI(loc, message);
+    return mlir::emitError(loc, "not yet implemented: " + message);
+  }
 
   /// Emit an OpenACC remark with lazy message generation.
   ///
@@ -293,7 +350,11 @@ public:
   ///
   /// \param v The MLIR value to check for legality.
   /// \param region The MLIR region in which the legality is checked.
-  bool isValidValueUse(Value v, Region &region);
+  /// \param symbolTables Optional cache of symbol tables used to resolve
+  ///        symbols. Pass one when checking many values of the same module:
+  ///        without it each symbol lookup scans the whole module.
+  bool isValidValueUse(Value v, Region &region,
+                       SymbolTableCollection *symbolTables = nullptr);
 
   /// Get or optionally create a GPU module in the given module.
   ///
@@ -306,6 +367,15 @@ public:
   std::optional<gpu::GPUModuleOp>
   getOrCreateGPUModule(ModuleOp mod, bool create = true,
                        llvm::StringRef name = "");
+
+  /// Returns the size and ABI alignment in bytes for \p ty.
+  std::optional<TypeSizeAndAlignment> getTypeSizeAndAlignment(Type ty,
+                                                              ModuleOp module) {
+    if (impl)
+      if (auto result = impl->getTypeSizeAndAlignment(ty, module, *this))
+        return result;
+    return acc::getTypeSizeAndAlignment(ty, module, this);
+  }
 
   /// Signal that this analysis should always be preserved so that
   /// underlying implementation registration is not lost.

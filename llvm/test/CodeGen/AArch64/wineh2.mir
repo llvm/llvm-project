@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prolog-epilog \
 # RUN:    -filetype=obj | llvm-readobj --unwind - | FileCheck %s
 # Test that the pre/post increment save of a flating point register is correct.
 
@@ -43,9 +43,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       true
-registers:
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:

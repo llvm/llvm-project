@@ -412,6 +412,26 @@ LLVM_ABI bool cannotOrderStrictlyLess(FPClassTest LHS, FPClassTest RHS,
 LLVM_ABI bool cannotOrderStrictlyLessEq(FPClassTest LHS, FPClassTest RHS,
                                         bool OrderedZeroSign = false);
 
+/// Returns all FPClasses which are less than all values in \p Mask
+/// That is, return all classes for which the comparison
+/// `fcmp ole LHS, RHS` will always return false.
+/// Ignores nan and treats the sign of the zeroes as ordered.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI FPClassTest orderedStrictlyLess(FPClassTest Mask,
+                                         bool OrderedZeroSign = false);
+
+/// Returns all FPClasses which are greater than all values in \p Mask
+/// That is, return all classes for which the comparison
+/// `fcmp ole LHS, RHS` will always return false.
+/// Ignores nan and treats the sign of the zeroes as ordered.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI FPClassTest orderedStrictlyGreater(FPClassTest Mask,
+                                            bool OrderedZeroSign = false);
+
 } // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H

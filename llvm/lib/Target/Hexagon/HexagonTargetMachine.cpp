@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -39,6 +40,10 @@ static cl::opt<bool>
 
 static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::init(true),
                                   cl::desc("Enable RDF-based optimizations"));
+
+static cl::opt<bool> EnablePostRAHandleQFP(
+    "hexagon-handle-qfloat", cl::init(true), cl::Hidden,
+    cl::desc("Fix up QFloat spills and reloads after register allocation"));
 
 cl::opt<unsigned> RDFFuncBlockLimit(
     "rdf-bb-limit", cl::Hidden, cl::init(1000),
@@ -156,6 +161,19 @@ static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
                                         cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
+cl::opt<QFloatMode> QFloatModeValue(
+    "hexagon-qfloat-mode", cl::desc("Specify the qfloat mode to operate on."),
+    cl::Hidden, cl::init(QFloatMode::Legacy),
+    cl::values(
+        clEnumValN(QFloatMode::StrictIEEE, "strict-ieee",
+                   "Enable code generation for qfloat strict IEEE-754 mode"),
+        clEnumValN(QFloatMode::IEEE, "ieee",
+                   "Enable code generation for qfloat IEEE-754 mode"),
+        clEnumValN(QFloatMode::Lossy, "lossy",
+                   "Enable code generation for qfloat lossy-subnormals mode"),
+        clEnumValN(QFloatMode::Legacy, "legacy",
+                   "Enable code generation for qfloat legacy mode")));
+
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -169,8 +187,11 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
       C, std::make_unique<HexagonConvergingVLIWScheduler>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  DAG->addMutation(
+      std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
+  DAG->addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
   return DAG;
 }
 
@@ -188,6 +209,7 @@ LLVMInitializeHexagonTarget() {
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAlignGlobalArraysPass(PR);
   initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
@@ -197,9 +219,14 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonGlobalSchedulerPass(PR);
+  initializeHLXExpandPseudosPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
+  initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
+  initializeHexagonLowerHLXPairAllocasPass(PR);
+  initializeHexagonMergeActivateWeightPass(PR);
+  initializeHexagonMergeActivateWeight2Pass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -230,6 +257,9 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonSplitConst32AndConst64Pass(PR);
   initializeHexagonVectorPrintPass(PR);
   initializeHexagonQFPOptimizerPass(PR);
+  initializeHexagonXQFloatGeneratorPass(PR);
+  initializeHexagonPostRAHandleQFPPass(PR);
+  initializeMachineKCFILegacyPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -238,10 +268,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    // Specify the vector alignment explicitly. For v512x1, the calculated
-    // alignment would be 512*alignment(i1), which is 512 bytes, instead of
-    // the required minimum of 64 bytes.
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small),
                                (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
@@ -252,18 +279,27 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
 
 const HexagonSubtarget *
 HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
-  AttributeList FnAttrs = F.getAttributes();
-  Attribute CPUAttr = FnAttrs.getFnAttr("target-cpu");
-  Attribute FSAttr = FnAttrs.getFnAttr("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)
     I = std::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -273,12 +309,12 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
@@ -349,9 +385,14 @@ public:
   }
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
+  void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() >= CodeGenOptLevel::Default;
+  }
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -367,6 +408,11 @@ void HexagonPassConfig::addIRPasses() {
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt) {
+    // Raise the alignment of global integer arrays to 8 bytes. At -O1/-O2,
+    // reduce .rodata size by keeping byte/half-word arrays at their natural
+    // alignment; apply full 8-byte alignment at -O3.
+    addPass(createHexagonAlignGlobalArrays(getOptLevel() !=
+                                           CodeGenOptLevel::Aggressive));
     if (EnableInstSimplify)
       addPass(createInstSimplifyLegacyPass());
     addPass(createDeadCodeEliminationPass());
@@ -395,14 +441,26 @@ void HexagonPassConfig::addIRPasses() {
   }
 }
 
+bool HexagonPassConfig::addPreISel() {
+  // Functions can enable HLX through target-features, so the pass filters
+  // individual functions instead of being gated by the default subtarget.
+  addPass(createHexagonLowerHLXPairAllocas());
+  return false;
+}
+
 bool HexagonPassConfig::addInstSelector() {
   HexagonTargetMachine &TM = getHexagonTargetMachine();
+  const HexagonSubtarget *HST = TM.getHexagonSubtarget();
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt)
     addPass(createHexagonOptimizeSZextends());
 
   addPass(createHexagonISelDag(TM, getOptLevel()));
+  // Run the QFloat mode code generation pass only if v79 or greater.
+  // Do not run this pass, if legacy mode is passed on command line.
+  if (HST->useHVXV79Ops() && (QFloatModeValue != QFloatMode::Legacy))
+    addPass(createHexagonXQFloatGenerator());
 
   if (!NoOpt) {
     if (EnableVExtractOpt)
@@ -429,7 +487,10 @@ bool HexagonPassConfig::addInstSelector() {
       addPass(createHexagonGenInsert());
     if (EnableEarlyIf)
       addPass(createHexagonEarlyIfConversion());
-    addPass(createHexagonQFPOptimizer());
+    // For v75 or below, or if legacy mode is requested, run QFPOptizer pass
+    // to preserve backward compatibility.
+    if (!HST->useHVXV79Ops() || (QFloatModeValue == QFloatMode::Legacy))
+      addPass(createHexagonQFPOptimizer());
   }
 
   return false;
@@ -442,30 +503,48 @@ bool HexagonPassConfig::addILPOpts() {
   return true;
 }
 
+void HexagonPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+
+  if (EnableCExtOpt)
+    addPass(createHexagonConstExtenders());
+  if (!DisableStoreWidening)
+    addPass(createHexagonStoreWidening());
+  if (!DisableLoadWidening)
+    addPass(createHexagonLoadWidening());
+  if (EnableGenMemAbs)
+    addPass(createHexagonGenMemAbsolute());
+  if (!DisableHardwareLoops)
+    addPass(createHexagonHardwareLoops());
+}
+
 void HexagonPassConfig::addPreRegAlloc() {
+  // HMX activation/weight pairs must be adjacent before register allocation.
+  // With optimized register allocation, run after the machine scheduler,
+  // which may separate the pairs.
+  if (getOptimizeRegAlloc())
+    insertPass(&MachineSchedulerID, &HexagonMergeActivateWeightID);
+  else
+    insertPass(&PHIEliminationID, &HexagonMergeActivateWeightID);
+
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (EnableCExtOpt)
-      addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
     if (EnableCopyHoist)
       insertPass(&RegisterCoalescerID, &HexagonCopyHoistingID);
     if (EnableTfrCleanup)
       insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
-    if (!DisableStoreWidening)
-      addPass(createHexagonStoreWidening());
-    if (!DisableLoadWidening)
-      addPass(createHexagonLoadWidening());
-    if (EnableGenMemAbs)
-      addPass(createHexagonGenMemAbsolute());
-    if (!DisableHardwareLoops)
-      addPass(createHexagonHardwareLoops());
   }
-  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
-    addPass(&MachinePipelinerID);
+  addPass(createHexagonHVXSaveRemark());
 }
 
 void HexagonPassConfig::addPostRegAlloc() {
+  HexagonTargetMachine &HTM = getHexagonTargetMachine();
+  const HexagonSubtarget *HST = HTM.getHexagonSubtarget();
+  // Run PostRAQFP on v79 and above.
+  if (EnablePostRAHandleQFP && HST->useHVXV79Ops())
+    addPass(createHexagonPostRAHandleQFP());
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableRDFOpt)
       addPass(createHexagonRDFOpt());
@@ -508,8 +587,18 @@ void HexagonPassConfig::addPreEmitPass() {
       addPass(&HexagonLiveVariablesID);
   }
 
+  addPass(createHexagonMergeActivateWeight2());
+
+  // Emit KCFI checks for indirect calls. Must run before packetization so
+  // the check and call can be bundled together into a VLIW packet.
+  addPass(createKCFIPass());
+
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
+
+  // Expand HLX load/store pseudos into their final bundled form. This must run
+  // after packetization so the resulting bundles are not seen by the scheduler.
+  addPass(createHLXExpandPseudos());
 
   if (!NoOpt) {
     // Global pull-up scheduler

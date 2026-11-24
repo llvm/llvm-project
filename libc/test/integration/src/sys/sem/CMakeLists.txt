@@ -1,10 +1,9 @@
-add_custom_target(sys-sem-integration-tests)
-add_dependencies(libc-integration-tests sys-sem-integration-tests)
+add_libc_testsuite(libc-sys-sem-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   sem_test
   SUITE
-    sys-sem-integration-tests
+    libc-sys-sem-integration-tests
   SRCS
     sem_test.cpp
   DEPENDS

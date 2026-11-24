@@ -12,6 +12,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -65,8 +66,8 @@ public:
 
   bool VisitCallExpr(const CallExpr *CE) {
     const Decl *D = CE->getCalleeDecl();
-    if (D && D->hasBody())
-      return VisitBody(D->getBody());
+    if (Stmt *Body; D && (Body = D->getBody()))
+      return VisitBody(Body);
     else {
       auto name = safeGetName(D);
       if (name == "ensureOnMainThread" || name == "ensureOnMainRunLoop") {
@@ -198,8 +199,8 @@ public:
           if (!C)
             continue;
 
-          bool isExempt = T.getAsString() == "NoVirtualDestructorBase" &&
-                          safeGetName(C->getParent()) == "WTF";
+          bool isExempt = safeGetName(C->getParent()) == "WTF" &&
+                          T.getAsString() == "NoVirtualDestructorBase";
           if (isExempt || ExemptDecls.contains(C)) {
             ExemptDecls.insert(RD);
             continue;

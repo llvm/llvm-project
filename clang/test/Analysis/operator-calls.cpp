@@ -107,8 +107,13 @@ namespace SynthesizedAssignment {
   struct B {
     int x;
     A a[3];
-    B& operator=(B&) = default;
-    B& operator=(B&&) = default;
+    B& operator=(B&) = default; // #b_copy_assign
+    B& operator=(B&&) = default; // #b_move_assign
+  };
+
+  struct C { // #c_definition
+    int x;
+    A a[3];
   };
 
   // This used to produce a warning about the iteration variable in the
@@ -121,16 +126,16 @@ namespace SynthesizedAssignment {
   void testNoWarning() {
 
     B v, u;
-    u = v; // expected-warning@110{{Assigned value is uninitialized}}
+    u = v; // expected-warning@#b_copy_assign{{Value assigned to field 'x' in default assignment operator is uninitialized}}
     // expected-note@-1{{Calling defaulted copy assignment operator for 'B'}}
-    // expected-note@110{{Assigned value is uninitialized}}
+    // expected-note@#b_copy_assign{{Value assigned to field 'x' in default assignment operator is uninitialized}}
   }
 
   void testNoWarningMove() {
     B v, u;
-    u = static_cast<B &&>(v); // expected-warning@111{{Assigned value is uninitialized}}
+    u = static_cast<B &&>(v); // expected-warning@#b_move_assign{{Value assigned to field 'x' in default assignment operator is uninitialized}}
     // expected-note@-1{{Calling defaulted move assignment operator for 'B'}}
-    // expected-note@111{{Assigned value is uninitialized}}
+    // expected-note@#b_move_assign{{Value assigned to field 'x' in default assignment operator is uninitialized}}
   }
 
   void testConsistency() {
@@ -161,5 +166,12 @@ namespace SynthesizedAssignment {
     // expected-note@-1{{TRUE}}
     clang_analyzer_eval(u.a[2].a == 43); // expected-warning{{TRUE}}
     // expected-note@-1{{TRUE}}
+  }
+
+  void testImplicitAssign() {
+    C c1, c2;
+    c1 = c2; // expected-warning@#c_definition{{Value assigned to field 'x' in implicit assignment operator is uninitialized}}
+    // expected-note@-1{{Calling implicit copy assignment operator for 'C'}}
+    // expected-note@#c_definition{{Value assigned to field 'x' in implicit assignment operator is uninitialized}}
   }
 }

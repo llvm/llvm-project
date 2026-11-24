@@ -15,7 +15,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
@@ -222,12 +221,7 @@ private:
   bool handleStdGetCall(const CallEvent &Call, CheckerContext &C) const {
     ProgramStateRef State = C.getState();
 
-    SVal ArgSVal = Call.getArgSVal(0);
-    if (ArgSVal.isUnknown())
-      return false;
-
-    const auto &ArgType =
-        ArgSVal.getType(C.getASTContext())->getPointeeType().getTypePtr();
+    const auto *ArgType = Call.getArgExpr(0)->getType().getTypePtr();
     // We have to make sure that the argument is an std::variant.
     // There is another std::get with std::pair argument
     if (!isStdVariant(ArgType))

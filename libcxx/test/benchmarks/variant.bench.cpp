@@ -13,6 +13,7 @@
 
 #include "benchmark/benchmark.h"
 #include "GenerateInput.h"
+#include "test_macros.h"
 
 template <std::size_t I>
 struct S {
@@ -34,7 +35,7 @@ static auto genVariants(std::index_sequence<Is...>) {
 }
 
 template <std::size_t N, std::size_t Alts>
-static void BM_Visit(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_Visit(benchmark::State& state) {
   auto args = genVariants<N>(std::make_index_sequence<Alts>{});
   for (auto _ : state) {
     benchmark::DoNotOptimize(

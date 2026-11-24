@@ -74,7 +74,7 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
     process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
 
   if (!(match_info_ptr == NULL ||
-        NameMatches(process_info.GetExecutableFile().GetFilename().GetCString(),
+        NameMatches(process_info.GetExecutableFile().GetFilename(),
                     match_info_ptr->GetNameMatchType(),
                     match_info_ptr->GetProcessInfo().GetName())))
     return false;
@@ -97,16 +97,13 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
     proc_args.AppendArgument(llvm::StringRef(cstr));
   }
 
-  auto buffer_sp = FileSystem::Instance().CreateDataBuffer(pathname, 0x20, 0);
-  if (!buffer_sp) {
-    process_info.Clear();
-    return true;
-  }
-  uint8_t exe_class =
-      llvm::object::getElfArchType(
-          {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
-           size_t(buffer_sp->GetByteSize())})
-          .first;
+  uint8_t exe_class = llvm::ELF::ELFCLASSNONE;
+  if (auto buffer_sp = FileSystem::Instance().CreateDataBuffer(
+          process_info.GetExecutableFile(), 0x20, 0))
+    exe_class = llvm::object::getElfArchType(
+                    {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
+                     size_t(buffer_sp->GetByteSize())})
+                    .first;
 
   switch (exe_class) {
   case llvm::ELF::ELFCLASS32:
@@ -143,6 +140,8 @@ static bool GetFreeBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   if (proc_kinfo_size == 0)
     goto error;
 
+  process_info.SetProcessGroupID(proc_kinfo.ki_pgid);
+  process_info.SetProcessSessionID(proc_kinfo.ki_sid);
   process_info.SetParentProcessID(proc_kinfo.ki_ppid);
   process_info.SetUserID(proc_kinfo.ki_ruid);
   process_info.SetGroupID(proc_kinfo.ki_rgid);
@@ -154,6 +153,8 @@ static bool GetFreeBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   return true;
 
 error:
+  process_info.SetProcessGroupID(LLDB_INVALID_PROCESS_ID);
+  process_info.SetProcessSessionID(LLDB_INVALID_PROCESS_ID);
   process_info.SetParentProcessID(LLDB_INVALID_PROCESS_ID);
   process_info.SetUserID(UINT32_MAX);
   process_info.SetGroupID(UINT32_MAX);
@@ -221,6 +222,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
 
     ProcessInstanceInfo process_info;
     process_info.SetProcessID(kinfo.ki_pid);
+    process_info.SetProcessGroupID(kinfo.ki_pgid);
+    process_info.SetProcessSessionID(kinfo.ki_sid);
     process_info.SetParentProcessID(kinfo.ki_ppid);
     process_info.SetUserID(kinfo.ki_ruid);
     process_info.SetGroupID(kinfo.ki_rgid);
@@ -251,6 +254,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   return Status::FromErrorString("unimplemented");
 }

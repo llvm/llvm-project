@@ -2,7 +2,7 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @target_if_variable(%x : i1) {
-    omp.target if(%x) {
+    omp.target kernel_type(generic) if(%x) {
       omp.terminator
     }
     llvm.return
@@ -31,7 +31,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
   llvm.func @target_if_true() {
     %0 = llvm.mlir.constant(true) : i1
-    omp.target if(%0) {
+    omp.target kernel_type(generic) if(%0) {
       omp.terminator
     }
     llvm.return
@@ -53,7 +53,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
   llvm.func @target_if_false() {
     %0 = llvm.mlir.constant(false) : i1
-    omp.target if(%0) {
+    omp.target kernel_type(generic) if(%0) {
       omp.terminator
     }
     llvm.return

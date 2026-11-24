@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+struct AnalysisOptions;
 class BasicBlock;
 class CallBase;
 class DominatorTree;
@@ -35,6 +36,8 @@ class FunctionPropertiesInfo {
 
   ir2vec::Embedding FunctionEmbedding = ir2vec::Embedding(0.0);
   const ir2vec::Vocabulary *IR2VecVocab = nullptr;
+  // Non-null iff the detailed properties are computed.
+  const AnalysisOptions *DetailedOpts = nullptr;
 
 public:
   LLVM_ABI static FunctionPropertiesInfo
@@ -185,7 +188,7 @@ public:
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
-    : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
+    : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
   bool IsPreOptimization;
 
 public:

@@ -394,30 +394,29 @@ define <4 x i32> @test18(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; SSE4-LABEL: test18:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pxor %xmm2, %xmm2
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3,4,5,6,7]
-; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3,4,5,6,7]
-; SSE4-NEXT:    por %xmm0, %xmm2
-; SSE4-NEXT:    movdqa %xmm2, %xmm0
+; SSE4-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE4-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,1,1]
+; SSE4-NEXT:    pxor %xmm0, %xmm0
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
+; SSE4-NEXT:    por %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test18:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
-; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3,4,5,6,7]
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test18:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
-; AVX2-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test18:

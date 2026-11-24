@@ -8,7 +8,7 @@ declare <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x
 define <16 x i32> @vpternlog_v16i32_012(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_012:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & zmm2) ^ (zmm0 | zmm2)
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   ret <16 x i32> %1
@@ -17,7 +17,7 @@ define <16 x i32> @vpternlog_v16i32_012(<16 x i32> %x0, <16 x i32> %x1, <16 x i3
 define <16 x i32> @vpternlog_v16i32_102(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_102:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $78, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm2) ^ (zmm1 | zmm2)
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
   ret <16 x i32> %1
@@ -26,7 +26,7 @@ define <16 x i32> @vpternlog_v16i32_102(<16 x i32> %x0, <16 x i32> %x1, <16 x i3
 define <16 x i32> @vpternlog_v16i32_210(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_210:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $92, %zmm1, %zmm2, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm0 | zmm2)
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
   ret <16 x i32> %1
@@ -35,7 +35,7 @@ define <16 x i32> @vpternlog_v16i32_210(<16 x i32> %x0, <16 x i32> %x1, <16 x i3
 define <16 x i32> @vpternlog_v16i32_012_load0(ptr %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_012_load0:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -45,7 +45,7 @@ define <16 x i32> @vpternlog_v16i32_012_load0(ptr %x0ptr, <16 x i32> %x1, <16 x 
 define <16 x i32> @vpternlog_v16i32_012_load1(<16 x i32> %x0, ptr %x1ptr, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_012_load1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -55,7 +55,7 @@ define <16 x i32> @vpternlog_v16i32_012_load1(<16 x i32> %x0, ptr %x1ptr, <16 x 
 define <16 x i32> @vpternlog_v16i32_012_load2(<16 x i32> %x0, <16 x i32> %x1, ptr %x2ptr) {
 ; CHECK-LABEL: vpternlog_v16i32_012_load2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & mem) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -65,7 +65,7 @@ define <16 x i32> @vpternlog_v16i32_012_load2(<16 x i32> %x0, <16 x i32> %x1, pt
 define <16 x i32> @vpternlog_v16i32_102_load0(ptr %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_102_load0:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -75,7 +75,7 @@ define <16 x i32> @vpternlog_v16i32_102_load0(ptr %x0ptr, <16 x i32> %x1, <16 x 
 define <16 x i32> @vpternlog_v16i32_102_load1(<16 x i32> %x0, ptr %x1ptr, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_102_load1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -85,7 +85,7 @@ define <16 x i32> @vpternlog_v16i32_102_load1(<16 x i32> %x0, ptr %x1ptr, <16 x 
 define <16 x i32> @vpternlog_v16i32_102_load2(<16 x i32> %x0, <16 x i32> %x1, ptr %x2ptr) {
 ; CHECK-LABEL: vpternlog_v16i32_102_load2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & mem) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -95,7 +95,7 @@ define <16 x i32> @vpternlog_v16i32_102_load2(<16 x i32> %x0, <16 x i32> %x1, pt
 define <16 x i32> @vpternlog_v16i32_210_load0(ptr %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_210_load0:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & mem) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
@@ -105,7 +105,7 @@ define <16 x i32> @vpternlog_v16i32_210_load0(ptr %x0ptr, <16 x i32> %x1, <16 x 
 define <16 x i32> @vpternlog_v16i32_210_load1(<16 x i32> %x0, ptr %x1ptr, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_210_load1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $92, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
@@ -115,7 +115,7 @@ define <16 x i32> @vpternlog_v16i32_210_load1(<16 x i32> %x0, ptr %x1ptr, <16 x 
 define <16 x i32> @vpternlog_v16i32_210_load2(<16 x i32> %x0, <16 x i32> %x1, ptr %x2ptr) {
 ; CHECK-LABEL: vpternlog_v16i32_210_load2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
@@ -125,7 +125,7 @@ define <16 x i32> @vpternlog_v16i32_210_load2(<16 x i32> %x0, <16 x i32> %x1, pt
 define <16 x i32> @vpternlog_v16i32_021_load0(ptr %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_021_load0:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -135,7 +135,7 @@ define <16 x i32> @vpternlog_v16i32_021_load0(ptr %x0ptr, <16 x i32> %x1, <16 x 
 define <16 x i32> @vpternlog_v16i32_021_load1(<16 x i32> %x0, ptr %x1ptr, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_021_load1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & mem) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -145,7 +145,7 @@ define <16 x i32> @vpternlog_v16i32_021_load1(<16 x i32> %x0, ptr %x1ptr, <16 x 
 define <16 x i32> @vpternlog_v16i32_021_load2(<16 x i32> %x0, <16 x i32> %x1, ptr %x2ptr) {
 ; CHECK-LABEL: vpternlog_v16i32_021_load2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -156,7 +156,7 @@ define <16 x i32> @vpternlog_v16i32_012_mask(<16 x i32> %x0, <16 x i32> %x1, <16
 ; CHECK-LABEL: vpternlog_v16i32_012_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & zmm2) ^ (zmm0 | zmm2)
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %2 = bitcast i16 %mask to <16 x i1>
@@ -168,7 +168,7 @@ define <16 x i32> @vpternlog_v16i32_102_mask(<16 x i32> %x0, <16 x i32> %x1, <16
 ; CHECK-LABEL: vpternlog_v16i32_102_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm0 & zmm2) ^ (zmm1 | zmm2)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -181,7 +181,7 @@ define <16 x i32> @vpternlog_v16i32_210_mask(<16 x i32> %x0, <16 x i32> %x1, <16
 ; CHECK-LABEL: vpternlog_v16i32_210_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm1 & zmm0) ^ (zmm2 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
@@ -194,7 +194,7 @@ define <16 x i32> @vpternlog_v16i32_012_mask1(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-LABEL: vpternlog_v16i32_012_mask1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $78, %zmm2, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm1 & zmm2) ^ (zmm0 | zmm2)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -207,7 +207,7 @@ define <16 x i32> @vpternlog_v16i32_012_mask2(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-LABEL: vpternlog_v16i32_012_mask2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $58, %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm2 & zmm1) ^ (zmm2 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -221,7 +221,7 @@ define <16 x i32> @vpternlog_v16i32_012_load0_mask(ptr %x0ptr, <16 x i32> %x1, <
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm0 & zmm1) ^ (zmm2 | zmm1)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
@@ -235,7 +235,7 @@ define <16 x i32> @vpternlog_v16i32_012_load0_mask1(ptr %x0ptr, <16 x i32> %x1, 
 ; CHECK-LABEL: vpternlog_v16i32_012_load0_mask1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $65, (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = ~(zmm0 | (zmm1 ^ mem))
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
@@ -248,7 +248,7 @@ define <16 x i32> @vpternlog_v16i32_012_load0_mask2(ptr %x0ptr, <16 x i32> %x1, 
 ; CHECK-LABEL: vpternlog_v16i32_012_load0_mask2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $33, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = ~(zmm0 | (zmm1 ^ mem))
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
@@ -262,7 +262,7 @@ define <16 x i32> @vpternlog_v16i32_012_load1_mask(<16 x i32> %x0, ptr %x1ptr, <
 ; CHECK-LABEL: vpternlog_v16i32_012_load1_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -275,7 +275,7 @@ define <16 x i32> @vpternlog_v16i32_012_load1_mask2(<16 x i32> %x0, ptr %x1ptr, 
 ; CHECK-LABEL: vpternlog_v16i32_012_load1_mask2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $9, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = ~(mem | (zmm1 ^ zmm0))
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
@@ -289,7 +289,7 @@ define <16 x i32> @vpternlog_v16i32_012_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK-LABEL: vpternlog_v16i32_012_load2_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & mem) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -302,7 +302,7 @@ define <16 x i32> @vpternlog_v16i32_012_load2_mask1(<16 x i32> %x0, <16 x i32> %
 ; CHECK-LABEL: vpternlog_v16i32_012_load2_mask1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $9, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = ~(zmm1 | (zmm0 ^ mem))
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
@@ -316,7 +316,7 @@ define <16 x i32> @vpternlog_v16i32_102_load0_mask(ptr %x0ptr, <16 x i32> %x1, <
 ; CHECK-LABEL: vpternlog_v16i32_102_load0_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -330,7 +330,7 @@ define <16 x i32> @vpternlog_v16i32_102_load1_mask(<16 x i32> %x0, ptr %x1ptr, <
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm0 & zmm1) ^ (zmm2 | zmm1)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
@@ -344,7 +344,7 @@ define <16 x i32> @vpternlog_v16i32_102_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK-LABEL: vpternlog_v16i32_102_load2_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm0 & mem) ^ (zmm1 | mem)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
@@ -358,7 +358,7 @@ define <16 x i32> @vpternlog_v16i32_210_load0_mask(ptr %x0ptr, <16 x i32> %x1, <
 ; CHECK-LABEL: vpternlog_v16i32_210_load0_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm0 & mem) ^ (zmm1 | mem)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
@@ -372,7 +372,7 @@ define <16 x i32> @vpternlog_v16i32_210_load1_mask(<16 x i32> %x0, ptr %x1ptr, <
 ; CHECK-LABEL: vpternlog_v16i32_210_load1_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm0 & mem) ^ (zmm1 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
@@ -387,7 +387,7 @@ define <16 x i32> @vpternlog_v16i32_210_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm1 & zmm0) ^ (zmm2 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
@@ -402,7 +402,7 @@ define <16 x i32> @vpternlog_v16i32_021_load0_mask(ptr %x0ptr, <16 x i32> %x1, <
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm1 & zmm0) ^ (zmm2 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
@@ -416,7 +416,7 @@ define <16 x i32> @vpternlog_v16i32_021_load1_mask(<16 x i32> %x0, ptr %x1ptr, <
 ; CHECK-LABEL: vpternlog_v16i32_021_load1_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & mem) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -429,7 +429,7 @@ define <16 x i32> @vpternlog_v16i32_021_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK-LABEL: vpternlog_v16i32_021_load2_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -442,7 +442,7 @@ define <16 x i32> @vpternlog_v16i32_012_maskz(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-LABEL: vpternlog_v16i32_012_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & zmm2) ^ (zmm0 | zmm2)
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %2 = bitcast i16 %mask to <16 x i1>
@@ -454,7 +454,7 @@ define <16 x i32> @vpternlog_v16i32_102_maskz(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-LABEL: vpternlog_v16i32_102_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $78, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm2) ^ (zmm1 | zmm2)
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
   %2 = bitcast i16 %mask to <16 x i1>
@@ -466,7 +466,7 @@ define <16 x i32> @vpternlog_v16i32_210_maskz(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-LABEL: vpternlog_v16i32_210_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vpternlogd $92, %zmm1, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm0 | zmm2)
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
   %2 = bitcast i16 %mask to <16 x i1>
@@ -478,7 +478,7 @@ define <16 x i32> @vpternlog_v16i32_012_load0_maskz(ptr %x0ptr, <16 x i32> %x1, 
 ; CHECK-LABEL: vpternlog_v16i32_012_load0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -491,7 +491,7 @@ define <16 x i32> @vpternlog_v16i32_012_load1_maskz(<16 x i32> %x0, ptr %x1ptr, 
 ; CHECK-LABEL: vpternlog_v16i32_012_load1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -504,7 +504,7 @@ define <16 x i32> @vpternlog_v16i32_012_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-LABEL: vpternlog_v16i32_012_load2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & mem) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
@@ -517,7 +517,7 @@ define <16 x i32> @vpternlog_v16i32_102_load0_maskz(ptr %x0ptr, <16 x i32> %x1, 
 ; CHECK-LABEL: vpternlog_v16i32_102_load0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -530,7 +530,7 @@ define <16 x i32> @vpternlog_v16i32_102_load1_maskz(<16 x i32> %x0, ptr %x1ptr, 
 ; CHECK-LABEL: vpternlog_v16i32_102_load1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -543,7 +543,7 @@ define <16 x i32> @vpternlog_v16i32_102_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-LABEL: vpternlog_v16i32_102_load2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & mem) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
@@ -556,7 +556,7 @@ define <16 x i32> @vpternlog_v16i32_210_load0_maskz(ptr %x0ptr, <16 x i32> %x1, 
 ; CHECK-LABEL: vpternlog_v16i32_210_load0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & mem) ^ (zmm1 | mem)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
@@ -569,7 +569,7 @@ define <16 x i32> @vpternlog_v16i32_210_load1_maskz(<16 x i32> %x0, ptr %x1ptr, 
 ; CHECK-LABEL: vpternlog_v16i32_210_load1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $92, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
@@ -582,7 +582,7 @@ define <16 x i32> @vpternlog_v16i32_210_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-LABEL: vpternlog_v16i32_210_load2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
@@ -595,7 +595,7 @@ define <16 x i32> @vpternlog_v16i32_021_load0_maskz(ptr %x0ptr, <16 x i32> %x1, 
 ; CHECK-LABEL: vpternlog_v16i32_021_load0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, ptr %x0ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -608,7 +608,7 @@ define <16 x i32> @vpternlog_v16i32_021_load1_maskz(<16 x i32> %x0, ptr %x1ptr, 
 ; CHECK-LABEL: vpternlog_v16i32_021_load1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & mem) ^ (zmm0 | mem)
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, ptr %x1ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -621,7 +621,7 @@ define <16 x i32> @vpternlog_v16i32_021_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-LABEL: vpternlog_v16i32_021_load2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & mem) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, ptr %x2ptr
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
@@ -633,7 +633,7 @@ define <16 x i32> @vpternlog_v16i32_021_load2_maskz(<16 x i32> %x0, <16 x i32> %
 define <16 x i32> @vpternlog_v16i32_012_broadcast0(ptr %ptr_x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast0:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $46, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x0_scalar = load i32, ptr %ptr_x0
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0_scalar, i32 0
@@ -645,7 +645,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0(ptr %ptr_x0, <16 x i32> %x1, 
 define <16 x i32> @vpternlog_v16i32_012_broadcast1(<16 x i32> %x0, ptr %ptr_x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1_scalar = load i32, ptr %ptr_x1
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1_scalar, i32 0
@@ -657,7 +657,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1(<16 x i32> %x0, ptr %ptr_x1, 
 define <16 x i32> @vpternlog_v16i32_012_broadcast2(<16 x i32> %x0, <16 x i32> %x1, ptr %ptr_x2) {
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $114, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & m32bcst) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x2_scalar = load i32, ptr %ptr_x2
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2_scalar, i32 0
@@ -669,7 +669,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2(<16 x i32> %x0, <16 x i32> %x
 define <16 x i32> @vpternlog_v16i32_102_broadcast0(ptr %ptr_x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast0:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x0_scalar = load i32, ptr %ptr_x0
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0_scalar, i32 0
@@ -681,7 +681,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast0(ptr %ptr_x0, <16 x i32> %x1, 
 define <16 x i32> @vpternlog_v16i32_102_broadcast1(<16 x i32> %x0, ptr %ptr_x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $46, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x1_scalar = load i32, ptr %ptr_x1
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1_scalar, i32 0
@@ -693,7 +693,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast1(<16 x i32> %x0, ptr %ptr_x1, 
 define <16 x i32> @vpternlog_v16i32_102_broadcast2(<16 x i32> %x0, <16 x i32> %x1, ptr %ptr_x2) {
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $78, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & m32bcst) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x2_scalar = load i32, ptr %ptr_x2
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2_scalar, i32 0
@@ -705,7 +705,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast2(<16 x i32> %x0, <16 x i32> %x
 define <16 x i32> @vpternlog_v16i32_210_broadcast0(ptr %ptr_x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast0:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $78, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & m32bcst) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x0_scalar = load i32, ptr %ptr_x0
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0_scalar, i32 0
@@ -717,7 +717,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast0(ptr %ptr_x0, <16 x i32> %x1, 
 define <16 x i32> @vpternlog_v16i32_210_broadcast1(<16 x i32> %x0, ptr %ptr_x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast1:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $92, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1_scalar = load i32, ptr %ptr_x1
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1_scalar, i32 0
@@ -729,7 +729,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast1(<16 x i32> %x0, ptr %ptr_x1, 
 define <16 x i32> @vpternlog_v16i32_210_broadcast2(<16 x i32> %x0, <16 x i32> %x1, ptr %ptr_x2) {
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $58, (%rdi){1to16}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & zmm1) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x2_scalar = load i32, ptr %ptr_x2
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2_scalar, i32 0
@@ -743,7 +743,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask(ptr %x0ptr, <16 x i32> %
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm0 & zmm1) ^ (zmm2 | zmm1)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
@@ -759,7 +759,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1_mask(<16 x i32> %x0, ptr %x1p
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast1_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
@@ -774,7 +774,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2_mask(<16 x i32> %x0, <16 x i3
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast2_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi){1to16}, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & m32bcst) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
@@ -789,7 +789,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast0_mask(ptr %x0ptr, <16 x i32> %
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast0_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
@@ -805,7 +805,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast1_mask(<16 x i32> %x0, ptr %x1p
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm0 & zmm1) ^ (zmm2 | zmm1)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
@@ -821,7 +821,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast2_mask(<16 x i32> %x0, <16 x i3
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast2_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi){1to16}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm0 & m32bcst) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
@@ -837,7 +837,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast0_mask(ptr %x0ptr, <16 x i32> %
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast0_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi){1to16}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm0 & m32bcst) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
@@ -853,7 +853,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast1_mask(<16 x i32> %x0, ptr %x1p
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast1_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm0 & m32bcst) ^ (zmm1 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
@@ -870,7 +870,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast2_mask(<16 x i32> %x0, <16 x i3
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm1 & zmm0) ^ (zmm2 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
@@ -887,7 +887,7 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast0_mask(ptr %x0ptr, <16 x i32> %
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} = (zmm1 & zmm0) ^ (zmm2 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
@@ -903,7 +903,7 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast1_mask(<16 x i32> %x0, ptr %x1p
 ; CHECK-LABEL: vpternlog_v16i32_021_broadcast1_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi){1to16}, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & m32bcst) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
@@ -918,7 +918,7 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast2_mask(<16 x i32> %x0, <16 x i3
 ; CHECK-LABEL: vpternlog_v16i32_021_broadcast2_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
@@ -933,7 +933,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0_maskz(ptr %x0ptr, <16 x i32> 
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $46, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
@@ -948,7 +948,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1_maskz(<16 x i32> %x0, ptr %x1
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
@@ -963,7 +963,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2_maskz(<16 x i32> %x0, <16 x i
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & m32bcst) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
@@ -978,7 +978,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast0_maskz(ptr %x0ptr, <16 x i32> 
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
@@ -993,7 +993,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast1_maskz(<16 x i32> %x0, ptr %x1
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $46, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
@@ -1008,7 +1008,7 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast2_maskz(<16 x i32> %x0, <16 x i
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $78, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & m32bcst) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
@@ -1023,7 +1023,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast0_maskz(ptr %x0ptr, <16 x i32> 
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $78, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & m32bcst) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
@@ -1038,7 +1038,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast1_maskz(<16 x i32> %x0, ptr %x1
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $92, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
@@ -1053,7 +1053,7 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast2_maskz(<16 x i32> %x0, <16 x i
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $58, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
@@ -1068,7 +1068,7 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast0_maskz(ptr %x0ptr, <16 x i32> 
 ; CHECK-LABEL: vpternlog_v16i32_021_broadcast0_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $58, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm0 & zmm1) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
@@ -1083,7 +1083,7 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast1_maskz(<16 x i32> %x0, ptr %x1
 ; CHECK-LABEL: vpternlog_v16i32_021_broadcast1_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $114, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & m32bcst) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
@@ -1098,7 +1098,7 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast2_maskz(<16 x i32> %x0, <16 x i
 ; CHECK-LABEL: vpternlog_v16i32_021_broadcast2_maskz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $116, (%rdi){1to16}, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = (zmm1 & m32bcst) ^ (zmm0 | zmm1)
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
@@ -1113,7 +1113,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask1(ptr %x0ptr, <16 x i32> 
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast0_mask1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $92, (%rdi){1to16}, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm0 & zmm1) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
@@ -1128,7 +1128,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask2(ptr %x0ptr, <16 x i32> 
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast0_mask2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $58, (%rdi){1to16}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm1 & zmm0) ^ (zmm1 | m32bcst)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, ptr %x0ptr
@@ -1144,7 +1144,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1_mask2(<16 x i32> %x0, ptr %x1
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast1_mask2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $46, (%rdi){1to16}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm1 & m32bcst) ^ (zmm1 | zmm0)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, ptr %x1ptr
@@ -1160,7 +1160,7 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2_mask1(<16 x i32> %x0, <16 x i
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast2_mask1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vpternlogd $78, (%rdi){1to16}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} = (zmm1 & m32bcst) ^ (zmm0 | m32bcst)
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, ptr %x2ptr
@@ -1170,4 +1170,60 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2_mask1(<16 x i32> %x0, <16 x i
   %mask.cast = bitcast i16 %mask to <16 x i1>
   %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x1
   ret <16 x i32> %res2
+}
+; These test the four pattern sites that had swapped immediates
+define <16 x i32> @vpternlog_v16i32_231_rmik(<16 x i32> %a, <16 x i32> %b, ptr %ptr, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_231_rmik:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovd %esi, %k1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = ~(zmm0 | (zmm1 ^ mem))
+; CHECK-NEXT:    retq
+  %load = load <16 x i32>, ptr %ptr
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %b, <16 x i32> %load, <16 x i32> %a, i32 65)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %a
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @vpternlog_v16i32_312_rmik(<16 x i32> %a, <16 x i32> %b, ptr %ptr, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_312_rmik:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovd %esi, %k1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = ~(mem | (zmm0 ^ zmm1))
+; CHECK-NEXT:    retq
+  %load = load <16 x i32>, ptr %ptr
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %a, <16 x i32> %b, <16 x i32> %load, i32 65)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %a
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @vpternlog_v16i32_231_rmbik(<16 x i32> %a, <16 x i32> %b, ptr %ptr, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_231_rmbik:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovd %esi, %k1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm0 & zmm1) ^ (zmm1 | m32bcst)
+; CHECK-NEXT:    retq
+  %scalar = load i32, ptr %ptr
+  %vecinit = insertelement <16 x i32> poison, i32 %scalar, i32 0
+  %broadcast = shufflevector <16 x i32> %vecinit, <16 x i32> poison, <16 x i32> zeroinitializer
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %b, <16 x i32> %broadcast, <16 x i32> %a, i32 92)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %a
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @vpternlog_v16i32_312_rmbik(<16 x i32> %a, <16 x i32> %b, ptr %ptr, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_312_rmbik:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovd %esi, %k1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = (zmm0 & m32bcst) ^ (zmm0 | zmm1)
+; CHECK-NEXT:    retq
+  %scalar = load i32, ptr %ptr
+  %vecinit = insertelement <16 x i32> poison, i32 %scalar, i32 0
+  %broadcast = shufflevector <16 x i32> %vecinit, <16 x i32> poison, <16 x i32> zeroinitializer
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %a, <16 x i32> %b, <16 x i32> %broadcast, i32 92)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %a
+  ret <16 x i32> %res
 }

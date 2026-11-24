@@ -59,6 +59,10 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
   real, dimension(iVolatileStmtFunc()) :: arrayVarWithVolatile
     !ERROR: Invalid specification expression: reference to impure function 'iimpurestmtfunc'
   real, dimension(iImpureStmtFunc()) :: arrayVarWithImpureFunction
+  ! The entity-decl's array-spec overrides the DIMENSION attribute's, but the
+  ! attribute's bound remains a specification expression that must be valid.
+    !ERROR: Invalid specification expression: reference to impure function 'iimpurestmtfunc'
+  real, dimension(iImpureStmtFunc()) :: overriddenArrayVar(3)
     !ERROR: Invalid specification expression: reference to statement function 'ipurestmtfunc'
   real, dimension(iPureStmtFunc()) :: arrayVarWithPureFunction
   real, dimension(iabs(iArg)) :: arrayVarWithIntrinsic

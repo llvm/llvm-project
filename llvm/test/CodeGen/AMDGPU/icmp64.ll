@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}test_i64_eq:
 ; VI: s_cmp_eq_u64

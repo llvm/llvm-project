@@ -55,6 +55,9 @@ TEST(ProtocolRequestsTest, ExceptionInfoResponseBody) {
   body.breakMode = eExceptionBreakModeNever;
   body.details = ExceptionDetails{};
   body.details->message = "some message";
+  body.lldbExtStopReasonExtendedInfo =
+      json::Object{{"instrumentation_class", "AddressSanitizer"}};
+  body.lldbExtExtendedCrashInformation = json::Object{{"crash-info", "abort"}};
 
   Expected<json::Value> expected_opt = parse(
       R"({
@@ -63,6 +66,12 @@ TEST(ProtocolRequestsTest, ExceptionInfoResponseBody) {
     "breakMode": "never",
     "details": {
       "message": "some message"
+    },
+    "$__lldb_stopReasonExtendedInfo": {
+      "instrumentation_class": "AddressSanitizer"
+    },
+    "$__lldb_extendedCrashInformation": {
+      "crash-info": "abort"
     }
   })");
 
@@ -251,6 +260,12 @@ TEST(ProtocolRequestsTest, CompileUnitsArguments) {
       parse<CompileUnitsArguments>(R"({"moduleId": "42"})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(expected->moduleId, "42");
+  EXPECT_THAT(expected->compileUnitIds, testing::IsEmpty());
+
+  expected = parse<CompileUnitsArguments>(
+      R"({"moduleId": "42", "compileUnitIds": [3, 9]})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_THAT(expected->compileUnitIds, testing::ElementsAre(3u, 9u));
 
   // Check required keys.
   EXPECT_THAT_EXPECTED(parse<CompileUnitsArguments>(R"({})"),
@@ -259,16 +274,27 @@ TEST(ProtocolRequestsTest, CompileUnitsArguments) {
 
 TEST(ProtocolRequestsTest, CompileUnitsResponseBody) {
   CompileUnitsResponseBody body;
-  body.compileUnits = {{"main.cpp"}, {"util.cpp"}};
+  body.compileUnits = {{1, "main.cpp", "c++", false},
+                       {2, "util.cpp", std::nullopt, true},
+                       {3, "other.cpp", std::nullopt, std::nullopt}};
 
   // Check required keys.
   Expected<json::Value> expected = parse(R"({
     "compileUnits": [
       {
-        "compileUnitPath": "main.cpp"
+        "id": 1,
+        "compileUnitPath": "main.cpp",
+        "language": "c++",
+        "isOptimized": false
       },
       {
-        "compileUnitPath": "util.cpp"
+        "id": 2,
+        "compileUnitPath": "util.cpp",
+        "isOptimized": true
+      },
+      {
+        "id": 3,
+        "compileUnitPath": "other.cpp"
       }
     ]
   })");
@@ -345,6 +371,18 @@ TEST(ProtocolRequestsTest, RestartArguments) {
       std::get_if<AttachRequestArguments>(&expected->arguments);
   EXPECT_NE(attach_args, nullptr);
   EXPECT_EQ(attach_args->pid, 123U);
+}
+
+TEST(ProtocolRequestsTest, LaunchRequestArgumentsDisableASLR) {
+  llvm::Expected<LaunchRequestArguments> expected =
+      parse<LaunchRequestArguments>(R"({"program": "main.exe"})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->disableASLR, std::nullopt);
+
+  expected = parse<LaunchRequestArguments>(
+      R"({"program": "main.exe", "disableASLR": false})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->disableASLR, false);
 }
 
 TEST(ProtocolRequestsTest, StackTraceArguments) {

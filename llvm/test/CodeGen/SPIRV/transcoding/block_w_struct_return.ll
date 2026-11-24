@@ -1,5 +1,7 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV1_4
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV1_4
+
+; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; CHECK-ERROR: Function used as a data pointer requires SPV_INTEL_function_pointers extension
 
 ;; TODO: We cannot check SPIR_V 1.1 and 1.4 simultaneously, implement additional
 ;;       run with CHECK-SPIRV1_1.
@@ -22,8 +24,8 @@
 ;; }
 
 ; CHECK-SPIRV1_4-DAG: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterfaceId1:]] %[[#InterfaceId2:]]
-; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "__spirv_BuiltInGlobalInvocationId"
-; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "__block_literal_global"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "__block_literal_global"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "__spirv_BuiltInGlobalInvocationId"
 
 ; CHECK-SPIRV1_1: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterfaceId1:]]
 ; CHECK-SPIRV1_1: OpName %[[#InterfaceId1]] "__spirv_BuiltInGlobalInvocationId"

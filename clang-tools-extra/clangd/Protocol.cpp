@@ -877,6 +877,8 @@ llvm::json::Value toJSON(const SymbolInformation &P) {
   };
   if (P.score)
     O["score"] = *P.score;
+  if (!P.tags.empty())
+    O["tags"] = P.tags;
   return std::move(O);
 }
 
@@ -1456,6 +1458,8 @@ llvm::json::Value toJSON(const TypeHierarchyItem &I) {
 
   if (I.detail)
     Result["detail"] = I.detail;
+  if (!I.tags.empty())
+    Result["tags"] = I.tags;
   return std::move(Result);
 }
 
@@ -1754,17 +1758,18 @@ llvm::json::Value toJSON(const ASTNode &N) {
   return Result;
 }
 
+static void printASTNode(llvm::raw_ostream &OS, const ASTNode &N,
+                         unsigned Level) {
+  OS.indent(2 * Level) << N.role << ": " << N.kind;
+  if (!N.detail.empty())
+    OS << " - " << N.detail;
+  OS << "\n";
+  for (const ASTNode &C : N.children)
+    printASTNode(OS, C, Level + 1);
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ASTNode &Root) {
-  std::function<void(const ASTNode &, unsigned)> Print = [&](const ASTNode &N,
-                                                             unsigned Level) {
-    OS.indent(2 * Level) << N.role << ": " << N.kind;
-    if (!N.detail.empty())
-      OS << " - " << N.detail;
-    OS << "\n";
-    for (const ASTNode &C : N.children)
-      Print(C, Level + 1);
-  };
-  Print(Root, 0);
+  printASTNode(OS, Root, 0);
   return OS;
 }
 

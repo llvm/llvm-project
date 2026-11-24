@@ -1,6 +1,7 @@
 
 add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   DebuggerThread.cpp
+  ExceptionRecord.cpp
   LocalDebugDelegate.cpp
   NativeProcessWindows.cpp
   NativeRegisterContextWindows.cpp
@@ -27,6 +28,7 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
     lldbHost
     lldbInterpreter
     lldbPluginDynamicLoaderWindowsDYLD
+    lldbPluginRegisterNative
     lldbSymbol
     lldbTarget
     ws2_32

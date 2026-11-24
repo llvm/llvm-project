@@ -77,11 +77,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_current_value = m_default_value;
-    m_value_was_set = false;
-  }
-
   bool IsDefault() const override { return m_current_value == m_default_value; }
 
   // Subclass specific functions
@@ -122,6 +117,11 @@ public:
   }
 
 protected:
+  void ClearImpl() override {
+    m_current_value = m_default_value;
+    m_value_was_set = false;
+  }
+
   std::string m_current_value;
   std::string m_default_value;
   Flags m_options;

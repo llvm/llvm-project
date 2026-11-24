@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck %s %}
+
+// REQUIRES: x86-registered-target
 
 extern void foo_alias (void) __asm ("foo");
 inline void foo (void) {
@@ -32,7 +35,7 @@ void f(void) {
 
 // CHECK-LABEL: define{{.*}} void @f()
 // CHECK: call void @foo()
-// CHECK: call i32 @abs(i32 noundef %0)
+// CHECK: call i32 @abs(i32 noundef %{{.*}})
 // CHECK: call ptr @strrchr(
 // CHECK: call void @llvm.prefetch.p0(
 // CHECK: call ptr @memchr(

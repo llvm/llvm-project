@@ -8,11 +8,15 @@
 ; CHECK-DAG: OpName [[BOOL_SUB:%.+]] "bool_sub"
 ; CHECK-DAG: OpName [[SCALAR_ADD:%.+]] "scalar_add"
 ; CHECK-DAG: OpName [[SCALAR_SUB:%.+]] "scalar_sub"
+; CHECK-DAG: OpName [[BOOL_MUL:%.+]] "bool_mul"
+; CHECK-DAG: OpName [[BOOL_MUL_NSW:%.+]] "bool_mul_nsw"
+; CHECK-DAG: OpName [[BOOL_MUL_NUW:%.+]] "bool_mul_nuw"
 ; CHECK-DAG: OpName [[SCALAR_MUL:%.+]] "scalar_mul"
 ; CHECK-DAG: OpName [[SCALAR_UDIV:%.+]] "scalar_udiv"
 ; CHECK-DAG: OpName [[SCALAR_SDIV:%.+]] "scalar_sdiv"
 ; CHECK-DAG: OpName [[SCALAR_UREM:%.+]] "scalar_urem"
 ; CHECK-DAG: OpName [[SCALAR_SREM:%.+]] "scalar_srem"
+; CHECK-DAG: OpName [[SCALAR_SMOD:%.+]] "scalar_smod"
 ; CHECK-DAG: OpName [[SCALAR_SNEGATE:%.+]] "scalar_snegate"
 
 ; CHECK-NOT: DAG-FENCE
@@ -84,6 +88,45 @@ define i32 @scalar_sub(i32 %a, i32 %b) {
 
 
 ;; Test mul on scalar:
+define i1 @bool_mul(i1 %a, i1 %b) {
+    %c = mul i1 %a, %b
+    ret i1 %c
+}
+
+; CHECK:      [[BOOL_MUL]] = OpFunction [[BOOL]] None [[BOOL_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpLogicalAnd [[BOOL]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+define i1 @bool_mul_nsw(i1 %a, i1 %b) {
+    %c = mul nsw i1 %a, %b
+    ret i1 %c
+}
+
+; CHECK:      [[BOOL_MUL_NSW]] = OpFunction [[BOOL]] None [[BOOL_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpLogicalAnd [[BOOL]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+define i1 @bool_mul_nuw(i1 %a, i1 %b) {
+    %c = mul nuw i1 %a, %b
+    ret i1 %c
+}
+
+; CHECK:      [[BOOL_MUL_NUW]] = OpFunction [[BOOL]] None [[BOOL_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpLogicalAnd [[BOOL]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
 define i32 @scalar_mul(i32 %a, i32 %b) {
     %c = mul i32 %a, %b
     ret i32 %c
@@ -154,6 +197,23 @@ define i32 @scalar_srem(i32 %a, i32 %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
 ; CHECK:      OpLabel
 ; CHECK:      [[C:%.+]] = OpSRem [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test smod on scalar:
+define spir_func i32 @scalar_smod(i32 %a, i32 %b) {
+    %c = call spir_func i32 @_Z12__spirv_SModii(i32 %a, i32 %b)
+    ret i32 %c
+}
+
+declare spir_func i32 @_Z12__spirv_SModii(i32, i32)
+
+; CHECK:      [[SCALAR_SMOD]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpSMod [[SCALAR]] [[A]] [[B]]
 ; CHECK:      OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd
 

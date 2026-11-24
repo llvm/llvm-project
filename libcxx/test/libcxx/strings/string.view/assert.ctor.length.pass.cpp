@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++11 && gcc
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // Construct a string_view from an invalid length
 // constexpr basic_string_view( const _CharT* s, size_type len )

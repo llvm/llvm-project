@@ -11,9 +11,66 @@ set(CLANG_CMAKE_DIR "@CLANG_CONFIG_CMAKE_DIR@")
 set(CLANG_INCLUDE_DIRS "@CLANG_CONFIG_INCLUDE_DIRS@")
 set(CLANG_LINK_CLANG_DYLIB "@CLANG_LINK_CLANG_DYLIB@")
 set(CLANG_DEFAULT_LINKER "@CLANG_DEFAULT_LINKER@")
+set(CLANG_DEFAULT_UNWINDLIB "@CLANG_DEFAULT_UNWINDLIB@")
 
-# Provide all our library targets to users.
-@CLANG_CONFIG_INCLUDE_EXPORTS@
+# Provide all our library targets to users. Skip when
+# LLVM_OMIT_EXPORTS_FROM_CONFIG flag is set.
+if(NOT LLVM_OMIT_EXPORTS_FROM_CONFIG)
+  # When ClangIR is enabled and MLIR was built as a project in its own right,
+  # Clang's exported targets reference MLIR targets that are owned by the MLIR
+  # package rather than re-exported here. Load that package first so the
+  # references in ClangTargets.cmake resolve. This stays inside the
+  # LLVM_OMIT_EXPORTS_FROM_CONFIG guard because MLIRTargets.cmake in turn
+  # references LLVM targets, which are not imported in that mode.
+  #
+  # When MLIR is only an implicit dependency of ClangIR, no MLIR package is
+  # installed; the reachable MLIR targets are then part of ClangTargets.cmake
+  # itself and this block is skipped.
+  #
+  # The lookup is deliberately optional and quiet. Whether MLIR is actually
+  # needed depends on which export sets were installed: a distribution
+  # (LLVM_DISTRIBUTION_COMPONENTS / LLVM_DISTRIBUTIONS) may ship only targets
+  # that do not link MLIR, in which case no MLIR package exists and none is
+  # required. The targets file below is the source of truth: it verifies
+  # that every target it references is defined and otherwise marks Clang as
+  # not found, honoring the consumer's REQUIRED/QUIET. We only add a hint
+  # about MLIR to that message.
+  #
+  # The numeric version components are used because find_package(LLVM)
+  # above overwrites LLVM_VERSION with the package version string
+  # (e.g. "24.0.0git"), which find_package rejects as a version argument.
+  if(@CLANG_CONFIG_FIND_MLIR@)
+    # CMake >= 4.1 lets a consumer set CMAKE_FIND_REQUIRED to make every
+    # find_package() REQUIRED. find_package(Clang) unsets it while loading
+    # this file, but include(ClangConfig) does not, so clear and restore it
+    # around the lookup to keep MLIR optional in that case too.
+    if(DEFINED CMAKE_FIND_REQUIRED)
+      set(_clang_saved_find_required "${CMAKE_FIND_REQUIRED}")
+    endif()
+    set(CMAKE_FIND_REQUIRED OFF)
+    find_package(MLIR
+      ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
+      EXACT CONFIG QUIET HINTS "@CLANG_CONFIG_MLIR_CMAKE_DIR@")
+    if(DEFINED _clang_saved_find_required)
+      set(CMAKE_FIND_REQUIRED "${_clang_saved_find_required}")
+      unset(_clang_saved_find_required)
+    else()
+      unset(CMAKE_FIND_REQUIRED)
+    endif()
+  endif()
+  @CLANG_CONFIG_INCLUDE_EXPORTS@
+  if(@CLANG_CONFIG_FIND_MLIR@ AND NOT MLIR_FOUND AND CMAKE_FIND_PACKAGE_NAME
+     AND DEFINED ${CMAKE_FIND_PACKAGE_NAME}_FOUND
+     AND NOT ${CMAKE_FIND_PACKAGE_NAME}_FOUND)
+    string(APPEND ${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE
+      "\nThis Clang was built with ClangIR, whose libraries depend on MLIR, "
+      "but no MLIR "
+      "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH} "
+      "package was found (searched \"@CLANG_CONFIG_MLIR_CMAKE_DIR@\" and the "
+      "usual find_package locations). Install the MLIR CMake package from the "
+      "same build or point MLIR_DIR at it.")
+  endif()
+endif()
 
 # By creating clang-tablegen-targets here, subprojects that depend on Clang's
 # tablegen-generated headers can always depend on this target whether building

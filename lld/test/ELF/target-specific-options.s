@@ -44,7 +44,7 @@
 
 # RUN: not ld.lld a.o -z execute-only-report=foo 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR-EXECUTE-ONLY-INVALID
-# ERR-EXECUTE-ONLY-INVALID: error: unknown -z execute-only-report= value: foo
+# ERR-EXECUTE-ONLY-INVALID: error: unknown -z execute-only-report= value 'foo'
 
 .globl _start
 _start:

@@ -146,12 +146,12 @@ define <32 x i32> @test7(<32 x i16> %x, <32 x i32> %a, <32 x i32> %b) {
 ;
 ; CHECK-KNL-LABEL: test7:
 ; CHECK-KNL:       # %bb.0:
-; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; CHECK-KNL-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; CHECK-KNL-NEXT:    vpcmpeqw %ymm6, %ymm5, %ymm5
-; CHECK-KNL-NEXT:    vpmovsxwd %ymm5, %zmm5
-; CHECK-KNL-NEXT:    vptestmd %zmm5, %zmm5, %k1
-; CHECK-KNL-NEXT:    vpcmpeqw %ymm6, %ymm0, %ymm0
+; CHECK-KNL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm6
+; CHECK-KNL-NEXT:    vpcmpeqw %ymm5, %ymm6, %ymm6
+; CHECK-KNL-NEXT:    vpmovsxwd %ymm6, %zmm6
+; CHECK-KNL-NEXT:    vptestmd %zmm6, %zmm6, %k1
+; CHECK-KNL-NEXT:    vpcmpeqw %ymm5, %ymm0, %ymm0
 ; CHECK-KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; CHECK-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k2
 ; CHECK-KNL-NEXT:    vpblendmd %zmm1, %zmm3, %zmm0 {%k2}
@@ -173,17 +173,17 @@ define <64 x i16> @test8(<64 x i8> %x, <64 x i16> %a, <64 x i16> %b) {
 ;
 ; CHECK-KNL-LABEL: test8:
 ; CHECK-KNL:       # %bb.0:
-; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; CHECK-KNL-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; CHECK-KNL-NEXT:    vpcmpeqb %ymm6, %ymm5, %ymm5
-; CHECK-KNL-NEXT:    vpcmpeqb %ymm6, %ymm0, %ymm0
-; CHECK-KNL-NEXT:    vpmovsxbw %xmm0, %ymm6
+; CHECK-KNL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm6
+; CHECK-KNL-NEXT:    vpcmpeqb %ymm5, %ymm6, %ymm6
+; CHECK-KNL-NEXT:    vpcmpeqb %ymm5, %ymm0, %ymm0
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm0, %ymm5
 ; CHECK-KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-KNL-NEXT:    vpmovsxbw %xmm0, %ymm0
-; CHECK-KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm6, %zmm0
+; CHECK-KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm5, %zmm0
 ; CHECK-KNL-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm3 ^ (zmm0 & (zmm1 ^ zmm3))
-; CHECK-KNL-NEXT:    vpmovsxbw %xmm5, %ymm1
-; CHECK-KNL-NEXT:    vextracti128 $1, %ymm5, %xmm3
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm6, %ymm1
+; CHECK-KNL-NEXT:    vextracti128 $1, %ymm6, %xmm3
 ; CHECK-KNL-NEXT:    vpmovsxbw %xmm3, %ymm3
 ; CHECK-KNL-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
 ; CHECK-KNL-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm4 ^ (zmm1 & (zmm2 ^ zmm4))

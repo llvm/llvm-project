@@ -101,6 +101,22 @@ constexpr int Y<int>::a;
 const int &yib = Y<int>::b;
 // CHECK-NOT: @_ZN1YIiE1cE
 
+namespace PR219796 {
+template<typename> struct A;
+template<>
+struct A<void> {
+    template<int> static int value;
+};
+
+// CHECK: _ZN8PR2197961AIvE5valueILi101EEE = weak_odr constant i32 3
+template<> constexpr int A<void>::value<101> = 3;
+
+const int& f()
+{
+    return A<void>::template value<101>;
+}
+}
+
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK: call noundef i32 @_Z1fv
 

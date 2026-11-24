@@ -8,6 +8,9 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
@@ -34,6 +37,18 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "foo::bar"},
       {"int foo::bar::func01(int a, double b)", "int", "foo::bar", "func01",
        "(int a, double b)", "", "foo::bar::func01"},
+      {"foo(struct AStruct)", "", "", "foo", "(struct AStruct)", "", "foo"},
+      {"struct foo(class a)", "", "", "struct foo", "(class a)", "",
+       "struct foo"},
+      {"struct AStruct struct_foo(class class_::_AClass)", "struct AStruct", "",
+       "struct_foo", "(class class_::_AClass)", "", "struct_foo"},
+      {"class_(enum_arg)", "", "", "class_", "(enum_arg)", "", "class_"},
+      {"struct AStruct a::b::c(class AClass)", "struct AStruct", "a::b", "c",
+       "(class AClass)", "", "a::b::c"},
+      {"struct ns::AStruct const & A::f(void) const",
+       "struct ns::AStruct const &", "A", "f", "(void)", "const", "A::f"},
+      {"union AUnion A<enum AEnum>::fn(void)", "union AUnion", "A<enum AEnum>",
+       "fn", "(void)", "", "A<enum AEnum>::fn"},
 
       // Operators
       {"std::basic_ostream<char, std::char_traits<char> >& "
@@ -147,6 +162,12 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"void foo<Bar[10]>()", "void", "", "foo<Bar[10]>", "()", "",
        "foo<Bar[10]>"},
       {"void foo<Bar[]>()", "void", "", "foo<Bar[]>", "()", "", "foo<Bar[]>"},
+      {"class std::_Func_base<bool, int> * std::_Func_class<bool, "
+       "int>::_Getimpl(void) const",
+       "class std::_Func_base<bool, int> *", "std::_Func_class<bool, int>",
+       "_Getimpl", "(void)", "const", "std::_Func_class<bool, int>::_Getimpl"},
+      {"struct AStruct foo<struct AStruct>(void)", "struct AStruct", "",
+       "foo<struct AStruct>", "(void)", "", "foo<struct AStruct>"},
 
       // auto return type
       {"auto std::test_return_auto<int>() const", "auto", "std",
@@ -226,7 +247,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "A::operator<=>[abi:tag]<A::B>"}};
 
   for (const auto &test : test_cases) {
-    CPlusPlusLanguage::CxxMethodName method(ConstString(test.input));
+    CPlusPlusLanguage::CxxMethodName method(test.input);
     EXPECT_TRUE(method.IsValid()) << test.input;
     if (method.IsValid()) {
       EXPECT_EQ(test.return_type, method.GetReturnType().str());
@@ -257,23 +278,22 @@ TEST(CPlusPlusLanguage, InvalidMethodNameParsing) {
   };
 
   for (const auto &name : test_cases) {
-    CPlusPlusLanguage::CxxMethodName method{ConstString(name)};
+    CPlusPlusLanguage::CxxMethodName method{name};
     EXPECT_FALSE(method.IsValid()) << name;
   }
 }
 
 TEST(CPlusPlusLanguage, ContainsPath) {
   CPlusPlusLanguage::CxxMethodName reference_1(
-      ConstString("int foo::bar::func01(int a, double b)"));
+      "int foo::bar::func01(int a, double b)");
   CPlusPlusLanguage::CxxMethodName reference_2(
-      ConstString("int foofoo::bar::func01(std::string a, int b)"));
-  CPlusPlusLanguage::CxxMethodName reference_3(ConstString("int func01()"));
-  CPlusPlusLanguage::CxxMethodName reference_4(
-      ConstString("bar::baz::operator bool()"));
+      "int foofoo::bar::func01(std::string a, int b)");
+  CPlusPlusLanguage::CxxMethodName reference_3("int func01()");
+  CPlusPlusLanguage::CxxMethodName reference_4("bar::baz::operator bool()");
   CPlusPlusLanguage::CxxMethodName reference_5(
-      ConstString("bar::baz::operator bool<int, Type<double>>()"));
-  CPlusPlusLanguage::CxxMethodName reference_6(ConstString(
-      "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()"));
+      "bar::baz::operator bool<int, Type<double>>()");
+  CPlusPlusLanguage::CxxMethodName reference_6(
+      "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()");
 
   EXPECT_TRUE(reference_1.ContainsPath(""));
   EXPECT_TRUE(reference_1.ContainsPath("func01"));
@@ -440,6 +460,19 @@ TEST(CPlusPlusLanguage, MatchesCxx) {
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(itaniumExtensionSymbol));
   Mangled msvcSymbol("??x@@3AH");
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(msvcSymbol));
+}
+
+TEST(CPlusPlusLanguage, GetVersionWithLanguageInfo) {
+  SubsystemRAII<CPlusPlusLanguage> lang;
+  std::string info = CPlusPlusLanguage().GetVersionInfo();
+  if (info.empty())
+    GTEST_SKIP() << "built without VCS revisions";
+
+  // There is one CPlusPlusLanguage instance per C++ dialect, but its
+  // information must appear only once.
+  std::string version = Language::GetVersionWithLanguageInfo();
+  EXPECT_TRUE(llvm::StringRef(version).starts_with(GetVersion()));
+  EXPECT_EQ(llvm::StringRef(version).count(info), 1u);
 }
 
 struct ManglingSubstitutorTestCase {
@@ -613,4 +646,54 @@ TEST(CPlusPlusLanguage, ManglingSubstitutor_StructorAlias) {
     EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
     EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
   }
+}
+
+TEST(CPlusPlusLanguage, FormatterLanguages) {
+  CPlusPlusLanguage language;
+  std::vector<lldb::LanguageType> cplusplus = {lldb::eLanguageTypeC_plus_plus};
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC, lldb::eLanguageTypeC89, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC11, lldb::eLanguageTypeC_plus_plus,
+        lldb::eLanguageTypeC_plus_plus_03, lldb::eLanguageTypeC_plus_plus_11,
+        lldb::eLanguageTypeC_plus_plus_14})
+    EXPECT_EQ(language.GetFormatterLanguages(c_or_cplusplus), cplusplus);
+
+  EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC).empty());
+  EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC_plus_plus)
+                  .empty());
+}
+
+TEST(CPlusPlusLanguage, IsCategoryApplicable) {
+  CPlusPlusLanguage language;
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC89, lldb::eLanguageTypeC, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC_plus_plus})
+    EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                              c_or_cplusplus));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                             lldb::eLanguageTypeObjC));
+
+  // A category for a specific version of C++ only applies to its own values.
+  EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                            lldb::eLanguageTypeC_plus_plus_11));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                             lldb::eLanguageTypeC_plus_plus));
+}
+
+TEST(CPlusPlusLanguage, ExpressionOptions) {
+  std::unique_ptr<OptionGroupLanguageExpression> options =
+      CPlusPlusLanguage().CreateExpressionOptions();
+  ASSERT_TRUE(options);
+  llvm::ArrayRef<OptionDefinition> definitions = options->GetDefinitions();
+  ASSERT_EQ(definitions.size(), 1u);
+  EXPECT_STREQ(definitions[0].long_option, "c++-ignore-context-qualifiers");
+
+  EvaluateExpressionOptions expression_options;
+  options->OptionParsingStarting(nullptr);
+  options->Apply(expression_options);
+  EXPECT_FALSE(expression_options.GetCppIgnoreContextQualifiers());
+
+  ASSERT_TRUE(options->SetOptionValue(0, "", nullptr).Success());
+  options->Apply(expression_options);
+  EXPECT_TRUE(expression_options.GetCppIgnoreContextQualifiers());
 }

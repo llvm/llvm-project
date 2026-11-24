@@ -7,7 +7,7 @@ define void @test(ptr %0, i32 %.sroa.31.0.copyload4033) {
 ; CHECK-NEXT:  [[_PREHEADER1937_PREHEADER:.*:]]
 ; CHECK-NEXT:    br [[DOTPREHEADER1927_PREHEADER:label %.*]]
 ; CHECK:       [[_PREHEADER1927_PREHEADER:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[DOTSROA_31_0_COPYLOAD4033]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[DOTSROA_31_0_COPYLOAD4033]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br [[DOTPREHEADER1927:label %.*]]
 ; CHECK:       [[_LOOPEXIT1924:.*:]]

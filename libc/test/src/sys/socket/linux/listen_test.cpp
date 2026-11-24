@@ -26,9 +26,8 @@ using LlvmLibcListenTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 
 TEST_F(LlvmLibcListenTest, ListenLocalSocket) {
-
-  const char *FILENAME = "listen_file.test";
-  auto SOCK_PATH = libc_make_test_file_path(FILENAME);
+  LIBC_NAMESPACE::testing::TestDirectoryScope dir_scope;
+  constexpr char SOCK_PATH[] = "listen_file.test";
 
   int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_STREAM, 0);
   ASSERT_GE(sock, 0);

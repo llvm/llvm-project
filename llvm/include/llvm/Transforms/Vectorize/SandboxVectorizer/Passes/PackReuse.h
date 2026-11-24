@@ -27,7 +27,9 @@ class LLVM_ABI PackReuse final : public RegionPass {
   bool Change = false;
 
 public:
-  PackReuse() : RegionPass("pack-reuse") {}
+  PackReuse(StringRef AuxArg) : RegionPass("pack-reuse") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 

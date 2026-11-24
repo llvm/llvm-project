@@ -85,7 +85,7 @@ llvm::Error CommonOptionsParser::init(
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
 
   static cl::opt<std::string> BuildPath("p", cl::desc("Build path"),
-                                        cl::Optional, cl::cat(Category),
+                                        cl::cat(Category),
                                         cl::sub(cl::SubCommand::getAll()));
 
   static cl::list<std::string> SourcePaths(
@@ -139,6 +139,7 @@ llvm::Error CommonOptionsParser::init(
           new FixedCompilationDatabase(".", std::vector<std::string>()));
     }
   }
+  Compilations = inferToolLocation(std::move(Compilations));
   auto AdjustingCompilations =
       std::make_unique<ArgumentsAdjustingCompilations>(
           std::move(Compilations));

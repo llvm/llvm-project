@@ -15,7 +15,6 @@
 #include "SIPostRABundler.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;
@@ -60,11 +59,6 @@ private:
   bool canBundle(const MachineInstr &MI, const MachineInstr &NextMI) const;
 };
 
-constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
-                              SIInstrFlags::SMRD | SIInstrFlags::DS |
-                              SIInstrFlags::FLAT | SIInstrFlags::MIMG |
-                              SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE;
-
 } // End anonymous namespace.
 
 INITIALIZE_PASS(SIPostRABundlerLegacy, DEBUG_TYPE, "SI post-RA bundler", false,
@@ -73,10 +67,6 @@ INITIALIZE_PASS(SIPostRABundlerLegacy, DEBUG_TYPE, "SI post-RA bundler", false,
 char SIPostRABundlerLegacy::ID = 0;
 
 char &llvm::SIPostRABundlerLegacyID = SIPostRABundlerLegacy::ID;
-
-FunctionPass *llvm::createSIPostRABundlerPass() {
-  return new SIPostRABundlerLegacy();
-}
 
 bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
   if (!MI.mayLoad())
@@ -112,19 +102,34 @@ void SIPostRABundler::collectUsedRegUnits(const MachineInstr &MI,
   }
 }
 
+static bool isMemoryInst(const MachineInstr &MI) {
+  return SIInstrFlags::isMUBUF(MI) || SIInstrFlags::isMTBUF(MI) ||
+         SIInstrFlags::isSMRD(MI) || SIInstrFlags::isDS(MI) ||
+         SIInstrFlags::isFLAT(MI) || SIInstrFlags::isMIMG(MI) ||
+         SIInstrFlags::isVIMAGE(MI) || SIInstrFlags::isVSAMPLE(MI);
+}
+
+static bool hasSameMemFormat(const MachineInstr &A, const MachineInstr &B) {
+  return SIInstrFlags::isMUBUF(A) == SIInstrFlags::isMUBUF(B) &&
+         SIInstrFlags::isMTBUF(A) == SIInstrFlags::isMTBUF(B) &&
+         SIInstrFlags::isSMRD(A) == SIInstrFlags::isSMRD(B) &&
+         SIInstrFlags::isDS(A) == SIInstrFlags::isDS(B) &&
+         SIInstrFlags::isFLAT(A) == SIInstrFlags::isFLAT(B) &&
+         SIInstrFlags::isMIMG(A) == SIInstrFlags::isMIMG(B) &&
+         SIInstrFlags::isVIMAGE(A) == SIInstrFlags::isVIMAGE(B) &&
+         SIInstrFlags::isVSAMPLE(A) == SIInstrFlags::isVSAMPLE(B);
+}
+
 bool SIPostRABundler::isBundleCandidate(const MachineInstr &MI) const {
-  const uint64_t IMemFlags = MI.getDesc().TSFlags & MemFlags;
-  return IMemFlags != 0 && MI.mayLoadOrStore() && !MI.isBundled();
+  return isMemoryInst(MI) && MI.mayLoadOrStore() && !MI.isBundled();
 }
 
 bool SIPostRABundler::canBundle(const MachineInstr &MI,
                                 const MachineInstr &NextMI) const {
-  const uint64_t IMemFlags = MI.getDesc().TSFlags & MemFlags;
-
-  return (IMemFlags != 0 && MI.mayLoadOrStore() && !NextMI.isBundled() &&
-          NextMI.mayLoad() == MI.mayLoad() && NextMI.mayStore() == MI.mayStore() &&
-          ((NextMI.getDesc().TSFlags & MemFlags) == IMemFlags) &&
-          !isDependentLoad(NextMI));
+  return isMemoryInst(MI) && MI.mayLoadOrStore() && !NextMI.isBundled() &&
+         NextMI.mayLoad() == MI.mayLoad() &&
+         NextMI.mayStore() == MI.mayStore() && hasSameMemFormat(MI, NextMI) &&
+         !isDependentLoad(NextMI);
 }
 
 bool SIPostRABundlerLegacy::runOnMachineFunction(MachineFunction &MF) {

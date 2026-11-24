@@ -107,18 +107,114 @@ define void @main() {
   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec
   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec
 
+  ; Padding bits are poison only if all non-padding bits in the padding byte
+  ; are poison.
+  %alloc_vec_padding = alloca i16
+  store <3 x b4> poison, ptr %alloc_vec_padding
+  %all_poison_vec_bytes = load b16, ptr %alloc_vec_padding
+  ; The padding byte has a concrete non-padding bit, so the padding is zero.
+  store <3 x b4> <b4 1, b4 poison, b4 poison>, ptr %alloc_vec_padding
+  %mixed_poison_vec_bytes = load b16, ptr %alloc_vec_padding
+  ; The padding byte's non-padding bits are all poison, so the padding is
+  ; poison.
+  store <3 x b4> <b4 poison, b4 poison, b4 1>, ptr %alloc_vec_padding
+  %mixed_poison_vec_bytes2 = load b16, ptr %alloc_vec_padding
+
+  ; Non-byte-sized vector elements follow integer lane poison semantics.
+  %alloc_i7_vec = alloca i16
+  store i16 -1, ptr %alloc_i7_vec
+  %load_i7_vec_padding = load <2 x i7>, ptr %alloc_i7_vec
+
   %alloc_struct_padding = alloca {i8, i32}
   store {i8, i32} zeroinitializer, ptr %alloc_struct_padding
   %load_struct_noundef = load {i8, i32}, ptr %alloc_struct_padding, !noundef !{}
 
   %alloc_ptr = alloca ptr
   store ptr %alloc_ptr, ptr %alloc_ptr
+  %bytes = load b64, ptr %alloc_ptr
   ; It should recover the provenance.
   %ptr_with_provenance = load ptr, ptr %alloc_ptr
   %addr_bits = load i8, ptr %alloc_ptr
   store i8 %addr_bits, ptr %alloc_ptr
   ; The first byte is tainted. We cannot recover the provenance.
   %ptr_without_provenance = load ptr, ptr %alloc_ptr
+  store b64 %bytes, ptr %alloc_ptr
+  ; It should recover the provenance.
+  %ptr_with_provenance2 = load ptr, ptr %alloc_ptr
+  %bv64b1 = bitcast b64 %bytes to <64 x b1>
+  %bv64b1_reversed = call <64 x b1> @llvm.vector.reverse(<64 x b1> %bv64b1)
+  store <64 x b1> %bv64b1_reversed, ptr %alloc_ptr
+  ; The bit order is incorrect. We cannot recover the provenance.
+  %ptr_without_provenance2 = load ptr, ptr %alloc_ptr
+  store b64 %bytes, ptr %alloc_ptr
+  store <2 x b4> <b4 0, b4 poison>, ptr %alloc_ptr
+  %bytes_tainted = load b64, ptr %alloc_ptr
+  ; The first byte is tainted. We cannot recover the provenance.
+  %ptr_without_provenance3 = load ptr, ptr %alloc_ptr
+  %bv8b8_reversed = bitcast <64 x b1> %bv64b1_reversed to <8 x b8>
+  %first_byte_with_provenance_reversed = extractelement <8 x b8> %bv8b8_reversed, i32 7
+  %first_byte_with_provenance_reversed_v8b1 = bitcast b8 %first_byte_with_provenance_reversed to <8 x b1>
+  %first_byte_with_provenance_v8b1 = call <8 x b1> @llvm.vector.reverse(<8 x b1> %first_byte_with_provenance_reversed_v8b1)
+  store <8 x b1> %first_byte_with_provenance_v8b1, ptr %alloc_ptr
+  %bytes_recovered = load b64, ptr %alloc_ptr
+  ; It should recover the provenance.
+  %ptr_with_provenance3 = load ptr, ptr %alloc_ptr
+
+  %alloc_byte = alloca b32
+  store b8 127, ptr %alloc_byte
+  %gep_second_byte = getelementptr i8, ptr %alloc_byte, i64 1
+  store <8 x b1> %first_byte_with_provenance_v8b1, ptr %gep_second_byte
+  %gep_third_byte = getelementptr i8, ptr %alloc_byte, i64 2
+  store b8 poison, ptr %gep_third_byte
+  %bytes_mixed = load b32, ptr %alloc_byte
+  store b32 u0xDEADBEEF, ptr %alloc_byte
+  %bytes_endianness = load b32, ptr %alloc_byte
+  ; Non-byte-sized byte loads poison value bits in the padding byte if
+  ; padding bits are not zero.
+  %bytes_trunc_b28 = load b28, ptr %alloc_byte
+  store b28 u0xEADBEEF, ptr %alloc_byte
+  %bytes_zextd = load b32, ptr %alloc_byte
+  store b8 255, ptr %alloc_byte
+  %bytes_trunc_b7 = load b7, ptr %alloc_byte
+
+  %alloc_ptr_array = alloca [4 x ptr]
+  store i64 0, ptr %alloc_ptr_array
+  %ptr_array_1 = getelementptr ptr, ptr %alloc_ptr_array, i64 1
+  store ptr %alloc_ptr_array, ptr %ptr_array_1
+  %ptr_array_2 = getelementptr ptr, ptr %alloc_ptr_array, i64 2
+  store ptr %alloc_ptr_array, ptr %ptr_array_2
+  %ptr_array_2_middle = getelementptr i8, ptr %alloc_ptr_array, i64 20
+  store i8 0, ptr %ptr_array_2_middle
+  %mixed_alloc = load b256, ptr %alloc_ptr_array
+
+  ; A byte value with mixed concrete and poison bits is not a poison value.
+  ; Its padding bits are written as zero.
+  %mixed_b7 = bitinsert b7 poison, i3 5, i32 0
+  store b7 %mixed_b7, ptr %alloc_byte
+  %mixed_b7_bytes = load b8, ptr %alloc_byte
+  ; A poison byte value writes poison padding bits.
+  store b7 poison, ptr %alloc_byte
+  %poison_b7_bytes = load b8, ptr %alloc_byte
+  ; Undef bits in a non-byte-sized byte load become poison, so the padding
+  ; bits must be poison as well.
+  %undef_alloc = alloca i8
+  call void @llvm.lifetime.start.p0(ptr %undef_alloc)
+  %undef_b7 = load b7, ptr %undef_alloc
+  store b7 %undef_b7, ptr %alloc_byte
+  %undef_b7_bytes = load b8, ptr %alloc_byte
+
+  ; Store-to-load forwarding across a non-byte-sized byte type with interior
+  ; poison bits: store b13 zero-pads to b16 without disturbing the poison bits.
+  %b13_poison = bitinsert b13 poison, i3 5, i32 0
+  %b13_val = bitinsert b13 %b13_poison, i3 3, i32 10
+  %b13_dst = alloca i16
+  store b13 %b13_val, ptr %b13_dst
+  %b13_forward_b16 = load b16, ptr %b13_dst
+  %b13_forward_b13 = load b13, ptr %b13_dst
+
+  %b = bitinsert b8 0, i4 poison, i32 0
+  store b8 %b, ptr %alloc_byte
+  %v = load b4, ptr %alloc_byte
 
   ret void
 }
@@ -146,7 +242,7 @@ define void @main() {
 ; CHECK-NEXT:   %val11 = load i25, ptr %alloc, align 4 => poison
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr poison)
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr poison)
-; CHECK-NEXT:   %alloc_lifetime = alloca i32, align 4 => ptr 0xC [alloc_lifetime (dead)]
+; CHECK-NEXT:   %alloc_lifetime = alloca i32, align 4 => ptr 0x10 [alloc_lifetime (dead)]
 ; CHECK-NEXT:   %val12 = load i32, ptr %alloc_lifetime, align 4 => poison
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc_lifetime)
 ; CHECK-NEXT:   %val13 = load i32, ptr %alloc_lifetime, align 4 => i32 -289830082
@@ -161,52 +257,122 @@ define void @main() {
 ; CHECK-NEXT:   %val16 = load i32, ptr %alloc_lifetime, align 4 => poison
 ; CHECK-NEXT:   store i32 -524288, ptr %alloc, align 4
 ; CHECK-NEXT:   %val17 = load float, ptr %alloc, align 4 => float 0xFFF80000
-; CHECK-NEXT:   %alloc_vscale = alloca <vscale x 2 x i32>, align 8 => ptr 0x10 [alloc_vscale]
+; CHECK-NEXT:   %alloc_vscale = alloca <vscale x 2 x i32>, align 8 => ptr 0x18 [alloc_vscale]
 ; CHECK-NEXT:   %insert = insertelement <vscale x 1 x i32> poison, i32 1, i32 0 => { i32 1, poison, poison, poison }
 ; CHECK-NEXT:   %ones = shufflevector <vscale x 1 x i32> %insert, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer => { i32 1, i32 1, i32 1, i32 1 }
 ; CHECK-NEXT:   %twos = add <vscale x 1 x i32> %ones, %ones => { i32 2, i32 2, i32 2, i32 2 }
 ; CHECK-NEXT:   store <vscale x 1 x i32> %ones, ptr %alloc_vscale, align 4
-; CHECK-NEXT:   %gep3 = getelementptr <vscale x 1 x i32>, ptr %alloc_vscale, i64 1 => ptr 0x20 [alloc_vscale + 16]
+; CHECK-NEXT:   %gep3 = getelementptr <vscale x 1 x i32>, ptr %alloc_vscale, i64 1 => ptr 0x28 [alloc_vscale + 16]
 ; CHECK-NEXT:   store <vscale x 1 x i32> %twos, ptr %gep3, align 4
 ; CHECK-NEXT:   %val18 = load <vscale x 2 x i32>, ptr %alloc_vscale, align 8 => { i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2 }
-; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x30 [alloc_struct]
+; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x40 [alloc_struct]
 ; CHECK-NEXT:   store %struct { [2 x i16] [i16 1, i16 2], i64 3 }, ptr %alloc_struct, align 8
 ; CHECK-NEXT:   %val19 = load %struct, ptr %alloc_struct, align 8 => { { i16 1, i16 2 }, i64 3 }
 ; CHECK-NEXT:   %val20 = load i64, ptr %alloc_struct, align 8 => i64 281486191577587
 ; CHECK-NEXT:   %val21 = load i64, ptr %alloc_struct, align 8 => i64 281486962127119
-; CHECK-NEXT:   %alloc_struct_packed = alloca %struct.packed, align 8 => ptr 0x40 [alloc_struct_packed]
+; CHECK-NEXT:   %alloc_struct_packed = alloca %struct.packed, align 8 => ptr 0x58 [alloc_struct_packed]
 ; CHECK-NEXT:   store %struct.packed <{ [2 x i16] [i16 1, i16 2], i64 3 }>, ptr %alloc_struct_packed, align 1
 ; CHECK-NEXT:   %val22 = load %struct.packed, ptr %alloc_struct_packed, align 1 => { { i16 1, i16 2 }, i64 3 }
 ; CHECK-NEXT:   %val23 = load i64, ptr %alloc_struct_packed, align 8 => i64 281483566645248
 ; CHECK-NEXT:   %val24 = load i64, ptr %alloc_struct_packed, align 8 => i64 281483566645248
-; CHECK-NEXT:   %alloc_struct_vscale = alloca %struct.vscale, align 8 => ptr 0x50 [alloc_struct_vscale]
+; CHECK-NEXT:   %alloc_struct_vscale = alloca %struct.vscale, align 8 => ptr 0x68 [alloc_struct_vscale]
 ; CHECK-NEXT:   store %struct.vscale zeroinitializer, ptr %alloc_struct_vscale, align 4
-; CHECK-NEXT:   %gep4 = getelementptr <vscale x 1 x i32>, ptr %alloc_struct_vscale, i32 1 => ptr 0x60 [alloc_struct_vscale + 16]
+; CHECK-NEXT:   %gep4 = getelementptr <vscale x 1 x i32>, ptr %alloc_struct_vscale, i32 1 => ptr 0x78 [alloc_struct_vscale + 16]
 ; CHECK-NEXT:   store <vscale x 1 x i32> %ones, ptr %gep4, align 4
 ; CHECK-NEXT:   %val25 = load %struct.vscale, ptr %alloc_struct_vscale, align 4 => { { i32 0, i32 0, i32 0, i32 0 }, { i32 1, i32 1, i32 1, i32 1 } }
-; CHECK-NEXT:   %alloc_array = alloca [2 x i32], align 4 => ptr 0x70 [alloc_array]
+; CHECK-NEXT:   %alloc_array = alloca [2 x i32], align 4 => ptr 0x8C [alloc_array]
 ; CHECK-NEXT:   store [2 x i32] [i32 1, i32 2], ptr %alloc_array, align 4
 ; CHECK-NEXT:   %val26 = load [2 x i32], ptr %alloc_array, align 4 => { i32 1, i32 2 }
-; CHECK-NEXT:   %alloc_i1_vec = alloca <4 x i1>, align 1 => ptr 0x78 [alloc_i1_vec]
+; CHECK-NEXT:   %alloc_i1_vec = alloca <4 x i1>, align 1 => ptr 0x95 [alloc_i1_vec]
 ; CHECK-NEXT:   store <4 x i1> <i1 true, i1 false, i1 poison, i1 false>, ptr %alloc_i1_vec, align 1
 ; CHECK-NEXT:   %val27 = load <4 x i1>, ptr %alloc_i1_vec, align 1 => { T, F, poison, F }
 ; CHECK-NEXT:   %val28 = load i8, ptr %alloc_i1_vec, align 1 => poison
-; CHECK-NEXT:   %alloc_padding = alloca i31, align 4 => ptr 0x7C [alloc_padding]
+; CHECK-NEXT:   %alloc_padding = alloca i31, align 4 => ptr 0x98 [alloc_padding]
 ; CHECK-NEXT:   store i32 0, ptr %alloc_padding, align 4
-; CHECK-NEXT:   %alloc_padding_vec = alloca i64, align 8 => ptr 0x80 [alloc_padding_vec]
+; CHECK-NEXT:   %alloc_padding_vec = alloca i64, align 8 => ptr 0xA0 [alloc_padding_vec]
 ; CHECK-NEXT:   store { <6 x i5>, i32 } { <6 x i5> zeroinitializer, i32 -1 }, ptr %alloc_padding_vec, align 4
 ; CHECK-NEXT:   %load_agg = load { <6 x i5>, i32 }, ptr %alloc_padding_vec, align 4 => { { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }, i32 -1 }
 ; CHECK-NEXT:   %load_vec = load <6 x i5>, ptr %alloc_padding_vec, align 4 => { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }
 ; CHECK-NEXT:   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec, align 8 => i33 255
 ; CHECK-NEXT:   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec, align 8 => { i11 0, i11 0, i11 255 }
-; CHECK-NEXT:   %alloc_struct_padding = alloca { i8, i32 }, align 8 => ptr 0x88 [alloc_struct_padding]
+; CHECK-NEXT:   %alloc_vec_padding = alloca i16, align 2 => ptr 0xAA [alloc_vec_padding]
+; CHECK-NEXT:   store <3 x b4> poison, ptr %alloc_vec_padding, align 2
+; CHECK-NEXT:   %all_poison_vec_bytes = load b16, ptr %alloc_vec_padding, align 2 => b16 0x!! 0x!! 
+; CHECK-NEXT:   store <3 x b4> <b4 1, b4 poison, b4 poison>, ptr %alloc_vec_padding, align 2
+; CHECK-NEXT:   %mixed_poison_vec_bytes = load b16, ptr %alloc_vec_padding, align 2 => b16 0x01 0x!! 
+; CHECK-NEXT:   store <3 x b4> <b4 poison, b4 poison, b4 1>, ptr %alloc_vec_padding, align 2
+; CHECK-NEXT:   %mixed_poison_vec_bytes2 = load b16, ptr %alloc_vec_padding, align 2 => b16 0x!! !!!!0001 
+; CHECK-NEXT:   %alloc_i7_vec = alloca i16, align 2 => ptr 0xAE [alloc_i7_vec]
+; CHECK-NEXT:   store i16 -1, ptr %alloc_i7_vec, align 2
+; CHECK-NEXT:   %load_i7_vec_padding = load <2 x i7>, ptr %alloc_i7_vec, align 2 => { poison, i7 -1 }
+; CHECK-NEXT:   %alloc_struct_padding = alloca { i8, i32 }, align 8 => ptr 0xB8 [alloc_struct_padding]
 ; CHECK-NEXT:   store { i8, i32 } zeroinitializer, ptr %alloc_struct_padding, align 4
 ; CHECK-NEXT:   %load_struct_noundef = load { i8, i32 }, ptr %alloc_struct_padding, align 4, !noundef !0 => { i8 0, i32 0 }
-; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0x90 [alloc_ptr]
+; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0xC8 [alloc_ptr]
 ; CHECK-NEXT:   store ptr %alloc_ptr, ptr %alloc_ptr, align 8
-; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [alloc_ptr]
+; CHECK-NEXT:   %bytes = load b64, ptr %alloc_ptr, align 8 => b64 ptr 0xC8 [alloc_ptr] 
+; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC8 [alloc_ptr]
 ; CHECK-NEXT:   %addr_bits = load i8, ptr %alloc_ptr, align 1 => i8 0
 ; CHECK-NEXT:   store i8 %addr_bits, ptr %alloc_ptr, align 1
-; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [nullary]
+; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC8 [nullary]
+; CHECK-NEXT:   store b64 %bytes, ptr %alloc_ptr, align 8
+; CHECK-NEXT:   %ptr_with_provenance2 = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC8 [alloc_ptr]
+; CHECK-NEXT:   %bv64b1 = bitcast b64 %bytes to <64 x b1> => { b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 1(0) , b1 1(0) , b1 0(1) , b1 0(0) , b1 1(1) , b1 0(1) , b1 0(0) , b1 0(0)  }
+; CHECK-NEXT:   %bv64b1_reversed = call <64 x b1> @llvm.vector.reverse.v64b1(<64 x b1> %bv64b1) => { b1 0(0) , b1 0(0) , b1 0(1) , b1 1(1) , b1 0(0) , b1 0(1) , b1 1(0) , b1 1(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0)  }
+; CHECK-NEXT:   store <64 x b1> %bv64b1_reversed, ptr %alloc_ptr, align 8
+; CHECK-NEXT:   %ptr_without_provenance2 = load ptr, ptr %alloc_ptr, align 8 => ptr 0x1300000000000000 [nullary]
+; CHECK-NEXT:   store b64 %bytes, ptr %alloc_ptr, align 8
+; CHECK-NEXT:   store <2 x b4> <b4 0, b4 poison>, ptr %alloc_ptr, align 1
+; CHECK-NEXT:   %bytes_tainted = load b64, ptr %alloc_ptr, align 8 => b64 0000!!!! 00000000(01110001) 00000000(00111100) 00000000(00111001) 00000000(10001010) 00000000(10010101) 00000000(00001000) 11001000(00101100) 
+; CHECK-NEXT:   %ptr_without_provenance3 = load ptr, ptr %alloc_ptr, align 8 => poison
+; CHECK-NEXT:   %bv8b8_reversed = bitcast <64 x b1> %bv64b1_reversed to <8 x b8> => { b8 00010011(00110100) , b8 00000000(00010000) , b8 00000000(10101001) , b8 00000000(01010001) , b8 00000000(10011100) , b8 00000000(00111100) , b8 00000000(10001110) , b8 00000000(01100100)  }
+; CHECK-NEXT:   %first_byte_with_provenance_reversed = extractelement <8 x b8> %bv8b8_reversed, i32 7 => b8 00000000(01100100) 
+; CHECK-NEXT:   %first_byte_with_provenance_reversed_v8b1 = bitcast b8 %first_byte_with_provenance_reversed to <8 x b1> => { b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0)  }
+; CHECK-NEXT:   %first_byte_with_provenance_v8b1 = call <8 x b1> @llvm.vector.reverse.v8b1(<8 x b1> %first_byte_with_provenance_reversed_v8b1) => { b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0)  }
+; CHECK-NEXT:   store <8 x b1> %first_byte_with_provenance_v8b1, ptr %alloc_ptr, align 1
+; CHECK-NEXT:   %bytes_recovered = load b64, ptr %alloc_ptr, align 8 => b64 ptr 0xC8 [alloc_ptr] 
+; CHECK-NEXT:   %ptr_with_provenance3 = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC8 [alloc_ptr]
+; CHECK-NEXT:   %alloc_byte = alloca b32, align 4 => ptr 0xD4 [alloc_byte]
+; CHECK-NEXT:   store b8 127, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %gep_second_byte = getelementptr i8, ptr %alloc_byte, i64 1 => ptr 0xD5 [alloc_byte + 1]
+; CHECK-NEXT:   store <8 x b1> %first_byte_with_provenance_v8b1, ptr %gep_second_byte, align 1
+; CHECK-NEXT:   %gep_third_byte = getelementptr i8, ptr %alloc_byte, i64 2 => ptr 0xD6 [alloc_byte + 2]
+; CHECK-NEXT:   store b8 poison, ptr %gep_third_byte, align 1
+; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 00000000(00100110) 0x!! 0x!! 
+; CHECK-NEXT:   store b32 -559038737, ptr %alloc_byte, align 4
+; CHECK-NEXT:   %bytes_endianness = load b32, ptr %alloc_byte, align 4 => b32 0xDE 0xAD 0xBE 0xEF 
+; CHECK-NEXT:   %bytes_trunc_b28 = load b28, ptr %alloc_byte, align 4 => b28 !!!! 0xAD 0xBE 0xEF 
+; CHECK-NEXT:   store b28 -22167825, ptr %alloc_byte, align 4
+; CHECK-NEXT:   %bytes_zextd = load b32, ptr %alloc_byte, align 4 => b32 0x0E 0xAD 0xBE 0xEF 
+; CHECK-NEXT:   store b8 -1, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %bytes_trunc_b7 = load b7, ptr %alloc_byte, align 1 => b7 !!!!!!! 
+; CHECK-NEXT:   %alloc_ptr_array = alloca [4 x ptr], align 8 => ptr 0xE0 [alloc_ptr_array]
+; CHECK-NEXT:   store i64 0, ptr %alloc_ptr_array, align 8
+; CHECK-NEXT:   %ptr_array_1 = getelementptr ptr, ptr %alloc_ptr_array, i64 1 => ptr 0xE8 [alloc_ptr_array + 8]
+; CHECK-NEXT:   store ptr %alloc_ptr_array, ptr %ptr_array_1, align 8
+; CHECK-NEXT:   %ptr_array_2 = getelementptr ptr, ptr %alloc_ptr_array, i64 2 => ptr 0xF0 [alloc_ptr_array + 16]
+; CHECK-NEXT:   store ptr %alloc_ptr_array, ptr %ptr_array_2, align 8
+; CHECK-NEXT:   %ptr_array_2_middle = getelementptr i8, ptr %alloc_ptr_array, i64 20 => ptr 0xF4 [alloc_ptr_array + 20]
+; CHECK-NEXT:   store i8 0, ptr %ptr_array_2_middle, align 1
+; CHECK-NEXT:   %mixed_alloc = load b256, ptr %alloc_ptr_array, align 8 => b256 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 ptr 0xE0 [alloc_ptr_array] 00000000(00000101) 00000000(00011010) 00000000(01100011) 00000000(11000100) 0x00 00000000(11111000) 00000000(10110101) 11100000(00101111) 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 
+; CHECK-NEXT:   %mixed_b7 = bitinsert b7 poison, i3 -3, i32 0 => b7 !!!!101 
+; CHECK-NEXT:   store b7 %mixed_b7, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %mixed_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0!!!!101 
+; CHECK-NEXT:   store b7 poison, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %poison_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0x!! 
+; CHECK-NEXT:   %undef_alloc = alloca i8, align 1 => ptr 0x101 [undef_alloc (dead)]
+; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %undef_alloc)
+; CHECK-NEXT:   %undef_b7 = load b7, ptr %undef_alloc, align 1 => b7 !!!!!!! 
+; CHECK-NEXT:   store b7 %undef_b7, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %undef_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0x!! 
+; CHECK-NEXT:   %b13_poison = bitinsert b13 poison, i3 -3, i32 0 => b13 !!!!! !!!!!101 
+; CHECK-NEXT:   %b13_val = bitinsert b13 %b13_poison, i3 3, i32 10 => b13 011!! !!!!!101 
+; CHECK-NEXT:   %b13_dst = alloca i16, align 2 => ptr 0x104 [b13_dst]
+; CHECK-NEXT:   store b13 %b13_val, ptr %b13_dst, align 2
+; CHECK-NEXT:   %b13_forward_b16 = load b16, ptr %b13_dst, align 2 => b16 000011!! !!!!!101 
+; CHECK-NEXT:   %b13_forward_b13 = load b13, ptr %b13_dst, align 2 => b13 011!! !!!!!101 
+; CHECK-NEXT:   %b = bitinsert b8 0, i4 poison, i32 0 => b8 0000!!!! 
+; CHECK-NEXT:   store b8 %b, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %v = load b4, ptr %alloc_byte, align 1 => b4 !!!! 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

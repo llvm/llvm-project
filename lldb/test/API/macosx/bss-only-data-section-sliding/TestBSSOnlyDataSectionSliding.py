@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestBSSOnlyDataSectionSliding(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_with_python_api(self):
         """Test that we get thread names when interrupting a process."""
         self.build()

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MacroToEnumCheck.h"
+#include "../utils/LexerUtils.h"
 #include "IntegralLiteralExpressionMatcher.h"
 
 #include "clang/AST/ASTContext.h"
@@ -18,6 +19,8 @@
 #include <string>
 
 namespace clang::tidy::modernize {
+
+using utils::lexer::getTokenName;
 
 static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
                             StringRef Text) {
@@ -70,11 +73,6 @@ static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
   }
 
   return true;
-}
-
-static StringRef getTokenName(const Token &Tok) {
-  return Tok.is(tok::raw_identifier) ? Tok.getRawIdentifier()
-                                     : Tok.getIdentifierInfo()->getName();
 }
 
 namespace {
@@ -258,17 +256,9 @@ void MacroToEnumCallbacks::conditionStart(const SourceLocation &Loc) {
 }
 
 void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
-  const CharSourceRange CharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(Range), SM, LangOpts);
-  std::string Text = Lexer::getSourceText(CharRange, SM, LangOpts).str();
-  Lexer Lex(CharRange.getBegin(), LangOpts, Text.data(), Text.data(),
-            Text.data() + Text.size());
-  Token Tok;
-  bool End = false;
-  while (!End) {
-    End = Lex.LexFromRawLexer(Tok);
-    if (Tok.is(tok::raw_identifier) &&
-        Tok.getRawIdentifier().str() != "defined")
+  for (const Token &Tok : utils::lexer::getRawTokens(
+           CharSourceRange::getTokenRange(Range), SM, LangOpts)) {
+    if (Tok.is(tok::raw_identifier) && getTokenName(Tok) != "defined")
       checkName(Tok);
   }
 }
@@ -286,7 +276,7 @@ void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
 
 void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
   const std::string Id = getTokenName(Tok).str();
-  auto Pos = llvm::lower_bound(ExpressionNames, Id);
+  const auto Pos = llvm::lower_bound(ExpressionNames, Id);
   if (Pos == ExpressionNames.end() || *Pos != Id)
     ExpressionNames.insert(Pos, Id);
 }
@@ -366,13 +356,14 @@ void MacroToEnumCallbacks::MacroUndefined(const Token &MacroNameTok,
                                           const MacroDirective *Undef) {
   rememberExpressionName(MacroNameTok);
 
-  auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
+  const auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
     return getTokenName(Macro.Name) == getTokenName(MacroNameTok);
   };
 
-  auto *It = llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
-    return llvm::any_of(MacroList, MatchesToken);
-  });
+  const auto *It =
+      llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
+        return llvm::any_of(MacroList, MatchesToken);
+      });
   if (It != Enums.end())
     Enums.erase(It);
 
@@ -522,7 +513,7 @@ void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,
 
 void MacroToEnumCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   using namespace ast_matchers;
-  auto TopLevelDecl = hasParent(translationUnitDecl());
+  const auto TopLevelDecl = hasParent(translationUnitDecl());
   Finder->addMatcher(decl(TopLevelDecl).bind("top"), this);
 }
 
@@ -541,11 +532,11 @@ void MacroToEnumCheck::check(
     return;
 
   SourceRange Range = TLDecl->getSourceRange();
-  if (auto *TemplateFn = Result.Nodes.getNodeAs<FunctionTemplateDecl>("top")) {
-    if (TemplateFn->isThisDeclarationADefinition() && TemplateFn->hasBody())
-      Range = SourceRange{TemplateFn->getBeginLoc(),
-                          TemplateFn->getUnderlyingDecl()->getBodyRBrace()};
-  }
+  if (auto *TemplateFn = Result.Nodes.getNodeAs<FunctionTemplateDecl>("top");
+      TemplateFn && TemplateFn->isThisDeclarationADefinition() &&
+      TemplateFn->hasBody())
+    Range = SourceRange{TemplateFn->getBeginLoc(),
+                        TemplateFn->getUnderlyingDecl()->getBodyRBrace()};
 
   if (isValid(Range) && !empty(Range))
     PPCallback->invalidateRange(Range);

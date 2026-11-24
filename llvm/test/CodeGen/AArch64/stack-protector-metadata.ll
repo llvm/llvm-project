@@ -37,6 +37,83 @@ entry:
   ret void
 }
 
+; sspreq protects every function unconditionally, so the metadata is ignored
+; there and test3 still gets a guard despite carrying it.
+
+; CHECK-LABEL: test3:
+; CHECK: ___stack_chk_guard
+
+; Function Attrs: noinline nounwind optnone
+define void @test3(ptr noundef %msg) #4 {
+entry:
+  %msg.addr = alloca ptr, align 8
+  %a = alloca [1000 x i8], align 1, !stack-protector !2
+  store ptr %msg, ptr %msg.addr, align 8
+  %arraydecay = getelementptr inbounds [1000 x i8], ptr %a, i64 0, i64 0
+  %0 = load ptr, ptr %msg.addr, align 8
+  %call = call ptr @strcpy(ptr noundef %arraydecay, ptr noundef %0) #3
+  %arraydecay1 = getelementptr inbounds [1000 x i8], ptr %a, i64 0, i64 0
+  %call2 = call i32 (ptr, ...) @printf(ptr noundef @.str, ptr noundef %arraydecay1)
+  ret void
+}
+
+; Control for test3: same function without the metadata, also protected.
+
+; CHECK-LABEL: test4:
+; CHECK: ___stack_chk_guard
+
+; Function Attrs: noinline nounwind optnone
+define void @test4(ptr noundef %msg) #4 {
+entry:
+  %msg.addr = alloca ptr, align 8
+  %b = alloca [1000 x i8], align 1
+  store ptr %msg, ptr %msg.addr, align 8
+  %arraydecay = getelementptr inbounds [1000 x i8], ptr %b, i64 0, i64 0
+  %0 = load ptr, ptr %msg.addr, align 8
+  %call = call ptr @strcpy(ptr noundef %arraydecay, ptr noundef %0) #3
+  %arraydecay1 = getelementptr inbounds [1000 x i8], ptr %b, i64 0, i64 0
+  %call2 = call i32 (ptr, ...) @printf(ptr noundef @.str, ptr noundef %arraydecay1)
+  ret void
+}
+
+; sspstrong honors the metadata, like ssp.
+
+; CHECK-LABEL: test5:
+; CHECK-NOT: ___stack_chk_guard
+
+; Function Attrs: noinline nounwind optnone
+define void @test5(ptr noundef %msg) #5 {
+entry:
+  %msg.addr = alloca ptr, align 8
+  %a = alloca [1000 x i8], align 1, !stack-protector !2
+  store ptr %msg, ptr %msg.addr, align 8
+  %arraydecay = getelementptr inbounds [1000 x i8], ptr %a, i64 0, i64 0
+  %0 = load ptr, ptr %msg.addr, align 8
+  %call = call ptr @strcpy(ptr noundef %arraydecay, ptr noundef %0) #3
+  %arraydecay1 = getelementptr inbounds [1000 x i8], ptr %a, i64 0, i64 0
+  %call2 = call i32 (ptr, ...) @printf(ptr noundef @.str, ptr noundef %arraydecay1)
+  ret void
+}
+
+; Control for test5: same function without the metadata, protected.
+
+; CHECK-LABEL: test6:
+; CHECK: ___stack_chk_guard
+
+; Function Attrs: noinline nounwind optnone
+define void @test6(ptr noundef %msg) #5 {
+entry:
+  %msg.addr = alloca ptr, align 8
+  %b = alloca [1000 x i8], align 1
+  store ptr %msg, ptr %msg.addr, align 8
+  %arraydecay = getelementptr inbounds [1000 x i8], ptr %b, i64 0, i64 0
+  %0 = load ptr, ptr %msg.addr, align 8
+  %call = call ptr @strcpy(ptr noundef %arraydecay, ptr noundef %0) #3
+  %arraydecay1 = getelementptr inbounds [1000 x i8], ptr %b, i64 0, i64 0
+  %call2 = call i32 (ptr, ...) @printf(ptr noundef @.str, ptr noundef %arraydecay1)
+  ret void
+}
+
 ; Function Attrs: nounwind
 declare ptr @strcpy(ptr noundef, ptr noundef) #1
 
@@ -46,6 +123,8 @@ attributes #0 = { noinline nounwind optnone "no-trapping-math"="true" "stack-pro
 attributes #1 = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #2 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #3 = { nounwind }
+attributes #4 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" sspreq }
+attributes #5 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" sspstrong }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

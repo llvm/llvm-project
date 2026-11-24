@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple aarch64_lfi %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64_lfi -mattr=+no-lfi-loads %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64_lfi --aarch64-lfi-guard-elim=false %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64_lfi -mattr=+no-lfi-loads --aarch64-lfi-guard-elim=false %s | FileCheck %s
 
 .arch_extension lse
 

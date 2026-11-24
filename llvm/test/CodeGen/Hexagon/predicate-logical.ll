@@ -25,6 +25,7 @@ entry:
 
 declare i32 @llvm.hexagon.A2.vcmpwgtu(i64, i64) nounwind readnone
 
-!0 = !{!"long long", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"long long", !1}

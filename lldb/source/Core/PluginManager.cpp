@@ -8,15 +8,19 @@
 
 #include "lldb/Core/PluginManager.h"
 
+#include "lldb/Core/BugReporter.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -24,6 +28,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -171,8 +176,7 @@ llvm::Expected<PluginInfo> PluginInfo::Create(const FileSpec &path) {
   // Look for files that follow the convention <g_plugin_prefix><name>.<ext>, in
   // which case we need to call lldb_initialize_<name> and
   // lldb_terminate_<name>.
-  llvm::StringRef file_name =
-      path.GetFileNameStrippingExtension().GetStringRef();
+  llvm::StringRef file_name = path.GetFileNameStrippingExtension();
   if (file_name.starts_with(g_plugin_prefix)) {
     llvm::StringRef plugin_name = file_name.substr(g_plugin_prefix.size());
     std::string init_symbol =
@@ -233,8 +237,7 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     // requested.
     PluginDir::LoadPolicy *policy = (PluginDir::LoadPolicy *)baton;
     if (*policy == PluginDir::LoadOnlyWithLLDBPrefix &&
-        !plugin_file_spec.GetFilename().GetStringRef().starts_with(
-            g_plugin_prefix))
+        !plugin_file_spec.GetFilename().starts_with(g_plugin_prefix))
       return FileSystem::eEnumerateDirectoryResultNext;
 
     // Don't try to load an already loaded plugin again.
@@ -293,7 +296,12 @@ void PluginManager::Initialize() {
   }
 }
 
-void PluginManager::Terminate() { GetPluginRegistry().Terminate(); }
+static void ClearScriptInterpreterErrors();
+
+void PluginManager::Terminate() {
+  GetPluginRegistry().Terminate();
+  ClearScriptInterpreterErrors();
+}
 
 llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   static PluginNamespace PluginNamespaces[] = {
@@ -308,6 +316,12 @@ llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
           "architecture",
           PluginManager::GetArchitecturePluginInfo,
           PluginManager::SetArchitecturePluginEnabled,
+      },
+
+      {
+          "bug-reporter",
+          PluginManager::GetBugReporterPluginInfo,
+          PluginManager::SetBugReporterPluginEnabled,
       },
 
       {
@@ -506,24 +520,6 @@ bool PluginManager::MatchPluginName(llvm::StringRef pattern,
   std::string qualified_name = (plugin_ns.name + "." + plugin_info.name).str();
   return pattern == qualified_name;
 }
-
-template <typename Callback> struct PluginInstance {
-  typedef Callback CallbackType;
-
-  PluginInstance() = default;
-  PluginInstance(llvm::StringRef name, llvm::StringRef description,
-                 Callback create_callback,
-                 DebuggerInitializeCallback debugger_init_callback = nullptr)
-      : name(name), description(description), enabled(true),
-        create_callback(create_callback),
-        debugger_init_callback(debugger_init_callback) {}
-
-  llvm::StringRef name;
-  llvm::StringRef description;
-  bool enabled;
-  Callback create_callback;
-  DebuggerInitializeCallback debugger_init_callback;
-};
 
 template <typename Instance> class PluginInstances {
 public:
@@ -751,6 +747,42 @@ PluginManager::CreateArchitectureInstance(const ArchSpec &arch) {
   return nullptr;
 }
 
+#pragma mark BugReporter
+
+typedef PluginInstance<BugReporterCreateInstance> BugReporterInstance;
+typedef PluginInstances<BugReporterInstance> BugReporterInstances;
+
+static BugReporterInstances &GetBugReporterInstances() {
+  static BugReporterInstances g_instances;
+  return g_instances;
+}
+
+void PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
+                                   BugReporterCreateInstance create_callback) {
+  GetBugReporterInstances().RegisterPlugin(name, description, create_callback);
+}
+
+void PluginManager::UnregisterPlugin(
+    BugReporterCreateInstance create_callback) {
+  GetBugReporterInstances().UnregisterPlugin(create_callback);
+}
+
+std::unique_ptr<BugReporter>
+PluginManager::CreateBugReporterInstance(llvm::StringRef name) {
+  if (!name.empty()) {
+    if (auto create_callback =
+            GetBugReporterInstances().GetCallbackForName(name))
+      return create_callback();
+    return nullptr;
+  }
+  for (const auto &instance : GetBugReporterInstances().GetSnapshot()) {
+    if (auto plugin_up = instance.create_callback())
+      return plugin_up;
+  }
+  return nullptr;
+}
+
 #pragma mark Disassembler
 
 typedef PluginInstance<DisassemblerCreateInstance> DisassemblerInstance;
@@ -923,21 +955,96 @@ static LanguageInstances &GetLanguageInstances() {
   return g_instances;
 }
 
+namespace {
+/// The Language instances that the language plugins create. Callers cache
+/// these instances, so they are never destroyed.
+class LanguageInstanceCache {
+public:
+  Language *Get(lldb::LanguageType language) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    return Lookup(language);
+  }
+
+  std::vector<Language *> GetAll() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    std::vector<Language *> instances;
+    for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes;
+         ++lang) {
+      if (Language *instance = Lookup(static_cast<lldb::LanguageType>(lang)))
+        instances.push_back(instance);
+    }
+    return instances;
+  }
+
+  /// Call this whenever a language plugin is registered, unregistered,
+  /// enabled, or disabled.
+  void Invalidate() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    m_active.clear();
+  }
+
+private:
+  /// Returns the instance of the first enabled plugin that supports
+  /// \p language, or nullptr. The caller must hold m_mutex.
+  Language *Lookup(lldb::LanguageType language) {
+    auto [active, inserted] = m_active.try_emplace(language, nullptr);
+    if (!inserted)
+      return active->second;
+    for (LanguageCreateInstance create_callback :
+         GetLanguageInstances().GetCreateCallbacks()) {
+      auto [created, is_new] =
+          m_created.try_emplace({create_callback, language}, nullptr);
+      if (is_new)
+        created->second = create_callback(language);
+      if (created->second)
+        return active->second = created->second;
+    }
+    return nullptr;
+  }
+
+  std::mutex m_mutex;
+  /// The instance of the first enabled plugin that supports each language,
+  /// or nullptr if none does.
+  std::map<lldb::LanguageType, Language *> m_active;
+  /// The result of every create callback for every language, so that each
+  /// callback is called once per language and a plugin that is registered or
+  /// enabled again gets the same instances. This assumes that a create
+  /// callback's result only depends on the language.
+  std::map<std::pair<LanguageCreateInstance, lldb::LanguageType>, Language *>
+      m_created;
+};
+} // namespace
+
+// Language instances are never destroyed, so neither is this cache.
+static LanguageInstanceCache &GetLanguageInstanceCache() {
+  static LanguageInstanceCache *g_cache = new LanguageInstanceCache();
+  return *g_cache;
+}
+
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     LanguageCreateInstance create_callback,
     DebuggerInitializeCallback debugger_init_callback) {
-  return GetLanguageInstances().RegisterPlugin(
+  bool registered = GetLanguageInstances().RegisterPlugin(
       name, description, create_callback, debugger_init_callback);
+  if (registered)
+    GetLanguageInstanceCache().Invalidate();
+  return registered;
 }
 
 bool PluginManager::UnregisterPlugin(LanguageCreateInstance create_callback) {
-  return GetLanguageInstances().UnregisterPlugin(create_callback);
+  bool unregistered = GetLanguageInstances().UnregisterPlugin(create_callback);
+  if (unregistered)
+    GetLanguageInstanceCache().Invalidate();
+  return unregistered;
 }
 
-llvm::SmallVector<LanguageCreateInstance>
-PluginManager::GetLanguageCreateCallbacks() {
-  return GetLanguageInstances().GetCreateCallbacks();
+Language *PluginManager::GetLanguageInstance(lldb::LanguageType language) {
+  return GetLanguageInstanceCache().Get(language);
+}
+
+std::vector<Language *> PluginManager::GetAllLanguageInstances() {
+  return GetLanguageInstanceCache().GetAll();
 }
 
 #pragma mark LanguageRuntime
@@ -1422,12 +1529,50 @@ PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
       none_instance = instance.create_callback;
 
     if (script_lang == instance.language)
-      return instance.create_callback(debugger);
+      return instance.create_callback(debugger, script_lang);
   }
 
   // If we didn't find one, return the ScriptInterpreter for the null language.
   assert(none_instance != nullptr);
-  return none_instance(debugger);
+  return none_instance(debugger, script_lang);
+}
+
+namespace {
+struct ScriptInterpreterErrors {
+  std::mutex mutex;
+  llvm::DenseMap<lldb::ScriptLanguage, Status> errors;
+};
+} // namespace
+
+static ScriptInterpreterErrors &GetScriptInterpreterErrors() {
+  static ScriptInterpreterErrors g_errors;
+  return g_errors;
+}
+
+static void ClearScriptInterpreterErrors() {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  errors.errors.clear();
+}
+
+void PluginManager::SetScriptInterpreterError(lldb::ScriptLanguage script_lang,
+                                              llvm::Error error) {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  if (error)
+    errors.errors[script_lang] = Status::FromError(std::move(error));
+  else
+    errors.errors.erase(script_lang);
+}
+
+llvm::Error
+PluginManager::GetScriptInterpreterError(lldb::ScriptLanguage script_lang) {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  auto it = errors.errors.find(script_lang);
+  if (it == errors.errors.end())
+    return llvm::Error::success();
+  return it->second.ToError();
 }
 
 FileSpec PluginManager::GetScriptInterpreterLibraryPath(
@@ -1958,9 +2103,10 @@ struct TypeSystemInstance : public PluginInstance<TypeSystemCreateInstance> {
   TypeSystemInstance(llvm::StringRef name, llvm::StringRef description,
                      CallbackType create_callback,
                      LanguageSet supported_languages_for_types,
-                     LanguageSet supported_languages_for_expressions)
-      : PluginInstance<TypeSystemCreateInstance>(name, description,
-                                                 create_callback),
+                     LanguageSet supported_languages_for_expressions,
+                     DebuggerInitializeCallback debugger_init_callback)
+      : PluginInstance<TypeSystemCreateInstance>(
+            name, description, create_callback, debugger_init_callback),
         supported_languages_for_types(supported_languages_for_types),
         supported_languages_for_expressions(
             supported_languages_for_expressions) {}
@@ -1980,10 +2126,11 @@ bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     TypeSystemCreateInstance create_callback,
     LanguageSet supported_languages_for_types,
-    LanguageSet supported_languages_for_expressions) {
+    LanguageSet supported_languages_for_expressions,
+    DebuggerInitializeCallback debugger_init_callback) {
   return GetTypeSystemInstances().RegisterPlugin(
       name, description, create_callback, supported_languages_for_types,
-      supported_languages_for_expressions);
+      supported_languages_for_expressions, debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(TypeSystemCreateInstance create_callback) {
@@ -2013,20 +2160,6 @@ LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
 
 #pragma mark ScriptedInterfaces
 
-struct ScriptedInterfaceInstance
-    : public PluginInstance<ScriptedInterfaceCreateInstance> {
-  ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
-                            ScriptedInterfaceCreateInstance create_callback,
-                            lldb::ScriptLanguage language,
-                            ScriptedInterfaceUsages usages)
-      : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
-                                                        create_callback),
-        language(language), usages(usages) {}
-
-  lldb::ScriptLanguage language;
-  ScriptedInterfaceUsages usages;
-};
-
 typedef PluginInstances<ScriptedInterfaceInstance> ScriptedInterfaceInstances;
 
 static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
@@ -2037,9 +2170,10 @@ static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ScriptedInterfaceCreateInstance create_callback,
-    lldb::ScriptLanguage language, ScriptedInterfaceUsages usages) {
+    lldb::ScriptedExtension extension, lldb::ScriptLanguage language,
+    ScriptedInterfaceUsages usages) {
   return GetScriptedInterfaceInstances().RegisterPlugin(
-      name, description, create_callback, language, usages);
+      name, description, create_callback, extension, language, usages);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -2047,7 +2181,7 @@ bool PluginManager::UnregisterPlugin(
   return GetScriptedInterfaceInstances().UnregisterPlugin(create_callback);
 }
 
-uint32_t PluginManager::GetNumScriptedInterfaces() {
+size_t PluginManager::GetNumScriptedInterfaces() {
   return GetScriptedInterfaceInstances().GetSnapshot().size();
 }
 
@@ -2058,6 +2192,13 @@ llvm::StringRef PluginManager::GetScriptedInterfaceNameAtIndex(uint32_t index) {
 llvm::StringRef
 PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
   return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
+}
+
+lldb::ScriptedExtension
+PluginManager::GetScriptedInterfaceExtensionAtIndex(uint32_t index) {
+  if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(index))
+    return instance->extension;
+  return ScriptedExtension::eScriptedExtensionInvalid;
 }
 
 lldb::ScriptLanguage
@@ -2072,6 +2213,35 @@ PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
   if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx))
     return instance->usages;
   return {};
+}
+
+void PluginManager::ForEachScriptedExtension(
+    llvm::function_ref<void(const ScriptedInterfaceInstance &)> callback,
+    lldb::ScriptLanguage language) {
+  llvm::SmallSet<lldb::ScriptedExtension, 16> emitted;
+  for (size_t idx = 0; idx < GetNumScriptedInterfaces(); idx++) {
+    auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx);
+    if (!instance)
+      continue;
+    if (language != lldb::eScriptLanguageUnknown &&
+        instance->language != language)
+      continue;
+    if (emitted.insert(instance->extension).second)
+      callback(*instance);
+  }
+}
+
+void PluginManager::AutoCompleteScriptedExtension(
+    llvm::StringRef name, CompletionRequest &request,
+    lldb::ScriptLanguage language) {
+  ForEachScriptedExtension(
+      [&](const ScriptedInterfaceInstance &instance) {
+        llvm::StringLiteral extension_name =
+            ScriptInterpreter::ExtensionToString(instance.extension);
+        if (extension_name.starts_with(name))
+          request.AddCompletion(extension_name);
+      },
+      language);
 }
 
 #pragma mark REPL
@@ -2168,6 +2338,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
   GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
+  GetTypeSystemInstances().PerformDebuggerCallback(debugger);
   GetLanguageInstances().PerformDebuggerCallback(debugger);
 }
 
@@ -2494,6 +2665,15 @@ bool PluginManager::SetArchitecturePluginEnabled(llvm::StringRef name,
 }
 
 llvm::SmallVector<RegisteredPluginInfo>
+PluginManager::GetBugReporterPluginInfo() {
+  return GetBugReporterInstances().GetPluginInfoForAllInstances();
+}
+bool PluginManager::SetBugReporterPluginEnabled(llvm::StringRef name,
+                                                bool enable) {
+  return GetBugReporterInstances().SetInstanceEnabled(name, enable);
+}
+
+llvm::SmallVector<RegisteredPluginInfo>
 PluginManager::GetDisassemblerPluginInfo() {
   return GetDisassemblerInstances().GetPluginInfoForAllInstances();
 }
@@ -2563,7 +2743,10 @@ llvm::SmallVector<RegisteredPluginInfo> PluginManager::GetLanguagePluginInfo() {
 }
 bool PluginManager::SetLanguagePluginEnabled(llvm::StringRef name,
                                              bool enable) {
-  return GetLanguageInstances().SetInstanceEnabled(name, enable);
+  bool found = GetLanguageInstances().SetInstanceEnabled(name, enable);
+  if (found)
+    GetLanguageInstanceCache().Invalidate();
+  return found;
 }
 
 llvm::SmallVector<RegisteredPluginInfo>

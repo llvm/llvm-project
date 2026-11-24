@@ -1839,7 +1839,6 @@
 // CHECK_DMR_M32: #define __AMX_FP8__ 1
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
 // CHECK_DMR_M32: #define __AMX_MOVRS__ 1
-// CHECK_DMR_M32: #define __AMX_TF32__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
@@ -1945,7 +1944,6 @@
 // CHECK_DMR_M64: #define __AMX_FP8__ 1
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
 // CHECK_DMR_M64: #define __AMX_MOVRS__ 1
-// CHECK_DMR_M64: #define __AMX_TF32__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
@@ -4147,6 +4145,7 @@
 // CHECK_ZNVER6_M32: #define __AVX2__ 1
 // CHECK_ZNVER6_M32: #define __AVX512BF16__ 1
 // CHECK_ZNVER6_M32: #define __AVX512BITALG__ 1
+// CHECK_ZNVER6_M32: #define __AVX512BMM__ 1
 // CHECK_ZNVER6_M32: #define __AVX512BW__ 1
 // CHECK_ZNVER6_M32: #define __AVX512CD__ 1
 // CHECK_ZNVER6_M32: #define __AVX512DQ__ 1
@@ -4220,6 +4219,7 @@
 // CHECK_ZNVER6_M64: #define __AVX2__ 1
 // CHECK_ZNVER6_M64: #define __AVX512BF16__ 1
 // CHECK_ZNVER6_M64: #define __AVX512BITALG__ 1
+// CHECK_ZNVER6_M64: #define __AVX512BMM__ 1
 // CHECK_ZNVER6_M64: #define __AVX512BW__ 1
 // CHECK_ZNVER6_M64: #define __AVX512CD__ 1
 // CHECK_ZNVER6_M64: #define __AVX512DQ__ 1
@@ -4585,6 +4585,130 @@
 // CHECK_C864GM7_M64: #define __x86_64 1
 // CHECK_C864GM7_M64: #define __x86_64__ 1
 
+// RUN: %clang -march=c86-4g-m8 -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM8_M32
+// CHECK_C864GM8_M32: #define __ADX__ 1
+// CHECK_C864GM8_M32: #define __AES__ 1
+// CHECK_C864GM8_M32: #define __AVX2__ 1
+// CHECK_C864GM8_M32: #define __AVX512BF16__ 1
+// CHECK_C864GM8_M32: #define __AVX512BITALG__ 1
+// CHECK_C864GM8_M32: #define __AVX512BW__ 1
+// CHECK_C864GM8_M32: #define __AVX512CD__ 1
+// CHECK_C864GM8_M32: #define __AVX512DQ__ 1
+// CHECK_C864GM8_M32: #define __AVX512F__ 1
+// CHECK_C864GM8_M32: #define __AVX512IFMA__ 1
+// CHECK_C864GM8_M32: #define __AVX512VBMI2__ 1
+// CHECK_C864GM8_M32: #define __AVX512VBMI__ 1
+// CHECK_C864GM8_M32: #define __AVX512VL__ 1
+// CHECK_C864GM8_M32: #define __AVX512VNNI__ 1
+// CHECK_C864GM8_M32: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_C864GM8_M32: #define __AVX__ 1
+// CHECK_C864GM8_M32: #define __BMI2__ 1
+// CHECK_C864GM8_M32: #define __BMI__ 1
+// CHECK_C864GM8_M32: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM8_M32: #define __CLWB__ 1
+// CHECK_C864GM8_M32: #define __CLZERO__ 1
+// CHECK_C864GM8_M32: #define __CRC32__ 1
+// CHECK_C864GM8_M32: #define __F16C__ 1
+// CHECK_C864GM8_M32: #define __FMA__ 1
+// CHECK_C864GM8_M32: #define __FSGSBASE__ 1
+// CHECK_C864GM8_M32: #define __FXSR__ 1
+// CHECK_C864GM8_M32: #define __GFNI__ 1
+// CHECK_C864GM8_M32: #define __LZCNT__ 1
+// CHECK_C864GM8_M32: #define __MMX__ 1
+// CHECK_C864GM8_M32: #define __MOVBE__ 1
+// CHECK_C864GM8_M32: #define __MWAITX__ 1
+// CHECK_C864GM8_M32: #define __PCLMUL__ 1
+// CHECK_C864GM8_M32: #define __POPCNT__ 1
+// CHECK_C864GM8_M32: #define __PRFCHW__ 1
+// CHECK_C864GM8_M32: #define __RDRND__ 1
+// CHECK_C864GM8_M32: #define __RDSEED__ 1
+// CHECK_C864GM8_M32: #define __SHA__ 1
+// CHECK_C864GM8_M32: #define __SHSTK__ 1
+// CHECK_C864GM8_M32: #define __SSE2_MATH__ 1
+// CHECK_C864GM8_M32: #define __SSE2__ 1
+// CHECK_C864GM8_M32: #define __SSE3__ 1
+// CHECK_C864GM8_M32: #define __SSE4A__ 1
+// CHECK_C864GM8_M32: #define __SSE4_1__ 1
+// CHECK_C864GM8_M32: #define __SSE4_2__ 1
+// CHECK_C864GM8_M32: #define __SSE_MATH__ 1
+// CHECK_C864GM8_M32: #define __SSE__ 1
+// CHECK_C864GM8_M32: #define __SSSE3__ 1
+// CHECK_C864GM8_M32: #define __VAES__ 1
+// CHECK_C864GM8_M32: #define __VPCLMULQDQ__ 1
+// CHECK_C864GM8_M32: #define __WBNOINVD__ 1
+// CHECK_C864GM8_M32: #define __XSAVEC__ 1
+// CHECK_C864GM8_M32: #define __XSAVEOPT__ 1
+// CHECK_C864GM8_M32: #define __XSAVES__ 1
+// CHECK_C864GM8_M32: #define __XSAVE__ 1
+// CHECK_C864GM8_M32: #define __c86_4g_m8__ 1
+// CHECK_C864GM8_M32: #define __i386 1
+// CHECK_C864GM8_M32: #define __i386__ 1
+// CHECK_C864GM8_M32: #define __tune_c86_4g_m8__ 1
+
+// RUN: %clang -march=c86-4g-m8 -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM8_M64
+// CHECK_C864GM8_M64: #define __ADX__ 1
+// CHECK_C864GM8_M64: #define __AES__ 1
+// CHECK_C864GM8_M64: #define __AVX2__ 1
+// CHECK_C864GM8_M64: #define __AVX512BF16__ 1
+// CHECK_C864GM8_M64: #define __AVX512BITALG__ 1
+// CHECK_C864GM8_M64: #define __AVX512BW__ 1
+// CHECK_C864GM8_M64: #define __AVX512CD__ 1
+// CHECK_C864GM8_M64: #define __AVX512DQ__ 1
+// CHECK_C864GM8_M64: #define __AVX512F__ 1
+// CHECK_C864GM8_M64: #define __AVX512IFMA__ 1
+// CHECK_C864GM8_M64: #define __AVX512VBMI2__ 1
+// CHECK_C864GM8_M64: #define __AVX512VBMI__ 1
+// CHECK_C864GM8_M64: #define __AVX512VL__ 1
+// CHECK_C864GM8_M64: #define __AVX512VNNI__ 1
+// CHECK_C864GM8_M64: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_C864GM8_M64: #define __AVX__ 1
+// CHECK_C864GM8_M64: #define __BMI2__ 1
+// CHECK_C864GM8_M64: #define __BMI__ 1
+// CHECK_C864GM8_M64: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM8_M64: #define __CLWB__ 1
+// CHECK_C864GM8_M64: #define __CLZERO__ 1
+// CHECK_C864GM8_M64: #define __CRC32__ 1
+// CHECK_C864GM8_M64: #define __F16C__ 1
+// CHECK_C864GM8_M64: #define __FMA__ 1
+// CHECK_C864GM8_M64: #define __FSGSBASE__ 1
+// CHECK_C864GM8_M64: #define __FXSR__ 1
+// CHECK_C864GM8_M64: #define __GFNI__ 1
+// CHECK_C864GM8_M64: #define __LZCNT__ 1
+// CHECK_C864GM8_M64: #define __MMX__ 1
+// CHECK_C864GM8_M64: #define __MOVBE__ 1
+// CHECK_C864GM8_M64: #define __MWAITX__ 1
+// CHECK_C864GM8_M64: #define __PCLMUL__ 1
+// CHECK_C864GM8_M64: #define __POPCNT__ 1
+// CHECK_C864GM8_M64: #define __PRFCHW__ 1
+// CHECK_C864GM8_M64: #define __RDRND__ 1
+// CHECK_C864GM8_M64: #define __RDSEED__ 1
+// CHECK_C864GM8_M64: #define __SHA__ 1
+// CHECK_C864GM8_M64: #define __SHSTK__ 1
+// CHECK_C864GM8_M64: #define __SSE2_MATH__ 1
+// CHECK_C864GM8_M64: #define __SSE2__ 1
+// CHECK_C864GM8_M64: #define __SSE3__ 1
+// CHECK_C864GM8_M64: #define __SSE4A__ 1
+// CHECK_C864GM8_M64: #define __SSE4_1__ 1
+// CHECK_C864GM8_M64: #define __SSE4_2__ 1
+// CHECK_C864GM8_M64: #define __SSE_MATH__ 1
+// CHECK_C864GM8_M64: #define __SSE__ 1
+// CHECK_C864GM8_M64: #define __SSSE3__ 1
+// CHECK_C864GM8_M64: #define __VAES__ 1
+// CHECK_C864GM8_M64: #define __VPCLMULQDQ__ 1
+// CHECK_C864GM8_M64: #define __WBNOINVD__ 1
+// CHECK_C864GM8_M64: #define __XSAVEC__ 1
+// CHECK_C864GM8_M64: #define __XSAVEOPT__ 1
+// CHECK_C864GM8_M64: #define __XSAVES__ 1
+// CHECK_C864GM8_M64: #define __XSAVE__ 1
+// CHECK_C864GM8_M64: #define __c86_4g_m8__ 1
+// CHECK_C864GM8_M64: #define __tune_c86_4g_m8__ 1
+// CHECK_C864GM8_M64: #define __x86_64 1
+// CHECK_C864GM8_M64: #define __x86_64__ 1
+
 
 // End X86/GCC/Linux tests ------------------
 
@@ -4666,13 +4790,26 @@
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL
 // CHECK_SPARC_LDBL: #define __LONG_DOUBLE_128__ 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-none \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL64
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-rtems \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL64
+// CHECK_SPARC_LDBL64-NOT: #define __LONG_DOUBLE_128__ 1
+// CHECK_SPARC_LDBL64: #define __SIZEOF_LONG_DOUBLE__ 8
 
 // RUN: %clang -mcpu=v9 -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V9
 // CHECK_SPARC-V9-NOT: #define __sparcv8 1
 // CHECK_SPARC-V9-NOT: #define __sparcv8__ 1
+// CHECK_SPARC-V9-NOT: #define __sparc_v8__ 1
 // CHECK_SPARC-V9: #define __sparc_v9__ 1
 // CHECK_SPARC-V9-NOT: #define __sparcv9 1
 // CHECK_SPARC-V9-NOT: #define __sparcv9__ 1
@@ -4684,6 +4821,44 @@
 // CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_V8PLUS_LOCK_FREE
+// RUN: %clang -mcpu=v9 -mv8plus -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SPARC_V8PLUS_LOCK_FREE,CHECK_SPARC_V8PLUS_CAS8
+// CHECK_SPARC_V8PLUS_LOCK_FREE: #define __GCC_ATOMIC_LLONG_LOCK_FREE 2
+// CHECK_SPARC_V8PLUS_CAS8: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Without V8+, 64-bit atomics are not lock-free in 32-bit code.
+// RUN: %clang -mcpu=v9 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_V9_NO_V8PLUS
+// RUN: %clang -mcpu=v9 -mno-v8plus -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_V9_NO_V8PLUS
+// CHECK_SPARC_V9_NO_V8PLUS: #define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// CHECK_SPARC_V9_NO_V8PLUS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SPARC_V9_NO_V8PLUS-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Plain V8 has no CAS, so no atomics are lock-free; LEON/Myriad CASA CPUs
+// have 32-bit ones.
+// RUN: %clang -mcpu=v8 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-elf \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_NO_CAS
+// RUN: %clang -mcpu=leon2 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-elf \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_NO_CAS
+// CHECK_SPARC_NO_CAS: #define __GCC_ATOMIC_INT_LOCK_FREE 1
+// CHECK_SPARC_NO_CAS-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// RUN: %clang -mcpu=leon3 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-elf \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_CASA
+// CHECK_SPARC_CASA: #define __GCC_ATOMIC_INT_LOCK_FREE 2
+// CHECK_SPARC_CASA: #define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// CHECK_SPARC_CASA: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SPARC_CASA-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 
 // RUN: %clang -mcpu=v8 -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-sun-solaris \
@@ -4697,9 +4872,17 @@
 // RUN:     -target sparcel-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARCEL
 // CHECK_SPARCEL: #define __LITTLE_ENDIAN__ 1
+// CHECK_SPARCEL-NOT: #define __leon__ 1
 // CHECK_SPARCEL: #define __sparc 1
 // CHECK_SPARCEL: #define __sparc__ 1
+// CHECK_SPARCEL: #define __sparc_v8__ 1
 // CHECK_SPARCEL: #define __sparcv8 1
+
+// RUN: %clang -mcpu=leon3 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-LEON
+// CHECK_SPARC-LEON: #define __leon__ 1
+// CHECK_SPARC-LEON: #define __sparc_v8__ 1
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparcv9-unknown-linux \
@@ -4719,6 +4902,23 @@
 // CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// RUN: %clang -msoft-float -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOFT_FLOAT
+// RUN: %clang -msoft-float -E -dM %s -o - 2>&1 \
+// RUN:     -target sparcv9-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOFT_FLOAT
+// CHECK_SPARC_SOFT_FLOAT-NOT: #define SOFT_FLOAT 1
+// CHECK_SPARC_SOFT_FLOAT: #define _SOFT_FLOAT 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_HARD_FLOAT
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparcv9-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_HARD_FLOAT
+// CHECK_SPARC_HARD_FLOAT-NOT: #define _SOFT_FLOAT 1
 
 // Begin SystemZ/GCC/Linux tests ----------------
 

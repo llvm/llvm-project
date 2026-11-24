@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h      \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D __CLANG_GPU_DISABLE_MATH_WRAPPERS | FileCheck -check-prefix=AMDGPU %s
 
 // RUN: %clang_cc1 -include __clang_cuda_runtime_wrapper.h      \

@@ -10,4 +10,4 @@
 
 #include "src/math/fabsf.h"
 
-LIST_FABS_TESTS(float, LIBC_NAMESPACE::fabsf)
+LIST_FABS_TESTS(Fabsf, float, LIBC_NAMESPACE::fabsf)

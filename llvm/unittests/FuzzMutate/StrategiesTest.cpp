@@ -775,7 +775,7 @@ TEST(AllStrategies, SpecialTerminator) {
 
 TEST(AllStrategies, AMDGCNLegalAddrspace) {
   StringRef Source = "\n\
-    target triple = \"amdgcn-amd-amdhsa\"\n\
+    target triple = \"amdgpu7.00-amd-amdhsa\"\n\
     ; minimum values required by the fuzzer (e.g., default addrspace for allocas and globals)\n\
     target datalayout = \"A5-G1\"\n\
     define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {\n\

@@ -49,7 +49,6 @@ class ExplodedNodeSet;
 class ExprEngine;
 struct EvalCallOptions;
 class MemRegion;
-class NodeBuilderContext;
 class ObjCMethodCall;
 class RegionAndSymbolInvalidationTraits;
 class SVal;
@@ -130,6 +129,10 @@ class CheckerManager {
   CheckerNameRef CurrentCheckerName;
   DiagnosticsEngine &Diags;
   std::unique_ptr<CheckerRegistryData> RegistryData;
+  /// Whether -ftime-trace is enabled. It cannot change during the analysis,
+  /// and caching it avoids querying the thread-local profiler instance for
+  /// every checker callback.
+  const bool TimeTraceEnabled;
 
 public:
   // These constructors are defined in the Frontend library, because
@@ -160,6 +163,8 @@ public:
 
   void setCurrentCheckerName(CheckerNameRef name) { CurrentCheckerName = name; }
   CheckerNameRef getCurrentCheckerName() const { return CurrentCheckerName; }
+
+  bool isTimeTraceEnabled() const { return TimeTraceEnabled; }
 
   bool hasPathSensitiveCheckers() const;
 

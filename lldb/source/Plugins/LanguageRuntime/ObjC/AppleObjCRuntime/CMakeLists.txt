@@ -1,6 +1,5 @@
 add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
   AppleObjCRuntime.cpp
-  AppleObjCRuntimeV1.cpp
   AppleObjCRuntimeV2.cpp
   AppleObjCTrampolineHandler.cpp
   AppleObjCDeclVendor.cpp

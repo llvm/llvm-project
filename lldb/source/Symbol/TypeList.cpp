@@ -39,36 +39,35 @@ uint32_t TypeList::GetSize() const { return m_types.size(); }
 // type lists that are returned for "image dump -t TYPENAME" commands and other
 // simple symbol queries that grab the first result...
 
-TypeSP TypeList::GetTypeAtIndex(uint32_t idx) {
-  iterator pos, end;
-  uint32_t i = idx;
-  assert(i < GetSize() && "Accessing past the end of a TypeList");
-  for (pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    if (i == 0)
-      return *pos;
-    --i;
-  }
-  return TypeSP();
+TypeSP TypeList::GetTypeAtIndex(uint32_t idx) const {
+  assert(idx < GetSize() && "Accessing past the end of a TypeList");
+
+  if (idx < m_types.size())
+    return m_types[idx];
+  return {};
 }
 
 void TypeList::ForEach(
     std::function<bool(const lldb::TypeSP &type_sp)> const &callback) const {
-  for (auto pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    if (!callback(*pos))
+  for (const auto &type : m_types) {
+    if (!callback(type))
       break;
   }
 }
 
 void TypeList::ForEach(
     std::function<bool(lldb::TypeSP &type_sp)> const &callback) {
-  for (auto pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    if (!callback(*pos))
+  for (auto &type : m_types) {
+    if (!callback(type))
       break;
   }
 }
 
 void TypeList::Dump(Stream *s, bool show_context) {
-  for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos)
-    if (Type *t = pos->get())
-      t->Dump(s, show_context);
+  // Dumping a type can complete it. Completing a type can parse more types and
+  // append them to m_types, which can reallocate it. Index into m_types instead
+  // of using iterators, which a reallocation would invalidate.
+  for (size_t i = 0; i < m_types.size(); ++i)
+    if (Type *type = m_types[i].get())
+      type->Dump(s, show_context);
 }

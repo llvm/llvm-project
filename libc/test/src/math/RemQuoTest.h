@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H
 
 #include "hdr/math_macros.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -105,7 +106,9 @@ public:
 
   void testSubnormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 1'231;
-    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
+        StorageType(1));
     for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
          v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
       T x = FPBits(v).get_val(), y = FPBits(w).get_val();
@@ -138,13 +141,13 @@ public:
   }
 };
 
-#define LIST_REMQUO_TESTS(T, func)                                             \
-  using LlvmLibcRemQuoTest = RemQuoTestTemplate<T>;                            \
-  TEST_F(LlvmLibcRemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }    \
-  TEST_F(LlvmLibcRemQuoTest, EqualNumeratorAndDenominator) {                   \
+#define LIST_REMQUO_TESTS(Name, T, func)                                       \
+  using LlvmLibc##Name##Test = RemQuoTestTemplate<T>;                          \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, EqualNumeratorAndDenominator) {                 \
     testEqualNumeratorAndDenominator(&func);                                   \
   }                                                                            \
-  TEST_F(LlvmLibcRemQuoTest, SubnormalRange) { testSubnormalRange(&func); }    \
-  TEST_F(LlvmLibcRemQuoTest, NormalRange) { testNormalRange(&func); }
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) { testSubnormalRange(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H

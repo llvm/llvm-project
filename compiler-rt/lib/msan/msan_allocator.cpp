@@ -145,7 +145,7 @@ struct AP32 {
 };
 using PrimaryAllocator = SizeClassAllocator32<AP32>;
 #elif defined(__aarch64__)
-const uptr kMaxAllowedMallocSize = 8UL << 30;
+const uptr kMaxAllowedMallocSize = 1UL << 40;
 
 struct AP64 {
   static const uptr kSpaceBeg = 0xE00000000000ULL;

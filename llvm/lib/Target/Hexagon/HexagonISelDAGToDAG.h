@@ -44,7 +44,6 @@ public:
     HII = HST->getInstrInfo();
     HRI = HST->getRegisterInfo();
     SelectionDAGISel::runOnMachineFunction(MF);
-    updateAligna();
     return true;
   }
 
@@ -65,6 +64,8 @@ public:
   bool SelectGlobalAddress(SDValue &N, SDValue &R, bool UseGP, Align Alignment);
   bool SelectAddrFI(SDValue &N, SDValue &R);
   bool DetectUseSxtw(SDValue &N, SDValue &R);
+  bool DetectUseSxth(SDValue &N, SDValue &R);
+  bool DetectUseZxth(SDValue &N, SDValue &R);
 
   inline bool SelectAnyImm0(SDValue &N, SDValue &R);
   inline bool SelectAnyImm1(SDValue &N, SDValue &R);
@@ -149,9 +150,6 @@ private:
   void SelectHvxShuffle(SDNode *N);
   void SelectHvxRor(SDNode *N);
   void SelectHvxVAlign(SDNode *N);
-
-  // Function postprocessing.
-  void updateAligna();
 
   SmallDenseMap<SDNode *,int> RootWeights;
   SmallDenseMap<SDNode *,int> RootHeights;

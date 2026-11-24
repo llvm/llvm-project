@@ -276,13 +276,33 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_file<"foo" in "bar">
   mlirAttributeDump(file);
 
-  MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
-      ctx, recId0, false, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault, bar, 0,
-      NULL);
+  // sourceLanguageDialect 1 is DW_LLVM_LANG_DIALECT_simt, as defined by
+  // LLVM's dwarf::LanguageDialectAttribute enum.
+  MlirAttribute compile_unit =
+      mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+          ctx, recId0, false, id, /*DW_LANG_C99=*/0x000c,
+          /*sourceLanguageDialect=*/1, file, foo, false,
+          MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
+          bar, 0, NULL);
 
-  // CHECK: #llvm.di_compile_unit<{{.*}}>
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguage =
+  // CHECK-SAME: #llvm.di_source_language_name<language = DW_LANG_C99
+  // CHECK-SAME: dialect = DW_LLVM_LANG_DIALECT_simt>
   mlirAttributeDump(compile_unit);
+
+  // sourceLanguageName 4 is DW_LNAME_C_plus_plus.
+  MlirAttribute versioned_compile_unit =
+      mlirLLVMDICompileUnitAttrGetWithSourceLanguageName(
+          ctx, recId0, false, id, /*sourceLanguageName=*/4,
+          /*sourceLanguageVersion=*/202002,
+          /*sourceLanguageDialect=*/1, file, foo, false,
+          MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
+          bar, 0, NULL);
+
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguage =
+  // CHECK-SAME: #llvm.di_source_language_name<name = DW_LNAME_C_plus_plus
+  // CHECK-SAME: version = 202002
+  mlirAttributeDump(versioned_compile_unit);
 
   // CHECK: #llvm.di_compile_unit<recId = {{.*}}, isRecSelf = true>
   mlirAttributeDump(mlirLLVMDICompileUnitAttrGetRecSelf(recId1));
@@ -369,10 +389,12 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_expression<[(1)]>
   mlirAttributeDump(expression);
 
-  MlirAttribute string_type =
-      mlirLLVMDIStringTypeAttrGet(ctx, 0x0, foo, 16, 0, local_var, expression,
-                                  expression, MlirLLVMTypeEncodingSigned);
-  // CHECK: #llvm.di_string_type<{{.*}}>
+  MlirAttribute basic_type = mlirLLVMDIBasicTypeAttrGet(
+      ctx, 0x0, foo, 8, MlirLLVMTypeEncodingUnsignedChar);
+  MlirAttribute string_type = mlirLLVMDIStringTypeAttrGet(
+      ctx, 0x0, foo, 16, 0, local_var, expression, expression,
+      MlirLLVMTypeEncodingSigned, basic_type);
+  // CHECK: #llvm.di_string_type<{{.*}}charType = {{.*}}>
   mlirAttributeDump(string_type);
 
   // CHECK: #llvm.di_composite_type<recId = {{.*}}, isRecSelf = true>

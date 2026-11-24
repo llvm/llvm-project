@@ -22,13 +22,19 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 
+#define OPTIONS_STRUCT_DECL
+#include "SparcOptions.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "SparcGenSubtargetInfo.inc"
 
 namespace llvm {
+class SparcTargetMachine;
 class StringRef;
 
 class SparcSubtarget : public SparcGenSubtargetInfo {
+  const SparcOptions &CLOpts;
+
   // ReserveRegister[i] - Register #i is not available as a general purpose
   // register.
   BitVector ReserveRegister;
@@ -46,9 +52,11 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
 
 public:
   SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                 const StringRef &FS, const TargetMachine &TM);
+                 const StringRef &FS, const SparcTargetMachine &TM);
 
   ~SparcSubtarget() override;
+
+  const SparcOptions &getCLOpts() const { return CLOpts; }
 
   const SparcInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const TargetFrameLowering *getFrameLowering() const override {

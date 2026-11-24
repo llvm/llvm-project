@@ -18,13 +18,14 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
-                        bool try_inverse, bool enforce_exact_match);
+                        bool enforce_exact_match);
 
 namespace lldb_private {
 
@@ -120,6 +121,8 @@ static constexpr const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_arm_arm64_32, "arm64_32"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
      ArchSpec::eCore_arm_aarch64, "aarch64"},
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
+     ArchSpec::eCore_arm_arm64ex1, "arm64e.x1"},
 
     // mips32, mips32r2, mips32r3, mips32r5, mips32r6
     {eByteOrderBig, 4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32,
@@ -254,6 +257,8 @@ static constexpr const CoreDefinition g_core_definitions[] = {
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
+    {eByteOrderLittle, 8, 4, 16, llvm::Triple::amdgpu, ArchSpec::eCore_amd_gpu,
+     "amdgpu"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -328,6 +333,7 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
     {ArchSpec::eCore_arm_armv8m_main,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V8M_MAIN,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_armv8_1m_main,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64e,      llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64E,        UINT32_MAX, SUBTYPE_MASK},
+    {ArchSpec::eCore_arm_arm64ex1,    llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64E_X1,     UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64_ALL,     UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64_V8,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      13,                                     UINT32_MAX, SUBTYPE_MASK},
@@ -421,6 +427,9 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_riscv64,         llvm::ELF::EM_RISCV,      ArchSpec::eRISCVSubType_riscv64}, // riscv64
     {ArchSpec::eCore_loongarch32,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch32}, // loongarch32
     {ArchSpec::eCore_loongarch64,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch64}, // loongarch64
+    // Match every AMDGPU ELF subtype. SetArchitecture() converts recognized
+    // AMDGCN EF_AMDGPU_MACH values to triple subarchitectures.
+    {ArchSpec::eCore_amd_gpu,         llvm::ELF::EM_AMDGPU,     0,  UINT32_MAX, 0},
 };
 // clang-format on
 
@@ -523,6 +532,8 @@ FindArchDefinitionEntry(const ArchDefinition *def, ArchSpec::Core core) {
   }
   return nullptr;
 }
+
+static llvm::StringRef GetAMDGPUVariantName(uint32_t sub);
 
 //===----------------------------------------------------------------------===//
 // Constructors and destructors.
@@ -652,31 +663,40 @@ std::string ArchSpec::GetClangTargetCPU() const {
 
   if (GetTriple().isARM())
     cpu = llvm::ARM::getARMCPUForArch(GetTriple(), "").str();
+
+  if (GetTriple().getArch() == llvm::Triple::amdgpu)
+    cpu = llvm::AMDGPU::getArchNameFromSubArch(GetTriple().getSubArch());
   return cpu;
 }
 
-uint32_t ArchSpec::GetMachOCPUType() const {
-  const CoreDefinition *core_def = FindCoreDefinition(m_core);
-  if (core_def) {
-    const ArchDefinitionEntry *arch_def =
-        FindArchDefinitionEntry(&g_macho_arch_def, core_def->core);
-    if (arch_def) {
-      return arch_def->cpu;
-    }
-  }
+static const ArchDefinitionEntry *
+FindArchDefEntryIfCoreIsValid(const ArchDefinition *def, ArchSpec::Core core) {
+  if (const CoreDefinition *core_def = FindCoreDefinition(core))
+    return FindArchDefinitionEntry(def, core_def->core);
+
+  return nullptr;
+}
+
+static uint32_t GetCPUType(const ArchDefinition *def, ArchSpec::Core core) {
+  if (const ArchDefinitionEntry *arch_def =
+          FindArchDefEntryIfCoreIsValid(def, core))
+    return arch_def->cpu;
   return LLDB_INVALID_CPUTYPE;
 }
 
-uint32_t ArchSpec::GetMachOCPUSubType() const {
-  const CoreDefinition *core_def = FindCoreDefinition(m_core);
-  if (core_def) {
-    const ArchDefinitionEntry *arch_def =
-        FindArchDefinitionEntry(&g_macho_arch_def, core_def->core);
-    if (arch_def) {
-      return arch_def->sub;
-    }
-  }
+static uint32_t GetCPUSubType(const ArchDefinition *def, ArchSpec::Core core) {
+  if (const ArchDefinitionEntry *arch_def =
+          FindArchDefEntryIfCoreIsValid(def, core))
+    return arch_def->sub;
   return LLDB_INVALID_CPUTYPE;
+}
+
+uint32_t ArchSpec::GetMachOCPUType() const {
+  return GetCPUType(&g_macho_arch_def, m_core);
+}
+
+uint32_t ArchSpec::GetMachOCPUSubType() const {
+  return GetCPUSubType(&g_macho_arch_def, m_core);
 }
 
 llvm::Triple::ArchType ArchSpec::GetMachine() const {
@@ -796,7 +816,19 @@ bool ArchSpec::SetTriple(llvm::StringRef triple) {
   if (ParseMachCPUDashSubtypeTriple(triple, *this))
     return true;
 
-  SetTriple(llvm::Triple(llvm::Triple::normalize(triple)));
+  llvm::Triple normalized(llvm::Triple::normalize(triple));
+  // Clang offload target IDs append the GPU and its features to a four-part
+  // triple. Rebuild the triple without that suffix and represent the GPU as its
+  // subarchitecture. For example, "amdgcn-amd-amdhsa--gfx942" becomes
+  // "amdgpu9.42-amd-amdhsa".
+  if (std::optional<llvm::AMDGPU::TargetID> target_id =
+          llvm::AMDGPU::TargetID::parseTargetIDString(triple)) {
+    llvm::Triple base(target_id->getTargetTripleString());
+    normalized = llvm::Triple(llvm::Triple::amdgpu,
+                              llvm::AMDGPU::getSubArch(target_id->getGPUKind()),
+                              base.getVendor(), base.getOS());
+  }
+  SetTriple(normalized);
   return IsValid();
 }
 
@@ -830,6 +862,19 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     if (other.GetCore() != eCore_uknownMach64)
       UpdateCore();
   }
+  // AMDGPU models share one LLDB core, so merge their triple subarchitectures
+  // explicitly. Keep this ArchSpec's platform fields in the comparison triple
+  // because they are handled separately in this function.
+  if (GetTriple().getArch() == llvm::Triple::amdgpu &&
+      other.GetTriple().getArch() == llvm::Triple::amdgpu) {
+    llvm::Triple other_arch = GetTriple();
+    other_arch.setArch(other.GetTriple().getArch(),
+                       other.GetTriple().getSubArch());
+    // Use this triple as the right-hand operand so an incompatible merge
+    // leaves it unchanged.
+    llvm::Triple merged(other_arch.merge(GetTriple()));
+    GetTriple().setArch(merged.getArch(), merged.getSubArch());
+  }
   if (!TripleEnvironmentWasSpecified() &&
       other.TripleEnvironmentWasSpecified()) {
     GetTriple().setEnvironment(other.GetTriple().getEnvironment());
@@ -846,6 +891,18 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
   }
   if (GetFlags() == 0) {
     SetFlags(other.GetFlags());
+  }
+}
+
+static llvm::StringRef GetAMDGPUVariantName(uint32_t sub) {
+  switch (sub) {
+#define X(NUM, ENUM, NAME)                                                     \
+  case llvm::ELF::ENUM:                                                        \
+    return NAME;
+    AMDGPU_MACH_LIST(X)
+#undef X
+  default:
+    return {};
   }
 }
 
@@ -900,6 +957,10 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           case llvm::ELF::ELFOSABI_STANDALONE:
             m_triple.setOS(llvm::Triple::OSType::UnknownOS);
             break;
+          case llvm::ELF::ELFOSABI_AMDGPU_HSA:
+            m_triple.setVendor(llvm::Triple::VendorType::AMD);
+            m_triple.setOS(llvm::Triple::OSType::AMDHSA);
+            break;
           }
         } else if (arch_type == eArchTypeCOFF && os == llvm::Triple::Win32) {
           m_triple.setVendor(llvm::Triple::PC);
@@ -911,10 +972,28 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setVendor(llvm::Triple::UnknownVendor);
           m_triple.setOS(llvm::Triple::UnknownOS);
         }
-        // Fall back onto setting the machine type if the arch by name
-        // failed...
-        if (m_triple.getArch() == llvm::Triple::UnknownArch)
+        switch (m_triple.getArch()) {
+        case llvm::Triple::UnknownArch:
+          // Fall back onto setting the machine type if the arch by name
+          // failed...
           m_triple.setArch(core_def->machine);
+          break;
+        case llvm::Triple::amdgpu: {
+          llvm::StringRef gpu = GetAMDGPUVariantName(sub);
+          if (!gpu.empty()) {
+            llvm::Triple::SubArchType sub_arch =
+                llvm::AMDGPU::getSubArchFromGPUName(gpu);
+            if (sub_arch == llvm::Triple::NoSubArch) {
+              Clear();
+              return false;
+            }
+            m_triple.setArch(llvm::Triple::amdgpu, sub_arch);
+          }
+          break;
+        }
+        default:
+          break;
+        }
       }
     } else {
       Log *log(GetLog(LLDBLog::Target | LLDBLog::Process | LLDBLog::Platform));
@@ -975,11 +1054,25 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
 
 bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
   if (GetByteOrder() != rhs.GetByteOrder() ||
-      !cores_match(GetCore(), rhs.GetCore(), true, match == ExactMatch))
+      !cores_match(GetCore(), rhs.GetCore(), match == ExactMatch))
     return false;
 
   const llvm::Triple &lhs_triple = GetTriple();
   const llvm::Triple &rhs_triple = rhs.GetTriple();
+
+  // AMDGPU models share one LLDB core, so compare their triple
+  // subarchitectures explicitly. Keep the LHS platform fields in the
+  // comparison triple because ArchSpec compares them separately below.
+  if (lhs_triple.getArch() == llvm::Triple::amdgpu &&
+      rhs_triple.getArch() == llvm::Triple::amdgpu) {
+    llvm::Triple rhs_arch = lhs_triple;
+    rhs_arch.setArch(rhs_triple.getArch(), rhs_triple.getSubArch());
+    bool sub_arches_match =
+        match == ExactMatch ? lhs_triple.getSubArch() == rhs_triple.getSubArch()
+                            : lhs_triple.isCompatibleWith(rhs_arch);
+    if (!sub_arches_match)
+      return false;
+  }
 
   const llvm::Triple::VendorType lhs_triple_vendor = lhs_triple.getVendor();
   const llvm::Triple::VendorType rhs_triple_vendor = rhs_triple.getVendor();
@@ -1057,8 +1150,15 @@ bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
 }
 
 void ArchSpec::UpdateCore() {
-  llvm::StringRef arch_name(m_triple.getArchName());
-  const CoreDefinition *core_def = FindCoreDefinition(arch_name);
+  const CoreDefinition *core_def;
+  // AMDGPU subarchitectures have distinct architecture names (for example,
+  // "amdgpu9.42"), but all share the generic LLDB AMDGPU core definition.
+  if (m_triple.getArch() == llvm::Triple::amdgpu) {
+    core_def = FindCoreDefinition(eCore_amd_gpu);
+  } else {
+    core_def = FindCoreDefinition(m_triple.getArchName());
+  }
+
   if (core_def) {
     m_core = core_def->core;
     // Set the byte order to the default byte order for an architecture. This
@@ -1089,11 +1189,12 @@ void ArchSpec::CoreUpdated(bool update_triple) {
 //===----------------------------------------------------------------------===//
 // Operators.
 
-static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
-                        bool try_inverse, bool enforce_exact_match) {
-  if (core1 == core2)
-    return true;
-
+// Checks core1's rules only, because they are not symmetric. Must not call
+// cores_match() here, or an unmatched pair would loop between the two
+// directions forever.
+static bool cores_match_one_direction(const ArchSpec::Core core1,
+                                      const ArchSpec::Core core2,
+                                      bool enforce_exact_match) {
   switch (core1) {
   case ArchSpec::kCore_any:
     return true;
@@ -1161,7 +1262,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv7)
         return true;
-      try_inverse = true;
     }
     break;
 
@@ -1179,7 +1279,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv7em)
         return true;
-      try_inverse = true;
     }
     break;
 
@@ -1197,7 +1296,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv6m)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1211,14 +1309,12 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv7)
         return true;
-      try_inverse = false;
     }
     break;
 
   case ArchSpec::eCore_x86_64_x86_64h:
   case ArchSpec::eCore_x86_64_amd64:
     if (!enforce_exact_match) {
-      try_inverse = false;
       if (core2 == ArchSpec::eCore_x86_64_x86_64)
         return true;
     }
@@ -1232,7 +1328,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
         return true;
-      try_inverse = false;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
+        return true;
     }
     break;
 
@@ -1244,7 +1341,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv8)
         return true;
-      try_inverse = false;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
+        return true;
     }
     break;
   case ArchSpec::eCore_arm_aarch64:
@@ -1255,7 +1353,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
         return true;
-      try_inverse = false;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
+        return true;
     }
     break;
 
@@ -1267,7 +1366,21 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
         return true;
-      try_inverse = false;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
+        return true;
+    }
+    break;
+
+  case ArchSpec::eCore_arm_arm64ex1:
+    if (!enforce_exact_match) {
+      if (core2 == ArchSpec::eCore_arm_arm64e)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_arm64)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_aarch64)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_armv8)
+        return true;
     }
     break;
 
@@ -1275,7 +1388,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     if (!enforce_exact_match) {
       if (core2 == ArchSpec::eCore_arm_generic)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1284,7 +1396,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips32_first &&
           core2 <= ArchSpec::kCore_mips32_last)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1293,7 +1404,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips32el_first &&
           core2 <= ArchSpec::kCore_mips32el_last)
         return true;
-      try_inverse = true;
     }
     break;
 
@@ -1305,7 +1415,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips64_first &&
           core2 <= ArchSpec::kCore_mips64_last)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1317,7 +1426,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips64el_first &&
           core2 <= ArchSpec::kCore_mips64el_last)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1329,7 +1437,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 >= ArchSpec::kCore_mips64_first && core2 <= (core1 - 1))
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1341,7 +1448,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 >= ArchSpec::kCore_mips64el_first && core2 <= (core1 - 1))
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1401,19 +1507,31 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
   default:
     break;
   }
-  if (try_inverse)
-    return cores_match(core2, core1, false, enforce_exact_match);
   return false;
+}
+
+// The match rules only work in one direction, so this checks both ways.
+static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
+                        bool enforce_exact_match) {
+  if (core1 == core2)
+    return true;
+  return cores_match_one_direction(core1, core2, enforce_exact_match) ||
+         cores_match_one_direction(core2, core1, enforce_exact_match);
 }
 
 bool lldb_private::operator<(const ArchSpec &lhs, const ArchSpec &rhs) {
   const ArchSpec::Core lhs_core = lhs.GetCore();
   const ArchSpec::Core rhs_core = rhs.GetCore();
+  if (lhs_core == rhs_core && lhs_core == ArchSpec::eCore_amd_gpu)
+    return lhs.GetTriple().getSubArch() < rhs.GetTriple().getSubArch();
   return lhs_core < rhs_core;
 }
 
 bool lldb_private::operator==(const ArchSpec &lhs, const ArchSpec &rhs) {
-  return lhs.GetCore() == rhs.GetCore();
+  if (lhs.GetCore() != rhs.GetCore())
+    return false;
+  return lhs.GetCore() != ArchSpec::eCore_amd_gpu ||
+         lhs.GetTriple().getSubArch() == rhs.GetTriple().getSubArch();
 }
 
 bool lldb_private::operator!=(const ArchSpec &lhs, const ArchSpec &rhs) {

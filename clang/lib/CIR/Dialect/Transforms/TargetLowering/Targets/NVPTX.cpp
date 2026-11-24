@@ -17,6 +17,7 @@ constexpr unsigned NVPTXAddrSpaceMap[] = {
     llvm::NVPTXAS::ADDRESS_SPACE_GENERIC, llvm::NVPTXAS::ADDRESS_SPACE_GENERIC,
     llvm::NVPTXAS::ADDRESS_SPACE_SHARED,  llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,
     llvm::NVPTXAS::ADDRESS_SPACE_CONST,   llvm::NVPTXAS::ADDRESS_SPACE_GENERIC,
+    llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,  llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL,
 };
 
 class NVPTXTargetLoweringInfo : public TargetLoweringInfo {
@@ -28,6 +29,13 @@ public:
     assert(idx < std::size(NVPTXAddrSpaceMap) &&
            "Unknown CIR address space for NVPTX target");
     return NVPTXAddrSpaceMap[idx];
+  }
+
+  cir::SyncScopeKind
+  convertSyncScope(cir::SyncScopeKind syncScope) const override {
+    if (syncScope == cir::SyncScopeKind::Workgroup)
+      return cir::SyncScopeKind::Workgroup;
+    return cir::SyncScopeKind::System;
   }
 };
 

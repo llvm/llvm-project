@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; check that the debug locations are correctly propagated
 
@@ -123,7 +123,7 @@ attributes #4 = { nounwind readnone speculatable }
 !25 = !{!"tbaa root"}
 !26 = !{!27}
 !27 = distinct !{!27, !28, !"some scope 1"}
-!28 = distinct !{!28, !"some domain"}
+!28 = distinct !{!28, i1 false, !"some domain"}
 !29 = !{!30}
 !30 = distinct !{!30, !28, !"some scope 2"}
 !31 = !DILocation(line: 13, column: 1, scope: !20)

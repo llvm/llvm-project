@@ -16,6 +16,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include <functional>
 #include <memory>
 
@@ -62,10 +63,13 @@ extern ColorOutput DisassemblyColor;
 extern DIDumpType DwarfDumpType;
 extern std::vector<std::string> FilterSections;
 extern bool LeadingAddr;
+extern cl::LibraryOptionsContext LibraryOptions;
 extern std::vector<std::string> MAttrs;
 extern std::string MCPU;
 extern std::string Prefix;
 extern uint32_t PrefixStrip;
+extern std::vector<std::string> SourceDirs;
+extern std::vector<std::pair<std::string, std::string>> SubstitutePaths;
 extern bool PrintImmHex;
 extern bool PrintLines;
 extern bool PrintSource;

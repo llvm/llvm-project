@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/LLVMIR/ROCDLDialect.td"
 include "mlir/Dialect/LLVMIR/ROCDLEnums.td"
+include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
@@ -19,12 +20,45 @@ include "mlir/IR/EnumAttr.td"
 
 class ROCDL_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<ROCDL_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/ROCDLDialect.h"];
   let mnemonic = attrMnemonic;
 }
 
 class ROCDL_IntrinsicIntegerEnumAttr<EnumInfo enumInfo, string name>
     : EnumAttr<ROCDL_Dialect, enumInfo, name,
                [LLVM_IntrinsicIntegerAttrInterface]>;
+
+def ROCDL_BufferOOBModeAttr :
+    ROCDL_IntrinsicIntegerEnumAttr<ROCDL_BufferOOBMode, "buffer_oob_mode"> {
+  let summary = "ROCDL buffer out-of-bounds mode";
+  let description = [{
+    Specifies the AMDGPU buffer out-of-bounds mode encoded in
+    `amdgpu.buffer.oob.mode` or `amdgpu.tbuffer.oob.mode` LLVM module flags.
+  }];
+}
+
+class ROCDL_BufferOOBModeModuleFlagAttrBase<string attrName, string mnemonic>
+    : ROCDL_Attr<attrName, mnemonic,
+                 [DeclareAttrInterfaceMethods<LLVM_ModuleFlagAttrInterface>]> {
+  let summary = "ROCDL buffer/tbuffer out-of-bounds mode LLVM module flag";
+  let description = [{
+    Specifies an AMDGPU buffer or tbuffer out-of-bounds mode LLVM module flag.
+    The attribute supplies the required `max` merge behavior and AMDGPU module
+    flag key. Prefer these typed attributes over hand-written generic
+    `#llvm.mlir.module_flag` triples for AMDGPU OOB mode keys when MLIR-side
+    behavior and enum validation are required.
+  }];
+  let parameters = (ins EnumParameter<ROCDL_BufferOOBMode>:$value);
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def ROCDL_BufferOOBModeModuleFlagAttr :
+    ROCDL_BufferOOBModeModuleFlagAttrBase<"BufferOOBModeModuleFlag",
+                                          "buffer_oob_mode_flag">;
+
+def ROCDL_TBufferOOBModeModuleFlagAttr :
+    ROCDL_BufferOOBModeModuleFlagAttrBase<"TBufferOOBModeModuleFlag",
+                                          "tbuffer_oob_mode_flag">;
 
 def ROCDL_MFMAPermBAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_MFMAPermB, "mfma_perm_b">;
@@ -51,6 +85,9 @@ def ROCDL_WMMACModifierAttr
 def ROCDL_SchedGroupMaskAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_SchedGroupMask,
                                      "sched_group_mask">;
+
+def ROCDL_AsyncStagesAttr
+    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_AsyncStages, "async_stages">;
 
 def ROCDL_PreGfx12CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_PreGfx12CachePolicy,

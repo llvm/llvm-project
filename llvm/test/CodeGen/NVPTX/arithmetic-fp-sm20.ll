@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -fp-contract=fast | FileCheck %s
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast | FileCheck %s
-; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ;; These tests should run for all targets
 
@@ -13,21 +13,21 @@
 define double @fadd_f64(double %a, double %b) {
 ; CHECK: add.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret
-  %ret = fadd double %a, %b
+  %ret = fadd contract double %a, %b
   ret double %ret
 }
 
 define double @fsub_f64(double %a, double %b) {
 ; CHECK: sub.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret
-  %ret = fsub double %a, %b
+  %ret = fsub contract double %a, %b
   ret double %ret
 }
 
 define double @fmul_f64(double %a, double %b) {
 ; CHECK: mul.f64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret
-  %ret = fmul double %a, %b
+  %ret = fmul contract double %a, %b
   ret double %ret
 }
 
@@ -46,21 +46,21 @@ define double @fdiv_f64(double %a, double %b) {
 define float @fadd_f32(float %a, float %b) {
 ; CHECK: add.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: ret
-  %ret = fadd float %a, %b
+  %ret = fadd contract float %a, %b
   ret float %ret
 }
 
 define float @fsub_f32(float %a, float %b) {
 ; CHECK: sub.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: ret
-  %ret = fsub float %a, %b
+  %ret = fsub contract float %a, %b
   ret float %ret
 }
 
 define float @fmul_f32(float %a, float %b) {
 ; CHECK: mul.f32 %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: ret
-  %ret = fmul float %a, %b
+  %ret = fmul contract float %a, %b
   ret float %ret
 }
 

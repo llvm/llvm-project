@@ -204,13 +204,12 @@ define <vscale x 8 x i16> @sdiv_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.s, z1.h
 ; CHECK-NEXT:    sunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    sunpklo z4.s, z0.h
 ; CHECK-NEXT:    sdivr z1.s, p0/m, z1.s, z4.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z3.h
 ; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    ret
@@ -226,8 +225,9 @@ define <vscale x 16 x i8> @sdiv_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.h, z1.b
 ; CHECK-NEXT:    sunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    sunpkhi z5.s, z3.h
 ; CHECK-NEXT:    sunpkhi z6.s, z4.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
@@ -242,8 +242,6 @@ define <vscale x 16 x i8> @sdiv_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    sdivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    sdivr z1.s, p0/m, z1.s, z4.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z6.h
 ; CHECK-NEXT:    uzp1 z1.b, z1.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p1/m, z1.b
@@ -290,13 +288,12 @@ define <vscale x 8 x i16> @udiv_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    uunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    uunpklo z4.s, z0.h
 ; CHECK-NEXT:    udivr z1.s, p0/m, z1.s, z4.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z3.h
 ; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    ret
@@ -312,8 +309,9 @@ define <vscale x 16 x i8> @udiv_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.h, z1.b
 ; CHECK-NEXT:    uunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uunpkhi z5.s, z3.h
 ; CHECK-NEXT:    uunpkhi z6.s, z4.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
@@ -328,8 +326,6 @@ define <vscale x 16 x i8> @udiv_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    udivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    udivr z1.s, p0/m, z1.s, z4.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z6.h
 ; CHECK-NEXT:    uzp1 z1.b, z1.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p1/m, z1.b
@@ -378,13 +374,12 @@ define <vscale x 8 x i16> @srem_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.s, z1.h
 ; CHECK-NEXT:    sunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sunpklo z5.s, z0.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    sunpklo z4.s, z1.h
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z2.h, z4.h, z3.h
 ; CHECK-NEXT:    mls z0.h, p1/m, z2.h, z1.h
 ; CHECK-NEXT:    ret
@@ -400,7 +395,8 @@ define <vscale x 16 x i8> @srem_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.h, z1.b
 ; CHECK-NEXT:    sunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    sunpkhi z5.s, z3.h
 ; CHECK-NEXT:    sunpkhi z6.s, z4.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
@@ -416,8 +412,6 @@ define <vscale x 16 x i8> @srem_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    sdivr z7.s, p0/m, z7.s, z24.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z6.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z7.h
 ; CHECK-NEXT:    uzp1 z2.b, z4.b, z3.b
 ; CHECK-NEXT:    mls z0.b, p1/m, z2.b, z1.b
@@ -466,13 +460,12 @@ define <vscale x 8 x i16> @urem_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    uunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uunpklo z5.s, z0.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    uunpklo z4.s, z1.h
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z2.h, z4.h, z3.h
 ; CHECK-NEXT:    mls z0.h, p1/m, z2.h, z1.h
 ; CHECK-NEXT:    ret
@@ -488,7 +481,8 @@ define <vscale x 16 x i8> @urem_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.h, z1.b
 ; CHECK-NEXT:    uunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uunpkhi z5.s, z3.h
 ; CHECK-NEXT:    uunpkhi z6.s, z4.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
@@ -504,8 +498,6 @@ define <vscale x 16 x i8> @urem_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    udivr z7.s, p0/m, z7.s, z24.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z6.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z7.h
 ; CHECK-NEXT:    uzp1 z2.b, z4.b, z3.b
 ; CHECK-NEXT:    mls z0.b, p1/m, z2.b, z1.b
@@ -1653,13 +1645,12 @@ define <vscale x 8 x i16> @sdiv_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.s, z1.h
 ; CHECK-NEXT:    sunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    sunpklo z4.s, z1.h
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -1675,8 +1666,9 @@ define <vscale x 16 x i8> @sdiv_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.h, z1.b
 ; CHECK-NEXT:    sunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    sunpkhi z5.s, z3.h
 ; CHECK-NEXT:    sunpkhi z6.s, z4.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
@@ -1691,8 +1683,6 @@ define <vscale x 16 x i8> @sdiv_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    sdivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z6.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z3.b
 ; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
@@ -1739,13 +1729,12 @@ define <vscale x 8 x i16> @udiv_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    uunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    uunpklo z4.s, z1.h
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -1761,8 +1750,9 @@ define <vscale x 16 x i8> @udiv_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.h, z1.b
 ; CHECK-NEXT:    uunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uunpkhi z5.s, z3.h
 ; CHECK-NEXT:    uunpkhi z6.s, z4.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
@@ -1777,8 +1767,6 @@ define <vscale x 16 x i8> @udiv_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    udivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z6.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z3.b
 ; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
@@ -1829,13 +1817,12 @@ define <vscale x 8 x i16> @srem_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.s, z1.h
 ; CHECK-NEXT:    sunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sunpklo z5.s, z0.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    sunpklo z4.s, z1.h
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z2.h, z4.h, z3.h
 ; CHECK-NEXT:    msb z1.h, p1/m, z2.h, z0.h
 ; CHECK-NEXT:    mov z0.d, z1.d
@@ -1852,7 +1839,8 @@ define <vscale x 16 x i8> @srem_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sunpkhi z3.h, z1.b
 ; CHECK-NEXT:    sunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    sunpkhi z5.s, z3.h
 ; CHECK-NEXT:    sunpkhi z6.s, z4.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
@@ -1868,8 +1856,6 @@ define <vscale x 16 x i8> @srem_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    sdivr z7.s, p0/m, z7.s, z24.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z6.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z7.h
 ; CHECK-NEXT:    uzp1 z2.b, z4.b, z3.b
 ; CHECK-NEXT:    msb z1.b, p1/m, z2.b, z0.b
@@ -1921,13 +1907,12 @@ define <vscale x 8 x i16> @urem_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    uunpkhi z4.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uunpklo z5.s, z0.h
+; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    uunpklo z4.s, z1.h
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    uzp1 z2.h, z4.h, z3.h
 ; CHECK-NEXT:    msb z1.h, p1/m, z2.h, z0.h
 ; CHECK-NEXT:    mov z0.d, z1.d
@@ -1944,7 +1929,8 @@ define <vscale x 16 x i8> @urem_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uunpkhi z3.h, z1.b
 ; CHECK-NEXT:    uunpkhi z4.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uunpkhi z5.s, z3.h
 ; CHECK-NEXT:    uunpkhi z6.s, z4.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
@@ -1960,8 +1946,6 @@ define <vscale x 16 x i8> @urem_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK-NEXT:    udivr z7.s, p0/m, z7.s, z24.s
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z5.h
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z6.s
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z7.h
 ; CHECK-NEXT:    uzp1 z2.b, z4.b, z3.b
 ; CHECK-NEXT:    msb z1.b, p1/m, z2.b, z0.b

@@ -53,6 +53,7 @@ void runChecks(
                    "...\n"
                    "---\n"
                    "name: sizes\n"
+                   "tracksRegLiveness: false\n"
                    "jumpTable:\n"
                    "  kind:            block-address\n"
                    "  entries:\n"
@@ -71,7 +72,7 @@ void runChecks(
   ASSERT_TRUE(M);
 
   M->setTargetTriple(TM->getTargetTriple());
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM);
   bool Res = MParser->parseMachineFunctions(*M, MMI);

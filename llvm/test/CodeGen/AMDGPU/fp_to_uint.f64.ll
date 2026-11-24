@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare double @llvm.fabs.f64(double) #1
@@ -44,7 +44,7 @@ define amdgpu_kernel void @fp_to_uint_v4i32_v4f64(ptr addrspace(1) %out, <4 x do
 
 ; CI-DAG: v_fma_f64 [[FMA:v\[[0-9]+:[0-9]+\]]], [[FLOOR]], s{{\[[0-9]+}}:[[K1_HI]]], [[TRUNC]]
 ; CI-DAG: v_cvt_u32_f64_e32 v[[LO:[0-9]+]], [[FMA]]
-; CI-DAG: v_cvt_u32_f64_e32 v[[HI:[0-9]+]], [[FLOOR]]
+; CI-DAG: v_cvt_u32_f64_e32 v[[HI:[0-9]+]], [[MUL]]
 ; CI: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @fp_to_uint_i64_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

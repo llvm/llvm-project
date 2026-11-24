@@ -32,17 +32,20 @@ class Test(unittest.TestCase):
                 "c++20": "201606L",
                 "c++23": "201606L",
                 "c++26": "201606L",
+                "c++29": "201606L",
             },
             "__cpp_lib_barrier": {
                 "c++20": "201907L",
                 "c++23": "201907L",
                 "c++26": "299900L",
+                "c++29": "299900L",
             },
             "__cpp_lib_clamp": {
                 "c++17": "201603L",
                 "c++20": "201603L",
                 "c++23": "201603L",
                 "c++26": "201603L",
+                "c++29": "201603L",
             },
             "__cpp_lib_format": {},
             "__cpp_lib_parallel_algorithm": {
@@ -50,6 +53,7 @@ class Test(unittest.TestCase):
                 "c++20": "201603L",
                 "c++23": "201603L",
                 "c++26": "201603L",
+                "c++29": "201603L",
             },
             "__cpp_lib_to_chars": {},
             "__cpp_lib_variant": {
@@ -57,7 +61,9 @@ class Test(unittest.TestCase):
                 "c++20": "202102L",
                 "c++23": "202102L",
                 "c++26": "202102L",
+                "c++29": "202102L",
             },
+            "__cpp_lib_view_interface": {},
             "__cpp_lib_zz_missing_FTM_in_older_standard": {},
         }
 

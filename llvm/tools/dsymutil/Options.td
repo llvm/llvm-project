@@ -172,6 +172,7 @@ def threads: Separate<["--", "-"], "num-threads">,
   HelpText<"Specifies the maximum number of simultaneous threads to use when linking multiple architectures.">,
   Group<grp_general>;
 def: Separate<["-"], "j">,
+  Alias<threads>,
   MetaVarName<"<threads>">,
   HelpText<"Alias for --num-threads">,
   Group<grp_general>;
@@ -219,7 +220,7 @@ def include_swiftmodules_from_interface: Flag<["--", "-"], "include-swiftmodules
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'parallel'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
 

@@ -1283,8 +1283,8 @@ define <16 x i1> @test51(<16 x i1> %arg, <16 x i1> %arg1) {
 ;
   %tmp = and <16 x i1> %arg, <i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>
   %tmp2 = and <16 x i1> %arg1, <i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true>
-  %tmp3 = or <16 x i1> %tmp, %tmp2
-  ret <16 x i1> %tmp3
+  %res = or <16 x i1> %tmp, %tmp2
+  ret <16 x i1> %res
 }
 
 ; This would infinite loop because it reaches a transform
@@ -2205,4 +2205,184 @@ define <2 x i8> @or_select_smax_multi_uses(<2 x i8> %a){
   %or = or <2 x i8> %sel, %max
   %add = add <2 x i8> %or, %max
   ret <2 x i8> %add
+}
+
+declare void @use_i1(i1)
+
+; signum encoded with or:
+; (X s>> (BW - 1)) | (zext (X s> 0)) --> scmp(X, 0)
+; (X s>> (BW - 1)) | (zext (X != 0)) --> scmp(X, 0)
+
+define i32 @signum_i32_or_sgt(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_sgt(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  %sgt0 = icmp sgt i32 %x, 0
+  %zgt0 = zext i1 %sgt0 to i32
+  %r = or i32 %signbit, %zgt0
+  ret i32 %r
+}
+
+define i32 @signum_i32_or_ne(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_ne(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  %nz = icmp ne i32 %x, 0
+  %znz = zext i1 %nz to i32
+  %r = or i32 %signbit, %znz
+  ret i32 %r
+}
+
+; commuted operands of or
+
+define i32 @signum_i32_or_sgt_commuted(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_sgt_commuted(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  %sgt0 = icmp sgt i32 %x, 0
+  %zgt0 = zext i1 %sgt0 to i32
+  %r = or i32 %zgt0, %signbit
+  ret i32 %r
+}
+
+; vector
+
+define <2 x i5> @signum_v2i5_or_sgt(<2 x i5> %x) {
+; CHECK-LABEL: @signum_v2i5_or_sgt(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i5> @llvm.scmp.v2i5.v2i5(<2 x i5> [[X:%.*]], <2 x i5> zeroinitializer)
+; CHECK-NEXT:    ret <2 x i5> [[R]]
+;
+  %signbit = ashr <2 x i5> %x, <i5 4, i5 poison>
+  %sgt0 = icmp sgt <2 x i5> %x, zeroinitializer
+  %zgt0 = zext <2 x i1> %sgt0 to <2 x i5>
+  %r = or <2 x i5> %signbit, %zgt0
+  ret <2 x i5> %r
+}
+
+; extra use of the ashr is ok: the ashr stays alive but the or still folds.
+
+define i32 @signum_i32_or_sgt_use_ashr(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_sgt_use_ashr(
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    call void @use(i32 [[SIGNBIT]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  call void @use(i32 %signbit)
+  %sgt0 = icmp sgt i32 %x, 0
+  %zgt0 = zext i1 %sgt0 to i32
+  %r = or i32 %signbit, %zgt0
+  ret i32 %r
+}
+
+; extra use of the zext is ok: the zext stays alive but the or still folds.
+
+define i32 @signum_i32_or_sgt_extra_use_zext(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_sgt_extra_use_zext(
+; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[ZGT0:%.*]] = zext i1 [[SGT0]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZGT0]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  %sgt0 = icmp sgt i32 %x, 0
+  %zgt0 = zext i1 %sgt0 to i32
+  call void @use(i32 %zgt0)
+  %r = or i32 %signbit, %zgt0
+  ret i32 %r
+}
+
+; extra use of the icmp is ok: the icmp/zext stay alive but the or still folds.
+
+define i32 @signum_i32_or_sgt_extra_use_icmp(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_sgt_extra_use_icmp(
+; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @use_i1(i1 [[SGT0]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  %sgt0 = icmp sgt i32 %x, 0
+  call void @use_i1(i1 %sgt0)
+  %zgt0 = zext i1 %sgt0 to i32
+  %r = or i32 %signbit, %zgt0
+  ret i32 %r
+}
+
+; negative test - not profitable if both operands have extra uses.
+
+define i32 @signum_i32_or_sgt_extra_use_both(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_sgt_extra_use_both(
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    call void @use(i32 [[SIGNBIT]])
+; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[ZGT0:%.*]] = zext i1 [[SGT0]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZGT0]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SIGNBIT]], [[ZGT0]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  call void @use(i32 %signbit)
+  %sgt0 = icmp sgt i32 %x, 0
+  %zgt0 = zext i1 %sgt0 to i32
+  call void @use(i32 %zgt0)
+  %r = or i32 %signbit, %zgt0
+  ret i32 %r
+}
+
+; negative test - wrong shift amount.
+
+define i32 @signum_i32_or_wrong_sh_amt(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_wrong_sh_amt(
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i32 [[X:%.*]], 30
+; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[ZGT0:%.*]] = zext i1 [[SGT0]] to i32
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SIGNBIT]], [[ZGT0]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 30
+  %sgt0 = icmp sgt i32 %x, 0
+  %zgt0 = zext i1 %sgt0 to i32
+  %r = or i32 %signbit, %zgt0
+  ret i32 %r
+}
+
+; negative test - wrong predicate (slt does not yield signum here).
+
+define i32 @signum_i32_or_wrong_pred(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_wrong_pred(
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SIGNBIT]], [[X_LOBIT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  %slt0 = icmp slt i32 %x, 0
+  %zlt0 = zext i1 %slt0 to i32
+  %r = or i32 %signbit, %zlt0
+  ret i32 %r
+}
+
+; negative test - sext instead of zext.
+
+define i32 @signum_i32_or_wrong_ext(i32 %x) {
+; CHECK-LABEL: @signum_i32_or_wrong_ext(
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[SGT0]], i32 -1, i32 [[SIGNBIT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %signbit = ashr i32 %x, 31
+  %sgt0 = icmp sgt i32 %x, 0
+  %sgt0ext = sext i1 %sgt0 to i32
+  %r = or i32 %signbit, %sgt0ext
+  ret i32 %r
 }

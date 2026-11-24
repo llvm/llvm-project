@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03, libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-fast
 
 // <streambuf>
 
@@ -43,7 +41,7 @@ void test() {
 
   {
     streambuf<CharT> buff;
-    TEST_LIBCPP_ASSERT_FAILURE(buff.setp(std::begin(arr) + 3, std::begin(arr)), "[pbeg, pend) must be a valid range");
+    TEST_LIBCPP_ASSERT_FAILURE(buff.setp(std::begin(arr) + 3, std::begin(arr)), "[begin, end) must be a valid range");
   }
 }
 

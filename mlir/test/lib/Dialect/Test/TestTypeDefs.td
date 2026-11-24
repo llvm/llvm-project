@@ -173,7 +173,9 @@ def TestMemRefElementType : Test_Type<"TestMemRefElementType",
   let mnemonic = "memref_element";
 }
 
-def TestTypeTrait : NativeTypeTrait<"TestTypeTrait">;
+def TestTypeTrait : NativeTypeTrait<"TestTypeTrait"> {
+  let cppIncludes = ["TestTraits.h"];
+}
 
 // The definition of a singleton type that has a trait.
 def TestTypeWithTrait : Test_Type<"TestTypeWithTrait", [TestTypeTrait]> {
@@ -477,9 +479,9 @@ def TestMemrefType : Test_Type<"TestMemref",
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
     "mlir::Type":$elementType,
-    DefaultValuedParameter<"mlir::Attribute", "nullptr">:$memSpace
+    DefaultValuedParameter<"mlir::MemRefLayoutAttrInterface", "nullptr">:$layout
   );
-  let assemblyFormat = "`<` `[` $shape `]` `,` $elementType (`,` $memSpace^)? `>`";
+  let assemblyFormat = "`<` `[` $shape `]` `,` $elementType (`,` $layout^)? `>`";
 
   let extraClassDeclaration = [{
     // ShapedTypeInterface:
@@ -489,9 +491,30 @@ def TestMemrefType : Test_Type<"TestMemref",
     test::TestMemrefType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape,
                                    mlir::Type elementType) const {
       return test::TestMemrefType::get(
-        getContext(), shape.value_or(getShape()), elementType, getMemSpace());
+        getContext(), shape.value_or(getShape()), elementType, getLayout());
     }
   }];
+}
+
+// A type that is tensor-like and buffer-like but not shaped. As a tensor-like
+// type, its buffer is a builtin memref of the same element type.
+def TestUnshapedType : Test_Type<"TestUnshaped",
+    [DeclareTypeInterfaceMethods<Bufferization_TensorLikeTypeInterface,
+        ["verifyCompatibleBufferType"]>,
+     Bufferization_BufferLikeTypeInterface]> {
+  let mnemonic = "test_unshaped";
+  let parameters = (ins "mlir::Type":$elementType);
+  let assemblyFormat = "`<` $elementType `>`";
+}
+
+// A type that is tensor-like exactly when its inner type is. As a tensor-like
+// type, its buffer is the buffer of its inner type.
+def TestTensorLikeWrapperType : Test_Type<"TestTensorLikeWrapper",
+    [DeclareTypeInterfaceMethods<Bufferization_TensorLikeTypeInterface,
+        ["verifyCompatibleBufferType", "isTensorLike"]>]> {
+  let mnemonic = "tensor_like_wrapper";
+  let parameters = (ins "mlir::Type":$inner);
+  let assemblyFormat = "`<` $inner `>`";
 }
 
 // Test implementation of an interface with methods specifying a

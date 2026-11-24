@@ -21,6 +21,7 @@ add_llvm_unittest(SupportTests
   Caching.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
+  CHERICapabilityFormatTest.cpp
   Chrono.cpp
   CommandLineTest.cpp
   CompressionTest.cpp
@@ -56,6 +57,7 @@ add_llvm_unittest(SupportTests
   JobserverTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
+  KnownFPClassTest.cpp
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
@@ -73,6 +75,7 @@ add_llvm_unittest(SupportTests
   ParallelTest.cpp
   Path.cpp
   PerThreadBumpPtrAllocatorTest.cpp
+  PrefixMapperTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
   ProgramStackTest.cpp
@@ -160,3 +163,4 @@ if(NOT LLVM_INTEGRATED_CRT_ALLOC)
 endif()
 
 add_subdirectory(CommandLineInit)
+add_subdirectory(LLVMToolSession)

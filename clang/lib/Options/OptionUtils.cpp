@@ -219,10 +219,12 @@ std::string clang::GetResourcesPath(StringRef BinaryPath) {
   if (!ConfiguredResourceDir.empty()) {
     // FIXME: We should fix the behavior of llvm::sys::path::append so we don't
     // need to check for absolute paths here.
-    if (llvm::sys::path::is_absolute(ConfiguredResourceDir))
+    if (llvm::sys::path::is_absolute(ConfiguredResourceDir)) {
       P = ConfiguredResourceDir;
-    else
+    } else {
       llvm::sys::path::append(P, ConfiguredResourceDir);
+      llvm::sys::path::remove_dots(P, true);
+    }
   } else {
     // On Windows, libclang.dll is in bin/.
     // On non-Windows, libclang.so/.dylib is in lib/.
@@ -243,4 +245,36 @@ std::string clang::GetResourcesPath(const char *Argv0, void *MainAddr) {
   const std::string ClangExecutable =
       llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
   return GetResourcesPath(ClangExecutable);
+}
+
+static bool isSpaceOrNull(char c) { return !c || c == ' '; }
+
+static Expected<const char *> unescapeUntilSpace(const char *Arg,
+                                                 SmallVectorImpl<char> &Res) {
+  for (; !isSpaceOrNull(*Arg); ++Arg) {
+    if (*Arg == '\\') {
+      ++Arg;
+      if (*Arg != '\\' && *Arg != ' ')
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "only escaped backslashes and spaces are supported");
+    }
+    Res.push_back(*Arg);
+  }
+  return Arg;
+}
+
+Expected<SmallVector<SmallString<8>>>
+clang::parseEscapedCommandLine(const char *CommandLine) {
+  SmallVector<SmallString<8>> Res;
+  while (*CommandLine) {
+    Expected<const char *> ArgEnd =
+        unescapeUntilSpace(CommandLine, Res.emplace_back());
+    if (!ArgEnd)
+      return ArgEnd.takeError();
+    CommandLine = *ArgEnd;
+    if (*CommandLine == ' ')
+      ++CommandLine;
+  }
+  return Res;
 }

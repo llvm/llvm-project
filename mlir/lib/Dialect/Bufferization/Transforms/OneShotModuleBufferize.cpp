@@ -25,6 +25,8 @@
 //   each tensor return value (if any).
 // * `funcOpBbArgReadWriteAnalysis` determines whether or not a tensor bbArg is
 //   read/written.
+// * `funcOpReturnValueWritabilityAnalysis` determines whether returned buffers
+//   are writable.
 //
 // Module Bufferization implements the following calling convention.
 //
@@ -99,8 +101,8 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   Operation *op = returnVal.getOwner();
 
   SmallVector<int64_t> equivBbArgs;
-  if (op->hasAttr(kEquivalentArgsAttr)) {
-    auto attr = cast<ArrayAttr>(op->getAttr(kEquivalentArgsAttr));
+  if (op->hasDiscardableAttr(kEquivalentArgsAttr)) {
+    auto attr = cast<ArrayAttr>(op->getDiscardableAttr(kEquivalentArgsAttr));
     equivBbArgs = llvm::map_to_vector<4>(attr, [](Attribute a) {
       return cast<IntegerAttr>(a).getValue().getSExtValue();
     });
@@ -110,7 +112,7 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   equivBbArgs[returnVal.getOperandNumber()] = bbArg.getArgNumber();
 
   OpBuilder b(op->getContext());
-  op->setAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
+  op->setDiscardableAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
 }
 
 /// Store function BlockArguments that are equivalent to/aliasing a returned
@@ -276,6 +278,31 @@ funcOpBbArgReadWriteAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
 
   return success();
 }
+
+/// Determine which tensor return values are writable at every return site.
+static void funcOpReturnValueWritabilityAnalysis(FuncOp funcOp,
+                                                 OneShotAnalysisState &state,
+                                                 FuncAnalysisState &funcState) {
+  // Without a body, none of the returned buffers are known to be writable.
+  if (funcOp.isExternal())
+    return;
+
+  SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+  for (auto [index, type] : llvm::enumerate(funcOp.getResultTypes())) {
+    if (!isa<TensorLikeType>(type))
+      continue;
+    bool isWritable = true;
+    for (func::ReturnOp returnOp : returnOps) {
+      // A view or a forwarded value may itself be writable but alias a
+      // read-only buffer, such as an arith.constant or a callee result.
+      state.applyOnAliases(returnOp.getOperand(index), [&](Value alias) {
+        isWritable &= state.isWritable(alias);
+      });
+    }
+    if (isWritable)
+      funcState.writableReturnVals[funcOp].insert(index);
+  }
+}
 } // namespace
 
 /// Remove bufferization attributes on FuncOp arguments.
@@ -435,6 +462,11 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 
   // Compute the common result types of all return ops.
   SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+  // There is nothing to fold if the function body does not end in a
+  // func::ReturnOp (e.g., the terminator is from a different dialect). Bail
+  // out gracefully instead of asserting inside `getReturnTypes`.
+  if (returnOps.empty())
+    return;
   SmallVector<Type> resultTypes = getReturnTypes(returnOps);
 
   // Remove direct casts.
@@ -502,6 +534,7 @@ mlir::bufferization::analyzeModuleOp(Operation *moduleOp,
     if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, state, funcState)) ||
         failed(funcOpBbArgReadWriteAnalysis(funcOp, state, funcState)))
       return failure();
+    funcOpReturnValueWritabilityAnalysis(funcOp, state, funcState);
 
     // Mark op as fully analyzed.
     funcState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;

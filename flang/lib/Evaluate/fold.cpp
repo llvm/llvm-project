@@ -9,6 +9,7 @@
 #include "flang/Evaluate/fold.h"
 #include "fold-implementation.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/initial-image.h"
 #include "flang/Evaluate/tools.h"
 
@@ -27,8 +28,8 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
       common::visitors{
           [](IndirectSubscriptIntegerExpr &expr)
               -> std::optional<Constant<SubscriptInteger>> {
-            if (const auto *constant{
-                    UnwrapConstantValue<SubscriptInteger>(expr.value())}) {
+            if (const auto *constant{UnwrapConstantValue<SubscriptInteger>(
+                    SubscriptIntegerKind, expr.value())}) {
               return *constant;
             } else {
               return std::nullopt;
@@ -51,10 +52,11 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
               std::vector<SubscriptInteger::Scalar> values;
               while ((*stride > 0 && *lbi <= *ubi) ||
                   (*stride < 0 && *lbi >= *ubi)) {
-                values.emplace_back(*lbi);
+                values.emplace_back(SubscriptIntegerKind, *lbi);
                 *lbi += *stride;
               }
-              return Constant<SubscriptInteger>{std::move(values),
+              return Constant<SubscriptInteger>{SubscriptIntegerKind,
+                  std::move(values),
                   ConstantSubscripts{
                       static_cast<ConstantSubscript>(values.size())}};
             } else {
@@ -65,7 +67,112 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
       ss.u);
 }
 
-Expr<SomeDerived> FoldOperation(
+Expr<Type<TypeCategory::Derived>> FoldEnumerationNextOrPrevious(
+    FoldingContext &context, FunctionRef<Type<TypeCategory::Derived>> &&funcRef,
+    bool isNext) {
+  ActualArguments &args{funcRef.arguments()};
+  // Don't fold if STAT is present — STAT assignment is a side effect
+  if (args.size() >= 2 && args[1]) {
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
+  }
+  auto *expr{args.size() >= 1 && args[0]
+          ? UnwrapExpr<Expr<Type<TypeCategory::Derived>>>(args[0])
+          : nullptr};
+  if (!expr) {
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
+  }
+  const auto *derived{GetEnumerationTypeSpec(expr->GetType())};
+  const semantics::Scope *scope{derived ? derived->GetScope() : nullptr};
+  if (!scope) {
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
+  }
+  auto ordIter{scope->find(
+      semantics::SourceName{semantics::DerivedTypeDetails::ordinalComponentName,
+          sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
+  if (ordIter == scope->end()) {
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
+  }
+  const semantics::Symbol &ordSym{*ordIter->second};
+  int count{derived->typeSymbol()
+          .GetUltimate()
+          .get<semantics::DerivedTypeDetails>()
+          .enumeratorCount()};
+  auto *constant{UnwrapConstantValue<Type<TypeCategory::Derived>>(*expr)};
+  if (!constant) {
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
+  }
+  // A boundary hit (NEXT() of the last enumerator or PREVIOUS() of the first)
+  // without STAT= is a runtime error termination.  In a required-constant
+  // context that value cannot be deferred, so it is diagnosed as out of range.
+  // Outside a constant context the reference is left unfolded and deferred to
+  // run time, where lowering emits the STAT assignment or error termination.
+  auto handleBoundary{[&]() -> Expr<Type<TypeCategory::Derived>> {
+    if (context.inConstantContext()) {
+      context.messages().Say(isNext
+              ? "NEXT() of the last enumerator is out of range"_err_en_US
+              : "PREVIOUS() of the first enumerator is out of range"_err_en_US);
+      return MakeInvalidIntrinsic<Type<TypeCategory::Derived>>(
+          std::move(funcRef));
+    }
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
+  }};
+  if (auto sc{constant->GetScalarValue()}) {
+    if (auto ordExpr{sc->Find(ordSym)}) {
+      if (auto ordVal{ToInt64(*ordExpr)}) {
+        if (isNext ? *ordVal >= count : *ordVal <= 1) {
+          return handleBoundary();
+        }
+        int newOrd{isNext ? static_cast<int>(*ordVal + 1)
+                          : static_cast<int>(*ordVal - 1)};
+        StructureConstructor ctor{*derived};
+        ctor.Add(ordSym,
+            Expr<SomeType>{
+                Expr<Type<TypeCategory::Integer>>{MakeCIntegerExpr(newOrd)}});
+        return Expr<Type<TypeCategory::Derived>>{
+            Constant<Type<TypeCategory::Derived>>{std::move(ctor)}};
+      }
+    }
+  } else if (constant->Rank() > 0) {
+    // Array constant: NEXT/PREVIOUS are elemental, so fold elementwise into
+    // a constant array of enumerators.  STAT= is absent here (the
+    // STAT-present case bails out above), so there is no side effect to
+    // preserve.  This elementwise fold mirrors the runtime elemental lowering
+    // in genEnumerationArray (flang/lib/Lower/ConvertExprToHLFIR.cpp).
+    std::vector<StructureConstructor> elements;
+    elements.reserve(constant->values().size());
+    for (const StructureConstructorValues &scv : constant->values()) {
+      auto ordVal{ToInt64(scv.find(ordSym)->second.value())};
+      if (isNext ? *ordVal >= count : *ordVal <= 1) {
+        return handleBoundary();
+      }
+      int newOrd{isNext ? static_cast<int>(*ordVal + 1)
+                        : static_cast<int>(*ordVal - 1)};
+      StructureConstructor ctor{*derived};
+      ctor.Add(ordSym,
+          Expr<SomeType>{
+              Expr<Type<TypeCategory::Integer>>{MakeCIntegerExpr(newOrd)}});
+      elements.emplace_back(std::move(ctor));
+    }
+    return Expr<Type<TypeCategory::Derived>>{
+        Constant<Type<TypeCategory::Derived>>{*derived, std::move(elements),
+            ConstantSubscripts{constant->shape()}}};
+  }
+  return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
+}
+
+bool IsTypeOnlyInquiryArg(const SpecificIntrinsic &intrinsic, std::size_t j) {
+  const auto &dummies{intrinsic.characteristics.value().dummyArguments};
+  if (j < dummies.size()) {
+    if (const auto *object{
+            std::get_if<characteristics::DummyDataObject>(&dummies[j].u)}) {
+      return object->attrs.test(
+          characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry);
+    }
+  }
+  return false;
+}
+
+Expr<Type<TypeCategory::Derived>> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
   StructureConstructor ctor{structure.derivedTypeSpec()};
   bool isConstant{true};
@@ -113,9 +220,10 @@ Expr<SomeDerived> FoldOperation(
     ctor.Add(symbol, std::move(expr));
   }
   if (isConstant) {
-    return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
+    return Expr<Type<TypeCategory::Derived>>{
+        Constant<Type<TypeCategory::Derived>>{std::move(ctor)}};
   } else {
-    return Expr<SomeDerived>{std::move(ctor)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(ctor)};
   }
 }
 
@@ -144,6 +252,7 @@ Subscript FoldOperation(FoldingContext &context, Subscript &&subscript) {
       common::visitors{
           [&](IndirectSubscriptIntegerExpr &&expr) {
             expr.value() = Fold(context, std::move(expr.value()));
+            CHECK(IsSubscriptIntegerKind(expr.value()));
             return Subscript(std::move(expr));
           },
           [&](Triplet &&triplet) {
@@ -168,8 +277,12 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
     cosubscript.emplace_back(Fold(context, std::move(x)));
   }
   CoarrayRef folded{std::move(base), std::move(cosubscript)};
-  if (std::optional<Expr<SomeInteger>> stat{coarrayRef.stat()}) {
+  if (std::optional<Expr<Type<TypeCategory::Integer>>> stat{
+          coarrayRef.stat()}) {
     folded.set_stat(Fold(context, std::move(*stat)));
+  }
+  if (std::optional<Expr<SomeType>> notify{coarrayRef.notify()}) {
+    folded.set_notify(Fold(context, std::move(*notify)));
   }
   if (std::optional<Expr<SomeType>> team{coarrayRef.team()}) {
     folded.set_team(Fold(context, std::move(*team)));
@@ -214,7 +327,8 @@ std::optional<std::int64_t> GetInt64ArgOr(
 Expr<ImpliedDoIndex::Result> FoldOperation(
     FoldingContext &context, ImpliedDoIndex &&iDo) {
   if (std::optional<ConstantSubscript> value{context.GetImpliedDo(iDo.name)}) {
-    return Expr<ImpliedDoIndex::Result>{*value};
+    return MakeConstantExpr<ImpliedDoIndex::Result>(
+        SubscriptIntegerKind, *value);
   } else {
     return Expr<ImpliedDoIndex::Result>{std::move(iDo)};
   }
@@ -240,7 +354,8 @@ std::optional<Expr<SomeType>> FoldTransfer(
   if (arguments[1]) { // MOLD=
     moldType = arguments[1]->GetType();
     if (moldType && moldType->category() == TypeCategory::Character) {
-      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(arguments[1])}) {
+      if (const auto *chExpr{
+              UnwrapExpr<Expr<Type<TypeCategory::Character>>>(arguments[1])}) {
         moldLength = ToInt64(Fold(context, chExpr->LEN()));
       }
     }
@@ -298,7 +413,100 @@ std::optional<Expr<SomeType>> FoldTransfer(
   return std::nullopt;
 }
 
-template class ExpressionBase<SomeDerived>;
+// Fold a Consequent expression in place.
+static void FoldConsequent(
+    FoldingContext &context, ActualArgument::ConditionalArg::Consequent &cons) {
+  if (cons && !IsNamedConstantDesignator(cons->value())) {
+    // A retained named-constant designator keeps its designator form for
+    // storage association; see the corresponding skip in
+    // FoldOperation(FunctionRef).  Intrinsic references get their values
+    // through the folded copy made at intrinsic resolution.
+    cons->value() = Fold(context, std::move(cons->value()));
+  }
+}
+
+// Returned by FoldConditionalArgImpl when the entire ConditionalArg chain
+// resolves to a single consequent.  Wraps Consequent in a named type so
+// callers can distinguish "fully resolved" from std::nullopt, which means
+// "chain still has at least one non-constant condition".
+// Note: a ResolvedConsequent whose value is std::nullopt represents .NIL.
+// (an absent optional argument), which is a valid resolved outcome.
+namespace {
+struct ResolvedConsequent {
+  ActualArgument::ConditionalArg::Consequent value;
+};
+} // namespace
+
+// Recursively fold a ConditionalArg chain.
+//   Returns ResolvedConsequent  — entire chain resolved to one consequent.
+//   Returns std::nullopt        — chain still has non-constant conditions;
+//                                 all reachable sub-expressions folded in
+//                                 place.
+static std::optional<ResolvedConsequent> FoldConditionalArgImpl(
+    FoldingContext &context, ActualArgument::ConditionalArg &condArg) {
+  using ConditionalArg = ActualArgument::ConditionalArg;
+  using Consequent = ConditionalArg::Consequent;
+
+  condArg.condition() = Fold(context, std::move(condArg.condition()));
+
+  // Condition is constant - select appropriate branch and recursively fold it.
+  if (auto constCond{GetScalarConstantValue<LogicalResult>(
+          LogicalResultKind, condArg.condition())}) {
+    if (constCond->IsTrue()) {
+      // .TRUE. — select this consequent.
+      FoldConsequent(context, condArg.consequent());
+      return ResolvedConsequent{std::move(condArg.consequent())};
+    }
+    // .FALSE. — skip to the tail.
+    return condArg.VisitTail(
+        [&](ConditionalArg &inner) -> std::optional<ResolvedConsequent> {
+          auto folded{FoldConditionalArgImpl(context, inner)};
+          if (!folded) {
+            // Inner chain not fully resolved — promote it to replace
+            // the current condArg (peeling off the .FALSE. prefix).
+            // Move to a local first to avoid self-referential assignment.
+            auto promoted{std::move(inner)};
+            condArg = std::move(promoted);
+          }
+          return folded;
+        },
+        [&](Consequent &cons) -> std::optional<ResolvedConsequent> {
+          FoldConsequent(context, cons);
+          return ResolvedConsequent{std::move(cons)};
+        });
+  }
+
+  // Condition is not constant — fold all sub-expressions in place.
+  FoldConsequent(context, condArg.consequent());
+  condArg.VisitTail(
+      [&](ConditionalArg &inner) {
+        if (auto resolved{FoldConditionalArgImpl(context, inner)}) {
+          // Inner chain fully resolved — replace tail with its consequent.
+          condArg.tail() = std::move(resolved->value);
+        }
+      },
+      [&](Consequent &cons) { FoldConsequent(context, cons); });
+
+  // The condition was not a compile-time constant, so the chain could not be
+  // collapsed. All reachable sub-expressions have been folded in place above.
+  return std::nullopt;
+}
+
+void FoldConditionalArg(
+    FoldingContext &context, std::optional<ActualArgument> &arg) {
+  auto *condArg{arg ? arg->GetConditionalArg() : nullptr};
+  if (!condArg) {
+    return;
+  }
+  if (auto resolved{FoldConditionalArgImpl(context, *condArg)}) {
+    // Fully resolved to a single consequent.
+    // operator=(Expr&&) preserves keyword_, attrs_, and dummyIntent_.
+    resolved->value ? void(*arg = std::move(resolved->value->value()))
+                    : void(arg = std::nullopt); // .NIL. — absent argument
+  }
+}
+
+template class ExpressionBase<Type<TypeCategory::Derived>>;
 template class ExpressionBase<SomeType>;
 
 } // namespace Fortran::evaluate

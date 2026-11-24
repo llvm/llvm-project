@@ -155,30 +155,36 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
       if (OpR->isSubClassOf("RegisterOperand"))
         OpR = OpR->getValueAsDef("RegClass");
 
-      if (OpR->isSubClassOf("RegClassByHwMode")) {
+      if (OpR->isSubClassOf("RegClassByHwMode") &&
+          !OpR->getValueAsListOfDefs("Objects").empty()) {
         Res += Namespace;
         Res += "::";
         Res += OpR->getName();
         Res += ", ";
-      } else if (OpR->isSubClassOf("RegisterClass"))
-        Res += getQualifiedName(OpR) + "RegClassID, ";
-      else if (OpR->isSubClassOf("PointerLikeRegClass")) {
+      } else if (OpR->isSubClassOf("RegClassByHwMode")) {
+        // An empty RegClassByHwMode is the generic ptr_rc placeholder. It must
+        // be substituted with a real class per target (via
+        // RemapAllTargetPseudoPointerOperands); reaching here means it was not.
         if (Inst.isPseudo) {
           // TODO: Verify this is a fixed pseudo
           PrintError(Inst.TheDef,
                      "missing target override for pseudoinstruction "
-                     "using PointerLikeRegClass");
+                     "using ptr_rc");
           PrintNote(OpR->getLoc(),
                     "target should define equivalent instruction "
                     "with RegisterClassLike replacement; (use "
                     "RemapAllTargetPseudoPointerOperands?)");
         } else {
-          PrintError(Inst.TheDef,
-                     "non-pseudoinstruction user of PointerLikeRegClass");
+          PrintError(Inst.TheDef, "non-pseudoinstruction user of ptr_rc");
         }
-      } else
         // -1 means the operand does not have a fixed register class.
         Res += "-1, ";
+      } else if (OpR->isSubClassOf("RegisterClass")) {
+        Res += getQualifiedName(OpR) + "RegClassID, ";
+      } else {
+        // -1 means the operand does not have a fixed register class.
+        Res += "-1, ";
+      }
 
       // Fill in applicable flags.
       Res += "0";
@@ -663,6 +669,16 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "class MCInst;\n";
     OS << "class FeatureBitset;\n\n";
 
+    const CodeGenTarget &Target = CDP.getTargetInfo();
+    ArrayRef<const Record *> RegClassByHwMode = Target.getAllRegClassByHwMode();
+    if (!RegClassByHwMode.empty()) {
+      const CodeGenHwModes &CGH = Target.getHwModes();
+      unsigned NumModes = CGH.getNumModeIds();
+      unsigned NumClassesByHwMode = RegClassByHwMode.size();
+      OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
+         << NumModes << "][" << NumClassesByHwMode << "];\n\n";
+    }
+
     NamespaceEmitter TargetNS(OS, (TargetName + "_MC").str());
     for (const Record *Rec : TIIPredicates)
       OS << "bool " << Rec->getValueAsString("FunctionName")
@@ -1079,20 +1095,16 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     }
 
     if (HasComplexDeprecationInfos) {
-      OS << "extern const MCInstrInfo::ComplexDeprecationPredicate "
-         << TargetName << "InstrComplexDeprecationInfos[] = {";
-      Num = 0;
+      OS << "bool " << TargetName << "InstrComplexDeprecationInfo("
+         << "MCInst &Inst, const MCSubtargetInfo &STI, std::string &Info) {\n"
+         << "  switch (Inst.getOpcode()) {\n";
       for (const CodeGenInstruction *Inst : NumberedInstructions) {
-        if (Num % 8 == 0)
-          OS << "\n    ";
-        if (Inst->HasComplexDeprecationPredicate)
-          // Emit a function pointer to the complex predicate method.
-          OS << "&get" << Inst->DeprecatedReason << "DeprecationInfo, ";
-        else
-          OS << "nullptr, ";
-        ++Num;
+        if (!Inst->HasComplexDeprecationPredicate)
+          continue;
+        OS << "  case " << getQualifiedName(Inst->TheDef) << ": return get"
+           << Inst->DeprecatedReason << "DeprecationInfo(Inst, STI, Info);\n";
       }
-      OS << "\n};\n\n";
+      OS << "  }\n  return false;\n}\n\n";
     }
 
     // MCInstrInfo initialization routine.
@@ -1141,7 +1153,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     else
       OS << "nullptr, ";
     if (HasComplexDeprecationInfos)
-      OS << TargetName << "InstrComplexDeprecationInfos, ";
+      OS << TargetName << "InstrComplexDeprecationInfo, ";
     else
       OS << "nullptr, ";
     OS << NumberedInstructions.size() << ", ";
@@ -1216,8 +1228,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       OS << "extern const uint8_t " << TargetName
          << "InstrDeprecationFeatures[];\n";
     if (HasComplexDeprecationInfos)
-      OS << "extern const MCInstrInfo::ComplexDeprecationPredicate "
-         << TargetName << "InstrComplexDeprecationInfos[];\n";
+      OS << "bool " << TargetName << "InstrComplexDeprecationInfo("
+         << "MCInst &Inst, const MCSubtargetInfo &STI, std::string &Info);\n";
     Twine ClassName = TargetName + "GenInstrInfo";
     OS << ClassName << "::" << ClassName
        << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
@@ -1239,7 +1251,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     else
       OS << "nullptr, ";
     if (HasComplexDeprecationInfos)
-      OS << TargetName << "InstrComplexDeprecationInfos, ";
+      OS << TargetName << "InstrComplexDeprecationInfo, ";
     else
       OS << "nullptr, ";
     OS << NumberedInstructions.size();

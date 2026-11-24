@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
+#include "hdr/types/sigset_t.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaddset.h"
 #include "src/signal/sigemptyset.h"
@@ -13,8 +15,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
 
 class LlvmLibcSigprocmaskTest
     : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
@@ -37,17 +37,22 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 // This tests for invalid input.
 TEST_F(LlvmLibcSigprocmaskTest, SigprocmaskInvalid) {
-  sigset_t valid;
+  sigset_t valid{};
   // 17 and -4 are out of the range for sigprocmask's how paramater.
   EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(17, &valid, nullptr), Fails(EINVAL));
   EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(-4, &valid, nullptr), Fails(EINVAL));
+}
 
+#if !defined(__APPLE__)
+// Darwin does not guarantee EFAULT for invalid sigprocmask pointers.
+TEST_F(LlvmLibcSigprocmaskTest, SigprocmaskInvalidPointers) {
   // This pointer is out of this processes address range.
   sigset_t *invalid = reinterpret_cast<sigset_t *>(-1);
   EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, invalid, nullptr),
               Fails(EFAULT));
   EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(-4, nullptr, invalid), Fails(EFAULT));
 }
+#endif
 
 // This tests that when nothing is blocked, a process gets killed and alse tests
 // that when signals are blocked they are not delivered to the process.

@@ -68,10 +68,10 @@ public:
   }
 };
 
-#define LIST_CEIL_TESTS(T, func)                                               \
-  using LlvmLibcCeilTest = CeilTest<T>;                                        \
-  TEST_F(LlvmLibcCeilTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcCeilTest, RoundedNubmers) { testRoundedNumbers(&func); }      \
-  TEST_F(LlvmLibcCeilTest, Fractions) { testFractions(&func); }
+#define LIST_CEIL_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = CeilTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_CEILTEST_H

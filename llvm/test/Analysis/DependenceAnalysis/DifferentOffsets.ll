@@ -148,7 +148,7 @@ end:
 define void @multidim_accesses(ptr %A) {
 ; CHECK-LABEL: 'multidim_accesses'
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
-; CHECK-NEXT:    da analyze - output [0 0 *]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - output [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
@@ -211,7 +211,9 @@ end:
 define void @multidim_accesses2(ptr %A) {
 ; CHECK-LABEL: 'multidim_accesses2'
 ; CHECK-NEXT:  Src: store i64 1, ptr %idx, align 4 --> Dst: store i64 1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i3 {0,+,-4}<%for.k> to i64) == 0
 ;
 entry:
   br label %for.i

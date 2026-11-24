@@ -15,7 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/PassBuilder.h"
+#include "PassesOptions.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -50,6 +52,7 @@
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/LibcallLoweringInfo.h"
 #include "llvm/Analysis/Lint.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
@@ -73,6 +76,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/Analysis/StructuralHash.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -84,26 +88,40 @@
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFGuardLongjmp.h"
+#include "llvm/CodeGen/CFIFixup.h"
+#include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
+#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/FuncletLayout.h"
 #include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/IfConversion.h"
+#include "llvm/CodeGen/ImplicitNullChecks.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InlineAsmPrepare.h"
@@ -116,9 +134,9 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
+#include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
@@ -126,6 +144,8 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCFGPrinter.h"
 #include "llvm/CodeGen/MachineCSE.h"
+#include "llvm/CodeGen/MachineCheckDebugify.h"
+#include "llvm/CodeGen/MachineCombiner.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
@@ -135,7 +155,9 @@
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
@@ -153,6 +175,7 @@
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ProcessImplicitDefs.h"
+#include "llvm/CodeGen/PseudoProbeInserter.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -160,12 +183,14 @@
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/ResetMachineFunctionPass.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -178,6 +203,8 @@
 #include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
+#include "llvm/CodeGen/StaticDataAnnotator.h"
+#include "llvm/CodeGen/StaticDataSplitter.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
@@ -194,8 +221,8 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -232,11 +259,9 @@
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/GlobalSplit.h"
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
-#include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/IPO/LoopExtractor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
@@ -253,7 +278,9 @@
 #include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
+#include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
+#include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -292,6 +319,8 @@
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/GVNHoist.h"
+#include "llvm/Transforms/Scalar/GVNSink.h"
 #include "llvm/Transforms/Scalar/GuardWidening.h"
 #include "llvm/Transforms/Scalar/IVUsersPrinter.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
@@ -302,6 +331,7 @@
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/Transforms/Scalar/LogicalSROA.h"
 #include "llvm/Transforms/Scalar/LoopAccessAnalysisPrinter.h"
 #include "llvm/Transforms/Scalar/LoopBoundSplit.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
@@ -354,6 +384,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
@@ -371,6 +402,7 @@
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Utils/LowerCommentStringPass.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
@@ -386,8 +418,6 @@
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
-#include "llvm/Transforms/Utils/TriggerCrashPass.h"
-#include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
@@ -399,32 +429,9 @@
 
 using namespace llvm;
 
-cl::opt<std::optional<PrintPipelinePassesFormat>, false,
-        PrintPipelinePassesFormatParser>
-    llvm::PrintPipelinePasses(
-        "print-pipeline-passes", cl::ValueOptional,
-        cl::desc(
-            "Print string describing the pipeline (best-effort only).\n"
-            "  - =text\tPrint a '-passes' compatible string describing the "
-            "pipeline.\n"
-            "  - =tree\tPrint a tree-like structure describing the pipeline."));
-
-bool PrintPipelinePassesFormatParser::parse(
-    cl::Option &O, StringRef ArgName, StringRef Arg,
-    std::optional<PrintPipelinePassesFormat> &Val) {
-  std::optional<PrintPipelinePassesFormat> Format =
-      StringSwitch<std::optional<PrintPipelinePassesFormat>>(Arg)
-          .Case("text", PrintPipelinePassesFormat::Text)
-          .Case("", PrintPipelinePassesFormat::Text)
-          .Case("tree", PrintPipelinePassesFormat::Tree)
-          .Default(std::nullopt);
-
-  if (!Format)
-    return O.error(formatv(
-        "'{0}' value invalid for print-pipeline-passes argument!", Arg));
-
-  Val = Format;
-  return false;
+std::optional<PrintPipelinePassesFormat>
+PassBuilder::getPrintPipelinePasses() const {
+  return Opts.print_pipeline_passes;
 }
 
 void llvm::printFormattedPipelinePasses(raw_ostream &OS, StringRef Pipeline,
@@ -564,11 +571,15 @@ static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
       inconvertibleErrorCode());
 }
 
-PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
+PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
+                         std::optional<PipelineTuningOptions> PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
+    : Context(Context), Opts(getPassesOptions(Context)), TM(TM),
+      PTO(PTO.value_or(PipelineTuningOptions())
+              .resolve(Context.getLibraryOptions())),
+      PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {
@@ -876,6 +887,11 @@ Expected<bool> parseInstCountOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
 }
 
+Expected<bool> parseInferAddressSpacesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(
+      Params, "assume-default-is-flat-addrspace", "InferAddressSpacesPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -884,7 +900,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
     if (OptLevel) {
-      UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
+      UnrollOpts.setOptLevel(static_cast<int>(*OptLevel));
       continue;
     }
     if (ParamName.consume_front("full-unroll-max=")) {
@@ -908,6 +924,8 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
       UnrollOpts.setRuntime(Enable);
     } else if (ParamName == "upperbound") {
       UnrollOpts.setUpperBound(Enable);
+    } else if (ParamName == "prepare-for-lto") {
+      UnrollOpts.setPrepareForLTO(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid LoopUnrollPass parameter '{}'", ParamName).str(),
@@ -954,10 +972,6 @@ Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
 Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "drop-deref",
                                             "DropUnnecessaryAssumes");
-}
-
-Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "single", "LoopExtractor");
 }
 
 Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
@@ -1591,11 +1605,6 @@ parseStructuralHashPrinterPassOptions(StringRef Params) {
       inconvertibleErrorCode());
 }
 
-Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "demote-catchswitch-only",
-                                            "WinEHPreparePass");
-}
-
 Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
   GlobalMergeOptions Result;
   while (!Params.empty()) {
@@ -2056,8 +2065,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
+  PTO.LoopVectorization = L >= OptimizationLevel::O2;
+  PTO.SLPVectorization = L >= OptimizationLevel::O2;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,
@@ -2850,92 +2859,158 @@ PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   return std::nullopt;
 }
 
-static void printPassName(StringRef PassName, raw_ostream &OS) {
-  OS << "  " << PassName << "\n";
+LLVM_ATTRIBUTE_NOINLINE static void printPassNameList(StringTable PassNames,
+                                                      raw_ostream &OS) {
+  for (StringRef PassName : PassNames)
+    OS << "  " << PassName << '\n';
 }
-static void printPassName(StringRef PassName, StringRef Params,
-                          raw_ostream &OS) {
-  OS << "  " << PassName << "<" << Params << ">\n";
+
+LLVM_ATTRIBUTE_NOINLINE static void
+printPassNameListWithParams(StringTable PassNames, raw_ostream &OS) {
+  auto I = PassNames.begin();
+  auto End = PassNames.end();
+  while (I != End) {
+    StringRef Name = *I;
+    ++I;
+    assert(I != End);
+    StringRef Params = *I;
+    ++I;
+    OS << "  " << Name << '<' << Params << ">\n";
+  }
 }
 
 void PassBuilder::printPassNames(raw_ostream &OS) {
   // TODO: print pass descriptions when they are available
 
   OS << "Module passes:\n";
-#define MODULE_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char ModulePassNames[] = {"\0"
+#define MODULE_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(ModulePassNames), OS);
 
   OS << "Module passes with params:\n";
+  static constexpr char ModulePassNamesWithParams[] = {"\0"
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(ModulePassNamesWithParams), OS);
 
   OS << "Module analyses:\n";
-#define MODULE_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char ModuleAnalysisNames[] = {"\0"
+#define MODULE_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(ModuleAnalysisNames), OS);
 
   OS << "Module alias analyses:\n";
-#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char ModuleAliasAnalysisNames[] = {"\0"
+#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(ModuleAliasAnalysisNames), OS);
 
   OS << "CGSCC passes:\n";
-#define CGSCC_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char CGSCCPassNames[] = {"\0"
+#define CGSCC_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(CGSCCPassNames), OS);
 
   OS << "CGSCC passes with params:\n";
+  static constexpr char CGSCCPassNamesWithParams[] = {"\0"
 #define CGSCC_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)       \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(CGSCCPassNamesWithParams), OS);
 
   OS << "CGSCC analyses:\n";
-#define CGSCC_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char CGSCCAnalysisNames[] = {"\0"
+#define CGSCC_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(CGSCCAnalysisNames), OS);
 
   OS << "Function passes:\n";
-#define FUNCTION_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char FunctionPassNames[] = {"\0"
+#define FUNCTION_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(FunctionPassNames), OS);
 
   OS << "Function passes with params:\n";
+  static constexpr char FunctionPassNamesWithParams[] = {"\0"
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)    \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(FunctionPassNamesWithParams), OS);
 
   OS << "Function analyses:\n";
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char FunctionAnalysisNames[] = {"\0"
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(FunctionAnalysisNames), OS);
 
   OS << "Function alias analyses:\n";
-#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char FunctionAliasAnalysisNames[] = {"\0"
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(FunctionAliasAnalysisNames), OS);
 
   OS << "LoopNest passes:\n";
-#define LOOPNEST_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char LoopNestPassNames[] = {"\0"
+#define LOOPNEST_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(LoopNestPassNames), OS);
 
   OS << "Loop passes:\n";
-#define LOOP_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char LoopPassNames[] = {"\0"
+#define LOOP_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(LoopPassNames), OS);
 
   OS << "Loop passes with params:\n";
+  static constexpr char LoopPassNamesWithParams[] = {"\0"
 #define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)        \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(LoopPassNamesWithParams), OS);
 
   OS << "Loop analyses:\n";
-#define LOOP_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char LoopAnalysisNames[] = {"\0"
+#define LOOP_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(LoopAnalysisNames), OS);
 
   OS << "Machine module passes (WIP):\n";
-#define MACHINE_MODULE_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char MachineModulePassNames[] = {"\0"
+#define MACHINE_MODULE_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
+  };
+  printPassNameList(StringTable(MachineModulePassNames), OS);
 
   OS << "Machine function passes (WIP):\n";
-#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char MachineFunctionPassNames[] = {"\0"
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
+  };
+  printPassNameList(StringTable(MachineFunctionPassNames), OS);
 
   OS << "Machine function analyses (WIP):\n";
-#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char MachineFunctionAnalysisNames[] = {"\0"
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
+  };
+  printPassNameList(StringTable(MachineFunctionAnalysisNames), OS);
 }
 
 void PassBuilder::registerParseTopLevelPipelineCallback(

@@ -98,6 +98,7 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+// CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      1, 2, 2, 0,
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return InstructionIndex[Opcode];

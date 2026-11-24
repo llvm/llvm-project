@@ -11,7 +11,6 @@
 // <iterator>
 // template <class C> constexpr auto empty(const C& c) -> decltype(c.empty());       // C++17
 // template <class T, size_t N> constexpr bool empty(const T (&array)[N]) noexcept;  // C++17
-// template <class E> constexpr bool empty(initializer_list<E> il) noexcept;         // C++17
 
 #include <iterator>
 #include <cassert>
@@ -29,8 +28,8 @@
 template<typename C>
 void test_const_container( const C& c )
 {
-//  Can't say noexcept here because the container might not be
-    assert ( std::empty(c)   == c.empty());
+  static_assert(noexcept(std::empty(c)) == noexcept(c.empty()));
+  assert(std::empty(c) == c.empty());
 }
 
 template<typename T>
@@ -42,8 +41,8 @@ void test_const_container( const std::initializer_list<T>& c )
 template<typename C>
 void test_container( C& c )
 {
-//  Can't say noexcept here because the container might not be
-    assert ( std::empty(c)   == c.empty());
+  static_assert(noexcept(std::empty(c)) == noexcept(c.empty()));
+  assert(std::empty(c) == c.empty());
 }
 
 template<typename T>

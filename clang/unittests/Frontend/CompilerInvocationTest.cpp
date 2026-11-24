@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInvocation.h"
+
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -163,6 +164,74 @@ TEST(CompilerInvocationTest, CopyOnWriteAssignment) {
   // The new copy reflects the modification, old instance remains unchanged.
   EXPECT_EQ(A.getFrontendOpts().OutputFile, "y.o");
   EXPECT_EQ(B.getFrontendOpts().OutputFile, "x.o");
+}
+
+TEST(CompilerInvocationTest, WithConstCowRef) {
+  CompilerInvocation CI;
+  CI.getHeaderSearchOpts().ModuleCachePath = "mcp";
+
+  HeaderSearchOptions *HSOpts = &CI.getHeaderSearchOpts();
+
+  CI.withCowRef<void>([](const CowCompilerInvocation &CowCI) {
+    // Values stored in the original invocation are reflected in cow.
+    EXPECT_EQ(CowCI.getHeaderSearchOpts().ModuleCachePath, "mcp");
+  });
+
+  // Creating const cow reference does not make a copy.
+  EXPECT_EQ(HSOpts, &CI.getHeaderSearchOpts());
+}
+
+TEST(CompilerInvocationTest, WithMutCowRef) {
+  CompilerInvocation CI;
+  CI.getHeaderSearchOpts().ModuleCachePath = "mcp";
+  CI.getLangOpts().Modules = true;
+
+  HeaderSearchOptions *HSOpts = &CI.getHeaderSearchOpts();
+  LangOptions *LangOpts = &CI.getLangOpts();
+
+  CI.withCowRef<void>([](CowCompilerInvocation &CowCI) {
+    // Values stored in the original invocation are reflected in cow.
+    EXPECT_EQ(CowCI.getHeaderSearchOpts().ModuleCachePath, "mcp");
+    // Values can be mutated.
+    CowCI.getMutLangOpts().Modules = false;
+  });
+
+  // Reading options class on a non-const cow reference does not make a copy.
+  EXPECT_EQ(HSOpts, &CI.getHeaderSearchOpts());
+  // Writing options class on a non-const cow reference does not make a copy.
+  EXPECT_EQ(LangOpts, &CI.getLangOpts());
+  // Writing options class on a non-const cow reference modifies the original.
+  EXPECT_EQ(CI.getLangOpts().Modules, false);
+}
+
+TEST(CompilerInvocationTest, CopyOnWriteVisitPaths) {
+  CowCompilerInvocation A;
+  A.getMutHeaderSearchOpts().ModuleCachePath = "mcp";
+  A.getMutLangOpts().Modules = true;
+
+  CowCompilerInvocation B(A);
+
+  const HeaderSearchOptions *HSOpts = &B.getHeaderSearchOpts();
+  const LangOptions *LangOpts = &B.getLangOpts();
+  B.visitMutPaths([](StringRef Path, std::string &NewPath) {
+    CowCompilerInvocation::VisitMutResult Res;
+    if (Path == "mcp") {
+      NewPath = "pcm";
+      Res.Replace = true;
+      Res.Terminate = true;
+    }
+    return Res;
+  });
+
+  // Modifying a path copies and modifies only one instance of the invocation.
+  EXPECT_NE(HSOpts, &B.getHeaderSearchOpts());
+  EXPECT_EQ(B.getHeaderSearchOpts().ModuleCachePath, "pcm");
+  // And the other instance remains unmodified.
+  EXPECT_EQ(HSOpts, &A.getHeaderSearchOpts());
+  EXPECT_EQ(A.getHeaderSearchOpts().ModuleCachePath, "mcp");
+
+  // Unmodified options are not copied.
+  EXPECT_EQ(LangOpts, &B.getLangOpts());
 }
 
 // Boolean option with a keypath that defaults to true.
@@ -356,6 +425,77 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentReset) {
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-no-clear-ast-before-backend"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-clear-ast-before-backend"))));
+}
+
+// Boolean option with a keypath that defaults to a target-dependent expression.
+// IncrementalLinkerCompatible defaults to true on MSVC/UEFI, and false on
+// others.
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentNoneGNU) {
+  const char *Args[] = {"-triple", "x86_64-w64-windows-gnu"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentNoneMSVC) {
+  const char *Args[] = {"-triple", "x86_64-pc-windows-msvc"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentNoneUEFI) {
+  const char *Args[] = {"-triple", "x86_64-unknown-uefi"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentChangeGNU) {
+  const char *Args[] = {"-triple", "x86_64-w64-windows-gnu",
+                        "-mincremental-linker-compatible"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Contains(StrEq("-mincremental-linker-compatible")));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mno-incremental-linker-compatible"))));
+}
+
+TEST_F(CommandLineTest, BoolOptionDefaultTargetDependentPresentChangeMSVC) {
+  const char *Args[] = {"-triple", "x86_64-pc-windows-msvc",
+                        "-mno-incremental-linker-compatible"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getCodeGenOpts().IncrementalLinkerCompatible);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs,
+              Contains(StrEq("-mno-incremental-linker-compatible")));
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-mincremental-linker-compatible"))));
 }
 
 // Boolean option that gets the CC1Option flag from a let statement (which
@@ -805,7 +945,6 @@ TEST_F(CommandLineTest, WideIntegerHighValue) {
 // their parent:
 //
 //   * -cl-unsafe-math-optimizations
-//     * -cl-mad-enable
 //     * -funsafe-math-optimizations
 //       * -freciprocal-math
 
@@ -814,7 +953,6 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getLangOpts().CLUnsafeMath);
-  ASSERT_FALSE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_FALSE(Invocation.getLangOpts().UnsafeFPMath);
   ASSERT_FALSE(Invocation.getLangOpts().AllowRecip);
 
@@ -823,7 +961,6 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
   // Not generated - missing.
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-funsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
@@ -836,7 +973,6 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsRootFlagPresent) {
   // Explicitly provided root flag.
   ASSERT_TRUE(Invocation.getLangOpts().CLUnsafeMath);
   // Directly implied by explicitly provided root flag.
-  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts().UnsafeFPMath);
   // Transitively implied by explicitly provided root flag.
   ASSERT_TRUE(Invocation.getLangOpts().AllowRecip);
@@ -846,19 +982,17 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsRootFlagPresent) {
   // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
   // Not generated - implied by the generated root flag.
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-funsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
 TEST_F(CommandLineTest, ImpliedBoolOptionsAllFlagsPresent) {
-  const char *Args[] = {"-cl-unsafe-math-optimizations", "-cl-mad-enable",
+  const char *Args[] = {"-cl-unsafe-math-optimizations",
                         "-funsafe-math-optimizations", "-freciprocal-math"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getLangOpts().CLUnsafeMath);
-  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts().UnsafeFPMath);
   ASSERT_TRUE(Invocation.getLangOpts().AllowRecip);
 
@@ -867,19 +1001,16 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsAllFlagsPresent) {
   // Generated - explicitly provided.
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-unsafe-math-optimizations")));
   // Not generated - implied by their generated parent.
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-cl-mad-enable"))));
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-funsafe-math-optimizations"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
 TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
-  const char *Args[] = {"-cl-mad-enable", "-funsafe-math-optimizations",
-                        "-freciprocal-math"};
+  const char *Args[] = {"-funsafe-math-optimizations", "-freciprocal-math"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getLangOpts().CLUnsafeMath);
-  ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts().UnsafeFPMath);
   ASSERT_TRUE(Invocation.getLangOpts().AllowRecip);
 
@@ -888,21 +1019,19 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
   ASSERT_THAT(GeneratedArgs,
               Not(Contains(StrEq("-cl-unsafe-math-optimizations"))));
   // Generated - explicitly provided.
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-funsafe-math-optimizations")));
   // Not generated - implied by its generated parent.
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-freciprocal-math"))));
 }
 
 TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
-  const char *Args[] = {"-cl-mad-enable", "-funsafe-math-optimizations"};
+  const char *Args[] = {"-funsafe-math-optimizations"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Present options that were not implied are generated.
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-funsafe-math-optimizations")));
 }
 

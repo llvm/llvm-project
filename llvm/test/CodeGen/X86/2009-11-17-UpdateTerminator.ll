@@ -26,27 +26,24 @@ define zeroext i8 @_ZN4llvm9InlineAsm14ConstraintInfo5ParseENS_9StringRefERSt6ve
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_4: ## %bb27.outer108
+; CHECK-NEXT:  LBB0_2: ## %bb27.outer108
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je LBB0_5
-; CHECK-NEXT:  ## %bb.2: ## %bb10
-; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    jne LBB0_8
-; CHECK-NEXT:  ## %bb.3: ## %bb10
-; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    je LBB0_4
+; CHECK-NEXT:  ## %bb.3: ## %bb10
+; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:    jmp LBB0_8
-; CHECK-NEXT:  LBB0_5: ## %bb27.outer108
-; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
+; CHECK-NEXT:  LBB0_4: ## %bb27.outer108
+; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    jne LBB0_8
+; CHECK-NEXT:  ## %bb.5: ## %bb27.outer108
+; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    jne LBB0_8
 ; CHECK-NEXT:  ## %bb.6: ## %bb27.outer108
-; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    jne LBB0_8
-; CHECK-NEXT:  ## %bb.7: ## %bb27.outer108
-; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
+; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB0_4
+; CHECK-NEXT:    jne LBB0_2
 ; CHECK-NEXT:  LBB0_8: ## %bb14
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retq

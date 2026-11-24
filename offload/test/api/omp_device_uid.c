@@ -65,6 +65,14 @@ int main() {
       num_failed++;
     }
   }
+  // test that uid for omp_initial_device matches uid
+  // for omp_get_num_devices(), i.e. the host device
+  if (omp_get_uid_from_device(omp_initial_device) !=
+      omp_get_uid_from_device(num_devices)) {
+    printf("FAIL for matching uid for omp_initial_device and "
+           "omp_get_initial_device()");
+    num_failed++;
+  }
   if (num_failed) {
     printf("FAIL\n");
     return 1;

@@ -11,7 +11,7 @@ func.func @test_fir_scalar_in_serial() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<i64>) recipe({{.*}}) -> !fir.ref<i64> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<i64>) recipe({{.*}}) implicit(true) name("scalarvar") -> !fir.ref<i64>
 
 // -----
 
@@ -24,7 +24,7 @@ func.func @test_fir_scalar_in_parallel() {
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) implicit(true) name("scalarvar") -> !fir.ref<f32>
 
 // -----
 
@@ -37,8 +37,8 @@ func.func @test_fir_scalar_in_kernels() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) -> !fir.ref<f64> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "scalarvar"}
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<f64>) to varPtr({{.*}} : !fir.ref<f64>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "scalarvar"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar") -> !fir.ref<f64>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<f64>) to varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar")
 
 // -----
 
@@ -47,7 +47,7 @@ func.func @test_fir_scalar_in_parallel_defaultnone() {
   acc.parallel {
     %load = fir.load %livein : !fir.ref<f32>
     acc.yield
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   return
 }
 
@@ -60,7 +60,7 @@ func.func @test_fir_scalar_in_kernels_defaultnone() {
   acc.kernels {
     %load = fir.load %livein : !fir.ref<f64>
     acc.terminator
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   return
 }
 
@@ -77,8 +77,8 @@ func.func @test_fir_derivedtype_in_parallel() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aggrvar"}
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) to varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aggrvar"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) dataClause(acc_copy) implicit(true) name("aggrvar") -> !fir.ref<!fir.type<_QFTaggr{field:f32}>>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) to varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) dataClause(acc_copy) implicit(true) name("aggrvar")
 
 // -----
 
@@ -91,8 +91,8 @@ func.func @test_fir_derivedtype_in_kernels() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aggrvar"}
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) to varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aggrvar"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) dataClause(acc_copy) implicit(true) name("aggrvar") -> !fir.ref<!fir.type<_QFTaggr{field:f32}>>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) to varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) dataClause(acc_copy) implicit(true) name("aggrvar")
 
 // -----
 
@@ -105,8 +105,8 @@ func.func @test_fir_array_in_parallel() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar"}
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<10xf32>>) to varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) implicit(true) name("arrayvar") -> !fir.ref<!fir.array<10xf32>>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<10xf32>>) to varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) implicit(true) name("arrayvar")
 
 // -----
 
@@ -119,8 +119,8 @@ func.func @test_fir_array_in_kernels() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar"}
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<10xf32>>) to varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) implicit(true) name("arrayvar") -> !fir.ref<!fir.array<10xf32>>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<10xf32>>) to varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) implicit(true) name("arrayvar")
 
 // -----
 
@@ -129,12 +129,12 @@ func.func @test_fir_derivedtype_in_parallel_defaultpresent() {
   acc.parallel {
     %load = fir.load %livein : !fir.ref<!fir.type<_QFTaggr{field:f32}>>
     acc.yield
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default, implicit = true, name = "aggrvar"}
-// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "aggrvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) implicit(true) name("aggrvar") -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default}
+// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) dataClause(acc_present) implicit(true) name("aggrvar")
 
 // -----
 
@@ -143,12 +143,12 @@ func.func @test_fir_derivedtype_in_kernels_defaultpresent() {
   acc.kernels {
     %load = fir.load %livein : !fir.ref<!fir.type<_QFTaggr{field:f32}>>
     acc.terminator
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default, implicit = true, name = "aggrvar"}
-// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "aggrvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) implicit(true) name("aggrvar") -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default}
+// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) dataClause(acc_present) implicit(true) name("aggrvar")
 
 // -----
 
@@ -157,12 +157,12 @@ func.func @test_fir_array_in_parallel_defaultpresent() {
   acc.parallel {
     %load = fir.load %livein : !fir.ref<!fir.array<10xf32>>
     acc.yield
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {acc.from_default, implicit = true, name = "arrayvar"}
-// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "arrayvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) implicit(true) name("arrayvar") -> !fir.ref<!fir.array<10xf32>> {acc.from_default}
+// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_present) implicit(true) name("arrayvar")
 
 // -----
 
@@ -171,12 +171,12 @@ func.func @test_fir_array_in_kernels_defaultpresent() {
   acc.kernels {
     %load = fir.load %livein : !fir.ref<!fir.array<10xf32>>
     acc.terminator
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {acc.from_default, implicit = true, name = "arrayvar"}
-// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "arrayvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) implicit(true) name("arrayvar") -> !fir.ref<!fir.array<10xf32>> {acc.from_default}
+// CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_present) implicit(true) name("arrayvar")
 
 // -----
 
@@ -185,11 +185,11 @@ func.func @test_fir_scalar_in_parallel_defaultpresent() {
   acc.parallel {
     %load = fir.load %livein : !fir.ref<f32>
     acc.yield
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   return
 }
 
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe({{.*}}) implicit(true) name("scalarvar") -> !fir.ref<f32>
 
 // -----
 
@@ -198,12 +198,12 @@ func.func @test_fir_scalar_in_kernels_defaultpresent() {
   acc.kernels {
     %load = fir.load %livein : !fir.ref<f64>
     acc.terminator
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) -> !fir.ref<f64> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "scalarvar"}
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<f64>) to varPtr({{.*}} : !fir.ref<f64>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "scalarvar"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar") -> !fir.ref<f64>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<f64>) to varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar")
 
 // -----
 
@@ -216,8 +216,8 @@ func.func @test_fir_box_ref() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.array<?xi32>>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "descriptor"}
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.box<!fir.array<?xi32>>>) to varPtr({{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "descriptor"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>) dataClause(acc_copy) implicit(true) name("descriptor") -> !fir.ref<!fir.box<!fir.array<?xi32>>>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.box<!fir.array<?xi32>>>) to varPtr({{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>) dataClause(acc_copy) implicit(true) name("descriptor")
 
 // -----
 
@@ -231,8 +231,8 @@ func.func @test_fir_box_val() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin var({{.*}} : !fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "descriptor"}
-// CHECK: acc.copyout accVar(%[[COPYIN]] : !fir.box<!fir.array<?xi32>>) to var({{.*}} : !fir.box<!fir.array<?xi32>>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "descriptor"}
+// CHECK: %[[COPYIN:.*]] = acc.copyin var({{.*}} : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("descriptor") -> !fir.box<!fir.array<?xi32>>
+// CHECK: acc.copyout accVar(%[[COPYIN]] : !fir.box<!fir.array<?xi32>>) to var({{.*}} : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("descriptor")
 
 
 // -----
@@ -245,19 +245,19 @@ func.func @test_explicit_box_implicit_ptr() {
   %c10 = arith.constant 10 : index
   %arr = fir.alloca !fir.array<10xf32> {bindc_name = "aa"}
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %arr_decl = fir.declare %arr(%shape) {uniq_name = "aa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %arr_decl = fir.declare %arr(%shape) uniq_name("aa") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %box = fir.embox %arr_decl(%shape) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
-  %copyin = acc.copyin var(%box : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "aa"}
+  %copyin = acc.copyin var(%box : !fir.box<!fir.array<10xf32>>) dataClause(acc_copy) name("aa") -> !fir.box<!fir.array<10xf32>>
   acc.serial dataOperands(%copyin : !fir.box<!fir.array<10xf32>>) {
     // Use the pointer, not the box
     %elem = fir.array_coor %arr_decl(%shape) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
     acc.yield
   }
-  acc.copyout accVar(%copyin : !fir.box<!fir.array<10xf32>>) to var(%box : !fir.box<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "aa"}
+  acc.copyout accVar(%copyin : !fir.box<!fir.array<10xf32>>) to var(%box : !fir.box<!fir.array<10xf32>>) dataClause(acc_copy) name("aa")
   return
 }
 
-// CHECK: acc.present varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>){{.*}}-> !fir.ref<!fir.array<10xf32>> {implicit = true, name = "aa"}
+// CHECK: acc.present varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>){{.*}} implicit(true) name("aa") -> !fir.ref<!fir.array<10xf32>>
 
 // -----
 
@@ -281,7 +281,7 @@ func.func @_QParray(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "aa"}, 
   %c1 = arith.constant 1 : index
   %c10_i64 = arith.constant 10 : i64
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFarrayEnn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg1 dummy_scope %0 uniq_name("_QFarrayEnn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %4 = fir.convert %c10_i64 : (i64) -> index
   %5 = fir.load %1 : !fir.ref<i32>
   %6 = fir.convert %5 : (i32) -> i64
@@ -291,7 +291,7 @@ func.func @_QParray(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "aa"}, 
   %10 = arith.cmpi sgt, %9, %c0 : index
   %11 = arith.select %10, %9, %c0 : index
   %12 = fir.shape_shift %4, %11 : (index, index) -> !fir.shapeshift<1>
-  %13 = fir.declare %arg0(%12) dummy_scope %0 {uniq_name = "_QFarrayEaa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %13 = fir.declare %arg0(%12) dummy_scope %0 uniq_name("_QFarrayEaa") : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
   acc.kernels {
     %elem = fir.array_coor %13(%12) %4 : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
     acc.terminator
@@ -302,7 +302,7 @@ func.func @_QParray(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "aa"}, 
 // This tries to confirm that the acc.bounds operation is as expected.
 // Effectively the extent needs to be max(0, nn), stride needs to be 1,
 // adjusted lowerbound is 0, and actual language start index is 10.
-// CHECK: %[[NN:.*]] = fir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFarrayEnn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK: %[[NN:.*]] = fir.declare %{{.*}} dummy_scope %{{.*}} uniq_name("_QFarrayEnn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK: %[[C10:.*]] = fir.convert %c10{{.*}} : (i64) -> index
 // CHECK: %[[LOADEDNN:.*]] = fir.load %[[NN]] : !fir.ref<i32>
 // CHECK: %[[CAST1:.*]] = fir.convert %[[LOADEDNN]] : (i32) -> i64
@@ -312,7 +312,7 @@ func.func @_QParray(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "aa"}, 
 // CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[ADDI]], %c0{{.*}} : index
 // CHECK: %[[SELECT:.*]] = arith.select %[[CMPI]], %[[ADDI]], %c0{{.*}} : index
 // CHECK: %[[BOUNDS:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[SELECT]] : index) stride(%c1{{.*}} : index) startIdx(%[[C10]] : index)
-// CHECK: acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aa"}
+// CHECK: acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) dataClause(acc_copy) implicit(true) name("aa") -> !fir.ref<!fir.array<?xf32>>
 
 // -----
 
@@ -322,7 +322,7 @@ func.func @test_deviceptr_no_implicit_copy() {
   %arr = fir.alloca !fir.array<10xf64> {bindc_name = "a"}
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
   %arr_box = fir.embox %arr(%shape) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
-  %devptr = acc.deviceptr var(%arr_box : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {name = "a"}
+  %devptr = acc.deviceptr var(%arr_box : !fir.box<!fir.array<10xf64>>) name("a") -> !fir.box<!fir.array<10xf64>>
   acc.parallel dataOperands(%devptr : !fir.box<!fir.array<10xf64>>) {
     %elem = fir.box_addr %arr_box : (!fir.box<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>>
     acc.yield
@@ -341,7 +341,7 @@ func.func @test_acc_declare_deviceptr() {
   %arr = fir.alloca !fir.array<10xf64> {bindc_name = "a"}
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
   %arr_box = fir.embox %arr(%shape) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
-  %devptr = acc.deviceptr var(%arr_box : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {name = "a"}
+  %devptr = acc.deviceptr var(%arr_box : !fir.box<!fir.array<10xf64>>) name("a") -> !fir.box<!fir.array<10xf64>>
   %token = acc.declare_enter dataOperands(%devptr : !fir.box<!fir.array<10xf64>>)
   acc.parallel {
     %elem = fir.box_addr %arr_box : (!fir.box<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>>
@@ -362,13 +362,13 @@ func.func @test_acc_declare_deviceptr() {
 // Test that implicit deviceptr is generated for a symbol with CUDA device attribute
 func.func @test_cuda_device_implicit_deviceptr() {
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %2 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %3 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %4 = fir.embox %2(%3) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %4 = fir.embox %2(%3) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %4 to %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %5:2 = hlfir.declare %1 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %5:2 = hlfir.declare %1 uniq_name("_QFEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
   %c1 = arith.constant 1 : index
   %c16_i32 = arith.constant 16 : i32
   %c0_i32 = arith.constant 0 : i32
@@ -376,7 +376,7 @@ func.func @test_cuda_device_implicit_deviceptr() {
   %7 = fir.convert %c1 : (index) -> i64
   %8 = fir.convert %c16_i32 : (i32) -> i64
   fir.call @_FortranAAllocatableSetBounds(%6, %c0_i32, %7, %8) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
-  %9 = cuf.allocate %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %9 = cuf.allocate %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
   acc.serial {
     %cst = arith.constant 1.000000e+02 : f32
     %10 = fir.load %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -401,9 +401,9 @@ func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<none>>, i32, 
 func.func @test_fir_declare_deviceptr_arg_in_parallel(%arg0: !fir.ref<!fir.array<10xf64>>) {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %arr_decl = fir.declare %arg0(%shape) {acc.declare = #acc.declare<dataClause = acc_deviceptr>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf64>>
+  %arr_decl = fir.declare %arg0(%shape) uniq_name("_QFtestEa") {acc.declare = #acc.declare<dataClause = acc_deviceptr>} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf64>>
   %arr_box = fir.embox %arr_decl(%shape) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
-  %devptr = acc.deviceptr var(%arr_box : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {name = "a"}
+  %devptr = acc.deviceptr var(%arr_box : !fir.box<!fir.array<10xf64>>) name("a") -> !fir.box<!fir.array<10xf64>>
   %token = acc.declare_enter dataOperands(%devptr : !fir.box<!fir.array<10xf64>>)
   acc.parallel {
     %addr = fir.box_addr %arr_box : (!fir.box<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>>
@@ -417,10 +417,10 @@ func.func @test_fir_declare_deviceptr_arg_in_parallel(%arg0: !fir.ref<!fir.array
 // CHECK-LABEL: func.func @test_fir_declare_deviceptr_arg_in_parallel
 // CHECK: %[[DECL:.*]] = fir.declare %{{.*}}{{.*}}{acc.declare = #acc.declare<dataClause = acc_deviceptr>{{.*}}
 // CHECK: %[[BOX:.*]] = fir.embox %[[DECL]]
-// CHECK: %[[DEVPTR:.*]] = acc.deviceptr var(%[[BOX]] : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {name = "a"}
+// CHECK: %[[DEVPTR:.*]] = acc.deviceptr var(%[[BOX]] : !fir.box<!fir.array<10xf64>>) name("a") -> !fir.box<!fir.array<10xf64>>
 // CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVPTR]] : !fir.box<!fir.array<10xf64>>)
-// CHECK: %[[IMPLICIT_BOX:.*]] = acc.deviceptr var(%[[BOX]] : !fir.box<!fir.array<10xf64>>) -> !fir.box<!fir.array<10xf64>> {implicit = true, name = "a"}
-// CHECK: %[[IMPLICIT_REF:.*]] = acc.deviceptr varPtr(%[[DECL]] : !fir.ref<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>> {implicit = true, name = "a"}
+// CHECK: %[[IMPLICIT_BOX:.*]] = acc.deviceptr var(%[[BOX]] : !fir.box<!fir.array<10xf64>>) implicit(true) name("a") -> !fir.box<!fir.array<10xf64>>
+// CHECK: %[[IMPLICIT_REF:.*]] = acc.deviceptr varPtr(%[[DECL]] : !fir.ref<!fir.array<10xf64>>) implicit(true) name("a") -> !fir.ref<!fir.array<10xf64>>
 // CHECK: acc.parallel dataOperands(%[[IMPLICIT_BOX]], %[[IMPLICIT_REF]] : !fir.box<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>) {
 // CHECK: fir.box_addr %[[IMPLICIT_BOX]] : (!fir.box<!fir.array<10xf64>>) -> !fir.ref<!fir.array<10xf64>>
 // CHECK: fir.array_coor %[[IMPLICIT_REF]]
@@ -447,9 +447,9 @@ func.func @test_serial_inside_data_deviceptr_embox() {
   %c1 = arith.constant 1 : index
   %arr = fir.alloca !fir.array<10xf32> {bindc_name = "b"}
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %arr_decl = fir.declare %arr(%shape) {uniq_name = "b"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %arr_decl = fir.declare %arr(%shape) uniq_name("b") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %box = fir.embox %arr_decl(%shape) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
-  %devptr = acc.deviceptr var(%box : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {name = "b(1:10)"}
+  %devptr = acc.deviceptr var(%box : !fir.box<!fir.array<10xf32>>) name("b(1:10)") -> !fir.box<!fir.array<10xf32>>
   acc.data dataOperands(%devptr : !fir.box<!fir.array<10xf32>>) {
     acc.serial {
       %elem = fir.array_coor %arr_decl(%shape) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
@@ -462,9 +462,9 @@ func.func @test_serial_inside_data_deviceptr_embox() {
 }
 
 // CHECK-LABEL: func.func @test_serial_inside_data_deviceptr_embox
-// CHECK: acc.deviceptr var({{.*}} : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {name = "b(1:10)"}
+// CHECK: acc.deviceptr var({{.*}} : !fir.box<!fir.array<10xf32>>) name("b(1:10)") -> !fir.box<!fir.array<10xf32>>
 // CHECK: acc.data
-// CHECK: acc.deviceptr varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {implicit = true, name = "b"}
+// CHECK: acc.deviceptr varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) implicit(true) name("b") -> !fir.ref<!fir.array<10xf32>>
 // CHECK: acc.serial dataOperands({{.*}} : !fir.ref<!fir.array<10xf32>>)
 // CHECK-NOT: acc.copyin
 // CHECK-NOT: acc.copyout

@@ -19,6 +19,7 @@ class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 struct HistogramInfo;
 struct VFRange;
+struct CompressedPtrInfo;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -38,11 +39,6 @@ class VPRecipeBuilder {
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
-  /// Optimize the special case where the operand of \p VPI is a constant
-  /// integer induction variable.
-  VPWidenIntOrFpInductionRecipe *
-  tryToOptimizeInductionTruncate(VPInstruction *VPI, VFRange &Range);
-
   /// Check if \p VPI has an opcode that can be widened and return a
   /// widened recipe if it can. The function should only be called if the
   /// cost-model indicates that widening should be performed.
@@ -52,6 +48,14 @@ public:
   VPRecipeBuilder(VPlan &Plan, LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM, VPBuilder &Builder)
       : Plan(Plan), Legal(Legal), CM(CM), Builder(Builder) {}
+
+  /// Returns true if \p I needs to be predicated (i.e. cannot be executed
+  /// unconditionally for all lanes) in the loop being vectorized.
+  /// FIXME: Fully migrate logic to determine if mask is needed to VPlan.
+  bool isPredicatedInst(Instruction *I) const;
+
+  /// Returns true if the target prefers vectorized addressing.
+  bool prefersVectorizedAddressing() const;
 
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
@@ -69,6 +73,15 @@ public:
   /// Add|Sub + Store operations that perform the histogram in the original
   /// scalar loop.
   VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
+
+  /// Returns the CompressedPtrInfo for \p VPI if it is a compressed load or
+  /// store (as determined by LoopVectorizationLegality), otherwise
+  /// std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(VPInstruction *VPI);
+
+  /// Build a llvm.masked.expandload or llvm.masked.compressstore intrinsic for
+  /// \p VPI. \p VPI must be a compressed memory operation.
+  VPWidenMemIntrinsicRecipe *widenCompressedLoadOrStore(VPInstruction *VPI);
 
   /// If \p VPI is a store of a reduction into an invariant address, delete it.
   /// If it is the final store of a reduction result, a uniform store recipe

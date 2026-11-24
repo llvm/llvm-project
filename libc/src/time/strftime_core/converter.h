@@ -16,7 +16,7 @@
 
 #include "hdr/types/struct_tm.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/writer.h"
 #include "src/time/strftime_core/composite_converter.h"
 #include "src/time/strftime_core/core_structs.h"
 #include "src/time/strftime_core/num_converter.h"
@@ -27,14 +27,14 @@ namespace strftime_core {
 
 /// Converts a format section and writes it to the writer.
 ///
-/// \tparam write_mode The write mode for the writer.
+/// \tparam overflow_mode The write overflow mode for the writer.
 /// \param writer The writer to write the output to.
 /// \param to_conv The format section to convert.
 /// \param timeptr Pointer to the tm structure.
 /// \return Number of characters written on success, or a negative error code on
 /// failure.
-template <printf_core::WriteMode write_mode>
-int convert(printf_core::Writer<write_mode> *writer,
+template <printf_core::OverflowMode overflow_mode>
+int convert(printf_core::Writer<overflow_mode> *writer,
             const FormatSection &to_conv, const tm *timeptr) {
   // TODO: Implement the locale support.
   // Currently locale flags are ignored, as described by the posix standard for
@@ -75,6 +75,10 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'y': // Year of the Century [00-99]
   case 'Y': // Full year
     return convert_int(writer, to_conv, timeptr);
+  case 'z': // Timezone offset (+/-hhmm) (num conv)
+    if (timeptr->tm_isdst < 0)
+      return 0;
+    return convert_int(writer, to_conv, timeptr);
 
     // string conversions
   case 'a': // Abbreviated weekday name
@@ -83,6 +87,11 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'B': // Full month name
   case 'h': // same as %b
   case 'p': // AM/PM designation
+    return convert_str(writer, to_conv, timeptr);
+
+  case 'Z': // Timezone name (string conv)
+    if (timeptr->tm_isdst < 0)
+      return 0;
     return convert_str(writer, to_conv, timeptr);
 
     // composite conversions
@@ -95,13 +104,6 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'x': // locale specified date
   case 'X': // locale specified time
     return convert_composite(writer, to_conv, timeptr);
-
-    // timezone conversions
-  case 'z': // Timezone offset (+/-hhmm) (num conv)
-  case 'Z': // Timezone name (string conv)
-    // the standard says if no time zone is determinable, write no characters.
-    // Leave this here until time zones are implemented.
-    return 0;
   default:
     return writer->write(to_conv.raw_string);
   }

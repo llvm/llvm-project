@@ -100,6 +100,11 @@ bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
                           std::optional<int64_t> alignment,
                           const ::mlir::DataLayout *dataLayout,
                           function_ref<InFlightDiagnostic()> emitError);
+
+/// Verifies that a module flag value can be exported to LLVM IR.
+LogicalResult
+verifyModuleFlagValue(StringAttr key, Attribute value,
+                      function_ref<InFlightDiagnostic()> emitError);
 } // namespace detail
 } // namespace LLVM
 } // namespace mlir
@@ -108,5 +113,17 @@ bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
+
+namespace mlir {
+namespace LLVM {
+
+/// Canonical name used when attaching LoopAnnotationAttr as a discardable
+/// attribute on operations that do not declare it inherently.
+inline constexpr llvm::StringLiteral getLoopAnnotationAttrName() {
+  return LoopAnnotationAttr::name;
+}
+
+} // namespace LLVM
+} // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMATTRS_H_

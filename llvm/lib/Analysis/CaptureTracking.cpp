@@ -45,7 +45,7 @@ STATISTIC(NumNotCapturedBefore, "Number of pointers not captured before");
 static cl::opt<unsigned>
     DefaultMaxUsesToExplore("capture-tracking-max-uses-to-explore", cl::Hidden,
                             cl::desc("Maximal number of uses to explore."),
-                            cl::init(100));
+                            cl::init(150));
 
 unsigned llvm::getDefaultMaxUsesToExploreForCaptureTracking() {
   return DefaultMaxUsesToExplore;

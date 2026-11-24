@@ -17,10 +17,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <cassert>
+#include <limits>
 using namespace llvm;
 
 // As the type of more than one return values is represented as an anonymous
@@ -30,6 +32,38 @@ using namespace llvm;
 // return is 257.
 static constexpr unsigned MaxNumReturn = 257;
 
+using ImmArgRange = CodeGenIntrinsic::ImmArgRangeSet::Range;
+using ImmArgRangeList = CodeGenIntrinsic::ImmArgRangeSet::RangeList;
+
+static ImmArgRange getHalfOpenRange(const Record *R, const ListInit *Range,
+                                    StringRef AttrName) {
+  auto GetBound = [&](const Init *Bound) -> int64_t {
+    if (const auto *II = dyn_cast<IntInit>(Bound))
+      return II->getValue();
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) +
+                        " bound is not an integer: " + Bound->getAsString());
+  };
+
+  int64_t Lower = GetBound(Range->getElement(0));
+  int64_t Upper = GetBound(Range->getElement(1));
+  if (Upper == std::numeric_limits<int64_t>::max())
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) + " closed upper bound is too large");
+  return ImmArgRange(Lower, Upper + 1);
+}
+
+static void appendHalfOpenRange(SmallVectorImpl<ImmArgRange> &Ranges,
+                                ImmArgRange Range) {
+  if (!Ranges.empty()) {
+    if (Range.first == Ranges.back().second) {
+      Ranges.back().second = Range.second;
+      return;
+    }
+  }
+  Ranges.push_back(Range);
+}
+
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
 //===----------------------------------------------------------------------===//
@@ -38,6 +72,7 @@ CodeGenIntrinsicContext::CodeGenIntrinsicContext(const RecordKeeper &RC) {
   for (const Record *Rec : RC.getAllDerivedDefinitions("IntrinsicProperty"))
     if (Rec->getValueAsBit("IsDefault"))
       DefaultProperties.push_back(Rec);
+  NoUnwindAttr = RC.getDef("NoUnwind");
 }
 
 CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
@@ -276,6 +311,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
       R->getValueAsOptionalString("ClangBuiltinName").value_or("");
   // Ignore a missing MSBuiltinName field.
   MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
+  TargetFeatures = R->getValueAsString("TargetFeatures");
 
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
@@ -379,12 +415,62 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   // Set default properties to true.
   setDefaultProperties(Ctx.DefaultProperties);
 
+  if (!canThrow)
+    FnAttributes.push_back(Ctx.NoUnwindAttr);
+
+  if (hasFnAttribute("NoReturn")) {
+    llvm::erase_if(FnAttributes, [](const Record *Attr) {
+      return Attr->getName() == "WillReturn";
+    });
+  }
+
+  llvm::sort(FnAttributes, LessRecordByID());
+  FnAttributes.erase(llvm::unique(FnAttributes), FnAttributes.end());
+
   // Also record the SDPatternOperator Properties.
   Properties = parseSDPatternOperatorProperties(R);
 
   // Sort the argument attributes for later benefit.
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
+
+  for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+    if (!isParamImmArg(RangeSet.ArgNo))
+      PrintFatalError(
+          TheDef->getLoc(),
+          formatv("RangeSet requires ImmArg for argument {}", RangeSet.ArgNo));
+
+  unsigned NumParams = IS.ParamTys.size();
+  bool SeenDefault = false;
+  for (unsigned i = 0; i < NumParams; ++i) {
+    bool HasDefault =
+        (i < ParamDefaultValues.size() && ParamDefaultValues[i].has_value());
+    if (HasDefault) {
+      SeenDefault = true;
+    } else if (SeenDefault) {
+      PrintFatalError(TheDef->getLoc(),
+                      "missing default argument on parameter " + Twine(i));
+    }
+  }
+
+  for (unsigned i = 0; i < ParamDefaultValues.size(); ++i) {
+    if (!ParamDefaultValues[i].has_value())
+      continue;
+    const Record *VT = IS.ParamTys[i]->getValueAsDef("VT");
+    if (!VT->getValueAsBit("isInteger")) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument on parameter " + Twine(i) +
+                          " requires an integer parameter type");
+    }
+    unsigned Width = VT->getValueAsInt("Size");
+    uint64_t Value = *ParamDefaultValues[i];
+    if (!isUIntN(Width, Value)) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument value " + Twine(Value) +
+                          " out of range for i" + Twine(Width) + " parameter " +
+                          Twine(i));
+    }
+  }
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
@@ -434,74 +520,67 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     isCommutative = true;
   else if (R->getName() == "Throws")
     canThrow = true;
-  else if (R->getName() == "IntrNoDuplicate")
-    isNoDuplicate = true;
-  else if (R->getName() == "IntrNoMerge")
-    isNoMerge = true;
-  else if (R->getName() == "IntrConvergent")
-    isConvergent = true;
-  else if (R->getName() == "IntrNoReturn")
-    isNoReturn = true;
-  else if (R->getName() == "IntrNoCallback")
-    isNoCallback = true;
-  else if (R->getName() == "IntrNoSync")
-    isNoSync = true;
-  else if (R->getName() == "IntrNoFree")
-    isNoFree = true;
-  else if (R->getName() == "IntrWillReturn")
-    isWillReturn = !isNoReturn;
-  else if (R->getName() == "IntrCold")
-    isCold = true;
-  else if (R->getName() == "IntrSpeculatable")
-    isSpeculatable = true;
   else if (R->getName() == "IntrHasSideEffects")
     hasSideEffects = true;
-  else if (R->getName() == "IntrStrictFP")
-    isStrictFP = true;
-  else if (R->getName() == "IntrNoCreateUndefOrPoison")
-    isNoCreateUndefOrPoison = true;
   else if (R->getName() == "IntrTriviallyScalarizable")
     isTriviallyScalarizable = true;
-  else if (R->isSubClassOf("NoCapture")) {
+  else if (R->isSubClassOf("IntrinsicFnAttr")) {
+    const Record *Attr = R->getValueAsDef("Attr");
+    if (!is_contained(Attr->getValueAsListOfDefs("Properties"),
+                      R->getRecords().getDef("FnAttr"))) {
+      PrintFatalError(R->getLoc(),
+                      Attr->getName() + " is not a function attribute");
+    }
+
+    FnAttributes.push_back(Attr);
+  } else if (R->isSubClassOf("IntrinsicArgAttr")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, NoCapture);
-  } else if (R->isSubClassOf("NoAlias")) {
+    const Record *Attr = R->getValueAsDef("Attr");
+    StringRef Kind = ArgNo == 0 ? "RetAttr" : "ParamAttr";
+    if (!is_contained(Attr->getValueAsListOfDefs("Properties"),
+                      R->getRecords().getDef(Kind))) {
+      PrintFatalError(R->getLoc(), Attr->getName() + " is not a " + Kind);
+    }
+
+    if (Attr->isSubClassOf("ConstantRangeAttr")) {
+      addArgAttribute(ArgNo, Attr, R->getValueAsInt("Lower"),
+                      R->getValueAsInt("Upper"));
+    } else {
+      addArgAttribute(ArgNo, Attr, R->getValueAsInt("Value"));
+    }
+
+    if (R->isSubClassOf("ImmArg")) {
+      const Record *DefaultField = R->getValueAsDef("Default");
+      const RecordVal *ValueField = DefaultField->getValue("Value");
+      if (ValueField && !isa<UnsetInit>(ValueField->getValue())) {
+        int64_t Value = DefaultField->getValueAsInt("Value");
+        if (Value < 0)
+          PrintFatalError(TheDef->getLoc(),
+                          "default argument value " + Twine(Value) +
+                              " on parameter " + Twine(ArgNo - 1) +
+                              " must be non-negative");
+        addDefaultArgValue(ArgNo - 1, Value);
+      }
+    }
+  } else if (R->isSubClassOf("RangeSet")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, NoAlias);
-  } else if (R->isSubClassOf("NoUndef")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, NoUndef);
-  } else if (R->isSubClassOf("NonNull")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, NonNull);
-  } else if (R->isSubClassOf("Returned")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, Returned);
-  } else if (R->isSubClassOf("ReadOnly")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, ReadOnly);
-  } else if (R->isSubClassOf("WriteOnly")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, WriteOnly);
-  } else if (R->isSubClassOf("ReadNone")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, ReadNone);
-  } else if (R->isSubClassOf("ImmArg")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    addArgAttribute(ArgNo, ImmArg);
-  } else if (R->isSubClassOf("Align")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    uint64_t Align = R->getValueAsInt("Align");
-    addArgAttribute(ArgNo, Alignment, Align);
-  } else if (R->isSubClassOf("Dereferenceable")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    uint64_t Bytes = R->getValueAsInt("Bytes");
-    addArgAttribute(ArgNo, Dereferenceable, Bytes);
-  } else if (R->isSubClassOf("Range")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    int64_t Lower = R->getValueAsInt("Lower");
-    int64_t Upper = R->getValueAsInt("Upper");
-    addArgAttribute(ArgNo, Range, Lower, Upper);
+    const ListInit *RangeList = R->getValueAsListInit("Ranges");
+    ImmArgRangeList Ranges;
+
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(), "RangeSet should only apply to arguments");
+    unsigned ParamNo = ArgNo - 1;
+
+    for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+      if (RangeSet.ArgNo == ParamNo)
+        PrintFatalError(
+            R->getLoc(),
+            formatv("RangeSet for argument {} already specified", ParamNo));
+
+    for (const Init *Range : RangeList->getElements())
+      appendHalfOpenRange(
+          Ranges, getHalfOpenRange(R, cast<ListInit>(Range), "RangeSet"));
+    addImmArgRangeSet(ParamNo, std::move(Ranges));
   } else if (R->isSubClassOf("ArgInfo")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     if (ArgNo < 1)
@@ -559,15 +638,33 @@ bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
   ++ParamIdx;
   if (ParamIdx >= ArgumentAttributes.size())
     return false;
-  ArgAttribute Val{ImmArg, 0, 0};
-  return llvm::binary_search(ArgumentAttributes[ParamIdx], Val);
+  return llvm::any_of(ArgumentAttributes[ParamIdx], [](const ArgAttribute &A) {
+    return A.Attr->getName() == "ImmArg";
+  });
 }
 
-void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
-                                       uint64_t V2) {
+bool CodeGenIntrinsic::hasFnAttribute(StringRef Name) const {
+  return llvm::any_of(FnAttributes, [Name](const Record *Attr) {
+    return Attr->getName() == Name;
+  });
+}
+
+bool CodeGenIntrinsic::ArgAttribute::operator<(
+    const ArgAttribute &Other) const {
+  return std::make_tuple(Attr->getID(), Value, Value2) <
+         std::make_tuple(Other.Attr->getID(), Other.Value, Other.Value2);
+}
+
+void CodeGenIntrinsic::addArgAttribute(unsigned Idx, const Record *Attr,
+                                       uint64_t V, uint64_t V2) {
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
-  ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+  ArgumentAttributes[Idx].emplace_back(Attr, V, V2);
+}
+
+void CodeGenIntrinsic::addImmArgRangeSet(unsigned ArgNo,
+                                         ImmArgRangeSet::RangeList Ranges) {
+  ImmArgRangeSets.push_back({ArgNo, std::move(Ranges)});
 }
 
 void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
@@ -581,4 +678,16 @@ void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
                                           " is already defined as '" +
                                           It->FuncName + "'");
   PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
+}
+
+void CodeGenIntrinsic::addDefaultArgValue(unsigned ArgIdx, uint64_t Value) {
+  if (ArgIdx >= ParamDefaultValues.size())
+    ParamDefaultValues.resize(ArgIdx + 1, std::nullopt);
+
+  if (ParamDefaultValues[ArgIdx].has_value())
+    PrintFatalError(TheDef->getLoc(), "Default value for argument " +
+                                          Twine(ArgIdx) +
+                                          " is already defined");
+
+  ParamDefaultValues[ArgIdx] = Value;
 }

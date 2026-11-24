@@ -137,7 +137,7 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     // from header to merge.
     auto loc = forOp.getLoc();
     auto loopControl = spirv::LoopControl::None;
-    if (auto attr = forOp->getAttrOfType<spirv::LoopControlAttr>(
+    if (auto attr = forOp->getDiscardableAttrOfType<spirv::LoopControlAttr>(
             spirv::getLoopControlAttrName()))
       loopControl = attr.getValue();
     auto loopOp = spirv::LoopOp::create(rewriter, loc, loopControl);
@@ -214,6 +214,16 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
       initTypes.push_back(arg.getType());
     replaceSCFOutputValue(forOp, loopOp, rewriter, scfToSPIRVContext,
                           initTypes);
+
+    // Store init values so a zero-trip loop returns them instead of undef.
+    // Skip the stores if the loop is known to always execute at least once.
+    std::optional<APInt> tripCount = forOp.getStaticTripCount();
+    if (!tripCount || tripCount->isZero()) {
+      auto &allocas = scfToSPIRVContext->outputVars[loopOp];
+      rewriter.setInsertionPoint(loopOp);
+      for (auto [alloca, init] : llvm::zip(allocas, adaptor.getInitArgs()))
+        spirv::StoreOp::create(rewriter, loc, alloca, init);
+    }
     return success();
   }
 };
@@ -250,7 +260,7 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
     // Create `spirv.selection` operation, selection header block and merge
     // block.
     auto selectionControl = spirv::SelectionControl::None;
-    if (auto attr = ifOp->getAttrOfType<spirv::SelectionControlAttr>(
+    if (auto attr = ifOp->getDiscardableAttrOfType<spirv::SelectionControlAttr>(
             spirv::getSelectionControlAttrName()))
       selectionControl = attr.getValue();
     auto selectionOp =
@@ -294,6 +304,91 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// scf::IndexSwitchOp
+//===----------------------------------------------------------------------===//
+
+/// Pattern to convert a scf::IndexSwitchOp within kernel functions into
+/// spirv::SelectionOp with a spirv::SwitchOp header.
+struct IndexSwitchOpConversion final : SCFToSPIRVPattern<scf::IndexSwitchOp> {
+  using SCFToSPIRVPattern::SCFToSPIRVPattern;
+
+  LogicalResult
+  matchAndRewrite(scf::IndexSwitchOp switchOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = switchOp.getLoc();
+
+    // Compute return types.
+    SmallVector<Type, 8> returnTypes;
+    for (Value result : switchOp.getResults()) {
+      Type convertedType = typeConverter.convertType(result.getType());
+      if (!convertedType)
+        return rewriter.notifyMatchFailure(
+            loc,
+            llvm::formatv("failed to convert type '{0}'", result.getType()));
+      returnTypes.push_back(convertedType);
+    }
+
+    // The selector must be a SPIR-V integer; spirv.Switch literals are
+    // interpreted with the selector's bit width.
+    Value selector = adaptor.getArg();
+    auto selectorType = dyn_cast<IntegerType>(selector.getType());
+    if (!selectorType)
+      return rewriter.notifyMatchFailure(loc,
+                                         "selector type is not an integer");
+    unsigned selectorWidth = selectorType.getWidth();
+
+    // Create the `spirv.mlir.selection` op, its header block, and merge block.
+    auto selectionControl = spirv::SelectionControl::None;
+    if (auto attr =
+            switchOp->getDiscardableAttrOfType<spirv::SelectionControlAttr>(
+                spirv::getSelectionControlAttrName()))
+      selectionControl = attr.getValue();
+    auto selectionOp =
+        spirv::SelectionOp::create(rewriter, loc, selectionControl);
+    auto *mergeBlock = rewriter.createBlock(&selectionOp.getBody(),
+                                            selectionOp.getBody().end());
+    spirv::MergeOp::create(rewriter, loc);
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    auto *headerBlock = rewriter.createBlock(&selectionOp.getBody().front());
+
+    // Inline each case region before the merge block and branch to it.
+    SmallVector<APInt> caseLiterals;
+    SmallVector<Block *> caseBlocks;
+    ArrayRef<int64_t> cases = switchOp.getCases();
+    for (auto [caseValue, caseRegion] :
+         llvm::zip_equal(cases, switchOp.getCaseRegions())) {
+      Block *caseBlock = &caseRegion.front();
+      rewriter.setInsertionPointToEnd(&caseRegion.back());
+      spirv::BranchOp::create(rewriter, loc, mergeBlock);
+      rewriter.inlineRegionBefore(caseRegion, mergeBlock);
+      caseLiterals.push_back(
+          APInt(selectorWidth, caseValue, /*isSigned=*/true));
+      caseBlocks.push_back(caseBlock);
+    }
+
+    // Inline the default region before the merge block and branch to it.
+    Region &defaultRegion = switchOp.getDefaultRegion();
+    Block *defaultBlock = &defaultRegion.front();
+    rewriter.setInsertionPointToEnd(&defaultRegion.back());
+    spirv::BranchOp::create(rewriter, loc, mergeBlock);
+    rewriter.inlineRegionBefore(defaultRegion, mergeBlock);
+
+    // Create the `spirv.Switch` terminator for the header block. The case
+    // regions carry their results through variables, so the branches take no
+    // operands.
+    SmallVector<ValueRange> caseOperands(caseBlocks.size(), ValueRange());
+    rewriter.setInsertionPointToEnd(headerBlock);
+    spirv::SwitchOp::create(rewriter, loc, selector, defaultBlock, ValueRange(),
+                            caseLiterals, caseBlocks, caseOperands);
+
+    replaceSCFOutputValue(switchOp, selectionOp, rewriter, scfToSPIRVContext,
+                          returnTypes);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // scf::YieldOp
 //===----------------------------------------------------------------------===//
 
@@ -311,7 +406,7 @@ public:
     // TODO: Implement conversion for the remaining `scf` ops.
     if (parent->getDialect()->getNamespace() ==
             scf::SCFDialect::getDialectNamespace() &&
-        !isa<scf::IfOp, scf::ForOp, scf::WhileOp>(parent))
+        !isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::IndexSwitchOp>(parent))
       return rewriter.notifyMatchFailure(
           terminatorOp,
           llvm::formatv("conversion not supported for parent op: '{0}'",
@@ -357,7 +452,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = whileOp.getLoc();
     auto loopControl = spirv::LoopControl::None;
-    if (auto attr = whileOp->getAttrOfType<spirv::LoopControlAttr>(
+    if (auto attr = whileOp->getDiscardableAttrOfType<spirv::LoopControlAttr>(
             spirv::getLoopControlAttrName()))
       loopControl = attr.getValue();
     auto loopOp = spirv::LoopOp::create(rewriter, loc, loopControl);
@@ -459,7 +554,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 void mlir::populateSCFToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       ScfToSPIRVContext &scfToSPIRVContext,
                                       RewritePatternSet &patterns) {
-  patterns.add<ForOpConversion, IfOpConversion, TerminatorOpConversion,
-               WhileOpConversion>(patterns.getContext(), typeConverter,
-                                  scfToSPIRVContext.getImpl());
+  patterns.add<ForOpConversion, IfOpConversion, IndexSwitchOpConversion,
+               TerminatorOpConversion, WhileOpConversion>(
+      patterns.getContext(), typeConverter, scfToSPIRVContext.getImpl());
 }

@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 declare ptr @llvm.returnaddress(i32)
 define void @return_address(i32 %var) {
@@ -154,6 +154,18 @@ define void @test_prefetch(ptr %ptr, i32 %arg0, i32 %arg1) {
   ; CHECK-NEXT:  i32 %arg1
   call void @llvm.prefetch(ptr %ptr, i32 %arg0, i32 0, i32 0)
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 %arg1, i32 0)
+
+  ; CHECK: immarg value 2 for arg 1 out of range [0,2)
+  ; CHECK-NEXT: call void @llvm.prefetch.p0(ptr %ptr, i32 2, i32 0, i32 0)
+  call void @llvm.prefetch(ptr %ptr, i32 2, i32 0, i32 0)
+
+  ; CHECK: immarg value 8 for arg 2 out of range [0,4)
+  ; CHECK-NEXT: call void @llvm.prefetch.p0(ptr %ptr, i32 0, i32 8, i32 0)
+  call void @llvm.prefetch(ptr %ptr, i32 0, i32 8, i32 0)
+
+  ; CHECK: immarg value 4 for arg 3 out of range [0,2)
+  ; CHECK-NEXT: call void @llvm.prefetch.p0(ptr %ptr, i32 0, i32 0, i32 4)
+  call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 4)
   ret void
 }
 
@@ -240,5 +252,23 @@ define void @eh_sjlj_callsite(i32 %arg0) {
   ; CHECK: i32 %arg0
   ; CHECK: call void @llvm.eh.sjlj.callsite(i32 %arg0)
   call void @llvm.eh.sjlj.callsite(i32 %arg0)
+  ret void
+}
+
+declare void @llvm.coro.end(ptr, i1, token)
+define void @coro_end(ptr %p, i1 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %c
+  ; CHECK-NEXT: call void @llvm.coro.end(ptr %p, i1 %c, token none)
+  call void @llvm.coro.end(ptr %p, i1 %c, token none)
+  ret void
+}
+
+declare void  @llvm.coro.end.async(ptr, i1, ...)
+define void @coro_end_async(ptr %p, i1 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %c
+  ; CHECK-NEXT: call void (ptr, i1, ...) @llvm.coro.end.async(ptr %p, i1 %c)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %p, i1 %c)
   ret void
 }

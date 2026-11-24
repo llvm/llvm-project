@@ -735,7 +735,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       ConstString const_func_name(FunctionName());
       FileSpec jit_file;
       jit_file.SetFilename(const_func_name);
-      jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+      jit_module_sp->SetFileSpecAndObjectName(jit_file, std::string());
       m_jit_module_wp = jit_module_sp;
       target->GetImages().Append(jit_module_sp);
     }
@@ -854,6 +854,9 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
   auto valobj_sp =
       GetObjectPointerValueObject(std::move(frame_sp), object_name, err);
 
+  if (!err.Success() || !valobj_sp)
+    return LLDB_INVALID_ADDRESS;
+
   // We're inside a C++ class method. This could potentially be an unnamed
   // lambda structure. If the lambda captured a "this", that should be
   // the object pointer.
@@ -861,9 +864,6 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
     valobj_sp = thisChildSP;
   else if (auto cv_this_child_sp = valobj_sp->GetChildMemberWithName("__this"))
     valobj_sp = cv_this_child_sp;
-
-  if (!err.Success() || !valobj_sp.get())
-    return LLDB_INVALID_ADDRESS;
 
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 

@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MacroFusion.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,9 +30,6 @@ STATISTIC(NumFusionConflicts,
           "cluster (either fusion or non-fusion)");
 
 using namespace llvm;
-
-static cl::opt<bool> EnableMacroFusion("misched-fusion", cl::Hidden,
-  cl::desc("Enable scheduling for macro fusion."), cl::init(true));
 
 static bool isHazard(const SDep &Dep) {
   return Dep.getKind() == SDep::Anti || Dep.getKind() == SDep::Output;
@@ -53,6 +50,10 @@ bool llvm::hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
   return Num < FuseLimit;
 }
 
+bool llvm::isNonDataDep(const SDep *Dep) {
+  return Dep && Dep->getKind() != SDep::Data;
+}
+
 bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
                                SUnit &SecondSU) {
   // Check that neither instr is already associated with a cluster (either
@@ -60,12 +61,16 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
   if (FirstSU.isClustered() || SecondSU.isClustered()) {
     ++NumFusionConflicts;
     LLVM_DEBUG({
-      dbgs() << "Fusion conflict: cannot fuse SU(" << FirstSU.NodeNum
-             << ") and SU(" << SecondSU.NodeNum << ")\n";
+      dbgs() << "Fusion conflict: cannot fuse " << FirstSU << " and ";
+      DAG.dumpNodeName(SecondSU);
+      dbgs() << "\n";
       if (FirstSU.isClustered())
-        dbgs() << "  SU(" << FirstSU.NodeNum << ") already clustered\n";
-      if (SecondSU.isClustered())
-        dbgs() << "  SU(" << SecondSU.NodeNum << ") already clustered\n";
+        dbgs() << "  " << FirstSU << " already clustered\n";
+      if (SecondSU.isClustered()) {
+        dbgs() << "  ";
+        DAG.dumpNodeName(SecondSU);
+        dbgs() << " already clustered\n";
+      }
     });
     return false;
   }
@@ -165,7 +170,7 @@ public:
   bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                               const TargetSubtargetInfo &STI,
                               const MachineInstr *FirstMI,
-                              const MachineInstr &SecondMI);
+                              const MachineInstr &SecondMI, const SDep *Dep);
 };
 
 } // end anonymous namespace
@@ -173,13 +178,17 @@ public:
 bool MacroFusion::shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                          const TargetSubtargetInfo &STI,
                                          const MachineInstr *FirstMI,
-                                         const MachineInstr &SecondMI) {
+                                         const MachineInstr &SecondMI,
+                                         const SDep *Dep) {
   return llvm::any_of(Predicates, [&](MacroFusionPredTy Predicate) {
-    return Predicate(TII, STI, FirstMI, SecondMI);
+    return Predicate(TII, STI, FirstMI, SecondMI, Dep);
   });
 }
 
 void MacroFusion::apply(ScheduleDAGInstrs *DAG) {
+  if (!DAG->Opts.misched_fusion)
+    return;
+
   if (FuseBlock)
     // For each of the SUnits in the scheduling block, try to fuse the instr in
     // it with one in its predecessors.
@@ -199,15 +208,11 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
   const TargetSubtargetInfo &ST = DAG.MF.getSubtarget();
 
   // Check if the anchor instr may be fused.
-  if (!shouldScheduleAdjacent(TII, ST, nullptr, AnchorMI))
+  if (!shouldScheduleAdjacent(TII, ST, nullptr, AnchorMI, nullptr))
     return false;
 
   // Explorer for fusion candidates among the dependencies of the anchor instr.
   for (SDep &Dep : AnchorSU.Preds) {
-    // Ignore dependencies other than data or strong ordering.
-    if (Dep.isWeak() || isHazard(Dep))
-      continue;
-
     SUnit &DepSU = *Dep.getSUnit();
     if (DepSU.isBoundaryNode())
       continue;
@@ -215,7 +220,7 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
     // Only chain two instructions together at most.
     const MachineInstr *DepMI = DepSU.getInstr();
     if (!hasLessThanNumFused(DepSU, 2) ||
-        !shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI))
+        !shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI, &Dep))
       continue;
 
     if (fuseInstructionPair(DAG, DepSU, AnchorSU))
@@ -228,7 +233,5 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
 std::unique_ptr<ScheduleDAGMutation>
 llvm::createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates,
                                    bool BranchOnly) {
-  if (EnableMacroFusion)
-    return std::make_unique<MacroFusion>(Predicates, !BranchOnly);
-  return nullptr;
+  return std::make_unique<MacroFusion>(Predicates, !BranchOnly);
 }

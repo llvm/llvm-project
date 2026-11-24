@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s -o=%t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: llvm-readobj --codeview-merged-types %t.obj | FileCheck %s --check-prefix=MERGED
 # RUN: llvm-readobj --codeview-merged-types --codeview-ghash %t.obj | FileCheck %s --check-prefix=MERGED
 

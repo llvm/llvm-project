@@ -266,7 +266,7 @@ namespace {
 /// predecessors, for any op implementing BranchOpInterface.
 struct SimplifyUniformBlockArguments
     : public OpInterfaceRewritePattern<BranchOpInterface> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(BranchOpInterface op,
                                 PatternRewriter &rewriter) const override {
     bool changed = false;
@@ -307,7 +307,7 @@ namespace {
 ///  -> br ^bb2
 ///
 struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
-  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(CondBranchOp condbr,
                                 PatternRewriter &rewriter) const override {
@@ -529,6 +529,12 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
   }
 };
 
+/// Returns true if `block` contains only `ub.unreachable`.
+static bool isUnreachableBlock(Block *block) {
+  return llvm::hasSingleElement(*block) &&
+         isa<ub::UnreachableOp>(block->getTerminator());
+}
+
 /// If the destination block of a conditional branch contains only
 /// ub.unreachable, unconditionally branch to the other destination.
 struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
@@ -540,8 +546,7 @@ struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
     // destination.
     Block *trueDest = condbr.getTrueDest();
     Block *falseDest = condbr.getFalseDest();
-    if (llvm::hasSingleElement(*trueDest) &&
-        isa<ub::UnreachableOp>(trueDest->getTerminator())) {
+    if (isUnreachableBlock(trueDest)) {
       rewriter.replaceOpWithNewOp<BranchOp>(condbr, falseDest,
                                             condbr.getFalseOperands());
       return success();
@@ -549,8 +554,7 @@ struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
 
     // If the "false" destination is unreachable, branch to the "true"
     // destination.
-    if (llvm::hasSingleElement(*falseDest) &&
-        isa<ub::UnreachableOp>(falseDest->getTerminator())) {
+    if (isUnreachableBlock(falseDest)) {
       rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest,
                                             condbr.getTrueOperands());
       return success();
@@ -638,8 +642,8 @@ static ParseResult parseSwitchOpCases(
       parser.parseSuccessor(defaultDestination))
     return failure();
   if (succeeded(parser.parseOptionalLParen())) {
-    if (parser.parseOperandList(defaultOperands, OpAsmParser::Delimiter::None,
-                                /*allowResultNumber=*/false) ||
+    if (parser.parseOperandList(defaultOperands,
+                                OpAsmParser::Delimiter::None) ||
         parser.parseColonTypeList(defaultOperandTypes) || parser.parseRParen())
       return failure();
   }
@@ -647,10 +651,15 @@ static ParseResult parseSwitchOpCases(
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
   while (succeeded(parser.parseOptionalComma())) {
-    int64_t value = 0;
+    SMLoc valueLoc = parser.getCurrentLocation();
+    APInt value;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
+    if (value.isNegative() ? !value.isSignedIntN(bitWidth)
+                           : !value.isIntN(bitWidth))
+      return parser.emitError(valueLoc)
+             << "case value is out of range for " << flagType;
+    values.push_back(value.sextOrTrunc(bitWidth));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -693,7 +702,7 @@ static void printSwitchOpCases(
     p << ',';
     p.printNewline();
     p << "  ";
-    p << it.value().getLimitedValue();
+    p << it.value();
     p << ": ";
     p.printSuccessorAndUseList(caseDestinations[it.index()],
                                caseOperands[it.index()]);
@@ -796,6 +805,66 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<SwitchOp>(
       op, op.getFlag(), op.getDefaultDestination(), op.getDefaultOperands(),
       newCaseValues, newCaseDestinations, newCaseOperands);
+  return success();
+}
+
+/// Drop cases whose destination block contains only ub.unreachable. If the
+/// default destination is unreachable, the last remaining case becomes the new
+/// default destination, or the switch is replaced by ub.unreachable if no case
+/// remains.
+/// switch %flag : i32, [
+///   default: ^bb1,
+///   42: ^bb2,
+///   43: ^bb3
+/// ]
+/// ^bb3:
+///   ub.unreachable
+/// -> switch %flag : i32, [
+///   default: ^bb1,
+///   42: ^bb2
+/// ]
+static LogicalResult dropUnreachableSwitchCases(SwitchOp op,
+                                                PatternRewriter &rewriter) {
+  std::optional<DenseIntElementsAttr> caseValues = op.getCaseValues();
+  if (!caseValues)
+    return failure();
+
+  SmallVector<APInt> newCaseValues;
+  SmallVector<Block *> newCaseDestinations;
+  SmallVector<ValueRange> newCaseOperands;
+  auto caseDests = op.getCaseDestinations();
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (isUnreachableBlock(caseDests[it.index()]))
+      continue;
+    newCaseValues.push_back(it.value());
+    newCaseDestinations.push_back(caseDests[it.index()]);
+    newCaseOperands.push_back(op.getCaseOperands(it.index()));
+  }
+
+  Block *defaultDest = op.getDefaultDestination();
+  ValueRange defaultOperands = op.getDefaultOperands();
+  if (isUnreachableBlock(defaultDest)) {
+    // Every destination is unreachable, so the switch itself is unreachable.
+    if (newCaseDestinations.empty()) {
+      rewriter.replaceOpWithNewOp<ub::UnreachableOp>(op);
+      return success();
+    }
+    // Any value not matching a remaining case is undefined behavior, so the
+    // last remaining case can serve as the default destination.
+    defaultDest = newCaseDestinations.pop_back_val();
+    defaultOperands = newCaseOperands.pop_back_val();
+    newCaseValues.pop_back();
+  } else if (newCaseDestinations.size() == caseDests.size()) {
+    return failure();
+  }
+
+  if (newCaseDestinations.empty()) {
+    rewriter.replaceOpWithNewOp<BranchOp>(op, defaultDest, defaultOperands);
+    return success();
+  }
+  rewriter.replaceOpWithNewOp<SwitchOp>(op, op.getFlag(), defaultDest,
+                                        defaultOperands, newCaseValues,
+                                        newCaseDestinations, newCaseOperands);
   return success();
 }
 
@@ -1027,6 +1096,7 @@ void SwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add(&simplifySwitchWithOnlyDefault)
       .add(&dropSwitchCasesThatMatchDefault)
+      .add(&dropUnreachableSwitchCases)
       .add(&simplifyConstSwitchValue)
       .add(&simplifyPassThroughSwitch)
       .add(&simplifySwitchFromSwitchOnSameCondition)

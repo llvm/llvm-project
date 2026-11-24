@@ -817,6 +817,40 @@ func.func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: 
 
 /////////////////////////////////////////////////////////////////////
 
+func.func @affine_parallel_with_int_min_max(%arg0: memref<3xi32>) -> (i32, i32, i32, i32) {
+  %0:4 = affine.parallel (%k) = (0) to (3) reduce ("maxs", "mins", "maxu", "minu") -> (i32, i32, i32, i32) {
+    %1 = affine.load %arg0[%k] : memref<3xi32>
+    affine.yield %1, %1, %1, %1 : i32, i32, i32, i32
+  }
+  return %0#0, %0#1, %0#2, %0#3 : i32, i32, i32, i32
+}
+// CHECK-LABEL: func @affine_parallel_with_int_min_max
+// CHECK:         %[[INIT_1:.*]] = arith.constant -2147483648 : i32
+// CHECK-NEXT:    %[[INIT_2:.*]] = arith.constant 2147483647 : i32
+// CHECK-NEXT:    %[[INIT_3:.*]] = arith.constant 0 : i32
+// CHECK-NEXT:    %[[INIT_4:.*]] = arith.constant -1 : i32
+// CHECK-NEXT:    %[[RES:.*]]:4 = scf.parallel (%[[I:.*]]) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) init (%[[INIT_1]], %[[INIT_2]], %[[INIT_3]], %[[INIT_4]]) -> (i32, i32, i32, i32) {
+// CHECK-NEXT:      %[[VAL:.*]] = memref.load
+// CHECK-NEXT:      scf.reduce(%[[VAL]], %[[VAL]], %[[VAL]], %[[VAL]] : i32, i32, i32, i32) {
+// CHECK-NEXT:      ^bb0(%[[LHS:.*]]: i32, %[[RHS:.*]]: i32):
+// CHECK-NEXT:        %[[R:.*]] = arith.maxsi %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT:        scf.reduce.return %[[R]] : i32
+// CHECK-NEXT:      }, {
+// CHECK-NEXT:      ^bb0(%[[LHS:.*]]: i32, %[[RHS:.*]]: i32):
+// CHECK-NEXT:        %[[R:.*]] = arith.minsi %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT:        scf.reduce.return %[[R]] : i32
+// CHECK-NEXT:      }, {
+// CHECK-NEXT:      ^bb0(%[[LHS:.*]]: i32, %[[RHS:.*]]: i32):
+// CHECK-NEXT:        %[[R:.*]] = arith.maxui %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT:        scf.reduce.return %[[R]] : i32
+// CHECK-NEXT:      }, {
+// CHECK-NEXT:      ^bb0(%[[LHS:.*]]: i32, %[[RHS:.*]]: i32):
+// CHECK-NEXT:        %[[R:.*]] = arith.minui %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT:        scf.reduce.return %[[R]] : i32
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2, %[[RES]]#3 : i32, i32, i32, i32
+
 func.func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (f32, f32) {
   %0:2 = affine.parallel (%kx, %ky) = (0, 0) to (2, 2) reduce ("addf", "mulf") -> (f32, f32) {
             %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf32>
@@ -927,3 +961,28 @@ func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: me
 // CHECK:      scf.reduce.return %[[RES]] : i64
 // CHECK:    }
 // CHECK:  }
+
+// -----
+
+// The alignment an affine access promises stays on the memref access it
+// becomes.
+
+// CHECK-LABEL: func @affine_load_store_alignment
+func.func @affine_load_store_alignment(%memref: memref<4xi32>) {
+  // CHECK: memref.load {{.*}} alignment(16)
+  %val = affine.load %memref[0] { alignment = 16 } : memref<4xi32>
+  // CHECK: memref.store {{.*}} alignment(16)
+  affine.store %val, %memref[0] { alignment = 16 } : memref<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_vector_load_store_alignment
+func.func @affine_vector_load_store_alignment(%memref: memref<16xi32>) {
+  // CHECK: vector.load {{.*}} alignment = 8
+  %val = affine.vector_load %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
+  // CHECK: vector.store {{.*}} alignment = 8
+  affine.vector_store %val, %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
+  return
+}

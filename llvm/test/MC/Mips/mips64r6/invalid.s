@@ -216,3 +216,4 @@ local_label:
         swc2 $32, 777($17)   # CHECK: :[[@LINE]]:14: error: invalid register number
         swc2 $11, -1025($12) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         swc2 $11, 1024($12)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+        ldpc $3, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 18-bit signed immediate and multiple of 8

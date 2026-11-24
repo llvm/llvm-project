@@ -76,7 +76,7 @@ public:
   }
   bool operator!=(const Use &Other) const { return !(*this == Other); }
 #ifndef NDEBUG
-  LLVM_ABI_FOR_TEST void dumpOS(raw_ostream &OS) const;
+  LLVM_ABI void dumpOS(raw_ostream &OS) const;
   void dump() const;
 #endif // NDEBUG
 };

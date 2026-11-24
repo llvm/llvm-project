@@ -1,9 +1,9 @@
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.02--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=SI -enable-var-scope %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=VI -enable-var-scope %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00--amdpal < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
 
 ; This compute shader has input args that claim that it has 17 sgprs and 5 vgprs
 ; in wave dispatch. Ensure that the sgpr and vgpr counts in COMPUTE_PGM_RSRC1
@@ -15,6 +15,7 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .cs:
+; GCN-NEXT:         .backend_stack_size: 0
 ; GCN-NEXT:         .entry_point:    _amdgpu_cs_main
 ; GCN-NEXT:         .entry_point_symbol:    _amdgpu_cs_main
 ; GCN-NEXT:         .scratch_memory_size: 0

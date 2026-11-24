@@ -71,7 +71,7 @@ func.func @entry() {
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
   %c32 = arith.constant 32: index
-  %A = memref.alloc(%c32) {alignment=64} : memref<?xf32>
+  %A = memref.alloc(%c32) alignment = 64 : memref<?xf32>
   scf.for %i = %c0 to %c32 step %c1 {
     %f = arith.constant 0.0: f32
     memref.store %f, %A[%i] : memref<?xf32>
@@ -121,7 +121,7 @@ func.func @entry() {
 
   // 3D case
   %c4 = arith.constant 4: index
-  %A1 = memref.alloc() {alignment=64} : memref<4x4x4xf32>
+  %A1 = memref.alloc() alignment = 64 : memref<4x4x4xf32>
   scf.for %i = %c0 to %c4 step %c1 {
     scf.for %j = %c0 to %c4 step %c1 {
       scf.for %k = %c0 to %c4 step %c1 {

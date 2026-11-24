@@ -1,9 +1,9 @@
 ; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
-; RUN:    -o - %s -stop-after=livedebugvars \
+; RUN:    -o - %s -stop-before=x86-asm-printer \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCS
 ; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
-; RUN:    -o - %s -stop-after=livedebugvars \
+; RUN:    -o - %s -stop-before=x86-asm-printer \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 

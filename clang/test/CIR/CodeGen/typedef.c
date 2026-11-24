@@ -16,7 +16,7 @@ void local_typedef(void) {
 
 // LLVM: %struct.Struct = type { i32 }
 // LLVM: define{{.*}} void @local_typedef()
-// LLVM:   alloca %struct.Struct, i64 1, align 4
+// LLVM:   alloca %struct.Struct, align 4
 // LLVM:   ret void
 
 // OGCG: %struct.Struct = type { i32 }

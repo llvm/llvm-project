@@ -26,6 +26,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -153,38 +154,20 @@ public:
 //   - Mark their reachable symbols live in SymbolReaper,
 //     see ScanReachableSymbols.
 //   - Mark the region in DRoots if the binding is a loc::MemRegionVal.
-Environment
-EnvironmentManager::removeDeadBindings(Environment Env,
-                                       SymbolReaper &SymReaper,
-                                       ProgramStateRef ST) {
-  // We construct a new Environment object entirely, as this is cheaper than
-  // individually removing all the subexpression bindings (which will greatly
-  // outnumber block-level expression bindings).
-  Environment NewEnv = getInitialEnvironment();
-
+Environment EnvironmentManager::removeDeadBindings(Environment Env,
+                                                   SymbolReaper &SymReaper,
+                                                   ProgramStateRef ST) {
   MarkLiveCallback CB(SymReaper);
   ScanReachableSymbols RSScaner(ST, CB);
 
-  llvm::ImmutableMapRef<EnvironmentEntry, SVal>
-    EBMapRef(NewEnv.ExprBindings.getRootWithoutRetain(),
-             F.getTreeFactory());
-
-  // Iterate over the block-expr bindings.
-  for (Environment::iterator I = Env.begin(), End = Env.end(); I != End; ++I) {
-    const EnvironmentEntry &BlkExpr = I.getKey();
-    SVal X = I.getData();
-
-    if (SymReaper.isLive(BlkExpr.getExpr(), BlkExpr.getStackFrame())) {
-      // Copy the binding to the new map.
-      EBMapRef = EBMapRef.add(BlkExpr, X);
-
-      // Mark all symbols in the block expr's value live.
-      RSScaner.scan(X);
-    }
-  }
-
-  NewEnv.ExprBindings = EBMapRef.asImmutableMap();
-  return NewEnv;
+  // Keep the live bindings and mark the symbols in their values live.
+  return Environment(F.filter(Env.ExprBindings, [&](const auto &B) {
+    const EnvironmentEntry &BlkExpr = B.first;
+    if (!SymReaper.isLive(BlkExpr.getExpr(), BlkExpr.getStackFrame()))
+      return false;
+    RSScaner.scan(B.second);
+    return true;
+  }));
 }
 
 void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
@@ -206,8 +189,8 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
       if (FoundStackFrames.count(CurrentSF) == 0) {
         // This stack frame is fresher than all other stack frames so far.
         SF = CurrentSF;
-        for (const StackFrame *SFI = CurrentSF; SFI; SFI = SFI->getParent())
-          FoundStackFrames.insert(SFI);
+        FoundStackFrames.insert_range(
+            llvm::make_pointer_range(CurrentSF->parentsIncludingSelf()));
       }
     }
   }

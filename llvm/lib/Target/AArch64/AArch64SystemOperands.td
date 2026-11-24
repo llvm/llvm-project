@@ -338,39 +338,6 @@ def lookupISBByName : SearchIndex {
 def : ISB<"sy", 0xf>;
 
 //===----------------------------------------------------------------------===//
-// TSB (Trace synchronization barrier) instruction options.
-//===----------------------------------------------------------------------===//
-
-class TSB<string name, bits<4> encoding> {
-  string Name = name;
-  bits<4> Encoding;
-  let Encoding = encoding;
-
-  code Requires = [{ {AArch64::FeatureTRACEV8_4} }];
-}
-
-def TSBValues : GenericEnum {
-  let FilterClass = "TSB";
-  let NameField = "Name";
-  let ValueField = "Encoding";
-}
-
-def TSBsList : GenericTable {
-  let FilterClass = "TSB";
-  let Fields = ["Name", "Encoding", "Requires"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupTSBByEncoding";
-}
-
-def lookupTSBByName : SearchIndex {
-  let Table = TSBsList;
-  let Key = ["Name"];
-}
-
-def : TSB<"csync", 2>;
-
-//===----------------------------------------------------------------------===//
 // PRFM (prefetch) instruction options.
 //===----------------------------------------------------------------------===//
 
@@ -748,87 +715,6 @@ def : SVCR<"SVCRSM",   0b001>;
 def : SVCR<"SVCRZA",   0b010>;
 def : SVCR<"SVCRSMZA", 0b011>;
 }
-
-//===----------------------------------------------------------------------===//
-// PSB instruction options.
-//===----------------------------------------------------------------------===//
-
-class PSB<string name, bits<5> encoding> {
-  string Name = name;
-  bits<5> Encoding;
-  let Encoding = encoding;
-}
-
-def PSBValues : GenericEnum {
-  let FilterClass = "PSB";
-  let NameField = "Name";
-  let ValueField = "Encoding";
-}
-
-def PSBsList : GenericTable {
-  let FilterClass = "PSB";
-  let Fields = ["Name", "Encoding"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupPSBByEncoding";
-}
-
-def lookupPSBByName : SearchIndex {
-  let Table = PSBsList;
-  let Key = ["Name"];
-}
-
-def : PSB<"csync", 0x11>;
-
-//===----------------------------------------------------------------------===//
-// BTI instruction options.
-//===----------------------------------------------------------------------===//
-
-class BTI<string name, bits<3> encoding> {
-  string Name = name;
-  bits<3> Encoding;
-  let Encoding = encoding;
-}
-
-def BTIValues : GenericEnum {
-  let FilterClass = "BTI";
-  let NameField = "Name";
-  let ValueField = "Encoding";
-}
-
-def BTIsList : GenericTable {
-  let FilterClass = "BTI";
-  let Fields = ["Name", "Encoding"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupBTIByEncoding";
-}
-
-def lookupBTIByName : SearchIndex {
-  let Table = BTIsList;
-  let Key = ["Name"];
-}
-
-def : BTI<"r",  0b000>;
-def : BTI<"c",  0b010>;
-def : BTI<"j",  0b100>;
-def : BTI<"jc", 0b110>;
-
-//===----------------------------------------------------------------------===//
-// CMHPriority instruction options.
-//===----------------------------------------------------------------------===//
-
-class CMHPriorityHint<string name, bits<1> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
-  string Name = name;
-  bits<1> Encoding;
-  let Encoding = encoding;
-}
-
-def : CMHPriorityHint<"ph", 0b1>;
-
 
 //===----------------------------------------------------------------------===//
 // TIndex instruction options.
@@ -1371,9 +1257,7 @@ def : RWSysReg<"ACTLR_EL12",         0b11, 0b101, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"HCR_EL2",            0b11, 0b100, 0b0001, 0b0001, 0b000>;
-def : RWSysReg<"HCRX_EL2",           0b11, 0b100, 0b0001, 0b0010, 0b010> {
-  let Requires = [{ {AArch64::FeatureHCX} }];
-}
+def : RWSysReg<"HCRX_EL2",           0b11, 0b100, 0b0001, 0b0010, 0b010>;
 def : RWSysReg<"SCR_EL3",            0b11, 0b110, 0b0001, 0b0001, 0b000>;
 def : RWSysReg<"MDCR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b001>;
 def : RWSysReg<"SDER32_EL3",         0b11, 0b110, 0b0001, 0b0001, 0b001>;
@@ -2446,44 +2330,6 @@ def : RWSysReg<"ACTLRMASK_EL2",   0b11, 0b100, 0b0001, 0b0100, 0b001>;
 def : RWSysReg<"ACTLRMASK_EL12",  0b11, 0b101, 0b0001, 0b0100, 0b001>;
 def : RWSysReg<"ACTLRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b101>;
 
-//===----------------------------------------------------------------------===//
-// v9.6a PCDPHINT instruction options.
-//===----------------------------------------------------------------------===//
-
-class PHint<bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
-              bits<3> op2, string name> {
-  string Name = name;
-  bits<16> Encoding;
-  let Encoding{15-14} = op0;
-  let Encoding{13-11} = op1;
-  let Encoding{10-7} = crn;
-  let Encoding{6-3} = crm;
-  let Encoding{2-0} = op2;
-  code Requires = [{ {} }];
-}
-
-def PHintValues : GenericEnum {
-  let FilterClass = "PHint";
-  let NameField = "Name";
-  let ValueField = "Encoding";
-}
-
-def PHintsList : GenericTable {
-  let FilterClass = "PHint";
-  let Fields = ["Name", "Encoding", "Requires"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupPHintByEncoding";
-}
-
-def lookupPHintByName : SearchIndex {
-  let Table = PHintsList;
-  let Key = ["Name"];
-}
-
-def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
-def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
-
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;
 
@@ -2822,16 +2668,11 @@ def : RWSysReg<"NVHCRXMASK_EL2",    0b11, 0b100, 0b0001, 0b0101, 0b101>;
 
 // S1POE2 Thread private state extension (FEAT_TPS/TPSP).
 foreach n = 0-1 in {
-  defvar nb = !cast<bits<1>>(n);
   //                                Op0   Op1    CRn     CRm     Op2
-  def : RWSysReg<"TPMIN"#n#"_EL0",  0b11, 0b011, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL0",  0b11, 0b011, 0b0010, 0b0010, {0b1,nb,1}>;
-  def : RWSysReg<"TPMIN"#n#"_EL1",  0b11, 0b000, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL1",  0b11, 0b000, 0b0010, 0b0010, {0b1,nb,1}>;
-  def : RWSysReg<"TPMIN"#n#"_EL2",  0b11, 0b100, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL2",  0b11, 0b100, 0b0010, 0b0010, {0b1,nb,1}>;
-  def : RWSysReg<"TPMIN"#n#"_EL12", 0b11, 0b101, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL12", 0b11, 0b101, 0b0010, 0b0010, {0b1,nb,1}>;
+  def : RWSysReg<"TPCR"#n#"_EL0",   0b11, 0b011, 0b0010, 0b0010, {0b10,n}>;
+  def : RWSysReg<"TPCR"#n#"_EL1",   0b11, 0b000, 0b0010, 0b0010, {0b10,n}>;
+  def : RWSysReg<"TPCR"#n#"_EL2",   0b11, 0b100, 0b0010, 0b0010, {0b10,n}>;
+  def : RWSysReg<"TPCR"#n#"_EL12",  0b11, 0b101, 0b0010, 0b0010, {0b10,n}>;
 }
 
 class PLBIEntry<bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, string name,

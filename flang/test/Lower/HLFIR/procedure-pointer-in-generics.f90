@@ -34,7 +34,7 @@ subroutine test_local()
   foo => func
 end subroutine
 !CHECK-LABEL:   func.func @_QPtest_local() {
-!CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "foo", uniq_name = "_QFtest_localEfoo"}
+!CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> <{bindc_name = "foo", uniq_name = "_QFtest_localEfoo"}>
 !CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}"_QFtest_localEfoo"{{.*}} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>)
 !CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QPfunc) : (!fir.ref<f32>) -> f32
 !CHECK:           %[[VAL_5:.*]] = fir.emboxproc %[[VAL_4]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<() -> ()>

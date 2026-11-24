@@ -9,19 +9,19 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBEXTRAS_H
 #define LLVM_DEBUGINFO_PDB_PDBEXTRAS_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <unordered_map>
 
 namespace llvm {
 
 namespace pdb {
 
-using TagStats = std::unordered_map<PDB_SymType, int>;
+using TagStats = DenseMap<PDB_SymType, int>;
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const PDB_VariantType &Value);
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const PDB_CallingConv &Conv);

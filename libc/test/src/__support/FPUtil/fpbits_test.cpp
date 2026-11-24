@@ -292,10 +292,14 @@ constexpr FP all_fp_values[] = {
 
 constexpr Sign all_signs[] = {Sign::POS, Sign::NEG};
 
-using FPTypes = LIBC_NAMESPACE::testing::TypeList<
+using FPTypes = LIBC_NAMESPACE::testing::Types<
     FPRep<FPType::IEEE754_Binary16>, FPRep<FPType::IEEE754_Binary32>,
     FPRep<FPType::IEEE754_Binary64>, FPRep<FPType::IEEE754_Binary128>,
     FPRep<FPType::X86_Binary80>>;
+
+template <typename T>
+class LlvmLibcTypedFPBitsTest : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedFPBitsTest, FPTypes);
 
 template <typename T> constexpr auto make(Sign sign, FP fp) {
   switch (fp) {
@@ -322,7 +326,8 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
 }
 
 // Tests all properties for all types of float.
-TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
+TYPED_TEST(LlvmLibcTypedFPBitsTest, Properties) {
+  using T = TypeParam;
   for (Sign sign : all_signs) {
     for (FP fp : all_fp_values) {
       const T value = make<T>(sign, fp);
@@ -362,7 +367,8 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
 
 #define ASSERT_SAME_REP(A, B) ASSERT_EQ(A.uintval(), B.uintval());
 
-TYPED_TEST(LlvmLibcFPBitsTest, NextTowardInf, FPTypes) {
+TYPED_TEST(LlvmLibcTypedFPBitsTest, NextTowardInf) {
+  using T = TypeParam;
   struct {
     FP before, after;
   } TEST_CASES[] = {
@@ -709,7 +715,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
 }
 #endif
 
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 TEST(LlvmLibcFPBitsTest, Float128Type) {
   using DFloat128Bits = FPBits<float128>;
 
@@ -777,4 +783,4 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
   DFloat128Bits quiet_nan = DFloat128Bits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128

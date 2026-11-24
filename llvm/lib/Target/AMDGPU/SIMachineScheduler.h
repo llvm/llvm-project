@@ -24,7 +24,6 @@
 namespace llvm {
 
 class SIInstrInfo;
-class SIRegisterInfo;
 class SIScheduleDAGMI;
 class SIScheduleBlockCreator;
 
@@ -46,7 +45,6 @@ struct SISchedulerCandidate {
 
   SISchedulerCandidate() = default;
 
-  bool isRepeat(SIScheduleCandReason R) { return RepeatReasonSet & (1 << R); }
   void setRepeat(SIScheduleCandReason R) { RepeatReasonSet |= (1 << R); }
 };
 
@@ -132,7 +130,7 @@ public:
   // This is approximative.
   // Ideally should take into accounts some instructions (rcp, etc)
   // are 4 times slower.
-  int getCost() { return SUnits.size(); }
+  int getCost() { return static_cast<int>(SUnits.size()); }
 
   // The block Predecessors and Successors must be all registered
   // before fastSchedule().
@@ -150,12 +148,6 @@ public:
                 MachineBasicBlock::iterator EndBlock);
 
   bool isScheduled() { return Scheduled; }
-
-  // Needs the block to be scheduled inside
-  // TODO: find a way to compute it.
-  std::vector<unsigned> &getInternalAdditionalRegUsage() {
-    return InternalAdditionalPressure;
-  }
 
   std::set<Register> &getInRegs() { return LiveInRegs; }
   std::set<Register> &getOutRegs() { return LiveOutRegs; }
@@ -200,7 +192,6 @@ private:
 
   void nodeScheduled(SUnit *SU);
   void tryCandidateTopDown(SISchedCandidate &Cand, SISchedCandidate &TryCand);
-  void tryCandidateBottomUp(SISchedCandidate &Cand, SISchedCandidate &TryCand);
   SUnit* pickNode();
   void traceCandidate(const SISchedCandidate &Cand);
   void initRegPressure(MachineBasicBlock::iterator BeginBlock,
@@ -277,21 +268,9 @@ private:
   // (TODO: else if all their users depend on the same group, put them there)
   void colorMergeConstantLoadsNextGroup();
 
-  // Merge SUs that have all their users into another group to the group
-  void colorMergeIfPossibleNextGroup();
-
   // Merge SUs that have all their users into another group to the group,
   // but only for Reserved groups.
   void colorMergeIfPossibleNextGroupOnlyForReserved();
-
-  // Merge SUs that have all their users into another group to the group,
-  // but only if the group is no more than a few SUs.
-  void colorMergeIfPossibleSmallGroupsToNextGroup();
-
-  // Divides Blocks with important size.
-  // Idea of implementation: attribute new colors depending on topdown and
-  // bottom up links to other blocks.
-  void cutHugeBlocks();
 
   // Put in one group all instructions with no users in this scheduling region
   // (we'd want these groups be at the end).
@@ -360,7 +339,7 @@ private:
 
     bool IsHighLatency;
     int VGPRUsageDiff;
-    unsigned NumSuccessors;
+    size_t NumSuccessors;
     unsigned NumHighLatencySuccessors;
     unsigned LastPosHighLatParentScheduled;
     unsigned Height;
@@ -398,8 +377,6 @@ private:
   // by scheduling a block with these LiveIn and LiveOut.
   std::vector<int> checkRegUsageImpact(std::set<Register> &InRegs,
                                        std::set<Register> &OutRegs);
-
-  void schedule();
 };
 
 struct SIScheduleBlockResult {
@@ -424,7 +401,6 @@ public:
 
 class SIScheduleDAGMI final : public ScheduleDAGMILive {
   const SIInstrInfo *SITII;
-  const SIRegisterInfo *SITRI;
 
   std::vector<SUnit> SUnitsLinksBackup;
 
@@ -452,8 +428,6 @@ public:
   MachineRegisterInfo *getMRI() { return &MRI; }
   const TargetRegisterInfo *getTRI() { return TRI; }
   ScheduleDAGTopologicalSort *GetTopo() { return &Topo; }
-  SUnit &getEntrySU() { return EntrySU; }
-  SUnit& getExitSU() { return ExitSU; }
 
   void restoreSULinksLeft();
 

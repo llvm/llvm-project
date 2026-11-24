@@ -1,7 +1,5 @@
 ; RUN: llc -O2 < %s -mtriple=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix=O2 --check-prefix=CHECK
-; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix=O0 --check-prefix=CHECK
 ; RUN: %if ptxas %{ llc -O2 < %s -mtriple=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 ; The following IR
 ;
@@ -13,14 +11,13 @@
 ;   quot = n / d
 ;   rem = n - (n / d) * d
 ;
-; during NVPTX isel, at -O2.  At -O0, we should leave it alone.
+; during DAG combining (even at -O0)
 
 ; CHECK-LABEL: sdiv32(
 define void @sdiv32(i32 %n, i32 %d, ptr %quot_ret, ptr %rem_ret) {
   ; CHECK: div.s32 [[quot:%r[0-9]+]], [[num:%r[0-9]+]], [[den:%r[0-9]+]];
   %quot = sdiv i32 %n, %d
 
-  ; O0: rem.s32
   ; (This is unfortunately order-sensitive, even though mul is commutative.)
   ; O2: mul.lo.s32 [[mul:%r[0-9]+]], [[quot]], [[den]];
   ; O2: sub.s32 [[rem:%r[0-9]+]], [[num]], [[mul]]
@@ -37,8 +34,6 @@ define void @sdiv32(i32 %n, i32 %d, ptr %quot_ret, ptr %rem_ret) {
 define void @udiv32(i32 %n, i32 %d, ptr %quot_ret, ptr %rem_ret) {
   ; CHECK: div.u32 [[quot:%r[0-9]+]], [[num:%r[0-9]+]], [[den:%r[0-9]+]];
   %quot = udiv i32 %n, %d
-
-  ; O0: rem.u32
 
   ; Selection DAG doesn't know whether this is signed or unsigned
   ; multiplication and subtraction, but it doesn't make a difference either

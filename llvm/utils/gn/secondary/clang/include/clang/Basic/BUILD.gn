@@ -21,6 +21,7 @@ write_cmake_config("version") {
 diag_groups = [
   "Analysis",
   "AST",
+  "CodeGen",
   "Comment",
   "Common",
   "CrossTU",
@@ -145,11 +146,19 @@ clang_tablegen("Builtins") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsAVR") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinsBPF") {
   args = [ "-gen-clang-builtins" ]
 }
 
 clang_tablegen("BuiltinsAArch64") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsARM") {
   args = [ "-gen-clang-builtins" ]
 }
 
@@ -197,8 +206,16 @@ clang_tablegen("BuiltinsX86_64") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsZOS") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinTemplates") {
   args = [ "-gen-clang-builtin-templates" ]
+}
+
+clang_tablegen("BuiltinTraits") {
+  args = [ "-gen-clang-builtin-traits" ]
 }
 
 # ARM CDE, MVE, and NEON.

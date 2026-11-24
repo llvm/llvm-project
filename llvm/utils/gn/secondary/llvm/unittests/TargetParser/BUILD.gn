@@ -7,8 +7,11 @@ unittest("TargetParserTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "AtomicScopeTest.cpp",
     "CSKYTargetParserTest.cpp",
     "Host.cpp",
+    "IntelGPUTargetParserTest.cpp",
+    "NVPTXTargetParserTest.cpp",
     "RISCVISAInfoTest.cpp",
     "RISCVTargetParserTest.cpp",
     "TargetParserTest.cpp",

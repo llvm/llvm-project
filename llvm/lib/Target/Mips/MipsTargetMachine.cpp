@@ -14,9 +14,7 @@
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
-#include "Mips16ISelDAGToDAG.h"
 #include "MipsMachineFunction.h"
-#include "MipsSEISelDAGToDAG.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetObjectFile.h"
 #include "MipsTargetTransformInfo.h"
@@ -36,6 +34,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -48,41 +47,36 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips"
 
-static cl::opt<bool>
-    EnableMulMulFix("mfix4300", cl::init(false),
-                    cl::desc("Enable the VR4300 mulmul bug fix."), cl::Hidden);
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
+  static opt::RegisterLibraryOptions<MipsOptions> O;
   // Register the target.
   RegisterTargetMachine<MipsebTargetMachine> X(getTheMipsTarget());
   RegisterTargetMachine<MipselTargetMachine> Y(getTheMipselTarget());
   RegisterTargetMachine<MipsebTargetMachine> A(getTheMips64Target());
   RegisterTargetMachine<MipselTargetMachine> B(getTheMips64elTarget());
+  RegisterTargetMachine<NanoMipsTargetMachine> C(getTheNanoMipsTarget());
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeMipsAsmPrinterPass(*PR);
-  initializeMipsDelaySlotFillerPass(*PR);
-  initializeMipsBranchExpansionPass(*PR);
-  initializeMicroMipsSizeReducePass(*PR);
-  initializeMipsPreLegalizerCombinerPass(*PR);
-  initializeMipsPostLegalizerCombinerPass(*PR);
-  initializeMipsMulMulBugFixPass(*PR);
+  initializeMipsDelaySlotFillerLegacyPass(*PR);
+  initializeMipsBranchExpansionLegacyPass(*PR);
+  initializeMicroMipsSizeReduceLegacyPass(*PR);
+  initializeMipsPreLegalizerCombinerLegacyPass(*PR);
+  initializeMipsPostLegalizerCombinerLegacyPass(*PR);
+  initializeMipsMulMulBugFixLegacyPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
-  initializeMipsSetMachineRegisterFlagsPass(*PR);
 }
 
-static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+static std::unique_ptr<TargetLoweringObjectFile>
+createTLOF(const Triple &TT, bool UseSmallSection) {
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
-  return std::make_unique<MipsTargetObjectFile>();
+  return std::make_unique<MipsTargetObjectFile>(UseSmallSection);
 }
 
-static Reloc::Model getEffectiveRelocModel(bool JIT,
-                                           std::optional<Reloc::Model> RM) {
-  if (!RM || JIT)
-    return Reloc::Static;
-  return *RM;
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+  return RM.value_or(Reloc::Static);
 }
 
 // On function prologue, the stack is created by decrementing
@@ -97,19 +91,15 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT,
                                      bool isLittle)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
-          Options, getEffectiveRelocModel(JIT, RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      isLittle(isLittle), TLOF(createTLOF(getTargetTriple())),
-      ABI(MipsABIInfo::computeTargetABI(TT, Options.MCOptions.getABIName())),
-      Subtarget(nullptr),
-      DefaultSubtarget(TT, CPU, FS, isLittle, *this, std::nullopt),
-      NoMips16Subtarget(TT, CPU, FS.empty() ? "-mips16" : FS.str() + ",-mips16",
-                        isLittle, *this, std::nullopt),
-      Mips16Subtarget(TT, CPU, FS.empty() ? "+mips16" : FS.str() + ",+mips16",
-                      isLittle, *this, std::nullopt) {
-  Subtarget = &DefaultSubtarget;
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<MipsOptions>(
+          Options.MCOptions.LibraryOptions)),
+      MCCLOpts(MIPS_MC::getCLOpts(Options.MCOptions)), isLittle(isLittle),
+      IsJIT(JIT), DefaultSubtarget(TT, CPU, FS, Options.MCOptions.getABIName(),
+                                   isLittle, *this, std::nullopt),
+      TLOF(createTLOF(TT, DefaultSubtarget.useSmallSection())) {
   initAsmInfo();
 
   // Mips supports the debug entry values.
@@ -138,25 +128,52 @@ MipselTargetMachine::MipselTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOptLevel OL, bool JIT)
     : MipsTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
+void NanoMipsTargetMachine::anchor() {}
+
+NanoMipsTargetMachine::NanoMipsTargetMachine(const Target &T, const Triple &TT,
+                                             StringRef CPU, StringRef FS,
+                                             const TargetOptions &Options,
+                                             std::optional<Reloc::Model> RM,
+                                             std::optional<CodeModel::Model> CM,
+                                             CodeGenOptLevel OL, bool JIT)
+    : MipsTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
+
 const MipsSubtarget *
 MipsTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const MipsSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.Mips16 = FnAttrs.getAttribute("mips16");
+  Attrs.NoMips16 = FnAttrs.getAttribute("nomips16");
+  Attrs.MicroMips = FnAttrs.getAttribute("micromips");
+  Attrs.NoMicroMips = FnAttrs.getAttribute("nomicromips");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+  Attrs.ABIName = getTargetABIName(*M);
+
+  if (const MipsSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  bool hasMips16Attr = F.getFnAttribute("mips16").isValid();
-  bool hasNoMips16Attr = F.getFnAttribute("nomips16").isValid();
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
+  bool hasMips16Attr = Attrs.Mips16.isValid();
+  bool hasNoMips16Attr = Attrs.NoMips16.isValid();
 
-  bool HasMicroMipsAttr = F.getFnAttribute("micromips").isValid();
-  bool HasNoMicroMipsAttr = F.getFnAttribute("nomicromips").isValid();
+  bool HasMicroMipsAttr = Attrs.MicroMips.isValid();
+  bool HasNoMicroMipsAttr = Attrs.NoMicroMips.isValid();
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
-  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool softFloat = Attrs.SoftFloat.getValueAsBool();
+  if (getTargetTriple().isNanoMips())
+    softFloat = true;
 
   if (hasMips16Attr)
     FS += FS.empty() ? "+mips16" : ",+mips16";
@@ -169,19 +186,14 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  auto &I = SubtargetMap[CPU + FS];
+  auto &I = SubtargetMap[CPU + FS + Attrs.ABIName.str()];
   if (!I) {
     I = std::make_unique<MipsSubtarget>(
-        TargetTriple, CPU, FS, isLittle, *this,
+        TargetTriple, CPU, FS, Attrs.ABIName, isLittle, *this,
         MaybeAlign(F.getParent()->getOverrideStackAlignment()));
   }
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
-}
-
-void MipsTargetMachine::resetSubtarget(MachineFunction *MF) {
-  LLVM_DEBUG(dbgs() << "resetSubtarget\n");
-
-  Subtarget = &MF->getSubtarget<MipsSubtarget>();
 }
 
 namespace {
@@ -193,18 +205,13 @@ public:
       : TargetPassConfig(TM, PM) {
     // The current implementation of long branch pass requires a scratch
     // register ($at) to be available before branch instructions. Tail merging
-    // can break this requirement, so disable it when long branch pass is
-    // enabled.
-    EnableTailMerge = !getMipsSubtarget().enableLongBranchPass();
+    // can break this requirement.
+    EnableTailMerge = false;
     EnableLoopTermFold = true;
   }
 
   MipsTargetMachine &getMipsTargetMachine() const {
     return getTM<MipsTargetMachine>();
-  }
-
-  const MipsSubtarget &getMipsSubtarget() const {
-    return *getMipsTargetMachine().getSubtargetImpl();
   }
 
   void addIRPasses() override;
@@ -234,33 +241,24 @@ std::unique_ptr<CSEConfigBase> MipsPassConfig::getCSEConfig() const {
 void MipsPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   addPass(createAtomicExpandLegacyPass());
-  if (getMipsSubtarget().os16())
-    addPass(createMipsOs16Pass());
-  if (getMipsSubtarget().inMips16HardFloat())
-    addPass(createMips16HardFloatPass());
+  if (getMipsTargetMachine().getCLOpts().os16)
+    addPass(createMipsOs16LegacyPass());
+  addPass(createMips16HardFloatLegacyPass());
 }
 // Install an instruction selector pass using
 // the ISelDag to gen Mips code.
 bool MipsPassConfig::addInstSelector() {
-  addPass(createMipsModuleISelDagPass());
-  addPass(createMips16ISelDag(getMipsTargetMachine(), getOptLevel()));
-  addPass(createMipsSEISelDag(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMips16ISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMipsSEISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
   return false;
 }
 
 void MipsPassConfig::addPreRegAlloc() {
-  addPass(createMipsOptimizePICCallPass());
-  addPass(createMipsSetMachineRegisterFlagsPass());
+  addPass(createMipsOptimizePICCallLegacyPass());
 }
 
 TargetTransformInfo
 MipsTargetMachine::getTargetTransformInfo(const Function &F) const {
-  if (Subtarget->allowMixed16_32()) {
-    LLVM_DEBUG(errs() << "No Target Transform Info Pass Added\n");
-    // FIXME: This is no longer necessary as the TTI returned is per-function.
-    return TargetTransformInfo(F.getDataLayout());
-  }
-
   LLVM_DEBUG(errs() << "Target Transform Info Pass Added\n");
   return TargetTransformInfo(std::make_unique<MipsTTIImpl>(this, F));
 }
@@ -275,20 +273,20 @@ MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(
 // machine code is emitted.
 void MipsPassConfig::addPreEmitPass() {
   // Expand pseudo instructions that are sensitive to register allocation.
-  addPass(createMipsExpandPseudoPass());
+  addPass(createMipsExpandPseudoLegacyPass());
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.
-  addPass(createMicroMipsSizeReducePass());
+  addPass(createMicroMipsSizeReduceLegacyPass());
 
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.
-  if (EnableMulMulFix)
-    addPass(createMipsMulMulBugPass());
+  if (getMipsTargetMachine().getCLOpts().mfix4300)
+    addPass(createMipsMulMulBugFixLegacyPass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
-  addPass(createMipsDelaySlotFillerPass());
+  addPass(createMipsDelaySlotFillerLegacyPass());
 
   // This pass expands branches and takes care about the forbidden slot hazards.
   // Expanding branches may potentially create forbidden slot hazards for
@@ -298,36 +296,36 @@ void MipsPassConfig::addPreEmitPass() {
   // then we can be sure that all branches are expanded properly and no hazards
   // exists.
   // Any new pass should go before this pass.
-  addPass(createMipsBranchExpansion());
+  addPass(createMipsBranchExpansionLegacyPass());
 
-  addPass(createMipsConstantIslandPass());
+  addPass(createMipsConstantIslandLegacyPass());
 }
 
 bool MipsPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
 void MipsPassConfig::addPreLegalizeMachineIR() {
-  addPass(createMipsPreLegalizeCombiner());
+  addPass(createMipsPreLegalizeCombinerLegacyPass());
 }
 
 bool MipsPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 void MipsPassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createMipsPostLegalizeCombiner(IsOptNone));
+  addPass(createMipsPostLegalizeCombinerLegacyPass(IsOptNone));
 }
 
 bool MipsPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool MipsPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }

@@ -86,10 +86,10 @@ define void @test_volatile_store(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[MUL:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; CHECK-NEXT:    store volatile double [[MUL]], ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
-; CHECK-NEXT:    [[MUL5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[MUL5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    store volatile double [[MUL5]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -129,11 +129,18 @@ TEST(Bytecode, AlignmentFailure) {
   OwningOpRef<Operation *> module =
       parseSourceString<Operation *>(irWithResources, parseConfig);
   ASSERT_TRUE(module);
+  // Ensure that the resource section needs an explicit alignment marker. The
+  // test below exercises the reader's handling of that marker.
+  module.get()->setDiscardableAttr("bytecode.padding",
+                                   builder.getStringAttr("padding"));
 
   // Write the module to bytecode.
   std::string serializedBytecode;
   llvm::raw_string_ostream ostream(serializedBytecode);
-  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
+  // Hardcode the producer to make sure that the length of the producer string
+  // does not affect the alignment.
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream,
+                                            BytecodeWriterConfig("MLIR"))));
 
   // Create copy of buffer which is not aligned to requested resource alignment.
   std::string buffer(serializedBytecode);
@@ -222,7 +229,7 @@ TEST(Bytecode, OpWithoutProperties) {
   ASSERT_TRUE(succeeded(readBytecodeFile(
       llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
   Operation *roundtripped = &block->front();
-  EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
+  EXPECT_EQ(roundtripped->getRawDictionaryAttrs().size(), 2u);
   EXPECT_EQ(roundtripped->getInherentAttr("inherent_attr"), std::nullopt);
   EXPECT_NE(roundtripped->getDiscardableAttr("inherent_attr"), Attribute());
   EXPECT_NE(roundtripped->getDiscardableAttr("other_attr"), Attribute());
@@ -389,7 +396,7 @@ TEST(Bytecode, LocationElisionPreservesAttributes) {
   EXPECT_TRUE(isa<UnknownLoc>(innerOp->getLoc()));
 
   // 2. Verify that the semantic location attribute WAS PRESERVED.
-  Attribute semanticLocAttr = innerOp->getAttr("some_loc_attr");
+  Attribute semanticLocAttr = innerOp->getDiscardableAttr("some_loc_attr");
   ASSERT_TRUE(semanticLocAttr);
   auto locAttr = dyn_cast<LocationAttr>(semanticLocAttr);
   ASSERT_TRUE(locAttr);

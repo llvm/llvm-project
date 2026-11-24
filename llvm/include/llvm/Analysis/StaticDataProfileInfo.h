@@ -4,13 +4,21 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include <memory>
 
 namespace llvm {
 
+struct AnalysisOptions;
+
 namespace memprof {
+/// Return -memprof-annotate-string-literal-section-prefix.
+LLVM_ABI bool shouldAnnotateStringLiteralSectionPrefix(const LLVMContext &C);
+
 // Represents the eligibility status of a global variable for section prefix
 // annotation. Other than AnnotationOk, each enum value indicates a specific
 // reason for ineligibility.
@@ -67,11 +75,15 @@ public:
   /// Return the string representation of the hotness enum \p Hotness.
   LLVM_ABI StringRef hotnessToStr(StaticDataHotness Hotness) const;
 
+  const AnalysisOptions &Opts;
   bool EnableDataAccessProf = false;
 
 public:
-  StaticDataProfileInfo(bool EnableDataAccessProf)
-      : EnableDataAccessProf(EnableDataAccessProf) {}
+  StaticDataProfileInfo(const AnalysisOptions &Opts, bool EnableDataAccessProf)
+      : Opts(Opts), EnableDataAccessProf(EnableDataAccessProf) {}
+
+  /// Return -preserve-hot-data-section-prefix.
+  LLVM_ABI static bool shouldPreserveHotDataSectionPrefix(const LLVMContext &C);
 
   /// If \p Count is not nullopt, add it to the profile count of the constant \p
   /// C in a saturating way, and clamp the count to \p getInstrMaxCountValue if
@@ -110,6 +122,31 @@ public:
 
 private:
   std::unique_ptr<StaticDataProfileInfo> Info;
+};
+
+class LLVM_ABI StaticDataProfileInfoAnalysis
+    : public AnalysisInfoMixin<StaticDataProfileInfoAnalysis> {
+public:
+  static AnalysisKey Key;
+
+  class Result {
+    std::unique_ptr<StaticDataProfileInfo> HeldInfo;
+    Result(std::unique_ptr<StaticDataProfileInfo> &&Info)
+        : HeldInfo(std::move(Info)) {}
+    friend class StaticDataProfileInfoAnalysis;
+
+  public:
+    StaticDataProfileInfo &getStaticDataProfileInfo() {
+      return *HeldInfo;
+    }
+
+    bool invalidate(Module &, const PreservedAnalyses &,
+                    ModuleAnalysisManager::Invalidator &) {
+      return false;
+    }
+  };
+
+  Result run(Module &M, ModuleAnalysisManager &);
 };
 
 } // namespace llvm

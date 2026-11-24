@@ -65,7 +65,7 @@ public:
   /// that information can be stored before the header, like a file magic.
   /// \param NewFileConstructor is for constructing new files. It has exclusive
   /// access to the file. Must call \c initializeBumpPtr.
-  LLVM_ABI_FOR_TEST static Expected<MappedFileRegionArena>
+  LLVM_ABI static Expected<MappedFileRegionArena>
   create(const Twine &Path, uint64_t Capacity, uint64_t HeaderOffset,
          std::shared_ptr<ondisk::OnDiskCASLogger> Logger,
          function_ref<Error(MappedFileRegionArena &)> NewFileConstructor);
@@ -86,7 +86,7 @@ public:
     return data() + *Offset;
   }
   /// Allocate, returning the offset from \a data() instead of a pointer.
-  LLVM_ABI_FOR_TEST Expected<int64_t> allocateOffset(uint64_t AllocSize);
+  LLVM_ABI Expected<int64_t> allocateOffset(uint64_t AllocSize);
 
   char *data() const { return Region.data(); }
   uint64_t size() const { return H->BumpPtr; }
@@ -111,7 +111,7 @@ private:
   // initialize header from offset.
   Error initializeHeader(uint64_t HeaderOffset);
 
-  LLVM_ABI_FOR_TEST void destroyImpl();
+  LLVM_ABI void destroyImpl();
   void moveImpl(MappedFileRegionArena &RHS) {
     std::swap(Region, RHS.Region);
     std::swap(H, RHS.H);

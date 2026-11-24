@@ -50,11 +50,11 @@ define <2 x i64> @vector_ptrtointbitcast({<1 x ptr>, <1 x ptr>} %x) {
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <1 x ptr>, <1 x ptr> } [[X:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <1 x ptr> [[X_FCA_0_EXTRACT]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[A_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i32 0
+; CHECK-NEXT:    [[A_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <1 x ptr>, <1 x ptr> } [[X]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <1 x ptr> [[X_FCA_1_EXTRACT]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP3]] to i64
-; CHECK-NEXT:    [[A_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[A_SROA_0_0_VEC_INSERT]], i64 [[TMP4]], i32 1
+; CHECK-NEXT:    [[A_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[A_SROA_0_0_VEC_INSERT]], i64 [[TMP4]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[A_SROA_0_8_VEC_INSERT]]
 ;
   %a = alloca {<1 x ptr>, <1 x ptr>}, align 16

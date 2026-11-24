@@ -1,12 +1,21 @@
 header: sys/time.h
 standards:
   - posix
+merge_yaml_files:
+  - select-time.yaml
 macros:
+  - macro_name: ITIMER_REAL
+    macro_header: sys-time-macros.h
+  - macro_name: ITIMER_VIRTUAL
+    macro_header: sys-time-macros.h
+  - macro_name: ITIMER_PROF
+    macro_header: sys-time-macros.h
   - macro_name: timeradd
     macro_header: sys-time-macros.h
 types:
-  - type_name: struct_timeval
   - type_name: struct_itimerval
+  - type_name: suseconds_t
+  - type_name: time_t
 enums: []
 objects: []
 functions:
@@ -15,16 +24,19 @@ functions:
     arguments:
       - type: const char*
       - type: const struct timeval*
-
   - name: setitimer
     return_type: int
     arguments:
       - type: int
       - type: const struct itimerval *__restrict
       - type: struct itimerval *__restrict
-  
   - name: getitimer
     return_type: int
     arguments:
       - type: int
       - type: struct itimerval *
+  - name: gettimeofday
+    return_type: int
+    arguments:
+      - type: struct timeval *
+      - type: void *

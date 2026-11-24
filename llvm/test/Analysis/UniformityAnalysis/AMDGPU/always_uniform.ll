@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: for function 'readfirstlane':
 define amdgpu_kernel void @readfirstlane() {
@@ -6,20 +6,6 @@ define amdgpu_kernel void @readfirstlane() {
 ; CHECK: DIVERGENT:  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %first.lane = call i32 @llvm.amdgcn.readfirstlane(i32 %id.x)
 ; CHECK-NOT: DIVERGENT:  %first.lane = call i32 @llvm.amdgcn.readfirstlane(i32 %id.x)
-  ret void
-}
-
-; CHECK-LABEL: for function 'icmp':
-define amdgpu_kernel void @icmp(i32 inreg %x) {
-; CHECK-NOT: DIVERGENT:  %icmp = call i64 @llvm.amdgcn.icmp.i32
-  %icmp = call i64 @llvm.amdgcn.icmp.i32(i32 %x, i32 0, i32 33)
-  ret void
-}
-
-; CHECK-LABEL: for function 'fcmp':
-define amdgpu_kernel void @fcmp(float inreg %x, float inreg %y) {
-; CHECK-NOT: DIVERGENT:  %fcmp = call i64 @llvm.amdgcn.fcmp.i32
-  %fcmp = call i64 @llvm.amdgcn.fcmp.i32(float %x, float %y, i32 33)
   ret void
 }
 
@@ -160,10 +146,10 @@ define i32 @s_get_barrier_state(i32 %bar) {
 }
 
 ; CHECK-LABEL: for function 's_get_named_barrier_state':
-; CHECK: DIVERGENT: ptr addrspace(3) %bar
+; CHECK: DIVERGENT: ptr addrspace(15) %bar
 ; CHECK-NOT: DIVERGENT
-define i32 @s_get_named_barrier_state(ptr addrspace(3) %bar) {
-  %result = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %bar)
+define i32 @s_get_named_barrier_state(ptr addrspace(15) %bar) {
+  %result = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) %bar)
   ret i32 %result
 }
 
@@ -259,8 +245,6 @@ define void @s_memrealtime(ptr addrspace(1) inreg %out) {
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
-declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
-declare i64 @llvm.amdgcn.fcmp.i32(float, float, i32) #1
 declare i64 @llvm.amdgcn.ballot.i32(i1) #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0

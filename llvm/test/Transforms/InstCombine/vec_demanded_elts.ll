@@ -1251,3 +1251,125 @@ define <2 x i8> @common_binop_demand_via_splat_mask_poison_3(<2 x i8> %x, <2 x i
   %res = add <2 x i8> %vv, %msplat
   ret <2 x i8> %res
 }
+
+; A wide insert chain with distinct in-range indices should keep all inserts
+; while skipping redundant all-lanes SDVE scans of intermediate chain nodes.
+define <11 x i32> @wide_distinct_insert_chain(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10) {
+; CHECK-LABEL: @wide_distinct_insert_chain(
+; CHECK-NEXT:    [[V0:%.*]] = insertelement <11 x i32> poison, i32 [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <11 x i32> [[V0]], i32 [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[V2:%.*]] = insertelement <11 x i32> [[V1]], i32 [[A2:%.*]], i64 2
+; CHECK-NEXT:    [[V3:%.*]] = insertelement <11 x i32> [[V2]], i32 [[A3:%.*]], i64 3
+; CHECK-NEXT:    [[V4:%.*]] = insertelement <11 x i32> [[V3]], i32 [[A4:%.*]], i64 4
+; CHECK-NEXT:    [[V5:%.*]] = insertelement <11 x i32> [[V4]], i32 [[A5:%.*]], i64 5
+; CHECK-NEXT:    [[V6:%.*]] = insertelement <11 x i32> [[V5]], i32 [[A6:%.*]], i64 6
+; CHECK-NEXT:    [[V7:%.*]] = insertelement <11 x i32> [[V6]], i32 [[A7:%.*]], i64 7
+; CHECK-NEXT:    [[V8:%.*]] = insertelement <11 x i32> [[V7]], i32 [[A8:%.*]], i64 8
+; CHECK-NEXT:    [[V9:%.*]] = insertelement <11 x i32> [[V8]], i32 [[A9:%.*]], i64 9
+; CHECK-NEXT:    [[V10:%.*]] = insertelement <11 x i32> [[V9]], i32 [[A10:%.*]], i64 10
+; CHECK-NEXT:    ret <11 x i32> [[V10]]
+;
+  %v0 = insertelement <11 x i32> poison, i32 %a0, i64 0
+  %v1 = insertelement <11 x i32> %v0, i32 %a1, i64 1
+  %v2 = insertelement <11 x i32> %v1, i32 %a2, i64 2
+  %v3 = insertelement <11 x i32> %v2, i32 %a3, i64 3
+  %v4 = insertelement <11 x i32> %v3, i32 %a4, i64 4
+  %v5 = insertelement <11 x i32> %v4, i32 %a5, i64 5
+  %v6 = insertelement <11 x i32> %v5, i32 %a6, i64 6
+  %v7 = insertelement <11 x i32> %v6, i32 %a7, i64 7
+  %v8 = insertelement <11 x i32> %v7, i32 %a8, i64 8
+  %v9 = insertelement <11 x i32> %v8, i32 %a9, i64 9
+  %v10 = insertelement <11 x i32> %v9, i32 %a10, i64 10
+  ret <11 x i32> %v10
+}
+
+; Duplicate insert indices must still use the normal SDVE path so overwritten
+; inserts can be removed.
+define <12 x i32> @wide_insert_chain_deep_duplicate(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11) {
+; CHECK-LABEL: @wide_insert_chain_deep_duplicate(
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <12 x i32> poison, i32 [[A1:%.*]], i64 0
+; CHECK-NEXT:    [[V2:%.*]] = insertelement <12 x i32> [[V1]], i32 [[A2:%.*]], i64 2
+; CHECK-NEXT:    [[V3:%.*]] = insertelement <12 x i32> [[V2]], i32 [[A3:%.*]], i64 3
+; CHECK-NEXT:    [[V4:%.*]] = insertelement <12 x i32> [[V3]], i32 [[A4:%.*]], i64 4
+; CHECK-NEXT:    [[V5:%.*]] = insertelement <12 x i32> [[V4]], i32 [[A5:%.*]], i64 5
+; CHECK-NEXT:    [[V6:%.*]] = insertelement <12 x i32> [[V5]], i32 [[A6:%.*]], i64 6
+; CHECK-NEXT:    [[V7:%.*]] = insertelement <12 x i32> [[V6]], i32 [[A7:%.*]], i64 7
+; CHECK-NEXT:    [[V8:%.*]] = insertelement <12 x i32> [[V7]], i32 [[A8:%.*]], i64 8
+; CHECK-NEXT:    [[V9:%.*]] = insertelement <12 x i32> [[V8]], i32 [[A9:%.*]], i64 9
+; CHECK-NEXT:    [[V10:%.*]] = insertelement <12 x i32> [[V9]], i32 [[A10:%.*]], i64 10
+; CHECK-NEXT:    [[V11:%.*]] = insertelement <12 x i32> [[V10]], i32 [[A11:%.*]], i64 11
+; CHECK-NEXT:    ret <12 x i32> [[V11]]
+;
+  %v0 = insertelement <12 x i32> poison, i32 %a0, i64 0
+  %v1 = insertelement <12 x i32> %v0, i32 %a1, i64 0
+  %v2 = insertelement <12 x i32> %v1, i32 %a2, i64 2
+  %v3 = insertelement <12 x i32> %v2, i32 %a3, i64 3
+  %v4 = insertelement <12 x i32> %v3, i32 %a4, i64 4
+  %v5 = insertelement <12 x i32> %v4, i32 %a5, i64 5
+  %v6 = insertelement <12 x i32> %v5, i32 %a6, i64 6
+  %v7 = insertelement <12 x i32> %v6, i32 %a7, i64 7
+  %v8 = insertelement <12 x i32> %v7, i32 %a8, i64 8
+  %v9 = insertelement <12 x i32> %v8, i32 %a9, i64 9
+  %v10 = insertelement <12 x i32> %v9, i32 %a10, i64 10
+  %v11 = insertelement <12 x i32> %v10, i32 %a11, i64 11
+  ret <12 x i32> %v11
+}
+
+; Out-of-range insert indices must still use the normal SDVE path; the skip
+; helper only accepts in-range constant indices.
+define <11 x i32> @wide_insert_chain_out_of_range(i32 %a0, i32 %bad, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10) {
+; CHECK-LABEL: @wide_insert_chain_out_of_range(
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <11 x i32> poison, i32 [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[V2:%.*]] = insertelement <11 x i32> [[V1]], i32 [[A2:%.*]], i64 2
+; CHECK-NEXT:    [[V3:%.*]] = insertelement <11 x i32> [[V2]], i32 [[A3:%.*]], i64 3
+; CHECK-NEXT:    [[V4:%.*]] = insertelement <11 x i32> [[V3]], i32 [[A4:%.*]], i64 4
+; CHECK-NEXT:    [[V5:%.*]] = insertelement <11 x i32> [[V4]], i32 [[A5:%.*]], i64 5
+; CHECK-NEXT:    [[V6:%.*]] = insertelement <11 x i32> [[V5]], i32 [[A6:%.*]], i64 6
+; CHECK-NEXT:    [[V7:%.*]] = insertelement <11 x i32> [[V6]], i32 [[A7:%.*]], i64 7
+; CHECK-NEXT:    [[V8:%.*]] = insertelement <11 x i32> [[V7]], i32 [[A8:%.*]], i64 8
+; CHECK-NEXT:    [[V9:%.*]] = insertelement <11 x i32> [[V8]], i32 [[A9:%.*]], i64 9
+; CHECK-NEXT:    [[V10:%.*]] = insertelement <11 x i32> [[V9]], i32 [[A10:%.*]], i64 10
+; CHECK-NEXT:    ret <11 x i32> [[V10]]
+;
+  %v0 = insertelement <11 x i32> poison, i32 %a0, i64 0
+  %badins = insertelement <11 x i32> %v0, i32 %bad, i64 11
+  %v1 = insertelement <11 x i32> %badins, i32 %a1, i64 1
+  %v2 = insertelement <11 x i32> %v1, i32 %a2, i64 2
+  %v3 = insertelement <11 x i32> %v2, i32 %a3, i64 3
+  %v4 = insertelement <11 x i32> %v3, i32 %a4, i64 4
+  %v5 = insertelement <11 x i32> %v4, i32 %a5, i64 5
+  %v6 = insertelement <11 x i32> %v5, i32 %a6, i64 6
+  %v7 = insertelement <11 x i32> %v6, i32 %a7, i64 7
+  %v8 = insertelement <11 x i32> %v7, i32 %a8, i64 8
+  %v9 = insertelement <11 x i32> %v8, i32 %a9, i64 9
+  %v10 = insertelement <11 x i32> %v9, i32 %a10, i64 10
+  ret <11 x i32> %v10
+}
+
+; abs is elementwise, so dropping result lane 3 drops the same lane of the
+; vector operand and removes the insert. Its i1 flag is a scalar operand and
+; must be left alone.
+define <4 x i32> @abs_undemanded_elt(<4 x i32> %a, i32 %x) {
+; CHECK-LABEL: @abs_undemanded_elt(
+; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[A:%.*]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[ABS]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %a3 = insertelement <4 x i32> %a, i32 %x, i64 3
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a3, i1 false)
+  %r = shufflevector <4 x i32> %abs, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x i32> %r
+}
+
+; Same for is.fpclass, whose i32 test mask is a scalar operand.
+define <4 x i1> @is_fpclass_undemanded_elt(<4 x float> %a, float %x) {
+; CHECK-LABEL: @is_fpclass_undemanded_elt(
+; CHECK-NEXT:    [[CLS:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[A:%.*]], /* (norm) */ i32 264)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i1> [[CLS]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %a3 = insertelement <4 x float> %a, float %x, i64 3
+  %cls = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %a3, i32 264)
+  %r = shufflevector <4 x i1> %cls, <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+  ret <4 x i1> %r
+}

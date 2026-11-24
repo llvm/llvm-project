@@ -19,6 +19,7 @@
 #include "lldb/Utility/StringList.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/FormatAdapters.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -312,12 +313,11 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
                 .c_str());
         return nullptr;
       }
-      Status script_error;
-      script_error =
-          interp->SetBreakpointCommandCallback(*bp_options, cmd_data_up);
-      if (script_error.Fail()) {
-        error = Status::FromErrorStringWithFormat(
-            "Error generating script callback: %s.", error.AsCString());
+      if (llvm::Error script_error =
+              interp->SetBreakpointCommandCallback(*bp_options, cmd_data_up)) {
+        error = Status::FromErrorStringWithFormatv(
+            "Error generating script callback: {0}.",
+            llvm::fmt_consume(std::move(script_error)));
         return nullptr;
       }
     }
@@ -522,10 +522,10 @@ void BreakpointOptions::GetDescription(Stream *s,
     s->Printf("%sabled ", m_enabled ? "en" : "dis");
 
     if (m_one_shot)
-      s->Printf("one-shot ");
+      s->PutCString("one-shot ");
 
     if (m_auto_continue)
-      s->Printf("auto-continue ");
+      s->PutCString("auto-continue ");
 
     if (m_thread_spec_up)
       m_thread_spec_up->GetDescription(s, level);

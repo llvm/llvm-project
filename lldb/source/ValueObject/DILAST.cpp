@@ -17,22 +17,60 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::Assign;
   case Token::minus:
     return BinaryOpKind::Sub;
-  case Token::minusequal:
-    return BinaryOpKind::SubAssign;
   case Token::plus:
     return BinaryOpKind::Add;
-  case Token::plusequal:
-    return BinaryOpKind::AddAssign;
   case Token::star:
     return BinaryOpKind::Mul;
   case Token::slash:
     return BinaryOpKind::Div;
   case Token::percent:
     return BinaryOpKind::Rem;
+  case Token::amp:
+    return BinaryOpKind::And;
+  case Token::caret:
+    return BinaryOpKind::Xor;
+  case Token::pipe:
+    return BinaryOpKind::Or;
   case Token::lessless:
     return BinaryOpKind::Shl;
   case Token::greatergreater:
     return BinaryOpKind::Shr;
+  case Token::minusequal:
+    return BinaryOpKind::SubAssign;
+  case Token::plusequal:
+    return BinaryOpKind::AddAssign;
+  case Token::starequal:
+    return BinaryOpKind::MulAssign;
+  case Token::slashequal:
+    return BinaryOpKind::DivAssign;
+  case Token::percentequal:
+    return BinaryOpKind::RemAssign;
+  case Token::ampequal:
+    return BinaryOpKind::AndAssign;
+  case Token::caretequal:
+    return BinaryOpKind::XorAssign;
+  case Token::pipeequal:
+    return BinaryOpKind::OrAssign;
+  case Token::lesslessequal:
+    return BinaryOpKind::ShlAssign;
+  case Token::greatergreaterequal:
+    return BinaryOpKind::ShrAssign;
+  case Token::ampamp:
+    return BinaryOpKind::LAnd;
+  case Token::pipepipe:
+    return BinaryOpKind::LOr;
+  case Token::less:
+    return BinaryOpKind::LT;
+  case Token::greater:
+    return BinaryOpKind::GT;
+  case Token::lessequal:
+    return BinaryOpKind::LE;
+  case Token::greaterequal:
+    return BinaryOpKind::GE;
+  case Token::equalequal:
+    return BinaryOpKind::EQ;
+  case Token::exclaimequal:
+    return BinaryOpKind::NE;
   default:
     break;
   }
@@ -84,6 +122,14 @@ BooleanLiteralNode::Accept(Visitor *v) const {
 }
 
 llvm::Expected<lldb::ValueObjectSP> CastNode::Accept(Visitor *v) const {
+  return v->Visit(*this);
+}
+
+llvm::Expected<lldb::ValueObjectSP> ConditionalNode::Accept(Visitor *v) const {
+  return v->Visit(*this);
+}
+
+llvm::Expected<lldb::ValueObjectSP> SizeOfNode::Accept(Visitor *v) const {
   return v->Visit(*this);
 }
 

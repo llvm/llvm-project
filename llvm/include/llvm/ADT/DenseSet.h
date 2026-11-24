@@ -18,9 +18,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
-#include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <utility>
@@ -50,10 +50,8 @@ public:
 ///   DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
 ///            detail::DenseSetPair<ValueT>>
 ///
-/// or the equivalent SmallDenseMap type.  ValueInfoT must implement the
-/// DenseMapInfo "concept".
-template <typename ValueT, typename MapTy, typename ValueInfoT>
-class DenseSetImpl {
+/// or the equivalent SmallDenseMap type.
+template <typename ValueT, typename MapTy> class DenseSetImpl {
   static_assert(sizeof(typename MapTy::value_type) == sizeof(ValueT),
                 "DenseMap buckets unexpectedly large!");
   MapTy TheMap;
@@ -246,10 +244,9 @@ public:
 /// of RHS, and that RHS contains no additional values.
 /// Equivalent to N calls to RHS.count. Amortized complexity is linear, worst
 /// case is O(N^2) (if every hash collides).
-template <typename ValueT, typename MapTy, typename ValueInfoT>
-[[nodiscard]] bool
-operator==(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
-           const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
+template <typename ValueT, typename MapTy>
+[[nodiscard]] bool operator==(const DenseSetImpl<ValueT, MapTy> &LHS,
+                              const DenseSetImpl<ValueT, MapTy> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -263,30 +260,27 @@ operator==(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
 /// Inequality comparison for DenseSet.
 ///
 /// Equivalent to !(LHS == RHS). See operator== for performance notes.
-template <typename ValueT, typename MapTy, typename ValueInfoT>
-[[nodiscard]] bool
-operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
-           const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
+template <typename ValueT, typename MapTy>
+[[nodiscard]] bool operator!=(const DenseSetImpl<ValueT, MapTy> &LHS,
+                              const DenseSetImpl<ValueT, MapTy> &RHS) {
   return !(LHS == RHS);
 }
 
 template <typename ValueT, typename ValueInfoT>
 using DenseSet = DenseSetImpl<
-    ValueT, DenseMap<ValueT, DenseSetEmpty, ValueInfoT, DenseSetPair<ValueT>>,
-    ValueInfoT>;
+    ValueT, DenseMap<ValueT, DenseSetEmpty, ValueInfoT, DenseSetPair<ValueT>>>;
 
 template <typename ValueT, unsigned InlineBuckets, typename ValueInfoT>
 using SmallDenseSet =
-    DenseSetImpl<ValueT,
-                 SmallDenseMap<ValueT, DenseSetEmpty, InlineBuckets, ValueInfoT,
-                               DenseSetPair<ValueT>>,
-                 ValueInfoT>;
+    DenseSetImpl<ValueT, SmallDenseMap<ValueT, DenseSetEmpty, InlineBuckets,
+                                       ValueInfoT, DenseSetPair<ValueT>>>;
 
 } // end namespace detail
 
 /// Implements a dense probed hash-table based set.
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
-class DenseSet : public detail::DenseSet<ValueT, ValueInfoT> {
+class LLVM_ATTRIBUTE_WARN_UNUSED DenseSet
+    : public detail::DenseSet<ValueT, ValueInfoT> {
   using BaseT = detail::DenseSet<ValueT, ValueInfoT>;
 
 public:
@@ -297,7 +291,7 @@ public:
 /// stored inline.
 template <typename ValueT, unsigned InlineBuckets = 4,
           typename ValueInfoT = DenseMapInfo<ValueT>>
-class SmallDenseSet
+class LLVM_ATTRIBUTE_WARN_UNUSED SmallDenseSet
     : public detail::SmallDenseSet<ValueT, InlineBuckets, ValueInfoT> {
   using BaseT = detail::SmallDenseSet<ValueT, InlineBuckets, ValueInfoT>;
 

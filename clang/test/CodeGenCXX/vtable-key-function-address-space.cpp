@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -o - | FileCheck %s
 // PR5697
 namespace PR5697 {
 struct A {

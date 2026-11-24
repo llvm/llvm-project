@@ -81,6 +81,40 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 
 // -----
 
+def SPIRV_InBoundsAccessChainOp : SPIRV_Op<"InBoundsAccessChain", [Pure]> {
+  let summary = [{
+    Create a pointer into a composite object that is known to stay within the
+    base object.
+  }];
+
+  let description = [{
+    Has the same operands, result, and type rules as `spirv.AccessChain`, with
+    the additional contract that the resulting pointer points within the base
+    object.
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$base_ptr,
+    Variadic<SPIRV_Integer>:$indices
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$component_ptr
+  );
+
+  let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
+
+  let hasCanonicalizer = 1;
+
+  let hasCustomAssemblyFormat = 0;
+
+  let assemblyFormat = [{
+    $base_ptr `[` $indices `]` attr-dict `:` type($base_ptr) `,` type($indices) `->` type(results)
+  }];
+}
+
+// -----
+
 def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = [{
     Copy from the memory pointed to by Source to the memory pointed to by
@@ -308,6 +342,96 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
   let assemblyFormat = [{
     $base_ptr `[` $element ($indices^)? `]` attr-dict `:` type($base_ptr) `,` type($element) (`,` type($indices)^)? `->` type($result)
   }];
+}
+
+// -----
+
+def SPIRV_PtrEqualOp : SPIRV_Op<"PtrEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have the same value. Result is
+    false if Operand 1 and Operand 2 have different values.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
+}
+
+// -----
+
+def SPIRV_PtrNotEqualOp : SPIRV_Op<"PtrNotEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have different values. Result
+    is false if Operand 1 and Operand 2 have the same value.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
 }
 
 // -----

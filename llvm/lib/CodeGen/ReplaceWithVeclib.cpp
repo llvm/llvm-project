@@ -90,11 +90,14 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
 
-  auto *Replacement = IRBuilder.CreateCall(TLIVecFunc, Args, OpBundles);
-  II->replaceAllUsesWith(Replacement);
-  // Preserve fast math flags for FP math.
+  // Preserve fast math flags for FP math (getFastMathFlagsOrNone keeps this
+  // safe for non-FP intrinsics, whose flags are simply empty).
+  auto *Replacement = IRBuilder.CreateCall(
+      TLIVecFunc, Args, OpBundles, /*FMFSource=*/II->getFastMathFlagsOrNone());
+  // Preserve fpmath for FP math
   if (isa<FPMathOperator>(Replacement))
-    Replacement->copyFastMathFlags(II);
+    Replacement->copyMetadata(*II, {LLVMContext::MD_fpmath});
+  II->replaceAllUsesWith(Replacement);
   Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
 
@@ -207,19 +210,80 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   return true;
 }
 
+/// If \p II is a vector llvm.sincos with no direct vector library mapping but
+/// the target does have vector mappings for both llvm.sin and llvm.cos at the
+/// same element count, replace it with separate llvm.sin and llvm.cos calls
+/// and run the standard veclib replacement on each.
+static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
+                                 IntrinsicInst *II,
+                                 SmallVectorImpl<Instruction *> &Replaced) {
+  if (II->getIntrinsicID() != Intrinsic::sincos)
+    return false;
+  Value *Arg = II->getArgOperand(0);
+  auto *VTy = dyn_cast<VectorType>(Arg->getType());
+  if (!VTy)
+    return false;
+
+  ElementCount EC = VTy->getElementCount();
+  Type *ScalarTy = VTy->getElementType();
+  Module *M = II->getModule();
+
+  if (!shouldSplitVectorSinCos(TLI, ScalarTy, EC, M))
+    return false;
+
+  // All users must be extractvalue.
+  for (User *U : II->users()) {
+    if (!isa<ExtractValueInst>(U))
+      return false;
+  }
+
+  IRBuilder<> B(II);
+  Function *SinFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::sin, Arg->getType());
+  Function *CosFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::cos, Arg->getType());
+  CallInst *SinCall = B.CreateCall(SinFn, {Arg}, /*FMFSource=*/II, "sin");
+  CallInst *CosCall = B.CreateCall(CosFn, {Arg}, /*FMFSource=*/II, "cos");
+  SinCall->copyMetadata(*II, {LLVMContext::MD_fpmath});
+  CosCall->copyMetadata(*II, {LLVMContext::MD_fpmath});
+
+  // Forward extractvalue uses to the new calls.
+  for (User *U : make_early_inc_range(II->users())) {
+    auto *EV = cast<ExtractValueInst>(U);
+    EV->replaceAllUsesWith(EV->getIndices()[0] == 0 ? SinCall : CosCall);
+    EV->eraseFromParent();
+  }
+
+  // Replace each new call with the vector library function.
+  if (replaceWithCallToVeclib(TLI, cast<IntrinsicInst>(SinCall)))
+    Replaced.push_back(SinCall);
+  if (replaceWithCallToVeclib(TLI, cast<IntrinsicInst>(CosCall)))
+    Replaced.push_back(CosCall);
+
+  return true;
+}
+
 static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
   SmallVector<Instruction *> ReplacedCalls;
   for (auto &I : instructions(F)) {
-    // Process only intrinsic calls that return void or a vector.
-    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-      if (II->getIntrinsicID() == Intrinsic::not_intrinsic)
-        continue;
-      if (!II->getType()->isVectorTy() && !II->getType()->isVoidTy())
-        continue;
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II || II->getIntrinsicID() == Intrinsic::not_intrinsic)
+      continue;
 
-      if (replaceWithCallToVeclib(TLI, II))
-        ReplacedCalls.push_back(&I);
+    // Vector llvm.sincos returns a struct so it does not fit the generic
+    // path below; try to split it into separate sin and cos calls when the
+    // target has vector mappings for them.
+    if (trySplitVectorSinCos(TLI, II, ReplacedCalls)) {
+      ReplacedCalls.push_back(&I);
+      continue;
     }
+
+    // Process only intrinsic calls that return void or a vector.
+    if (!II->getType()->isVectorTy() && !II->getType()->isVoidTy())
+      continue;
+
+    if (replaceWithCallToVeclib(TLI, II))
+      ReplacedCalls.push_back(&I);
   }
   // Erase any intrinsic calls that were replaced with vector library calls.
   for (auto *I : ReplacedCalls)

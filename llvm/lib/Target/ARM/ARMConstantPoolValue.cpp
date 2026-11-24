@@ -230,10 +230,11 @@ ARMConstantPoolSymbol::ARMConstantPoolSymbol(LLVMContext &C, StringRef s,
                            AddCurrentAddress),
       S(std::string(s)) {}
 
-ARMConstantPoolSymbol *ARMConstantPoolSymbol::Create(LLVMContext &C,
-                                                     StringRef s, unsigned ID,
-                                                     unsigned char PCAdj) {
-  return new ARMConstantPoolSymbol(C, s, ID, PCAdj, ARMCP::no_modifier, false);
+ARMConstantPoolSymbol *ARMConstantPoolSymbol::Create(
+    LLVMContext &C, StringRef s, unsigned ID, unsigned char PCAdj,
+    ARMCP::ARMCPModifier Modifier, bool AddCurrentAddress) {
+  return new ARMConstantPoolSymbol(C, s, ID, PCAdj, Modifier,
+                                   AddCurrentAddress);
 }
 
 int ARMConstantPoolSymbol::getExistingMachineCPValue(MachineConstantPool *CP,

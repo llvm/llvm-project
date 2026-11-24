@@ -135,13 +135,15 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
     if (MAI.needsDwarfSectionOffsetDirective()) {
       assert(!isDwarf64() &&
              "emitting DWARF64 is not implemented for COFF targets");
-      OutStreamer->emitCOFFSecRel32(Label, /*Offset=*/0);
+      OutStreamer->emitDwarfSectionOffset(Label, /*Offset=*/0,
+                                          getDwarfOffsetByteSize());
       return;
     }
 
     // If the format uses relocations with dwarf, refer to the symbol directly.
     if (doesDwarfUseRelocationsAcrossSections()) {
-      OutStreamer->emitSymbolValue(Label, getDwarfOffsetByteSize());
+      OutStreamer->emitDwarfSectionOffset(Label, /*Offset=*/0,
+                                          getDwarfOffsetByteSize());
       return;
     }
   }
@@ -238,6 +240,14 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpNegateRAStateWithPC:
     OutStreamer->emitCFINegateRAStateWithPC(Loc);
     break;
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    if (MCSymbol *Symbol = Inst.getRASignSymbol())
+      OutStreamer->emitCFILLVMSetRAState(Inst.getRASignState(), Symbol, Loc);
+    else
+      OutStreamer->emitCFILLVMSetRAState(Inst.getRASignState(),
+                                         Inst.getRASignOffset(), Loc);
+    break;
+  }
   case MCCFIInstruction::OpSameValue:
     OutStreamer->emitCFISameValue(Inst.getRegister(), Loc);
     break;
@@ -300,6 +310,8 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
 }
 
 void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
+  assert(!Die.isPlaceholder() && "Cannot emit a placeholder DIE");
+
   // Emit the code (index) for the abbreviation.
   if (isVerbose())
     OutStreamer->AddComment("Abbrev [" + Twine(Die.getAbbrevNumber()) + "] 0x" +

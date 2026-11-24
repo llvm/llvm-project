@@ -14,8 +14,8 @@ define i32 @test(ptr %isec) {
 ; CHECK-NEXT:    br label [[BLOCK3]]
 ; CHECK:       block3:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP1]], [[BLOCK1]] ], [ [[TMP1]], [[BLOCK2]] ], [ [[TMP2]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;

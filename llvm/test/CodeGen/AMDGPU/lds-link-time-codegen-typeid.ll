@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r - | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck %s --check-prefix=ASM --implicit-check-not=.amdgpu_num_agpr
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r - | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck %s --check-prefix=ASM --implicit-check-not=.amdgpu_num_agpr
 
 ; Test ABI register-size type ID generation for various function types.
 ; The type ID encodes each parameter/return by bit width: v=void, i=<=32-bit,

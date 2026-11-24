@@ -16,8 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-template <typename T>
-class FormatAdapter : public support::detail::format_adapter {
+template <typename T> class FormatAdapter {
 protected:
   explicit FormatAdapter(T &&Item) : Item(std::forward<T>(Item)) {}
 
@@ -36,8 +35,8 @@ public:
       : FormatAdapter<T>(std::forward<T>(Item)), Where(Where), Amount(Amount),
         Fill(Fill) {}
 
-  void format(llvm::raw_ostream &Stream, StringRef Style) override {
-    auto Adapter = detail::build_format_adapter(std::forward<T>(this->Item));
+  void format(llvm::raw_ostream &Stream, StringRef Style) {
+    auto Adapter = detail::FormatFunctor(std::forward<T>(this->Item));
     FmtAlign(Adapter, Where, Amount, Fill).format(Stream, Style);
   }
 };
@@ -50,10 +49,10 @@ public:
   PadAdapter(T &&Item, size_t Left, size_t Right)
       : FormatAdapter<T>(std::forward<T>(Item)), Left(Left), Right(Right) {}
 
-  void format(llvm::raw_ostream &Stream, StringRef Style) override {
-    auto Adapter = detail::build_format_adapter(std::forward<T>(this->Item));
+  void format(llvm::raw_ostream &Stream, StringRef Style) {
+    auto Adapter = detail::FormatFunctor(std::forward<T>(this->Item));
     Stream.indent(Left);
-    Adapter.format(Stream, Style);
+    Adapter(Stream, Style);
     Stream.indent(Right);
   }
 };
@@ -65,10 +64,10 @@ public:
   RepeatAdapter(T &&Item, size_t Count)
       : FormatAdapter<T>(std::forward<T>(Item)), Count(Count) {}
 
-  void format(llvm::raw_ostream &Stream, StringRef Style) override {
-    auto Adapter = detail::build_format_adapter(std::forward<T>(this->Item));
+  void format(llvm::raw_ostream &Stream, StringRef Style) {
+    auto Adapter = detail::FormatFunctor(std::forward<T>(this->Item));
     for (size_t I = 0; I < Count; ++I) {
-      Adapter.format(Stream, Style);
+      Adapter(Stream, Style);
     }
   }
 };
@@ -77,10 +76,8 @@ class ErrorAdapter : public FormatAdapter<Error> {
 public:
   ErrorAdapter(Error &&Item) : FormatAdapter(std::move(Item)) {}
   ErrorAdapter(ErrorAdapter &&) = default;
-  ~ErrorAdapter() override { consumeError(std::move(Item)); }
-  void format(llvm::raw_ostream &Stream, StringRef Style) override {
-    Stream << Item;
-  }
+  ~ErrorAdapter() { consumeError(std::move(Item)); }
+  void format(llvm::raw_ostream &Stream, StringRef Style) { Stream << Item; }
 };
 } // namespace detail
 } // namespace support

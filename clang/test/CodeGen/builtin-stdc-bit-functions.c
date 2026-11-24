@@ -319,6 +319,13 @@ void test_bitint_first_and_count(unsigned _BitInt(9) bi9) {
   r = __builtin_stdc_count_zeros(bi9);
 }
 
+// CHECK-LABEL: test_bit_ceil_bitint1
+// CHECK: shl i1 poison, %{{.*}}
+// CHECK: phi i1 [ true, %{{.*}} ], [ %{{.*}}, %bitceil.calc ]
+void test_bit_ceil_bitint1(unsigned _BitInt(1) bi1) {
+  volatile unsigned _BitInt(1) r = __builtin_stdc_bit_ceil(bi1);
+}
+
 // CHECK-LABEL: test_bit_floor_all_ones_bitint
 // CHECK: store volatile i32 65536, ptr %r
 void test_bit_floor_all_ones_bitint(void) {

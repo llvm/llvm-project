@@ -26,6 +26,7 @@ enum class StreamPurpose {
   DBI,
   TPI,
   IPI,
+  DXContainer,
   GlobalHash,
   PublicHash,
   TpiHash,

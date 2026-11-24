@@ -9,9 +9,9 @@ define <16 x double> @test(ptr %x, double %v, double %a) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <6 x double>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[GEP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[GEP8]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x double> poison, double [[A]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x double> poison, double [[A]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x double> [[TMP4]], <16 x double> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <6 x double> poison, double [[V]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <6 x double> poison, double [[V]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <6 x double> [[TMP9]], <6 x double> poison, <6 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <6 x double> [[TMP16]], <6 x double> poison, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

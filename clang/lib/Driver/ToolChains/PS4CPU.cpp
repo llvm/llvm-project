@@ -114,8 +114,12 @@ void toolchains::PS5CPU::addSanitizerArgs(const ArgList &Args,
     CmdArgs.push_back(arg("SceUBSanitizer_nosubmission_stub_weak"));
   if (SanArgs.needsAsanRt())
     CmdArgs.push_back(arg("SceAddressSanitizer_nosubmission_stub_weak"));
+  if (SanArgs.needsRtsanRt())
+    CmdArgs.push_back(arg("SceRealtimeSanitizer_nosubmission_stub_weak"));
   if (SanArgs.needsTsanRt())
     CmdArgs.push_back(arg("SceThreadSanitizer_nosubmission_stub_weak"));
+  if (SanArgs.needsTysanRt())
+    CmdArgs.push_back(arg("SceTypeSanitizer_nosubmission_stub_weak"));
 }
 
 void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -565,9 +569,8 @@ Tool *toolchains::PS5CPU::buildLinker() const {
 }
 
 SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -576,15 +579,16 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
 }
 
 SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      PS4PS5Base::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = PS4PS5Base::getSupportedSanitizers(BA, DeviceOffloadKind);
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Thread;
+  Res |= SanitizerKind::Type;
   return Res;
 }
 
 void toolchains::PS4PS5Base::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadingKind) const {
   // PS4/PS5 do not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {

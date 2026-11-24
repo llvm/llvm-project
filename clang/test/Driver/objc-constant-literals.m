@@ -5,10 +5,10 @@
 // RUN: %clang -### -target arm64-apple-macosx11 -fno-objc-constant-literals -c %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DISABLED
 
-// DEFAULT-NOT: -fobjc-constant-literals
-// DEFAULT-NOT: -fconstant-nsnumber-literals
-// DEFAULT-NOT: -fconstant-nsarray-literals
-// DEFAULT-NOT: -fconstant-nsdictionary-literals
+// DEFAULT: -fobjc-constant-literals
+// DEFAULT: -fconstant-nsnumber-literals
+// DEFAULT: -fconstant-nsarray-literals
+// DEFAULT: -fconstant-nsdictionary-literals
 
 // ENABLED: -fobjc-constant-literals
 // ENABLED: -fconstant-nsnumber-literals

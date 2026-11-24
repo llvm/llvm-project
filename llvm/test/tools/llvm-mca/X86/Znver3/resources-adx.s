@@ -20,14 +20,14 @@ adox        (%rbx), %rcx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     1.00                        adcxl	%ebx, %ecx
-# CHECK-NEXT:  1      5     1.00    *                   adcxl	(%rbx), %ecx
-# CHECK-NEXT:  1      1     1.00                        adcxq	%rbx, %rcx
-# CHECK-NEXT:  1      5     1.00    *                   adcxq	(%rbx), %rcx
-# CHECK-NEXT:  1      1     1.00                        adoxl	%ebx, %ecx
-# CHECK-NEXT:  1      5     1.00    *                   adoxl	(%rbx), %ecx
-# CHECK-NEXT:  1      1     1.00                        adoxq	%rbx, %rcx
-# CHECK-NEXT:  1      5     1.00    *                   adoxq	(%rbx), %rcx
+# CHECK-NEXT:  1      1     0.25                        adcxl	%ebx, %ecx
+# CHECK-NEXT:  1      5     0.33    *                   adcxl	(%rbx), %ecx
+# CHECK-NEXT:  1      1     0.25                        adcxq	%rbx, %rcx
+# CHECK-NEXT:  1      5     0.33    *                   adcxq	(%rbx), %rcx
+# CHECK-NEXT:  1      1     0.25                        adoxl	%ebx, %ecx
+# CHECK-NEXT:  1      5     0.33    *                   adoxl	(%rbx), %ecx
+# CHECK-NEXT:  1      1     0.25                        adoxq	%rbx, %rcx
+# CHECK-NEXT:  1      5     0.33    *                   adoxq	(%rbx), %rcx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -56,15 +56,15 @@ adox        (%rbx), %rcx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 1.33   1.33   1.33   8.00   8.00   8.00   8.00    -      -      -      -      -      -      -      -     1.33   1.33   1.33   1.33   1.33   1.33    -      -
+# CHECK-NEXT: 1.33   1.33   1.33   2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -     1.33   1.33   1.33   1.33   1.33   1.33    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adcxl	%ebx, %ecx
-# CHECK-NEXT: 0.33   0.33   0.33   1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adcxl	(%rbx), %ecx
-# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adcxq	%rbx, %rcx
-# CHECK-NEXT: 0.33   0.33   0.33   1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adcxq	(%rbx), %rcx
-# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adoxl	%ebx, %ecx
-# CHECK-NEXT: 0.33   0.33   0.33   1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adoxl	(%rbx), %ecx
-# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adoxq	%rbx, %rcx
-# CHECK-NEXT: 0.33   0.33   0.33   1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adoxq	(%rbx), %rcx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adcxl	%ebx, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adcxl	(%rbx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adcxq	%rbx, %rcx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adcxq	(%rbx), %rcx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adoxl	%ebx, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adoxl	(%rbx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adoxq	%rbx, %rcx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     adoxq	(%rbx), %rcx

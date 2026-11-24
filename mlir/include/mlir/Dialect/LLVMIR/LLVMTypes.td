@@ -18,6 +18,7 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 /// Base class for all LLVM dialect types.
 class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<LLVM_Dialect, typeName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/LLVMTypes.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -58,6 +59,32 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
     /// Checks if the given type can be used inside an array type.
     static bool isValidElementType(Type type);
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// LLVMByteType
+//===----------------------------------------------------------------------===//
+
+def LLVMByteType : LLVMType<"LLVMByte", "byte", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+                                ["getTypeSizeInBits", "getABIAlignment"]>,
+    VectorElementTypeInterface]> {
+  let summary = "LLVM byte type";
+  let description = [{
+    The `!llvm.byte` type represents raw memory data in SSA registers, mirroring
+    LLVM's builtin byte type.
+    It should be used when it cannot be determined whether a value holds a
+    pointer or another type at run time, or if the value contains uninitialized
+    or poison data.
+    Unlike integer types, copying byte types preserves all poison bits and the
+    provenance of pointers.
+  }];
+
+  let parameters = (ins "unsigned":$bitWidth);
+  let assemblyFormat = [{
+    `<` $bitWidth `>`
+  }];
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -232,6 +259,10 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
     /// Checks if a struct is packed.
     bool isPacked() const;
 
+    /// Returns the byte offset of the element at the given index.
+    uint64_t getElementOffset(const DataLayout &dataLayout,
+                              unsigned index) const;
+
     /// Checks if a struct is identified.
     bool isIdentified() const;
 
@@ -248,7 +279,14 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
     static LogicalResult
     verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
                      ArrayRef<Type> types, bool);
-    using Base::verifyInvariants;
+    /// Verifies a literal struct's storage key, which sub-element replacement
+    /// passes to get().
+    template <typename StorageKey>
+    static LogicalResult
+    verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.getTypeList(), key.isPacked());
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;

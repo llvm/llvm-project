@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.4.1",
+  "version": "0.6.1",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -660,7 +660,7 @@
                   "Launch the program inside an external terminal window."
                 ],
                 "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
-                "default": "internalConsole"
+                "default": "integratedTerminal"
               },
               "stdio": {
                 "type": "array",

@@ -17,8 +17,6 @@ target triple = "armv7--linux-gnueabi"
 define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnone %lim) {
 ; ENABLE-LABEL: wrongUseOfPostDominate:
 ; ENABLE:       @ %bb.0: @ %entry
-; ENABLE-NEXT:    .save {r11, lr}
-; ENABLE-NEXT:    push {r11, lr}
 ; ENABLE-NEXT:    cmn r1, #1
 ; ENABLE-NEXT:    ble .LBB0_7
 ; ENABLE-NEXT:  @ %bb.1: @ %while.cond.preheader
@@ -26,8 +24,8 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE-NEXT:    beq .LBB0_6
 ; ENABLE-NEXT:  @ %bb.2: @ %while.cond.preheader
 ; ENABLE-NEXT:    cmp r0, r2
-; ENABLE-NEXT:    pophs {r11, pc}
-; ENABLE-NEXT:  .LBB0_3: @ %while.body.preheader
+; ENABLE-NEXT:    bhs .LBB0_6
+; ENABLE-NEXT:  @ %bb.3: @ %while.body.preheader
 ; ENABLE-NEXT:    movw r12, :lower16:skip
 ; ENABLE-NEXT:    sub r1, r1, #1
 ; ENABLE-NEXT:    movt r12, :upper16:skip
@@ -38,70 +36,73 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE-NEXT:    add r0, r0, r3
 ; ENABLE-NEXT:    sub r3, r1, #1
 ; ENABLE-NEXT:    cmp r3, r1
-; ENABLE-NEXT:    bhs .LBB0_6
-; ENABLE-NEXT:  @ %bb.5: @ %while.body
+; ENABLE-NEXT:    bxhs lr
+; ENABLE-NEXT:  .LBB0_5: @ %while.body
 ; ENABLE-NEXT:    @ in Loop: Header=BB0_4 Depth=1
 ; ENABLE-NEXT:    mov r1, r3
 ; ENABLE-NEXT:    cmp r0, r2
 ; ENABLE-NEXT:    blo .LBB0_4
 ; ENABLE-NEXT:  .LBB0_6: @ %if.end29
-; ENABLE-NEXT:    pop {r11, pc}
-; ENABLE-NEXT:  .LBB0_7: @ %while.cond2.outer
+; ENABLE-NEXT:    bx lr
+; ENABLE-NEXT:  .LBB0_7:
+; ENABLE-NEXT:    .save {r11, lr}
+; ENABLE-NEXT:    push {r11, lr}
+; ENABLE-NEXT:  .LBB0_8: @ %while.cond2.outer
 ; ENABLE-NEXT:    @ =>This Loop Header: Depth=1
-; ENABLE-NEXT:    @ Child Loop BB0_8 Depth 2
-; ENABLE-NEXT:    @ Child Loop BB0_15 Depth 2
+; ENABLE-NEXT:    @ Child Loop BB0_9 Depth 2
+; ENABLE-NEXT:    @ Child Loop BB0_16 Depth 2
 ; ENABLE-NEXT:    mov r3, r0
-; ENABLE-NEXT:  .LBB0_8: @ %while.cond2
-; ENABLE-NEXT:    @ Parent Loop BB0_7 Depth=1
+; ENABLE-NEXT:  .LBB0_9: @ %while.cond2
+; ENABLE-NEXT:    @ Parent Loop BB0_8 Depth=1
 ; ENABLE-NEXT:    @ => This Inner Loop Header: Depth=2
 ; ENABLE-NEXT:    add r1, r1, #1
 ; ENABLE-NEXT:    cmp r1, #1
-; ENABLE-NEXT:    beq .LBB0_18
-; ENABLE-NEXT:  @ %bb.9: @ %while.body4
-; ENABLE-NEXT:    @ in Loop: Header=BB0_8 Depth=2
+; ENABLE-NEXT:    beq .LBB0_19
+; ENABLE-NEXT:  @ %bb.10: @ %while.body4
+; ENABLE-NEXT:    @ in Loop: Header=BB0_9 Depth=2
 ; ENABLE-NEXT:    cmp r3, r2
-; ENABLE-NEXT:    bls .LBB0_8
-; ENABLE-NEXT:  @ %bb.10: @ %if.then7
-; ENABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
+; ENABLE-NEXT:    bls .LBB0_9
+; ENABLE-NEXT:  @ %bb.11: @ %if.then7
+; ENABLE-NEXT:    @ in Loop: Header=BB0_8 Depth=1
 ; ENABLE-NEXT:    mov r0, r3
 ; ENABLE-NEXT:    ldrb r12, [r0, #-1]!
 ; ENABLE-NEXT:    sxtb lr, r12
 ; ENABLE-NEXT:    cmn lr, #1
-; ENABLE-NEXT:    bgt .LBB0_7
-; ENABLE-NEXT:  @ %bb.11: @ %if.then7
-; ENABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
+; ENABLE-NEXT:    bgt .LBB0_8
+; ENABLE-NEXT:  @ %bb.12: @ %if.then7
+; ENABLE-NEXT:    @ in Loop: Header=BB0_8 Depth=1
 ; ENABLE-NEXT:    cmp r0, r2
-; ENABLE-NEXT:    bls .LBB0_7
-; ENABLE-NEXT:  @ %bb.12: @ %land.rhs14.preheader
-; ENABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
-; ENABLE-NEXT:    cmn lr, #1
-; ENABLE-NEXT:    bgt .LBB0_7
+; ENABLE-NEXT:    bls .LBB0_8
 ; ENABLE-NEXT:  @ %bb.13: @ %land.rhs14.preheader
-; ENABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
+; ENABLE-NEXT:    @ in Loop: Header=BB0_8 Depth=1
+; ENABLE-NEXT:    cmn lr, #1
+; ENABLE-NEXT:    bgt .LBB0_8
+; ENABLE-NEXT:  @ %bb.14: @ %land.rhs14.preheader
+; ENABLE-NEXT:    @ in Loop: Header=BB0_8 Depth=1
 ; ENABLE-NEXT:    cmp r12, #191
-; ENABLE-NEXT:    bhi .LBB0_7
-; ENABLE-NEXT:  @ %bb.14: @ %while.body24.preheader
-; ENABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
+; ENABLE-NEXT:    bhi .LBB0_8
+; ENABLE-NEXT:  @ %bb.15: @ %while.body24.preheader
+; ENABLE-NEXT:    @ in Loop: Header=BB0_8 Depth=1
 ; ENABLE-NEXT:    sub r3, r3, #2
-; ENABLE-NEXT:  .LBB0_15: @ %while.body24
-; ENABLE-NEXT:    @ Parent Loop BB0_7 Depth=1
+; ENABLE-NEXT:  .LBB0_16: @ %while.body24
+; ENABLE-NEXT:    @ Parent Loop BB0_8 Depth=1
 ; ENABLE-NEXT:    @ => This Inner Loop Header: Depth=2
 ; ENABLE-NEXT:    mov r0, r3
 ; ENABLE-NEXT:    cmp r3, r2
-; ENABLE-NEXT:    bls .LBB0_7
-; ENABLE-NEXT:  @ %bb.16: @ %while.body24.land.rhs14_crit_edge
-; ENABLE-NEXT:    @ in Loop: Header=BB0_15 Depth=2
+; ENABLE-NEXT:    bls .LBB0_8
+; ENABLE-NEXT:  @ %bb.17: @ %while.body24.land.rhs14_crit_edge
+; ENABLE-NEXT:    @ in Loop: Header=BB0_16 Depth=2
 ; ENABLE-NEXT:    mov r3, r0
 ; ENABLE-NEXT:    ldrsb lr, [r3], #-1
 ; ENABLE-NEXT:    cmn lr, #1
 ; ENABLE-NEXT:    uxtb r12, lr
-; ENABLE-NEXT:    bgt .LBB0_7
-; ENABLE-NEXT:  @ %bb.17: @ %while.body24.land.rhs14_crit_edge
-; ENABLE-NEXT:    @ in Loop: Header=BB0_15 Depth=2
+; ENABLE-NEXT:    bgt .LBB0_8
+; ENABLE-NEXT:  @ %bb.18: @ %while.body24.land.rhs14_crit_edge
+; ENABLE-NEXT:    @ in Loop: Header=BB0_16 Depth=2
 ; ENABLE-NEXT:    cmp r12, #192
-; ENABLE-NEXT:    blo .LBB0_15
-; ENABLE-NEXT:    b .LBB0_7
-; ENABLE-NEXT:  .LBB0_18:
+; ENABLE-NEXT:    blo .LBB0_16
+; ENABLE-NEXT:    b .LBB0_8
+; ENABLE-NEXT:  .LBB0_19:
 ; ENABLE-NEXT:    mov r0, r3
 ; ENABLE-NEXT:    pop {r11, pc}
 ;

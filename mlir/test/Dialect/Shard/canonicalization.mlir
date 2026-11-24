@@ -246,3 +246,28 @@ func.func @test_duplicate_shardops_diff() -> (tensor<1024x1024xf32>, tensor<1024
   // CHECK-NEXT: return [[vsharded_1]], [[vsharded]] : tensor<1024x1024xf32>, tensor<1024x1024xf32>
   return %sharded_1, %sharded_2 : tensor<1024x1024xf32>, tensor<1024x1024xf32>
 }
+
+// CHECK-LABEL: func @test_duplicate_shardops_different_blocks
+// CHECK-SAME: [[varg0:%.*]]: tensor<1024x1024xf32>, [[varg1:%.*]]: tensor<1024x1024xf32>, [[varg2:%.*]]: i1
+func.func @test_duplicate_shardops_different_blocks(%arg0: tensor<1024x1024xf32>, %arg1: tensor<1024x1024xf32>, %arg2: i1) -> (tensor<1024x1024xf32>, tensor<1024x1024xf32>) {
+  // CHECK-NEXT: [[vsharding:%.*]] = shard.sharding @grid4x4 split_axes = {{\[\[}}0]] : !shard.sharding
+  %sharding_1 = shard.sharding @grid4x4 split_axes = [[0]] : !shard.sharding
+  // CHECK-NEXT: [[vsharded:%.*]] = shard.shard [[varg0]] to [[vsharding]] : tensor<1024x1024xf32>
+  %sharded_1 = shard.shard %arg0 to %sharding_1 : tensor<1024x1024xf32>
+  // CHECK-NEXT: [[vif:%.*]] = scf.if [[varg2]] -> (tensor<1024x1024xf32>) {
+  %0 = scf.if %arg2 -> (tensor<1024x1024xf32>) {
+    // CHECK-NEXT: [[vsharding_0:%.*]] = shard.sharding @grid4x4 split_axes = {{\[\[}}1]] : !shard.sharding
+    %sharding_2 = shard.sharding @grid4x4 split_axes = [[1]] : !shard.sharding
+    // CHECK-NEXT: [[vsharded_0:%.*]] = shard.shard [[varg0]] to [[vsharding_0]] : tensor<1024x1024xf32>
+    %sharded_2 = shard.shard %arg0 to %sharding_2 : tensor<1024x1024xf32>
+    // CHECK-NEXT: scf.yield [[vsharded_0]] : tensor<1024x1024xf32>
+    scf.yield %sharded_2 : tensor<1024x1024xf32>
+  // CHECK-NEXT: } else {
+  } else {
+    // CHECK-NEXT: scf.yield [[varg1]] : tensor<1024x1024xf32>
+    scf.yield %arg1 : tensor<1024x1024xf32>
+  // CHECK-NEXT: }
+  }
+  // CHECK-NEXT: return [[vsharded]], [[vif]] : tensor<1024x1024xf32>, tensor<1024x1024xf32>
+  return %sharded_1, %0 : tensor<1024x1024xf32>, tensor<1024x1024xf32>
+}

@@ -18,9 +18,6 @@
 #include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
-#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -377,6 +374,14 @@ static std::string formatJumpTableEntrySize(JumpTableEntrySize EntrySize) {
     RETURN_CASE(JumpTableEntrySize, Int16ShiftLeft, "int16shl");
   }
   return formatUnknownEnum(EntrySize);
+}
+
+static std::string formatAssociationKind(AssociationKind Kind) {
+  switch (Kind) {
+    RETURN_CASE(AssociationKind, None, "none");
+    RETURN_CASE(AssociationKind, Coroutine, "coroutine");
+  }
+  return formatUnknownEnum(Kind);
 }
 
 Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record) {
@@ -995,5 +1000,13 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   P.formatLine("function = {0}, name = {1}", typeIndex(JumpTable.Function),
                JumpTable.Name);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            AssociationSym &Assoc) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("kind = {0}, addr = {1}", formatAssociationKind(Assoc.AssocKind),
+               formatSegmentOffset(Assoc.Segment, Assoc.CodeOffset));
   return Error::success();
 }

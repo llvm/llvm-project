@@ -1,8 +1,0 @@
-.. _omp102:
-
-Parallel region is not called from a unique kernel. Will not attempt to rewrite the state machine. [OMP102]
-===========================================================================================================
-
-This analysis remark indicates that a given parallel region is called by
-multiple kernels. This prevents the compiler from optimizing it to a single
-kernel and rewrite the state machine.

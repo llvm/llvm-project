@@ -260,7 +260,7 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
   SmallString<1024> AbsolutePath = RelativePath;
   if (auto EC = FS.makeAbsolute(AbsolutePath))
     return llvm::errorCodeToError(EC);
-  llvm::sys::path::native(AbsolutePath);
+  llvm::sys::path::make_preferred(AbsolutePath);
   return std::string(AbsolutePath);
 }
 

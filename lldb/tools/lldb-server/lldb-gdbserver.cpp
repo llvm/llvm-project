@@ -11,7 +11,9 @@
 #include <cstdio>
 #include <cstring>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#else
 #include <csignal>
 #include <unistd.h>
 #endif
@@ -165,6 +167,11 @@ llvm::Error handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server,
   FileSystem::Instance().Resolve(cwd_spec);
   info.SetWorkingDirectory(cwd_spec);
   info.GetEnvironment() = Host::GetEnvironment();
+#ifdef _WIN32
+  // A 0x0 window size makes the inferior use pipes instead of a ConPTY.
+  if (::getenv("LLDB_LAUNCH_FLAG_USE_PIPES"))
+    info.SetSTDIOWindowSize(0, 0);
+#endif
 
   gdb_server.SetLaunchInfo(info);
 
@@ -300,24 +307,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "LLGSOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LLGSOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "LLGSOptions.inc"
-#undef OPTION
-};
-
-class LLGSOptTable : public opt::GenericOptTable {
+class LLGSOptTable : public opt::OptTable {
 public:
-  LLGSOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLGSOptTable() : opt::OptTable(optionTables()) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =
@@ -423,6 +418,16 @@ int main_gdbserver(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     unnamed_pipe = (pipe_t)Arg;
+#ifdef _WIN32
+    if (::GetFileType((HANDLE)unnamed_pipe) != FILE_TYPE_PIPE) {
+      WithColor::error() << "'--pipe' argument is not a pipe handle\n"
+                         << HelpText;
+      return EXIT_FAILURE;
+    }
+    // Prevent the inferior we later launch from inheriting this pipe's write
+    // handle.
+    ::SetHandleInformation((HANDLE)unnamed_pipe, HANDLE_FLAG_INHERIT, 0);
+#endif
   }
   if (Args.hasArg(OPT_fd)) {
     int64_t fd;
@@ -437,7 +442,7 @@ int main_gdbserver(int argc, char *argv[]) {
           log_file, log_channels,
           LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
               LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION))
-    return -1;
+    return EXIT_FAILURE;
 
   std::vector<llvm::StringRef> Inputs;
   for (opt::Arg *Arg : Args.filtered(OPT_INPUT))
@@ -452,7 +457,8 @@ int main_gdbserver(int argc, char *argv[]) {
   }
 
   NativeProcessManager manager(mainloop);
-  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager,
+                                              "lldb-server.native");
 
 #if defined(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
   gdb_server.InstallPlugin(

@@ -16,10 +16,8 @@
 //===----------------------------------------------------------------------===//
 #include "Hexagon.h"
 #include "HexagonGlobalRegion.h"
-#include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
 #include "HexagonVLIWPacketizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -27,7 +25,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
-#include "llvm/CodeGen/LatencyPriorityQueue.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -39,17 +36,14 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -113,11 +107,11 @@ static cl::opt<unsigned> SecondaryCandidateQueueSize("pull-up-sec-queue-size",
                                                      cl::Hidden, cl::init(2));
 
 static cl::opt<bool> PostPullUpOpt(
-    "post-pull-up-opt", cl::Hidden, cl::Optional, cl::init(true),
+    "post-pull-up-opt", cl::Hidden, cl::init(true),
     cl::desc("Enable opt. exposed by pull-up e.g., remove redundant jumps"));
 
 static cl::opt<bool> SpeculateNonPredInsn(
-    "speculate-non-pred-insn", cl::Hidden, cl::Optional, cl::init(true),
+    "speculate-non-pred-insn", cl::Hidden, cl::init(true),
     cl::desc("Speculate non-predicable instructions in parent BB"));
 
 static cl::opt<bool>
@@ -132,12 +126,8 @@ static cl::opt<bool>
 static cl::opt<bool>
     ForceNoopHazards("force-noop-hazards", cl::Hidden, cl::init(false),
                      cl::desc("Force noop hazards in scheduler"));
-static cl::opt<bool> OneFloatPerPacket(
-    "single-float-packet", cl::Hidden,
-    cl::desc("Allow only one single floating point instruction in a packet"));
-static cl::opt<bool> OneComplexPerPacket(
-    "single-complex-packet", cl::Hidden,
-    cl::desc("Allow only one complex instruction in a packet"));
+extern cl::opt<bool> OneFloatPerPacket;
+extern cl::opt<bool> OneComplexPerPacket;
 
 namespace llvm {
 FunctionPass *createHexagonGlobalScheduler();
@@ -437,8 +427,6 @@ private:
   bool canAddMIToThisPacket(
       MachineInstr *MI,
       SmallVector<MachineInstr *, HEXAGON_PACKET_SIZE> &Bundle);
-
-  bool CanPromoteToDotNew(MachineInstr *MI, unsigned Reg);
 
   bool pullUpPeelBBLoop(MachineBasicBlock *PredBB, MachineBasicBlock *LoopBB);
 
@@ -1125,88 +1113,6 @@ static inline bool isGlobalMemoryObject(MachineInstr *MI) {
   return false;
 }
 
-// This MI might have either incomplete info, or known to be unsafe
-// to deal with (i.e. volatile object).
-static inline bool isUnsafeMemoryObject(MachineInstr *MI) {
-  if (!MI || MI->memoperands_empty())
-    return true;
-
-  // We purposefully do no check for hasOneMemOperand() here
-  // in hope to trigger an assert downstream in order to
-  // finish implementation.
-  if ((*MI->memoperands_begin())->isVolatile() || MI->hasUnmodeledSideEffects())
-    return true;
-
-  if (!(*MI->memoperands_begin())->getValue())
-    return true;
-
-  return false;
-}
-
-/// This returns true if the two MIs could be memory dependent.
-static bool MIsNeedChainEdge(AliasAnalysis *AA, const TargetInstrInfo *TII,
-                             MachineInstr *MIa, MachineInstr *MIb) {
-  // Cover a trivial case - no edge is need to itself.
-  if (MIa == MIb)
-    return false;
-
-  if (TII->areMemAccessesTriviallyDisjoint(*MIa, *MIb))
-    return false;
-
-  if (isUnsafeMemoryObject(MIa) || isUnsafeMemoryObject(MIb))
-    return true;
-
-  // If we are dealing with two "normal" loads, we do not need an edge
-  // between them - they could be reordered.
-  if (!MIa->mayStore() && !MIb->mayStore())
-    return false;
-
-  // To this point analysis is generic. From here on we do need AA.
-  if (!AA)
-    return true;
-
-  MachineMemOperand *MMOa = *MIa->memoperands_begin();
-  MachineMemOperand *MMOb = *MIb->memoperands_begin();
-
-  // TODO: Need to handle multiple memory operands.
-  // if either instruction has more than one memory operand, punt.
-  if (!(MIa->hasOneMemOperand() && MIb->hasOneMemOperand()))
-    return true;
-
-  if (!MMOa->getSize().hasValue() || !MMOb->getSize().hasValue())
-    return true;
-
-  assert((MMOa->getOffset() >= 0) && "Negative MachineMemOperand offset");
-  assert((MMOb->getOffset() >= 0) && "Negative MachineMemOperand offset");
-  assert((MMOa->getSize().hasValue() && MMOb->getSize().hasValue()) &&
-         "Size 0 memory access");
-
-  // If the base address of the two memoperands is the same. For instance,
-  // x and x+4, then we can easily reason about them using the offset and size
-  // of access.
-  if (MMOa->getValue() == MMOb->getValue()) {
-    if (MMOa->getOffset() > MMOb->getOffset()) {
-      uint64_t offDiff = MMOa->getOffset() - MMOb->getOffset();
-      return !(MMOb->getSize().getValue() <= offDiff);
-    } else if (MMOa->getOffset() < MMOb->getOffset()) {
-      uint64_t offDiff = MMOb->getOffset() - MMOa->getOffset();
-      return !(MMOa->getSize().getValue() <= offDiff);
-    }
-    // MMOa->getOffset() == MMOb->getOffset()
-    return true;
-  }
-
-  int64_t MinOffset = std::min(MMOa->getOffset(), MMOb->getOffset());
-  int64_t Overlapa = MMOa->getSize().getValue() + MMOa->getOffset() - MinOffset;
-  int64_t Overlapb = MMOb->getSize().getValue() + MMOb->getOffset() - MinOffset;
-
-  AliasResult AAResult =
-      AA->alias(MemoryLocation(MMOa->getValue(), Overlapa, MMOa->getAAInfo()),
-                MemoryLocation(MMOb->getValue(), Overlapb, MMOb->getAAInfo()));
-
-  return (AAResult != AliasResult::NoAlias);
-}
-
 /// Gather register def/uses from MI.
 /// This treats possible (predicated) defs
 /// as actually happening ones (conservatively).
@@ -1512,7 +1418,7 @@ bool HexagonGlobalSchedulerImpl::canAddMIToThisPacket(
     if ((MI->mayLoad() && (*BI)->mayStore()) ||
         (MI->mayStore() && (*BI)->mayLoad()) ||
         (MI->mayStore() && (*BI)->mayStore())) {
-      if (MIsNeedChainEdge(AA, TII, MI, *BI)) {
+      if (QII->areMemAccessesDependent(AA, MI, *BI)) {
         LLVM_DEBUG(dbgs() << "\tAliasing detected:\n\t"; MI->dump();
                    dbgs() << "\t"; (*BI)->dump());
         return false;
@@ -1611,7 +1517,7 @@ bool HexagonGlobalSchedulerImpl::ReorderDependencyTest(MachineInstr *MIa,
   if (((MIa->mayLoad() && MIb->mayStore()) ||
        (MIa->mayStore() && MIb->mayLoad()) ||
        (MIa->mayStore() && MIb->mayStore())) &&
-      MIsNeedChainEdge(AA, TII, MIa, MIb))
+      QII->areMemAccessesDependent(AA, MIa, MIb))
     return true;
 
   return false;
@@ -2442,6 +2348,9 @@ void HexagonGlobalSchedulerImpl::removeInstructionFromExistingBundle(
         if (Head->isBundledWithSucc())
           Head->unbundleFromSucc();
       }
+      // Head is no longer bundled, so none of its reads are internal.
+      for (MachineOperand &MO : Head->all_uses())
+        MO.setIsInternalRead(false);
     } else
       llvm_unreachable("Corrupt bundle");
   }
@@ -4160,8 +4069,7 @@ bool HexagonGlobalSchedulerImpl::pullUpPeelBBLoop(MachineBasicBlock *PredBB,
   MachineInstr *RegMI = &*FMI;
   if (RegMI->isBundle())
     return false;
-  int TfrOpcode = RegMI->getOpcode();
-  if (TfrOpcode != Hexagon::A2_tfr && TfrOpcode != Hexagon::A2_tfr)
+  if (RegMI->getOpcode() != Hexagon::A2_tfr)
     return false;
   if (!(RegMI->getOperand(0).isReg() && RegMI->getOperand(1).isReg()))
     return false;

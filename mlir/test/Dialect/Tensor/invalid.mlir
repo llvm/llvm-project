@@ -699,6 +699,14 @@ func.func @test_empty_reassociation(%arg0: tensor<1x?xf32>) -> tensor<?x10xf32> 
 
 // -----
 
+func.func @expand_shape_empty_reassociation(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  // expected-error@below {{'tensor.expand_shape' op reassociation indices must not be empty}}
+  %0 = tensor.expand_shape %arg0 [[]] output_shape [4] : tensor<4xf32> into tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
 func.func @collapse_shape_requires_ranked_tensor(%arg0: tensor<*xf32>) {
   // expected-error@+1 {{custom op 'tensor.collapse_shape' invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xf32>'}}
   %0 = tensor.collapse_shape %arg0 [[0]] : tensor<*xf32> into tensor<f32>
@@ -723,3 +731,59 @@ func.func @no_fold_invalid_collapse() -> tensor<i64> {
     return %0 : tensor<i64>
 }
 
+// -----
+
+func.func @pad_negative_low(%arg0: tensor<10xf32>, %arg1: f32) -> tensor<8xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -2}}
+  %0 = tensor.pad %arg0 low[-2] high[0] {
+  ^bb0(%arg2: index):
+    tensor.yield %arg1 : f32
+  } : tensor<10xf32> to tensor<8xf32>
+  return %0 : tensor<8xf32>
+}
+
+// -----
+
+func.func @pad_negative_high(%arg0: tensor<?x4xf32>, %arg1: f32) -> tensor<?x3xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -1}}
+  %0 = tensor.pad %arg0 low[0, 0] high[0, -1] {
+  ^bb0(%arg2: index, %arg3: index):
+    tensor.yield %arg1 : f32
+  } : tensor<?x4xf32> to tensor<?x3xf32>
+  return %0 : tensor<?x3xf32>
+}
+
+// -----
+
+func.func @pad_negative_dynamic_dim(%arg0: tensor<?xf32>, %arg1: f32) -> tensor<?xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -1}}
+  %0 = tensor.pad %arg0 low[-1] high[0] {
+  ^bb0(%arg2: index):
+    tensor.yield %arg1 : f32
+  } : tensor<?xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+func.func @collapse_shape_num_elements_overflow(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.collapse_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.collapse_shape %arg0 [[0], [1]] : tensor<4611686018427387904x2xf32> into tensor<4611686018427387904x2xf32>
+  return
+}
+
+// -----
+
+func.func @collapse_shape_num_elements_overflow_to_scalar(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.collapse_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.collapse_shape %arg0 [] : tensor<4611686018427387904x2xf32> into tensor<f32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_num_elements_overflow(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.expand_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.expand_shape %arg0 [[0], [1]] output_shape [4611686018427387904, 2] : tensor<4611686018427387904x2xf32> into tensor<4611686018427387904x2xf32>
+  return
+}

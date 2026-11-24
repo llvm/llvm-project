@@ -137,7 +137,7 @@ static void diagnoseInvalidFormatString(const CallBase *CI) {
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   Type *I32Ty = Type::getInt32Ty(Ctx);
 
   // Instead of creating global variables, the printf format strings are
@@ -211,8 +211,12 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             ArgSize = 4;
         }
       }
-      if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType))
-        ArgSize = alignTo(getAsConstantStr(Arg).size() + 1, 4);
+      if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
+        // Match the store loop below: ceil(len / 4) dwords, or one dword
+        // for the empty string. The trailing NUL is not stored.
+        StringRef Str = getAsConstantStr(Arg);
+        ArgSize = Str.empty() ? 4 : alignTo(Str.size(), 4);
+      }
 
       LLVM_DEBUG(dbgs() << "Printf ArgSize (in buffer) = " << ArgSize
                         << " for type: " << *ArgType << '\n');

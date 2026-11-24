@@ -544,15 +544,15 @@ llvm.func @caller(%arg0: !llvm.ptr) {
   %2 = llvm.insertelement %arg0, %1[1] : !descriptor
 
   // The offset is set up to zero.
-  %3 = llvm.mlir.constant(0 : index) : i64
+  %3 = llvm.mlir.constant(0 : i64) : i64
   %4 = llvm.insertelement %3, %2[2] : !descriptor
 
   // The sizes and strides are derived from the statically known values.
-  %5 = llvm.mlir.constant(2 : index) : i64
-  %6 = llvm.mlir.constant(4 : index) : i64
+  %5 = llvm.mlir.constant(2 : i64) : i64
+  %6 = llvm.mlir.constant(4 : i64) : i64
   %7 = llvm.insertelement %5, %4[3, 0] : !descriptor
   %8 = llvm.insertelement %6, %7[3, 1] : !descriptor
-  %9 = llvm.mlir.constant(1 : index) : i64
+  %9 = llvm.mlir.constant(1 : i64) : i64
   %10 = llvm.insertelement %9, %8[4, 0] : !descriptor
   %11 = llvm.insertelement %10, %9[4, 1] : !descriptor
 
@@ -667,7 +667,7 @@ llvm.func @qux(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
   %7 = llvm.insertvalue %arg6, %6[4, 1] : !llvm.memref_2d
 
   // Store the descriptor in a stack-allocated space.
-  %8 = llvm.mlir.constant(1 : index) : i64
+  %8 = llvm.mlir.constant(1 : i64) : i64
   %9 = llvm.alloca %8 x !llvm.memref_2d
      : (i64) -> !llvm.ptr
   llvm.store %7, %9 : !llvm.memref_2d, !llvm.ptr
@@ -841,11 +841,11 @@ is transformed into the equivalent of the following code:
 // When the stride or, in absence of explicit strides, the trailing sizes are
 // known statically, this value is used as a constant. The natural value of
 // strides is the product of all sizes following the current dimension.
-%stride2 = llvm.mlir.constant(32 : index) : i64
+%stride2 = llvm.mlir.constant(32 : i64) : i64
 %addr2 = arith.muli %stride2, %2 : i64
 %addr3 = arith.addi %addr1, %addr2 : i64
 
-%stride3 = llvm.mlir.constant(8 : index) : i64
+%stride3 = llvm.mlir.constant(8 : i64) : i64
 %addr4 = arith.muli %stride3, %3 : i64
 %addr5 = arith.addi %addr3, %addr4 : i64
 

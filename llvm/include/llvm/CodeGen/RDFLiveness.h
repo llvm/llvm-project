@@ -18,7 +18,6 @@
 #include "llvm/MC/LaneBitmask.h"
 #include <map>
 #include <set>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -57,7 +56,7 @@ public:
   using LiveMapType = RegisterAggrMap<MachineBasicBlock *>;
   using NodeRef = detail::NodeRef;
   using NodeRefSet = std::unordered_set<NodeRef>;
-  using RefMap = std::unordered_map<RegisterId, NodeRefSet>;
+  using RefMap = DenseMap<RegisterId, NodeRefSet>;
 
   Liveness(MachineRegisterInfo &mri, const DataFlowGraph &g)
       : DFG(g), TRI(g.getTRI()), PRI(g.getPRI()), MDT(g.getDT()),

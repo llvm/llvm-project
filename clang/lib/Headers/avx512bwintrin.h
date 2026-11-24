@@ -1872,11 +1872,9 @@ _mm512_mask_permutexvar_epi16(__m512i __W, __mmask32 __M, __m512i __A,
                                   (__v32hi)_mm512_dbsad_epu8((A), (B), (imm)), \
                                   (__v32hi)_mm512_setzero_si512()))
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_sad_epu8 (__m512i __A, __m512i __B)
-{
- return (__m512i) __builtin_ia32_psadbw512 ((__v64qi) __A,
-               (__v64qi) __B);
+static __inline__ __m512i
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_sad_epu8(__m512i __A, __m512i __B) {
+  return (__m512i)__builtin_ia32_psadbw512((__v64qu)__A, (__v64qu)__B);
 }
 
 #undef __DEFAULT_FN_ATTRS512

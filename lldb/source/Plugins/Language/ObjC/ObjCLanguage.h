@@ -137,7 +137,7 @@ public:
   //  variant_names[3] => "-[NSString myStringWithCString:]"
   // Also returns the FunctionNameType of each possible name.
   std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const override;
+  GetMethodNameVariants(llvm::StringRef method_name) const override;
 
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
@@ -146,9 +146,18 @@ public:
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
+  HardcodedFormatters::HardcodedSyntheticFinder
+  GetHardcodedSynthetics() override;
+
   std::vector<FormattersMatchCandidate>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;
+
+  std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const override;
+
+  bool IsCategoryApplicable(lldb::LanguageType category_language,
+                            lldb::LanguageType valobj_language) const override;
 
   std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
 

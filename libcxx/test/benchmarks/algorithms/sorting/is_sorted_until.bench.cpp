@@ -17,16 +17,13 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   auto std_is_sorted_until      = [](auto first, auto last) { return std::is_sorted_until(first, last); };
   auto std_is_sorted_until_pred = [](auto first, auto last) {
-    return std::is_sorted_until(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::is_sorted_until(first, last, [](auto x, auto y) { return x < y; });
   };
 
   // Benchmark {std,ranges}::is_sorted_until on a sorted sequence (the worst case).
@@ -34,7 +31,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto is_sorted_until) {
       benchmark::RegisterBenchmark(
           name,
-          [is_sorted_until](auto& st) {
+          [is_sorted_until](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             std::vector<ValueType> data;

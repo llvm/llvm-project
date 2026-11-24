@@ -72,6 +72,7 @@ target(liblldb_type, "liblldb") {
     "SBFrameList.cpp",
     "SBFunction.cpp",
     "SBHostOS.cpp",
+    "SBInitializationOptions.cpp",
     "SBInstruction.cpp",
     "SBInstructionList.cpp",
     "SBLanguageRuntime.cpp",
@@ -88,6 +89,7 @@ target(liblldb_type, "liblldb") {
     "SBProcessInfo.cpp",
     "SBProcessInfoList.cpp",
     "SBProgress.cpp",
+    "SBProtocolServer.cpp",
     "SBQueue.cpp",
     "SBQueueItem.cpp",
     "SBReproducer.cpp",
@@ -122,6 +124,7 @@ target(liblldb_type, "liblldb") {
     "SBVariablesOptions.cpp",
     "SBWatchpoint.cpp",
     "SBWatchpointOptions.cpp",
+    "ScriptInterpreterBridge.cpp",
     "SystemInitializerFull.cpp",
   ]
 

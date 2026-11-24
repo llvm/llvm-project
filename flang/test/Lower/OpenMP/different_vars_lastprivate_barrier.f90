@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -mmlir --enable-delayed-privatization-staging=true -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 subroutine first_and_lastprivate(var)
   integer i
@@ -24,12 +24,12 @@ end subroutine
 ! CHECK: omp.private {type = private} @[[I_PRIVATIZER:.*Ei_private_i32]] : i32
 
 ! CHECK:     func.func @{{.*}}first_and_lastprivate({{.*}})
-! CHECK:       %[[ORIG_I_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "{{.*}}Ei"}
+! CHECK:       %[[ORIG_I_DECL:.*]]:2 = hlfir.declare {{.*}} uniq_name("{{.*}}Ei")
 ! CHECK:       omp.parallel {
 ! CHECK-NOT:      omp.barrier
 ! CHECK:          omp.wsloop private(@[[I_PRIVATIZER]] %[[ORIG_I_DECL]]#0 -> %[[I_ARG:.*]], @[[VAR_PRIVATIZER]] {{.*}}) {
 ! CHECK:            omp.loop_nest {{.*}} {
-! CHECK:              %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[I_ARG]] {uniq_name = "{{.*}}Ei"}
+! CHECK:              %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[I_ARG]] uniq_name("{{.*}}Ei")
 ! CHECK:              fir.if %{{.*}} {
 ! CHECK:                %[[PRIV_I_VAL:.*]] = fir.load %[[PRIV_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                hlfir.assign %[[PRIV_I_VAL]] to %[[ORIG_I_DECL]]#0

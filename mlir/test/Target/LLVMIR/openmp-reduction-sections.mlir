@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
 omp.declare_reduction @add_reduction_f32 : f32 init {
 ^bb0(%arg0: f32):
@@ -6,7 +6,7 @@ omp.declare_reduction @add_reduction_f32 : f32 init {
   omp.yield(%0 : f32)
 } combiner {
 ^bb0(%arg0: f32, %arg1: f32):
-  %0 = llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<contract>} : f32
+  %0 = llvm.fadd %arg0, %arg1 fastmath<contract> : f32
   omp.yield(%0 : f32)
 }  
 llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.internal_name = "_QPsections"} {
@@ -17,14 +17,14 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
       omp.section {
       ^bb0(%arg2: !llvm.ptr):
         %2 = llvm.load %arg2 : !llvm.ptr -> f32
-        %3 = llvm.fadd %2, %1  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %3 = llvm.fadd %2, %1 fastmath<contract> : f32
         llvm.store %3, %arg2 : f32, !llvm.ptr
         omp.terminator
       }
       omp.section {
       ^bb0(%arg2: !llvm.ptr):
         %2 = llvm.load %arg2 : !llvm.ptr -> f32
-        %3 = llvm.fadd %2, %0  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %3 = llvm.fadd %2, %0 fastmath<contract> : f32
         llvm.store %3, %arg2 : f32, !llvm.ptr
         omp.terminator
       }
@@ -157,3 +157,34 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_78:.*]] = fadd contract float %[[VAL_73]], %[[VAL_77]]
 // CHECK:         store float %[[VAL_78]], ptr %[[VAL_72]], align 4
 // CHECK:         ret void
+
+// -----
+
+omp.declare_reduction @add_reduction_f32 : f32 init {
+^bb0(%arg0: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield(%0 : f32)
+} combiner {
+^bb0(%arg0: f32, %arg1: f32):
+  %0 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield(%0 : f32)
+}
+
+llvm.func @sections_nowait(%sum: !llvm.ptr) {
+  omp.sections nowait reduction(@add_reduction_f32 %sum -> %private : !llvm.ptr) {
+    omp.section {
+    ^bb0(%value: !llvm.ptr):
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @sections_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       call i32 @__kmpc_reduce_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       call void @__kmpc_end_reduce_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       {{^}}}

@@ -74,3 +74,80 @@ for.body:
 for.end:
   ret void
 }
+
+define void @ordered_rdx_non_pow2_fallback(ptr %p, double %x) {
+; CHECK-LABEL: define void @ordered_rdx_non_pow2_fallback(
+; CHECK-SAME: ptr [[P:%.*]], double [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[SUM5:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP5]], <4 x double> splat (double 2.000000e+00), <4 x double> splat (double 3.000000e+00))
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x double> [[TMP6]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP7]], <4 x double> splat (double 2.000000e+00), <4 x double> splat (double 3.000000e+00))
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[TMP8]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP9]], <4 x double> splat (double 2.000000e+00), <4 x double> splat (double 3.000000e+00))
+; CHECK-NEXT:    [[R4:%.*]] = call double @llvm.fmuladd.f64(double [[X]], double 2.000000e+00, double 3.000000e+00)
+; CHECK-NEXT:    [[R5:%.*]] = call double @llvm.fmuladd.f64(double [[X]], double 2.000000e+00, double 3.000000e+00)
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x double> [[TMP10]], i64 0
+; CHECK-NEXT:    [[SUM0:%.*]] = fadd double [[ACC]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x double> [[TMP10]], i64 1
+; CHECK-NEXT:    [[SUM1:%.*]] = fadd double [[SUM0]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x double> [[TMP10]], i64 2
+; CHECK-NEXT:    [[SUM2:%.*]] = fadd double [[SUM1]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x double> [[TMP10]], i64 3
+; CHECK-NEXT:    [[SUM3:%.*]] = fadd double [[SUM2]], [[TMP14]]
+; CHECK-NEXT:    [[SUM4:%.*]] = fadd double [[SUM3]], [[R4]]
+; CHECK-NEXT:    [[SUM5]] = fadd double [[SUM4]], [[R5]]
+; CHECK-NEXT:    br label %[[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %acc = phi double [ 0.000000e+00, %entry ], [ %sum5, %loop ]
+  %l0 = load double, ptr %p, align 8
+  %a0 = fadd double %l0, 1.000000e+00
+  %m0 = call double @llvm.fmuladd.f64(double %a0, double 2.000000e+00, double 3.000000e+00)
+  %b0 = fadd double %m0, 1.000000e+00
+  %n0 = call double @llvm.fmuladd.f64(double %b0, double 2.000000e+00, double 3.000000e+00)
+  %c0 = fadd double %n0, 1.000000e+00
+  %r0 = call double @llvm.fmuladd.f64(double %c0, double 2.000000e+00, double 3.000000e+00)
+  %gep1 = getelementptr i8, ptr %p, i64 8
+  %l1 = load double, ptr %gep1, align 8
+  %a1 = fadd double %l1, 1.000000e+00
+  %m1 = call double @llvm.fmuladd.f64(double %a1, double 2.000000e+00, double 3.000000e+00)
+  %b1 = fadd double %m1, 1.000000e+00
+  %n1 = call double @llvm.fmuladd.f64(double %b1, double 2.000000e+00, double 3.000000e+00)
+  %c1 = fadd double %n1, 1.000000e+00
+  %r1 = call double @llvm.fmuladd.f64(double %c1, double 2.000000e+00, double 3.000000e+00)
+  %a2 = fadd double %x, 1.000000e+00
+  %m2 = call double @llvm.fmuladd.f64(double %a2, double 2.000000e+00, double 3.000000e+00)
+  %b2 = fadd double %m2, 1.000000e+00
+  %n2 = call double @llvm.fmuladd.f64(double %b2, double 2.000000e+00, double 3.000000e+00)
+  %c2 = fadd double %n2, 1.000000e+00
+  %r2 = call double @llvm.fmuladd.f64(double %c2, double 2.000000e+00, double 3.000000e+00)
+  %a3 = fadd double %x, 1.000000e+00
+  %m3 = call double @llvm.fmuladd.f64(double %a3, double 2.000000e+00, double 3.000000e+00)
+  %b3 = fadd double %m3, 1.000000e+00
+  %n3 = call double @llvm.fmuladd.f64(double %b3, double 2.000000e+00, double 3.000000e+00)
+  %c3 = fadd double %n3, 1.000000e+00
+  %r3 = call double @llvm.fmuladd.f64(double %c3, double 2.000000e+00, double 3.000000e+00)
+  %r4 = call double @llvm.fmuladd.f64(double %x, double 2.000000e+00, double 3.000000e+00)
+  %r5 = call double @llvm.fmuladd.f64(double %x, double 2.000000e+00, double 3.000000e+00)
+  %sum0 = fadd double %acc, %r0
+  %sum1 = fadd double %sum0, %r1
+  %sum2 = fadd double %sum1, %r2
+  %sum3 = fadd double %sum2, %r3
+  %sum4 = fadd double %sum3, %r4
+  %sum5 = fadd double %sum4, %r5
+  br label %loop
+}
+
+declare double @llvm.fmuladd.f64(double, double, double)

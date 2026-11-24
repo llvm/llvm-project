@@ -1,7 +1,7 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=bonaire < %s | FileCheck --check-prefix=GFX7 %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck --check-prefix=GFX90A %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck --check-prefix=GFX942 %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgpu7.04-amd-amdhsa < %s | FileCheck --check-prefix=GFX7 %s
+// RUN: llvm-mc -triple=amdgpu9.0a-amd-amdhsa < %s | FileCheck --check-prefix=GFX90A %s
+// RUN: llvm-mc -triple=amdgpu9.42-amd-amdhsa < %s | FileCheck --check-prefix=GFX942 %s
+// RUN: llvm-mc -triple=amdgpu10.10-amd-amdhsa < %s | FileCheck --check-prefix=GFX10 %s
 
 // gfx942 has architected flat scratch enabled.
 

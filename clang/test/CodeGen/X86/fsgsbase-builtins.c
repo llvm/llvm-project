@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +fsgsbase -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +fsgsbase -emit-llvm -o - | FileCheck %s %}
 
 
 #include <immintrin.h>

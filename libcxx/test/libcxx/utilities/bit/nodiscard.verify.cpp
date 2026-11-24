@@ -30,4 +30,14 @@ void func() {
   std::countr_one(0u); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::has_single_bit(0u); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::popcount(0u); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#if TEST_STD_VER >= 29
+  // [bit.shift]
+  std::shl(1, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::shr(1, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+
+  // [bit.rotate]
+  std::rotl(0u, 0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::rotr(0u, 0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

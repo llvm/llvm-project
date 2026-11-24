@@ -108,6 +108,22 @@ StringRef loongarch::getLoongArchABI(const Driver &D, const ArgList &Args,
   case llvm::Triple::GNUF32:
   case llvm::Triple::MuslF32:
     return IsLA32 ? "ilp32f" : "lp64f";
+  case llvm::Triple::UnknownEnvironment: {
+    // Without an environment, the triple implies no ABI. Use the widest
+    // floating-point ABI that the architecture's FPU supports, which is also
+    // what the backend picks when it is given no ABI.
+    std::string ArchName;
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
+      ArchName = A->getValue();
+    std::vector<StringRef> ArchFeatures;
+    llvm::LoongArch::getArchFeatures(
+        postProcessTargetCPUString(ArchName, Triple), ArchFeatures);
+    if (llvm::is_contained(ArchFeatures, "+d"))
+      return IsLA32 ? "ilp32d" : "lp64d";
+    if (llvm::is_contained(ArchFeatures, "+f"))
+      return IsLA32 ? "ilp32f" : "lp64f";
+    return IsLA32 ? "ilp32s" : "lp64s";
+  }
   case llvm::Triple::GNUF64:
     // This was originally permitted (and indeed the canonical way) to
     // represent the {ILP32,LP64}D ABIs, but in Feb 2023 Loongson decided to

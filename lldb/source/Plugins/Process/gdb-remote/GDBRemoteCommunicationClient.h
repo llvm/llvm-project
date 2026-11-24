@@ -20,6 +20,7 @@
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/AcceleratorGDBRemotePackets.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/GDBRemote.h"
@@ -94,7 +95,12 @@ public:
   ///
   /// \param[in] args
   ///     A list of program arguments. The first entry is the program being run.
-  llvm::Error LaunchProcess(const Args &args);
+  ///
+  /// \returns
+  ///     The server's initial stop reply if "vRun" was used, or "OK" from
+  ///     "qLaunchSuccess" if the "A" packet was used. Returns an llvm::Error if
+  ///     launching fails with either packet.
+  llvm::Expected<StringExtractorGDBRemote> LaunchProcess(const Args &args);
 
   /// Sends a "QEnvironment:NAME=VALUE" packet that will build up the
   /// environment that will get used when launching an application
@@ -103,7 +109,7 @@ public:
   /// environment that the inferior should be launched with.
   ///
   /// \param[in] name_equal_value
-  ///     A NULL terminated C string that contains a single environment
+  ///     A null-terminated C string that contains a single environment
   ///     in the format "NAME=VALUE".
   ///
   /// \return
@@ -222,6 +228,12 @@ public:
                                   bool &value_is_offset);
 
   std::vector<lldb::addr_t> GetProcessStandaloneBinaries();
+
+  /// Empty if the server does not support "jAddressSpacesInfo".
+  std::vector<AddressSpaceInfo> GetAddressSpaces();
+
+  /// Whether the server advertised address-space support ("address-spaces+").
+  bool GetAddressSpacesSupported() const { return m_supports_address_spaces; }
 
   void GetRemoteQSupported();
 
@@ -359,6 +371,11 @@ public:
 
   bool GetAcceleratorPluginsSupported();
 
+  /// Whether the WebAssembly stub can be told which module instance to read
+  /// from, which it advertises with "qWasmInstance+" in its qSupported
+  /// response.
+  bool GetWasmInstanceSupported();
+
   /// Send the "jAcceleratorPluginInitialize" packet and return the actions
   /// requested by each accelerator plugin installed in lldb-server. The packet
   /// is only sent if the lldb-server advertised accelerator plugin support via
@@ -368,6 +385,12 @@ public:
   llvm::Expected<std::vector<AcceleratorActions>>
   GetAcceleratorInitializeActions();
 
+  /// Return LLDB-specific settings for this GDB-remote process.
+  ///
+  /// Only sent when the server advertises "lldb-settings+" in response to the
+  /// "qSupported" packet.
+  std::optional<LLDBSettings> GetLLDBSettings();
+
   /// Send the "jAcceleratorPluginBreakpointHit" packet to notify the
   /// accelerator plugin that one of its requested breakpoints was hit, and
   /// return the plugin's response. This is only used when the lldb-server
@@ -376,6 +399,11 @@ public:
   /// that case. Errors are returned for the caller to report.
   llvm::Expected<AcceleratorBreakpointHitResponse>
   AcceleratorBreakpointHit(const AcceleratorBreakpointHitArgs &args);
+
+  /// Returns std::nullopt if the packet failed or the response did not parse.
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args);
 
   LazyBool SupportsAllocDeallocMemory() // const
   {
@@ -503,6 +531,9 @@ public:
   llvm::Expected<std::string> ReadExtFeature(llvm::StringRef object,
                                              llvm::StringRef annex);
 
+  /// Read the siginfo of the given thread using the qXfer:siginfo:read packet.
+  llvm::Expected<std::string> ReadSiginfo(lldb::tid_t tid);
+
   void ServeSymbolLookups(lldb_private::Process *process);
 
   // Sends QPassSignals packet to the server with given signals to ignore.
@@ -606,6 +637,7 @@ protected:
   LazyBool m_supports_error_string_reply = eLazyBoolCalculate;
   LazyBool m_supports_multiprocess = eLazyBoolCalculate;
   LazyBool m_supports_memory_tagging = eLazyBoolCalculate;
+  bool m_supports_address_spaces = false;
   LazyBool m_supports_qSaveCore = eLazyBoolCalculate;
   LazyBool m_uses_native_signals = eLazyBoolCalculate;
   std::optional<xPacketState> m_x_packet_state;
@@ -614,6 +646,8 @@ protected:
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
   LazyBool m_supports_accelerator_plugins = eLazyBoolCalculate;
+  LazyBool m_supports_lldb_settings = eLazyBoolCalculate;
+  LazyBool m_supports_wasm_instance = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,
@@ -650,6 +684,7 @@ protected:
   std::vector<lldb::addr_t> m_binary_addresses;
   llvm::VersionTuple m_os_version;
   llvm::VersionTuple m_maccatalyst_version;
+  std::optional<LLDBSettings> m_lldb_settings;
   std::string m_os_build;
   std::string m_os_kernel;
   std::string m_hostname;

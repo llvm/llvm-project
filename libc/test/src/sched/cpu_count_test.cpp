@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/gettid.h"
+#include "src/sched/sched_clrcpuset.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_getcpucount.h"
 #include "src/sched/sched_getcpuisset.h"
@@ -24,7 +25,7 @@ using LlvmLibcSchedCpuCountTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcSchedCpuCountTest, SmokeTest) {
   cpu_set_t mask;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
+  pid_t tid = LIBC_NAMESPACE::linux_syscalls::gettid();
   ASSERT_GT(tid, pid_t(0));
   ASSERT_THAT(LIBC_NAMESPACE::sched_getaffinity(tid, sizeof(cpu_set_t), &mask),
               Succeeds(0));
@@ -46,4 +47,12 @@ TEST_F(LlvmLibcSchedCpuCountTest, CpuSetMacros) {
   LIBC_NAMESPACE::CPU_SET(1, &mask);
   ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET(1, &mask), 1);
   ASSERT_EQ(LIBC_NAMESPACE::CPU_COUNT(&mask), 1);
+
+  LIBC_NAMESPACE::CPU_CLR(1, &mask);
+  ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET(1, &mask), 0);
+
+  LIBC_NAMESPACE::CPU_SET_S(1, sizeof(cpu_set_t), &mask);
+  ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET_S(1, sizeof(cpu_set_t), &mask), 1);
+  LIBC_NAMESPACE::CPU_CLR_S(1, sizeof(cpu_set_t), &mask);
+  ASSERT_EQ(LIBC_NAMESPACE::CPU_ISSET_S(1, sizeof(cpu_set_t), &mask), 0);
 }

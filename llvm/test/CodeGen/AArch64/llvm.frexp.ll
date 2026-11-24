@@ -316,6 +316,54 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) nounwind {
   ret <2 x i32> %result.1
 }
 
+define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
+; CHECK-LABEL: test_frexp_bf16_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    ldr w0, [sp, #12]
+; CHECK-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    orr w9, w9, #0x400000
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    csel w8, w9, w8, vs
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_bf16_i32:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    // kill: def $h0 killed $h0 def $d0
+; WINDOWS-NEXT:    add x0, sp, #12
+; WINDOWS-NEXT:    shll v0.4s, v0.4h, #16
+; WINDOWS-NEXT:    fcvt d0, s0
+; WINDOWS-NEXT:    bl frexp
+; WINDOWS-NEXT:    fcvtxn s0, d0
+; WINDOWS-NEXT:    mov w8, #32767 // =0x7fff
+; WINDOWS-NEXT:    ldr w0, [sp, #12]
+; WINDOWS-NEXT:    fmov w9, s0
+; WINDOWS-NEXT:    ubfx w10, w9, #16, #1
+; WINDOWS-NEXT:    add w8, w9, w8
+; WINDOWS-NEXT:    add w8, w10, w8
+; WINDOWS-NEXT:    lsr w8, w8, #16
+; WINDOWS-NEXT:    fmov s0, w8
+; WINDOWS-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+  %result = call { bfloat, i32 } @llvm.frexp.bf16.i32(bfloat %a)
+  ret { bfloat, i32 } %result
+}
+
 define { <3 x float>, <3 x i32> } @test_frexp_v3f32_v3i32(<3 x float> %a) nounwind {
 ; CHECK-LABEL: test_frexp_v3f32_v3i32:
 ; CHECK:       // %bb.0:
@@ -1132,18 +1180,5 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
   ret <2 x i32> %result.1
 }
-
-declare { float, i32 } @llvm.frexp.f32.i32(float) #0
-declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>) #0
-declare { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float>) #0
-
-declare { half, i32 } @llvm.frexp.f16.i32(half) #0
-declare { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half>) #0
-
-declare { double, i32 } @llvm.frexp.f64.i32(double) #0
-declare { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double>) #0
-
-declare { half, i16 } @llvm.frexp.f16.i16(half) #0
-declare { <2 x half>, <2 x i16> } @llvm.frexp.v2f16.v2i16(<2 x half>) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

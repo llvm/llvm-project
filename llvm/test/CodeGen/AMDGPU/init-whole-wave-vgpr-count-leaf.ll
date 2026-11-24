@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu12.00--amdpal < %s | FileCheck %s
 
 ; CHECK-LABEL: .shader_functions:
 

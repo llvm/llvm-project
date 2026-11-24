@@ -50,3 +50,18 @@ func.func @sparse_iteration_to_scf(%sp : tensor<4x8xf32, #COO>) -> index {
   }
   return %r1 : index
 }
+
+#DenseCompressed = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
+}>
+
+// CHECK-LABEL:   @sparse_iteration_dense_level
+// CHECK:           scf.for
+func.func @sparse_iteration_dense_level(%sp: tensor<?x?xf64, #DenseCompressed>) {
+  %0 = sparse_tensor.extract_iteration_space %sp lvls = 0
+      : tensor<?x?xf64, #DenseCompressed> -> !sparse_tensor.iter_space<#DenseCompressed, lvls = 0>
+  sparse_tensor.iterate %it in %0 at(%i)
+      : !sparse_tensor.iter_space<#DenseCompressed, lvls = 0> {
+  }
+  return
+}

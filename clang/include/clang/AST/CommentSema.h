@@ -23,7 +23,6 @@
 
 namespace clang {
 class Decl;
-class SourceMgr;
 class Preprocessor;
 
 namespace comments {
@@ -136,11 +135,13 @@ public:
 
   InlineContentComment *actOnUnknownCommand(SourceLocation LocBegin,
                                             SourceLocation LocEnd,
-                                            StringRef CommandName);
+                                            StringRef CommandName,
+                                            CommandMarkerKind CommandMarker);
 
   InlineContentComment *actOnUnknownCommand(SourceLocation LocBegin,
                                             SourceLocation LocEnd,
-                                            unsigned CommandID);
+                                            unsigned CommandID,
+                                            CommandMarkerKind CommandMarker);
 
   TextComment *actOnText(SourceLocation LocBegin,
                          SourceLocation LocEnd,

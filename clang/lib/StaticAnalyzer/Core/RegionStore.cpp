@@ -196,6 +196,12 @@ public:
                              IsMainAnalysis);
   }
 
+  template <typename PredFn>
+  RegionBindingsRef filterClusters(PredFn Pred) const {
+    return RegionBindingsRef(ParentTy::filter(Pred), *CBFactory,
+                             IsMainAnalysis);
+  }
+
   RegionBindingsRef addBinding(BindingKey K, SVal V) const;
 
   RegionBindingsRef addBinding(const MemRegion *R,
@@ -2411,15 +2417,17 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
   if (isa<StackArgumentsSpaceRegion>(MS))
     return svalBuilder.getRegionValueSymbolVal(R);
 
-  // Is 'VD' declared constant?  If so, retrieve the constant value.
-  if (VD->getType().isConstQualified()) {
+  // Is 'VD' declared constant, or is it a function reference whose
+  // binding is necessarily immutable?  If so, retrieve the value
+  // from its initializer.
+  if (VD->getType().isConstQualified() ||
+      VD->getType()->isFunctionReferenceType()) {
     if (const Expr *Init = VD->getAnyInitializer()) {
       if (std::optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
 
-      // If the variable is const qualified and has an initializer but
-      // we couldn't evaluate initializer to a value, treat the value as
-      // unknown.
+      // If the variable has an immutable binding and an initializer but we
+      // couldn't evaluate the initializer, treat the value as unknown.
       return UnknownVal();
     }
   }
@@ -2726,8 +2734,16 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, Init);
   }
 
-  if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
+  // We may get non-CompoundVal accidentally due to imprecise cast logic or
+  // that we are binding a genuinely symbolic/unknown/undefined array value.
+  // Preserve Init as a default binding rather than lossily converting to
+  // UnknownVal(), and handle every non-CompoundVal case exhaustively (like
+  // bindStruct()/bindVector() do) rather than enumerating specific SVal
+  // kinds one at a time.
+  if (!isa<nonloc::CompoundVal>(Init)) {
+    assert((isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init)));
     return bindAggregate(B, R, Init);
+  }
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();
@@ -3153,12 +3169,8 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   // We have now scanned the store, marking reachable regions and symbols
   // as live.  We now remove all the regions that are dead from the store
   // as well as update DSymbols with the set symbols that are now dead.
-  for (const MemRegion *Base : llvm::make_first_range(B)) {
-    // If the cluster has been visited, we know the region has been marked.
-    // Otherwise, remove the dead entry.
-    if (!W.isVisited(Base))
-      B = B.removeCluster(Base);
-  }
+  // A cluster that has been visited has been marked live.
+  B = B.filterClusters([&](const auto &E) { return W.isVisited(E.first); });
 
   return StoreRef(B.asStore(), *this);
 }

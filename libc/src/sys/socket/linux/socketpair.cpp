@@ -26,7 +26,7 @@ LLVM_LIBC_FUNCTION(int, socketpair,
     return -1;
   }
 
-  MSAN_UNPOISON(sv, sizeof(int) * 2);
+  LIBC_MSAN_UNPOISON(sv, sizeof(int) * 2);
 
   return result.value();
 }

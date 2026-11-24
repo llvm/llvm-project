@@ -1,7 +1,7 @@
 # Check if this is a in tree build.
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
-  cmake_minimum_required(VERSION 3.20.0)
+  cmake_minimum_required(VERSION 3.31.0)
   set(POLLY_STANDALONE_BUILD TRUE)
 endif()
 set(LLVM_SUBPROJECT_TITLE "Polly")

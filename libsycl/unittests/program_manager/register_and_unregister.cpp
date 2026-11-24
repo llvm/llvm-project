@@ -32,7 +32,7 @@ struct MockProgramAndKernelManager : public detail::ProgramAndKernelManager {
 TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfFatbin) {
   std::array<llvm::StringRef, 1> KernelNames = {"kernel"};
   llvm::SmallString<0> Binary =
-      sycl::unittest::createSYCLDeviceBinary(KernelNames);
+      sycl::unittests::createSYCLDeviceBinary(KernelNames);
 
   llvm::MemoryBufferRef MBR(
       llvm::StringRef(static_cast<const char *>(Binary.data()), Binary.size()),
@@ -59,8 +59,8 @@ TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfFatbin) {
 TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfImage) {
   std::array<llvm::StringRef, 1> KernelNames = {"kernel"};
   llvm::SmallString<0> IncompatibleImageBinary =
-      sycl::unittest::createSYCLDeviceBinary(KernelNames,
-                                             llvm::object::IMG_Bitcode);
+      sycl::unittests::createSYCLDeviceBinary(KernelNames,
+                                              llvm::object::IMG_Bitcode);
 
   MockProgramAndKernelManager Manager;
 
@@ -75,8 +75,8 @@ TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfImage) {
                 Property(&sycl::exception::code, Eq(sycl::errc::runtime)))));
 
   llvm::SmallString<0> CompatibleImageBinary =
-      sycl::unittest::createSYCLDeviceBinary(KernelNames,
-                                             llvm::object::IMG_SPIRV);
+      sycl::unittests::createSYCLDeviceBinary(KernelNames,
+                                              llvm::object::IMG_SPIRV);
   EXPECT_NO_THROW(Manager.registerFatBin(CompatibleImageBinary.data(),
                                          CompatibleImageBinary.size()));
   EXPECT_NO_THROW(Manager.unregisterFatBin(CompatibleImageBinary.data(),
@@ -95,8 +95,8 @@ TEST(ProgramAndKernelManager, CheckRegisterAndUnregister) {
   llvm::offloading::sycl::writeSymbolTable(Image2Kernels, Symbols[1]);
 
   llvm::SmallVector<llvm::object::OffloadBinary::OffloadingImage, 2> Images;
-  Images.push_back(sycl::unittest::createSYCLImage(Symbols[0]));
-  Images.push_back(sycl::unittest::createSYCLImage(Symbols[1]));
+  Images.push_back(sycl::unittests::createSYCLImage(Symbols[0]));
+  Images.push_back(sycl::unittests::createSYCLImage(Symbols[1]));
 
   llvm::SmallString<0> Binary = llvm::object::OffloadBinary::write(Images);
 
@@ -126,4 +126,24 @@ TEST(ProgramAndKernelManager, CheckRegisterAndUnregister) {
   EXPECT_NO_THROW(Manager.unregisterFatBin(Binary.data(), Binary.size()));
   EXPECT_THAT(Manager.MDeviceImageManagers, IsEmpty());
   EXPECT_THAT(Manager.MDeviceKernelInfoMap, IsEmpty());
+}
+
+TEST(ProgramAndKernelManager, CheckUnknownKernelName) {
+  std::array<llvm::StringRef, 1> KernelNames = {"kernel"};
+  llvm::SmallString<0> Binary =
+      sycl::unittests::createSYCLDeviceBinary(KernelNames);
+
+  MockProgramAndKernelManager Manager;
+  ASSERT_NO_THROW(Manager.registerFatBin(Binary.data(), Binary.size()));
+
+  EXPECT_NO_THROW(Manager.getDeviceKernelInfo("kernel"));
+  EXPECT_THAT(
+      [&]() { Manager.getDeviceKernelInfo("missing_kernel"); },
+      Throws<sycl::exception>(
+          AllOf(Property(&sycl::exception::what,
+                         HasSubstr("No registered device image provides kernel "
+                                   "missing_kernel")),
+                Property(&sycl::exception::code, Eq(sycl::errc::runtime)))));
+
+  EXPECT_NO_THROW(Manager.unregisterFatBin(Binary.data(), Binary.size()));
 }

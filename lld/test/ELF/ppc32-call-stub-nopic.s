@@ -20,24 +20,24 @@
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: <_start>:
-# CHECK-NEXT:    bl 0x100101d0
-# CHECK-NEXT:    bl 0x100101d0
 # CHECK-NEXT:    bl 0x100101e0
 # CHECK-NEXT:    bl 0x100101e0
+# CHECK-NEXT:    bl 0x100101d0
+# CHECK-NEXT:    bl 0x100101d0
 # CHECK-EMPTY:
 
 ## -fno-PIC call stubs of f and g.
 ## .plt[0] = 0x100302c4 = 65536*4099+708
 ## .plt[1] = 0x100302c8 = 65536*4099+712
-# CHECK-NEXT:  <00000000.plt_call32.f>:
-# CHECK-NEXT:    lis 11, 4099
-# CHECK-NEXT:    lwz 11, 708(11)
-# CHECK-NEXT:    mtctr 11
-# CHECK-NEXT:    bctr
-# CHECK-EMPTY:
 # CHECK-NEXT:  <00000000.plt_call32.g>:
 # CHECK-NEXT:    lis 11, 4099
 # CHECK-NEXT:    lwz 11, 712(11)
+# CHECK-NEXT:    mtctr 11
+# CHECK-NEXT:    bctr
+# CHECK-EMPTY:
+# CHECK-NEXT:  <00000000.plt_call32.f>:
+# CHECK-NEXT:    lis 11, 4099
+# CHECK-NEXT:    lwz 11, 708(11)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
 # CHECK-EMPTY:

@@ -34,7 +34,7 @@ tail_call:
 // CHECK-LABEL: Name: .impcall (2E 69 6D 70 63 61 6C 6C)
 // CHECK-NEXT:  VirtualSize: 0x0
 // CHECK-NEXT:  VirtualAddress: 0x0
-// CHECK-NEXT:  RawDataSize: 52
+// CHECK-NEXT:  RawDataSize: 0x34
 // CHECK-NEXT:  PointerToRawData: 0x150
 // CHECK-NEXT:  PointerToRelocations: 0x0
 // CHECK-NEXT:  PointerToLineNumbers: 0x0

@@ -49,8 +49,7 @@ TYPED_TEST(ScudoErrorInfoTest, RingBufferErrorInfo) {
     GTEST_SKIP() << "MTE not supported or enabled";
   }
 
-  EXPECT_GT(Allocator->getRingBufferSize(), 0u);
-  EXPECT_NE(nullptr, Allocator->getRingBufferAddress());
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
 
   const scudo::uptr Size = 64U;
   void *P = nullptr;

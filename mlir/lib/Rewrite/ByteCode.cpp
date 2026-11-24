@@ -1498,12 +1498,13 @@ void ByteCodeExecutor::processNativeFunResults(
            "result");
     // If the result is a range, we need to copy it over to the bytecodes
     // range memory.
-    if (std::optional<TypeRange> typeRange = result.dyn_cast<TypeRange>()) {
+    if (std::optional<TypeRange> typeRange =
+            llvm::dyn_cast_if_present<TypeRange>(result)) {
       unsigned rangeIndex = read();
       typeRangeMemory[rangeIndex] = *typeRange;
       memory[read()] = &typeRangeMemory[rangeIndex];
     } else if (std::optional<ValueRange> valueRange =
-                   result.dyn_cast<ValueRange>()) {
+                   llvm::dyn_cast_if_present<ValueRange>(result)) {
       unsigned rangeIndex = read();
       valueRangeMemory[rangeIndex] = *valueRange;
       memory[read()] = &valueRangeMemory[rangeIndex];
@@ -1788,7 +1789,9 @@ void ByteCodeExecutor::executeGetAttribute() {
   unsigned memIndex = read();
   Operation *op = read<Operation *>();
   StringAttr attrName = read<StringAttr>();
-  Attribute attr = op->getAttr(attrName);
+  Attribute attr = op->getDiscardableAttr(attrName);
+  if (op->getPropertiesStorageSize())
+    attr = op->getInherentAttr(attrName).value_or(attr);
 
   LDBG() << "  * Operation: " << *op << "\n  * Attribute: " << attrName
          << "\n  * Result: " << attr;
@@ -1857,7 +1860,8 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
   } else if (op->hasTrait<AttrSizedSegmentsT>()) {
     LDBG() << "  * Extracting values from `" << attrSizedSegments << "`";
 
-    auto segmentAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrSizedSegments);
+    auto segmentAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+        op->getInherentAttr(attrSizedSegments).value_or(Attribute{}));
     if (!segmentAttr || segmentAttr.asArrayRef().size() <= index)
       return nullptr;
 

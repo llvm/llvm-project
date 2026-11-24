@@ -154,3 +154,78 @@ class TestCase(PExpectTest):
         self.child.expect_exact(self.ANSI_RED + "ame variable" + self.ANSI_CYAN)
         self.child.send("\n")
 
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_autosuggestion_tab_mode(self):
+        """Test that show-autosuggestion=tab-mode suggests the prefix that
+        tab completion would insert, instead of consulting command history."""
+        self.launch(
+            use_colors=True,
+            extra_args=[
+                "-o",
+                "settings set show-autosuggestion tab-mode",
+                "-o",
+                "settings set use-color true",
+            ],
+        )
+
+        ctrl_f = "\x06"
+
+        # Put 'help frame' into the session history. If tab-mode incorrectly
+        # consulted history (as the 'true' mode does), typing 'hel' would
+        # suggest 'p frame'. In tab-mode the suggestion should be just 'p',
+        # since the only tab completion of 'hel' is 'help'.
+        frame_output_needle = "Syntax: frame <subcommand>"
+        self.expect("help frame", substrs=[frame_output_needle])
+
+        self.child.send("hel")
+        # Note that the ANSI_RESET color prevents us from accepting a longer
+        # suggestion as a valid test outcome.
+        self.child.expect_exact(
+            cursor_horizontal_abs("(lldb) he")
+            + "l"
+            + self.ANSI_FAINT
+            + "p"
+            + self.ANSI_RESET
+        )
+
+        # Applying the suggestion with Ctrl-F should leave the line as 'help'
+        # (not 'help frame'). Running it lists all commands.
+        self.child.send(ctrl_f + "\n")
+        self.child.expect_exact("Debugger commands:")
+
+        # Tab completion must still work in tab-mode. Pressing tab on 'hel'
+        # should complete to 'help'; running it lists all commands.
+        self.child.send("hel\t\n")
+        self.child.expect_exact("Debugger commands:")
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_autosuggestion_tab_mode_no_common_prefix(self):
+        """Test that show-autosuggestion=tab-mode shows no suggestion when
+        the tab completions don't share a prefix beyond what the user typed."""
+        self.launch(
+            use_colors=True,
+            extra_args=[
+                "-o",
+                "settings set show-autosuggestion tab-mode",
+                "-o",
+                "settings set use-color true",
+            ],
+        )
+
+        ctrl_f = "\x06"
+
+        # 'se' matches several top-level commands (session, settings, ...)
+        # whose longest common prefix is 'se' itself, so tab-mode must not
+        # show any suggestion. Pressing Ctrl-F should therefore do nothing
+        # and running the line should yield the 'ambiguous command' error.
+        self.child.send("se" + ctrl_f + "\n")
+        self.child.expect_exact("ambiguous command 'se'")
+
+        # Tab completion must still work in tab-mode even when there is no
+        # common prefix to suggest: pressing tab on 'se' should list the
+        # available completions.
+        self.child.send("se\t")
+        self.child.expect_exact("session")
+        self.child.expect_exact("settings")

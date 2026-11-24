@@ -34,8 +34,8 @@ def MPI_Dialect : Dialect {
     [OpenMPI online documentation](https://www.open-mpi.org/doc/current/).
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,9 +211,7 @@ def MPI_ErrorClassEnum
   let cppNamespace = "::mlir::mpi";
 }
 
-def MPI_ErrorClassAttr : EnumAttr<MPI_Dialect, MPI_ErrorClassEnum, "errclass"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def MPI_ErrorClassAttr : EnumAttr<MPI_Dialect, MPI_ErrorClassEnum, "errclass">;
 
 def MPI_OpNull : I32EnumAttrCase<"MPI_OP_NULL", 0, "MPI_OP_NULL">;
 def MPI_OpMax : I32EnumAttrCase<"MPI_MAX", 1, "MPI_MAX">;

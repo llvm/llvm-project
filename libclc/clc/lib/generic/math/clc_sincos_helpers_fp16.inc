@@ -22,7 +22,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(private __CLC_HALFN *r_lo,
       rint, -pb2_c, __clc_mad(rint, -pb2_b, __clc_mad(rint, -pb2_a, x_float)));
 
   *r_lo = __CLC_CONVERT_HALFN(result);
-  return __CLC_CONVERT_INTN(rint) & 0x3;
+  return __clc_select(__CLC_CONVERT_INTN(rint) & 0x3, (__CLC_INTN)0,
+                      __CLC_CONVERT_UINTN(__clc_isnan(rint)));
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_SINCOS_RET_GENTYPE

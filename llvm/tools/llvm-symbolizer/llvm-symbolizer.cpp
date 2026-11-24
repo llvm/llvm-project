@@ -32,9 +32,9 @@
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
@@ -56,25 +56,13 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTION
-};
 
-class SymbolizerOptTable : public opt::GenericOptTable {
+class SymbolizerOptTable : public opt::OptTable {
 public:
-  SymbolizerOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+  SymbolizerOptTable() : OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -496,6 +484,7 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.DefaultArch = Args.getLastArgValue(OPT_default_arch_EQ).str();
   Opts.Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, !IsAddr2Line);
   Opts.DWPName = Args.getLastArgValue(OPT_dwp_EQ).str();
+  Opts.PDBName = Args.getLastArgValue(OPT_pdb_EQ).str();
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
   Opts.GsymFileDirectory = Args.getAllArgValues(OPT_gsym_file_directory_EQ);

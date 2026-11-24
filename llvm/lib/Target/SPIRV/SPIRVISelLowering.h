@@ -66,7 +66,7 @@ public:
 
   MVT getPreferredSwitchConditionType(LLVMContext &Context,
                                       EVT ConditionVT) const override {
-    return ConditionVT.getSimpleVT();
+    return MVT::i1;
   }
 
   bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,
@@ -78,6 +78,8 @@ public:
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
   AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const override;
+  AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
 
   bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
     return false;

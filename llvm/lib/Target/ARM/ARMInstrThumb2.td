@@ -3557,6 +3557,8 @@ def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg rGPR:$Rm)),
             (t2CMNrr GPRnopc:$Rn, rGPR:$Rm)>;
 def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg t2_so_reg:$ShiftedRm)),
             (t2CMNrs GPRnopc:$Rn, t2_so_reg:$ShiftedRm)>;
+def : T2Pat<(ARMcmpZ (ineg GPRnopc:$Rn), t2_so_reg:$ShiftedRm),
+            (t2CMNrs GPRnopc:$Rn, t2_so_reg:$ShiftedRm)>;
 
 defm t2TST  : T2I_cmp_irs<0b0000, "tst", rGPR,
                           IIC_iTSTi, IIC_iTSTr, IIC_iTSTsi,
@@ -4081,7 +4083,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
                    (ins thumb_br_target:$dst, pred:$p),
                    4, IIC_Br, [],
                    (t2B thumb_br_target:$dst, pred:$p)>,
-                 Requires<[IsThumb2]>, Sched<[WriteBr]>;
+                 Requires<[IsThumb, HasV8MBaseline]>, Sched<[WriteBr]>;
 }
 
 // IT block

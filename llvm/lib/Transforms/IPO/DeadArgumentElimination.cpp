@@ -76,13 +76,11 @@ public:
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
-    DeadArgumentEliminationPass DAEP(shouldHackArguments());
+    DeadArgumentEliminationPass DAEP;
     ModuleAnalysisManager DummyMAM;
     PreservedAnalyses PA = DAEP.run(M, DummyMAM);
     return !PA.areAllPreserved();
   }
-
-  virtual bool shouldHackArguments() const { return false; }
 };
 
 } // end anonymous namespace
@@ -91,31 +89,9 @@ char DAE::ID = 0;
 
 INITIALIZE_PASS(DAE, "deadargelim", "Dead Argument Elimination", false, false)
 
-namespace {
-
-/// The DeadArgumentHacking pass, same as dead argument elimination, but deletes
-/// arguments to functions which are external. This is only for use by bugpoint.
-struct DAH : public DAE {
-  static char ID;
-
-  DAH() : DAE(ID) {}
-
-  bool shouldHackArguments() const override { return true; }
-};
-
-} // end anonymous namespace
-
-char DAH::ID = 0;
-
-INITIALIZE_PASS(DAH, "deadarghaX0r",
-                "Dead Argument Hacking (BUGPOINT USE ONLY; DO NOT USE)", false,
-                false)
-
 /// This pass removes arguments from functions which are not used by the body of
 /// the function.
 ModulePass *llvm::createDeadArgEliminationPass() { return new DAE(); }
-
-ModulePass *llvm::createDeadArgHackingPass() { return new DAH(); }
 
 /// If this is an function that takes a ... list, and if llvm.vastart is never
 /// called, the varargs list is dead for the function.
@@ -128,10 +104,10 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
   if (F.hasAddressTaken())
     return false;
 
-  // Don't touch naked functions. The assembly might be using an argument, or
-  // otherwise rely on the frame layout in a way that this analysis will not
-  // see.
-  if (F.hasFnAttribute(Attribute::Naked)) {
+  // Don't touch functions whose ABI must be preserved. For naked functions the
+  // assembly might be using an argument, or otherwise rely on the frame layout
+  // in a way that this analysis will not see.
+  if (!F.canChangeSignature()) {
     return false;
   }
 
@@ -177,6 +153,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
     CallBase *CB = dyn_cast<CallBase>(U);
     if (!CB)
       continue;
+    ChangedFunctions.insert(CB->getFunction());
 
     // Pass all the same arguments.
     Args.assign(CB->arg_begin(), CB->arg_begin() + NumArgs);
@@ -205,7 +182,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
     }
     NewCB->setCallingConv(CB->getCallingConv());
     NewCB->setAttributes(PAL);
-    NewCB->copyMetadata(*CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCB->copyProfileAndDebugMetadata(*CB);
 
     Args.clear();
 
@@ -247,7 +224,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
   // appear to be address-taken.
   NF->removeDeadConstantUsers();
   // Finally, nuke the old function.
-  F.eraseFromParent();
+  eraseReplacedFunction(F, *NF);
   return true;
 }
 
@@ -276,10 +253,10 @@ bool DeadArgumentEliminationPass::removeDeadArgumentsFromCallers(Function &F) {
       !F.getFunctionType()->isVarArg())
     return false;
 
-  // Don't touch naked functions. The assembly might be using an argument, or
-  // otherwise rely on the frame layout in a way that this analysis will not
-  // see.
-  if (F.hasFnAttribute(Attribute::Naked))
+  // Don't touch functions whose ABI must be preserved. For naked functions the
+  // assembly might be using an argument, or otherwise rely on the frame layout
+  // in a way that this analysis will not see.
+  if (!F.canChangeSignature())
     return false;
 
   if (F.use_empty())
@@ -304,12 +281,14 @@ bool DeadArgumentEliminationPass::removeDeadArgumentsFromCallers(Function &F) {
 
   if (UnusedArgs.empty())
     return false;
+  ChangedFunctions.insert(&F);
 
   for (Use &U : F.uses()) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (!CB || !CB->isCallee(&U) ||
         CB->getFunctionType() != F.getFunctionType())
       continue;
+    ChangedFunctions.insert(CB->getFunction());
 
     // Now go through all unused args and replace them with poison.
     for (unsigned ArgNo : UnusedArgs) {
@@ -484,6 +463,12 @@ DeadArgumentEliminationPass::surveyUses(const Value *V,
 /// We consider arguments of non-internal functions to be intrinsically alive as
 /// well as arguments to functions which have their "address taken".
 void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
+  // Can only change function signature for functions with local linkage.
+  if (!F.hasLocalLinkage()) {
+    markFrozen(F);
+    return;
+  }
+
   // Functions with inalloca/preallocated parameters are expecting args in a
   // particular register and memory layout.
   if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
@@ -492,10 +477,16 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
     return;
   }
 
-  // Don't touch naked functions. The assembly might be using an argument, or
-  // otherwise rely on the frame layout in a way that this analysis will not
-  // see.
-  if (F.hasFnAttribute(Attribute::Naked)) {
+  // Don't touch functions whose ABI must be preserved. For naked functions the
+  // assembly might be using an argument, or otherwise rely on the frame layout
+  // in a way that this analysis will not see.
+  if (!F.canChangeSignature()) {
+    markFrozen(F);
+    return;
+  }
+
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F.isDefinitionExact()) {
     markFrozen(F);
     return;
   }
@@ -521,11 +512,6 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
       if (markFnOrRetTyFrozenOnMusttail(F))
         return;
     }
-  }
-
-  if (!F.hasLocalLinkage() && (!ShouldHackArguments || F.isIntrinsic())) {
-    markFrozen(F);
-    return;
   }
 
   LLVM_DEBUG(
@@ -654,14 +640,14 @@ void DeadArgumentEliminationPass::markValue(const RetOrArg &RA, Liveness L,
 /// only needs to guarantee they have the same return type.
 bool DeadArgumentEliminationPass::markFnOrRetTyFrozenOnMusttail(
     const Function &F) {
-  if (F.getCallingConv() != CallingConv::SwiftTail ||
+  if (F.getCallingConv() != CallingConv::SwiftTail &&
       F.getCallingConv() != CallingConv::Tail) {
     markFrozen(F);
     return true;
-  } else {
-    markRetTyFrozen(F);
-    return false;
   }
+
+  markRetTyFrozen(F);
+  return false;
 }
 
 /// Mark the given Function as alive, meaning that it cannot be changed in any
@@ -887,6 +873,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   std::vector<Value *> Args;
   while (!F->use_empty()) {
     CallBase &CB = cast<CallBase>(*F->user_back());
+    ChangedFunctions.insert(CB.getFunction());
 
     ArgAttrVec.clear();
     const AttributeList &CallPAL = CB.getAttributes();
@@ -955,7 +942,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
     }
     NewCB->setCallingConv(CB.getCallingConv());
     NewCB->setAttributes(NewCallPAL);
-    NewCB->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCB->copyProfileAndDebugMetadata(CB);
     Args.clear();
     ArgAttrVec.clear();
 
@@ -1094,13 +1081,22 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   }
 
   // Now that the old function is dead, delete it.
-  F->eraseFromParent();
+  eraseReplacedFunction(*F, *NF);
 
   return true;
 }
 
+void DeadArgumentEliminationPass::eraseReplacedFunction(Function &F,
+                                                        const Function &NF) {
+  ChangedFunctions.remove(&F);
+  // The replacement took the name of F.
+  FAM->clear(F, NF.getName());
+  F.eraseFromParent();
+}
+
 PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
-                                                   ModuleAnalysisManager &) {
+                                                   ModuleAnalysisManager &MAM) {
+  FAM = &MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool Changed = false;
 
   // First pass: Do a simple check to see if any functions can have their "..."
@@ -1130,7 +1126,17 @@ PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
   for (auto &F : M)
     Changed |= removeDeadArgumentsFromCallers(F);
 
+  // Only the analyses of the changed functions are invalid. The ones of the
+  // replaced functions were already cleared.
+  for (Function *F : ChangedFunctions)
+    FAM->invalidate(*F, PreservedAnalyses::none());
+  ChangedFunctions.clear();
+  FAM = nullptr;
+
   if (!Changed)
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

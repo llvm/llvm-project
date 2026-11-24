@@ -10,10 +10,6 @@
 ; folding in the optimizers.
 ; RUN: opt -S -o - -passes='function(instcombine),globalopt' -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
 
-; "SCEV" - ScalarEvolution with default target layout
-; RUN: opt -passes='print<scalar-evolution>' < %s -disable-output 2>&1 | FileCheck --check-prefix=SCEV %s
-
-
 ; The automatic constant folder in opt does not have targetdata access, so
 ; it can't fold gep arithmetic, in general. However, the constant folder run
 ; from instcombine and global opt can use targetdata.
@@ -296,30 +292,6 @@ define ptr @hoo1() nounwind {
 ; TO: define i64 @fi() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
-; SCEV-LABEL: Classifying expressions for: @fb
-; SCEV:  %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, [13 x double] }, ptr null, i64 0, i32 1) to i64) to i64
-; SCEV:   -->  8
-; SCEV-LABEL: Classifying expressions for: @fc
-; SCEV:  %t = bitcast i64 ptrtoint (ptr getelementptr ({ double, double, double, double }, ptr null, i64 0, i32 2) to i64) to i64
-; SCEV:   -->  16
-; SCEV-LABEL: Classifying expressions for: @fd
-; SCEV:   %t = bitcast i64 ptrtoint (ptr getelementptr ([13 x double], ptr null, i64 0, i32 11) to i64) to i64
-; SCEV:   -->  88
-; SCEV-LABEL: Classifying expressions for: @fe
-; SCEV:   %t = bitcast i64 ptrtoint (ptr getelementptr ({ double, float, double, double }, ptr null, i64 0, i32 2) to i64) to i64
-; SCEV:   -->  16
-; SCEV-LABEL: Classifying expressions for: @ff
-; SCEV:   %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, <{ i16, i128 }> }, ptr null, i64 0, i32 1) to i64) to i64
-; SCEV:   -->  1
-; SCEV-LABEL: Classifying expressions for: @fg
-; SCEV:   %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, { double, double } }, ptr null, i64 0, i32 1) to i64) to i64
-; SCEV:   -->  8
-; SCEV-LABEL: Classifying expressions for: @fh
-; SCEV:   %t = bitcast i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64) to i64
-; SCEV:   --> 8
-; SCEV-LABEL: Classifying expressions for: @fi
-; SCEV:   %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, ptr }, ptr null, i64 0, i32 1) to i64) to i64
-; SCEV:   --> 8
 
 define i64 @fb() nounwind {
   %t = bitcast i64 ptrtoint (ptr getelementptr ({i1, [13 x double]}, ptr null, i64 0, i32 1) to i64) to i64

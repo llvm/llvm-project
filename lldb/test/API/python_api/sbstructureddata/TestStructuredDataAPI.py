@@ -147,9 +147,27 @@ class TestStructuredDataAPI(TestBase):
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeFloat)
         self.assertEqual(example.GetFloatValue(), 4.19)
 
-        example.SetStringValue("Bonjour, 123!")
+        bonjour_str = "Bonjour, 123!"
+        example.SetStringValue(bonjour_str)
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
-        self.assertEqual(example.GetStringValue(42), "Bonjour, 123!")
+        self.assertEqual(example.GetStringValue(42), bonjour_str)
+        # Verify buffer does not affect the size of returned string.
+        self.assertEqual(example.GetStringValue(8), bonjour_str)
+
+        # Verify StructuredData's string as None doesn't crash.
+        example.SetStringValue(None)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
+        self.assertEqual(example.GetStringValue(20), "")
+        self.assertEqual(example.GetStringValue(), "")
+
+        # Verify writing a large buffer doesn't get
+        # trimmed when using the dynamic property.
+        large_str = "0xdeadbeef430e~~" * 4096
+        example.SetStringValue(large_str)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
+        self.assertEqual(example.dynamic, large_str)
+        self.assertEqual(example.GetStringValue(), large_str)
+        self.assertEqual(example.GetStringValue(len(large_str) + 1), large_str)
 
         value = lldb.SBStructuredData()
         example.SetValueForKey("Hello", value)
@@ -227,6 +245,13 @@ class TestStructuredDataAPI(TestBase):
         output = string_struct.GetStringValue(25)
         if not "STRING" in output:
             self.fail("wrong output: " + output)
+
+        self.assertEqual(string_struct.dynamic, "STRING")
+        self.assertEqual(str(string_struct), "STRING")
+
+        # Negative value still fails.
+        with self.assertRaises(Exception):
+            string_struct.GetStringValue(-1)
 
         # Calling wrong API on a SBStructuredData
         # (e.g. getting an integer from a string type structure)

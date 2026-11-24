@@ -159,7 +159,9 @@ public:
 private:
   void addUserToGraphRecursively(const User *Root, const GlobalValue *V) {
     SmallVector<const User *, 8> WorkList;
+    SmallPtrSet<const User *, 8> Visited;
     WorkList.push_back(Root);
+    Visited.insert(Root);
 
     while (!WorkList.empty()) {
       const User *U = WorkList.pop_back_val();
@@ -173,7 +175,8 @@ private:
         // bitcast or gep). We trace users of this constant further to reach
         // global objects they are used by and add them to the graph.
         for (const User *UU : U->users())
-          WorkList.push_back(UU);
+          if (Visited.insert(UU).second)
+            WorkList.push_back(UU);
       } else {
         llvm_unreachable("Unhandled type of function user");
       }

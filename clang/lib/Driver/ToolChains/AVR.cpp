@@ -466,7 +466,7 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void AVRToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   // Reject C/C++ compilation for avr1 devices since they have no SRAM.
   const Driver &D = getDriver();
   std::string CPU = getCPUName(D, DriverArgs, getTriple());
@@ -540,11 +540,10 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
-  // Currently we only support libgcc and compiler-rt.
   auto RtLib = TC.GetRuntimeLibType(Args);
-  assert(
-      (RtLib == ToolChain::RLT_Libgcc || RtLib == ToolChain::RLT_CompilerRT) &&
-      "unknown runtime library");
+  assert((RtLib == ToolChain::RLT_None || RtLib == ToolChain::RLT_Libgcc ||
+          RtLib == ToolChain::RLT_CompilerRT) &&
+         "unknown runtime library");
 
   // Only add default libraries if the user hasn't explicitly opted out.
   bool LinkStdlib = false;

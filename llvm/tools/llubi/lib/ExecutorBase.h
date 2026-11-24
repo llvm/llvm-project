@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "Value.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
@@ -64,6 +65,9 @@ struct Frame {
   // Reserved for in-flight subroutines.
   Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
+  // Temporary memory objects created via pointer arguments with byval.
+  // They belong to the caller.
+  SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
 
   Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
@@ -99,17 +103,27 @@ public:
   DiagnosticReporter reportImmediateUB();
   DiagnosticReporter reportError();
 
-  /// Check if the upcoming memory access is valid. Returns the offset relative
-  /// to the underlying object if it is valid.
-  std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
-                                          const APInt &Address,
-                                          uint64_t AccessSize, Align Alignment,
-                                          bool IsStore);
+  /// Check if the upcoming memory access is valid. Returns the resolved memory
+  /// object and offset if it is valid.
+  std::pair<MemoryObject *, uint64_t> verifyMemAccess(const Pointer &Ptr,
+                                                      uint64_t AccessSize,
+                                                      Align Alignment,
+                                                      bool IsStore);
 
   AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
                 bool NoUndef);
   void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
              Type *ValTy);
+
+  /// Copy `Length` bytes from `Src` to `Dest` according to the intrinsic `IID`.
+  /// If `IsLibCall` is true, the C library semantics are used instead.
+  void executeMemTransfer(const AnyValue &Dest, const AnyValue &Src,
+                          const AnyValue &Length, Intrinsic::ID IID,
+                          bool IsLibCall);
+
+  /// Fill `Length` bytes at `Dest` with `Val`.
+  void executeMemSet(const AnyValue &Dest, const AnyValue &Val,
+                     const AnyValue &Length);
 
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);
@@ -127,11 +141,12 @@ class DiagnosticReporter {
   ExecutorBase &Executor;
   std::string Buf;
   raw_string_ostream OS;
+  AnyValuePrinter Printer;
   DiagnosticKind Kind;
 
 public:
   DiagnosticReporter(ExecutorBase &E, DiagnosticKind K)
-      : Executor(E), OS(Buf), Kind(K) {}
+      : Executor(E), OS(Buf), Printer(E.Ctx, OS), Kind(K) {}
 
   DiagnosticReporter(const DiagnosticReporter &) = delete;
   DiagnosticReporter(DiagnosticReporter &&) noexcept = delete;
@@ -151,7 +166,7 @@ public:
   }
 
   template <typename T> DiagnosticReporter &operator<<(const T &Val) {
-    OS << Val;
+    Printer << Val;
     return *this;
   }
 };

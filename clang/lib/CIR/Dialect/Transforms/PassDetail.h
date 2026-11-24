@@ -11,6 +11,8 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
+#include "clang/CIR/Dialect/Passes.h"
+#include "llvm/ABI/TargetInfo.h"
 
 namespace cir {
 class CIRDialect;

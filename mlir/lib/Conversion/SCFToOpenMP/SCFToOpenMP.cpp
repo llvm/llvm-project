@@ -16,11 +16,14 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
@@ -204,7 +207,8 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperands()[reductionIndex].getType();
   auto decl = omp::DeclareReductionOp::create(builder, reduce.getLoc(),
-                                              "__scf_reduction", type,
+                                              "__scf_reduction",
+                                              /*sym_visibility=*/nullptr, type,
                                               /*byref_element_type=*/{});
   symbolTable.insert(decl);
 
@@ -412,6 +416,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
+    if (parallelOp.getUnsignedCmp())
+      return rewriter.notifyMatchFailure(
+          parallelOp, "unsigned loop bounds are not supported");
     // Bail out early if any reduction init value has a type that is not
     // compatible with LLVM (e.g. index), since we cannot allocate a reduction
     // variable for such types.
@@ -503,13 +510,15 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         rewriter, loc,
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocator_vars = */ llvm::SmallVector<Value>{},
+        /* allocate_alignments = */ nullptr,
+        /* allocate_private_indices = */ nullptr,
         /* if_expr = */ Value{},
         /* num_threads_vars = */ numThreadsVars,
         /* private_vars = */ ValueRange(),
         /* private_syms = */ nullptr,
-        /* private_needs_barrier = */ nullptr,
+        /* private_needs_barrier = */ false,
         /* proc_bind_kind = */ omp::ClauseProcBindKindAttr{},
-        /* reduction_mod = */ nullptr,
+        /* reduction_mods = */ nullptr,
         /* reduction_vars = */ llvm::SmallVector<Value>{},
         /* reduction_byref = */ DenseBoolArrayAttr{},
         /* reduction_syms = */ ArrayAttr{});

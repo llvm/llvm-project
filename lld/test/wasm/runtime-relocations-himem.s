@@ -47,14 +47,14 @@ data_sym:
 
 # CHECK: <__wasm_apply_data_relocs>:
 # CHECK-EMPTY:
-# CHECK-NEXT:  i32.const -2147483636
+# CHECK-NEXT:  i32.const -2147483644
 # CHECK-NEXT:  global.get 0
 # CHECK-NEXT:  i32.store 0
 # CHECK-NEXT:  end
 
 # CHECK: <__wasm_apply_tls_relocs>:
 # CHECK-EMPTY:
-# CHECK-NEXT:  i32.const -2147483644
+# CHECK-NEXT:  i32.const -2147483636
 # CHECK-NEXT:  global.get 0
 # CHECK-NEXT:  i32.store 0
 # CHECK-NEXT:  end

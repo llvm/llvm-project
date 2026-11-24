@@ -12,14 +12,13 @@
 #include "src/fenv/feraiseexcept.h"
 #include "src/fenv/fetestexcept.h"
 
+#include "hdr/fenv_macros.h"
+#include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/fenv_macros.h"
-#include <signal.h>
 
 #include "excepts.h"
 
@@ -28,6 +27,9 @@ using LlvmLibcExceptionStatusTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
 TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
+  // Unsupported: no fenv
+#else
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from
   // that exception handler, so such a testing can be done after we have
@@ -63,4 +65,5 @@ TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
     LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
     ASSERT_EQ(LIBC_NAMESPACE::feclearexcept(FE_ALL_EXCEPT), 0);
   }
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }

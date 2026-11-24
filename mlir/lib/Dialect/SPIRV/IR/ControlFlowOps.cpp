@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #include "SPIRVOpUtils.h"
@@ -204,11 +205,11 @@ FunctionCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName());
+  return getCalleeAttr();
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(getCalleeAttrName(), cast<SymbolRefAttr>(callee));
+  setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {
@@ -266,12 +267,14 @@ LogicalResult SwitchOp::verify() {
   if (!literals && targets.empty())
     return success();
 
-  Type selectorType = getSelector().getType();
-  Type literalType = literals->getType().getElementType();
-  if (literalType != selectorType)
-    return emitOpError() << "'selector' type (" << selectorType
-                         << ") should match literals type (" << literalType
-                         << ")";
+  if (literals) {
+    Type selectorType = getSelector().getType();
+    Type literalType = literals->getType().getElementType();
+    if (literalType != selectorType)
+      return emitOpError() << "'selector' type (" << selectorType
+                           << ") should match literals type (" << literalType
+                           << ")";
+  }
 
   if (literals && literals->size() != static_cast<int64_t>(targets.size()))
     return emitOpError() << "number of literals (" << literals->size()
@@ -301,6 +304,67 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
   }
   return nullptr;
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.KHR.Abort
+//===----------------------------------------------------------------------===//
+
+/// Returns true if `type` is a numerical scalar, physical pointer, vector,
+/// matrix, or an aggregate recursively containing only such types. Without an
+/// enclosing `moduleOp` any pointer is accepted.
+static bool isConcreteType(Type type, spirv::ModuleOp moduleOp) {
+  return TypeSwitch<Type, bool>(type)
+      .Case([&](spirv::PointerType pointerType) {
+        if (!moduleOp)
+          return true;
+        spirv::AddressingModel addressingModel = moduleOp.getAddressingModel();
+        if (addressingModel == spirv::AddressingModel::Logical)
+          return false;
+        return addressingModel !=
+                   spirv::AddressingModel::PhysicalStorageBuffer64 ||
+               pointerType.getStorageClass() ==
+                   spirv::StorageClass::PhysicalStorageBuffer;
+      })
+      .Case(
+          [](spirv::ScalarType scalarType) { return !scalarType.isInteger(1); })
+      .Case<VectorType, spirv::ArrayType, spirv::MatrixType>(
+          [&](auto compositeType) {
+            return isConcreteType(compositeType.getElementType(), moduleOp);
+          })
+      .Case([&](spirv::StructType structType) {
+        return llvm::all_of(structType.getElementTypes(),
+                            [&](Type elementType) {
+                              return isConcreteType(elementType, moduleOp);
+                            });
+      })
+      .Default(false);
+}
+
+LogicalResult KHRAbortOp::verify() {
+  if (!isConcreteType(getMessage().getType(),
+                      (*this)->getParentOfType<spirv::ModuleOp>()))
+    return emitOpError("message must be of a concrete type (numerical scalar, "
+                       "physical pointer, vector, matrix, or aggregate of such "
+                       "types)");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.LifetimeStart / spirv.LifetimeStop
+//===----------------------------------------------------------------------===//
+
+template <typename LifetimeOpTy>
+static LogicalResult verifyLifetimeOp(LifetimeOpTy op) {
+  auto ptrType = cast<spirv::PointerType>(op.getPointer().getType());
+  if (ptrType.getStorageClass() != spirv::StorageClass::Function)
+    return op.emitOpError("pointer must have the Function storage class");
+
+  return success();
+}
+
+LogicalResult LifetimeStartOp::verify() { return verifyLifetimeOp(*this); }
+
+LogicalResult LifetimeStopOp::verify() { return verifyLifetimeOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // spirv.mlir.loop
