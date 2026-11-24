@@ -13,14 +13,14 @@ define ptr @tail_memset(ptr %p, i64 %n) {
 ; RV32-NEXT:    lpad 778899
 ; RV32-NEXT:    mv a2, a1
 ; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    tail memset
+; RV32-NEXT:    tail memset, t2
 ;
 ; RV64-LABEL: tail_memset:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
 ; RV64-NEXT:    mv a2, a1
 ; RV64-NEXT:    li a1, 0
-; RV64-NEXT:    tail memset
+; RV64-NEXT:    tail memset, t2
   tail call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 %n, i1 false)
   ret ptr %p
 }
@@ -29,12 +29,12 @@ define ptr @tail_memcpy(ptr %d, ptr %s, i64 %n) {
 ; RV32-LABEL: tail_memcpy:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail memcpy
+; RV32-NEXT:    tail memcpy, t2
 ;
 ; RV64-LABEL: tail_memcpy:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail memcpy
+; RV64-NEXT:    tail memcpy, t2
   tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %d, ptr align 1 %s, i64 %n, i1 false)
   ret ptr %d
 }
@@ -43,12 +43,12 @@ define ptr @tail_memmove(ptr %d, ptr %s, i64 %n) {
 ; RV32-LABEL: tail_memmove:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail memmove
+; RV32-NEXT:    tail memmove, t2
 ;
 ; RV64-LABEL: tail_memmove:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail memmove
+; RV64-NEXT:    tail memmove, t2
   tail call void @llvm.memmove.p0.p0.i64(ptr align 1 %d, ptr align 1 %s, i64 %n, i1 false)
   ret ptr %d
 }
@@ -57,12 +57,12 @@ define double @tail_sin(double %x) {
 ; RV32-LABEL: tail_sin:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail sin
+; RV32-NEXT:    tail sin, t2
 ;
 ; RV64-LABEL: tail_sin:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail sin
+; RV64-NEXT:    tail sin, t2
   %r = tail call double @llvm.sin.f64(double %x)
   ret double %r
 }
@@ -71,12 +71,12 @@ define double @tail_cos(double %x) {
 ; RV32-LABEL: tail_cos:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail cos
+; RV32-NEXT:    tail cos, t2
 ;
 ; RV64-LABEL: tail_cos:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail cos
+; RV64-NEXT:    tail cos, t2
   %r = tail call double @llvm.cos.f64(double %x)
   ret double %r
 }
@@ -85,12 +85,12 @@ define double @tail_exp(double %x) {
 ; RV32-LABEL: tail_exp:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail exp
+; RV32-NEXT:    tail exp, t2
 ;
 ; RV64-LABEL: tail_exp:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail exp
+; RV64-NEXT:    tail exp, t2
   %r = tail call double @llvm.exp.f64(double %x)
   ret double %r
 }
@@ -99,12 +99,12 @@ define double @tail_exp2(double %x) {
 ; RV32-LABEL: tail_exp2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail exp2
+; RV32-NEXT:    tail exp2, t2
 ;
 ; RV64-LABEL: tail_exp2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail exp2
+; RV64-NEXT:    tail exp2, t2
   %r = tail call double @llvm.exp2.f64(double %x)
   ret double %r
 }
@@ -113,12 +113,12 @@ define double @tail_log(double %x) {
 ; RV32-LABEL: tail_log:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail log
+; RV32-NEXT:    tail log, t2
 ;
 ; RV64-LABEL: tail_log:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail log
+; RV64-NEXT:    tail log, t2
   %r = tail call double @llvm.log.f64(double %x)
   ret double %r
 }
@@ -127,12 +127,12 @@ define double @tail_log2(double %x) {
 ; RV32-LABEL: tail_log2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail log2
+; RV32-NEXT:    tail log2, t2
 ;
 ; RV64-LABEL: tail_log2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail log2
+; RV64-NEXT:    tail log2, t2
   %r = tail call double @llvm.log2.f64(double %x)
   ret double %r
 }
@@ -141,12 +141,12 @@ define double @tail_log10(double %x) {
 ; RV32-LABEL: tail_log10:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail log10
+; RV32-NEXT:    tail log10, t2
 ;
 ; RV64-LABEL: tail_log10:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail log10
+; RV64-NEXT:    tail log10, t2
   %r = tail call double @llvm.log10.f64(double %x)
   ret double %r
 }
@@ -155,12 +155,12 @@ define double @tail_pow(double %x, double %y) {
 ; RV32-LABEL: tail_pow:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail pow
+; RV32-NEXT:    tail pow, t2
 ;
 ; RV64-LABEL: tail_pow:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail pow
+; RV64-NEXT:    tail pow, t2
   %r = tail call double @llvm.pow.f64(double %x, double %y)
   ret double %r
 }
@@ -169,12 +169,12 @@ define double @tail_nearbyint(double %x) {
 ; RV32-LABEL: tail_nearbyint:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lpad 778899
-; RV32-NEXT:    tail nearbyint
+; RV32-NEXT:    tail nearbyint, t2
 ;
 ; RV64-LABEL: tail_nearbyint:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lpad 778899
-; RV64-NEXT:    tail nearbyint
+; RV64-NEXT:    tail nearbyint, t2
   %r = tail call double @llvm.nearbyint.f64(double %x)
   ret double %r
 }
