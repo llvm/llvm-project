@@ -4815,6 +4815,17 @@ LogicalResult RescaleOp::verify() {
     return failure();
   }
 
+  if (inputElementType.isUnsignedInteger() && !getInputUnsigned())
+    return emitOpError("requires input_unsigned to be true for unsigned input "
+                       "type, got ")
+           << inputElementType;
+
+  if (outputElementType.isUnsignedInteger() && !getOutputUnsigned())
+    return emitOpError(
+               "requires output_unsigned to be true for unsigned output "
+               "type, got ")
+           << outputElementType;
+
   if (verifyRescaleValueAndZpTypes(*this, getInput(), getInputZp(), "input")
           .failed())
     return failure();
@@ -4916,6 +4927,11 @@ LogicalResult CastOp::verify() {
       return emitOpError()
              << "attribute input_unsigned requires integer type inputs. Got: "
              << inputDataType;
+
+  if (inputDataType.isUnsignedInteger() && !isUnsigned)
+    return emitOpError("requires input_unsigned to be true for unsigned input "
+                       "type, got ")
+           << inputDataType;
 
   if (!inputIsBlockScaled && !outputIsBlockScaled)
     return success();

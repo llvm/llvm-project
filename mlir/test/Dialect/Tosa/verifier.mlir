@@ -2575,3 +2575,59 @@ func.func @test_reshape_non_const_invalid_static_size(%arg0: tensor<2x4xf32>) ->
   return %0 : tensor<3x5xf32>
 }
 
+
+// -----
+
+func.func @test_cast_unsigned_i8_input_unsigned_default(%arg0: tensor<1xui8>) -> tensor<1xf32> {
+  // expected-error@+1 {{'tosa.cast' op requires input_unsigned to be true for unsigned input type, got 'ui8'}}
+  %0 = tosa.cast %arg0 : (tensor<1xui8>) -> tensor<1xf32>
+  return %0 : tensor<1xf32>
+}
+
+// -----
+
+func.func @test_cast_unsigned_i8_input_unsigned_false(%arg0: tensor<1xui8>) -> tensor<1xf32> {
+  // expected-error@+1 {{'tosa.cast' op requires input_unsigned to be true for unsigned input type, got 'ui8'}}
+  %0 = tosa.cast %arg0 input_unsigned(false) : (tensor<1xui8>) -> tensor<1xf32>
+  return %0 : tensor<1xf32>
+}
+
+// -----
+
+func.func @test_cast_unsigned_i16_input_unsigned_false(%arg0: tensor<1xui16>) -> tensor<1xf32> {
+  // expected-error@+1 {{'tosa.cast' op requires input_unsigned to be true for unsigned input type, got 'ui16'}}
+  %0 = tosa.cast %arg0 input_unsigned(false) : (tensor<1xui16>) -> tensor<1xf32>
+  return %0 : tensor<1xf32>
+}
+
+// -----
+
+func.func @test_rescale_unsigned_i8_input_unsigned_false(%arg0: tensor<1xui8>, %multiplier: tensor<1xi16>, %shift: tensor<1xi8>, %input_zp: tensor<1xui8>, %output_zp: tensor<1xi8>) -> tensor<1xi8> {
+  // expected-error@+1 {{'tosa.rescale' op requires input_unsigned to be true for unsigned input type, got 'ui8'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<1xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xui8>, tensor<1xi8>) -> tensor<1xi8>
+  return %0 : tensor<1xi8>
+}
+
+// -----
+
+func.func @test_rescale_unsigned_i16_input_unsigned_false(%arg0: tensor<1xui16>, %multiplier: tensor<1xi16>, %shift: tensor<1xi8>, %input_zp: tensor<1xui16>, %output_zp: tensor<1xi8>) -> tensor<1xi8> {
+  // expected-error@+1 {{'tosa.rescale' op requires input_unsigned to be true for unsigned input type, got 'ui16'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<1xui16>, tensor<1xi16>, tensor<1xi8>, tensor<1xui16>, tensor<1xi8>) -> tensor<1xi8>
+  return %0 : tensor<1xi8>
+}
+
+// -----
+
+func.func @test_rescale_unsigned_i8_output_unsigned_false(%arg0: tensor<1xi8>, %multiplier: tensor<1xi16>, %shift: tensor<1xi8>, %input_zp: tensor<1xi8>, %output_zp: tensor<1xui8>) -> tensor<1xui8> {
+  // expected-error@+1 {{'tosa.rescale' op requires output_unsigned to be true for unsigned output type, got 'ui8'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<1xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xui8>) -> tensor<1xui8>
+  return %0 : tensor<1xui8>
+}
+
+// -----
+
+func.func @test_rescale_unsigned_i16_output_unsigned_false(%arg0: tensor<1xi8>, %multiplier: tensor<1xi16>, %shift: tensor<1xi8>, %input_zp: tensor<1xi8>, %output_zp: tensor<1xui16>) -> tensor<1xui16> {
+  // expected-error@+1 {{'tosa.rescale' op requires output_unsigned to be true for unsigned output type, got 'ui16'}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<1xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xui16>) -> tensor<1xui16>
+  return %0 : tensor<1xui16>
+}

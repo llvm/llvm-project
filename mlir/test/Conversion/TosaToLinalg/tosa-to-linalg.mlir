@@ -678,7 +678,7 @@ func.func @test_simple_i16(%arg0: tensor<1xi16>) -> () {
 // CHECK-LABEL: @test_simple_ui8
 func.func @test_simple_ui8(%arg0: tensor<1xui8>) -> () {
   // CHECK: arith.uitofp
-  %0 = tosa.cast %arg0 : (tensor<1xui8>) -> tensor<1xf32>
+  %0 = tosa.cast %arg0 input_unsigned(true) : (tensor<1xui8>) -> tensor<1xf32>
   return
 }
 
@@ -1531,8 +1531,8 @@ func.func @rescale_i8_unsigned_input_output_explicit(%arg0 : tensor<2xui8>) -> (
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C17]]
   // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] rounding_mode<SINGLE_ROUND>
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C22]]
-  // CHECK-DAG: [[CMIN:%.+]] = arith.constant -128
-  // CHECK-DAG: [[CMAX:%.+]] = arith.constant 127
+  // CHECK-DAG: [[CMIN:%.+]] = arith.constant 0
+  // CHECK-DAG: [[CMAX:%.+]] = arith.constant 255
   // CHECK-DAG: [[LOWER:%.+]] = arith.maxsi [[CMIN]], [[SCALED_ZEROED]]
   // CHECK: [[BOUNDED:%.+]] = arith.minsi [[CMAX]], [[LOWER]]
   // CHECK: [[TRUNC:%.+]] = arith.trunci [[BOUNDED]]
@@ -1542,7 +1542,7 @@ func.func @rescale_i8_unsigned_input_output_explicit(%arg0 : tensor<2xui8>) -> (
   %shift = "tosa.const"() <{values = dense<15> : tensor<1xi8> }> : () -> tensor<1xi8>
   %input_zp = "tosa.const"() <{values = dense<17> : tensor<1xi8>}> : () -> tensor<1xi8>
   %output_zp = "tosa.const"() <{values = dense<22> : tensor<1xi8>}> : () -> tensor<1xi8>
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<2xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xui8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(true) : (tensor<2xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xui8>
 
   return
 }
