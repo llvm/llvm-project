@@ -742,8 +742,8 @@ def int_aarch64_neon_tbx3 : AdvSIMD_Tbx3_Intrinsic;
 def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 
 // Maps Memory locations to registers.
-defvar FFR = InaccessibleMem;
-defvar FPMR = InaccessibleMem;
+defvar FFR = ControlMem;
+defvar FPMR = ControlMem;
 defvar ZT0 = TargetMem0;
 defvar ZA = TargetMem1;
 

@@ -634,7 +634,7 @@ static std::optional<uint32_t> getMemoryEffects(const Record *R) {
   const Record *Memory = R->getValueAsDef("Memory");
   static constexpr std::pair<IRMemLocation, StringRef> Locations[] = {
       {IRMemLocation::ArgMem, "ArgMem"},
-      {IRMemLocation::InaccessibleMem, "InaccessibleMem"},
+      {IRMemLocation::ControlMem, "ControlMem"},
       {IRMemLocation::ErrnoMem, "ErrnoMem"},
       {IRMemLocation::Other, "Other"},
       {IRMemLocation::TargetMem0, "TargetMem0"},

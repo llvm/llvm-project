@@ -815,7 +815,7 @@ class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  UninitAllocKind,
                  AllocSizeAttr<0>, AllocFamilyAttr<family>];
-  let Memory = InaccessibleMemOrErrnoWrite;
+  let Memory = ControlMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef]];
 }
@@ -824,7 +824,7 @@ class CallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Zeroed">,
                  AllocSizeAttr<0, "1">, AllocFamilyAttr<family>];
-  let Memory = InaccessibleMemOrErrnoWrite;
+  let Memory = ControlMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef], [NoUndef]];
 }
@@ -832,7 +832,7 @@ class CallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
 class FreeLibcall<string family> : RuntimeLibcall<Void, [Ptr]> {
   let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Free">,
                  AllocFamilyAttr<family>];
-  let Memory = InaccessibleOrArgMem;
+  let Memory = ControlOrArgMem;
   let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
 }
 
@@ -841,7 +841,7 @@ class ReallocLibcall<string family, list<FuncArgType> SizeTypes,
     : RuntimeLibcall<Ptr, !listconcat([Ptr], SizeTypes)> {
   let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Realloc">,
                  allocSize, AllocFamilyAttr<family>];
-  let Memory = InaccessibleOrArgMemOrErrnoWrite;
+  let Memory = ControlMemOrArgMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = !listconcat([[AllocatedPointer, CapturesNone]],
                                !listsplat([NoUndef], !size(SizeTypes)));
@@ -1231,7 +1231,7 @@ def ALIGNED_ALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AlignedUninitAllocKind,
                  AllocSizeAttr<1>, AllocFamilyAttr<"malloc">];
-  let Memory = InaccessibleMemOrErrnoWrite;
+  let Memory = ControlMemOrArgMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[AllocAlign, NoUndef], [NoUndef]];
 }
@@ -1702,7 +1702,7 @@ def MEMALIGN : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AlignedUninitAllocKind,
                  AllocSizeAttr<1>, AllocFamilyAttr<"malloc">];
-  let Memory = InaccessibleMemOrErrnoWrite;
+  let Memory = ControlMemOrArgMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[AllocAlign]];
 }
@@ -1817,7 +1817,7 @@ def POPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
 
 def POSIX_MEMALIGN : RuntimeLibcall<Int, [Ptr, SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn];
-  let Memory = InaccessibleOrArgMem;
+  let Memory = ControlOrArgMem;
   let RetAttrs = [NoUndef];
   let ParamAttrs = [[CapturesNone, NoUndef, WriteOnly], [NoUndef], [NoUndef]];
 }
@@ -1864,7 +1864,7 @@ def PVALLOC : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  UninitAllocKind,
                  AllocFamilyAttr<"malloc">];
-  let Memory = InaccessibleMemOrErrnoWrite;
+  let Memory = ControlMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef]];
 }
@@ -2082,7 +2082,7 @@ def STRCSPN : RuntimeLibcall<SizeT, [Ptr, Ptr]> {
 
 def STRDUP : RuntimeLibcall<Ptr, [Ptr]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn, AllocFamilyAttr<"malloc">];
-  let Memory = InaccessibleOrArgMemOrErrnoWrite;
+  let Memory = ControlMemOrArgMemOrErrnoWrite;
   let RetAttrs = [NoAlias];
   let ParamAttrs = [[CapturesNone, ReadOnly]];
 }
@@ -2142,7 +2142,7 @@ def STRNCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
 
 def STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn, AllocFamilyAttr<"malloc">];
-  let Memory = InaccessibleOrArgMemOrErrnoWrite;
+  let Memory = ControlMemOrArgMemOrErrnoWrite;
   let RetAttrs = [NoAlias];
   let ParamAttrs = [[CapturesNone, ReadOnly], [NoUndef]];
 }
@@ -2307,7 +2307,7 @@ def VALLOC : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  UninitAllocKind,
                  AllocSizeAttr<0>, AllocFamilyAttr<"malloc">];
-  let Memory = InaccessibleMemOrErrnoWrite;
+  let Memory = ControlMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef]];
 }

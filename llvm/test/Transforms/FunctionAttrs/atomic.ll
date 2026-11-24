@@ -110,7 +110,7 @@ define void @atomicrmw_acq_rel_arg(ptr %x) {
 }
 
 define void @atomicrmw_monotonic_volatile_arg(ptr %x) {
-; CHECK: Function Attrs:  nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK: Function Attrs:  nofree norecurse nosync nounwind memory(argmem: readwrite, controlmem: readwrite)
 ; CHECK-LABEL: define void @atomicrmw_monotonic_volatile_arg(
 ; CHECK-SAME: ptr nofree captures(address) [[X:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw volatile add ptr [[X]], i32 1 monotonic, align 4
@@ -154,7 +154,7 @@ define void @cmpxchg_monotonic_acquire_arg(ptr %x) {
 }
 
 define void @cmpxchg_monotonic_volatile_arg(ptr %x) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, controlmem: readwrite)
 ; CHECK-LABEL: define void @cmpxchg_monotonic_volatile_arg(
 ; CHECK-SAME: ptr nofree captures(address) [[X:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg volatile ptr [[X]], i32 0, i32 1 monotonic monotonic, align 4

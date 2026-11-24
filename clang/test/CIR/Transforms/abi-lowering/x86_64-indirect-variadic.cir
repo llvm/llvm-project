@@ -13,7 +13,7 @@
 !rec_NoRegs = !cir.struct<"NoRegs" {data !s32i, data !s32i}>
 
 #none = #cir.memory_effects<other = none, arg_mem = none,
-                            inaccessible_mem = none, errno_mem = none,
+                            control_mem = none, errno_mem = none,
                             target_mem0 = none, target_mem1 = none>
 
 module attributes {
@@ -199,9 +199,9 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func {{.*}}@indirect_big_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
-  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %{{.+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %{{.+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
   // CHECK-LABEL: cir.func {{.*}}@indirect_scalar_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s32i)
-  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) {memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
 
   // LLVM-LABEL: define void @indirect_big_none(
   // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}}) #[[WIDE:[0-9]+]]

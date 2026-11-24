@@ -2519,28 +2519,28 @@ Error BitcodeReader::parseAttributeGroupBlock() {
                         MemoryEffects::argMemOnly(ArgMem) |
                         MemoryEffects::errnoMemOnly(OtherMem) |
                         MemoryEffects::otherMemOnly(OtherMem);
-              // Old bitcode encoded AArch64 state as inaccessible memory.
-              // Upgrade those effects to target-specific memory locations.
-              if (getTargetTriple().isAArch64())
-                ME = ME.getWithModRef(IRMemLocation::TargetMem0,
-                                      InaccessibleMem) |
-                     ME.getWithModRef(IRMemLocation::TargetMem1,
-                                      InaccessibleMem);
+              B.addMemoryAttr(ME);
+            } else if (Version <= 2) {
+              ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
+              ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
+              ModRefInfo ErrnoMem = ModRefInfo((EncodedME >> 4) & 3);
+              ModRefInfo OtherMem = ModRefInfo((EncodedME >> 6) & 3);
+              auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
+                        MemoryEffects::argMemOnly(ArgMem) |
+                        MemoryEffects::errnoMemOnly(ErrnoMem) |
+                        MemoryEffects::otherMemOnly(OtherMem);
+              if (Version == 2) {
+                ModRefInfo TargetMem0 = ModRefInfo((EncodedME >> 8) & 3);
+                ModRefInfo TargetMem1 = ModRefInfo((EncodedME >> 10) & 3);
+                ME = ME.getWithModRef(IRMemLocation::TargetMem0, TargetMem0)
+                         .getWithModRef(IRMemLocation::TargetMem1, TargetMem1);
+              }
               B.addMemoryAttr(ME);
             } else {
               // Construct the memory attribute directly from the encoded base
               // on newer versions.
               auto ME = MemoryEffects::createFromIntValue(
                   EncodedME & 0x00FFFFFFFFFFFFFFULL);
-              // Upgrade to target-specific memory locations introduced in
-              // version 2.
-              if (Version == 1 && getTargetTriple().isAArch64())
-                ME = ME.getWithModRef(
-                         IRMemLocation::TargetMem0,
-                         ME.getModRef(IRMemLocation::InaccessibleMem)) |
-                     ME.getWithModRef(
-                         IRMemLocation::TargetMem1,
-                         ME.getModRef(IRMemLocation::InaccessibleMem));
               B.addMemoryAttr(ME);
             }
           } else if (Kind == Attribute::Captures)

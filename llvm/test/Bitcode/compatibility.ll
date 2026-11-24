@@ -2610,7 +2610,7 @@ declare void @f.sanitize_concurrency() sanitize_concurrency
 ; CHECK: attributes #37 = { nounwind memory(argmem: readwrite) }
 ; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(read) }
 ; CHECK: attributes #39 = { nocallback nounwind }
-; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, controlmem: readwrite) }
 ; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #42 = { memory(write) }
 ; CHECK: attributes #43 = { speculatable }

@@ -1247,7 +1247,7 @@ define void @misc.metadata() {
 ; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(read) }
 ; CHECK: attributes #36 = { nocallback nounwind }
 ; CHECK: attributes #37 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, controlmem: readwrite) }
 ; CHECK: attributes #39 = { builtin }
 
 ;; Metadata

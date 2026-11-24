@@ -1820,9 +1820,9 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
   llvm::MemoryEffects newMemEffects =
       llvm::MemoryEffects(llvm::MemoryEffects::Location::ArgMem,
                           convertModRefInfoToLLVM(memEffects.getArgMem()));
-  newMemEffects |= llvm::MemoryEffects(
-      llvm::MemoryEffects::Location::InaccessibleMem,
-      convertModRefInfoToLLVM(memEffects.getInaccessibleMem()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::ControlMem,
+                          convertModRefInfoToLLVM(memEffects.getControlMem()));
   newMemEffects |=
       llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                           convertModRefInfoToLLVM(memEffects.getOther()));

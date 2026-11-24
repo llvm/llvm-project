@@ -230,17 +230,17 @@ void *g0() { return new G; }
 void *g1() { return new (q) G; }
 #endif
 
-// CHECK-DAG: attributes [[ATTR_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnwmSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_ZnwmSt11align_val_t" }
 // CHECK-DAG: attributes [[ATTR_ALIGN_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="_ZnwmSt11align_val_t" }
-// CHECK-DAG: attributes [[ATTR_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnamSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="_ZnamSt11align_val_t" }
 // CHECK-DAG: attributes [[ATTR_ALIGN_ARRAY_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="_ZnamSt11align_val_t" }
 
-// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??2@YAPAXIW4align_val_t@std@@@Z" }
+// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="??2@YAPAXIW4align_val_t@std@@@Z" }
 // CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??2@YAPAXIW4align_val_t@std@@@Z" }
-// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??_U@YAPAXIW4align_val_t@std@@@Z" }
+// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="??_U@YAPAXIW4align_val_t@std@@@Z" }
 // CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_ARRAY_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??_U@YAPAXIW4align_val_t@std@@@Z" }
 
-// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??2@YAPAXI@Z" }
+// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="??2@YAPAXI@Z" }
 // CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??2@YAPAXI@Z" }
-// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??_U@YAPAXI@Z" }
+// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(errnomem: write, inaccessiblemem: readwrite) "alloc-family"="??_U@YAPAXI@Z" }
 // CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_ARRAY_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??_U@YAPAXI@Z" }

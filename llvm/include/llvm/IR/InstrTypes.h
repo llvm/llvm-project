@@ -2018,12 +2018,10 @@ public:
   /// Determine if the function may only access memory that is
   /// inaccessible from the IR.
   LLVM_ABI bool onlyAccessesInaccessibleMemory() const;
-  LLVM_ABI void setOnlyAccessesInaccessibleMemory();
 
   /// Determine if the function may only access memory that is
   /// either inaccessible from the IR or pointed to by its arguments.
   LLVM_ABI bool onlyAccessesInaccessibleMemOrArgMem() const;
-  LLVM_ABI void setOnlyAccessesInaccessibleMemOrArgMem();
 
   /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }

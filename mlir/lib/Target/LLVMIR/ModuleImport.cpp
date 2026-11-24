@@ -3029,8 +3029,8 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
       memEffects.getModRef(llvm::MemoryEffects::Location::Other));
   auto argMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
-  auto inaccessibleMem = convertModRefInfoFromLLVM(
-      memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+  auto controlMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ControlMem));
   auto errnoMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::ErrnoMem));
   auto targetMem0 = convertModRefInfoFromLLVM(
@@ -3038,8 +3038,8 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   auto targetMem1 = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::TargetMem1));
   auto memAttr =
-      MemoryEffectsAttr::get(funcOp.getContext(), othermem, argMem,
-                             inaccessibleMem, errnoMem, targetMem0, targetMem1);
+      MemoryEffectsAttr::get(funcOp.getContext(), othermem, argMem, controlMem,
+                             errnoMem, targetMem0, targetMem1);
   // Only set the attr when it does not match the default value.
   if (memAttr.isReadWrite())
     return;
@@ -3493,8 +3493,8 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
       memEffects.getModRef(llvm::MemoryEffects::Location::Other));
   ModRefInfo argMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
-  ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
-      memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+  ModRefInfo controlMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ControlMem));
   ModRefInfo errnoMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::ErrnoMem));
   ModRefInfo targetMem0 = convertModRefInfoFromLLVM(
@@ -3502,7 +3502,7 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   ModRefInfo targetMem1 = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::TargetMem1));
   auto memAttr =
-      MemoryEffectsAttr::get(op.getContext(), othermem, argMem, inaccessibleMem,
+      MemoryEffectsAttr::get(op.getContext(), othermem, argMem, controlMem,
                              errnoMem, targetMem0, targetMem1);
   // Only set the attribute when it does not match the default value.
   if (!memAttr.isReadWrite())

@@ -61,13 +61,23 @@ def IntrInaccessibleMemOnly : IntrinsicProperty;
 // by the module being compiled. This is a weaker form of IntrArgMemOnly.
 def IntrInaccessibleMemOrArgMemOnly : IntrinsicProperty;
 
+// IntrControlMemOnly -- This intrinsic may only make access memory-like
+// objects, that cannot be accessed by any pointer. This is a weaker form of
+// IntrNoMem.
+def IntrControlMemOnly : IntrinsicProperty;
+
+// IntrControlMemOrArgMemOnly -- This intrinsic may only access memory-like
+// objects or the memory that its pointer-typed arguments point to. This is a
+// weaker form of IntrArgMemOnly.
+def IntrControlMemOrArgMemOnly : IntrinsicProperty;
+
 // Tablegen representation of IRMemLocation.
 class IntrinsicMemoryLocation;
 
 // TODO: Populate with all IRMemLocation enum values and update
 // getValueAsIRMemLocation accordingly.
 def ArgMem : IntrinsicMemoryLocation;
-def InaccessibleMem : IntrinsicMemoryLocation;
+def ControlMem : IntrinsicMemoryLocation;
 def TargetMem0 : IntrinsicMemoryLocation;
 def TargetMem1 : IntrinsicMemoryLocation;
 
@@ -1075,14 +1085,14 @@ def int_thread_pointer : DefaultAttrsIntrinsic<
                              [llvm_anyptr_ty], [], [IntrNoMem]>,
                          ClangBuiltin<"__builtin_thread_pointer">;
 
-// IntrInaccessibleMemOrArgMemOnly is a little more pessimistic than strictly
+// IntrIControlMemOrArgMemOnly is a little more pessimistic than strictly
 // necessary for prefetch, however it does conveniently prevent the prefetch
 // from being reordered overly much with respect to nearby access to the same
 // memory while not impeding optimization.
 def int_prefetch
     : DefaultAttrsIntrinsic<[],
                 [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-                [IntrInaccessibleMemOrArgMemOnly,
+                [IntrControlMemOrArgMemOnly,
                  ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
                  ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 0, 2>,
                  ImmArg<ArgIndex<2>>, Range<ArgIndex<2>, 0, 4>,
@@ -2128,12 +2138,12 @@ def int_allow_sanitize_hwaddress
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize
     : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
-                [Throws, IntrWrite<[InaccessibleMem]>]>;
+                [Throws, IntrWrite<[ControlMem]>]>;
 
 // Support for speculative runtime guards
 def int_experimental_guard
     : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
-                [Throws, IntrWrite<[InaccessibleMem]>]>;
+                [Throws, IntrWrite<[ControlMem]>]>;
 
 // Supports widenable conditions for guards represented as explicit branches.
 def int_experimental_widenable_condition : DefaultAttrsIntrinsic<[llvm_i1_ty],

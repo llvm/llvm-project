@@ -723,6 +723,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(write);
   KEYWORD(readwrite);
   KEYWORD(argmem);
+  KEYWORD(controlmem);
   KEYWORD(target_mem0);
   KEYWORD(target_mem1);
   KEYWORD(target_mem);

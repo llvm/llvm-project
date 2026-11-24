@@ -1223,7 +1223,7 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = "",
   // Descriptors read shared memory; writes affect tensor memory and internal
   // state. D may be read, and .ashift also writes A.
   list<IntrinsicProperty> common_intr_props = !listconcat(
-      [IntrWrite<[ArgMem, InaccessibleMem]>],
+      [IntrWrite<[ArgMem, ControlMem]>],
       !if(!and(!eq(Space, "tensor"), !not(IsAShift)), [ReadOnly<ArgIndex<1>>], []),
       !if(IsSparse, [ReadOnly<ArgIndex<5>>], []));
 

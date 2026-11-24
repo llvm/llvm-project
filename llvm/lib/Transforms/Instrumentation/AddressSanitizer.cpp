@@ -379,9 +379,7 @@ void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
   // read/write shadow memory, which is IRMemLocation::Other. Sanitizer
   // instrumentation can instrument any memory accesses to non-inaccessible
   // memory.
-  if (!F.getMemoryEffects()
-           .getWithoutLoc(IRMemLocation::InaccessibleMem)
-           .doesNotAccessMemory() &&
+  if (!F.getMemoryEffects().onlyAccessesInaccessibleMem() &&
       !isModAndRefSet(F.getMemoryEffects().getModRef(IRMemLocation::Other))) {
     F.setMemoryEffects(F.getMemoryEffects() |
                        MemoryEffects::otherMemOnly(ModRefInfo::ModRef));

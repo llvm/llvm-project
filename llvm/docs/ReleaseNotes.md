@@ -178,6 +178,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
+  
+* `InaccessibleMem` is now a category that includes several MemoryEffect
+  locations. The location it previously denoted is `ControlMem`.
 
 * The verifier now rejects a `"wchar_size"` module flag whose value is not
   positive.

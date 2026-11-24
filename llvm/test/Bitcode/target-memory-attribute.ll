@@ -7,7 +7,7 @@
 
 
 define void @test_inaccessible_read() #0 {
-; AARCH64: ; Function Attrs: memory(inaccessiblemem: read, target_mem: read)
+; AARCH64: ; Function Attrs: memory(inaccessiblemem: read)
 ; AARCH64-NEXT: define void @test_inaccessible_read()
 ; NON-AARCH64: ; Function Attrs: memory(inaccessiblemem: read)
 ; NON-AARCH64-NEXT: define void @test_inaccessible_read()
@@ -15,7 +15,7 @@ define void @test_inaccessible_read() #0 {
 }
 
 define void @test_inaccessible_readwrite() #1 {
-; AARCH64: ; Function Attrs: memory(inaccessiblemem: readwrite, target_mem: readwrite)
+; AARCH64: ; Function Attrs: memory(inaccessiblemem: readwrite)
 ; AARCH64-NEXT: define void @test_inaccessible_readwrite()
 ; NON-AARCH64: ; Function Attrs: memory(inaccessiblemem: readwrite)
 ; NON-AARCH64-NEXT: define void @test_inaccessible_readwrite()

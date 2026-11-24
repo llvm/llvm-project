@@ -84,14 +84,14 @@ define void @f1(i64 %x, i64 %y){
 define void @bar(){
 ; CHECK-LABEL: define void @bar() {
 ; CHECK-NEXT:    call void @fn_write_target1()
-; CHECK-NEXT:    call void @fn_write_inaccessiblemem()
-; CHECK-NEXT:    call void @fn_read_inaccessiblemem()
+; CHECK-NEXT:    call void @fn_write_controlmem()
+; CHECK-NEXT:    call void @fn_read_controlmem()
 ; CHECK-NEXT:    ret void
 ;
   call void @fn_write_target1()
-  call void @fn_write_inaccessiblemem()
+  call void @fn_write_controlmem()
   call void @fn_write_target1()
-  call void @fn_read_inaccessiblemem()
+  call void @fn_read_controlmem()
   ret void
 }
 
@@ -103,10 +103,10 @@ declare void @fn_read_target1()
 declare void @fn_read_target0_readwrite_target1()
   memory(target_mem0: read, target_mem1: readwrite)
 
-declare void @fn_read_inaccessiblemem()
+declare void @fn_read_controlmem()
   memory(inaccessiblemem: read)
-declare void @fn_write_inaccessiblemem()
-  memory(inaccessiblemem: write)
+declare void @fn_write_controlmem()
+  memory(controlmem: write)
 
 
 declare void @fn_readwrite_target0_read_target1()

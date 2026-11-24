@@ -90,8 +90,8 @@ template <typename OpTy> static void widenForArgMemory(OpTy op) {
     return;
   op.setMemoryEffectsAttr(cir::MemoryEffectsAttr::get(
       effects.getContext(), effects.getOther(), cir::ModRefInfo::ModRef,
-      effects.getInaccessibleMem(), effects.getErrnoMem(),
-      effects.getTargetMem0(), effects.getTargetMem1()));
+      effects.getControlMem(), effects.getErrnoMem(), effects.getTargetMem0(),
+      effects.getTargetMem1()));
 }
 
 #ifndef NDEBUG

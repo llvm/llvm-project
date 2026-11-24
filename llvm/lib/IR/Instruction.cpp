@@ -1100,7 +1100,7 @@ MemoryEffects Instruction::getMemoryEffects() const {
       return MemoryEffects::unknown();
 
     if (IsVolatile)
-      return MemoryEffects::inaccessibleOrArgMemOnly();
+      return MemoryEffects::controlOrArgMemOnly();
 
     if (isStrongerThanUnordered(Ordering))
       return MemoryEffects::argMemOnly();

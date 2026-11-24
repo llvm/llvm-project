@@ -153,7 +153,7 @@ def ModRef : ModRefInfo;
 
 class MemoryEffects<ModRefInfo mr = ModRef> {
   ModRefInfo ArgMem = mr;
-  ModRefInfo InaccessibleMem = mr;
+  ModRefInfo ControlMem = mr;
   ModRefInfo ErrnoMem = mr;
   ModRefInfo Other = mr;
   ModRefInfo TargetMem0 = mr;
@@ -172,19 +172,26 @@ def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
 }
 
 def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
-def InaccessibleMemOrErrnoWrite : MemoryEffects<NoModRef> {
-  let InaccessibleMem = ModRef;
+def ControlMemOrErrnoWrite : MemoryEffects<NoModRef> {
+  let ControlMem = ModRef;
   let ErrnoMem = Mod;
+}
+
+def ControlOrArgMem : MemoryEffects<NoModRef> {
+  let ArgMem = ModRef;
+  let ControlMem = ModRef;
 }
 
 def InaccessibleOrArgMem : MemoryEffects<NoModRef> {
   let ArgMem = ModRef;
-  let InaccessibleMem = ModRef;
+  let ControlMem = ModRef;
+  let TargetMem0 = ModRef;
+  let TargetMem1 = ModRef;
 }
 
-def InaccessibleOrArgMemOrErrnoWrite : MemoryEffects<NoModRef> {
+def ControlMemOrArgMemOrErrnoWrite : MemoryEffects<NoModRef> {
   let ArgMem = ModRef;
-  let InaccessibleMem = ModRef;
+  let ControlMem = ModRef;
   let ErrnoMem = Mod;
 }
 

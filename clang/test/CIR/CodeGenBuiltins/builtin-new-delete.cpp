@@ -9,7 +9,7 @@
 void test_builtins_basic() {
   __builtin_operator_delete(__builtin_operator_new(4));
   // CIR-LABEL: test_builtins_basic
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: cir.call @_ZdlPv([[P]]) {{.*}}builtin{{.*}} : (!cir.ptr<!void> {llvm.noundef}) -> ()
   // CIR: cir.return
 
@@ -28,7 +28,7 @@ void test_sized_delete() {
   __builtin_operator_delete(__builtin_operator_new(4), 4);
 
   // CIR-LABEL: test_sized_delete
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, control_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: cir.call @_ZdlPvm([[P]], {{%.*}}) {{.*}}builtin{{.*}} : (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
   // CIR: cir.return
 
@@ -43,7 +43,7 @@ void test_sized_delete() {
   // OGCG: ret void
 }
 
-// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(inaccessiblemem: readwrite, errnomem: write){{.*}}}
+// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(errnomem: write, controlmem: readwrite){{.*}}}
 // LLVM-DAG: attributes #[[ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
