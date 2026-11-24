@@ -224,3 +224,50 @@ TEST(SPSAllocActionTest, RunMacroDefinedAllocActionWithErrorFailureReturn) {
   ASSERT_NE(B.getOutOfBandError(), nullptr);
   EXPECT_STREQ(B.getOutOfBandError(), "X and Y differ");
 }
+
+// Test AllocActionFunction::handleWithMethod.
+class Accumulator {
+public:
+  Error add(int32_t N) noexcept {
+    Total += N;
+    return Error::success();
+  }
+  Error take(std::string &S) noexcept {
+    Log = std::move(S);
+    return Error::success();
+  }
+
+  int32_t Total = 0;
+  std::string Log;
+};
+
+ORC_RT_SPS_ALLOC_ACTION_IMPL(
+    method_add_allocaction, (SPSExecutorAddr, int32_t),
+    AllocActionFunction::handleWithMethod(&Accumulator::add))
+ORC_RT_SPS_ALLOC_ACTION_IMPL(
+    method_take_allocaction, (SPSExecutorAddr, SPSString),
+    AllocActionFunction::handleWithMethod(&Accumulator::take))
+
+TEST(SPSAllocActionTest, RunMethodAllocActionCallsTargetObject) {
+  // The method should be called on the object whose address is passed, and
+  // only that object.
+  Accumulator A, B;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, int32_t>::from(
+      method_add_allocaction, ExecutorAddr::fromPtr(&B), int32_t(42));
+  auto R = AA();
+  EXPECT_EQ(R.getOutOfBandError(), nullptr);
+  EXPECT_EQ(A.Total, 0);
+  EXPECT_EQ(B.Total, 42);
+}
+
+TEST(SPSAllocActionTest, RunMethodAllocActionWithNonConstLValueRefArg) {
+  // Method should forward arguments to the wrapped method according to the
+  // method's parameter types. A non-const lvalue reference parameter is the
+  // strictest case: it can't bind to an rvalue.
+  Accumulator A;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, SPSString>::from(
+      method_take_allocaction, ExecutorAddr::fromPtr(&A), std::string("hello"));
+  auto R = AA();
+  EXPECT_EQ(R.getOutOfBandError(), nullptr);
+  EXPECT_EQ(A.Log, "hello");
+}
