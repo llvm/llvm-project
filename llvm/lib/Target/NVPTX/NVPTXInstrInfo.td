@@ -1580,13 +1580,27 @@ def : Pat<(i16 (sext_inreg (trunc (prmt i32:$s, 0, byte_extract_prmt:$sel, PrmtN
 def : Pat<(i16 (sext_inreg (trunc i32:$s), i8)), (CVT_s8_s32 reg_or_imm:$s, CvtNONE)>;
 def : Pat<(i16 (sext_inreg (trunc i64:$s), i8)), (CVT_s8_s64 reg_or_imm:$s, CvtNONE)>;
 
-def : Pat<(sext_inreg (srl i32:$s, (i32 imm:$o)), i8), (BFE_S32 reg_or_imm:$s, imm:$o, (i32 8))>;
-def : Pat<(sext_inreg (srl i64:$s, (i32 imm:$o)), i8), (BFE_S64 reg_or_imm:$s, imm:$o, (i32 8))>;
+// Use unsigned extraction when the byte includes zeros shifted in by srl.
+def byte_extract_ofs32 : ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 24; }]>;
+def byte_extract_ofs64 : ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 56; }]>;
+def byte_extract_high_ofs32 : ImmLeaf<i32, [{ return Imm > 24 && Imm < 32; }]>;
+def byte_extract_high_ofs64 : ImmLeaf<i32, [{ return Imm > 56 && Imm < 64; }]>;
 
-def : Pat<(i16 (sext_inreg (trunc (srl i32:$s, (i32 imm:$o))), i8)),
+def : Pat<(sext_inreg (srl i32:$s, (i32 byte_extract_ofs32:$o)), i8), (BFE_S32 reg_or_imm:$s, imm:$o, (i32 8))>;
+def : Pat<(sext_inreg (srl i64:$s, (i32 byte_extract_ofs64:$o)), i8), (BFE_S64 reg_or_imm:$s, imm:$o, (i32 8))>;
+
+def : Pat<(i16 (sext_inreg (trunc (srl i32:$s, (i32 byte_extract_ofs32:$o))), i8)),
           (CVT_s8_s32 (BFE_S32 reg_or_imm:$s, imm:$o, (i32 8)), CvtNONE)>;
-def : Pat<(i16 (sext_inreg (trunc (srl i64:$s, (i32 imm:$o))), i8)),
+def : Pat<(i16 (sext_inreg (trunc (srl i64:$s, (i32 byte_extract_ofs64:$o))), i8)),
           (CVT_s8_s64 (BFE_S64 reg_or_imm:$s, imm:$o, (i32 8)), CvtNONE)>;
+
+def : Pat<(sext_inreg (srl i32:$s, (i32 byte_extract_high_ofs32:$o)), i8), (BFE_U32 reg_or_imm:$s, imm:$o, (i32 8))>;
+def : Pat<(sext_inreg (srl i64:$s, (i32 byte_extract_high_ofs64:$o)), i8), (BFE_U64 reg_or_imm:$s, imm:$o, (i32 8))>;
+
+def : Pat<(i16 (sext_inreg (trunc (srl i32:$s, (i32 byte_extract_high_ofs32:$o))), i8)),
+          (CVT_s8_s32 (BFE_U32 reg_or_imm:$s, imm:$o, (i32 8)), CvtNONE)>;
+def : Pat<(i16 (sext_inreg (trunc (srl i64:$s, (i32 byte_extract_high_ofs64:$o))), i8)),
+          (CVT_s8_s64 (BFE_U64 reg_or_imm:$s, imm:$o, (i32 8)), CvtNONE)>;
 
 def : Pat<(i16 (sra (i16 (trunc i32:$s)), (i32 8))),
           (CVT_s8_s32 (BFE_S32 reg_or_imm:$s, (i32 8), (i32 8)), CvtNONE)>;
