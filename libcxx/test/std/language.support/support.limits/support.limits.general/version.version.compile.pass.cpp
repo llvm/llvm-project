@@ -1064,6 +1064,14 @@
 #    error "__cpp_lib_stdatomic_h should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_stdbit_h
+#    error "__cpp_lib_stdbit_h should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_stdckdint_h
+#    error "__cpp_lib_stdckdint_h should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_string_contains
 #    error "__cpp_lib_string_contains should not be defined before c++23"
 #  endif
@@ -2296,6 +2304,14 @@
 
 #  ifdef __cpp_lib_stdatomic_h
 #    error "__cpp_lib_stdatomic_h should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_stdbit_h
+#    error "__cpp_lib_stdbit_h should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_stdckdint_h
+#    error "__cpp_lib_stdckdint_h should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_string_contains
@@ -3713,6 +3729,14 @@
 
 #  ifdef __cpp_lib_stdatomic_h
 #    error "__cpp_lib_stdatomic_h should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_stdbit_h
+#    error "__cpp_lib_stdbit_h should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_stdckdint_h
+#    error "__cpp_lib_stdckdint_h should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_string_contains
@@ -5397,6 +5421,14 @@
 
 #  ifdef __cpp_lib_stdatomic_h
 #    error "__cpp_lib_stdatomic_h should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_stdbit_h
+#    error "__cpp_lib_stdbit_h should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_stdckdint_h
+#    error "__cpp_lib_stdckdint_h should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_string_contains
@@ -7348,6 +7380,32 @@
 #  endif
 #  if __cpp_lib_stdatomic_h != 202011L
 #    error "__cpp_lib_stdatomic_h should have the value 202011L in c++23"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_stdbit_h
+#      error "__cpp_lib_stdbit_h should be defined in c++23"
+#    endif
+#    if __cpp_lib_stdbit_h != 202603L
+#      error "__cpp_lib_stdbit_h should have the value 202603L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_stdbit_h
+#      error "__cpp_lib_stdbit_h should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_stdckdint_h
+#      error "__cpp_lib_stdckdint_h should be defined in c++23"
+#    endif
+#    if __cpp_lib_stdckdint_h != 202603L
+#      error "__cpp_lib_stdckdint_h should have the value 202603L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_stdckdint_h
+#      error "__cpp_lib_stdckdint_h should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_string_contains
@@ -10022,6 +10080,32 @@
 #  endif
 #  if __cpp_lib_stdatomic_h != 202011L
 #    error "__cpp_lib_stdatomic_h should have the value 202011L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_stdbit_h
+#      error "__cpp_lib_stdbit_h should be defined in c++26"
+#    endif
+#    if __cpp_lib_stdbit_h != 202603L
+#      error "__cpp_lib_stdbit_h should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_stdbit_h
+#      error "__cpp_lib_stdbit_h should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_stdckdint_h
+#      error "__cpp_lib_stdckdint_h should be defined in c++26"
+#    endif
+#    if __cpp_lib_stdckdint_h != 202603L
+#      error "__cpp_lib_stdckdint_h should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_stdckdint_h
+#      error "__cpp_lib_stdckdint_h should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_string_contains
@@ -12783,6 +12867,32 @@
 #  endif
 #  if __cpp_lib_stdatomic_h != 202011L
 #    error "__cpp_lib_stdatomic_h should have the value 202011L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_stdbit_h
+#      error "__cpp_lib_stdbit_h should be defined in c++29"
+#    endif
+#    if __cpp_lib_stdbit_h != 202603L
+#      error "__cpp_lib_stdbit_h should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_stdbit_h
+#      error "__cpp_lib_stdbit_h should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_stdckdint_h
+#      error "__cpp_lib_stdckdint_h should be defined in c++29"
+#    endif
+#    if __cpp_lib_stdckdint_h != 202603L
+#      error "__cpp_lib_stdckdint_h should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_stdckdint_h
+#      error "__cpp_lib_stdckdint_h should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_string_contains

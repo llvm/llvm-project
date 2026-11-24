@@ -218,6 +218,8 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_stacktrace`                                 | *unimplemented* |
 | `__cpp_lib_start_lifetime_as`                          | *unimplemented* |
 | `__cpp_lib_stdatomic_h`                                | `202011L`       |
+| `__cpp_lib_stdbit_h`                                   | *unimplemented* |
+| `__cpp_lib_stdckdint_h`                                | *unimplemented* |
 | `__cpp_lib_string_contains`                            | `202011L`       |
 | `__cpp_lib_string_resize_and_overwrite`                | `202110L`       |
 | `__cpp_lib_to_underlying`                              | `202102L`       |
