@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 
 using namespace mlir;
@@ -31,8 +32,8 @@ namespace {
 
 struct FIROpenACCSupportAnalysisTest : public testing::Test {
   void SetUp() override {
-    context.loadDialect<fir::FIROpsDialect, func::FuncDialect, DLTIDialect,
-        LLVM::LLVMDialect>();
+    context.loadDialect<fir::FIROpsDialect, hlfir::hlfirDialect,
+        func::FuncDialect, DLTIDialect, LLVM::LLVMDialect>();
     kindMap = std::make_unique<fir::KindMapping>(&context);
     module = ModuleOp::create(UnknownLoc::get(&context));
     fir::setKindMapping(module, *kindMap);
@@ -77,6 +78,45 @@ struct FIROpenACCSupportAnalysisTest : public testing::Test {
 
   Value declareVariable(fir::FortranVariableFlagsAttr attrs = {}) {
     return declareScalar(fir::NameUniquer::doVariable({}, {}, 0, "x"), attrs);
+  }
+
+  /// A `fir.declare` of a 10 x i32 array named "x". \p attrs may be null.
+  /// The function has one i64 argument that designators use as the index.
+  Value declareArray(fir::FortranVariableFlagsAttr attrs = {}) {
+    OpBuilder builder(&context);
+    Location loc = builder.getUnknownLoc();
+    builder.setInsertionPointToEnd(module.getBody());
+    auto func = func::FuncOp::create(builder, loc,
+        "array_" + std::to_string(nextFunc++),
+        builder.getFunctionType({builder.getI64Type()}, {}));
+    Block *entry = func.addEntryBlock();
+    builder.setInsertionPointToStart(entry);
+    Type arrayTy = fir::ReferenceType::get(
+        fir::SequenceType::get({10}, builder.getI32Type()));
+    Value addr = fir::AllocaOp::create(builder, loc, arrayTy);
+    return fir::DeclareOp::create(builder, loc, addr.getType(), addr,
+        /*shape=*/Value{},
+        /*typeParams=*/ValueRange{}, /*dummy_scope=*/nullptr,
+        /*storage=*/nullptr, /*storage_offset=*/0,
+        builder.getStringAttr(fir::NameUniquer::doVariable({}, {}, 0, "x")),
+        attrs, /*data_attr=*/cuf::DataAttributeAttr{},
+        /*dummy_arg_no=*/IntegerAttr{})
+        .getResult();
+  }
+
+  /// `hlfir.designate %array (%idx)`: one element of an array made by
+  /// declareArray. \p attrs are the designator's own attributes and may be
+  /// null, as they usually are after lowering.
+  Value designateElement(
+      Value array, fir::FortranVariableFlagsAttr attrs = {}) {
+    OpBuilder builder(&context);
+    Location loc = builder.getUnknownLoc();
+    builder.setInsertionPointAfter(array.getDefiningOp());
+    Value index = array.getParentBlock()->getArgument(0);
+    return hlfir::DesignateOp::create(builder, loc,
+        fir::ReferenceType::get(builder.getI32Type()), array, ValueRange{index},
+        ValueRange{}, attrs)
+        .getResult();
   }
 
   MLIRContext context;
@@ -224,6 +264,47 @@ TEST_F(FIROpenACCSupportAnalysisTest, OtherAttributesDoNotCapture) {
   Value intentIn = declareVariable(fir::FortranVariableFlagsAttr::get(
       &context, fir::FortranVariableFlagsEnum::intent_in));
   EXPECT_TRUE(support.isAddressNotCapturedByCalls(intentIn));
+}
+
+// %0 = fir.alloca !fir.array<10xi32>
+// %1 = fir.declare %0 uniq_name("_QEx") : !fir.ref<!fir.array<10xi32>>
+// %2 = hlfir.designate %1 (%idx) : (!fir.ref<!fir.array<10xi32>>, i64)
+//          -> !fir.ref<i32>
+// true: the designator carries no attributes of its own, and the declaration
+// it is part of carries none that allow a callee to keep the address.
+TEST_F(FIROpenACCSupportAnalysisTest, DesignatorOfPlainVariableIsNotCaptured) {
+  Value element = designateElement(declareArray());
+  EXPECT_TRUE(support.isAddressNotCapturedByCalls(element));
+}
+
+// %1 = fir.declare %0 uniq_name("_QEx") fortran_attrs<asynchronous>
+// %2 = hlfir.designate %1 (%idx) : ...   (no fortran_attrs on the designate)
+// false: the designator does not carry ASYNCHRONOUS or VOLATILE, so the
+// answer has to come from the declaration it is part of. The same holds for
+// the attributes that the alias analysis collects (TARGET and POINTER).
+TEST_F(FIROpenACCSupportAnalysisTest,
+    DesignatorTakesCapturingAttributesFromDeclaration) {
+  using Flag = fir::FortranVariableFlagsEnum;
+  for (Flag flag : {Flag::asynchronous, Flag::fortran_volatile, Flag::target,
+           Flag::pointer}) {
+    Value element = designateElement(
+        declareArray(fir::FortranVariableFlagsAttr::get(&context, flag)));
+    EXPECT_FALSE(support.isAddressNotCapturedByCalls(element))
+        << "flag " << static_cast<uint32_t>(flag);
+  }
+}
+
+// %1 = fir.declare %0 uniq_name("_QEx") : ...   (no fortran_attrs)
+// %2 = hlfir.designate %1 (%idx) fortran_attrs<asynchronous> : ...
+// false: an attribute on the designator itself is also honored.
+TEST_F(FIROpenACCSupportAnalysisTest, DesignatorOwnAttributesKeepTheAddress) {
+  using Flag = fir::FortranVariableFlagsEnum;
+  for (Flag flag : {Flag::asynchronous, Flag::fortran_volatile}) {
+    Value element = designateElement(
+        declareArray(), fir::FortranVariableFlagsAttr::get(&context, flag));
+    EXPECT_FALSE(support.isAddressNotCapturedByCalls(element))
+        << "flag " << static_cast<uint32_t>(flag);
+  }
 }
 
 // %a = fir.alloca i32

@@ -102,16 +102,29 @@ bool FIROpenACCSupportAnalysis::isAddressNotCapturedByCalls(Value v) {
   auto varIface = v.getDefiningOp<fir::FortranVariableOpInterface>();
   if (!varIface)
     return false;
-  std::optional<fir::FortranVariableFlagsEnum> attrs =
-      varIface.getFortranAttrs();
-  if (attrs && bitEnumContainsAny(
-                   *attrs, fir::FortranVariableFlagsEnum::asynchronous |
-                               fir::FortranVariableFlagsEnum::fortran_volatile))
-    return false;
 
   fir::AliasAnalysis aliasAnalysis;
   fir::AliasAnalysis::Source source = aliasAnalysis.getSource(
       v, /*getLastInstantiationPoint=*/true, /*collectScopedOrigins=*/false);
+
+  constexpr fir::FortranVariableFlagsEnum externalAccessFlags =
+      fir::FortranVariableFlagsEnum::asynchronous |
+      fir::FortranVariableFlagsEnum::fortran_volatile;
+  auto hasExternalAccess = [&](fir::FortranVariableOpInterface iface) {
+    std::optional<fir::FortranVariableFlagsEnum> attrs =
+        iface.getFortranAttrs();
+    return attrs && bitEnumContainsAny(*attrs, externalAccessFlags);
+  };
+  if (hasExternalAccess(varIface))
+    return false;
+  // A designator such as hlfir.designate usually does not carry the
+  // attributes of the variable it designates, so also read them from the
+  // declaration that the alias analysis reached.
+  if (auto declIface = dyn_cast_or_null<fir::FortranVariableOpInterface>(
+          source.origin.instantiationPoint))
+    if (hasExternalAccess(declIface))
+      return false;
+
   return source.isFortranUserVariable() && !source.isTargetOrPointer() &&
          source.kind != fir::AliasAnalysis::SourceKind::HostAssoc &&
          !source.isCapturedInInternalProcedure;
