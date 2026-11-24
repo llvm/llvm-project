@@ -102,6 +102,10 @@ infrastructure are described first, followed by tool-specific sections.
   value when possible, and otherwise via a pointer parameter, since C has
   no references.
 
+- The `Define outline` tweak no longer copies attributes (`[[...]]`,
+  `__attribute__((...))` and `__declspec(...)`) from the declaration to the
+  generated out-of-line definition.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
@@ -143,6 +147,10 @@ infrastructure are described first, followed by tool-specific sections.
   `ImplementationFileExtensions` contains an invalid entry, such as one with a
   leading dot. The invalid option is now reported as a warning.
 
+- Added a new {program}`clang-tidy` command line option `-sarif-export=<file>`
+  in which clang-tidy diagnostics are exported in the [SARIF](https://sarifweb.azurewebsites.net/)
+  format.
+  
 #### New checks
 
 - New {doc}`bugprone-macro-condition

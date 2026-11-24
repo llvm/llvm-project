@@ -31,10 +31,6 @@
 #include "flang/Optimizer/HLFIR/HLFIRAttributes.cpp.inc"
 
 void hlfir::hlfirDialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "flang/Optimizer/HLFIR/HLFIRTypes.cpp.inc"
-      >();
   addOperations<
 #define GET_OP_LIST
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

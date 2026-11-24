@@ -20,6 +20,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -262,6 +263,43 @@ void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
   erase(MI);
 }
 
+static SmallVector<const MachineInstr *>
+getTypeDecls(const MachineFunction &MF) {
+  const SPIRVInstrInfo &TII = *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo();
+  SmallVector<const MachineInstr *> Res;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (MI.getNumDefs() && TII.isTypeDeclInstr(MI))
+        Res.push_back(&MI);
+  return Res;
+}
+
+void SPIRVGlobalRegistry::restoreFromMIR(const MachineFunction &MF) {
+  for (const MachineInstr *MI : getTypeDecls(MF))
+    assignSPIRVTypeToVReg(MI, getSPIRVTypeID(MI), MF);
+}
+
+SmallVector<std::pair<Register, Register>>
+SPIRVGlobalRegistry::getVRegTypeIDs(const MachineFunction &MF) const {
+  SmallVector<std::pair<Register, Register>> Res;
+  auto TypesIt = VRegToTypeMap.find(&MF);
+  if (TypesIt == VRegToTypeMap.end())
+    return Res;
+  // The map may hold erased instructions, so only compare pointers.
+  SmallPtrSet<const MachineInstr *, 16> TypeInstrs;
+  TypeInstrs.insert_range(getTypeDecls(MF));
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (auto [Reg, Ty] : TypesIt->second) {
+    if (!TypeInstrs.contains(Ty))
+      continue;
+    Register TypeReg = getSPIRVTypeID(Ty);
+    if (TypeReg != Reg && !MRI.reg_empty(Reg))
+      Res.emplace_back(Reg, TypeReg);
+  }
+  llvm::sort(Res);
+  return Res;
+}
+
 const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
@@ -387,8 +425,8 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
                                             const SPIRVInstrInfo &TII,
                                             bool ZeroAsNull) {
   unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
-  LLT LLTy = LLT::scalar(BitWidth);
-  Register Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
+  Register Res =
+      CurMF->getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
 
@@ -539,8 +577,7 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   if (Res.isValid())
     return Res;
 
-  LLT LLTy = LLT::scalar(getScalarOrVectorBitWidth(SpvType));
-  Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
+  Res = MF.getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   MF.getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, MF);
 
@@ -854,7 +891,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
   MachineIRBuilder GVBuilder(MIRBuilder.getState());
   if (&GVBuilder.getMBB() != &EntryBB)
-    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+    GVBuilder.setInsertPt(EntryBB, getOpVariableMBBIt(MIRBuilder.getMF()));
 
   // Pointers to opaque types stay typed even with the extension on, so emit the
   // untyped variant only when the result is actually an untyped pointer.
@@ -1077,10 +1114,18 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeStruct(
     MaxNumElements = MaxWordCount - 1;
   }
 
-  for (const auto &Elem : Ty->elements()) {
-    SPIRVTypeInst ElemTy = findSPIRVType(
-        toTypedPointer(Elem), MIRBuilder, AccQual,
-        /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
+  for (const auto &[Idx, Elem] : enumerate(Ty->elements())) {
+    SPIRVTypeInst ElemTy;
+    auto *PadTy = dyn_cast<TargetExtType>(Elem);
+    if (PadTy && PadTy->getName() == "spirv.Padding")
+      ElemTy = getOrCreatePaddingType(
+          MIRBuilder, PadTy->getIntParameter(0),
+          DL.getStructLayout(const_cast<StructType *>(Ty))
+              ->getElementOffset(Idx));
+    else
+      ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder, AccQual,
+                             /* ExplicitLayoutRequired= */ Decorator != nullptr,
+                             EmitIR);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
@@ -1345,7 +1390,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
 
   // TODO: We could end up with two SPIR-V types pointing to the same llvm type.
   // Is that a problem?
-  SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
+  // spirv.Padding lowers to a plain integer type shared with real members;
+  // keep that integer's IR type instead of remapping it to the target type.
+  auto *PadTy = dyn_cast<TargetExtType>(Ty);
+  if (!(PadTy && PadTy->getName() == "spirv.Padding"))
+    SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
       SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
@@ -1621,12 +1670,23 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
 }
 
 SPIRVTypeInst
-SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
-  auto Key = SPIRV::irhandle_padding();
+SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
+                                            uint64_t PaddingSizeInBytes,
+                                            uint64_t OffsetInBytes) {
+  // Member offsets are explicit, so the padding member only needs to be a
+  // valid integer that fits the gap. Use the widest of i32/i16/i8 whose size
+  // divides both the padding size and its offset (so the member is aligned):
+  // i8 members require the Int8 capability and, in Vulkan,
+  // uniformAndStorageBuffer8BitAccess.
+  assert(PaddingSizeInBytes != 0 && "spirv.Padding must not be empty");
+  uint64_t WidthInBytes =
+      std::min<uint64_t>(4, MinAlign(OffsetInBytes, PaddingSizeInBytes));
+  unsigned Width = WidthInBytes * 8;
+  auto Key = SPIRV::irhandle_padding(Width);
   if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
     return MI;
-  auto *T = Type::getInt8Ty(MIRBuilder.getContext());
-  SPIRVTypeInst R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  auto *T = Type::getIntNTy(MIRBuilder.getContext(), Width);
+  SPIRVTypeInst R = getOrCreateSPIRVIntegerType(Width, MIRBuilder);
   finishCreatingSPIRVType(T, R);
   add(Key, R);
   return R;

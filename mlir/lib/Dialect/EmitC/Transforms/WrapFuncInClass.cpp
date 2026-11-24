@@ -126,8 +126,8 @@ public:
       rewriter.replaceOp(getGlobalOp, getFieldOp);
     });
 
-    rewriter.createBlock(&newFuncOp.getBody());
-    newFuncOp.getBody().takeBody(funcOp.getBody());
+    rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+                                newFuncOp.getBody().end());
 
     rewriter.setInsertionPointToStart(&newFuncOp.getBody().front());
     std::vector<Value> newArguments;

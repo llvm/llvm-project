@@ -51,7 +51,7 @@ define void @foo() {
 ; CHECK: DC XL2'0000'
 ; CHECK: DC A(L#foo_end_0-L#EPM_foo_0)
 ; CHECK: DC XL2'0003'
-; CHECK: DC XL3'869696'
+; CHECK: DC CE'foo'
 ; CHECK: DC A(L#EPM_foo_0-L#PPA1_foo_0)
 ; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,RENT,NOTEXECUTABLE,RMODE(64),PAR
 ; CHECK:                T(stdin#S)

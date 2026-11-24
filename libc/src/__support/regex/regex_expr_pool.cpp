@@ -13,9 +13,12 @@
 
 #include "src/__support/regex/regex_expr_pool.h"
 #include "hdr/regex_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/utility.h"
+#include "src/__support/blockstore.h"
 #include "src/__support/checked_ptr.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/config.h"
@@ -25,13 +28,12 @@ namespace regex {
 
 namespace {
 
-// Hash an Expr node for hash-consing.
-uint32_t hash_expr(const Expr e) {
-  // Initialise HashState with a constant seed. The specific value (0x12345678)
-  // is an arbitrary placeholder; HashState immediately mixes this seed with
-  // high-entropy constants (derived from aHash) to produce a strong hash, while
-  // the constant value guarantees deterministic hashing for hash-consing.
-  internal::HashState hasher(0x12345678);
+// Hash an Expr node for hash-consing using the pool's pre-mixed seed.
+uint32_t hash_expr(const Expr e, uint32_t seed) {
+  const uint64_t s = (static_cast<uint64_t>(seed) << 32) | seed;
+  internal::HashState hasher(
+      internal::RANDOMNESS[1][0] ^ s, internal::RANDOMNESS[1][1] ^ s,
+      internal::RANDOMNESS[1][2] ^ s, internal::RANDOMNESS[1][3] ^ s);
   struct HashKey {
     uint64_t kind;
     uint64_t payload;
@@ -67,7 +69,9 @@ uint32_t hash_expr(const Expr e) {
   return static_cast<uint32_t>(h ^ (h >> 32));
 }
 
-// Bounded linear-probing range over a power-of-two open-addressing table.
+// Bounded triangular-probing range over a power-of-two open-addressing table.
+// Triangular numbers k(k+1)/2 mod 2^p visit every bucket exactly once while
+// avoiding linear-probing primary clustering.
 class BucketProber {
   cpp::span<ExprId> table;
   size_t start_idx;
@@ -86,8 +90,10 @@ public:
 
     ExprId &operator*() const { return table[idx]; }
     Iterator &operator++() {
-      idx = (idx + 1) & mask();
+      // Advance by increasing step sizes (triangular probing) rather than
+      // sequentially; visiting buckets out of order is intentional.
       ++step;
+      idx = (idx + step) & mask();
       return *this;
     }
     constexpr bool operator!=(Sentinel) const { return step != table.size(); }
@@ -102,6 +108,20 @@ public:
   Sentinel end() const { return {}; }
 };
 
+constexpr size_t INLINE_SPINE_CAPACITY = 16;
+
+// RAII LIFO wrapper around ReverseOrderBlockStore so stack-local spine buffers
+// keep short spines stack-only (INLINE_SPINE_CAPACITY inline ExprIds, zero heap
+// allocations), iterate in reverse (right-to-left) natively, and always release
+// spilled blocks on early returns.
+struct ReverseExprIdStack
+    : ReverseOrderBlockStore<ExprId, INLINE_SPINE_CAPACITY> {
+  ReverseExprIdStack() = default;
+  ReverseExprIdStack(const ReverseExprIdStack &) = delete;
+  ReverseExprIdStack &operator=(const ReverseExprIdStack &) = delete;
+  ~ReverseExprIdStack() { destroy(this); }
+};
+
 } // namespace
 
 bool ExprPool::ensure_initialized() {
@@ -114,6 +134,22 @@ bool ExprPool::ensure_initialized() {
     return false;
   hashtable = table.take_unique();
   hashtable_capacity = INITIAL_HASH_CAPACITY;
+
+  // Seed per-pool hashing from both heap and stack addresses without syscalls
+  // so baremetal and GPU targets stay self-contained.  Do not XOR this with
+  // blocks.get(): regcomp() allocates RegexInternal on the heap right before
+  // blocks, so both pointers share the same heap ASLR base and XORing them
+  // cancels the randomised upper bits into a constant offset.  Feeding them
+  // separately into HashState alongside a stack address (&ptrs) preserves both
+  // heap and stack ASLR entropy while sequential ExprIds stay deterministic.
+  const cpp::array<uintptr_t, 2> ptrs = {
+      reinterpret_cast<uintptr_t>(blocks.get()),
+      reinterpret_cast<uintptr_t>(&ptrs)};
+  internal::HashState seed_hasher(
+      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this)));
+  seed_hasher.update(ptrs.data(), sizeof(ptrs));
+  const uint64_t mixed = seed_hasher.finish();
+  hash_seed = static_cast<uint32_t>(mixed ^ (mixed >> 32));
 
   [[maybe_unused]] auto empty_set_id = intern(Expr::make_empty_set());
   [[maybe_unused]] auto empty_str_id = intern(Expr::make_empty_str());
@@ -175,7 +211,7 @@ ErrorOr<ExprId> ExprPool::intern(Expr e) {
     return Error(REG_ESPACE);
 
   // Probe for an existing node with identical content.
-  e.hash = hash_expr(e);
+  e.hash = hash_expr(e, hash_seed);
   ExprId *bucket = &find_bucket(hashtable_slots(), e);
   if (*bucket != INVALID_EXPR_ID)
     return *bucket;
@@ -198,7 +234,7 @@ ErrorOr<ExprId> ExprPool::intern(Expr e) {
 
   // Node Initialisation: Copy the structural definition into the arena.
   ++node_count;
-  ExprId new_id = static_cast<ExprId>(node_count);
+  ExprId new_id = node_count;
   slot_at(new_id) = e;
   *bucket = new_id;
   return new_id;
@@ -218,7 +254,7 @@ ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
 ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
-  if (mask == 0)
+  if (mask == 0 || (mask & ~ALL_ANCHORS_MASK) != 0)
     return Error(REG_BADPAT);
   return intern(Expr::make_anchor(mask));
 }
@@ -282,24 +318,27 @@ constexpr uint16_t scale_exp(uint16_t base, uint16_t factor) {
 } // namespace
 
 ErrorOr<ExprId> ExprPool::make_star(ExprId body) {
-  if (body == INVALID_EXPR_ID)
+  if (!is_valid_input(body))
     return Error(REG_BADPAT);
   // Ø* = ε and ε* = ε
   if (body == EMPTY_SET_ID || body == EMPTY_STR_ID)
     return empty_str();
-  // (R*)* = R* and (R{m,n})* = R* iff m <= 1 (since R^1 is in R{m,n} iff
-  // m <= 1, whereas (a{2,3})* excludes "a").
-  const Expr be = get(body);
+
+  // Unwrap nested repeats with min <= 1: (R{m,n})* = R* iff m <= 1 (since
+  // R^1 is in R{m,n} iff m <= 1, whereas (a{2,3})* excludes "a").
+  Expr be = get(body);
+  while (be.kind == ExprKind::Repeat && be.rep.min <= 1) {
+    body = be.rep.body;
+    be = get(body);
+  }
+  // (R*)* = R*
   if (be.kind == ExprKind::Star)
     return body;
-  if (be.kind == ExprKind::Repeat && be.rep.min <= 1)
-    return make_star(be.rep.body);
-  return intern(
-      Expr::make_star(body, be.has_anchors, be.has_repeat, be.rep_expansion));
+  return intern(Expr::make_star(body, be.has_repeat, be.rep_expansion));
 }
 
 ErrorOr<ExprId> ExprPool::make_repeat(ExprId body, uint16_t min, uint16_t max) {
-  if (body == INVALID_EXPR_ID || min > max || min == REPEAT_INF)
+  if (!is_valid_input(body) || min > max || min == REPEAT_INF)
     return Error(REG_BADPAT);
   // Normalize R{0,0} = ε, ε{m,n} = ε, Ø{m,n}, R{1,1} = R, and
   // R{0,REPEAT_INF} = R*.
@@ -318,12 +357,22 @@ ErrorOr<ExprId> ExprPool::make_repeat(ExprId body, uint16_t min, uint16_t max) {
       be.rep.max == REPEAT_INF)
     return make_repeat(be.rep.body, min, REPEAT_INF);
   uint16_t factor = (max == REPEAT_INF) ? min : max;
-  return intern(Expr::make_repeat(body, min, max, be.nullable, be.has_anchors,
+  return intern(Expr::make_repeat(body, min, max, be.nullable_mask,
                                   scale_exp(be.rep_expansion, factor)));
 }
 
+// Interns a Concat(l, r) node with propagated nullability and repeat metadata.
+ErrorOr<ExprId> ExprPool::intern_concat_node(ExprId l, ExprId r) {
+  const Expr le = get(l);
+  const Expr re = get(r);
+  return intern(Expr::make_concat(
+      l, r, static_cast<uint8_t>(le.nullable_mask & re.nullable_mask),
+      le.has_repeat || re.has_repeat,
+      cpp::max(le.rep_expansion, re.rep_expansion)));
+}
+
 ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
-  if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
+  if (!is_valid_input(l) || !is_valid_input(r))
     return Error(REG_BADPAT);
   // Apply basic algebraic identities for concatenation:
   // Ø · R = R · Ø = Ø (Identity: null set)
@@ -336,81 +385,136 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
     return (l == EMPTY_STR_ID) ? r : l;
   }
   // (A · B) · C = A · (B · C) (Right-associative canonical form)
-  const Expr le = get(l);
-  if (le.kind == ExprKind::Concat) {
-    ErrorOr<ExprId> tail = make_concat(le.bin.right, r);
-    if (!tail.has_value())
-      return tail;
-    return make_concat(le.bin.left, *tail);
+  Expr ce = get(l);
+  if (ce.kind != ExprKind::Concat)
+    return intern_concat_node(l, r);
+
+  // Flatten the right-associated left spine iteratively so long concatenations
+  // never recurse on the call stack: (A · (B · C)) · D -> [A, B], C, D.
+  ReverseExprIdStack lefts;
+  ExprId cur = l;
+  while (ce.kind == ExprKind::Concat) {
+    if (!lefts.push_back(ce.bin.left))
+      return Error(REG_ESPACE);
+    cur = ce.bin.right;
+    ce = get(cur);
   }
-  const Expr re = get(r);
-  return intern(Expr::make_concat(
-      l, r, le.nullable && re.nullable, le.has_anchors || re.has_anchors,
-      le.has_repeat || re.has_repeat,
-      cpp::max(le.rep_expansion, re.rep_expansion)));
+
+  // Rebuild right-to-left (LIFO): A · (B · (C · D)).
+  ErrorOr<ExprId> acc = intern_concat_node(cur, r);
+  if (!acc.has_value())
+    return acc;
+  for (ExprId id : lefts) {
+    acc = intern_concat_node(id, *acc);
+    if (!acc.has_value())
+      return acc;
+  }
+  return acc;
 }
 
 namespace {
+
+ErrorOr<ExprId> coalesce_repeat_leaves(ExprId a, ExprId b, ExprPool &pool);
 
 // Coalesces R{m1,n1} | R{m2,n2} (and shared-prefix/shared-suffix Concat nodes)
 // when their repetition intervals overlap or are adjacent.  Returns
 // INVALID_EXPR_ID when the pair cannot be coalesced.
 ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
-  const Expr ae = pool.get(a);
-  const Expr be = pool.get(b);
+  if (a == b)
+    return INVALID_EXPR_ID;
+
+  // Scan past matching left Concat prefixes (A · X) | (A · Y) -> A · (X | Y)
+  // without allocating; collect prefixes only if the suffixes coalesce.
+  const ExprId orig_a = a;
+  size_t prefix_depth = 0;
+  Expr ae = pool.get(a);
+  Expr be = pool.get(b);
+  while ((ae.has_repeat || be.has_repeat) && ae.kind == ExprKind::Concat &&
+         be.kind == ExprKind::Concat && ae.bin.left == be.bin.left) {
+    // Hash-consing guarantees distinct right children when a != b.
+    LIBC_ASSERT(ae.bin.right != be.bin.right);
+    ++prefix_depth;
+    a = ae.bin.right;
+    b = be.bin.right;
+    ae = pool.get(a);
+    be = pool.get(b);
+  }
   if (!ae.has_repeat && !be.has_repeat)
     return INVALID_EXPR_ID;
-  if (ae.kind == ExprKind::Concat && be.kind == ExprKind::Concat) {
-    if (ae.bin.right == be.bin.right) {
-      ErrorOr<ExprId> left =
-          coalesce_repeat_pair(ae.bin.left, be.bin.left, pool);
-      if (!left.has_value() || *left == INVALID_EXPR_ID)
-        return left;
-      return pool.make_concat(*left, ae.bin.right);
-    }
-    if (ae.bin.left == be.bin.left) {
-      ErrorOr<ExprId> right =
-          coalesce_repeat_pair(ae.bin.right, be.bin.right, pool);
-      if (!right.has_value() || *right == INVALID_EXPR_ID)
-        return right;
-      return pool.make_concat(ae.bin.left, *right);
-    }
-  }
-  // Handle Concat(X, S) | S and Concat(P, X) | P where R{0,0} normalized to
-  // EmptyStr on one side.
-  if (ae.kind == ExprKind::Concat && ae.bin.right == b) {
-    ErrorOr<ExprId> left =
-        coalesce_repeat_pair(ae.bin.left, EMPTY_STR_ID, pool);
+
+  auto merge_with_suffix = [&](ExprId lhs, ExprId rhs,
+                               ExprId suffix) -> ErrorOr<ExprId> {
+    // make_concat right-associates, so Concat::left is never itself a Concat.
+    LIBC_ASSERT(pool.get(lhs).kind != ExprKind::Concat &&
+                pool.get(rhs).kind != ExprKind::Concat);
+    ErrorOr<ExprId> left = coalesce_repeat_leaves(lhs, rhs, pool);
     if (!left.has_value() || *left == INVALID_EXPR_ID)
       return left;
-    return pool.make_concat(*left, b);
-  }
-  if (be.kind == ExprKind::Concat && be.bin.right == a) {
-    ErrorOr<ExprId> left =
-        coalesce_repeat_pair(EMPTY_STR_ID, be.bin.left, pool);
-    if (!left.has_value() || *left == INVALID_EXPR_ID)
-      return left;
-    return pool.make_concat(*left, a);
-  }
-  if (ae.kind == ExprKind::Concat && ae.bin.left == b) {
-    ErrorOr<ExprId> right =
-        coalesce_repeat_pair(ae.bin.right, EMPTY_STR_ID, pool);
+    return pool.make_concat(*left, suffix);
+  };
+  auto merge_with_prefix = [&](ExprId prefix, ExprId lhs,
+                               ExprId rhs) -> ErrorOr<ExprId> {
+    ErrorOr<ExprId> right = coalesce_repeat_leaves(lhs, rhs, pool);
     if (!right.has_value() || *right == INVALID_EXPR_ID)
       return right;
-    return pool.make_concat(b, *right);
+    return pool.make_concat(prefix, *right);
+  };
+
+  // Try coalescing the stripped suffixes across the Concat and leaf shapes:
+  //   (X · S) | (Y · S) -> (X | Y) · S  (e.g. a{2,3}·b | a{4,5}·b -> a{2,5}·b)
+  //   (X · S) | S       -> (X | ε) · S  (e.g. a{1,3}·b | b -> a{0,3}·b)
+  //   (P · X) | P       -> P · (X | ε)  (e.g. b·a{1,3} | b -> b·a{0,3})
+  //   X | Y             -> R{m,n}       (direct leaf intervals)
+  ErrorOr<ExprId> merged = INVALID_EXPR_ID;
+  if (ae.kind == ExprKind::Concat && be.kind == ExprKind::Concat &&
+      ae.bin.right == be.bin.right)
+    merged = merge_with_suffix(ae.bin.left, be.bin.left, ae.bin.right);
+  else if (ae.kind == ExprKind::Concat && ae.bin.right == b)
+    merged = merge_with_suffix(ae.bin.left, EMPTY_STR_ID, b);
+  else if (be.kind == ExprKind::Concat && be.bin.right == a)
+    merged = merge_with_suffix(EMPTY_STR_ID, be.bin.left, a);
+  else if (ae.kind == ExprKind::Concat && ae.bin.left == b)
+    merged = merge_with_prefix(b, ae.bin.right, EMPTY_STR_ID);
+  else if (be.kind == ExprKind::Concat && be.bin.left == a)
+    merged = merge_with_prefix(a, EMPTY_STR_ID, be.bin.right);
+  else
+    merged = coalesce_repeat_leaves(a, b, pool);
+
+  if (!merged.has_value() || *merged == INVALID_EXPR_ID || prefix_depth == 0)
+    return merged;
+
+  // Re-wrap the coalesced suffix with the stripped shared Concat prefixes
+  // (ReverseExprIdStack iterates LIFO): P1 · (P2 · ... · merged).
+  ReverseExprIdStack prefixes;
+  ExprId cur = orig_a;
+  for (size_t i = 0; i < prefix_depth; ++i) {
+    const Expr ce = pool.get(cur);
+    if (!prefixes.push_back(ce.bin.left))
+      return Error(REG_ESPACE);
+    cur = ce.bin.right;
   }
-  if (be.kind == ExprKind::Concat && be.bin.left == a) {
-    ErrorOr<ExprId> right =
-        coalesce_repeat_pair(EMPTY_STR_ID, be.bin.right, pool);
-    if (!right.has_value() || *right == INVALID_EXPR_ID)
-      return right;
-    return pool.make_concat(a, *right);
+  ExprId acc = *merged;
+  for (ExprId id : prefixes) {
+    ErrorOr<ExprId> next = pool.make_concat(id, acc);
+    if (!next.has_value())
+      return next;
+    acc = *next;
   }
+  return acc;
+}
+
+// Coalesces leaf Repeat / Star / body / EmptyStr pairs whose repetition
+// intervals overlap or are adjacent.  Returns INVALID_EXPR_ID when they
+// cannot be coalesced.
+ErrorOr<ExprId> coalesce_repeat_leaves(ExprId a, ExprId b, ExprPool &pool) {
+  LIBC_ASSERT(a != b);
+  const Expr ae = pool.get(a);
+  const Expr be = pool.get(b);
   if (ae.kind != ExprKind::Repeat && be.kind != ExprKind::Repeat)
     return INVALID_EXPR_ID;
   // When b is Repeat(a, ...) and a is itself a Repeat, pick body = a so
   // get_interval(a, ae) matches [1, 1] via `id == body` symmetrically with
-  // coalesce_repeat_pair(b, a).
+  // coalesce_repeat_leaves(b, a).
   ExprId body = (ae.kind == ExprKind::Repeat &&
                  !(be.kind == ExprKind::Repeat && be.rep.body == a))
                     ? ae.rep.body
@@ -473,7 +577,7 @@ ErrorOr<ExprId> coalesce_item_into_spine(ExprId item, ExprId spine,
 } // namespace
 
 ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
-  if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
+  if (!is_valid_input(l) || !is_valid_input(r))
     return Error(REG_BADPAT);
   // Apply basic algebraic identities for alternation:
   // Ø | R = R | Ø = R (Identity: null set) and R | R = R (Idempotency)
@@ -491,10 +595,10 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
       return coalesced;
     if (l > r)
       cpp::swap(l, r);
-    return intern(Expr::make_alt(l, r, le.nullable || re.nullable,
-                                 le.has_anchors || re.has_anchors,
-                                 le.has_repeat || re.has_repeat,
-                                 cpp::max(le.rep_expansion, re.rep_expansion)));
+    return intern(Expr::make_alt(
+        l, r, static_cast<uint8_t>(le.nullable_mask | re.nullable_mask),
+        le.has_repeat || re.has_repeat,
+        cpp::max(le.rep_expansion, re.rep_expansion)));
   }
 
   if (le.has_repeat || re.has_repeat) {
@@ -541,11 +645,11 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   ExprId rest_head = (re_rest.kind == ExprKind::Alt) ? re_rest.bin.left : *rest;
   if (head >= rest_head)
     return make_alt(head, *rest);
-  return intern(
-      Expr::make_alt(head, *rest, he.nullable || re_rest.nullable,
-                     he.has_anchors || re_rest.has_anchors,
-                     he.has_repeat || re_rest.has_repeat,
-                     cpp::max(he.rep_expansion, re_rest.rep_expansion)));
+  return intern(Expr::make_alt(
+      head, *rest,
+      static_cast<uint8_t>(he.nullable_mask | re_rest.nullable_mask),
+      he.has_repeat || re_rest.has_repeat,
+      cpp::max(he.rep_expansion, re_rest.rep_expansion)));
 }
 
 } // namespace regex
