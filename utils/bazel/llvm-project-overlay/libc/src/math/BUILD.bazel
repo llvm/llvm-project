@@ -708,13 +708,6 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "cosbf16",
-    additional_deps = [
-        "//libc/src/__support/math:cosbf16",
-    ],
-)
-
-libc_math_function(
     name = "cosf",
     additional_deps = ["//libc/src/__support/math:cosf"],
 )

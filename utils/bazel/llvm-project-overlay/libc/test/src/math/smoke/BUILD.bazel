@@ -330,13 +330,6 @@ math_test(
 
 math_test(name = "cos")
 
-math_test(
-    name = "cosbf16",
-    deps = [
-        "//libc/src/__support/FPUtil:bfloat16",
-    ],
-)
-
 math_test(name = "cosf")
 
 math_test(

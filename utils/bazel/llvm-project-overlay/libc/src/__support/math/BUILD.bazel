@@ -3193,22 +3193,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "cosbf16",
-    hdrs = ["cosbf16.h"],
-    deps = [
-        ":sincosf_utils",
-        "//libc/hdr:errno_macros",
-        "//libc/hdr:fenv_macros",
-        "//libc/src/__support/FPUtil:bfloat16",
-        "//libc/src/__support/FPUtil:cast",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/FPUtil:fp_bits",
-        "//libc/src/__support/FPUtil:multiply_add",
-        "//libc/src/__support/macros:optimization",
-    ],
-)
-
-libc_support_library(
     name = "cosf",
     hdrs = [
         "cosf.h",
