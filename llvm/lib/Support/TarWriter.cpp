@@ -97,6 +97,18 @@ static void computeChecksum(UstarHeader &Hdr) {
   snprintf(Hdr.Checksum, sizeof(Hdr.Checksum), "%06o", Chksum);
 }
 
+// Writes a file size to the Size field of a tar header. The field holds 11
+// octal digits plus a terminating NUL, so the largest representable size is
+// 8 GiB - 1. Clamping the value also lets the compiler prove that the output
+// fits, which avoids -Wformat-truncation warnings in optimized builds.
+static void writeSize(UstarHeader &Hdr, uint64_t Size) {
+  const uint64_t MaxSize = 077777777777;
+  assert(Size <= MaxSize && "file is too large for a ustar header");
+  Size = std::min(Size, MaxSize);
+  snprintf(Hdr.Size, sizeof(Hdr.Size), "%011llo",
+           static_cast<unsigned long long>(Size));
+}
+
 // Create a tar header and write it to a given output stream.
 static void writePaxHeader(raw_fd_ostream &OS, StringRef Path) {
   // A PAX header consists of a 512-byte header followed
@@ -105,7 +117,7 @@ static void writePaxHeader(raw_fd_ostream &OS, StringRef Path) {
 
   // Create a 512-byte header.
   UstarHeader Hdr = makeUstarHeader();
-  snprintf(Hdr.Size, sizeof(Hdr.Size), "%011zo", PaxAttr.size());
+  writeSize(Hdr, PaxAttr.size());
   Hdr.TypeFlag = 'x'; // PAX magic
   computeChecksum(Hdr);
 
@@ -159,7 +171,7 @@ static void writeUstarHeader(raw_fd_ostream &OS, StringRef Prefix,
   UstarHeader Hdr = makeUstarHeader();
   memcpy(Hdr.Name, Name.data(), Name.size());
   memcpy(Hdr.Mode, "0000664", 8);
-  snprintf(Hdr.Size, sizeof(Hdr.Size), "%011zo", Size);
+  writeSize(Hdr, Size);
   memcpy(Hdr.Prefix, Prefix.data(), Prefix.size());
   computeChecksum(Hdr);
   OS << StringRef(reinterpret_cast<char *>(&Hdr), sizeof(Hdr));
