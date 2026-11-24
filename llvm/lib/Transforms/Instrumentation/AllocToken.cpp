@@ -583,14 +583,24 @@ AllocTokenPass::AllocTokenPass(AllocTokenOptions Opts)
 PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
   const InstrumentationOptions &CLOpts = getInstrumentationOptions(M);
   AllocToken Pass(CLOpts, Options, M, MAM);
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool Modified = false;
 
   for (Function &F : M) {
     if (F.empty())
       continue; // declaration
-    Modified |= Pass.instrumentFunction(F);
+    if (Pass.instrumentFunction(F)) {
+      FAM.invalidate(F, PreservedAnalyses::none().preserveSet<CFGAnalyses>());
+      Modified = true;
+    }
   }
 
-  return Modified ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
-                  : PreservedAnalyses::all();
+  if (!Modified)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

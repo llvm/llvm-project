@@ -899,13 +899,11 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   const auto *exprVecTy = lv.getType()->getAs<clang::VectorType>();
   if (!exprVecTy) {
     int64_t indexValue = getAccessedFieldNo(0, elts);
-    cir::ConstantOp index =
-        builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
+    cir::ConstantOp index = builder.getConstInt(loc, cgm.sizeTy, indexValue);
     if (mlir::isa<cir::VectorType>(vec.getType()))
       return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
 
-    cir::ConstantOp columnIdx =
-        builder.getConstInt(loc, builder.getSInt64Ty(), 0);
+    cir::ConstantOp columnIdx = builder.getConstInt(loc, cgm.sizeTy, 0);
     mlir::Value element =
         cir::MatrixExtractOp::create(builder, loc, vec, index, columnIdx);
     return RValue::get(element);
@@ -2731,6 +2729,13 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
 RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
                                     ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
+
+  // Builtins never have block type.
+  if (e->getCallee()->getType()->isBlockPointerType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitCallExpr: block pointer type"));
+    return getUndefRValue(e->getType());
+  }
 
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
     return emitCXXMemberCallExpr(ce, returnValue);

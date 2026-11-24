@@ -3521,6 +3521,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/PowerPC/PPCGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":PPCMCOptionsTableGen",
+            ":PPCOptionsTableGen",
+        ],
     },
     {
         "name": "RISCV",
@@ -3783,6 +3787,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":SystemZOptionsTableGen",
         ],
     },
     {
@@ -4291,6 +4298,24 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "PPCMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/PowerPC",
+    tbl_outs = {"lib/Target/PowerPC/PPCMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/MCTargetDesc/PPCMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PPCOptionsTableGen",
+    strip_include_prefix = "lib/Target/PowerPC",
+    tbl_outs = {"lib/Target/PowerPC/PPCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/PPCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "RISCVMCOptionsTableGen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = {"lib/Target/RISCV/RISCVMCOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4323,6 +4348,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SystemZOptionsTableGen",
+    strip_include_prefix = "lib/Target/SystemZ",
+    tbl_outs = {"lib/Target/SystemZ/SystemZOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SystemZ/SystemZOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

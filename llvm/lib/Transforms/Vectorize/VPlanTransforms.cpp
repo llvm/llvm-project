@@ -2482,6 +2482,12 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
+  // TODO: Support outer-loop plans. Their loop region need not form a
+  // single-successor chain, which the alias check below expects, and sinking
+  // only supports stores with an invariant address.
+  if (FirstBB->getPlan()->isOuterLoop())
+    return true;
+
   // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
 
@@ -3994,7 +4000,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   auto ExtendAndReplaceConstantOp = [](VPWidenCastRecipe *ExtA,
                                        VPWidenCastRecipe *&ExtB, VPValue *&ValB,
                                        VPWidenRecipe *Mul) {
-    if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
+    if (!ExtA || ExtB || !isa<VPIRValue>(ValB) ||
+        !match(ExtA, m_ZExtOrSExt(m_VPValue())))
       return;
     Type *NarrowTy = ExtA->getOperand(0)->getScalarType();
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
@@ -6557,9 +6564,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
 void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
                                             VFRange &Range) {
-  if (Range.Start.isScalar())
-    return;
-
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -6581,7 +6585,8 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
                Ctx.TTI.getIntrinsicInstrCost(CttzElts, Ctx.CostKind) +
                    Ctx.TTI.getIntrinsicInstrCost(ActiveLaneMask, Ctx.CostKind);
       };
-      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
+      if (!Range.Start.isScalar() &&
+          LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
         continue;
 
       VPBuilder Builder(BeforeFirst);
