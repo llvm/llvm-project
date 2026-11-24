@@ -9,9 +9,7 @@ declare void @use_i8(i8)
 define i8 @umin_add_pair(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_add_pair(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[INNER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 11)
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i8 [[INNER]], 7
-; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[SUM]])
+; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 18)
 ; CHECK-NEXT:    ret i8 [[OUTER]]
 ;
   %inner = call i8 @llvm.umin.i8(i8 %x, i8 11)
@@ -23,11 +21,7 @@ define i8 @umin_add_pair(i8 %x) {
 define i32 @umin_add_chain(i32 %x) {
 ; CHECK-LABEL: define i32 @umin_add_chain(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 16)
-; CHECK-NEXT:    [[B:%.*]] = add nuw nsw i32 [[A]], 16
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[B]])
-; CHECK-NEXT:    [[D:%.*]] = add nuw nsw i32 [[C]], 16
-; CHECK-NEXT:    [[E:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[D]])
+; CHECK-NEXT:    [[E:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 48)
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %a = call i32 @llvm.umin.i32(i32 %x, i32 16)
@@ -41,9 +35,7 @@ define i32 @umin_add_chain(i32 %x) {
 define i8 @umin_add_pair_commuted(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_add_pair_commuted(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[INNER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 12)
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i8 [[INNER]], 9
-; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[SUM]], i8 [[X]])
+; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 21)
 ; CHECK-NEXT:    ret i8 [[OUTER]]
 ;
   %inner = call i8 @llvm.umin.i8(i8 12, i8 %x)
@@ -55,9 +47,7 @@ define i8 @umin_add_pair_commuted(i8 %x) {
 define <2 x i8> @umin_add_pair_vec(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @umin_add_pair_vec(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[INNER:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X]], <2 x i8> splat (i8 11))
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw <2 x i8> [[INNER]], splat (i8 7)
-; CHECK-NEXT:    [[OUTER:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X]], <2 x i8> [[SUM]])
+; CHECK-NEXT:    [[OUTER:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X]], <2 x i8> splat (i8 18))
 ; CHECK-NEXT:    ret <2 x i8> [[OUTER]]
 ;
   %inner = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> <i8 11, i8 11>)
@@ -113,8 +103,7 @@ define i8 @umin_add_pair_multiuse_inner(i8 %x) {
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[INNER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 11)
 ; CHECK-NEXT:    call void @use_i8(i8 [[INNER]])
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i8 [[INNER]], 7
-; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[SUM]])
+; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 18)
 ; CHECK-NEXT:    ret i8 [[OUTER]]
 ;
   %inner = call i8 @llvm.umin.i8(i8 %x, i8 11)
@@ -143,9 +132,7 @@ define i8 @umin_add_pair_multiuse_add(i8 %x) {
 define i8 @umin_add_pair_nsw(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_add_pair_nsw(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[INNER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 120)
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i8 [[INNER]], 16
-; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[SUM]])
+; CHECK-NEXT:    [[OUTER:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 -120)
 ; CHECK-NEXT:    ret i8 [[OUTER]]
 ;
   %inner = call i8 @llvm.umin.i8(i8 %x, i8 120)

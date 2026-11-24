@@ -2240,6 +2240,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::umin: {
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+    // umin(X, umin(X, C) + D) --> umin(X, C + D) if the sum does not wrap.
+    // The add must have one use, the inner umin may have other uses.
+    Value *X;
+    const APInt *C, *D;
+    if (match(II, m_c_UMin(m_Value(X),
+                           m_OneUse(m_c_Add(m_c_UMin(m_Deferred(X), m_APInt(C)),
+                                            m_APInt(D)))))) {
+      bool Overflow;
+      APInt Sum = C->uadd_ov(*D, Overflow);
+      if (!Overflow)
+        return replaceInstUsesWith(
+            *II, Builder.CreateBinaryIntrinsic(
+                     Intrinsic::umin, X, ConstantInt::get(II->getType(), Sum)));
+    }
     // umin(x, 1) == zext(x != 0)
     if (match(I1, m_One())) {
       assert(II->getType()->getScalarSizeInBits() != 1 &&
