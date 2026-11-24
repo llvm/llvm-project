@@ -258,8 +258,9 @@ public:
   InstructionCost getSpillCost();
 
   /// \returns true if \p LoadTE loses store-to-load forwarding against the
-  /// store chain anchored at \p BaseStore widened to \p VF elements in \p L.
-  bool storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
+  /// store anchored at \p BaseStore (widened by \p StoreE when non-null) in
+  /// \p L.
+  bool storeConflictsWithLoad(StoreInst *BaseStore, const TreeEntry *StoreE,
                               const TreeEntry &LoadTE, const Loop *L);
 
   /// \returns true if widening \p LoadTE creates a forwarding hazard with a
@@ -29938,9 +29939,11 @@ InstructionCost BoUpSLP::getSTLFCost() const {
   return TTI->getStoreLoadForwardingConflictCost();
 }
 
-bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
+bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore,
+                                     const TreeEntry *StoreE,
                                      const TreeEntry &LoadTE, const Loop *L) {
   assert(BaseStore && "Expected a valid base store");
+  unsigned VF = StoreE ? StoreE->Scalars.size() : 1;
 
   Type *StoreTy = BaseStore->getValueOperand()->getType();
   TypeSize StoreSize = DL->getTypeStoreSize(StoreTy);
@@ -29972,6 +29975,11 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
   // interleaved entry Scalars already lists every lane across all streams, so
   // it is not rescaled by the interleave factor again here. A compress entry
   // loads its whole masked span, which is wider than the kept scalars.
+  TypeSize LoadEltSize = DL->getTypeStoreSize(LoadI->getType());
+  if (LoadEltSize.isScalable() || LoadEltSize.isZero() ||
+      LoadEltSize.getFixedValue() > static_cast<uint64_t>(INT64_MAX))
+    return false;
+  uint64_t LoadEltBytes = LoadEltSize.getFixedValue();
   uint64_t LoadElementSize;
   int64_t Offset = *ByteDiff;
   if (LoadTE.State == TreeEntry::CompressVectorize) {
@@ -29979,9 +29987,8 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
         DL->getTypeStoreSize(std::get<1>(getCompressEntryData(LoadTE)))
             .getFixedValue();
   } else {
-    LoadElementSize = SaturatingMultiply<uint64_t>(
-        DL->getTypeStoreSize(LoadI->getType()).getFixedValue(),
-        LoadTE.Scalars.size());
+    LoadElementSize =
+        SaturatingMultiply<uint64_t>(LoadEltBytes, LoadTE.Scalars.size());
     // Leading non-load lanes move the emitted vector load below its first load.
     uint64_t LoadShift = getVectorLoadShift(LoadTE.Scalars);
     if (LoadShift > static_cast<uint64_t>(INT64_MAX) ||
@@ -29997,10 +30004,93 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
   const auto LoadBytes = static_cast<int64_t>(LoadElementSize);
   bool OverlapsStore = Offset < StoreBytes && Offset > -LoadBytes;
   bool PartialOverlap = Offset < 0 || Offset > StoreBytes - LoadBytes;
-  // A load overlapping the store of the same iteration is forwarded only if
-  // the store covers it. The wide load is emitted at the main op; the first
-  // load may be a copyable load from a predecessor block.
-  if (OverlapsStore && DT->dominates(BaseStore, LoadTE.getMainOp()))
+  // Same-iteration forwarding depends on the scalars that share bytes, not on
+  // the lane-0 anchors. The wide load is emitted at the main op, which may be
+  // a different lane, or a copyable load may sit in a predecessor.
+  auto StorePrecedesLoad = [&]() {
+    BasicBlock *StoreBB = BaseStore->getParent();
+    Instruction *LoadAnchor = LoadTE.getMainOp();
+    BasicBlock *LoadBB = LoadAnchor->getParent();
+    // Different blocks: the vector load is emitted in the main op's block, so
+    // block dominance is the whole check. Same-block order is decided below
+    // from the scalars that actually overlap.
+    if (StoreBB != LoadBB)
+      return DT->dominates(BaseStore, LoadAnchor);
+    const uint64_t StoreEltBytes = StoreSize.getFixedValue();
+    auto GetStoreAt = [&](int64_t ByteOff) -> StoreInst * {
+      if (!StoreE || StoreEltBytes == 0 || ByteOff < 0)
+        return BaseStore;
+      uint64_t Idx = static_cast<uint64_t>(ByteOff) / StoreEltBytes;
+      if (Idx >= StoreE->Scalars.size())
+        return nullptr;
+      auto *SI = dyn_cast<StoreInst>(StoreE->Scalars[Idx]);
+      if (!SI || SI->getParent() != StoreBB)
+        return nullptr;
+      return SI;
+    };
+    auto AnchorPrecedes = [&]() { return BaseStore->comesBefore(LoadAnchor); };
+    if (LoadTE.State == TreeEntry::CompressVectorize) {
+      for (Value *V : LoadTE.Scalars) {
+        auto *LI = dyn_cast<LoadInst>(V);
+        if (!LI || LI->getParent() != StoreBB)
+          continue;
+        std::optional<int64_t> LOff = getPointersDiff(
+            ByteTy, BaseStore->getPointerOperand(), ByteTy,
+            LI->getPointerOperand(), *DL, *SE, /*StrictCheck=*/true);
+        if (!LOff || *LOff >= StoreBytes ||
+            *LOff <= -static_cast<int64_t>(LoadEltBytes))
+          continue;
+        StoreInst *SI = GetStoreAt(std::max<int64_t>(0, *LOff));
+        if (!SI)
+          continue;
+        return SI->comesBefore(LI);
+      }
+      return AnchorPrecedes();
+    }
+    // Bytes of the store covered by the load, [Lo, Hi).
+    int64_t Lo = std::max<int64_t>(0, Offset);
+    int64_t Hi = StoreBytes;
+    int64_t StoreMinusLoad;
+    if (!SubOverflow(StoreBytes, LoadBytes, StoreMinusLoad) &&
+        Offset <= StoreMinusLoad) {
+      int64_t LoadEnd;
+      if (!AddOverflow(Offset, LoadBytes, LoadEnd))
+        Hi = LoadEnd;
+    }
+    if (Hi <= Lo)
+      return AnchorPrecedes();
+    auto LaneAt = [&](int64_t Byte) -> std::optional<uint64_t> {
+      int64_t FromLoad;
+      if (SubOverflow(Byte, Offset, FromLoad) || FromLoad < 0)
+        return std::nullopt;
+      return static_cast<uint64_t>(FromLoad) / LoadEltBytes;
+    };
+    std::optional<uint64_t> FirstLane = LaneAt(Lo);
+    std::optional<uint64_t> LastLane = LaneAt(Hi - 1);
+    if (!FirstLane || !LastLane || *FirstLane >= LoadTE.Scalars.size())
+      return AnchorPrecedes();
+    uint64_t Last = std::min(*LastLane, LoadTE.Scalars.size() - 1);
+    if (Last < *FirstLane)
+      return AnchorPrecedes();
+    for (uint64_t Lane = *FirstLane; Lane <= Last; ++Lane) {
+      auto *LI = dyn_cast<LoadInst>(LoadTE.Scalars[Lane]);
+      if (!LI || LI->getParent() != StoreBB)
+        continue;
+      uint64_t LaneBytes = SaturatingMultiply<uint64_t>(Lane, LoadEltBytes);
+      if (LaneBytes > static_cast<uint64_t>(INT64_MAX))
+        break;
+      int64_t LaneOff;
+      if (AddOverflow(Offset, static_cast<int64_t>(LaneBytes), LaneOff))
+        break;
+      int64_t ByteOff = std::max(Lo, LaneOff);
+      StoreInst *SI = GetStoreAt(ByteOff);
+      if (!SI)
+        continue;
+      return SI->comesBefore(LI);
+    }
+    return AnchorPrecedes();
+  };
+  if (OverlapsStore && StorePrecedesLoad())
     return PartialOverlap;
   // Without a constant step nothing shows that a later iteration re-reads the
   // stored bytes. A loop-invariant address overlaps on every iteration, so the
@@ -30080,21 +30170,21 @@ bool BoUpSLP::findStoreLoadForwardingHazardForLoad(const TreeEntry &LoadTE) {
     if (StoreBase != LoadBase || isDeleted(StoreI))
       continue;
     // A vector store entry of this tree is checked once, at its full width.
-    unsigned VF = 1;
+    const TreeEntry *StoreE = nullptr;
     ArrayRef<TreeEntry *> StoreEntries = getTreeEntries(StoreI);
     if (auto *StoreEIt =
             find_if(StoreEntries,
-                    [&](const TreeEntry *StoreE) {
-                      return StoreE->State == TreeEntry::Vectorize &&
-                             !DeletedNodes.contains(StoreE) &&
-                             !TransformedToGatherNodes.contains(StoreE);
+                    [&](const TreeEntry *StoreTE) {
+                      return StoreTE->State == TreeEntry::Vectorize &&
+                             !DeletedNodes.contains(StoreTE) &&
+                             !TransformedToGatherNodes.contains(StoreTE);
                     });
         StoreEIt != StoreEntries.end()) {
       if ((*StoreEIt)->getMainOp() != StoreI)
         continue;
-      VF = (*StoreEIt)->Scalars.size();
+      StoreE = *StoreEIt;
     }
-    if (storeConflictsWithLoad(StoreI, VF, LoadTE, LoadL))
+    if (storeConflictsWithLoad(StoreI, StoreE, LoadTE, LoadL))
       return true;
   }
   return false;
