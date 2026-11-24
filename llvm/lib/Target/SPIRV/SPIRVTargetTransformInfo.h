@@ -55,6 +55,8 @@ public:
     return true;
   }
 
+  ValueUniformity getValueUniformity(const Value *V) const override;
+
   unsigned getFlatAddressSpace() const override {
     // Clang has 2 distinct address space maps. One where
     // default=Generic, and one with default=Function. This depends on the

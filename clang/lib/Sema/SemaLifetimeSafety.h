@@ -593,6 +593,15 @@ public:
           << EscapeGlobal->getEndLoc();
   }
 
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const CXXMethodDecl *EscapeMethod) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+    S.Diag(EscapeMethod->getLocation(),
+           diag::note_lifetime_safety_escapes_to_object_here);
+  }
+
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
     S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
   }

@@ -27,7 +27,7 @@ define ptr @preserve_nobuiltin() {
 ;; Call-site speculatable is stripped because the synthesized __hot_cold_t
 ;; declaration is not speculatable.
 ; CHECK-LABEL: define ptr @strip_speculatable(
-; CHECK-NEXT:   %[[CALL:.*]] = call dereferenceable_or_null(16) ptr @_Znam12__hot_cold_t(i64 16, i8 5) #[[ATTR_BUILTIN:[0-9]+]]
+; CHECK-NEXT:   %[[CALL:.*]] = call ptr @_Znam12__hot_cold_t(i64 16, i8 5) #[[ATTR_BUILTIN:[0-9]+]]
 ; CHECK-NEXT:   ret ptr %[[CALL]]
 define ptr @strip_speculatable() {
   %call = call ptr @_Znam(i64 16) #2

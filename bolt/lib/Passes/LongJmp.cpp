@@ -37,10 +37,14 @@ static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::desc("share stubs across functions"),
                                 cl::init(true), cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-    ExperimentalRelaxation("relax-exp",
-                           cl::desc("run experimental relaxation pass"),
-                           cl::init(false), cl::cat(BoltOptCategory));
+static cl::opt<cl::boolOrDefault> RelaxWithClusters(
+    "relax-with-clusters",
+    cl::desc("run clustered relaxation pass (default=autodetect)"),
+    cl::init(cl::boolOrDefault::BOU_UNSET), cl::cat(BoltOptCategory));
+
+static cl::alias RelaxExp("relax-exp",
+                          cl::desc("alias for --relax-with-clusters"),
+                          cl::aliasopt(RelaxWithClusters), cl::Hidden);
 
 static cl::opt<unsigned long long> MaxClusterSize(
     "max-cluster-size",
@@ -105,13 +109,6 @@ static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
 }
 
 static bool mayNeedStub(const BinaryContext &BC, const MCInst &Inst) {
-  if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst) &&
-      !opts::CompactCodeModel) {
-    BC.errs() << "BOLT-ERROR: short range branch not supported"
-              << " outside compact code model\n";
-    BC.printInstruction(BC.errs(), Inst);
-    exit(1);
-  }
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
          !BC.MIB->isIndirectBranch(Inst) && !BC.MIB->isIndirectCall(Inst);
 }
@@ -660,6 +657,13 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
       if (BC.MIB->isPseudo(Inst))
         continue;
 
+      if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst)) {
+        BC.errs() << "BOLT-ERROR: short range branch not supported by the "
+                     "stub-insertion pass\n";
+        BC.printInstruction(BC.errs(), Inst);
+        exit(1);
+      }
+
       if (!mayNeedStub(BC, Inst)) {
         DotAddress += InsnSize;
         continue;
@@ -1085,7 +1089,9 @@ public:
   explicit ClusteredRelaxation(BinaryContext &BC)
       : BC(BC), OutputFunctions(BC.getOutputBinaryFunctions()) {}
 
-  void run();
+  /// Relax calls and direct unconditional branches, then install the output
+  /// function list. Returns true if any thunks were created.
+  Expected<bool> run();
 
 private:
   template <typename T>
@@ -1163,7 +1169,7 @@ private:
   static unsigned getClusterDistance(unsigned A, unsigned B);
   static uint64_t estimateFragmentSize(const BinaryFunction &BF,
                                        const FunctionFragment &FF);
-  void buildLayout();
+  Error buildLayout();
   void printStats() const;
   void collectOutOfRangeReferences();
   const MCSymbol *getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
@@ -1224,7 +1230,7 @@ uint64_t ClusteredRelaxation::estimateFragmentSize(const BinaryFunction &BF,
   return Size;
 }
 
-void ClusteredRelaxation::buildLayout() {
+Error ClusteredRelaxation::buildLayout() {
   struct OutputFragment {
     const FunctionFragment *FF;
     size_t FunctionIndex;
@@ -1256,8 +1262,16 @@ void ClusteredRelaxation::buildLayout() {
       if (FF.empty() && !BF->hasConstantIsland())
         continue;
 
-      addOrderedFragment({&FF, I, BF->getCodeSectionName(FF.getFragmentNum()),
-                          estimateFragmentSize(*BF, FF)});
+      const uint64_t Size = estimateFragmentSize(*BF, FF);
+      if (Size > opts::MaxClusterSize)
+        return createFatalBOLTError(
+            "fragment " + Twine(FF.getFragmentNum().get()) + " of " +
+            BF->getPrintName() + " is estimated to have " + Twine(Size) +
+            " bytes, exceeding --max-cluster-size=" +
+            Twine(opts::MaxClusterSize));
+
+      addOrderedFragment(
+          {&FF, I, BF->getCodeSectionName(FF.getFragmentNum()), Size});
     }
   }
 
@@ -1378,11 +1392,11 @@ void ClusteredRelaxation::buildLayout() {
       addFragmentToCluster(*OrderedFragments[I]);
   }
 
-  if (Clusters.empty())
-    return;
+  if (!Clusters.empty())
+    LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
+                      << '\n');
 
-  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
-                    << '\n');
+  return Error::success();
 }
 
 void ClusteredRelaxation::printStats() const {
@@ -1783,10 +1797,12 @@ void ClusteredRelaxation::applyBTIFixups() {
                                   *Thunk->front().getLastNonPseudoInstr());
 }
 
-void ClusteredRelaxation::run() {
-  buildLayout();
+Expected<bool> ClusteredRelaxation::run() {
+  if (Error E = buildLayout())
+    return std::move(E);
+
   if (Clusters.empty())
-    return;
+    return false;
 
   collectOutOfRangeReferences();
   relaxCalls();
@@ -1812,16 +1828,34 @@ void ClusteredRelaxation::run() {
 
   BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
   applyBTIFixups();
+  return true;
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
+  const bool RelaxWithClusters =
+      BC.HasRelocations &&
+      opts::RelaxWithClusters != cl::boolOrDefault::BOU_FALSE;
 
-  assert((opts::CompactCodeModel || opts::ExperimentalRelaxation ||
+  if (!BC.HasRelocations) {
+    if (opts::RelaxWithClusters == cl::boolOrDefault::BOU_TRUE)
+      return createFatalBOLTError(
+          "clustered relaxation requires code relocations; "
+          "link with --emit-relocs or pass --relax-with-clusters=false");
+    if (opts::RelaxWithClusters == cl::boolOrDefault::BOU_UNSET)
+      BC.errs()
+          << "BOLT-WARNING: clustered relaxation requires code relocations; "
+             "falling back to "
+          << (opts::CompactCodeModel ? "local branch relaxation"
+                                     : "the stub-insertion pass")
+          << '\n';
+  }
+
+  assert((opts::CompactCodeModel || RelaxWithClusters ||
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
   // Reserve at least one huge page of headroom for text-section alignment.
-  if (opts::ExperimentalRelaxation &&
+  if (RelaxWithClusters &&
       opts::MaxClusterSize > LongestJumpSpan - BinaryContext::HugePageSize)
     return createFatalBOLTError("--max-cluster-size must be at most 126 MiB");
 
@@ -1846,7 +1880,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     return It == BranchLiveness.end() ? nullptr : &It->second;
   };
 
-  if (opts::CompactCodeModel || opts::ExperimentalRelaxation) {
+  if (opts::CompactCodeModel || RelaxWithClusters) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
@@ -1869,12 +1903,11 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     if (HasFatal)
       return createFatalBOLTError("branch relaxation failure");
 
-    if (!opts::ExperimentalRelaxation)
+    if (!RelaxWithClusters)
       return Error::success();
 
-    BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
-    ClusteredRelaxation(BC).run();
-    return Error::success();
+    BC.outs() << "BOLT-INFO: starting clustered relaxation pass\n";
+    return ClusteredRelaxation(BC).run().takeError();
   }
 
   BC.outs() << "BOLT-INFO: Starting stub-insertion pass\n";
