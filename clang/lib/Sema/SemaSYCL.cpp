@@ -39,15 +39,9 @@ Sema::SemaDiagnosticBuilder SemaSYCL::DiagIfDeviceCode(SourceLocation Loc,
   // discarded code, including constexpr and constinit initializers.
   const Sema::ExpressionEvaluationContextRecord &EvalCtx =
       SemaRef.currentEvaluationContext();
-  auto IsConstantInitializer = [&] {
-    if (EvalCtx.ExprContext !=
-        Sema::ExpressionEvaluationContextRecord::EK_VariableInit)
-      return false;
-    const auto *VD = dyn_cast_or_null<VarDecl>(EvalCtx.ManglingContextDecl);
-    return VD && (VD->isConstexpr() || VD->hasAttr<ConstInitAttr>());
-  };
   if (EvalCtx.isUnevaluated() || SemaRef.isConstantEvaluatedContext() ||
-      EvalCtx.isDiscardedStatementContext() || IsConstantInitializer())
+      EvalCtx.isDiscardedStatementContext() ||
+      SemaRef.isConstantInitializerContext())
     return SemaDiagnosticBuilder(DiagKind, Loc, DiagID, FD, SemaRef);
 
   if (FD) {
