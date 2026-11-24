@@ -326,14 +326,19 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (PatternVariableLookedUp)
       return PatternVariable;
     PatternVariableLookedUp = true;
-    if (const auto *DeclaringFunction = dyn_cast_if_present<FunctionDecl>(
-            Variable->getParentFunctionOrMethod());
-        DeclaringFunction && DeclaringFunction->isTemplateInstantiation())
-      if (const FunctionDecl *Pattern =
-              DeclaringFunction->getTemplateInstantiationPattern())
-        if ((PatternBody = Pattern->getBody(PatternFunction)))
-          PatternVariable =
-              getPatternVariable(Variable, PatternBody, *Result.Context);
+    const auto *DeclaringFunction = dyn_cast_if_present<FunctionDecl>(
+        Variable->getParentFunctionOrMethod());
+    if (!DeclaringFunction || !DeclaringFunction->isTemplateInstantiation())
+      return nullptr;
+    const FunctionDecl *Pattern =
+        DeclaringFunction->getTemplateInstantiationPattern();
+    if (!Pattern)
+      return nullptr;
+    PatternBody = Pattern->getBody(PatternFunction);
+    if (!PatternBody)
+      return nullptr;
+    PatternVariable =
+        getPatternVariable(Variable, PatternBody, *Result.Context);
     return PatternVariable;
   };
 
