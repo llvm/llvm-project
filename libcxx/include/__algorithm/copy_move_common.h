@@ -93,21 +93,19 @@ struct __can_rewrap
 // `disable_sized_sentinel_for`; check random-access category/concept instead of `sized_sentinel_for` (mirroring
 // `std::distance`). Different `_InIter`/`_Sent` types only occur in `ranges::` algorithms, where
 // `sized_sentinel_for` guarantees `__last - __first` is valid.
+#if _LIBCPP_STD_VER >= 20
 template <class _InIter, class _Sent>
 struct __has_constant_time_distance
     : integral_constant<bool,
-                        is_same<_InIter, _Sent>::value ? (__has_random_access_iterator_category<_InIter>::value
-#if _LIBCPP_STD_VER >= 20
-                                                          || random_access_iterator<_InIter>
-#endif
-                                                          )
-#if _LIBCPP_STD_VER >= 20
-                                                       : sized_sentinel_for<_Sent, _InIter>
+                        is_same_v<_InIter, _Sent>
+                            ? (__has_random_access_iterator_category<_InIter>::value || random_access_iterator<_InIter>)
+                            : sized_sentinel_for<_Sent, _InIter> > {};
 #else
-                                                       : false
-#endif
-                        > {
+template <class _InIter, class _Sent>
+struct __has_constant_time_distance
+    : integral_constant<bool, is_same<_InIter, _Sent>::value && __has_random_access_iterator_category<_InIter>::value> {
 };
+#endif
 
 // If _OutIter is a bounded or user-defined contiguous iterator, we can only unwrap it up front when the input range's
 // length is known in O(1); otherwise keep _OutIter wrapped so the element-by-element loop checks bounds before each
