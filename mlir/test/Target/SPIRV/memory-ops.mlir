@@ -96,6 +96,13 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], [SPV_K
     spirv.Store "StorageBuffer" %4, %2 : i32
     spirv.Return
   }
+
+  // CHECK-LABEL: spirv.func @array_length
+  spirv.func @array_length(%arg0: !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer>) -> i32 "None" {
+    // CHECK: spirv.ArrayLength {{%.*}}, 1 : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer> -> i32
+    %0 = spirv.ArrayLength %arg0, 1 : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer> -> i32
+    spirv.ReturnValue %0 : i32
+  }
 }
 
 // -----
