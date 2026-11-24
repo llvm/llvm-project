@@ -886,7 +886,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   auto fastField{io.GetUpcomingFastAsciiField()};
   // Reaching EOF is okay when peeking at list-directed defined input;
   // pretend that there's an END= in that case.
-  bool oldHasEnd{maxRepeat == 0 && !io.GetIoErrorHandler().SetHasEnd()};
+  bool peeking{maxRepeat == 0};
+  bool hadEnd{peeking && io.GetIoErrorHandler().SetHasEnd()};
   auto ch{io.GetNextNonBlank(byteCount, &fastField)};
   if (ch && *ch == comma && eatComma_) {
     // Consume comma & whitespace after previous item.
@@ -897,7 +898,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     ch = io.GetNextNonBlank(byteCount, &fastField);
   }
   eatComma_ = true;
-  if (maxRepeat == 0 && !oldHasEnd) {
+  if (peeking && !hadEnd) {
     io.GetIoErrorHandler().SetHasEnd(false);
   }
   if (!ch) { // EOF
