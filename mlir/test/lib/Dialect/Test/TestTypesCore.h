@@ -1,32 +1,23 @@
-//===- TestTypes.h - MLIR Test Dialect Types --------------------*- C++ -*-===//
+//===- TestTypesCore.h - Test types in `Core` -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains types defined by the TestDialect for testing various
-// features of MLIR.
-//
-//===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TESTTYPES_H
-#define MLIR_TESTTYPES_H
+#ifndef MLIR_TEST_DIALECT_TEST_TESTTYPESCORE_H
+#define MLIR_TEST_DIALECT_TEST_TESTTYPESCORE_H
 
-#include <optional>
 #include <tuple>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 
 namespace test {
-class TestAttrWithFormatAttr;
-
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
 struct FieldInfo {
@@ -38,60 +29,11 @@ struct FieldInfo {
     return FieldInfo{alloc.copyInto(name), type};
   }
 };
-
-/// A custom type for a test type parameter.
-struct CustomParam {
-  int value;
-
-  bool operator==(const CustomParam &other) const {
-    return other.value == value;
-  }
-};
-
-inline llvm::hash_code hash_value(const test::CustomParam &param) {
-  return llvm::hash_value(param.value);
-}
-
 } // namespace test
-
-namespace mlir {
-template <>
-struct FieldParser<test::CustomParam> {
-  static FailureOr<test::CustomParam> parse(AsmParser &parser) {
-    auto value = FieldParser<int>::parse(parser);
-    if (failed(value))
-      return failure();
-    return test::CustomParam{*value};
-  }
-};
-
-inline mlir::AsmPrinter &operator<<(mlir::AsmPrinter &printer,
-                                    test::CustomParam param) {
-  return printer << param.value;
-}
-
-/// Overload the attribute parameter parser for optional integers.
-template <>
-struct FieldParser<std::optional<int>> {
-  static FailureOr<std::optional<int>> parse(AsmParser &parser) {
-    std::optional<int> value;
-    value.emplace();
-    OptionalParseResult result = parser.parseOptionalInteger(*value);
-    if (result.has_value()) {
-      if (succeeded(*result))
-        return value;
-      return failure();
-    }
-    value.reset();
-    return value;
-  }
-};
-} // namespace mlir
 
 #include "TestTypeInterfaces.h.inc"
 
 namespace test {
-
 /// Storage for simple named recursive types, where the type is identified by
 /// its name and can "contain" another type, including itself.
 struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
@@ -145,10 +87,9 @@ public:
   /// Name/key getter.
   ::llvm::StringRef getName() { return getImpl()->name; }
 };
-
 } // namespace test
 
 #define GET_TYPEDEF_CLASSES
-#include "TestTypeDefs.h.inc"
+#include "TestTypesCore.h.inc"
 
-#endif // MLIR_TESTTYPES_H
+#endif // MLIR_TEST_DIALECT_TEST_TESTTYPESCORE_H
