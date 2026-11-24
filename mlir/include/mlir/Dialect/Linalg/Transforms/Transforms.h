@@ -1377,13 +1377,16 @@ struct PackResult {
 /// Implement packing of a single LinalgOp by `packedSizes`.
 /// There must be one packedSizes entry per `linalgOp` iterator.
 /// If `operandsToPack` is set, only the operands it lists (operand numbers,
-/// inputs first) are packed. The others are split with a `tensor.expand_shape`
-/// instead. See `transform.structured.pack`.
+/// inputs first) are packed. The others keep their layout and are reshaped
+/// with a `tensor.expand_shape` instead. Their dynamic packed dimensions are
+/// rejected unless `assumeDynamicDimsDivisible` is set. See
+/// `transform.structured.pack`.
 /// Return the packed Linalg op on success, failure otherwise.
 FailureOr<PackResult>
 pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
      ArrayRef<OpFoldResult> packedSizes,
-     std::optional<ArrayRef<int64_t>> operandsToPack = std::nullopt);
+     std::optional<ArrayRef<int64_t>> operandsToPack = std::nullopt,
+     bool assumeDynamicDimsDivisible = false);
 
 /// Struct to hold the result of a `packTranspose` call.
 struct PackTransposeResult {
