@@ -152,16 +152,15 @@ std::string MIRVocabulary::extractBaseOpcodeName(StringRef InstrName) {
 
 unsigned MIRVocabulary::getCanonicalIndexForBaseName(StringRef BaseName) const {
   assert(!UniqueBaseOpcodeNames.empty() && "Canonical mapping not built");
-  auto It = std::find(UniqueBaseOpcodeNames.begin(),
-                      UniqueBaseOpcodeNames.end(), BaseName.str());
-  assert(It != UniqueBaseOpcodeNames.end() &&
+  auto It = llvm::lower_bound(UniqueBaseOpcodeNames, BaseName);
+  assert(It != UniqueBaseOpcodeNames.end() && *It == BaseName &&
          "Base name not found in unique opcodes");
   return std::distance(UniqueBaseOpcodeNames.begin(), It);
 }
 
 unsigned MIRVocabulary::getCanonicalOpcodeIndex(unsigned Opcode) const {
-  auto BaseOpcode = extractBaseOpcodeName(TII.getName(Opcode));
-  return getCanonicalIndexForBaseName(BaseOpcode);
+  assert(Opcode < OpcodeToCanonicalIndex.size() && "Opcode out of bounds");
+  return OpcodeToCanonicalIndex[Opcode];
 }
 
 unsigned
@@ -326,10 +325,20 @@ void MIRVocabulary::buildCanonicalOpcodeMapping() {
     return;
 
   // Build mapping from opcodes to canonical base opcode indices
-  for (unsigned Opcode = 0; Opcode < TII.getNumOpcodes(); ++Opcode) {
-    std::string BaseOpcode = extractBaseOpcodeName(TII.getName(Opcode));
-    UniqueBaseOpcodeNames.insert(BaseOpcode);
-  }
+  unsigned NumOpcodes = TII.getNumOpcodes();
+  SmallVector<std::string, 0> BaseOpcodes;
+  BaseOpcodes.reserve(NumOpcodes);
+  for (unsigned Opcode = 0; Opcode < NumOpcodes; ++Opcode)
+    BaseOpcodes.push_back(extractBaseOpcodeName(TII.getName(Opcode)));
+
+  UniqueBaseOpcodeNames = BaseOpcodes;
+  llvm::sort(UniqueBaseOpcodeNames);
+  UniqueBaseOpcodeNames.erase(llvm::unique(UniqueBaseOpcodeNames),
+                              UniqueBaseOpcodeNames.end());
+
+  OpcodeToCanonicalIndex.reserve(NumOpcodes);
+  for (const std::string &BaseOpcode : BaseOpcodes)
+    OpcodeToCanonicalIndex.push_back(getCanonicalIndexForBaseName(BaseOpcode));
 
   LLVM_DEBUG(dbgs() << "MIR2Vec: Built canonical mapping for target with "
                     << UniqueBaseOpcodeNames.size()
