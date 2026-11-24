@@ -5028,6 +5028,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       return false;
 
     if (Scalar) {
+      bool HasScalarUser = false;
       for (auto &[S, U, L] : ScalarUserAndIdx) {
         if (!IsUserFMulScalarTy(U)) {
           // Every user of Scalar must be suitable FMul
@@ -5042,8 +5043,13 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         auto *Op0 = FMul->getOperand(0);
         auto *Op1 = FMul->getOperand(1);
         // Instructions that don't have Scalar as an operand aren't relevant.
-        if (Op0 != Scalar && Op1 != Scalar)
+        if (Op0 != Scalar && Op1 != Scalar) {
+          assert(S != Scalar &&
+                 "U should have Scalar as operand if U is user of Scalar");
           continue;
+        }
+        if (S == Scalar)
+          HasScalarUser = true;
         // If there's a different value used in an FMul that Scalar is used
         // in, then if that also has nonzero lane then we need an extract.
         if (S != Scalar &&
@@ -5059,6 +5065,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         if (OtherEE && !IsLaneZeroExtract(OtherEE))
           return false;
       }
+      assert(HasScalarUser && "Scalar missing from ScalarUserAndIdx");
     } else {
       const auto *EE = cast<ExtractElementInst>(I);
 
