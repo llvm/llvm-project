@@ -63,11 +63,12 @@ body:             |
   ; CHECK-NEXT: bb.1.then:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[VPROLDZ256ri1:%[0-9]+]]:vr256x = VPROLDZ256ri [[VPMULLDZ256rr]], 24, debug-instr-number 1
+  ; CHECK-NEXT:   [[VBROADCASTI32X4Z256rm:%[0-9]+]]:vr256x = VBROADCASTI32X4Z256rm $rip, 1, $noreg, %const.0, $noreg :: (dereferenceable invariant load (s128) from constant-pool)
+  ; CHECK-NEXT:   [[VPSHUFBZ256rr:%[0-9]+]]:vr256x = VPSHUFBZ256rr [[VPMULLDZ256rr]], [[VBROADCASTI32X4Z256rm]], debug-instr-number 1
   ; CHECK-NEXT:   DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.exit:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vr256x = PHI [[VPMULLDZ256rr]], %bb.0, [[VPROLDZ256ri1]], %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vr256x = PHI [[VPMULLDZ256rr]], %bb.0, [[VPSHUFBZ256rr]], %bb.1
   ; CHECK-NEXT:   $ymm0 = COPY [[PHI]]
   ; CHECK-NEXT:   RET 0, $ymm0
   bb.0.entry:

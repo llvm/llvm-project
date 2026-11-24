@@ -96,15 +96,17 @@ define void @loop_three_rotates(ptr %p, ptr %q, i64 %n) {
 ; SPR-LABEL: loop_three_rotates:
 ; SPR:       # %bb.0: # %entry
 ; SPR-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SPR-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12]
+; SPR-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; SPR-NEXT:    .p2align 4
 ; SPR-NEXT:  .LBB2_1: # %loop
 ; SPR-NEXT:    # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    vmovdqa64 (%rdi), %zmm1
-; SPR-NEXT:    vprold $2, %zmm1, %zmm2
-; SPR-NEXT:    vprold $10, %zmm1, %zmm3
-; SPR-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ zmm0 ^ zmm2
-; SPR-NEXT:    vprold $24, %zmm1, %zmm0
-; SPR-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ zmm1 ^ zmm3
+; SPR-NEXT:    vmovdqa64 (%rdi), %zmm2
+; SPR-NEXT:    vprold $2, %zmm2, %zmm3
+; SPR-NEXT:    vprold $10, %zmm2, %zmm4
+; SPR-NEXT:    vpternlogd {{.*#+}} zmm4 = zmm4 ^ zmm0 ^ zmm3
+; SPR-NEXT:    vpshufb %zmm1, %zmm2, %zmm0
+; SPR-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ zmm2 ^ zmm4
 ; SPR-NEXT:    addq $64, %rdi
 ; SPR-NEXT:    decq %rdx
 ; SPR-NEXT:    jne .LBB2_1
@@ -179,15 +181,17 @@ define void @loop_rotr_d(ptr %p, ptr %q, i64 %n) {
 ; SPR-LABEL: loop_rotr_d:
 ; SPR:       # %bb.0: # %entry
 ; SPR-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SPR-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12]
+; SPR-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; SPR-NEXT:    .p2align 4
 ; SPR-NEXT:  .LBB3_1: # %loop
 ; SPR-NEXT:    # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    vmovdqa64 (%rdi), %zmm1
-; SPR-NEXT:    vprord $2, %zmm1, %zmm2
-; SPR-NEXT:    vprord $10, %zmm1, %zmm3
-; SPR-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ zmm0 ^ zmm2
-; SPR-NEXT:    vprord $8, %zmm1, %zmm0
-; SPR-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ zmm1 ^ zmm3
+; SPR-NEXT:    vmovdqa64 (%rdi), %zmm2
+; SPR-NEXT:    vprord $2, %zmm2, %zmm3
+; SPR-NEXT:    vprord $10, %zmm2, %zmm4
+; SPR-NEXT:    vpternlogd {{.*#+}} zmm4 = zmm4 ^ zmm0 ^ zmm3
+; SPR-NEXT:    vpshufb %zmm1, %zmm2, %zmm0
+; SPR-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ zmm2 ^ zmm4
 ; SPR-NEXT:    addq $64, %rdi
 ; SPR-NEXT:    decq %rdx
 ; SPR-NEXT:    jne .LBB3_1
@@ -262,15 +266,17 @@ define void @loop_rotl_q(ptr %p, ptr %q, i64 %n) {
 ; SPR-LABEL: loop_rotl_q:
 ; SPR:       # %bb.0: # %entry
 ; SPR-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SPR-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [3,4,5,6,7,0,1,2,11,12,13,14,15,8,9,10,3,4,5,6,7,0,1,2,11,12,13,14,15,8,9,10,3,4,5,6,7,0,1,2,11,12,13,14,15,8,9,10,3,4,5,6,7,0,1,2,11,12,13,14,15,8,9,10]
+; SPR-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; SPR-NEXT:    .p2align 4
 ; SPR-NEXT:  .LBB4_1: # %loop
 ; SPR-NEXT:    # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    vmovdqa64 (%rdi), %zmm1
-; SPR-NEXT:    vprolq $3, %zmm1, %zmm2
-; SPR-NEXT:    vprolq $11, %zmm1, %zmm3
-; SPR-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 ^ zmm0 ^ zmm2
-; SPR-NEXT:    vprolq $40, %zmm1, %zmm0
-; SPR-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ zmm1 ^ zmm3
+; SPR-NEXT:    vmovdqa64 (%rdi), %zmm2
+; SPR-NEXT:    vprolq $3, %zmm2, %zmm3
+; SPR-NEXT:    vprolq $11, %zmm2, %zmm4
+; SPR-NEXT:    vpternlogq {{.*#+}} zmm4 = zmm4 ^ zmm0 ^ zmm3
+; SPR-NEXT:    vpshufb %zmm1, %zmm2, %zmm0
+; SPR-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ zmm2 ^ zmm4
 ; SPR-NEXT:    addq $64, %rdi
 ; SPR-NEXT:    decq %rdx
 ; SPR-NEXT:    jne .LBB4_1
@@ -345,15 +351,17 @@ define void @loop_rotr_q(ptr %p, ptr %q, i64 %n) {
 ; SPR-LABEL: loop_rotr_q:
 ; SPR:       # %bb.0: # %entry
 ; SPR-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SPR-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [2,3,4,5,6,7,0,1,10,11,12,13,14,15,8,9,2,3,4,5,6,7,0,1,10,11,12,13,14,15,8,9,2,3,4,5,6,7,0,1,10,11,12,13,14,15,8,9,2,3,4,5,6,7,0,1,10,11,12,13,14,15,8,9]
+; SPR-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; SPR-NEXT:    .p2align 4
 ; SPR-NEXT:  .LBB5_1: # %loop
 ; SPR-NEXT:    # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    vmovdqa64 (%rdi), %zmm1
-; SPR-NEXT:    vprorq $3, %zmm1, %zmm2
-; SPR-NEXT:    vprorq $11, %zmm1, %zmm3
-; SPR-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 ^ zmm0 ^ zmm2
-; SPR-NEXT:    vprorq $16, %zmm1, %zmm0
-; SPR-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ zmm1 ^ zmm3
+; SPR-NEXT:    vmovdqa64 (%rdi), %zmm2
+; SPR-NEXT:    vprorq $3, %zmm2, %zmm3
+; SPR-NEXT:    vprorq $11, %zmm2, %zmm4
+; SPR-NEXT:    vpternlogq {{.*#+}} zmm4 = zmm4 ^ zmm0 ^ zmm3
+; SPR-NEXT:    vpshufb %zmm1, %zmm2, %zmm0
+; SPR-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ zmm2 ^ zmm4
 ; SPR-NEXT:    addq $64, %rdi
 ; SPR-NEXT:    decq %rdx
 ; SPR-NEXT:    jne .LBB5_1
@@ -513,7 +521,9 @@ define <8 x i32> @rotl_d_ymm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB7_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprold $24, %ymm0, %ymm0
+; SPR-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12]
+; SPR-NEXT:    # ymm1 = mem[0,1,0,1]
+; SPR-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; SPR-NEXT:  .LBB7_2: # %exit
 ; SPR-NEXT:    retq
 ;
@@ -551,7 +561,9 @@ define <8 x i32> @rotr_d_ymm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB8_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprord $8, %ymm0, %ymm0
+; SPR-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12,1,2,3,0,5,6,7,4,9,10,11,8,13,14,15,12]
+; SPR-NEXT:    # ymm1 = mem[0,1,0,1]
+; SPR-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; SPR-NEXT:  .LBB8_2: # %exit
 ; SPR-NEXT:    retq
 ;
@@ -589,7 +601,9 @@ define <4 x i64> @rotl_q_ymm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB9_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprolq $16, %ymm0, %ymm0
+; SPR-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [6,7,0,1,2,3,4,5,14,15,8,9,10,11,12,13,6,7,0,1,2,3,4,5,14,15,8,9,10,11,12,13]
+; SPR-NEXT:    # ymm1 = mem[0,1,0,1]
+; SPR-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; SPR-NEXT:  .LBB9_2: # %exit
 ; SPR-NEXT:    retq
 ;
@@ -630,7 +644,9 @@ define <4 x i64> @rotr_q_ymm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB10_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprorq $40, %ymm0, %ymm0
+; SPR-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [5,6,7,0,1,2,3,4,13,14,15,8,9,10,11,12,5,6,7,0,1,2,3,4,13,14,15,8,9,10,11,12]
+; SPR-NEXT:    # ymm1 = mem[0,1,0,1]
+; SPR-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; SPR-NEXT:  .LBB10_2: # %exit
 ; SPR-NEXT:    retq
 ;
@@ -671,7 +687,7 @@ define <4 x i32> @rotl_d_xmm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB11_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprold $16, %xmm0, %xmm0
+; SPR-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
 ; SPR-NEXT:  .LBB11_2: # %exit
 ; SPR-NEXT:    retq
 ;
@@ -709,7 +725,7 @@ define <4 x i32> @rotr_d_xmm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB12_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprord $24, %xmm0, %xmm0
+; SPR-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,0,1,2,7,4,5,6,11,8,9,10,15,12,13,14]
 ; SPR-NEXT:  .LBB12_2: # %exit
 ; SPR-NEXT:    retq
 ;
@@ -747,7 +763,7 @@ define <2 x i64> @rotl_q_xmm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB13_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprolq $48, %xmm0, %xmm0
+; SPR-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,0,1,10,11,12,13,14,15,8,9]
 ; SPR-NEXT:  .LBB13_2: # %exit
 ; SPR-NEXT:    retq
 ;
@@ -788,7 +804,7 @@ define <2 x i64> @rotr_q_xmm(ptr %p, i1 %c) {
 ; SPR-NEXT:    testb $1, %sil
 ; SPR-NEXT:    je .LBB14_2
 ; SPR-NEXT:  # %bb.1: # %then
-; SPR-NEXT:    vprorq $8, %xmm0, %xmm0
+; SPR-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,0,9,10,11,12,13,14,15,8]
 ; SPR-NEXT:  .LBB14_2: # %exit
 ; SPR-NEXT:    retq
 ;
