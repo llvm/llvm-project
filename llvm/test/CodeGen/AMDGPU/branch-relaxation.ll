@@ -503,7 +503,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB4_1: ; %bb2
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s0, s0, 1
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    v_nop_e64
@@ -511,6 +511,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_cmp_lt_i32 s0, 10
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX11-NEXT:  ; %bb.3: ; %bb2
 ; GFX11-NEXT:    ; in Loop: Header=BB4_1 Depth=1
@@ -529,7 +530,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:  .LBB4_1: ; %bb2
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    v_nop_e64
@@ -537,6 +538,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_cmp_lt_i32 s0, 10
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX12-NEXT:  ; %bb.3: ; %bb2
 ; GFX12-NEXT:    ; in Loop: Header=BB4_1 Depth=1

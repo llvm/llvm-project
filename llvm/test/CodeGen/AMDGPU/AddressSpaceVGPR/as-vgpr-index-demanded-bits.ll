@@ -10,8 +10,8 @@ define amdgpu_ps i32 @load_masked_index(i32 inreg %arg) {
 ; GFX12-LABEL: load_masked_index:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_bfe_u32 m0, s0, 0xe0002
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    ; return to shader part epilog
   %idx = and i32 %arg, 65535
@@ -24,6 +24,7 @@ define amdgpu_ps void @store_masked_index(i32 inreg %arg, i32 %val) {
 ; GFX12-LABEL: store_masked_index:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_bfe_u32 m0, s0, 0xe0002
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-NEXT:    s_endpgm
   %idx = and i32 %arg, 65535

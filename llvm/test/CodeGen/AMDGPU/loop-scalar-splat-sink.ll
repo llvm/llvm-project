@@ -61,6 +61,7 @@ define amdgpu_ps void @fma_v2f32_scalar_splat_loop(ptr addrspace(1) inreg %p, fl
 ; GFX11-SDAG-NEXT:    s_add_u32 s0, s0, 8
 ; GFX11-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-SDAG-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %exit
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -80,6 +81,7 @@ define amdgpu_ps void @fma_v2f32_scalar_splat_loop(ptr addrspace(1) inreg %p, fl
 ; GFX11-GISEL-NEXT:    s_add_u32 s0, s0, 8
 ; GFX11-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-GISEL-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %exit
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -136,6 +138,7 @@ define amdgpu_ps void @fmul_v2f16_scalar_splat_loop(ptr addrspace(1) inreg %p, h
 ; GFX11-NEXT:    s_add_u32 s0, s0, 4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GFX11-NEXT:  ; %bb.2: ; %exit
 ; GFX11-NEXT:    s_endpgm
@@ -216,6 +219,7 @@ define amdgpu_ps void @add_v2i16_scalar_splat_loop(ptr addrspace(1) inreg %p, i1
 ; GFX11-SDAG-NEXT:    s_add_u32 s0, s0, 4
 ; GFX11-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-SDAG-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %exit
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -242,6 +246,7 @@ define amdgpu_ps void @add_v2i16_scalar_splat_loop(ptr addrspace(1) inreg %p, i1
 ; GFX11-GISEL-NEXT:    s_add_u32 s0, s0, 4
 ; GFX11-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-GISEL-NEXT:    s_cmp_lt_i32 s4, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %exit
 ; GFX11-GISEL-NEXT:    s_endpgm

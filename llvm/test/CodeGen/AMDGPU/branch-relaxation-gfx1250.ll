@@ -357,13 +357,14 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:  .LBB4_1: ; %bb2
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_add_co_i32 s0, s0, 1
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_cmp_lt_i32 s0, 10
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GCN-NEXT:  ; %bb.3: ; %bb2
 ; GCN-NEXT:    ; in Loop: Header=BB4_1 Depth=1
@@ -384,13 +385,14 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-ADD-PC64-NEXT:    s_mov_b32 s0, 0
 ; GCN-ADD-PC64-NEXT:  .LBB4_1: ; %bb2
 ; GCN-ADD-PC64-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_add_co_i32 s0, s0, 1
 ; GCN-ADD-PC64-NEXT:    ;;#ASMSTART
 ; GCN-ADD-PC64-NEXT:    v_nop_e64
 ; GCN-ADD-PC64-NEXT:    v_nop_e64
 ; GCN-ADD-PC64-NEXT:    ;;#ASMEND
 ; GCN-ADD-PC64-NEXT:    s_cmp_lt_i32 s0, 10
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GCN-ADD-PC64-NEXT:  ; %bb.3: ; %bb2
 ; GCN-ADD-PC64-NEXT:    ; in Loop: Header=BB4_1 Depth=1

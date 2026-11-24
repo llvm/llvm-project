@@ -71,6 +71,7 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
@@ -115,6 +116,7 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-GISEL-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
@@ -226,6 +228,7 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
@@ -288,6 +291,7 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_cmp_eq_u32 s2, -1
+; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_cbranch_scc0 .LBB1_2
 ; HSA-TRAP-GFX1100-GISEL-NEXT:  ; %bb.1: ; %ret
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    v_mov_b32_e32 v1, 3
@@ -303,6 +307,7 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-GISEL-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
@@ -403,6 +408,7 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-NEXT:  .LBB2_3: ; =>This Inner Loop Header: Depth=1
@@ -478,6 +484,7 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-GISEL-NEXT:  .LBB2_3: ; =>This Inner Loop Header: Depth=1
@@ -572,6 +579,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-TRAP-GFX1100-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; HSA-TRAP-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX1100-NEXT:    s_bitcmp1_b32 s0, 0
+; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_cbranch_scc0 .LBB3_2
 ; HSA-TRAP-GFX1100-NEXT:  ; %bb.1: ; %exit
 ; HSA-TRAP-GFX1100-NEXT:    s_endpgm
@@ -592,6 +600,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-NEXT:  .LBB3_5: ; =>This Inner Loop Header: Depth=1
@@ -673,6 +682,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_bitset1_b32 s0, 10
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-GISEL-NEXT:    s_mov_b32 m0, ttmp2
 ; HSA-TRAP-GFX1100-GISEL-NEXT:  .LBB3_5: ; =>This Inner Loop Header: Depth=1

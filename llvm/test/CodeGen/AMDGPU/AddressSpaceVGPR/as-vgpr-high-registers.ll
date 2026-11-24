@@ -15,6 +15,7 @@ define void @fold_across_256(ptr addrspace(1) %out, i32 inreg %i) {
 ; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-NEXT:    s_mov_b32 m0, s0
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_movrels_b32_e32 v2, v254
 ; SDAG-NEXT:    v_movrels_b32_e32 v3, v255
 ; SDAG-NEXT:    s_set_vgpr_msb 1 ; msbs: dst=0 src0=1 src1=0 src2=0
@@ -29,12 +30,12 @@ define void @fold_across_256(ptr addrspace(1) %out, i32 inreg %i) {
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    s_lshl2_add_u32 s0, s0, 0x3f8
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_lshr_b32 m0, s0, 2
 ; GISEL-NEXT:    v_movrels_b32_e32 v2, v0
 ; GISEL-NEXT:    v_movrels_b32_e32 v3, v1
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)  | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GISEL-NEXT:    v_movrels_b32_e32 v4, v2
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    v_movrels_b32_e32 v5, v3
 ; GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GISEL-NEXT:    s_set_pc_i64 s[30:31]
@@ -53,6 +54,7 @@ define void @fold_below_256(ptr addrspace(1) %out, i32 inreg %i) {
 ; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-NEXT:    s_mov_b32 m0, s0
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_movrels_b32_e32 v2, v4
 ; SDAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; SDAG-NEXT:    s_set_pc_i64 s[30:31]

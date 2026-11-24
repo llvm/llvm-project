@@ -26,6 +26,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in)
 ; GFX1250-NEXT:    s_wakeup_barrier 1
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_and_b32 m0, s0, 63
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_wakeup_barrier m0
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -35,6 +36,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in)
 ; GFX1310-NEXT:    s_wakeup_barrier 1
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    s_and_b32 m0, s0, 63
+; GFX1310-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-NEXT:    s_wakeup_barrier m0
 ; GFX1310-NEXT:    s_endpgm
     call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15) @bar)

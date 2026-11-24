@@ -14,9 +14,10 @@ define i32 @atomicrmw_add(ptr addrspace(13) inreg %p, i32 %v) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) |  instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_movrels_b32_e32 v1, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_nc_u32_e32 v0, v1, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -33,9 +34,10 @@ define float @atomicrmw_fadd(ptr addrspace(13) inreg %p, float %v) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) |  instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_movrels_b32_e32 v1, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f32_e32 v0, v1, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -52,11 +54,11 @@ define i64 @atomicrmw_xchg_i64(ptr addrspace(13) inreg %p, i64 %v) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_movrels_b32_e32 v2, v0
 ; GFX12-NEXT:    v_movrels_b32_e32 v3, v1
 ; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-NEXT:    v_movreld_b32_e32 v1, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %r = atomicrmw xchg ptr addrspace(13) %p, i64 %v seq_cst, align 8
@@ -72,11 +74,12 @@ define i32 @cmpxchg(ptr addrspace(13) inreg %p, i32 %cmp, i32 %new) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_movrels_b32_e32 v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v0
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -94,6 +97,7 @@ define i32 @load_atomic(ptr addrspace(13) inreg %p) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %r = load atomic i32, ptr addrspace(13) %p acquire, align 4
@@ -109,6 +113,7 @@ define void @store_atomic(ptr addrspace(13) inreg %p, i32 %v) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   store atomic i32 %v, ptr addrspace(13) %p release, align 4

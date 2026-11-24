@@ -64,6 +64,7 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_execnz .LBB0_2
 ; GFX11-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s4
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX11-NEXT:  ; %bb.4: ; %DummyReturnBlock
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

@@ -298,6 +298,7 @@ define amdgpu_cs void @with_chain_call_dvgpr() #0 {
 ; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-TRUE16-NEXT:    s_alloc_vgpr 64
+; CHECK-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-TRUE16-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[2:3]
 ; CHECK-TRUE16-NEXT:    s_cselect_b32 exec_lo, -1, -1
 ; CHECK-TRUE16-NEXT:    s_setpc_b64 s[4:5]
@@ -318,6 +319,7 @@ define amdgpu_cs void @with_chain_call_dvgpr() #0 {
 ; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-FAKE16-NEXT:    s_alloc_vgpr 64
+; CHECK-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-FAKE16-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[2:3]
 ; CHECK-FAKE16-NEXT:    s_cselect_b32 exec_lo, -1, -1
 ; CHECK-FAKE16-NEXT:    s_setpc_b64 s[4:5]

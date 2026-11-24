@@ -167,9 +167,8 @@ define half @swap_B(half %a, half %b, half %c, i32 %i) {
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX11-FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX11-FAKE16-NEXT:  ; %bb.2: ; %ret
 ; GFX11-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
