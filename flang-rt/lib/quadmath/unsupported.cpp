@@ -5,3 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+// Provide a source file for the quadmath archive when no math provider is
+// available. The archive then contains no math entry points.
