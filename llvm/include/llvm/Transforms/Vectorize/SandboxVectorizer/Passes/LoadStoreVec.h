@@ -102,6 +102,16 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// Builds a single vector load out of \p Loads. \returns the new load.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
+  /// \returns true if each of \p Loads can be unpacked from a vector load of
+  /// type \p VecTy, i.e., the lanes it occupies can be reinterpreted as the
+  /// load's type.
+  bool canUnpackLoads(BndlRef<Instruction *> Loads, FixedVectorType *VecTy);
+
+  /// Replaces the uses of each of \p Loads with a value unpacked from the
+  /// lanes it occupies in \p VecLoad, casting it back to the load's type if
+  /// needed. canUnpackLoads() must be true.
+  void unpackLoads(LoadInst *VecLoad, BndlRef<Instruction *> Loads);
+
   /// Packs \p Constants into one constant vector. The element type is chosen
   /// by VecUtils::getCombinedVectorTypeFor().
   ///
