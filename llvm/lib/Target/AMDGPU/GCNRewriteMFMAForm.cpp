@@ -606,6 +606,8 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   int64_t BestSpillCost = 0;
   int64_t Cost = 0;
   unsigned MaxAGPRAfter = 0;
+  // What the region the rewrite helps most still spills after it.
+  unsigned BestRegionSpillsAfter = 0;
   uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
 
   std::pair<unsigned, unsigned> MaxVectorRegs =
@@ -613,6 +615,21 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   unsigned ArchVGPRThreshold = MaxVectorRegs.first;
   unsigned AGPRThreshold = MaxVectorRegs.second;
   unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
+
+  // Spills that have to be ArchVGPRs: an AV register, such as an MFMA source,
+  // may live in an AGPR for free, but GCNRegPressure counts it as an ArchVGPR.
+  auto SpillsWithoutAV = [&](GCNRegPressure &P) {
+    unsigned ArchOnly = P.getArchVGPRNum() - P.getAVGPRNum();
+    unsigned ArchSpill =
+        ArchOnly > ArchVGPRThreshold ? ArchOnly - ArchVGPRThreshold : 0;
+    unsigned AGPRSpill =
+        P.getAGPRNum() > AGPRThreshold ? P.getAGPRNum() - AGPRThreshold : 0;
+    unsigned Unified = P.getVGPRNum(/*UnifiedVGPRFile=*/true);
+    unsigned UnifiedSpill =
+        Unified > CombinedThreshold ? Unified - CombinedThreshold : 0;
+    return std::max(UnifiedSpill, ArchSpill + AGPRSpill);
+  };
+  int64_t MostAVFreeSaving = 0;
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     GCNRegPressure &PressureBefore = DAG.Pressure[Region];
@@ -627,6 +644,9 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
     MaxAGPRAfter = std::max(MaxAGPRAfter, PressureAfter.getAGPRNum());
+    MostAVFreeSaving =
+        std::max(MostAVFreeSaving, (int64_t)SpillsWithoutAV(PressureBefore) -
+                                       (int64_t)SpillsWithoutAV(PressureAfter));
 
     // Moving ArchVGPR overflow into the AGPRs only helps while both files hold
     // what the region needs; getVGPRSpills() cannot show that.
@@ -676,9 +696,18 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
     if (SpillCost > 0)
       return {SpillCost, /*AGPRUtil=*/0};
 
-    if (SpillCost < BestSpillCost)
+    if (SpillCost < BestSpillCost) {
       BestSpillCost = SpillCost;
+      BestRegionSpillsAfter = SpillCostAfter;
+    }
   }
+
+  // Relief of AV registers alone has to clear the region it helps most; short
+  // of that the plan only adds bridge copies. A kernel whose overflow is all AV
+  // runs 10% slower converted: its loops stay over the limit and gain about 190
+  // AGPR moves.
+  if (BestSpillCost < 0 && BestRegionSpillsAfter > 0 && MostAVFreeSaving <= 0)
+    return {std::numeric_limits<int64_t>::max() / 2, /*AGPRUtil=*/0};
 
   // Set the cost to the largest decrease in spill cost in order to not double
   // count spill reductions.
