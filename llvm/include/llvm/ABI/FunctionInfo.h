@@ -89,8 +89,7 @@ private:
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), Conservative(false),
         IndirectByVal(false), IndirectRealign(false), CanBeFlattened(false),
-        InReg(false),
-        NeededIntRegs(0), NeededSseRegs(0) {}
+        InReg(false), NeededIntRegs(0), NeededSseRegs(0) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
