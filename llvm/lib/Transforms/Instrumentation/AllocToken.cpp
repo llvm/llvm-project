@@ -585,15 +585,13 @@ PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
   AllocToken Pass(CLOpts, Options, M, MAM);
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  PreservedAnalyses FuncPA;
-  FuncPA.preserveSet<CFGAnalyses>();
   bool Modified = false;
 
   for (Function &F : M) {
     if (F.empty())
       continue; // declaration
     if (Pass.instrumentFunction(F)) {
-      FAM.invalidate(F, FuncPA);
+      FAM.invalidate(F, PreservedAnalyses::none().preserveSet<CFGAnalyses>());
       Modified = true;
     }
   }
