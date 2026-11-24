@@ -43,6 +43,7 @@ def CC_SI_Gfx : CallingConv<[
 
 def RetCC_SI_Gfx : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i16, f16, bf16], CCIfInRegOrNoRealTrue16<CCPromoteToType<i32>>>,
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
 
   CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
@@ -68,6 +69,7 @@ def CC_SI_SHADER : CallingConv<[
 
 def RetCC_SI_Shader : CallingConv<[
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i16, f16, bf16], CCIfInRegOrNoRealTrue16<CCPromoteToType<i32>>>,
   CCIfType<[i32, i16, v2i16], CCIfOrigTypeShaderCCIsSGPR<CCAssignToReg<
     !foreach(i, !range(0, 44), !cast<Register>("SGPR"#i))  // SGPR0-43
   >>>,
@@ -158,6 +160,7 @@ def CC_AMDGPU_Func : CallingConv<[
 // Calling convention for leaf functions
 def RetCC_AMDGPU_Func : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i16, f16, bf16], CCIfInRegOrNoRealTrue16<CCPromoteToType<i32>>>,
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
   CCIfType<[i32, f32, i16, f16, v2i16, v2f16, bf16, v2bf16], CCAssignToReg<
     !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31

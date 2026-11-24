@@ -234,6 +234,8 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   SmallVector<unsigned> UpdateImplicitDefIdx;
   if (HasDef && MI.hasImplicitDef()) {
     for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
+      if (!MO.isReg())
+        continue;
       Register ImplReg = MO.getReg();
       if ((ImplReg.isVirtual() && ImplReg == Reg0) ||
           (ImplReg.isPhysical() && Reg0.isPhysical() &&

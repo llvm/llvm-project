@@ -201,6 +201,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       setOperationAction(Op, MVT::f32, Legal);
       setOperationAction(Op, MVT::f64, Legal);
     }
+
+    // MIPS I has no sqrt.fmt, use a libcall.
+    if (!Subtarget.hasMips2()) {
+      for (auto Op : {ISD::FSQRT, ISD::STRICT_FSQRT}) {
+        setOperationAction(Op, MVT::f32, Expand);
+        setOperationAction(Op, MVT::f64, Expand);
+      }
+    }
   }
 
   // Targets with 64bits integer registers, but no 64bit floating point register
@@ -296,12 +304,12 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::i32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 
-    setOperationAction(ISD::SETCC, MVT::f32, Legal);
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
     setOperationAction(ISD::SELECT, MVT::f32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
-    setOperationAction(ISD::SETCC, MVT::f64, Legal);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
     setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
@@ -1391,7 +1399,7 @@ SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.hasMips2())
     BP = DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
   else
-    BP = DAG.getNode(MipsISD::BuildPairF64_FPR, DL, MVT::f64, Hi, Lo);
+    BP = DAG.getNode(MipsISD::BuildPairF64_FPR, DL, MVT::f64, Lo, Hi);
 
   SDValue Ops[2] = {BP, Hi.getValue(1)};
   return DAG.getMergeValues(Ops, DL);

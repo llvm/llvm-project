@@ -123,6 +123,7 @@ struct Configuration {
   bool forceLoadObjC = false;
   bool forceLoadSwift = false; // Only applies to LC_LINKER_OPTIONs.
   bool staticLink = false;
+  bool preload = false;
   bool implicitDylibs = false;
   bool isPic = false;
   bool headerPadMaxInstallNames = false;
