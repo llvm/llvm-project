@@ -2615,4 +2615,90 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
 #endif
   });
 }
+
+// A + zext(-A + B) -> zext(B) in getAddExpr undoes the
+// zext(C + X) -> zext(D) + zext((C - D) + X) split in getZeroExtendExpr. If
+// (C - D) + X is an unsimplified add created past the depth limit, the two
+// folds used to recurse infinitely.
+// https://github.com/llvm/llvm-project/issues/227664
+TEST_F(ScalarEvolutionsTest, ZExtOfAddWithUnsimplifiedResidual) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i1 %c) {
+      entry:
+        %sel = select i1 %c, i64 0, i64 2
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *Sel = SE.getSCEV(getInstructionByName(F, "sel"));
+    Type *I64 = Sel->getType();
+    Type *I128 = Type::getInt128Ty(F.getContext());
+    const SCEV *MinusOne = SE.getMinusOne(I64);
+
+    // Create Y = (-1 + (32 + %sel)) and (-1 + Y) past the arithmetic depth
+    // limit, so they are neither flattened nor constant folded.
+    SmallVector<SCEVUse, 2> Ops = {MinusOne,
+                                   SE.getAddExpr(SE.getConstant(I64, 32), Sel)};
+    const SCEV *Y = SE.getAddExpr(Ops, SCEV::FlagNone, /*Depth=*/100);
+    Ops = {MinusOne, Y};
+    const SCEV *YMinusOne = SE.getAddExpr(Ops, SCEV::FlagNone, /*Depth=*/100);
+    ASSERT_TRUE(
+        match(YMinusOne, m_scev_Add(m_scev_AllOnes(), m_scev_Specific(Y))));
+
+    // zext(Y) would split off D = 1, but the residual add is the cached
+    // (-1 + Y), which did not fold, so the split must be skipped.
+    const SCEV *ZExt = SE.getZeroExtendExpr(Y, I128);
+    EXPECT_TRUE(match(ZExt, m_scev_ZExt(m_scev_Specific(Y))));
+  });
+}
+
+// zext((A + B)<nuw>) -> zext(A) + zext(B) in getZeroExtendExpr is undone by
+// A + zext(-A + B) -> zext(B) in getAddExpr. If A + (-A + B) is an unsimplified
+// add created past the depth limit, the two folds used to recurse infinitely.
+// https://github.com/llvm/llvm-project/issues/184947
+TEST_F(ScalarEvolutionsTest, ZExtOfNUWAddWithUnsimplifiedOperand) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i64 range(i64 1, 100) %a) {
+      entry:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(F.getArg(0));
+    Type *I64 = A->getType();
+    Type *I128 = Type::getInt128Ty(F.getContext());
+
+    // Create X = (1 + (-1 + %a))<nuw> past the arithmetic depth limit, so it
+    // is not simplified to %a.
+    const SCEV *Inner = SE.getAddExpr(SE.getMinusOne(I64), A);
+    SmallVector<SCEVUse, 2> Ops = {SE.getOne(I64), Inner};
+    const SCEV *X = SE.getAddExpr(Ops, SCEV::FlagNUW, /*Depth=*/100);
+    ASSERT_TRUE(match(X, m_scev_Add(m_scev_One(), m_scev_Specific(Inner))));
+    ASSERT_TRUE(cast<SCEVAddExpr>(X)->hasNoUnsignedWrap());
+
+    // zext(X) distributes to 1 + zext(-1 + %a). Pushing the 1 back into the
+    // zext gives the cached X, which did not fold, so that must be skipped.
+    const SCEV *ZExt = SE.getZeroExtendExpr(X, I128);
+    EXPECT_TRUE(match(
+        ZExt, m_scev_Add(m_scev_One(), m_scev_ZExt(m_scev_Specific(Inner)))));
+  });
+}
 }  // end namespace llvm
