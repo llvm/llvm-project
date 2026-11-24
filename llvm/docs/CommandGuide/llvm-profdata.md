@@ -165,6 +165,14 @@ inlined functions and the other not. This option can only be used with
 sample-based profile in extbinary format.
 :::
 
+:::{option} --gen-inlinee-top-level-map=[true|false]
+Write a section that maps each inlinee to the top-level functions whose
+profiles contain an inlined instance of it. In the ThinLTO pre-link phase, the
+compiler uses it to also load those top-level profiles for functions defined in
+the module being compiled. This option can only be used with sample-based
+profile in extbinary format, and is ignored for context-sensitive profiles.
+:::
+
 :::{option} --convert-sample-profile-layout=[nest|flat]
 Convert the merged profile into a profile with a new layout. Supported
 layout are `nest` (Nested profile, the input should be CS flat profile) and
@@ -371,6 +379,12 @@ context sensitive profile counts.
 :::{option} --show-prof-sym-list=[true|false]
 Show profile symbol list if it exists in the profile. This option is only
 meaningful for sample-based profile in extbinary format.
+:::
+
+:::{option} --show-inlinee-top-level-map=[true|false]
+Show the map from each inlinee to the top-level functions it is inlined into,
+if the profile contains it. This option is only meaningful for sample-based
+profile in extbinary format.
 :::
 
 :::{option} --show-sec-info-only=[true|false]

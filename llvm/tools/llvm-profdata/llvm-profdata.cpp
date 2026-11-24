@@ -233,6 +233,12 @@ static cl::opt<bool> SplitLayout(
     cl::desc("Split the profile to two sections with one containing sample "
              "profiles with inlined functions and the other without (only "
              "meaningful for -extbinary)"));
+static cl::opt<bool> GenInlineeTopLevelMap(
+    "gen-inlinee-top-level-map", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Write a section mapping each inlinee to the top-level functions "
+             "it is inlined into (only meaningful for -extbinary, and not "
+             "supported for context-sensitive profiles)"));
 static cl::opt<bool>
     WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
                         cl::sub(MergeSubcommand),
@@ -473,6 +479,11 @@ static cl::opt<bool> OnlyListBelow(
 static cl::opt<bool> ShowProfileSymbolList(
     "show-prof-sym-list", cl::init(false),
     cl::desc("Show profile symbol list if it exists in the profile. "),
+    cl::sub(ShowSubcommand));
+static cl::opt<bool> ShowInlineeTopLevelMap(
+    "show-inlinee-top-level-map", cl::init(false),
+    cl::desc("Show the map from each inlinee to the top-level functions it is "
+             "inlined into, if it exists in the sample profile"),
     cl::sub(ShowSubcommand));
 static cl::opt<bool> ShowSectionInfoOnly(
     "show-sec-info-only", cl::init(false),
@@ -1693,6 +1704,16 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
       warn("-md5-indexed-tables is ignored. Specify -extbinary to enable it");
     else
       Writer.setUseMD5IndexedTables();
+  }
+  if (GenInlineeTopLevelMap) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-gen-inlinee-top-level-map is ignored. Specify -extbinary to "
+           "enable it");
+    else if (sampleprof::FunctionSamples::ProfileIsCS)
+      warn("-gen-inlinee-top-level-map is ignored for context-sensitive "
+           "profiles");
+    else
+      Writer.setWriteInlineeTopLevelMap(true);
   }
 }
 
@@ -3440,6 +3461,33 @@ static Error showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
         Reader->getProfileSymbolList();
     ReaderList->dump(OS);
+  }
+
+  if (ShowInlineeTopLevelMap) {
+    if (const InlineeTopLevelMap *Map = Reader->getInlineeTopLevelMap()) {
+      // The map is keyed by name hash, so recover inlinee names from the name
+      // table, then sort by name for stable output.
+      std::vector<std::pair<FunctionId, SmallVector<FunctionId, 1>>> Entries;
+      for (FunctionId Name : Reader->getNameTable())
+        if (auto It = Map->find(Name); It != Map->end())
+          Entries.emplace_back(Name, It->second);
+      llvm::sort(Entries, llvm::less_first());
+      Entries.erase(llvm::unique(Entries,
+                                 [](const auto &L, const auto &R) {
+                                   return L.first == R.first;
+                                 }),
+                    Entries.end());
+      OS << "Inlinee top-level function map:\n";
+      for (auto &[Inlinee, TopLevelFuncs] : Entries) {
+        llvm::sort(TopLevelFuncs);
+        OS << Inlinee << ":";
+        for (FunctionId TopLevel : TopLevelFuncs)
+          OS << " " << TopLevel;
+        OS << "\n";
+      }
+    } else {
+      WithColor::warning() << "no inlinee top-level map in the profile\n";
+    }
   }
 
   if (ShowDetailedSummary) {

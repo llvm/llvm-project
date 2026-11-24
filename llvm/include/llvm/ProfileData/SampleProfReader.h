@@ -721,6 +721,13 @@ public:
             SampleProfileNameTable::iterator()};
   }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
+
+  /// Return the map from each inlinee function to the top-level functions it
+  /// is inlined into, as read from the SecInlineeTopLevelMap section. Return
+  /// nullptr if the profile does not contain that section.
+  virtual const InlineeTopLevelMap *getInlineeTopLevelMap() const {
+    return nullptr;
+  }
   virtual bool contains(StringRef Key) const { return false; }
   virtual bool contains(uint64_t GUID) const { return false; }
 
@@ -747,6 +754,14 @@ public:
 
   /// Don't read profile without context if the flag is set.
   void setSkipFlatProf(bool Skip) { SkipFlatProf = Skip; }
+
+  /// When loading profiles on demand for a module, also load the profiles of
+  /// top-level functions that contain an inlined instance of a function
+  /// defined in the module, as recorded in the SecInlineeTopLevelMap section.
+  /// Has no effect if the profile does not contain that section.
+  void setLoadInlineeTopLevelFuncs(bool Load) {
+    LoadInlineeTopLevelFuncs = Load;
+  }
 
   /// Return whether any name in the profile contains ".__uniq." suffix.
   virtual bool hasUniqSuffix() { return false; }
@@ -867,6 +882,9 @@ protected:
   /// If SkipFlatProf is true, skip functions marked with !Flat in text mode or
   /// sections with SecFlagFlat flag in ExtBinary mode.
   bool SkipFlatProf = false;
+
+  /// See setLoadInlineeTopLevelFuncs().
+  bool LoadInlineeTopLevelFuncs = false;
 };
 
 class LLVM_ABI SampleProfileReaderText : public SampleProfileReader {
@@ -1172,6 +1190,11 @@ protected:
   std::error_code readNameTableSecLegacy(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList(bool IsMD5);
+  std::error_code readInlineeTopLevelMap();
+  /// Load the profiles of top-level functions that contain an inlined
+  /// instance of a function defined in the module. \p Start is the start of
+  /// the current function profile section.
+  std::error_code readInlineeTopLevelProfiles(const uint8_t *Start);
   std::error_code readStringBasedProfileSymbolList();
   std::error_code readMD5ProfileSymbolList();
 
@@ -1187,6 +1210,9 @@ protected:
   bool useFuncOffsetList() const;
 
   std::unique_ptr<ProfileSymbolList> ProfSymList;
+
+  /// Contents of the SecInlineeTopLevelMap section, if present.
+  std::optional<InlineeTopLevelMap> InlineeTopLevelFuncs;
 
   /// The table mapping from a function context's MD5 to the offset of its
   /// FunctionSample towards file start.
@@ -1230,6 +1256,10 @@ public:
   std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
   };
+
+  const InlineeTopLevelMap *getInlineeTopLevelMap() const override {
+    return InlineeTopLevelFuncs ? &*InlineeTopLevelFuncs : nullptr;
+  }
 
 private:
   /// Read the profiles on-demand for the given functions. This is used after

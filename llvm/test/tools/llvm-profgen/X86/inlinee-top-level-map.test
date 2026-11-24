@@ -1,0 +1,50 @@
+; Test --gen-inlinee-top-level-map, which writes a SecInlineeTopLevelMap section
+; mapping each inlinee to the top-level functions whose profiles contain it.
+
+; Line-based nested profile: swap is inlined into partition_pivot_first and
+; partition_pivot_last.
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t --gen-inlinee-top-level-map
+; RUN: llvm-profdata show -sample --show-sec-info-only %t | FileCheck %s --check-prefix=CHECK-SEC
+; RUN: llvm-profdata show -sample --show-inlinee-top-level-map %t | FileCheck %s --check-prefix=CHECK-MAP
+
+; CHECK-SEC: NameTableSection
+; CHECK-SEC: InlineeTopLevelMapSection - Offset: {{[0-9]+}}, Size: {{[1-9][0-9]*}}, Flags: {}
+
+; CHECK-MAP:      Inlinee top-level function map:
+; CHECK-MAP-NEXT: swap: partition_pivot_first partition_pivot_last
+; CHECK-MAP-NOT:  {{.}}
+
+; MD5 names.
+; RUN: llvm-profgen --format=extbinary --use-md5 --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t.md5 --gen-inlinee-top-level-map
+; RUN: llvm-profdata show -sample --show-inlinee-top-level-map %t.md5 | FileCheck %s --check-prefix=CHECK-MD5
+
+; CHECK-MD5:      Inlinee top-level function map:
+; CHECK-MD5-NEXT: {{^[0-9]+}}: {{[0-9]+}} {{[0-9]+$}}
+; CHECK-MD5-NOT:  {{.}}
+
+; Context-sensitive probe profile converted to a nested profile (the default).
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t.cs --gen-inlinee-top-level-map --profile-summary-cold-count=0
+; RUN: llvm-profdata show -sample --show-inlinee-top-level-map %t.cs | FileCheck %s --check-prefix=CHECK-CS-NESTED
+
+; CHECK-CS-NESTED:      Inlinee top-level function map:
+; CHECK-CS-NESTED-NEXT: bar: foo
+; CHECK-CS-NESTED-NOT:  {{.}}
+
+; The section is not written for full context-sensitive profiles.
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t.csflat --gen-inlinee-top-level-map --gen-cs-nested-profile=0 --profile-summary-cold-count=0 2>&1 | FileCheck %s --check-prefix=CHECK-WARN-CS
+; RUN: llvm-profdata show -sample --show-sec-info-only %t.csflat | FileCheck %s --check-prefix=CHECK-NO-SEC
+
+; CHECK-WARN-CS: warning: --gen-inlinee-top-level-map is ignored for context-sensitive profiles
+
+; The section is not written unless requested.
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t.none
+; RUN: llvm-profdata show -sample --show-sec-info-only %t.none | FileCheck %s --check-prefix=CHECK-NO-SEC
+; RUN: llvm-profdata show -sample --show-inlinee-top-level-map %t.none 2>&1 | FileCheck %s --check-prefix=CHECK-NO-MAP
+
+; CHECK-NO-SEC-NOT: InlineeTopLevelMapSection
+; CHECK-NO-MAP: warning: no inlinee top-level map in the profile
+
+; The option only applies to the extbinary format.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t.txt --gen-inlinee-top-level-map 2>&1 | FileCheck %s --check-prefix=CHECK-WARN-TEXT
+
+; CHECK-WARN-TEXT: warning: --gen-inlinee-top-level-map is ignored. Specify --format=extbinary to enable it

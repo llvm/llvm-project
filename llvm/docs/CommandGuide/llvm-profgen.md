@@ -65,6 +65,13 @@ Specify the format of the generated profile. Supported \<format> are `text`,
 descriptions of the format.
 :::
 
+:::{option} --gen-inlinee-top-level-map
+Write an additional section that maps each inlinee to the top-level functions
+whose profiles contain an inlined instance of it. Only meaningful for the
+`extbinary` format, and ignored for context-sensitive profiles unless they are
+converted to nested profiles.
+:::
+
 :::{option} --show-mmap-events
 Print mmap events.
 :::

@@ -42,6 +42,14 @@ static cl::opt<bool> UseMD5(
     cl::desc("Use md5 to represent function names in the output profile (only "
              "meaningful for -extbinary)"));
 
+static cl::opt<bool> GenInlineeTopLevelMap(
+    "gen-inlinee-top-level-map", cl::init(false),
+    cl::desc("Write a section mapping each inlinee to the top-level functions "
+             "it is inlined into (only meaningful for -extbinary, and not "
+             "supported for context-sensitive profiles that are not "
+             "converted to nested profiles)"),
+    cl::cat(ProfGenCategory));
+
 static cl::opt<bool> PopulateProfileSymbolList(
     "populate-profile-symbol-list", cl::init(false), cl::Hidden,
     cl::desc("Populate profile symbol list (only meaningful for -extbinary)"));
@@ -184,6 +192,18 @@ void ProfileGeneratorBase::write() {
                               "--format=extbinary to enable it\n";
     else
       WriterOrErr.get()->setUseMD5();
+  }
+
+  if (GenInlineeTopLevelMap) {
+    if (OutputFormat != SPF_Ext_Binary)
+      WithColor::warning() << "--gen-inlinee-top-level-map is ignored. Specify "
+                              "--format=extbinary to enable it\n";
+    else if (FunctionSamples::ProfileIsCS)
+      WithColor::warning()
+          << "--gen-inlinee-top-level-map is ignored for context-sensitive "
+             "profiles. Specify --gen-cs-nested-profile to enable it\n";
+    else
+      WriterOrErr.get()->setWriteInlineeTopLevelMap(true);
   }
 
   write(std::move(WriterOrErr.get()), ProfileMap);

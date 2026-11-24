@@ -11,13 +11,17 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -828,6 +832,289 @@ TEST_F(SampleProfTest, ext_binary_writer_toggles_composite_layout) {
   ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
   ProfileWriter->getOutputStream().flush();
   VerifyFormat(true, CompositeProfileVersion);
+}
+
+// Write a profile in which main inlines foo (which itself inlines bar) and
+// bar, baz inlines bar, and foo also has its own top-level profile.
+static void writeInlineeTestProfile(SmallVectorImpl<char> &Buffer, bool UseMD5,
+                                    bool UseMD5IndexedTables, bool CompressAll,
+                                    bool UseCtxSplitLayout) {
+  std::unique_ptr<raw_ostream> OS =
+      std::make_unique<raw_svector_ostream>(Buffer);
+  auto WriterOrErr =
+      SampleProfileWriter::create(OS, SampleProfileFormat::SPF_Ext_Binary);
+  ASSERT_TRUE(NoError(WriterOrErr.getError()));
+  auto ProfileWriter = std::move(WriterOrErr.get());
+  if (UseCtxSplitLayout)
+    ProfileWriter->setUseCtxSplitLayout();
+  // Enable compression before the map to check that the late-added section
+  // still inherits it.
+  if (CompressAll)
+    ProfileWriter->setToCompressAllSections();
+  ProfileWriter->setWriteInlineeTopLevelMap(true);
+  if (UseMD5)
+    ProfileWriter->setUseMD5();
+  if (UseMD5IndexedTables)
+    ProfileWriter->setUseMD5IndexedTables();
+
+  auto MakeSamples = [](StringRef Name, uint64_t Total) {
+    FunctionSamples FS;
+    FS.setFunction(FunctionId(Name));
+    FS.addTotalSamples(Total);
+    FS.addBodySamples(1, 0, Total);
+    return FS;
+  };
+
+  FunctionSamples BarInFoo = MakeSamples("_Z3barv", 10);
+  FunctionSamples FooInMain = MakeSamples("_Z3foov", 20);
+  FooInMain.functionSamplesAt(LineLocation(2, 0))[FunctionId("_Z3barv")] =
+      BarInFoo;
+  FunctionSamples Main = MakeSamples("main", 100);
+  Main.functionSamplesAt(LineLocation(1, 0))[FunctionId("_Z3foov")] = FooInMain;
+  Main.functionSamplesAt(LineLocation(3, 0))[FunctionId("_Z3barv")] =
+      MakeSamples("_Z3barv", 5);
+  FunctionSamples Baz = MakeSamples("_Z3bazv", 50);
+  Baz.functionSamplesAt(LineLocation(1, 0))[FunctionId("_Z3barv")] =
+      MakeSamples("_Z3barv", 7);
+  FunctionSamples Foo = MakeSamples("_Z3foov", 30);
+
+  SampleProfileMap Profiles;
+  Profiles[SampleContext("main")] = Main;
+  Profiles[SampleContext("_Z3bazv")] = Baz;
+  Profiles[SampleContext("_Z3foov")] = Foo;
+
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+}
+
+// Verify that SecInlineeTopLevelMap round trips the map from each inlinee to
+// the top-level functions containing it.
+static void testInlineeTopLevelMapRoundTrip(LLVMContext &Context, bool UseMD5,
+                                            bool UseMD5IndexedTables,
+                                            bool CompressAll,
+                                            bool UseCtxSplitLayout) {
+  SmallVector<char, 256> Buffer;
+  writeInlineeTestProfile(Buffer, UseMD5, UseMD5IndexedTables, CompressAll,
+                          UseCtxSplitLayout);
+  if (::testing::Test::HasFatalFailure())
+    return;
+
+  std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+      StringRef(Buffer.data(), Buffer.size()), "profile");
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+  auto ProfileReader = std::move(ReaderOrErr.get());
+  ASSERT_TRUE(NoError(ProfileReader->read()));
+
+  const InlineeTopLevelMap *Map = ProfileReader->getInlineeTopLevelMap();
+  ASSERT_NE(Map, nullptr);
+  EXPECT_EQ(Map->size(), 2u);
+
+  auto GetTopLevelGUIDs = [&](StringRef Inlinee) {
+    SmallVector<uint64_t> GUIDs;
+    auto It = Map->find(FunctionId(Inlinee));
+    if (It != Map->end())
+      for (FunctionId F : It->second)
+        GUIDs.push_back(F.getHashCode());
+    llvm::sort(GUIDs);
+    return GUIDs;
+  };
+  auto GUIDsOf = [](std::initializer_list<StringRef> Names) {
+    SmallVector<uint64_t> GUIDs;
+    for (StringRef Name : Names)
+      GUIDs.push_back(FunctionId(Name).getHashCode());
+    llvm::sort(GUIDs);
+    return GUIDs;
+  };
+
+  EXPECT_EQ(GetTopLevelGUIDs("_Z3foov"), GUIDsOf({"main"}));
+  EXPECT_EQ(GetTopLevelGUIDs("_Z3barv"), GUIDsOf({"main", "_Z3bazv"}));
+  EXPECT_TRUE(GetTopLevelGUIDs("main").empty());
+  EXPECT_TRUE(GetTopLevelGUIDs("_Z3bazv").empty());
+
+  // The profiles themselves are unaffected by the extra section.
+  FunctionSamples *ReadMain = ProfileReader->getSamplesFor("main");
+  ASSERT_NE(ReadMain, nullptr);
+  EXPECT_EQ(ReadMain->getTotalSamples(), 100u);
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_map_ext_binary) {
+  testInlineeTopLevelMapRoundTrip(Context, /*UseMD5=*/false,
+                                  /*UseMD5IndexedTables=*/false,
+                                  /*CompressAll=*/false,
+                                  /*UseCtxSplitLayout=*/false);
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_map_md5_ext_binary) {
+  testInlineeTopLevelMapRoundTrip(Context, /*UseMD5=*/true,
+                                  /*UseMD5IndexedTables=*/false,
+                                  /*CompressAll=*/false,
+                                  /*UseCtxSplitLayout=*/false);
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_map_eytzinger_ext_binary) {
+  testInlineeTopLevelMapRoundTrip(Context, /*UseMD5=*/true,
+                                  /*UseMD5IndexedTables=*/true,
+                                  /*CompressAll=*/false,
+                                  /*UseCtxSplitLayout=*/false);
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_map_compressed_ctx_split_ext_binary) {
+  if (!llvm::compression::zlib::isAvailable())
+    GTEST_SKIP() << "zlib unavailable";
+  testInlineeTopLevelMapRoundTrip(Context, /*UseMD5=*/false,
+                                  /*UseMD5IndexedTables=*/false,
+                                  /*CompressAll=*/true,
+                                  /*UseCtxSplitLayout=*/true);
+}
+
+// Read the profile from writeInlineeTestProfile() for a module that defines
+// \p Defined and declares \p Declared, and return the sorted GUIDs of the
+// loaded top-level profiles.
+static void readInlineeTestProfileForModule(
+    LLVMContext &Context, ArrayRef<char> Buffer, bool LoadTopLevel,
+    StringRef RemapFile, ArrayRef<StringRef> Defined,
+    ArrayRef<StringRef> Declared, SmallVectorImpl<uint64_t> &Loaded) {
+  Module M("inlinee-test", Context);
+  FunctionType *FnTy = FunctionType::get(Type::getVoidTy(Context), false);
+  for (StringRef Name : Defined) {
+    Function *F = Function::Create(FnTy, GlobalValue::ExternalLinkage, Name, M);
+    ReturnInst::Create(Context, BasicBlock::Create(Context, "entry", F));
+  }
+  for (StringRef Name : Declared)
+    Function::Create(FnTy, GlobalValue::ExternalLinkage, Name, M);
+
+  std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+      StringRef(Buffer.data(), Buffer.size()), "profile");
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(
+      MemBuffer, Context, *FS, FSDiscriminatorPass::Base, RemapFile);
+  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+  auto ProfileReader = std::move(ReaderOrErr.get());
+  ProfileReader->setModule(&M);
+  ProfileReader->setLoadInlineeTopLevelFuncs(LoadTopLevel);
+  ASSERT_TRUE(NoError(ProfileReader->read()));
+
+  Loaded.clear();
+  for (const auto &Entry : ProfileReader->getProfiles())
+    Loaded.push_back(Entry.second.getFunction().getHashCode());
+  llvm::sort(Loaded);
+}
+
+static SmallVector<uint64_t> sortedGUIDs(ArrayRef<StringRef> Names) {
+  SmallVector<uint64_t> GUIDs;
+  for (StringRef Name : Names)
+    GUIDs.push_back(FunctionId(Name).getHashCode());
+  llvm::sort(GUIDs);
+  return GUIDs;
+}
+
+// Verify that the reader loads the top-level profiles containing a function
+// defined in the module only when requested, and not for declarations.
+static void testInlineeTopLevelLoading(LLVMContext &Context, bool UseMD5,
+                                       bool UseMD5IndexedTables,
+                                       bool CompressAll, bool UseCtxSplitLayout,
+                                       StringRef RemapFile = "") {
+  SmallVector<char, 256> Buffer;
+  writeInlineeTestProfile(Buffer, UseMD5, UseMD5IndexedTables, CompressAll,
+                          UseCtxSplitLayout);
+  if (::testing::Test::HasFatalFailure())
+    return;
+
+  SmallVector<uint64_t> Loaded;
+  // bar has no top-level profile of its own; it is inlined into main and baz.
+  readInlineeTestProfileForModule(Context, Buffer, /*LoadTopLevel=*/false,
+                                  RemapFile, {"_Z3barv"}, {}, Loaded);
+  EXPECT_TRUE(Loaded.empty());
+  readInlineeTestProfileForModule(Context, Buffer, /*LoadTopLevel=*/true,
+                                  RemapFile, {"_Z3barv"}, {}, Loaded);
+  EXPECT_EQ(Loaded, sortedGUIDs({"main", "_Z3bazv"}));
+
+  // foo has its own profile and is inlined into main. bar is only declared, so
+  // baz is not loaded.
+  readInlineeTestProfileForModule(Context, Buffer, /*LoadTopLevel=*/false,
+                                  RemapFile, {"_Z3foov"}, {"_Z3barv"}, Loaded);
+  EXPECT_EQ(Loaded, sortedGUIDs({"_Z3foov"}));
+  readInlineeTestProfileForModule(Context, Buffer, /*LoadTopLevel=*/true,
+                                  RemapFile, {"_Z3foov"}, {"_Z3barv"}, Loaded);
+  EXPECT_EQ(Loaded, sortedGUIDs({"_Z3foov", "main"}));
+
+  // main is both defined and a container of a defined inlinee; it is loaded
+  // once.
+  readInlineeTestProfileForModule(Context, Buffer, /*LoadTopLevel=*/true,
+                                  RemapFile, {"main", "_Z3barv"}, {}, Loaded);
+  EXPECT_EQ(Loaded, sortedGUIDs({"main", "_Z3bazv"}));
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_loading_ext_binary) {
+  testInlineeTopLevelLoading(Context, /*UseMD5=*/false,
+                             /*UseMD5IndexedTables=*/false,
+                             /*CompressAll=*/false,
+                             /*UseCtxSplitLayout=*/false);
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_loading_md5_ext_binary) {
+  testInlineeTopLevelLoading(Context, /*UseMD5=*/true,
+                             /*UseMD5IndexedTables=*/false,
+                             /*CompressAll=*/false,
+                             /*UseCtxSplitLayout=*/false);
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_loading_eytzinger_ext_binary) {
+  testInlineeTopLevelLoading(Context, /*UseMD5=*/true,
+                             /*UseMD5IndexedTables=*/true,
+                             /*CompressAll=*/false,
+                             /*UseCtxSplitLayout=*/false);
+}
+
+TEST_F(SampleProfTest, inlinee_top_level_loading_ctx_split_ext_binary) {
+  if (!llvm::compression::zlib::isAvailable())
+    GTEST_SKIP() << "zlib unavailable";
+  testInlineeTopLevelLoading(Context, /*UseMD5=*/false,
+                             /*UseMD5IndexedTables=*/false,
+                             /*CompressAll=*/true,
+                             /*UseCtxSplitLayout=*/true);
+}
+
+// A remapper makes the reader keep the function offset table as a list.
+TEST_F(SampleProfTest, inlinee_top_level_loading_remap_ext_binary) {
+  TempFile RemapFile(createRemapFile());
+  testInlineeTopLevelLoading(Context, /*UseMD5=*/false,
+                             /*UseMD5IndexedTables=*/false,
+                             /*CompressAll=*/false,
+                             /*UseCtxSplitLayout=*/false, RemapFile.path());
+}
+
+// Without opting in, or after opting out, the section is not written and the
+// reader reports no map.
+TEST_F(SampleProfTest, inlinee_top_level_map_absent_by_default) {
+  SmallVector<char, 128> Buffer;
+  std::unique_ptr<raw_ostream> OS =
+      std::make_unique<raw_svector_ostream>(Buffer);
+  auto WriterOrErr =
+      SampleProfileWriter::create(OS, SampleProfileFormat::SPF_Ext_Binary);
+  ASSERT_TRUE(NoError(WriterOrErr.getError()));
+  auto ProfileWriter = std::move(WriterOrErr.get());
+  ProfileWriter->setWriteInlineeTopLevelMap(true);
+  ProfileWriter->setWriteInlineeTopLevelMap(false);
+
+  FunctionSamples Foo;
+  Foo.setFunction(FunctionId("foo"));
+  Foo.addTotalSamples(1);
+  SampleProfileMap Profiles;
+  Profiles[SampleContext("foo")] = Foo;
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+
+  std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+      StringRef(Buffer.data(), Buffer.size()), "profile");
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+  auto ProfileReader = std::move(ReaderOrErr.get());
+  ASSERT_TRUE(NoError(ProfileReader->read()));
+  EXPECT_EQ(ProfileReader->getInlineeTopLevelMap(), nullptr);
 }
 
 TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
