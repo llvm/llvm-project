@@ -305,7 +305,7 @@ protected:
 
           HWEvents::SMEM_ACCESS | HWEvents::SQ_MESSAGE | HWEvents::SCC_WRITE,
           HWEvents::VMEM_GROUP | HWEvents::SMEM_GROUP,
-          HWEvents::ASYNC_ACCESS,
+          HWEvents::ASYNC_STORE | HWEvents::ASYNC_READ,
           HWEvents::TENSOR_ACCESS,
           HWEvents::VGPR_CSMACC_READ | HWEvents::VGPR_DPMACC_READ |
               HWEvents::VGPR_TRANS_READ | HWEvents::VGPR_XDL_READ,
@@ -760,7 +760,7 @@ private:
   unsigned LastFlatLoadCnt = 0;
   // Remember the last VMEM operation that increments xcnt but neither loadcnt
   // nor storecnt, such as a prefetch or an LDS-only FLAT. Async LDS DMA is
-  // excluded: it is covered by ASYNC_ACCESS instead.
+  // excluded: it is covered by ASYNC_READ | ASYNC_STORE instead.
   unsigned LastXcntOnlyVmem = 0;
   // Remember the last GDS operation.
   unsigned LastGDS = 0;
@@ -1371,12 +1371,14 @@ void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
   if (CheckWait.get(AMDGPU::LOAD_CNT) != ~0u &&
       hasPendingEvent(HWEvents::VMEM_GROUP) &&
       !hasPendingEvent(AMDGPU::STORE_CNT) && !hasPendingXcntOnlyVmem() &&
-      !hasPendingEvent(HWEvents::ASYNC_ACCESS) &&
+      !hasPendingEvent(HWEvents::ASYNC_READ) &&
+      !hasPendingEvent(HWEvents::ASYNC_STORE) &&
       CheckWait.get(AMDGPU::X_CNT) >= CheckWait.get(AMDGPU::LOAD_CNT))
     UpdateWait.set(AMDGPU::X_CNT, ~0u);
   // asynccnt==0 completes every async op, which also drains their xcnt.
   if (CheckWait.get(AMDGPU::ASYNC_CNT) == 0 &&
-      hasPendingEvent(HWEvents::ASYNC_ACCESS) &&
+      hasPendingEvent(HWEvents::ASYNC_READ) &&
+      hasPendingEvent(HWEvents::ASYNC_STORE) &&
       !hasPendingNonAsyncXcnt(CheckWait))
     UpdateWait.set(AMDGPU::X_CNT, ~0u);
   simplifyWaitcnt(UpdateWait, AMDGPU::X_CNT);
@@ -1643,7 +1645,8 @@ void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
   }
   if (T == AMDGPU::LOAD_CNT && hasPendingEvent(HWEvents::VMEM_GROUP) &&
       !hasPendingEvent(AMDGPU::STORE_CNT) && !hasPendingXcntOnlyVmem() &&
-      !hasPendingEvent(HWEvents::ASYNC_ACCESS)) {
+      !hasPendingEvent(HWEvents::ASYNC_READ) &&
+      !hasPendingEvent(HWEvents::ASYNC_STORE)) {
     if (!hasMixedPendingEvents(AMDGPU::X_CNT))
       applyWaitcnt(AMDGPU::X_CNT, Count);
     else if (Count == 0)
@@ -2844,7 +2847,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (TII.isFLAT(Inst)) {
     if (InstEvents.contains(HWEvents::VMEM_GROUP) &&
         !TII.mayAccessVMEMThroughFlat(Inst) &&
-        !InstEvents.contains(HWEvents::ASYNC_ACCESS))
+        !InstEvents.contains(HWEvents::ASYNC_READ) &&
+        !InstEvents.contains(HWEvents::ASYNC_STORE))
       ScoreBrackets->setPendingXcntOnlyVmem();
 
     if (Inst.mayLoadOrStore() && TII.mayAccessVMEMThroughFlat(Inst) &&
