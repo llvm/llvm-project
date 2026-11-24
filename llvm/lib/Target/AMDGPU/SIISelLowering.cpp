@@ -18985,7 +18985,8 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     if (RHSKnown.isConstant() && !LHS->isDivergent() &&
         llvm::all_of(N->uses(), [](const SDUse &Use) {
           unsigned Opcode = Use.getUser()->getOpcode();
-          return Opcode == ISD::BRCOND || Opcode == ISD::SELECT;
+          return Opcode == ISD::BRCOND ||
+                 (Opcode == ISD::SELECT && Use.getOperandNo() == 0);
         })) {
       uint64_t RHSVal = RHSKnown.getConstant().getZExtValue();
 
