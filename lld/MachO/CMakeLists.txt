@@ -46,6 +46,7 @@ add_lld_library(lldMachO
   Core
   DebugInfoDWARF
   Demangle
+  Extensions
   LTO
   MC
   ObjCARCOpts

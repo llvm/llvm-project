@@ -38,7 +38,6 @@
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -69,10 +68,6 @@
 using namespace llvm;
 using namespace lto;
 using namespace object;
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-#include "llvm/Support/Extension.def"
 
 #define DEBUG_TYPE "lto"
 
@@ -1326,24 +1321,10 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
-Error LTO::setupPassPluginArgs() {
-  if (Conf.PassPluginArgs.empty())
-    return Error::success();
-  SmallVector<PassPluginLibraryInfo, 0> Infos;
-  for (const PassPlugin *Plugin : Conf.LoadedPassPlugins)
-    Infos.push_back(Plugin->getInfo());
-#define HANDLE_EXTENSION(Ext) Infos.push_back(get##Ext##PluginInfo());
-#include "llvm/Support/Extension.def"
-  return llvm::passPluginArguments(Infos, Conf.PassPluginArgs);
-}
-
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // Call the base class cleanup() explicitly since run() may be invoked on a
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
-
-  if (Error Err = setupPassPluginArgs())
-    return Err;
 
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;

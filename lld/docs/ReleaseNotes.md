@@ -41,7 +41,8 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 * ELF and MachO: `--load-pass-plugin` now loads plugins while options are
   parsed, so a plugin that fails to load is an error even if the link doesn't
-  run LTO. Before, such errors went unnoticed in links without LTO.
+  run LTO. Before, such errors went unnoticed in links without LTO. The same
+  applies to invalid `--pass-plugin-arg` values.
 
 ### COFF Improvements
 

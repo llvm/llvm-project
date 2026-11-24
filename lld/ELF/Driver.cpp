@@ -47,6 +47,7 @@
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
@@ -78,6 +79,24 @@ using namespace llvm::sys;
 using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
+// Pass "<plugin>,<arg>" values to loaded and statically linked pass plugins
+static Error passPluginArgs(ArrayRef<PassPlugin> plugins,
+                            ArrayRef<StringRef> args) {
+  if (args.empty())
+    return Error::success();
+  SmallVector<PassPluginLibraryInfo, 0> infos;
+  for (const PassPlugin &plugin : plugins)
+    infos.push_back(plugin.getInfo());
+#define HANDLE_EXTENSION(Ext) infos.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  return passPluginArguments(
+      infos, map_to_vector(args, [](StringRef arg) { return arg.str(); }));
+}
 
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
@@ -1886,6 +1905,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ctx.arg.passPlugins.push_back(std::move(*plugin));
   }
   ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
+  if (Error e = passPluginArgs(ctx.arg.passPlugins, ctx.arg.passPluginArgs))
+    ErrAlways(ctx) << std::move(e);
 
   ctx.arg.ltoKind = LtoKind::Default;
   if (auto *arg = args.getLastArg(OPT_lto)) {

@@ -55,10 +55,11 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
-  // Pass-plugins already loaded by the client. LTO does not take ownership, so
-  // they must outlive the lto::LTO object.
+  // Pass-plugins already loaded and configured by the client. LTO does not take
+  // ownership, so they must outlive the lto::LTO object.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
-  // "<plugin>,<arg>" values that lto::LTO::run() passes to pass plugins.
+  // Pass-plugin arguments as "<plugin>,<arg>" values to include in the cache
+  // key.
   std::vector<std::string> PassPluginArgs;
   std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;

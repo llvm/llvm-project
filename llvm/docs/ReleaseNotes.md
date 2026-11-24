@@ -191,8 +191,8 @@ Makes programs 10x faster by doing Special New Thing.
   A tool that created either now passes `mc::getToolOptions()` or `codegen::getToolOptions()` to `cl::parseCommandLineOptions`.
 
 * Removed `lto::Config::PassPluginFilenames`. LTO clients load pass plugins
-  themselves and pass them in `lto::Config::LoadedPassPlugins`. The plugins
-  must outlive the `lto::LTO` object:
+  themselves and pass them in `lto::Config::LoadedPassPlugins`. They also take
+  care of argument parsing. Loaded plugins must outlive the `lto::LTO` object:
 
   ```cpp
   SmallVector<PassPlugin, 0> Plugins;
