@@ -711,7 +711,7 @@ DestructibleTraits::DestructibleTraits(Sema &S, const ASTContext &C,
   }
 }
 
-DestructibleTraits::Destructibility DestructibleTraits::GetKind() const {
+DestructibleTraits::Destructibility DestructibleTraits::getKind() const {
   return Kind;
 }
 
