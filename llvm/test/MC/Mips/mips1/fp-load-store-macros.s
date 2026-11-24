@@ -28,16 +28,16 @@
 # MIPS2:        sdc1    $f6, 32($4)
 
         li.d    $f8, 1.1
-# ALL:        [[LABEL:\$tmp[0-9]+]]:
-# ALL-NEXT:     .p2align 3
+# ALL:          .p2align 3
+# ALL-NEXT:   [[LABEL:\$tmp[0-9]+]]:
 # ALL-NEXT:     .8byte 4607632778762754458
 # ALL:          lui     $1, %hi([[LABEL]])
 # EB-NEXT:      lwc1    $f9, %lo([[LABEL]])($1)
 # EB-NEXT:      lwc1    $f8, %lo([[LABEL]]+4)($1)
 # EL-NEXT:      lwc1    $f8, %lo([[LABEL]])($1)
 # EL-NEXT:      lwc1    $f9, %lo([[LABEL]]+4)($1)
-# MIPS2:      [[LABEL:\$tmp[0-9]+]]:
-# MIPS2-NEXT:   .p2align 3
+# MIPS2:        .p2align 3
+# MIPS2-NEXT: [[LABEL:\$tmp[0-9]+]]:
 # MIPS2-NEXT:   .8byte 4607632778762754458
 # MIPS2:        lui     $1, %hi([[LABEL]])
 # MIPS2-NEXT:   ldc1    $f8, %lo([[LABEL]])($1)

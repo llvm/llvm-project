@@ -3645,8 +3645,8 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
   const auto *LoExpr = MCSpecifierExpr::create(LoSym, Mips::S_LO, getContext());
 
   getStreamer().switchSection(ReadOnlySection);
-  getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(Align(8));
+  getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitIntValue(ImmOp64, 8);
   getStreamer().switchSection(CS);
 
@@ -3725,8 +3725,8 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   const auto *LoExpr = MCSpecifierExpr::create(LoSym, Mips::S_LO, getContext());
 
   getStreamer().switchSection(ReadOnlySection);
-  getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(Align(8));
+  getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitIntValue(ImmOp64, 8);
   getStreamer().switchSection(CS);
 
