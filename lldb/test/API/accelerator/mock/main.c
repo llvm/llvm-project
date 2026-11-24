@@ -1,5 +1,7 @@
 // The mock accelerator plugin sets its breakpoints on these dedicated, uniquely
 // named functions.
+unsigned char mock_gpu_accelerator_image[8192];
+
 void mock_gpu_accelerator_initialize(void) {}
 
 int mock_gpu_accelerator_compute(int x) { return x * 2; }

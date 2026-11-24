@@ -161,6 +161,7 @@ private:
   void parseSquare(bool SkipLambda = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
+  bool isFollowedByConditionalElse() const;
   void handleAttributes();
   bool handleCppAttributes();
   bool isBlockBegin(const FormatToken &Tok) const;
@@ -438,6 +439,9 @@ private:
   // parsed again only for its effect on the preprocessor bookkeeping. See
   // readToken().
   llvm::SmallPtrSet<const FormatToken *, 16> ParsedPPDirectives;
+
+  // Follows an if statement whose else may be in a skipped preprocessor branch.
+  const FormatToken *TokenAfterIfWithConditionalElse = nullptr;
 
   // Contains the first start column where the source begins. This is zero for
   // normal source code and may be nonzero when formatting a code fragment that

@@ -16,9 +16,9 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
@@ -40,7 +40,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 // Return true if value represents a zero constant.
 static bool isZeroConstant(Value val) {
   auto constant = val.getDefiningOp<arith::ConstantOp>();
@@ -145,6 +144,9 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   auto srcTy = dyn_cast<MemRefType>(xferOp.getShapedType());
   if (!srcTy)
     return rewriter.notifyMatchFailure(xferOp, "Expects memref source");
+  if (isa<VectorType>(srcTy.getElementType()))
+    return rewriter.notifyMatchFailure(xferOp,
+                                       "Expects a memref of scalar elements");
 
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
@@ -164,12 +166,22 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
 
   AffineMap map = xferOp.getPermutationMap();
-  if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
+  if (!map.isProjectedPermutation(/*allowZeroInResults=*/true))
     return rewriter.notifyMatchFailure(xferOp, "Unsupported permutation map");
+  // The transfer is built from a run of innermost source dimensions, as wide as
+  // the vector, with one dimension of slack for a 1D transfer: dropping the
+  // broadcast results of a map like (d1, 0) leaves a rank-1 transfer that still
+  // reads d1, and the scattered path reads along any dimension anyway.
   unsigned numInputDims = map.getNumInputs();
+  unsigned numAccessibleDims = std::max(vecRank, 2u);
+  unsigned firstAccessibleDim =
+      numInputDims > numAccessibleDims ? numInputDims - numAccessibleDims : 0;
   for (AffineExpr expr : map.getResults().take_back(vecRank)) {
+    // A broadcast result names no source dimension, so it constrains nothing.
     auto dim = dyn_cast<AffineDimExpr>(expr);
-    if (dim.getPosition() < (numInputDims - vecRank))
+    if (!dim)
+      continue;
+    if (dim.getPosition() < firstAccessibleDim)
       return rewriter.notifyMatchFailure(
           xferOp, "Only the innermost dimensions can be accessed");
   }
@@ -177,31 +189,19 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-// Adjusts the strides of a memref according to a given permutation map for
-// vector operations.
-//
-// This function updates the innermost strides in the `strides` array to
-// reflect the permutation specified by `permMap`. The permutation is computed
-// using the inverse and broadcasting-aware version of the permutation map,
-// and is applied to the relevant strides. This ensures that memory accesses
-// are consistent with the logical permutation of vector elements.
+// Returns the memref strides in vector-dimension order: the stride at vector
+// dimension `v` is the stride of the memref dimension the permutation map has
+// `v` read, so that stepping one element along `v` steps that far in memory.
 //
 // Example:
-//   Suppose we have a memref of rank 4 with strides `[s0, s1, s2, s3]`.
-//   If the permutation map swaps the last two dimensions (e.g., [0, 1] -> [1,
-//   0]), then after calling this function, the last two strides will be
-//   swapped:
-//     Original strides: [s0, s1, s2, s3]
-//     After permutation: [s0, s1, s3, s2]
+//   For a memref of rank 3 with strides `[s0, s1, s2]` read into a rank-2
+//   vector through `(d0, d1, d2) -> (d2, d1)`, the result is `[s2, s1]`.
 //
-static void adjustStridesForPermutation(AffineMap permMap,
-                                        SmallVectorImpl<Value> &strides) {
-
-  AffineMap invMap = inverseAndBroadcastProjectedPermutation(permMap);
-  SmallVector<unsigned> perms;
-  invMap.isPermutationOfMinorIdentityWithBroadcasting(perms);
-  SmallVector<int64_t> perms64(perms.begin(), perms.end());
-  strides = applyPermutation(strides, perms64);
+static SmallVector<Value> getStridesInVectorOrder(AffineMap permMap,
+                                                  ArrayRef<Value> strides) {
+  return llvm::map_to_vector(permMap.getResults(), [&](AffineExpr expr) {
+    return strides[cast<AffineDimExpr>(expr).getPosition()];
+  });
 }
 
 // Computes memory strides and a memref offset for vector transfer operations,
@@ -328,18 +328,14 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     return stepOp;
   });
 
-  // Local offsets are indexed in vector order, so permute strides; the base
-  // offset below uses the original memref-order strides.
-  SmallVector<Value> permutedStrides(strides.begin(), strides.end());
-  adjustStridesForPermutation(xferOp.getPermutationMap(), permutedStrides);
+  SmallVector<Value> vectorStrides =
+      getStridesInVectorOrder(xferOp.getPermutationMap(), strides);
 
   // Multiply step vectors by corresponding strides
-  size_t memrefRank = permutedStrides.size();
   size_t vectorRank = vectorShape.size();
   SmallVector<Value> strideMultiplied;
   for (size_t i = 0; i < vectorRank; ++i) {
-    size_t memrefDim = memrefRank - vectorRank + i;
-    Value strideValue = permutedStrides[memrefDim];
+    Value strideValue = vectorStrides[i];
     auto mulType = dyn_cast<VectorType>(stepVectors[i].getType());
     auto bcastOp =
         vector::BroadcastOp::create(rewriter, loc, mulType, strideValue);
@@ -686,6 +682,134 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
   return success();
 }
 
+// An nd block load fetches a 2D block, which a 1D transfer does not ask for -
+// but a leading unit dimension gives it one:
+//
+//   %v = vector.transfer_read %src[%i0, %i1] : memref<32x64xf32>, vector<8xf32>
+// becomes
+//   %b = vector.transfer_read %src[%i0, %i1]
+//     : memref<32x64xf32>, vector<1x8xf32>
+//   %v = vector.shape_cast %b : vector<1x8xf32> to vector<8xf32>
+//
+// Only a transfer running along the innermost source dimension qualifies. That
+// dimension is contiguous, which transferPreconditions has already checked, so
+// the <1xN> block it asks for is one the hardware can fetch. A transfer along
+// any other dimension would need the unit dimension on the other side, and a
+// <Nx1> block is not a shape the layouts downstream can distribute - the
+// scattered path is the one that fits it.
+static LogicalResult lowerToUnitDimRead(vector::TransferReadOp readOp,
+                                        PatternRewriter &rewriter) {
+  VectorType vecTy = readOp.getVectorType();
+  AffineMap map = readOp.getPermutationMap();
+  int64_t numInputs = map.getNumInputs();
+  int64_t pos = cast<AffineDimExpr>(map.getResult(0)).getPosition();
+  if (numInputs < 2 || pos != numInputs - 1)
+    return rewriter.notifyMatchFailure(
+        readOp, "1D transfer does not run along the innermost dimension");
+
+  Value block = vector::TransferReadOp::create(
+      rewriter, readOp.getLoc(),
+      VectorType::get({1, vecTy.getDimSize(0)}, vecTy.getElementType()),
+      readOp.getBase(), readOp.getIndices(),
+      AffineMapAttr::get(
+          AffineMap::getMinorIdentityMap(numInputs, 2, map.getContext())),
+      readOp.getPadding(), /*mask=*/Value(),
+      rewriter.getBoolArrayAttr({true, readOp.isDimInBounds(0)}));
+
+  rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, vecTy, block);
+  return success();
+}
+
+// Lowers a transfer whose permutation map broadcasts some of the vector
+// dimensions into a transfer of just the data in memory - the map with its
+// broadcast results dropped - plus the vector ops that expand it back:
+//
+//   %r = vector.transfer_read %src[%i0, %i1, %i2], %pad
+//     {permutation_map = affine_map<(d0, d1, d2) -> (d2, 0)>,
+//      in_bounds = [false, false]} : memref<256x32x512xf16>, vector<64x64xf16>
+// becomes
+//   %v = vector.transfer_read %src[%i0, %i1, %i2], %pad
+//     {permutation_map = affine_map<(d0, d1, d2) -> (d2)>,
+//      in_bounds = [false]} : memref<256x32x512xf16>, vector<64xf16>
+//   %c = vector.shape_cast %v : vector<64xf16> to vector<1x64xf16>
+//   %t = vector.transpose %c, [1, 0] : vector<1x64xf16> to vector<64x1xf16>
+//   %r = vector.broadcast %t : vector<64x1xf16> to vector<64x64xf16>
+//
+// A broadcast result names no source dimension, so only the dimensions the map
+// does name hold data; dropping the rest leaves the transfer that reads it, at
+// the extents and bounds checks those dimensions had. The dropped results come
+// back as unit dimensions, which the transpose moves to the positions those
+// results held, and vector.broadcast stretches to their final extents.
+static LogicalResult lowerBroadcastRead(vector::TransferReadOp readOp,
+                                        PatternRewriter &rewriter) {
+  Location loc = readOp.getLoc();
+  VectorType vecTy = readOp.getVectorType();
+  ArrayRef<int64_t> vecShape = vecTy.getShape();
+  AffineMap map = readOp.getPermutationMap();
+  int64_t vecRank = vecTy.getRank();
+
+  SmallVector<int64_t> dataPos, bcastPos;
+  for (int64_t i = 0; i < vecRank; ++i) {
+    if (isa<AffineDimExpr>(map.getResult(i)))
+      dataPos.push_back(i);
+    else
+      bcastPos.push_back(i);
+  }
+
+  SmallVector<AffineExpr> readExprs;
+  SmallVector<int64_t> readShape;
+  SmallVector<bool> readInBounds;
+  for (int64_t i : dataPos) {
+    readExprs.push_back(map.getResult(i));
+    readShape.push_back(vecShape[i]);
+    readInBounds.push_back(readOp.isDimInBounds(i));
+  }
+  // An all-broadcast map leaves no data dimension to read. Read one element of
+  // the innermost source dimension instead - a 0D transfer is not supported,
+  // and one element is all the data such a transfer holds.
+  if (readExprs.empty()) {
+    readExprs.push_back(rewriter.getAffineDimExpr(map.getNumInputs() - 1));
+    readShape.push_back(1);
+    readInBounds.push_back(true);
+  }
+
+  auto readTy = VectorType::get(readShape, vecTy.getElementType());
+  Value read = vector::TransferReadOp::create(
+      rewriter, loc, readTy, readOp.getBase(), readOp.getIndices(),
+      AffineMapAttr::get(
+          AffineMap::get(map.getNumInputs(), 0, readExprs, map.getContext())),
+      readOp.getPadding(), /*mask=*/Value(),
+      rewriter.getBoolArrayAttr(readInBounds));
+
+  // Grow the transfer back to the requested rank, one unit dimension per
+  // dropped result. The shape_cast adds them innermost, where they leave the
+  // dimension the data came in on innermost too, and the transpose moves them
+  // to the positions their results held. Only unit dimensions move, so the
+  // transpose permutes dimensions without shuffling elements between them.
+  SmallVector<int64_t> order(bcastPos);
+  llvm::append_range(order, dataPos);
+  SmallVector<int64_t> castShape(bcastPos.size(), 1);
+  for (int64_t i : dataPos)
+    castShape.push_back(vecShape[i]);
+  auto castTy = VectorType::get(castShape, vecTy.getElementType());
+  Value cast = castTy == readTy
+                   ? read
+                   : vector::ShapeCastOp::create(rewriter, loc, castTy, read);
+
+  if (!llvm::is_sorted(order)) {
+    SmallVector<int64_t> perm(vecRank);
+    for (int64_t i = 0; i < vecRank; ++i)
+      perm[order[i]] = i;
+    cast = vector::TransposeOp::create(rewriter, loc, cast, perm);
+  }
+
+  if (cast.getType() == vecTy)
+    rewriter.replaceOp(readOp, cast);
+  else
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(readOp, vecTy, cast);
+  return success();
+}
+
 static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                              PatternRewriter &rewriter) {
 
@@ -716,6 +840,77 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
   return success();
 }
 
+// Rewrites a transfer_read whose permutation map broadcasts some vector
+// dimensions into a transfer of just the data in memory plus the vector ops
+// that expand it back (see lowerBroadcastRead), so that the conversion
+// patterns only see maps without broadcast results.
+struct LegalizeBroadcastTransferRead
+    : public OpRewritePattern<vector::TransferReadOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
+                                PatternRewriter &rewriter) const override {
+    if (readOp.getPermutationMap().getBroadcastDims().empty())
+      return rewriter.notifyMatchFailure(readOp, "No broadcast dimension");
+    if (failed(transferPreconditions(rewriter, readOp)))
+      return failure();
+    return lowerBroadcastRead(readOp, rewriter);
+  }
+};
+
+// Returns true if the target's 2D block load can fetch the `tileShape` tile of
+// a non-SLM transfer_read: a scalar int/float element type, out-of-bounds
+// padding that matches load_nd's implicit zero padding, and a tile shape the
+// block load can access.
+static bool is2DBlockLoadable(vector::TransferReadOp readOp,
+                              ArrayRef<int64_t> tileShape,
+                              bool hasTranspose = false) {
+  auto readMemTy = cast<MemRefType>(readOp.getShapedType());
+  if (!readMemTy.getElementType().isIntOrFloat())
+    return false;
+  if (readOp.hasOutOfBoundsDim() && !isZeroOrPoisonPadding(readOp.getPadding()))
+    return false;
+  const xegpu::uArch::uArch *uArch =
+      xegpu::uArch::getUArch(xegpu::getChipStr(readOp).value_or(""));
+  return isSupportedBlockShape(
+      uArch, xegpu::uArch::InstructionKind::Subgroup2DBlockLoad, tileShape,
+      readOp.getVectorType().getElementType(), hasTranspose);
+}
+
+// Gives a 1D transfer_read the leading unit dimension an nd block load needs
+// (see lowerToUnitDimRead). Only worth it where the target's 2D block load can
+// access the resulting <1xN> tile; otherwise TransferReadLowering takes the 1D
+// vector as is on the scattered path.
+struct PromoteTransferReadToUnitDim
+    : public OpRewritePattern<vector::TransferReadOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType vecTy = readOp.getVectorType();
+    if (vecTy.getRank() != 1)
+      return rewriter.notifyMatchFailure(readOp, "Not a 1D transfer");
+    // A broadcast map is left to LegalizeBroadcastTransferRead.
+    if (!readOp.getPermutationMap().getBroadcastDims().empty())
+      return rewriter.notifyMatchFailure(readOp, "Broadcast permutation map");
+    if (failed(transferPreconditions(rewriter, readOp)))
+      return failure();
+
+    // SLM reads lower to load_matrix, which takes the 1D vector as is.
+    if (xegpu::XeGPUDialect::isSharedMemory(
+            cast<MemRefType>(readOp.getShapedType())))
+      return rewriter.notifyMatchFailure(readOp, "SLM transfer");
+    // A single element only extracted to a scalar becomes a scalar load.
+    if (vecTy.getNumElements() == 1 && isUsedAsScalar(readOp.getResult()))
+      return rewriter.notifyMatchFailure(readOp, "Used as a scalar");
+    if (!is2DBlockLoadable(readOp, {1, vecTy.getDimSize(0)}))
+      return rewriter.notifyMatchFailure(
+          readOp, "<1xN> tile is not accessible by a 2D block load");
+
+    return lowerToUnitDimRead(readOp, rewriter);
+  }
+};
+
 struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
   using Base::Base;
 
@@ -725,6 +920,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     if (failed(transferPreconditions(rewriter, readOp)))
       return failure();
+
+    // Broadcast maps are rewritten away by the transfer_read legalization that
+    // runs ahead of this pattern.
+    if (!readOp.getPermutationMap().getBroadcastDims().empty())
+      return rewriter.notifyMatchFailure(
+          readOp, "Broadcast permutation map must be legalized first");
+
     auto readMemTy = cast<MemRefType>(readOp.getShapedType());
     VectorType loadedVecTy = readOp.getVectorType();
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
@@ -771,9 +973,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (loadedVecTy.getNumElements() == 1 && isUsedAsScalar(readOp.getResult()))
       return lowerToScalarLoadOp(readOp, rewriter);
 
-    const xegpu::uArch::uArch *uArch =
-        xegpu::uArch::getUArch(xegpu::getChipStr(readOp).value_or(""));
-
     // An nd block load can realize a minor-identity map directly, or an
     // innermost-two-dims transpose via a trailing vector.transpose. Any other
     // permutation (e.g. a mid-vector transpose of a high-dim load) is left to
@@ -790,6 +989,12 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       assert(rank >= 2 && "Transpose requires at least 2 dimensions");
       std::swap(descShape[rank - 1], descShape[rank - 2]);
     }
+    // Swapping a unit dimension moves no data - e.g. a <1x64> tile read as
+    // <64x1> - so the tile is loaded as is and the trailing vector.transpose is
+    // only a reshape, with no need for the transposing block load variant.
+    bool needsTransposedBlockLoad = isTransposeLoad &&
+                                    descShape[descShape.size() - 1] != 1 &&
+                                    descShape[descShape.size() - 2] != 1;
 
     // Prefer an nd block load. It requires a vector of rank >= 2 backed by a
     // scalar-element memref, a map the block load can realize, and a tile shape
@@ -800,11 +1005,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     bool canLowerToLoadNd =
         loadedVecTy.getRank() > 1 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
-        readMemTy.getElementType().isIntOrFloat() &&
-        (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding())) &&
-        isSupportedBlockShape(
-            uArch, xegpu::uArch::InstructionKind::Subgroup2DBlockLoad,
-            descShape, elementType, /*hasTranspose=*/isTransposeLoad);
+        is2DBlockLoadable(readOp, descShape,
+                          /*hasTranspose=*/needsTransposedBlockLoad);
 
     if (canLowerToLoadNd) {
       // The load produces the memory-ordered tile; the transpose below restores
@@ -871,6 +1073,13 @@ struct TransferWriteLowering
       if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
         return rewriter.notifyMatchFailure(
             writeOp, "Only 1D and 2D vector stores are supported for SLM");
+      // store_matrix writes the payload along the innermost dimensions of the
+      // mem_desc, so it cannot express a transposed or strided store, e.g. a
+      // 1D vector written along a non-innermost dimension.
+      if (!writeOp.getPermutationMap().isMinorIdentity())
+        return rewriter.notifyMatchFailure(
+            writeOp,
+            "Non identity transposition is not supported for SLM stores.");
       // Out of bounds case is not supported for SLM stores.
       if (writeOp.hasOutOfBoundsDim())
         return rewriter.notifyMatchFailure(
@@ -951,6 +1160,10 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
     if (!srcTy)
       return rewriter.notifyMatchFailure(gatherOp, "Expects memref source");
 
+    if (gatherOp.getVectorType().isScalable())
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "Scalable vectors are not supported");
+
     Location loc = gatherOp.getLoc();
     VectorType vectorType = gatherOp.getVectorType();
 
@@ -985,6 +1198,10 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
     auto srcTy = dyn_cast<MemRefType>(scatterOp.getBase().getType());
     if (!srcTy)
       return rewriter.notifyMatchFailure(scatterOp, "Expects memref source");
+
+    if (scatterOp.getVectorType().isScalable())
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "Scalable vectors are not supported");
 
     Location loc = scatterOp.getLoc();
     auto meta = computeMemrefMeta(scatterOp, rewriter);
@@ -1154,16 +1371,13 @@ getRowMajorMatmulBatchRank(ArrayAttr indexingMaps) {
   return batchRank;
 }
 
-struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
+struct ContractionLowering : public vector::AddContractionOpRewritePattern {
   using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
     Location loc = contractOp.getLoc();
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind");
 
     TypedValue<VectorType> lhs = contractOp.getLhs();
     TypedValue<VectorType> rhs = contractOp.getRhs();
@@ -1317,15 +1531,89 @@ struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
   }
 };
 
-// Un-flatten every gather/scatter that was flattened to 1-D operands, so that
-// the conversion patterns and the XeGPU layouts downstream of them see the N-D
-// shape of the accessed data.
-static LogicalResult unflattenGatherScatter(Operation *root) {
-  MLIRContext *ctx = root->getContext();
-  RewritePatternSet patterns(ctx);
-  patterns.add<UnflattenGatherScatter<vector::GatherOp>,
-               UnflattenGatherScatter<vector::ScatterOp>>(ctx);
-  vector::ShapeCastOp::getCanonicalizationPatterns(patterns, ctx);
+// Rewrite a broadcast that is immediately transposed into a shape_cast that
+// inserts the new dims where they finally belong, followed by a broadcast that
+// stretches them in place.
+//
+// This lets layout propagation give %v the slice dim of the row reduction
+// that typically produces it (dims = [1] below, not [0]):
+//   #row = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+//   #col = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1],
+//                        order = [0, 1]>
+//
+// Before:
+//   // %v : #xegpu.slice<#col, dims = [0]>
+//   %b = vector.broadcast %v : vector<16xf32> to vector<64x16xf32>  // #col
+//   %t = vector.transpose %b, [1, 0]
+//          : vector<64x16xf32> to vector<16x64xf32>                // #row
+//
+// After:
+//   // %v : #xegpu.slice<#row, dims = [1]>
+//   %c = vector.shape_cast %v : vector<16xf32> to vector<16x1xf32>  // #row
+//   %t = vector.broadcast %c
+//          : vector<16x1xf32> to vector<16x64xf32>                 // #row
+struct TransposedBroadcastToStretch
+    : public OpRewritePattern<vector::TransposeOp> {
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    auto bcast = op.getVector().getDefiningOp<vector::BroadcastOp>();
+    if (!bcast)
+      return rewriter.notifyMatchFailure(op, "not transposing a broadcast");
+
+    // Scalar sources are left to FoldTransposeBroadcast.
+    auto srcTy = dyn_cast<VectorType>(bcast.getSourceType());
+    if (!srcTy || srcTy.getRank() < 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "broadcast source is not a vector");
+
+    VectorType bcastTy = bcast.getResultVectorType();
+    if (srcTy.isScalable() || bcastTy.isScalable())
+      return rewriter.notifyMatchFailure(op, "scalable vectors");
+
+    int64_t srcRank = srcTy.getRank();
+    int64_t numNewDims = bcastTy.getRank() - srcRank;
+    if (numNewDims < 1)
+      return rewriter.notifyMatchFailure(op, "broadcast adds no dims");
+
+    // Only a pure prepend; no source dim may be stretched.
+    if (srcTy.getShape() != bcastTy.getShape().take_back(srcRank))
+      return rewriter.notifyMatchFailure(op,
+                                         "broadcast stretches a source dim");
+
+    // Source dims must move to the front and new dims to the back, both in
+    // order.
+    ArrayRef<int64_t> perm = op.getPermutation();
+    for (int64_t i = 0; i < srcRank; ++i)
+      if (perm[i] != numNewDims + i)
+        return rewriter.notifyMatchFailure(
+            op, "source dims do not move to the front in order");
+    for (int64_t i = 0; i < numNewDims; ++i)
+      if (perm[srcRank + i] != i)
+        return rewriter.notifyMatchFailure(
+            op, "broadcast dims do not stay trailing in order");
+
+    // Source shape followed by one unit dim per new dim.
+    SmallVector<int64_t> castShape(srcTy.getShape());
+    castShape.append(numNewDims, 1);
+    auto castTy = VectorType::get(castShape, srcTy.getElementType());
+
+    DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+    auto cast = vector::ShapeCastOp::create(rewriter, op.getLoc(), castTy,
+                                            bcast.getSource());
+    auto stretch = rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        op, op.getResultVectorType(), cast);
+    stretch->setDiscardableAttrs(attrs);
+    return success();
+  }
+};
+
+// Bring the vector ops into a form the conversion patterns lower directly (see
+// populateVectorToXeGPULegalizationPatterns).
+static LogicalResult legalizeForVectorToXeGPU(Operation *root) {
+  RewritePatternSet patterns(root->getContext());
+  populateVectorToXeGPULegalizationPatterns(patterns);
   return applyPatternsGreedily(root, std::move(patterns));
 }
 
@@ -1410,8 +1698,9 @@ struct ConvertVectorToXeGPUPass
     promoteAllocasToSLM(getOperation());
 
     // Undo any flattening of gather/scatter operands, so that the conversion
-    // below sees the N-D shape the XeGPU layouts are expressed in.
-    if (failed(unflattenGatherScatter(getOperation())))
+    // below sees the N-D shape the XeGPU layouts are expressed in, and rewrite
+    // transfer_reads the conversion patterns cannot lower as they are.
+    if (failed(legalizeForVectorToXeGPU(getOperation())))
       return signalPassFailure();
 
     RewritePatternSet patterns(&getContext());
@@ -1421,13 +1710,32 @@ struct ConvertVectorToXeGPUPass
       return signalPassFailure();
   }
 };
-
 } // namespace
 
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
+  MLIRContext *ctx = patterns.getContext();
   patterns
       .add<TransferReadLowering, TransferWriteLowering, LoadLowering,
            ScatterLowering, GatherLowering, StoreLowering, ContractionLowering>(
-          patterns.getContext());
+          ctx);
+  // Tried ahead of TransferReadLowering, which would otherwise take a 1D
+  // transfer on the scattered path.
+  patterns.add<PromoteTransferReadToUnitDim>(ctx, /*benefit=*/2);
+}
+
+void mlir::populateVectorToXeGPULegalizationPatterns(
+    RewritePatternSet &patterns) {
+  MLIRContext *ctx = patterns.getContext();
+  // Un-flatten every gather/scatter that was flattened to 1-D operands, so
+  // that the conversion patterns and the XeGPU layouts downstream of them see
+  // the N-D shape of the accessed data. The shape_cast canonicalizations clean
+  // up the casts the un-flattening leaves behind.
+  patterns.add<UnflattenGatherScatter<vector::GatherOp>,
+               UnflattenGatherScatter<vector::ScatterOp>,
+               TransposedBroadcastToStretch>(ctx);
+  vector::ShapeCastOp::getCanonicalizationPatterns(patterns, ctx);
+  // Rewrite transfer_reads with a broadcast permutation map into a transfer of
+  // the data plus the vector ops that expand it.
+  patterns.add<LegalizeBroadcastTransferRead>(ctx);
 }

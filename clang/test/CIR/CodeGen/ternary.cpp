@@ -11,7 +11,7 @@ int x(int y) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow, optnone} {
-// CIR: [[RETVAL:%.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR: [[RETVAL:%.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR: [[Y:%.+]] = cir.alloca "y" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[YVAL:%.+]] = cir.load{{.*}} [[Y]] : !cir.ptr<!s32i>, !s32i
@@ -102,13 +102,11 @@ int foo(int a, int b) {
 // LLVM: [[MERGE_BB]]:
 // LLVM: %[[PHI:.*]] = phi i32 [ %[[AVAL2]], %[[FALSE_BB]] ], [ 0, %[[TRUE_BB]] ]
 // LLVM: %[[COND:.*]] = icmp ne i32 %[[PHI]], 0
-// LLVM: br i1 %[[COND]], label %[[RETURN_MINUS_ONE:.*]], label %[[CONT_BB:.*]]
+// LLVM: br i1 %[[COND]], label %[[RETURN_MINUS_ONE:.*]], label %[[RETURN_ZERO:.*]]
 // LLVM: [[RETURN_MINUS_ONE]]:
 // LLVM: store i32 -1, ptr %[[RETVAL]]
 // LLVM: %[[RET1:.*]] = load i32, ptr %[[RETVAL]]
 // LLVM: ret i32 %[[RET1]]
-// LLVM: [[CONT_BB]]:
-// LLVM: br label %[[RETURN_ZERO:.*]]
 // LLVM: [[RETURN_ZERO]]:
 // LLVM: store i32 0, ptr %[[RETVAL]]
 // LLVM: %[[RET2:.*]] = load i32, ptr %[[RETVAL]]

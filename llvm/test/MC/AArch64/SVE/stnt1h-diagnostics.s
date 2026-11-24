@@ -4,12 +4,12 @@
 // Immediate out of lower bound [-8, 7].
 
 stnt1h z23.h, p0, [x13, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: stnt1h z23.h, p0, [x13, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 stnt1h z29.h, p0, [x3, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: stnt1h z29.h, p0, [x3, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

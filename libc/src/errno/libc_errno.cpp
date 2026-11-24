@@ -7,28 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/libc_errno.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
-
-#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_UNDEFINED
-
-void Errno::operator=(int) {}
-Errno::operator int() { return 0; }
-
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
+#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
 
 namespace {
 LIBC_THREAD_LOCAL int thread_errno;
 }
 
-extern "C" int *__llvm_libc_errno() noexcept { return &thread_errno; }
-
-void Errno::operator=(int a) { thread_errno = a; }
-Errno::operator int() { return thread_errno; }
+extern "C" LLVM_LIBC_FUNCTION_ATTR int *__llvm_libc_errno() noexcept {
+  return &thread_errno;
+}
 
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SHARED
 
@@ -36,21 +29,16 @@ namespace {
 int shared_errno;
 }
 
-extern "C" int *__llvm_libc_errno() noexcept { return &shared_errno; }
-
-void Errno::operator=(int a) { shared_errno = a; }
-Errno::operator int() { return shared_errno; }
-
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
-
-void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
-Errno::operator int() { return *__llvm_libc_errno(); }
+extern "C" LLVM_LIBC_FUNCTION_ATTR int *__llvm_libc_errno() noexcept {
+  return &shared_errno;
+}
 
 #endif
 
-// Define the global `libc_errno` instance.
-Errno libc_errno;
-
-#endif // LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
-
 } // namespace LIBC_NAMESPACE_DECL
+
+#if defined(LIBC_COPT_PROVIDE_GNU_ALIASES) &&                                  \
+    (LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL ||                        \
+     LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SHARED)
+LLVM_LIBC_ADD_FUNCTION_C_ALIAS(__llvm_libc_errno, __errno_location);
+#endif

@@ -132,6 +132,24 @@ Symbols:
     Section:         .text
     Value:           0x1005
     Binding:         STB_GLOBAL
+  # A real function of the filter's that the first filtee merely *imports*
+  # back from it.  Filter and filtee commonly import from each other -
+  # FreeBSD's libsys.so.7 imports string routines from the libc.so.7 it is a
+  # filtee of - and that undefined symbol defines nothing, so the filter's
+  # own definition has to stand.
+  - Name:            imported_by_filtee
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1006
+    Size:            0x2
+    Binding:         STB_GLOBAL
+  # Same, except a later filtee does define it: the undefined symbol must be
+  # stepped over rather than end the search.
+  - Name:            undef_then_defined
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1007
+    Binding:         STB_GLOBAL
 ...
 )";
 
@@ -174,6 +192,13 @@ Symbols:
     Value:           0x1006
     Size:            0x2
     Binding:         STB_GLOBAL
+  # Imported from the filter, not defined here: no Section means SHN_UNDEF.
+  - Name:            imported_by_filtee
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            undef_then_defined
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
 ...
 )";
 
@@ -211,6 +236,12 @@ Symbols:
     Type:            STT_FUNC
     Section:         .text
     Value:           0x1004
+    Size:            0x2
+    Binding:         STB_WEAK
+  - Name:            undef_then_defined
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1006
     Size:            0x2
     Binding:         STB_WEAK
 ...
@@ -374,6 +405,31 @@ TEST_F(ReExportedSymbolTest, ResolveThroughFilteesInOrder) {
   EXPECT_EQ(ConstString("in_both_filtees"), in_both_def->GetName());
   EXPECT_EQ(aux1_sp, in_both_def->GetAddress().GetModule());
   EXPECT_EQ(0x1006u, in_both_def->GetAddress().GetFileAddress());
+
+  // The first filtee carries "imported_by_filtee" only as an undefined
+  // symbol - it imports the name back from the filter.  An import defines
+  // nothing, so it must not shadow the filter's own definition: like
+  // "filter_local" above, this resolves to nothing and the caller is left to
+  // use the filter's own definition, which stays intact and is what the
+  // dynamic linker would bind to as well.  Returning the import instead
+  // would hand callers an address-less symbol.
+  const Symbol *imported = FindFilterSymbol(filter_sp, "imported_by_filtee");
+  ASSERT_NE(nullptr, imported);
+  EXPECT_EQ(nullptr, imported->ResolveReExportedSymbol(*target_sp, filter_sp));
+  EXPECT_EQ(eSymbolTypeCode, imported->GetType());
+  EXPECT_EQ(filter_sp, imported->GetAddress().GetModule());
+  EXPECT_EQ(0x1006u, imported->GetAddress().GetFileAddress());
+
+  // The first filtee imports "undef_then_defined" and the second defines it.
+  // The undefined symbol must be skipped and the search continue, rather than
+  // stop at the filtee that merely names it.
+  const Symbol *undef_then = FindFilterSymbol(filter_sp, "undef_then_defined");
+  ASSERT_NE(nullptr, undef_then);
+  Symbol *undef_then_def =
+      undef_then->ResolveReExportedSymbol(*target_sp, filter_sp);
+  ASSERT_NE(nullptr, undef_then_def);
+  EXPECT_EQ(ConstString("undef_then_defined"), undef_then_def->GetName());
+  EXPECT_EQ(aux2_sp, undef_then_def->GetAddress().GetModule());
 
   // Without the containing module nothing connects the symbol to the
   // filtees, so "foo" cannot be resolved.  This is why callers that have

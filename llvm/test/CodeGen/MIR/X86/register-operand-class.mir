@@ -12,9 +12,10 @@
 # CHECK:   - { id: 3, class: gr16, preferred-register: '', flags: [   ] }
 # CHECK:   - { id: 4, class: _, preferred-register: '', flags: [   ] }
 name: func
+tracksRegLiveness: false
 body: |
   bb.0:
-    %0 : gr32 = COPY $rax
+    %0 : gr32 = COPY $eax
     %1.sub_32bit : gr64 = COPY $eax
     $rdx = COPY %1
     %2 = COPY $ecx

@@ -11,6 +11,7 @@
 #include "PtrTypesSemantics.h"
 #include "RawPtrRefSafetyModel.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -230,6 +231,15 @@ public:
         LambdasToIgnore.insert(L);
       }
 
+      bool VisitExplicitCastExpr(ExplicitCastExpr *CE) override {
+        // Discarding a variable with (void) doesn't let a lambda escape.
+        if (CE->getCastKind() != CK_ToVoid)
+          return true;
+        if (auto *DRE = dyn_cast<DeclRefExpr>(CE->getSubExpr()->IgnoreParens()))
+          DeclRefExprsToIgnore.insert(DRE);
+        return true;
+      }
+
       bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
         if (DeclRefExprsToIgnore.contains(DRE))
           return true;
@@ -369,14 +379,15 @@ public:
       LambdaExpr *findLambdaInArg(Expr *E) {
         if (auto *Lambda = dyn_cast_or_null<LambdaExpr>(E))
           return Lambda;
-        auto *TempExpr = dyn_cast_or_null<CXXBindTemporaryExpr>(E);
-        if (!TempExpr)
-          return nullptr;
-        E = TempExpr->getSubExpr()->IgnoreParenCasts();
-        if (!E)
-          return nullptr;
-        if (auto *Lambda = dyn_cast<LambdaExpr>(E))
-          return Lambda;
+        // A temporary of a type with a trivial destructor, such as
+        // WTF::ScopedLambda, isn't wrapped in a CXXBindTemporaryExpr.
+        if (auto *TempExpr = dyn_cast_or_null<CXXBindTemporaryExpr>(E)) {
+          E = TempExpr->getSubExpr()->IgnoreParenCasts();
+          if (!E)
+            return nullptr;
+          if (auto *Lambda = dyn_cast<LambdaExpr>(E))
+            return Lambda;
+        }
         auto *CE = dyn_cast_or_null<CXXConstructExpr>(E);
         if (!CE || !CE->getNumArgs())
           return nullptr;

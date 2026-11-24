@@ -72,7 +72,9 @@ public:
         BlockGen(Builder, LI, SE, DT, ScalarMap, EscapeMap, ValueMap,
                  &ExprBuilder, StartBlock),
         RegionGen(BlockGen), DL(DL), LI(LI), SE(SE), DT(DT),
-        StartBlock(StartBlock), GenDT(&DT), GenLI(&LI), GenSE(&SE) {}
+        StartBlock(StartBlock), GenDT(&DT), GenLI(&LI), GenSE(&SE) {
+    Builder.disableGEPCanonicalization();
+  }
 
   virtual ~IslNodeBuilder() = default;
 

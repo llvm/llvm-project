@@ -104,12 +104,11 @@
 // CHECK-DIVBYZERO-UBSAN: "-fsanitize={{.*}},float-divide-by-zero,{{.*}}"
 
 // RUN: %clang --target=x86_64-apple-darwin10 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=function -mcmodel=medium %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=function -mcmodel=large %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
 // RUN: %clang --target=aarch64-unknown-linux-gnu -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
 // RUN: %clang --target=riscv64-pc-freebsd -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
 // CHECK-FUNCTION: -cc1{{.*}}"-fsanitize=function" "-fsanitize-recover=function"
-
-// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=undefined,function -mcmodel=large %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-CODE-MODEL
-// CHECK-UBSAN-FUNCTION-CODE-MODEL: error: invalid argument '-fsanitize=function' only allowed with '-mcmodel=small'
 
 // RUN: %clang --target=i386--solaris -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-SOLARIS
 // RUN: %clang --target=x86_64--solaris -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-SOLARIS

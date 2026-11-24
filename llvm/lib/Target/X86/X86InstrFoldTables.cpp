@@ -110,6 +110,7 @@ lookupFoldTableImpl(ArrayRef<X86FoldTableEntry> Table, unsigned RegOp) {
     CHECK_SORTED_UNIQUE(BroadcastTable4)
     CHECK_SORTED_UNIQUE(BroadcastSizeTable2)
     CHECK_SORTED_UNIQUE(BroadcastSizeTable3)
+    CHECK_SORTED_UNIQUE(MemUnfoldTable)
     FoldTablesChecked.store(true, std::memory_order_relaxed);
   }
 #endif
@@ -168,76 +169,8 @@ const X86FoldTableEntry *llvm::lookupBroadcastFoldTable(unsigned RegOp,
   return lookupFoldTableImpl(FoldTable, RegOp);
 }
 
-namespace {
-
-// This class stores the memory unfolding tables. It is instantiated as a
-// function scope static variable to lazily init the unfolding table.
-struct X86MemUnfoldTable {
-  // Stores memory unfolding tables entries sorted by opcode.
-  std::vector<X86FoldTableEntry> Table;
-
-  X86MemUnfoldTable() {
-    for (const X86FoldTableEntry &Entry : Table2Addr)
-      // Index 0, folded load and store, no alignment requirement.
-      addTableEntry(Entry, TB_INDEX_0 | TB_FOLDED_LOAD | TB_FOLDED_STORE);
-
-    for (const X86FoldTableEntry &Entry : Table0)
-      // Index 0, mix of loads and stores.
-      addTableEntry(Entry, TB_INDEX_0);
-
-    for (const X86FoldTableEntry &Entry : Table1)
-      // Index 1, folded load
-      addTableEntry(Entry, TB_INDEX_1 | TB_FOLDED_LOAD);
-
-    for (const X86FoldTableEntry &Entry : Table2)
-      // Index 2, folded load
-      addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD);
-
-    for (const X86FoldTableEntry &Entry : Table3)
-      // Index 3, folded load
-      addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD);
-
-    for (const X86FoldTableEntry &Entry : Table4)
-      // Index 4, folded load
-      addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD);
-
-    // Broadcast tables.
-    for (const X86FoldTableEntry &Entry : BroadcastTable1)
-      // Index 1, folded broadcast
-      addTableEntry(Entry, TB_INDEX_1 | TB_FOLDED_LOAD);
-
-    for (const X86FoldTableEntry &Entry : BroadcastTable2)
-      // Index 2, folded broadcast
-      addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD);
-
-    for (const X86FoldTableEntry &Entry : BroadcastTable3)
-      // Index 3, folded broadcast
-      addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD);
-
-    for (const X86FoldTableEntry &Entry : BroadcastTable4)
-      // Index 4, folded broadcast
-      addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD);
-
-    // Sort the memory->reg unfold table.
-    array_pod_sort(Table.begin(), Table.end());
-
-    // Now that it's sorted, ensure its unique.
-    assert(std::adjacent_find(Table.begin(), Table.end()) == Table.end() &&
-           "Memory unfolding table is not unique!");
-  }
-
-  void addTableEntry(const X86FoldTableEntry &Entry, uint16_t ExtraFlags) {
-    // NOTE: This swaps the KeyOp and DstOp in the table so we can sort it.
-    if ((Entry.Flags & TB_NO_REVERSE) == 0)
-      Table.push_back({Entry.DstOp, Entry.KeyOp,
-                       static_cast<uint16_t>(Entry.Flags | ExtraFlags)});
-  }
-};
-} // namespace
-
 const X86FoldTableEntry *llvm::lookupUnfoldTable(unsigned MemOp) {
-  static X86MemUnfoldTable MemUnfoldTable;
-  auto &Table = MemUnfoldTable.Table;
+  ArrayRef<X86FoldTableEntry> Table(MemUnfoldTable);
   auto I = llvm::lower_bound(Table, MemOp);
   if (I != Table.end() && I->KeyOp == MemOp)
     return &*I;

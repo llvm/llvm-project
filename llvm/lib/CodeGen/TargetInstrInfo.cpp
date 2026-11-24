@@ -1064,7 +1064,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
   if (!MRI.hasOneNonDBGUser(Root.getOperand(0).getReg()))
     return false;
 
-  auto User = MRI.use_instr_begin(Root.getOperand(0).getReg());
+  auto User = MRI.use_instr_nodbg_begin(Root.getOperand(0).getReg());
   if (User->getOpcode() == Opc)
     return false;
 
@@ -1552,7 +1552,7 @@ void TargetInstrInfo::genAlternativeCodeSequence(
                   .addReg(Instr->getOperand(3).getReg());
       } else {
         // For the remaining cases, we need to use an output register of one of
-        // the newly inserted instuctions as operand 1
+        // the newly inserted instructions as operand 1
         AccReg = Instr->getOperand(0).getReg() == Root.getOperand(0).getReg()
                      ? MRI.createVirtualRegister(
                            MRI.getRegClass(Root.getOperand(0).getReg()))
@@ -2096,10 +2096,11 @@ std::string TargetInstrInfo::createMIROperandComment(const MachineInstr &MI,
   OS << F.getKindName();
 
   unsigned RCID;
-  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID))
+  if (!F.isImmKind() && !F.isMemKind() && !F.isFuncKind() &&
+      F.hasRegClassConstraint(RCID))
     OS << ':' << TRI.getRegClassName(TRI.getRegClass(RCID));
 
-  if (F.isMemKind()) {
+  if (F.isMemKind() || F.isFuncKind()) {
     InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
     OS << ":" << InlineAsm::getMemConstraintName(MCID);
   }
@@ -2236,7 +2237,7 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
     return false;
 
   if (Last != First && Last->isReturn()) {
-    --Last;
+    Last = prev_nodbg(Last, First, /*SkipPseudoOp=*/false);
     if (Last->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_EXIT ||
         Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
       return false;

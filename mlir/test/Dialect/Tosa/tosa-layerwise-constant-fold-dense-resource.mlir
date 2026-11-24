@@ -1,8 +1,5 @@
+// REQUIRES: host-byteorder-little-endian
 // RUN: mlir-opt --split-input-file --tosa-layerwise-constant-fold %s | FileCheck %s
-
-// Skip big-endian platforms for dense resources
-// XFAIL: target={{(s390x|sparc.*)-.*}}
-// XFAIL: system-aix
 
 // CHECK-LABEL: @transpose_fold_dense_resource
 func.func @transpose_fold_dense_resource() -> tensor<2x2xf32> {

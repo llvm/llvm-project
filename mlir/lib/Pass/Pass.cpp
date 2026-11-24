@@ -460,11 +460,13 @@ void OpPassManager::printAsTextualPipeline(raw_ostream &os, bool pretty) const {
       pretty);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void OpPassManager::dump() {
   llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes:\n";
   printAsTextualPipeline(llvm::errs(), /*pretty=*/true);
   llvm::errs() << "\n";
 }
+#endif
 
 static void registerDialectsForPipeline(const OpPassManager &pm,
                                         DialectRegistry &dialects) {

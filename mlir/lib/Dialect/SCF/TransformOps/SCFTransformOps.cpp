@@ -282,7 +282,10 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
   }
 
   results.push_back(target);
-  results.push_back(result);
+  if (getPartialAsIf())
+    results.push_back(scf::convertPartialIterationToIf(rewriter, result));
+  else
+    results.push_back(result);
 
   return DiagnosedSilenceableFailure::success();
 }

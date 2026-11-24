@@ -142,6 +142,16 @@ enum OperandType : unsigned {
   OPERAND_JUMP_TARGET_MM
 };
 
+/// Flags for the last operand of PseudoGOTLoadGlobal and PseudoGOTLoadLocal.
+enum GOTLoadFlags : unsigned {
+  // The load is of $25 for a call: the global form uses %call16.
+  GOTLoad_Call = 1 << 0,
+  // N32/N64: the local form uses %got_disp instead of %got and %lo.
+  GOTLoad_NewABI = 1 << 1,
+  // Use ld/daddiu instead of lw/addiu.
+  GOTLoad_Ptr64 = 1 << 2
+};
+
 static inline unsigned getFormat(uint64_t TSFlags) {
   return TSFlags & FormMask;
 }

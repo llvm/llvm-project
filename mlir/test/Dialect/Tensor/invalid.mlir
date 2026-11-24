@@ -763,3 +763,27 @@ func.func @pad_negative_dynamic_dim(%arg0: tensor<?xf32>, %arg1: f32) -> tensor<
   } : tensor<?xf32> to tensor<?xf32>
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+func.func @collapse_shape_num_elements_overflow(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.collapse_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.collapse_shape %arg0 [[0], [1]] : tensor<4611686018427387904x2xf32> into tensor<4611686018427387904x2xf32>
+  return
+}
+
+// -----
+
+func.func @collapse_shape_num_elements_overflow_to_scalar(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.collapse_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.collapse_shape %arg0 [] : tensor<4611686018427387904x2xf32> into tensor<f32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_num_elements_overflow(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.expand_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.expand_shape %arg0 [[0], [1]] output_shape [4611686018427387904, 2] : tensor<4611686018427387904x2xf32> into tensor<4611686018427387904x2xf32>
+  return
+}

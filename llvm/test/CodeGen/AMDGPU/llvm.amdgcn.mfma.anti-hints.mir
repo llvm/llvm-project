@@ -24,24 +24,13 @@ machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
 registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: vgpr_32 }
-  - { id: 6, class: vreg_128_align2 }
-  - { id: 7, class: vreg_512_align2 }
-  - { id: 8, class: vreg_512_align2 }
   - { id: 9, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 10, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 11, class: vreg_128_align2, anti-hints: [ '%7' ] }
   - { id: 12, class: vgpr_32, anti-hints: [ '%7' ] }
-  - { id: 13, class: vreg_512_align2 }
   - { id: 14, class: vgpr_32, anti-hints: [ '%8' ] }
   - { id: 15, class: vreg_128_align2, anti-hints: [ '%8' ] }
   - { id: 16, class: vgpr_32, anti-hints: [ '%8' ] }
-  - { id: 17, class: vreg_512_align2 }
   - { id: 18, class: vreg_128_align2, anti-hints: [ '%8', '%13' ] }
   - { id: 19, class: vreg_128_align2, anti-hints: [ '%13' ] }
 liveins:
@@ -107,27 +96,6 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
-registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: vgpr_32 }
-  - { id: 6, class: vreg_128_align2 }
-  - { id: 7, class: vreg_512_align2 }
-  - { id: 8, class: vreg_512_align2 }
-  - { id: 9, class: vgpr_32 }
-  - { id: 10, class: vgpr_32 }
-  - { id: 11, class: vreg_128_align2 }
-  - { id: 12, class: vgpr_32 }
-  - { id: 13, class: vreg_512_align2 }
-  - { id: 14, class: vgpr_32 }
-  - { id: 15, class: vreg_128_align2 }
-  - { id: 16, class: vgpr_32 }
-  - { id: 17, class: vreg_512_align2 }
-  - { id: 18, class: vreg_128_align2 }
-  - { id: 19, class: vreg_128_align2 }
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4' }
@@ -223,29 +191,15 @@ machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
 registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: vgpr_32 }
-  - { id: 6, class: vreg_128_align2 }
-  - { id: 7, class: vreg_512_align2 }
-  - { id: 8, class: vreg_512_align2 }
   - { id: 9, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 10, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 11, class: vreg_128_align2, anti-hints: [ '%7' ] }
   - { id: 12, class: vgpr_32, anti-hints: [ '%7' ] }
-  - { id: 13, class: vreg_512_align2 }
   - { id: 14, class: vgpr_32, anti-hints: [ '%8' ] }
   - { id: 15, class: vreg_128_align2, anti-hints: [ '%8' ] }
   - { id: 16, class: vgpr_32, anti-hints: [ '%8' ] }
-  - { id: 17, class: vreg_512_align2 }
   - { id: 18, class: vreg_128_align2, anti-hints: [ '%8', '%13' ] }
   - { id: 19, class: vreg_128_align2, anti-hints: [ '%13' ] }
-  - { id: 20, class: vreg_128_align2 }
-  - { id: 21, class: vreg_128_align2 }
-  - { id: 22, class: vreg_128_align2 }
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4' }
@@ -347,29 +301,15 @@ machineFunctionInfo:
   isEntryFunction: true
   occupancy:       4
 registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: vgpr_32 }
-  - { id: 6, class: vreg_128_align2 }
-  - { id: 7, class: vreg_512_align2 }
-  - { id: 8, class: vreg_512_align2 }
   - { id: 9, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 10, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 11, class: vreg_128_align2, anti-hints: [ '%7' ] }
   - { id: 12, class: vgpr_32, anti-hints: [ '%7' ] }
-  - { id: 13, class: vreg_512_align2 }
   - { id: 14, class: vgpr_32, anti-hints: [ '%8' ] }
   - { id: 15, class: vreg_128_align2, anti-hints: [ '%8' ] }
   - { id: 16, class: vgpr_32, anti-hints: [ '%8' ] }
-  - { id: 17, class: vreg_512_align2 }
   - { id: 18, class: vreg_128_align2, anti-hints: [ '%8', '%13' ] }
   - { id: 19, class: vreg_128_align2, anti-hints: [ '%13' ] }
-  - { id: 20, class: vreg_128_align2 }
-  - { id: 21, class: vreg_128_align2 }
-  - { id: 22, class: vreg_128_align2 }
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4' }
@@ -471,14 +411,7 @@ machineFunctionInfo:
   isEntryFunction: true
   occupancy:       6
 registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vreg_128_align2 }
-  - { id: 2, class: vreg_128_align2 }
-  - { id: 3, class: vreg_128_align2 }
   - { id: 4, class: vreg_512_align2, anti-hints: [ '%8' ] }
-  - { id: 5, class: vreg_128_align2 }
-  - { id: 6, class: vreg_128_align2 }
-  - { id: 7, class: areg_256_align2 }
   - { id: 8, class: vreg_512_align2, anti-hints: [ '%4' ] }
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
@@ -524,14 +457,7 @@ machineFunctionInfo:
   isEntryFunction: true
   occupancy:       6
 registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vreg_128_align2 }
-  - { id: 2, class: vreg_128_align2 }
-  - { id: 3, class: vreg_128_align2 }
   - { id: 4, class: vreg_512_align2, anti-hints: [ '%8' ] }
-  - { id: 5, class: vreg_128_align2 }
-  - { id: 6, class: vreg_128_align2 }
-  - { id: 7, class: areg_512_align2 }
   - { id: 8, class: vreg_512_align2, anti-hints: [ '%4' ] }
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
@@ -590,24 +516,13 @@ machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
 registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sgpr_128 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: vgpr_32 }
-  - { id: 6, class: vreg_128_align2 }
-  - { id: 7, class: vreg_512_align2 }
-  - { id: 8, class: vreg_512_align2 }
   - { id: 9, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 10, class: vgpr_32, anti-hints: [ '%7' ] }
   - { id: 11, class: vreg_128_align2, anti-hints: [ '%7' ] }
   - { id: 12, class: vgpr_32, anti-hints: [ '%7' ] }
-  - { id: 13, class: vreg_512_align2 }
   - { id: 14, class: vgpr_32, anti-hints: [ '%8' ] }
   - { id: 15, class: vreg_128_align2, anti-hints: [ '%8' ] }
   - { id: 16, class: vgpr_32, anti-hints: [ '%8' ] }
-  - { id: 17, class: vreg_512_align2 }
   - { id: 18, class: vreg_128_align2, anti-hints: [ '%8', '%13' ] }
   - { id: 19, class: vreg_128_align2, anti-hints: [ '%13' ] }
 liveins:
@@ -708,10 +623,6 @@ machineFunctionInfo:
   isEntryFunction: true
   occupancy:       6
 registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: areg_512_align2 }
-  - { id: 3, class: areg_512_align2 }
   - { id: 4, class: av_128_align2, anti-hints: [ '%2' ] }
 liveins:
   - { reg: '$vgpr0_vgpr1' }
@@ -730,7 +641,7 @@ body:             |
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = COPY $vgpr2
     %2:areg_512_align2 = IMPLICIT_DEF
-    early-clobber %3:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_e64 %0, %0, killed %2, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %3:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_e64 %0, %0, %2, 0, 0, 0, implicit $mode, implicit $exec
     %4:av_128_align2 = DS_READ_B128_gfx9 %1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     DS_WRITE_B128_gfx9 %1, %4, 2048, 0, implicit $exec :: (store (s128), addrspace 3)
     S_ENDPGM 0, implicit %0, implicit %1, implicit %3

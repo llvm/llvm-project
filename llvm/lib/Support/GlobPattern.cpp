@@ -299,12 +299,12 @@ StringRef GlobPattern::longest_substr() const {
 }
 
 bool GlobPattern::match(StringRef S) const {
+  if (SubGlobs.empty())
+    return S == Pattern;
   if (!S.consume_front(prefix()))
     return false;
   if (!S.consume_back(suffix()))
     return false;
-  if (SubGlobs.empty() && S.empty())
-    return true;
   for (auto &Glob : SubGlobs)
     if (Glob.match(S, SlashAgnostic))
       return true;

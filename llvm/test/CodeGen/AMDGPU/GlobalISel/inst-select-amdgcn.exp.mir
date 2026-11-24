@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu6.00 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=amdgpu11.00 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass=instruction-select %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu11.00 -run-pass=instruction-select %s -o - | FileCheck %s
 
 ---
 name: exp0

@@ -190,13 +190,26 @@ WebAssemblyTargetMachine::getSubtargetImpl(StringRef CPU, StringRef FS,
 
 const WebAssemblySubtarget *
 WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
-  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.ABIName = getTargetABIName(*M);
 
-  return getSubtargetImpl(CPU, FS, getTargetABIName(*F.getParent()));
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : TargetCPU;
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : TargetFS;
+
+  const WebAssemblySubtarget *ST = getSubtargetImpl(CPU, FS, Attrs.ABIName);
+  LastSubtarget.set(FnAttrs, M, Attrs, ST);
+  return ST;
 }
 
 namespace {
@@ -211,8 +224,6 @@ public:
     return getTM<WebAssemblyTargetMachine>();
   }
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
-
   void addIRPasses() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
@@ -221,12 +232,6 @@ public:
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
   bool addPreISel() override;
-
-  // No reg alloc
-  bool addRegAssignAndRewriteFast() override { return false; }
-
-  // No reg alloc
-  bool addRegAssignAndRewriteOptimized() override { return false; }
 
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -252,10 +257,6 @@ WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) const {
 TargetPassConfig *
 WebAssemblyTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new WebAssemblyPassConfig(*this, PM);
-}
-
-FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr; // No reg alloc
 }
 
 //===----------------------------------------------------------------------===//
@@ -343,21 +344,6 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
-  // TODO: The following CodeGen passes don't currently support code containing
-  // virtual registers. Consider removing their restrictions and re-enabling
-  // them.
-
-  // These functions all require the NoVRegs property.
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
-
   // This pass hurts code size for wasm because it can generate irreducible
   // control flow.
   disablePass(&MachineBlockPlacementID);

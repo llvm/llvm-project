@@ -42,8 +42,8 @@ body: |
     ; CHECK-NEXT: DBG_VALUE [[S_ADD_U32_]], $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
     ; CHECK-NEXT: DBG_VALUE [[S_ADD_U32_]], $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
     ; CHECK-NEXT: DBG_VALUE [[S_ADD_U32_]], $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
-    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 killed [[S_MOV_B32_]], killed [[S_MOV_B32_1]], implicit $scc
-    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_U32_]], killed [[S_CSELECT_B32_]], implicit-def dead $scc
+    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit $scc
+    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_U32_]], [[S_CSELECT_B32_]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_I32_]]
     %0:sreg_32 = S_ADD_I32 $sgpr0, 1, implicit-def dead $scc
     S_CMP_LG_U32 %0, 0, implicit-def $scc
@@ -58,7 +58,7 @@ body: |
     DBG_VALUE %0, $noreg, !5, !DIExpression(), debug-location !7
     DBG_VALUE %0, $noreg, !5, !DIExpression(), debug-location !7
     DBG_VALUE %0, $noreg, !5, !DIExpression(), debug-location !7
-    %3:sreg_32 = S_CSELECT_B32 killed %2, killed %1, implicit $scc
-    %4:sreg_32 = S_ADD_I32 %0, killed %3, implicit-def dead $scc
+    %3:sreg_32 = S_CSELECT_B32 %2, %1, implicit $scc
+    %4:sreg_32 = S_ADD_I32 %0, %3, implicit-def dead $scc
     S_ENDPGM 0, implicit %4
 ...

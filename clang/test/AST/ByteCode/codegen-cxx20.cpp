@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions                                         | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions                                         | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions -fexperimental-new-constant-interpreter | FileCheck %s %}
 
 
 /// The read from a used to succeed, causing the entire if statement to vanish.

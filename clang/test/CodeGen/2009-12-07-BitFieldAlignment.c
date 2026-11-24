@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i686-apple-darwin %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i686-apple-darwin %s -emit-llvm -o - | FileCheck %s %}
 // Set alignment on bitfield accesses.
 
 struct S {

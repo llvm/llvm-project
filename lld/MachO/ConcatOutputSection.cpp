@@ -118,7 +118,7 @@ bool TextOutputSection::isTargetKnownInRange(const ConcatInputSection &isec,
                        : 0;
   uint64_t highVA = callVA + target->forwardBranchRange;
   auto *funcSym = cast<Symbol *>(r.referent);
-  uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.addend);
+  uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.getAddend());
   // Check if the referent is reachable with a simple call instruction.
   return lowVA <= funcVA && funcVA <= highVA;
 }
@@ -152,7 +152,7 @@ void TextOutputSection::updateBranchTargetToThunk(Relocation &r,
   r.referent = thunk;
   // The thunk itself bakes in the addend, so the call-site reloc must
   // branch to the thunk start with no extra offset.
-  r.addend = 0;
+  r.setAddend(0);
   ++thunkCallCount;
 }
 
@@ -176,8 +176,8 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   assert(thunkInfo.isec->live);
 
   std::string addendSuffix;
-  if (r.addend != 0)
-    addendSuffix = "+" + std::to_string(r.addend);
+  if (r.getAddend() != 0)
+    addendSuffix = "+" + std::to_string(r.getAddend());
   size_t thunkSize = target->thunkSize;
   auto *funcSym = cast<Symbol *>(r.referent);
   StringRef thunkName =
@@ -198,7 +198,7 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   }
   thunkInfo.sym->used = true;
   thunkInfo.sym->branchExtensionThunk = true;
-  target->populateThunk(thunkInfo.isec, funcSym, r.addend);
+  target->populateThunk(thunkInfo.isec, funcSym, r.getAddend());
   updateBranchTargetToThunk(r, thunkInfo.sym);
   finalizeOne(thunkInfo.isec);
   thunks.push_back(thunkInfo.isec);
@@ -249,7 +249,7 @@ bool TextOutputSection::isTargetStubsAndInRange(
   if (!funcSym->isInStubs() && !(in.objcStubs && in.objcStubs->isNeeded() &&
                                  ObjCStubsSection::isObjCStubSymbol(funcSym)))
     return false;
-  if (r.addend)
+  if (r.getAddend())
     return false;
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
   return *estimatedStubsEnd <= highVA;
@@ -291,7 +291,7 @@ void TextOutputSection::finalize() {
           alignToPowerOf2(addr + size, isec->align) + isec->getSize();
       // If we were to emit this section, would we have enough space for more
       // thunks? If we do, then we can delay processing this thunk so we may
-      // finalize more potencial target sections. Otherwise we must emit thunks
+      // finalize more potential target sections. Otherwise we must emit thunks
       // until we have enough space.
       if (nextEnd + slop <= highVA)
         break;
@@ -301,17 +301,14 @@ void TextOutputSection::finalize() {
     }
     finalizeOne(isec);
 
-    // TODO: Remove this check and the assert below. In fact, I don't believe
-    // the relocation iteration order matters for correctness.
     bool hasCallsite = llvm::any_of(isec->relocs, [](Relocation &r) {
       return target->hasAttr(r.type, RelocAttrBits::BRANCH);
     });
     if (!hasCallsite)
       continue;
 
-    // Process relocs by ascending address, i.e., ascending offset within isec
-    // FIXME: This property does not hold for object files produced by ld64's
-    // `-r` mode.
+    // Process relocs by ascending address, i.e., ascending offset within isec.
+    // parseRelocations() ensures they are in descending order.
     assert(is_sorted(isec->relocs, [](Relocation &a, Relocation &b) {
       return a.offset > b.offset;
     }));

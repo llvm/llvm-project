@@ -123,6 +123,10 @@ public:
 
 } // end anonymous namespace
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new MCTargetStreamer(S);
+}
+
 static MCInstrAnalysis *createLanaiInstrAnalysis(const MCInstrInfo *Info) {
   return new LanaiMCInstrAnalysis(Info);
 }
@@ -158,6 +162,9 @@ LLVMInitializeLanaiTargetMC() {
 
   // Register the ELF streamer.
   TargetRegistry::RegisterELFStreamer(getTheLanaiTarget(), createMCStreamer);
+
+  TargetRegistry::RegisterNullTargetStreamer(getTheLanaiTarget(),
+                                             createNullTargetStreamer);
 
   // Register the MC relocation info.
   TargetRegistry::RegisterMCRelocationInfo(getTheLanaiTarget(),

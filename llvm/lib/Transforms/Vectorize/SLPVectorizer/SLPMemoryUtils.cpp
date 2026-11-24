@@ -221,6 +221,34 @@ SLPAnalysisCache::getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
   return Diff;
 }
 
+bool SLPAnalysisCache::sortPtrAccesses(
+    ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
+    ScalarEvolution &SE, SmallVectorImpl<unsigned> &SortedIndices) {
+  using DistOrdPair = std::pair<int64_t, unsigned>;
+  auto Compare = less_first();
+  std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
+  Offsets.emplace(0, 0);
+  bool IsConsecutive = true;
+  for (auto [Idx, Ptr] : drop_begin(enumerate(VL))) {
+    std::optional<int64_t> Diff =
+        getPointersDiff(ElemTy, VL.front(), ElemTy, Ptr, DL, SE,
+                        /*StrictCheck=*/true);
+    if (!Diff)
+      return false;
+    auto [It, IsInserted] = Offsets.emplace(*Diff, Idx);
+    if (!IsInserted)
+      return false;
+    IsConsecutive &= std::next(It) == Offsets.end();
+  }
+  SortedIndices.clear();
+  if (!IsConsecutive) {
+    SortedIndices.resize(VL.size());
+    for (auto [Idx, Off] : enumerate(Offsets))
+      SortedIndices[Idx] = Off.second;
+  }
+  return true;
+}
+
 bool SLPAnalysisCache::isGuaranteedNotToBePoison(const Value *V,
                                                  AssumptionCache *AC) {
   auto [It, Inserted] = NotPoisonCache.try_emplace(V, false);

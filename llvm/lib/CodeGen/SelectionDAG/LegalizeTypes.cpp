@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/CommandLine.h"
@@ -21,9 +22,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "legalize-types"
-
-static cl::opt<bool>
-EnableExpensiveChecks("enable-legalize-types-checking", cl::Hidden);
 
 /// Do extensive, expensive, basic correctness checking.
 void DAGTypeLegalizer::PerformExpensiveChecks() {
@@ -221,7 +219,7 @@ bool DAGTypeLegalizer::run() {
   // Now that we have a set of nodes to process, handle them all.
   while (!Worklist.empty()) {
 #ifndef EXPENSIVE_CHECKS
-    if (EnableExpensiveChecks)
+    if (DAG.getSelectionDAGOptions().enable_legalize_types_checking)
 #endif
       PerformExpensiveChecks();
 
@@ -423,7 +421,7 @@ NodeDone:
   }
 
 #ifndef EXPENSIVE_CHECKS
-  if (EnableExpensiveChecks)
+  if (DAG.getSelectionDAGOptions().enable_legalize_types_checking)
 #endif
     PerformExpensiveChecks();
 
@@ -566,7 +564,10 @@ void DAGTypeLegalizer::AnalyzeNewValue(SDValue &Val) {
 /// replace it by that value.
 void DAGTypeLegalizer::RemapValue(SDValue &V) {
   auto Id = getTableId(V);
-  V = getSDValue(Id);
+  SDValue Mapped = getSDValue(Id);
+  if (V && Mapped && V.getNode() != Mapped.getNode())
+    Mapped->intersectFlagsWith(V->getFlags());
+  V = Mapped;
 }
 
 void DAGTypeLegalizer::RemapId(TableId &Id) {

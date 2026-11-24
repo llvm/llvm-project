@@ -358,6 +358,16 @@ def IntPair : RegisterClass<"SP", [v2i32], 64,
 // spill slot is a stricter constraint than only requiring a 32-bit spill slot.
 def I64Regs : RegisterClass<"SP", [i64], 64, (add IntRegs)>;
 
+// Global and out registers. Under the V8+ ABI these are the only integer
+// registers whose upper 32 bits are preserved (window spills of %l/%i
+// registers in 32-bit code only save the lower halves), so they are the only
+// registers that may hold a 64-bit value in 32-bit code. This is the same set
+// as GCC's I64_REGS class (the "h" constraint), minus %o7, which holds the
+// return address in leaf procedures (%o6 is %sp and always reserved).
+def IntRegsV8Plus : RegisterClass<"SP", [i32], 32,
+                                  (add (sequence "G%u", 0, 7),
+                                       (sequence "O%u", 0, 6))>;
+
 // Floating point register classes.
 def FPRegs : RegisterClass<"SP", [f32], 32, (sequence "F%u", 0, 31)>;
 def DFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 31)>;
@@ -375,6 +385,9 @@ def GPROutgoingArg : RegisterClass<"SP", [i32, i64], 32, (sequence "O%u", 0, 5)>
 def GPRIncomingArg : RegisterClass<"SP", [i32, i64], 32, (sequence "I%u", 0, 5)>;
 
 let isAllocatable = 0 in {
+  // Integer condition codes, for inline assembly clobbers.
+  def ICCRegs : RegisterClass<"SP", [i32], 32, (add ICC)>;
+
   // Ancillary state registers
   // FIXME: TICK is special-cased here as it can be accessed
   // from the ASR (as ASR4) or the privileged register set.

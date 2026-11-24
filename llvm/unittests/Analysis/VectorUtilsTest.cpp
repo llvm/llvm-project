@@ -10,11 +10,12 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -74,6 +75,89 @@ struct BasicTest : public testing::Test {
 
 
 } // namespace
+
+TEST_F(VectorUtilsTest, PropagateCacheHintToMaskedLoad) {
+  parseAssembly(R"(
+    define <4 x i32> @test(ptr %p, <4 x i1> %mask) {
+      %A = load <4 x i32>, ptr %p, !mem.cache_hint !0
+      %masked = call <4 x i32> @llvm.masked.load.v4i32.p0(
+          ptr %p, <4 x i1> %mask, <4 x i32> poison)
+      ret <4 x i32> %masked
+    }
+    declare <4 x i32> @llvm.masked.load.v4i32.p0(
+        ptr, <4 x i1>, <4 x i32>)
+    !0 = !{i32 0, !1}
+    !1 = !{!"test.cache", i32 1}
+  )");
+
+  Instruction *Masked = A->getNextNode();
+  propagateMetadata(Masked, {A});
+  EXPECT_EQ(Masked->getMetadata(LLVMContext::MD_mem_cache_hint),
+            A->getMetadata(LLVMContext::MD_mem_cache_hint));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(VectorUtilsTest, PropagateCacheHintToMaskedScatter) {
+  parseAssembly(R"(
+    define void @test(ptr %p, <4 x ptr> %ptrs, <4 x i32> %value,
+                      <4 x i1> %mask) {
+      %A = getelementptr i32, ptr %p, i32 0
+      store <4 x i32> %value, ptr %A, !mem.cache_hint !0
+      call void @llvm.masked.scatter.v4i32.v4p0(
+          <4 x i32> %value, <4 x ptr> %ptrs, <4 x i1> %mask)
+      ret void
+    }
+    declare void @llvm.masked.scatter.v4i32.v4p0(
+        <4 x i32>, <4 x ptr>, <4 x i1>)
+    !0 = !{i32 1, !1}
+    !1 = !{!"test.cache", i32 1}
+  )");
+
+  Instruction *Store = A->getNextNode();
+  Instruction *Scatter = Store->getNextNode();
+  propagateMetadata(Scatter, {Store});
+  EXPECT_EQ(Scatter->getMetadata(LLVMContext::MD_mem_cache_hint),
+            Store->getMetadata(LLVMContext::MD_mem_cache_hint));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(VectorUtilsTest, DoNotPropagateCacheHintToTargetIntrinsic) {
+  parseAssembly(R"(
+    define <32 x i32> @test(ptr %p, i1 %pred) {
+      %A = load <32 x i32>, ptr %p, !mem.cache_hint !0
+      %predicated = call <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(
+          i1 %pred, ptr %p, i32 0)
+      ret <32 x i32> %predicated
+    }
+    declare <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(i1, ptr, i32)
+    !0 = !{i32 0, !1}
+    !1 = !{!"test.cache", i32 1}
+  )");
+
+  Instruction *Predicated = A->getNextNode();
+  // Hexagon vector alignment creates this intrinsic from ordinary loads, but
+  // its pointer is operand 1. Copying the source hint would name the predicate.
+  propagateMetadata(Predicated, {A});
+  EXPECT_EQ(Predicated->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(VectorUtilsTest, DoNotPropagateStoreCacheHintToLoad) {
+  parseAssembly(R"(
+    define <4 x i32> @test(ptr %p, <4 x i32> %value) {
+      store <4 x i32> %value, ptr %p, !mem.cache_hint !0
+      %A = load <4 x i32>, ptr %p
+      ret <4 x i32> %A
+    }
+    !0 = !{i32 1, !1}
+    !1 = !{!"test.cache", i32 1}
+  )");
+
+  // A load synthesized while expanding a store must not inherit its policy.
+  propagateMetadata(A, {A->getPrevNode()});
+  EXPECT_EQ(A->getMetadata(LLVMContext::MD_mem_cache_hint), nullptr);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
 
 TEST_F(BasicTest, isSplat) {
   Value *UndefVec = UndefValue::get(FixedVectorType::get(IRB.getInt8Ty(), 4));

@@ -516,29 +516,28 @@ nb::object PyMlirContext::attachDiagnosticHandler(nb::object callback) {
   // guaranteed to be known to pybind.
   auto handlerCallback =
       +[](MlirDiagnostic diagnostic, void *userData) -> MlirLogicalResult {
+    // Since this can be called from arbitrary C++ contexts, always get the GIL.
+    nb::gil_scoped_acquire gil;
     PyDiagnostic *pyDiagnostic = new PyDiagnostic(diagnostic);
     nb::object pyDiagnosticObject =
         nb::cast(pyDiagnostic, nb::rv_policy::take_ownership);
 
     auto *pyHandler = static_cast<PyDiagnosticHandler *>(userData);
     bool result = false;
-    {
-      // Since this can be called from arbitrary C++ contexts, always get the
-      // gil.
-      nb::gil_scoped_acquire gil;
-      try {
-        result = nb::cast<bool>(pyHandler->callback(pyDiagnostic));
-      } catch (std::exception &e) {
-        fprintf(stderr, "MLIR Python Diagnostic handler raised exception: %s\n",
-                e.what());
-        pyHandler->hadError = true;
-      }
+    try {
+      result = nb::cast<bool>(pyHandler->callback(pyDiagnostic));
+    } catch (std::exception &e) {
+      fprintf(stderr, "MLIR Python Diagnostic handler raised exception: %s\n",
+              e.what());
+      pyHandler->hadError = true;
     }
 
     pyDiagnostic->invalidate();
     return result ? mlirLogicalResultSuccess() : mlirLogicalResultFailure();
   };
   auto deleteCallback = +[](void *userData) {
+    // May run during context destruction, so always get the GIL.
+    nb::gil_scoped_acquire gil;
     auto *pyHandler = static_cast<PyDiagnosticHandler *>(userData);
     assert(pyHandler->registeredID && "handler is not registered");
     pyHandler->registeredID.reset();
@@ -564,6 +563,10 @@ MlirLogicalResult PyMlirContext::ErrorCapture::handler(MlirDiagnostic diag,
       MlirDiagnosticSeverity::MlirDiagnosticError)
     return mlirLogicalResultFailure();
 
+  // This may be invoked from a thread that is not attached to the
+  // interpreter (e.g. while PassManager.run has released the GIL),
+  // so reacquire the GIL.
+  nb::gil_scoped_acquire acquire;
   self->errors.emplace_back(PyDiagnostic(diag).getInfo());
   return mlirLogicalResultSuccess();
 }

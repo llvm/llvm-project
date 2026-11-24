@@ -65,7 +65,7 @@ DataVisualization::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
   return GetFormatManager().GetSyntheticForType(type_sp);
 }
 
-bool DataVisualization::Categories::GetCategory(ConstString category,
+bool DataVisualization::Categories::GetCategory(llvm::StringRef category,
                                                 lldb::TypeCategoryImplSP &entry,
                                                 bool allow_create) {
   entry = GetFormatManager().GetCategory(category, allow_create);
@@ -80,11 +80,11 @@ bool DataVisualization::Categories::GetCategory(
   return (entry.get() != nullptr);
 }
 
-void DataVisualization::Categories::Add(ConstString category) {
+void DataVisualization::Categories::Add(llvm::StringRef category) {
   GetFormatManager().GetCategory(category);
 }
 
-bool DataVisualization::Categories::Delete(ConstString category) {
+bool DataVisualization::Categories::Delete(llvm::StringRef category) {
   GetFormatManager().DisableCategory(category);
   return GetFormatManager().DeleteCategory(category);
 }
@@ -93,11 +93,11 @@ void DataVisualization::Categories::Clear() {
   GetFormatManager().ClearCategories();
 }
 
-void DataVisualization::Categories::Clear(ConstString category) {
+void DataVisualization::Categories::Clear(llvm::StringRef category) {
   GetFormatManager().GetCategory(category)->Clear(eFormatCategoryItemSummary);
 }
 
-void DataVisualization::Categories::Enable(ConstString category,
+void DataVisualization::Categories::Enable(llvm::StringRef category,
                                            TypeCategoryMap::Position pos) {
   if (GetFormatManager().GetCategory(category)->IsEnabled())
     GetFormatManager().DisableCategory(category);
@@ -110,7 +110,7 @@ void DataVisualization::Categories::Enable(lldb::LanguageType lang_type) {
     lang_category->Enable();
 }
 
-void DataVisualization::Categories::Disable(ConstString category) {
+void DataVisualization::Categories::Disable(llvm::StringRef category) {
   if (GetFormatManager().GetCategory(category)->IsEnabled())
     GetFormatManager().DisableCategory(category);
 }
@@ -159,20 +159,18 @@ DataVisualization::Categories::GetCategoryAtIndex(size_t index) {
 }
 
 bool DataVisualization::NamedSummaryFormats::GetSummaryFormat(
-    ConstString type, lldb::TypeSummaryImplSP &entry) {
-  return GetFormatManager().GetNamedSummaryContainer().GetExact(
-      type.GetStringRef().str(), entry);
+    llvm::StringRef type, lldb::TypeSummaryImplSP &entry) {
+  return GetFormatManager().GetNamedSummaryContainer().GetExact(type.str(),
+                                                                entry);
 }
 
 void DataVisualization::NamedSummaryFormats::Add(
-    ConstString type, const lldb::TypeSummaryImplSP &entry) {
-  GetFormatManager().GetNamedSummaryContainer().Add(type.GetStringRef().str(),
-                                                    entry);
+    llvm::StringRef type, const lldb::TypeSummaryImplSP &entry) {
+  GetFormatManager().GetNamedSummaryContainer().Add(type.str(), entry);
 }
 
-bool DataVisualization::NamedSummaryFormats::Delete(ConstString type) {
-  return GetFormatManager().GetNamedSummaryContainer().Delete(
-      type.GetStringRef().str());
+bool DataVisualization::NamedSummaryFormats::Delete(llvm::StringRef type) {
+  return GetFormatManager().GetNamedSummaryContainer().Delete(type.str());
 }
 
 void DataVisualization::NamedSummaryFormats::Clear() {

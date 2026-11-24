@@ -302,7 +302,7 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
 ; CHECK-NEXT:    [[PHI_PTR_MOVED]] = phi ptr addrspace(5) [ poison, [[FINALLY]] ], [ poison, [[ELSE:%.*]] ], [ poison, [[ENTRY:%.*]] ], [ [[KB_PTR]], [[THEN]] ]
-; CHECK-NEXT:    [[OTHER_PHI_MOVED]] = phi ptr addrspace(5) [ [[PHI_PTR]], [[FINALLY]] ], [ [[OTHER_PHI_MOVED]], [[ELSE]] ], [ [[ALLOCA]], [[ENTRY]] ], [ poison, [[THEN]] ]
+; CHECK-NEXT:    [[OTHER_PHI_MOVED]] = phi ptr addrspace(5) [ [[PHI_PTR]], [[FINALLY]] ], [ undef, [[ELSE]] ], [ [[ALLOCA]], [[ENTRY]] ], [ poison, [[THEN]] ]
 ; CHECK-NEXT:    [[GUARD_ELSE:%.*]] = phi i1 [ true, [[FINALLY]] ], [ true, [[ELSE]] ], [ true, [[ENTRY]] ], [ false, [[THEN]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_ELSE]], label [[ELSE]], label [[FINALLY]]
 ;

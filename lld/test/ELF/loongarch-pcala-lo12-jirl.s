@@ -5,8 +5,8 @@
 
 # RUN: ld.lld %t.la32.o -o %t.la32
 # RUN: ld.lld %t.la64.o -o %t.la64
-# RUN: llvm-objdump -d --no-show-raw-insn %t.la32 | FileCheck %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.la64 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.la32 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.la64 | FileCheck %s
 # CHECK:      pcalau12i $t0, -1
 # CHECK-NEXT: jirl  $ra, $t0, 564
 # CHECK-NEXT: pcalau12i $t0, 0
