@@ -16,8 +16,9 @@
 //   It starts `hardware_concurrency()-1` worker threads that live forever and sleep on an atomic epoch when idle.
 // - The worker threads are deliberately never shut down, which keeps the internal state simple.
 //   In practice this means that once a parallel algorithm has been called, the process keeps a set of
-//   (idle, blocked) threads around until it exits.
-// - Scheduler contains a shared board of tasks with a fixed number of slots.
+//   (idle, blocked) threads around until the process exits.
+// - The scheduler contains a shared array of tasks of a fixed size.
+//   The entries of that array are also named "slots" below.
 // - apply() acquires a Task, initializes it and opens it for participation by the worker threads.
 //   Workers join the Task and run the user function on indices taken from the Task's shared atomic counter.
 //   The caller also takes part and then waits for all participants to finish.
@@ -71,7 +72,9 @@ struct Task {
   func_t func = nullptr;
 
   // The total number of iterations to be processed.
-  // This number is atomic to allow workers speculatively skip joining a task.
+  // This number is atomic to allow workers to speculatively skip joining a task.
+  // This member doesn't need its own cacheline: like `ctx` and `func`, it is written only by the task owner
+  // and only read by the participants, so it doesn't cause contention.
   std::atomic_size_t iterations{0};
 
   // The next index of the iteration to be processed.
