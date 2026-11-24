@@ -30786,11 +30786,13 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   DT->updateDFSNumbers();
 
   SmallSetVector<Instruction *, 8> FMACandidates;
-  // Scan the blocks in the function in post order.
-  auto POT = post_order(&F.getEntryBlock());
-  for (auto *BB : make_filter_range(POT, [](auto *BB) {
-         return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
-       })) {
+  // The order is collected before the visit: the early visited blocks may be
+  // versioned.
+  SmallVector<BasicBlock *> POT = to_vector(post_order(&F.getEntryBlock()));
+  auto IsVisitable = [](BasicBlock *BB) {
+    return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
+  };
+  for (BasicBlock *BB : make_filter_range(POT, IsVisitable)) {
     // Skip scalar fallback blocks created by runtime alias check versioning:
     // they duplicate the original scalar code and must not be vectorized again.
     if (R.isScalarFallbackBlock(BB))
