@@ -137,14 +137,12 @@ struct _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_emplace : __shared_weak_count {
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&... __args) : __alloc_(std::move(__a)) {
-    allocator_traits<_Alloc>::construct(__alloc_, __get_elem(), std::forward<_Args>(__args)...);
+    allocator_traits<_Alloc>::construct(__alloc_, std::addressof(__value_), std::forward<_Args>(__args)...);
   }
-
-  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return reinterpret_cast<__value_type*>(__buffer_); }
 
 private:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
-    allocator_traits<_Alloc>::destroy(__alloc_, __get_elem());
+    allocator_traits<_Alloc>::destroy(__alloc_, std::addressof(__value_));
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
@@ -155,8 +153,13 @@ private:
         __tmp, pointer_traits<typename allocator_traits<__alloc_t>::pointer>::pointer_to(*this), 1);
   }
 
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~__shared_ptr_emplace() {}
+
   _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
-  _ALIGNAS_TYPE(__value_type) char __buffer_[sizeof(__value_type)];
+public:
+  union {
+    __value_type __value_;
+  };
 };
 
 template <class _Tp, class _Alloc>
@@ -174,10 +177,9 @@ struct _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_emplace_for_overwrite : __share
     __alloc_traits::deallocate(__tmp, pointer_traits<typename __alloc_traits::pointer>::pointer_to(*this), 1);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return std::addressof(__value_); }
-
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+public:
   _LIBCPP_NO_UNIQUE_ADDRESS __value_type __value_;
 };
 
@@ -673,7 +675,7 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> __allocate_shared_impl(const _Alloc& __all
   ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__alloc, std::forward<_Args>(__args)...);
   auto __control_block = __guard.__release_ptr();
   return shared_ptr<_Tp>::__create_with_control_block(
-      __control_block->__get_elem(), std::__to_address(__control_block));
+      std::addressof(__control_block->__value_), std::__to_address(__control_block));
 }
 
 template <class _Tp, class _Alloc, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
