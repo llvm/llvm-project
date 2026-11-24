@@ -322,6 +322,10 @@ public:
   /// -4.0f, -2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f, 4.0f.
   bool opCanUseInlineConstant(unsigned OpType) const;
 
+  /// Find the lowest eligible register unused throughout the function, or the
+  /// highest if \p ReserveHighestRegister is set. Exclude registers that
+  /// overlap \p LiveRegs when provided. Return AMDGPU::NoRegister if no
+  /// register is available.
   MCRegister findUnusedRegister(const MachineRegisterInfo &MRI,
                                 const TargetRegisterClass *RC,
                                 const MachineFunction &MF,

@@ -4116,22 +4116,15 @@ bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
          OpType <= AMDGPU::OPERAND_REG_IMM_LAST;
 }
 
-/// Returns a lowest register that is not used at any point in the function.
-///        If all registers are used, then this function will return
-///         AMDGPU::NoRegister. If \p ReserveHighestRegister = true, then return
-///         highest unused register.
 MCRegister SIRegisterInfo::findUnusedRegister(
     const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
     const MachineFunction &MF, bool ReserveHighestRegister,
     const LiveRegUnits *LiveRegs) const {
-  // Never offer VCC as an unused register.
-  auto isVCC = [](MCRegister Reg) {
-    return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
-  };
   auto IsAvailable = [&](MCRegister Reg) {
     if (LiveRegs && !LiveRegs->available(Reg))
       return false;
-    return MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) && !isVCC(Reg);
+    return MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) &&
+           Reg != AMDGPU::VCC && Reg != AMDGPU::VCC_LO && Reg != AMDGPU::VCC_HI;
   };
 
   if (ReserveHighestRegister) {
