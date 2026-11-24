@@ -7310,14 +7310,14 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
-  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
-  // UMUL_LOHI is supported.
-  const EVT WideSVT = MVT::i64;
+  // Allow scalars to be widened to twice their size for uncooperative divisors
+  // if MULHU or UMUL_LOHI is supported for the wider type.
+  const EVT WideSVT = EVT::getIntegerVT(*DAG.getContext(), 2 * EltBits);
   const bool HasWideMULHU =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
   const bool HasWideUMUL_LOHI =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
 

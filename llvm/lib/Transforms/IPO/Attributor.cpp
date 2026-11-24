@@ -2791,6 +2791,9 @@ Function *Attributor::internalizeFunction(Function &F, bool Force) {
 
 bool Attributor::internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
                                       DenseMap<Function *, Function *> &FnMap) {
+  if (FnSet.empty())
+    return false;
+
   for (Function *F : FnSet)
     if (!Attributor::isInternalizable(*F))
       return false;

@@ -74,6 +74,11 @@ BroadcastableToResult
 isBroadcastableTo(Type srcType, VectorType dstVectorType,
                   std::pair<VectorDim, VectorDim> *mismatchingDims = nullptr);
 
+/// Returns true if `memRefTy` has a valid layout for a vector.load/store of
+/// `vecTy`: the most minor memref dim must have unit stride, unless `vecTy`
+/// is a non-scalable vector with a single element.
+bool isValidLoadStoreMemRefLayout(VectorType vecTy, MemRefType memRefTy);
+
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit = 1);

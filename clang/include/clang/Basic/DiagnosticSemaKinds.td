@@ -4376,11 +4376,12 @@ def warn_thread_attribute_ignored : Warning<
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_not_on_non_static_member : Warning<
   "%0 attribute without capability arguments can only be applied to non-static "
-  "methods of a class">,
+  "methods and function pointer members of a class">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_not_on_capability_member : Warning<
-  "%0 attribute without capability arguments refers to 'this', but %1 isn't "
-  "annotated with 'capability' or 'scoped_lockable' attribute">,
+  "%0 attribute without capability arguments refers to "
+  "%select{'this'|the object it is called through}2, but %1 isn't annotated "
+  "with 'capability' or 'scoped_lockable' attribute">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_argument_not_lockable : Warning<
   "%0 attribute requires arguments whose type is annotated "
@@ -9964,7 +9965,7 @@ def err_cannot_pass_to_vararg_format : Error<
   "string was %3">;
 
 def err_typecheck_call_invalid_ordered_compare : Error<
-  "ordered compare requires two args of floating point type"
+  "floating point comparison requires two arguments of floating point type"
   "%diff{ ($ and $)|}0,1">;
 def err_typecheck_call_invalid_unary_fp : Error<
   "floating point classification requires argument of floating point type "
