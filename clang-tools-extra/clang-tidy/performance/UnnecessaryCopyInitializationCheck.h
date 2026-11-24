@@ -45,6 +45,7 @@ protected:
     ASTContext &ASTCtx;
     const bool IssueFix;
     const bool IsVarUnused;
+    const bool ShouldRemoveVar;
     const bool IsVarOnlyUsedAsConst;
   };
 

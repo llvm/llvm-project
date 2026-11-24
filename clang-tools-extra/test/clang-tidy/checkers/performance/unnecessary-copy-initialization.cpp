@@ -773,8 +773,12 @@ void positiveUnusedReferenceIsRemoved() {
 
 void positiveMaybeUnusedIsNotRemoved() {
   [[maybe_unused]] auto FromCall = ExpensiveTypeReference();
-  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: the variable 'FromCall' of type 'ExpensiveToCopyType' is copy-constructed from a const reference but is only used as const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: the variable 'FromCall' of type 'ExpensiveToCopyType' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: {{\[\[maybe_unused\]\]}} const auto& FromCall = ExpensiveTypeReference();
+
+  [[maybe_unused]] const auto ConstFromCall = ExpensiveTypeReference();
+  // CHECK-MESSAGES: [[@LINE-1]]:31: warning: the const qualified variable 'ConstFromCall' of type 'const ExpensiveToCopyType' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: {{\[\[maybe_unused\]\]}} const auto& ConstFromCall = ExpensiveTypeReference();
 
   ExpensiveToCopyType Orig;
   [[maybe_unused]] auto FromVar{Orig};
