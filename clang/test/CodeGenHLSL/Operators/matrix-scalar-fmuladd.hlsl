@@ -113,3 +113,18 @@ float2x3 test_sub_assign_scalar_mul(float2x3 m, float a, float b) {
 float2x3 test_matrix_mul_plus_matrix(float2x3 m, float2x3 n) {
   return m * 2 + n;
 }
+
+// A vector add/sub's scalar operand is splatted, so it still fuses.
+// CHECK-LABEL: test_vector_mul_plus_scalar
+// CHECK: call {{.*}}<3 x float> @llvm.fmuladd.v3f32(<3 x float> %{{.*}}, <3 x float> splat (float 2.000000e+00), <3 x float> splat (float 3.000000e+00))
+float3 test_vector_mul_plus_scalar(float3 v) {
+  return v * 2 + 3;
+}
+
+// The float operand is converted to double, so it still fuses.
+// CHECK-LABEL: test_double_mul_plus_float
+// CHECK: [[CONV:%.*]] = fpext {{.*}}float %{{.*}} to double
+// CHECK: call {{.*}}double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double [[CONV]])
+double test_double_mul_plus_float(double a, double b, float c) {
+  return a * b + c;
+}
