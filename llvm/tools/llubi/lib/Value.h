@@ -12,8 +12,12 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::ubi {
@@ -185,7 +189,11 @@ public:
 ///  NonNull    Null          Concrete
 ///  NonNull    NonNull       Wildcard (associated with a specific MO)
 class Provenance : public RefCountedBase<Provenance> {
-  // TODO: store reference to the provenance of the pointer it is derived from
+  // Strong reference to the provenance this node is derived from.
+  IntrusiveRefCntPtr<Provenance> Parent;
+  // Directly derived nodes. The parent does not own them. They unregister
+  // themselves in the destructor.
+  TinyPtrVector<Provenance *> Children;
 
   // The underlying memory object. It can be null for invalid or dangling
   // pointers. Besides, for pointers with wildcard provenance, it can be null
@@ -202,8 +210,10 @@ class Provenance : public RefCountedBase<Provenance> {
   // Null if it is concrete.
   IntrusiveRefCntPtr<WildcardProvenance> Wildcard;
 
+  // Address components are ignored.
+  CaptureComponents Capability;
+
   // TODO: modeling nofree
-  // TODO: modeling captures
   // TODO: modeling inrange(Start, End) attribute
 
   const APInt &getTag() const { return Tag; }
@@ -212,10 +222,72 @@ class Provenance : public RefCountedBase<Provenance> {
   friend class Context;
 
 public:
-  Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
+  Provenance(IntrusiveRefCntPtr<MemoryObject> Obj,
+             CaptureComponents Capability = CaptureComponents::Provenance)
+      : Obj(std::move(Obj)), Capability(Capability) {
+    assert((Capability & CaptureComponents::Address) ==
+               CaptureComponents::None &&
+           "Address capture is not modeled.");
+  }
+
+  Provenance(Provenance &Parent, IntrusiveRefCntPtr<MemoryObject> Obj,
+             CaptureComponents Capability)
+      : Parent(&Parent), Obj(std::move(Obj)), Capability(Capability) {
+    assert((Capability & CaptureComponents::Address) ==
+               CaptureComponents::None &&
+           "Address capture is not modeled.");
+    assert(
+        (Capability & Parent.Capability) == Capability &&
+        "A derived provenance cannot have more permissions than its parent.");
+    Parent.Children.push_back(this);
+  }
+
+  ~Provenance() {
+    if (!Parent)
+      return;
+    assert(llvm::is_contained(Parent->Children, this) &&
+           "Child was not registered.");
+    llvm::erase(Parent->Children, this);
+  }
+
+  Provenance(const Provenance &) = delete;
+  Provenance &operator=(const Provenance &) = delete;
+
   static IntrusiveRefCntPtr<Provenance> nullary();
+  IntrusiveRefCntPtr<Provenance>
+  cloneWithCapability(CaptureComponents NewCapability, Provenance &NewParent) {
+    IntrusiveRefCntPtr<Provenance> Res =
+        makeIntrusiveRefCnt<Provenance>(NewParent, Obj, NewCapability);
+    Res->Wildcard = Wildcard;
+    return Res;
+  }
+  IntrusiveRefCntPtr<Provenance> clone() {
+    return cloneWithCapability(Capability, *this);
+  }
+  void captureCapability(CaptureComponents CapturedMask) {
+    // A child never has more permissions than its parent, so an unchanged
+    // node implies an unchanged subtree.
+    SmallVector<Provenance *, 8> Worklist;
+    Worklist.push_back(this);
+    while (!Worklist.empty()) {
+      Provenance *Cur = Worklist.pop_back_val();
+      CaptureComponents NewCapability = Cur->Capability & CapturedMask;
+      if (NewCapability == Cur->Capability)
+        continue;
+      Cur->Capability = NewCapability;
+      Worklist.append(Cur->Children.begin(), Cur->Children.end());
+    }
+  }
+  bool isDerivedFrom(const Provenance &Other) const {
+    for (const Provenance *Cur = this; Cur; Cur = Cur->Parent.get())
+      if (Cur == &Other)
+        return true;
+    return false;
+  }
+  Provenance *getParent() const { return Parent.get(); }
   IntrusiveRefCntPtr<Provenance> getWithKnownMemoryObject(MemoryObject &Obj);
   MemoryObject *getMemoryObject() const { return Obj.get(); }
+  CaptureComponents capability() const { return Capability; }
   bool isWildcard() const { return Wildcard != nullptr; }
 };
 
