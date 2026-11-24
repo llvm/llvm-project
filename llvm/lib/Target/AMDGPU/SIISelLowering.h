@@ -243,6 +243,8 @@ private:
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performZeroOrAnyExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performZExtKnownZeroHi16Combine(SDNode *N,
+                                          DAGCombinerInfo &DCI) const;
   SDValue performExtendTruncShiftCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSignExtendInRegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;

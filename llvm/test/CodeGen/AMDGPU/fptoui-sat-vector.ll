@@ -6437,19 +6437,19 @@ define <4 x i8> @test_unsigned_v4f32_v4i8(<4 x float> %f) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_u32_f32_e32 v3, v3
+; GFX11-TRUE16-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX11-TRUE16-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX11-TRUE16-NEXT:    v_cvt_u32_f32_e32 v4, v1
 ; GFX11-TRUE16-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-TRUE16-NEXT:    v_min_u32_e32 v3, 0xff, v3
+; GFX11-TRUE16-NEXT:    v_min_u32_e32 v4, 0xff, v1
 ; GFX11-TRUE16-NEXT:    v_min_u32_e32 v2, 0xff, v2
 ; GFX11-TRUE16-NEXT:    v_min_u32_e32 v0, 0xff, v0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v3.l
-; GFX11-TRUE16-NEXT:    v_min_u32_e32 v3, 0xff, v4
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v4.l, 8, v4.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v2.l, v2.l, v1.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v3.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v4.l
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v4
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -6488,19 +6488,19 @@ define <4 x i8> @test_unsigned_v4f32_v4i8(<4 x float> %f) {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_cvt_u32_f32_e32 v3, v3
+; GFX12-TRUE16-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX12-TRUE16-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX12-TRUE16-NEXT:    v_cvt_u32_f32_e32 v4, v1
 ; GFX12-TRUE16-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX12-TRUE16-NEXT:    v_min_u32_e32 v3, 0xff, v3
+; GFX12-TRUE16-NEXT:    v_min_u32_e32 v4, 0xff, v1
 ; GFX12-TRUE16-NEXT:    v_min_u32_e32 v2, 0xff, v2
 ; GFX12-TRUE16-NEXT:    v_min_u32_e32 v0, 0xff, v0
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v3.l
-; GFX12-TRUE16-NEXT:    v_min_u32_e32 v3, 0xff, v4
+; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v4.l, 8, v4.l
 ; GFX12-TRUE16-NEXT:    v_or_b16 v2.l, v2.l, v1.l
-; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v3.l
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v4.l
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v4
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
-; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]

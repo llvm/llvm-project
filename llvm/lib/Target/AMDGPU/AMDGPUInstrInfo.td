@@ -373,6 +373,12 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
+// Zero extension of an i16 value (operand 0) whose result reuses the high
+// 16 bits of an i32 value (operand 1) that are known to be zero.
+def AMDGPUzext_reuse_hi16 : SDNode<"AMDGPUISD::ZEXT_REUSE_HI16",
+  SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i16>, SDTCisVT<2, i32>]>,
+  []>;
+
 // Marks the entry into a whole wave function.
 def AMDGPUwhole_wave_setup : SDNode<
   "AMDGPUISD::WHOLE_WAVE_SETUP", SDTypeProfile<1, 0, [SDTCisInt<0>]>,
