@@ -6,9 +6,7 @@
 
 ; Verify that llvm.masked.load and llvm.masked.store lower correctly.
 ; SPIR-V reports branch divergence, so ScalarizeMaskedMemIntrin extracts each
-; mask lane directly with OpCompositeExtract instead of reconstructing an
-; integer bitmask, since scalar bit tests offer no benefit under per-lane
-; divergent execution.
+; mask lane directly with OpCompositeExtract.
 
 ; CHECK-DAG: %[[#BOOL:]] = OpTypeBool
 ; CHECK-DAG: %[[#BVEC8:]] = OpTypeVector %[[#BOOL]] 8

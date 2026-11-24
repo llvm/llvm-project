@@ -30,6 +30,7 @@ define spir_func void @func_args(i32 %a) {
 ; CHECK: DIVERGENT: %ld.in = load
 ; CHECK: DIVERGENT: %ld.out = load
 ; CHECK: DIVERGENT: %ld.builtin = load
+; CHECK: DIVERGENT: %ld.builtin.y = load
 ; CHECK: DIVERGENT: %ld.decorated = load
 ; CHECK: DIVERGENT: %ld.atomic = load atomic
 ; CHECK-NOT: DIVERGENT: %ld.cross
@@ -46,6 +47,7 @@ define spir_kernel void @sources(ptr addrspace(1) %p, ptr addrspace(4) %g) {
   %ld.in = load i32, ptr addrspace(7) @input
   %ld.out = load i32, ptr addrspace(8) @output
   %ld.builtin = load <3 x i64>, ptr addrspace(1) @__spirv_BuiltInLocalInvocationId
+  %ld.builtin.y = load i64, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__spirv_BuiltInLocalInvocationId, i64 8)
   %ld.decorated = load i32, ptr addrspace(1) @decorated
   %ld.atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4
   %ld.cross = load i32, ptr addrspace(1) @cross
