@@ -536,7 +536,6 @@ However for values of NaN, the results are undefined.
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Discards the current pixel if the specified value is less than zero.
@@ -1004,7 +1003,7 @@ parameter.
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the fractional (or decimal) part of x.
@@ -1314,7 +1313,6 @@ def hlsl_mad : HLSLThreeArgBuiltin<"mad", "__builtin_hlsl_mad"> {
 \param B The second addition value.
 }];
   let VaryingTypes = AllNumericTypes;
-  let VaryingMatDims = [];
    let VaryingLongVector = 1;
 }
 
@@ -1395,6 +1393,17 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
 }];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
+}
+
+def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
+  let Doc = [{
+\brief Returns true if the condition is true in all active lanes in the quad.
+\param Cond The condition to evaluate.
+}];
+  let Args = [BoolTy];
+  let ReturnType = BoolTy;
+  let IsConvergent = 1;
+  let Availability = SM6_0;
 }
 
 // Reads the value from the lane across the X axis of the quad.
@@ -1588,7 +1597,6 @@ def hlsl_sign : HLSLOneArgBuiltin<"sign", "__builtin_hlsl_elementwise_sign"> {
   let ReturnType = VaryingShape<IntTy>;
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the sine of the input value, Val.

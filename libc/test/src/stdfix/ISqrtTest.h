@@ -14,10 +14,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_STDFIX_ISQRTTEST_H
 #define LLVM_LIBC_TEST_SRC_STDFIX_ISQRTTEST_H
 
-#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/fixed_point/fx_rep.h"

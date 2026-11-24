@@ -125,7 +125,7 @@ protected:
   MDNode *DefaultFPMathTag = nullptr;
   FastMathFlags FMF;
 
-  bool CanonicalizeGEPs = false;
+  bool CanonicalizeGEPs = true;
   bool IsFPConstrained = false;
   fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
   RoundingMode DefaultConstrainedRounding = RoundingMode::Dynamic;
@@ -345,7 +345,10 @@ public:
     DefaultOperandBundles = OpBundles;
   }
 
-  void enableGEPCanonicalization() { CanonicalizeGEPs = true; }
+  /// Disable canonicalization of getelementptr instructions to ptradd form.
+  /// This is a temporary test migration helper and will be removed in the
+  /// future.
+  void disableGEPCanonicalization() { CanonicalizeGEPs = false; }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.
@@ -2563,10 +2566,13 @@ public:
   }
 
   Value *CreateICmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
-                    const Twine &Name = "") {
+                    const Twine &Name = "", bool HasSameSign = false) {
     if (auto *V = Folder.FoldCmp(P, LHS, RHS))
       return V;
-    return Insert(new ICmpInst(P, LHS, RHS), Name);
+    ICmpInst *I = Insert(new ICmpInst(P, LHS, RHS), Name);
+    if (HasSameSign)
+      I->setSameSign();
+    return I;
   }
 
   // Create a quiet floating-point comparison (i.e. one that raises an FP

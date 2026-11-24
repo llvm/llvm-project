@@ -1224,6 +1224,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     QualType Ty = E->getArg(0)->getType();
     if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
+    else if (auto *MatTy = Ty->getAs<ConstantMatrixType>())
+      Ty = MatTy->getElementType();
 
     Intrinsic::ID Intr;
     if (Ty->isFloatingType()) {
@@ -1755,6 +1757,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
                              "hlsl.wave.prefix.product");
   }
+  case Builtin::BI__builtin_hlsl_quad_all: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadAllIntrinsic();
+    return EmitIntrinsicCall(ID, {Op});
+  }
   case Builtin::BI__builtin_hlsl_quad_read_across_x: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadReadAcrossXIntrinsic();
@@ -1778,12 +1785,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     auto *Arg0 = E->getArg(0);
     Value *Op0 = EmitScalarExpr(Arg0);
     llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt32Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      auto *XVecTy = Arg0->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
-    }
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt32Ty(this->getLLVMContext()), Arg0->getType());
     assert((Arg0->getType()->hasFloatingRepresentation() ||
             Arg0->getType()->hasIntegerRepresentation()) &&
            "sign operand must have a float or int representation");

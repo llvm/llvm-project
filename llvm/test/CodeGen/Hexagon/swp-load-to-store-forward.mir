@@ -27,7 +27,6 @@
 ...
 ---
 name:            crash_145878
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)

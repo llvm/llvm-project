@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.CompositeExtract
@@ -35,6 +36,19 @@ spirv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: llvm.insertelement %{{.*}}, %{{.*}}[%[[ONE]] : i32] : vector<3xf32>
   %0 = spirv.CompositeInsert %arg1, %arg0[1 : i32] : f32 into vector<3xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CopyObject
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @copy_object
+// CHECK-SAME: (%[[ARG:.*]]: !llvm.ptr)
+spirv.func @copy_object(%arg0: !spirv.ptr<f32, Function>) "None" {
+  // CHECK-NEXT: llvm.load %[[ARG]] : !llvm.ptr -> f32
+  %0 = spirv.CopyObject %arg0 : !spirv.ptr<f32, Function>
+  %1 = spirv.Load "Function" %0 : f32
   spirv.Return
 }
 

@@ -557,11 +557,13 @@ public:
   LLVM_ABI ConstantRange smul_sat(const ConstantRange &Other) const;
 
   /// Perform an unsigned saturating left shift of this constant range by a
-  /// value in \p Other.
+  /// value in \p Other. Shift amounts greater than or equal to the bit width
+  /// are poison, in line with IR, and do not contribute towards the result.
   LLVM_ABI ConstantRange ushl_sat(const ConstantRange &Other) const;
 
   /// Perform a signed saturating left shift of this constant range by a
-  /// value in \p Other.
+  /// value in \p Other. Shift amounts greater than or equal to the bit width
+  /// are poison, in line with IR, and do not contribute towards the result.
   LLVM_ABI ConstantRange sshl_sat(const ConstantRange &Other) const;
 
   /// Return a new range that is the logical not of the current set.

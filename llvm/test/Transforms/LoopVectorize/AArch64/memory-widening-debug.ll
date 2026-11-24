@@ -13,7 +13,7 @@ target triple = "aarch64"
 @c = common global [2048 x i32] zeroinitializer, align 16
 @d = common global [2048 x i32] zeroinitializer, align 16
 
-define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) {
+define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) vscale_range(1,16) {
 ; FIXED-LABEL: 'uniform_load'
 ; FIXED:  LV: Memory widening: calculating best strategy for %val = load i32, ptr %src, align 4
 ; FIXED:  LV: Memory widening: uniform memory op has GatherScatterCost = Invalid, ScalarizationCost = 3
@@ -46,7 +46,7 @@ for.end:
   ret void
 }
 
-define void @interleaved_load(ptr noalias readonly %src, ptr noalias %dst, i64 %n) {
+define void @interleaved_load(ptr noalias readonly %src, ptr noalias %dst, i64 %n) vscale_range(1,16) {
 ; FIXED-LABEL: 'interleaved_load'
 ; FIXED:  LV: Memory widening: calculating best strategy for %load.0 = load i16, ptr %gep.0, align 2
 ; FIXED:  LV: Memory widening: InterleaveCost = 2, GatherScatterCost = Invalid, ScalarizationCost = 32
@@ -89,7 +89,7 @@ for.end:
   ret void
 }
 
-define void @interleave_member_update() {
+define void @interleave_member_update() vscale_range(1,16) {
 ; FIXED-LABEL: 'interleave_member_update'
 ; FIXED:  LV: Memory widening: calculating best strategy for %idx = load i32, ptr %arrayidx, align 8
 ; FIXED:  LV: Memory widening: InterleaveCost = 2, GatherScatterCost = Invalid, ScalarizationCost = 16
@@ -147,7 +147,7 @@ for.end:
   ret void
 }
 
-define void @reverse_load_scatter(ptr noalias %src, ptr noalias %dst, i64 %n) {
+define void @reverse_load_scatter(ptr noalias %src, ptr noalias %dst, i64 %n) vscale_range(1,16) {
 ; FIXED-LABEL: 'reverse_load_scatter'
 ; FIXED:  LV: Memory widening: calculating best strategy for %val = load i64, ptr %src.ptr, align 8
 ; FIXED:  LV: Memory widening: can be widened normally with cost 4
@@ -185,7 +185,7 @@ exit:
   ret void
 }
 
-define double @gather_load(ptr noalias readonly %data, ptr noalias readonly %offset, i64 %n) {
+define double @gather_load(ptr noalias readonly %data, ptr noalias readonly %offset, i64 %n) vscale_range(1,16) {
 ; FIXED-LABEL: 'gather_load'
 ; FIXED:  LV: Memory widening: calculating best strategy for %idx = load i32, ptr %idx.ptr, align 4
 ; FIXED:  LV: Memory widening: can be widened normally with cost 1

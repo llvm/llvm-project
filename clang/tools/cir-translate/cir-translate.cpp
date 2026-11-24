@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -85,8 +85,8 @@ std::string prepareCIRModuleTriple(mlir::ModuleOp mod) {
   return triple;
 }
 
-std::optional<std::string>
-getTargetDataLayoutString(llvm::StringRef rawTriple) {
+llvm::IntrusiveRefCntPtr<clang::TargetInfo>
+getTargetInfo(llvm::StringRef rawTriple) {
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs);
   clang::DiagnosticOptions diagOpts;
@@ -97,8 +97,13 @@ getTargetDataLayoutString(llvm::StringRef rawTriple) {
   // 'TargetInfo' properly.
   clang::TargetOptions targetOptions;
   targetOptions.Triple = rawTriple;
+  return clang::TargetInfo::CreateTargetInfo(*diagnostics, targetOptions);
+}
+
+std::optional<std::string>
+getTargetDataLayoutString(llvm::StringRef rawTriple) {
   llvm::IntrusiveRefCntPtr<clang::TargetInfo> targetInfo =
-      clang::TargetInfo::CreateTargetInfo(*diagnostics, targetOptions);
+      getTargetInfo(rawTriple);
   if (!targetInfo)
     return std::nullopt;
   return targetInfo->getDataLayoutString();
@@ -110,9 +115,9 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
 
   // Data layout is fully determined by the target triple. Here we only pass the
   // triple to get the data layout.
-  std::optional<std::string> layoutString =
-      getTargetDataLayoutString(rawTriple);
-  if (!layoutString) {
+  llvm::IntrusiveRefCntPtr<clang::TargetInfo> targetInfo =
+      getTargetInfo(rawTriple);
+  if (!targetInfo) {
     mod.emitError() << "error: invalid target triple '" << rawTriple << "'\n";
     return llvm::failure();
   }
@@ -121,7 +126,10 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                        mlir::omp::OpenMPDialect>();
 
-  cir::setMLIRDataLayout(mod, llvm::DataLayout(*layoutString));
+  cir::setMLIRDataLayout(mod,
+                         llvm::DataLayout(targetInfo->getDataLayoutString()),
+                         targetInfo->getBitIntMaxAlign(),
+                         targetInfo->getMaxVectorAlign());
 
   return llvm::success();
 }

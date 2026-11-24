@@ -2,7 +2,7 @@
 ; The state machine rewrite has to be on for this test to say anything; it is
 ; the default upstream but not everywhere, so ask for it explicitly.
 ; RUN: opt --mtriple=amdgpu-amd-amdhsa --data-layout=A5 -S -passes=openmp-opt \
-; RUN:     -openmp-opt-disable-state-machine-rewrite=false < %s | FileCheck %s
+; RUN:     -openmp-opt-state-machine-rewrite < %s | FileCheck %s
 
 ; The loop runtime functions take the loop body as a callback, so a parallel
 ; region inside the body is reached by the kernel through the runtime call.

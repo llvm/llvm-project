@@ -1352,6 +1352,16 @@ KMP_LABEL(kmp_no_args):
 __gtid = 4
 __tid = 8
 
+// On arm64_32 pointers are 4 bytes, so p_argv entries, stack arguments and
+// *exit_frame_ptr are 4 bytes.
+# if KMP_ARCH_AARCH64_32
+#  define KMP_PTR_SIZE 4
+#  define KMP_PTR_REG(n) w##n
+# else
+#  define KMP_PTR_SIZE 8
+#  define KMP_PTR_REG(n) x##n
+# endif
+
 // -- Begin __kmp_invoke_microtask
 // mark_begin;
 	.text
@@ -1376,40 +1386,40 @@ __tid = 8
 	mov	x10, x4
 # if OMPT_SUPPORT
 	mov	x19, x5
-	str	x29, [x19]
+	str	KMP_PTR_REG(29), [x19]
 # endif
 
 	sub	x0, x29, #__gtid
 	sub	x1, x29, #__tid
 
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x2, [x10]
+	ldr	KMP_PTR_REG(2), [x10]
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x3, [x10, #8]!
+	ldr	KMP_PTR_REG(3), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x4, [x10, #8]!
+	ldr	KMP_PTR_REG(4), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x5, [x10, #8]!
+	ldr	KMP_PTR_REG(5), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x6, [x10, #8]!
+	ldr	KMP_PTR_REG(6), [x10, #KMP_PTR_SIZE]!
 
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x7, [x10, #8]!
+	ldr	KMP_PTR_REG(7), [x10, #KMP_PTR_SIZE]!
 
 KMP_LABEL(kmp_0):
 	sub	w9, w9, #1
 	cbz	w9, KMP_LABEL(kmp_1)
-	ldr	x12, [x10, #8]!
-	str	x12, [x11], #8
+	ldr	KMP_PTR_REG(12), [x10, #KMP_PTR_SIZE]!
+	str	KMP_PTR_REG(12), [x11], #KMP_PTR_SIZE
 	b	KMP_LABEL(kmp_0)
 KMP_LABEL(kmp_1):
 	blr	x8
@@ -1417,7 +1427,7 @@ KMP_LABEL(kmp_1):
 	mov	sp, x29
 	ldp	x29, x30, [sp], #16
 # if OMPT_SUPPORT
-	str	xzr, [x19]
+	str	KMP_PTR_REG(zr), [x19]
 	ldp	x19, x20, [sp], #16
 # endif
 	PACBTI_RET
@@ -1425,6 +1435,9 @@ KMP_LABEL(kmp_1):
 
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
+
+# undef KMP_PTR_SIZE
+# undef KMP_PTR_REG
 
 #endif /* KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 */
 
@@ -1800,6 +1813,121 @@ __kmp_invoke_microtask:
 // -- End  __kmp_invoke_microtask
 
 #endif /* KMP_ARCH_PPC64 */
+
+#if KMP_ARCH_PPC
+//------------------------------------------------------------------------
+// Same interface and argument registers as the PPC64 version above.
+//
+	.text
+	.globl	__kmp_invoke_microtask
+	.p2align	2
+	.type	__kmp_invoke_microtask,@function
+__kmp_invoke_microtask:
+.Lfunc_begin0:
+// -- Begin __kmp_invoke_microtask
+// The 32-bit SysV ABI has no red zone, so nothing may be stored below r1
+// until the frame is established. The frame is the 8-byte header, 4*argc
+// bytes of parameter area for the microtask (only argc - 6 are used), and
+// 16 bytes for r31, r30 (OMP-T), gtid and tid.
+	.cfi_startproc
+	mflr 0
+	stw 0, 4(1)
+	.cfi_offset lr, 4
+	mr 12, 1
+	.cfi_def_cfa_register r12
+// Compute the size necessary for the local stack frame, keeping it aligned
+// to 16 bytes.
+	slwi 11, 6, 2
+	addi 11, 11, 24 + 15
+	rlwinm 11, 11, 0, 0, 27
+	neg 11, 11
+// Establish the local stack frame.
+	stwux 1, 1, 11
+	stw 31, -4(12)
+// As on PPC64, r31 holds the incoming r1 rather than the new one, because
+// the frame size is computed dynamically.
+	mr 31, 12
+	.cfi_def_cfa_register r31
+	.cfi_offset r31, -4
+# if OMPT_SUPPORT
+	stw 30, -8(31)
+	.cfi_offset r30, -8
+	stw 1, 0(8)
+	mr 30, 8
+# endif
+// Store gtid and tid to the stack because they're passed by reference to the microtask.
+	stw 4, -12(31)
+	stw 5, -16(31)
+	mr 12, 3
+	mr 11, 6
+	mr 4, 7
+	cmpwi 0, 11, 1
+	blt	 0, .Lcall
+	lwz 5, 0(4)
+	cmpwi 0, 11, 2
+	blt	 0, .Lcall
+	lwz 6, 4(4)
+	cmpwi 0, 11, 3
+	blt	 0, .Lcall
+	lwz 7, 8(4)
+	cmpwi 0, 11, 4
+	blt	 0, .Lcall
+	lwz 8, 12(4)
+	cmpwi 0, 11, 5
+	blt	 0, .Lcall
+	lwz 9, 16(4)
+	cmpwi 0, 11, 6
+	blt	 0, .Lcall
+	lwz 10, 20(4)
+	cmpwi 0, 11, 7
+	blt	 0, .Lcall
+// There are more than 6 microtask parameters, so we need to store the
+// remainder to the stack.
+	addi 11, 11, -6
+	mtctr 11
+// These are set to 4 bytes before the first desired load and store addresses
+// (we're using pre-increment loads and stores in the loop below). The
+// parameter area for the microtask begins 8 bytes above r1.
+	addi 4, 4, 20
+	addi 3, 1, 4
+.Lnext:
+	lwzu 0, 4(4)
+	stwu 0, 4(3)
+	bdnz .Lnext
+.Lcall:
+	mtctr 12
+	addi 3, 31, -12
+	addi 4, 31, -16
+// The microtask is called through a variadic type, so tell it that no
+// floating-point arguments are passed in registers.
+	crxor 6, 6, 6
+	bctrl
+# if OMPT_SUPPORT
+	li 3, 0
+	stw 3, 0(30)
+	lwz 30, -8(31)
+	.cfi_restore r30
+# endif
+	li 3, 1
+	lwz 0, 4(31)
+	mtlr 0
+	.cfi_restore lr
+// Reload r31 before popping the frame; nothing below r1 survives once it is
+// gone.
+	mr 11, 31
+	.cfi_def_cfa_register r11
+	lwz 31, -4(11)
+	.cfi_restore r31
+	mr 1, 11
+	.cfi_def_cfa_register r1
+	blr
+.Lfunc_end0:
+	.size	__kmp_invoke_microtask, .Lfunc_end0-.Lfunc_begin0
+	.cfi_endproc
+
+// -- End  __kmp_invoke_microtask
+
+#endif /* KMP_ARCH_PPC */
 
 #if KMP_ARCH_RISCV64
 
@@ -2375,7 +2503,7 @@ __kmp_invoke_microtask:
 __kmp_invoke_microtask:
 	.cfi_startproc
 
-	stmg	%r6,%r14,48(%r15)
+	stmg	%r6,%r15,48(%r15)
         .cfi_offset %r6, -112
         .cfi_offset %r7, -104
         .cfi_offset %r8, -96
@@ -2459,8 +2587,7 @@ __kmp_invoke_microtask:
 
 	// Restore stack and return
 
-	lgr	%r15,%r11
-	lmg	%r6,%r14,48(%r15)
+	lmg	%r6,%r15,48(%r11)
 	lghi	%r2,1
 	br	%r14
 .Lfunc_end0:

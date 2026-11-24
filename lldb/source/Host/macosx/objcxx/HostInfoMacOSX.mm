@@ -1146,6 +1146,7 @@ bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
 }
 
 bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
+#if TARGET_OS_OSX
   std::string path = bundle_path.GetPath();
   CFURLRef url = CFURLCreateFromFileSystemRepresentation(
       kCFAllocatorDefault, reinterpret_cast<const UInt8 *>(path.data()),
@@ -1170,4 +1171,7 @@ bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
 
   return SecStaticCodeCheckValidity(static_code, kSecCSDefaultFlags,
                                     requirement) == errSecSuccess;
+#else
+  return false;
+#endif
 }

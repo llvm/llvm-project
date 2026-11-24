@@ -214,6 +214,7 @@ add_entrypoint_object(
   HDRS
     ../daddf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.daddf128
 )
 
@@ -234,6 +235,7 @@ add_entrypoint_object(
   HDRS
     ../ddivf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.ddivf128
 )
 
@@ -284,6 +286,7 @@ add_entrypoint_object(
   HDRS
     ../dsubf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.dsubf128
 )
 
@@ -1823,6 +1826,16 @@ add_entrypoint_object(
     ../log10f16.h
   DEPENDS
     libc.src.__support.math.log10f16
+)
+
+add_entrypoint_object(
+  log10p1bf16
+  SRCS
+    log10p1bf16.cpp
+  HDRS
+    ../log10p1bf16.h
+  DEPENDS
+    libc.src.__support.math.log10p1bf16
 )
 
 add_entrypoint_object(
@@ -3931,6 +3944,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  coshbf16
+  SRCS
+    coshbf16.cpp
+  HDRS
+    ../coshbf16.h
+  DEPENDS
+    libc.src.__support.math.coshbf16
+)
+
+add_entrypoint_object(
   coshf16
   SRCS
     coshf16.cpp
@@ -5089,6 +5112,7 @@ add_entrypoint_object(
   HDRS
     ../dmulf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.dmulf128
 )
 

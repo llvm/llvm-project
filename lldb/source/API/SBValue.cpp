@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBValue.h"
+#include "Utils.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBDeclaration.h"
@@ -36,6 +37,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
@@ -191,7 +193,10 @@ const char *SBValue::GetValue() {
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp)
     return nullptr;
-  return ConstString(value_sp->GetValueAsCString()).GetCString();
+  TargetSP target_sp = value_sp->GetTargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(value_sp->GetValueAsCString());
 }
 
 ValueType SBValue::GetValueType() {
@@ -219,7 +224,10 @@ const char *SBValue::GetObjectDescription() {
     llvm::consumeError(str.takeError());
     return nullptr;
   }
-  return ConstString(*str).AsCString(nullptr);
+  TargetSP target_sp = value_sp->GetTargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.InternNonEmpty(*str);
 }
 
 SBType SBValue::GetType() {
@@ -259,7 +267,10 @@ const char *SBValue::GetSummary() {
   if (!value_sp)
     return nullptr;
 
-  return ConstString(value_sp->GetSummaryAsCString()).GetCString();
+  TargetSP target_sp = value_sp->GetTargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(value_sp->GetSummaryAsCString());
 }
 
 const char *SBValue::GetSummary(lldb::SBStream &stream,
@@ -273,7 +284,10 @@ const char *SBValue::GetSummary(lldb::SBStream &stream,
     if (value_sp->GetSummaryAsCString(buffer, options.ref()) && !buffer.empty())
       stream.Printf("%s", buffer.c_str());
   }
-  return ConstString(stream.GetData()).GetCString();
+  TargetSP target_sp = value_sp ? value_sp->GetTargetSP() : TargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(stream.GetData());
 }
 
 const char *SBValue::GetLocation() {
@@ -284,7 +298,10 @@ const char *SBValue::GetLocation() {
   if (!value_sp)
     return nullptr;
 
-  return ConstString(value_sp->GetLocationAsCString()).GetCString();
+  TargetSP target_sp = value_sp->GetTargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(value_sp->GetLocationAsCString());
 }
 
 // Deprecated - use the one that takes an lldb::SBError
@@ -1112,8 +1129,8 @@ void SBValue::SetSP(const lldb::ValueObjectSP &sp,
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
                     const char *name) {
-  m_opaque_sp =
-      std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic, name);
+  m_opaque_sp = std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic,
+                                            llvm::StringRef(name).str());
 }
 
 bool SBValue::GetExpressionPath(SBStream &description) {

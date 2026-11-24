@@ -4,14 +4,14 @@ RUN: echo ab >> %t
 RUN: echo abc >> %t
 RUN: echo abcd >> %t
 # UTF-8 encoding of U+00A0 NON-BREAKING SPACE (which we treat as printable)
-RUN: echo -e 'bcde\302\240' >> %t
+RUN: echo -e 'bcde\0302\0240' >> %t
 # UTF-8 encoding of U+009F APPLICATION PROGRAM COMMAND (non-printable)
-RUN: echo -e 'cdef\302\240\302\237' >> %t
+RUN: echo -e 'cdef\0302\0240\0302\0237' >> %t
 
 # Check that partial and invalid UTF-8 characters do not interfere with
 # preceding and subsequent strings.
-RUN: echo -e '\342defg\342' >> %t
-RUN: echo -e '\342\200efgh\342\200' >> %t
+RUN: echo -e '\0342defg\0342' >> %t
+RUN: echo -e '\0342\0200efgh\0342\0200' >> %t
 
 # Check that long form options work.
 RUN: llvm-strings --encoding s %t | FileCheck --check-prefixes CHECK,CHECK-ASCII --strict-whitespace --match-full-lines %s
@@ -71,27 +71,27 @@ CHECK-ERROR: error: 'x' is not a valid value for '--encoding='
 # the boundary may or may not be printable.
 #
 RUN: printf "%16380s" | tr " " "\0" > %t
-#                             v chunk boundary
-RUN: echo -n -e "\302\240e\302\240e\302\240e\302\240" >> %t
+#                                v chunk boundary
+RUN: echo -n -e "\0302\0240e\0302\0240e\0302\0240e\0302\0240" >> %t
 RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-A --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
 RUN: printf "%16383s" | tr " " "\0" > %t
-#                    v chunk boundary
-RUN: echo -n -e "\302\240e\302\240e\302\240e\302\240" >> %t
+#                     v chunk boundary
+RUN: echo -n -e "\0302\0240e\0302\0240e\0302\0240e\0302\0240" >> %t
 RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-A --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 CHECK-UTF8-CHUNK-A:{{\xc2\xa0e\xc2\xa0e\xc2\xa0e\xc2\xa0}}
 
 RUN: printf "%16379s" | tr " " "\0" > %t
-#                              v chunk boundary
-RUN: echo -n -e "e\302\240e\302\237e\302\240e\302\240e" >> %t
+#                                 v chunk boundary
+RUN: echo -n -e "e\0302\0240e\0302\0237e\0302\0240e\0302\0240e" >> %t
 RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
 RUN: printf "%16382s" | tr " " "\0" > %t
-#                     v chunk boundary
-RUN: echo -n -e "e\302\237e\302\240e\302\240e\342" >> %t
+#                      v chunk boundary
+RUN: echo -n -e "e\0302\0237e\0302\0240e\0302\0240e\0342" >> %t
 RUN: llvm-strings -e utf8 %t | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 CHECK-UTF8-CHUNK-B:{{e\xc2\xa0e\xc2\xa0e}}

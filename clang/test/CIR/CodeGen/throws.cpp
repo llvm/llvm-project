@@ -7,7 +7,7 @@
 
 int throw_in_global_init = (throw 1, 0);
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR-NEXT:    cir.scope {
 // CIR:           cir.throw
 // CIR-NEXT:      cir.unreachable
@@ -31,7 +31,7 @@ int throw_in_global_init = (throw 1, 0);
 
 int trap_in_global_init = (__builtin_trap(), 1);
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init.1() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR-NEXT:    cir.scope {
 // CIR:           cir.trap
 // CIR:         ^bb1:
@@ -56,7 +56,7 @@ struct ThrowInGlobalCtorArg {
 };
 ThrowInGlobalCtorArg throw_in_global_ctor_arg = ThrowInGlobalCtorArg((throw 1, 0));
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init.2() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.2(){{.*}} {
 // CIR-NEXT:    cir.scope {
 // CIR:           cir.throw
 // CIR-NEXT:      cir.unreachable
@@ -81,7 +81,7 @@ ThrowInGlobalCtorArg throw_in_global_ctor_arg = ThrowInGlobalCtorArg((throw 1, 0
 inline int throw_in_inline_global = (throw 1, 0);
 int use_throw_in_inline_global() { return throw_in_inline_global; }
 
-// CIR-LABEL: cir.func comdat("throw_in_inline_global") internal private @__cxx_global_var_init.3() {
+// CIR-LABEL: cir.func comdat("throw_in_inline_global") internal private @__cxx_global_var_init.3(){{.*}} {
 // CIR:         cir.call @__cxa_guard_acquire
 // CIR:         cir.cleanup.scope {
 // CIR-NEXT:      cir.scope {
@@ -105,7 +105,7 @@ template <class X> struct ThrowInTemplateStatic {
 };
 int use_throw_in_template_static() { return ThrowInTemplateStatic<int>::w; }
 
-// CIR-LABEL: cir.func comdat("_ZN21ThrowInTemplateStaticIiE1wE") internal private @__cxx_global_var_init.4() {
+// CIR-LABEL: cir.func comdat("_ZN21ThrowInTemplateStaticIiE1wE") internal private @__cxx_global_var_init.4(){{.*}} {
 // CIR:         cir.if {{.*}} {
 // CIR:           cir.scope {
 // CIR:             cir.throw

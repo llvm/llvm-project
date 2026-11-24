@@ -26,8 +26,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 static cl::opt<std::string>
     TargetTripleStr("mtriple", cl::desc("Override target triple for module"));
 
@@ -193,7 +191,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   //
 
   handleExecNameEncodedOptimizerOpts(LibraryOptions, ExecName);
-  parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
+  parseFuzzerCLOpts(LibraryOptions, codegen::getToolOptions(), *argc, *argv);
 
   // Create TargetMachine
   //

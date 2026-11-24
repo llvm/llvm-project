@@ -887,7 +887,7 @@ func.func @replace_duplicate_iter_args(%lb: index, %ub: index, %step: index, %a:
 
 // -----
 
-func.func private @do(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
+func.func private @do(%arg0: tensor<?x?xf32>) -> tensor<32x1024xf32>
 
 func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index
@@ -895,8 +895,9 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
   %c1024 = arith.constant 1024 : index
   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
-    %2 = func.call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-    scf.yield %2 : tensor<?x?xf32>
+    %2 = func.call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+    %3 = tensor.cast %2 : tensor<32x1024xf32> to tensor<?x?xf32>
+    scf.yield %3 : tensor<?x?xf32>
   } {some_attr}
   return %1 : tensor<?x?xf32>
 }
@@ -906,12 +907,108 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
 //   CHECK-NOT: tensor.cast
 //       CHECK: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[ITER_T0:.*]] = %[[T0]]) -> (tensor<32x1024xf32>) {
 //       CHECK:   %[[CAST:.*]] = tensor.cast %[[ITER_T0]] : tensor<32x1024xf32> to tensor<?x?xf32>
-//       CHECK:   %[[DONE:.*]] = func.call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-//       CHECK:   %[[UNCAST:.*]] = tensor.cast %[[DONE]] : tensor<?x?xf32> to tensor<32x1024xf32>
-//       CHECK:   scf.yield %[[UNCAST]] : tensor<32x1024xf32>
+//       CHECK:   %[[DONE:.*]] = func.call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+//       CHECK:   scf.yield %[[DONE]] : tensor<32x1024xf32>
 //       CHECK: } {some_attr}
 //       CHECK: %[[RES:.*]] = tensor.cast
 //       CHECK: return %[[RES]] : tensor<?x?xf32>
+
+// -----
+
+// The inner loop inserts into the tensor it carries, so both loops keep the
+// static shape and the cast moves into the outer loop.
+
+func.func @tensor_cast_into_for_nested_tied_yield(%t0: tensor<32x1024xf32>, %f: f32) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c32 step %c1 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = scf.for %j = %c0 to %c32 step %c1 iter_args(%iter_t1 = %iter_t0) -> (tensor<?x?xf32>) {
+      %3 = tensor.insert %f into %iter_t1[%i, %j] : tensor<?x?xf32>
+      scf.yield %3 : tensor<?x?xf32>
+    }
+    scf.yield %2 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @tensor_cast_into_for_nested_tied_yield
+//       CHECK:   scf.for {{.*}} -> (tensor<32x1024xf32>) {
+//       CHECK:     scf.for {{.*}} -> (tensor<32x1024xf32>) {
+
+// -----
+
+// The loop may change the shape it carries, so the cast stays outside it.
+
+func.func private @resize(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
+
+func.func @no_tensor_cast_into_for_unknown_yield(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %c1024 = arith.constant 1024 : index
+  %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = func.call @resize(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+    scf.yield %2 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @no_tensor_cast_into_for_unknown_yield
+//       CHECK:   %[[CAST:.*]] = tensor.cast
+//       CHECK:   scf.for {{.*}} iter_args(%{{.*}} = %[[CAST]]) -> (tensor<?x?xf32>) {
+
+// -----
+
+// The loop yields a cast from another static type, so the cast stays outside it.
+
+func.func private @reshape(%arg0: tensor<?x?xf32>) -> tensor<16x2048xf32>
+
+func.func @no_tensor_cast_into_for_other_static_yield(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %c1024 = arith.constant 1024 : index
+  %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = func.call @reshape(%iter_t0) : (tensor<?x?xf32>) -> tensor<16x2048xf32>
+    %3 = tensor.cast %2 : tensor<16x2048xf32> to tensor<?x?xf32>
+    scf.yield %3 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @no_tensor_cast_into_for_other_static_yield
+//       CHECK:   %[[CAST:.*]] = tensor.cast
+//       CHECK:   scf.for {{.*}} iter_args(%{{.*}} = %[[CAST]]) -> (tensor<?x?xf32>) {
+
+// -----
+
+// The loop yields a cast from the same partially static type, so the cast
+// moves into the loop. The size of the dynamic dimension may change between
+// iterations; the type the loop carries says nothing about it.
+
+func.func private @resize_rows(%arg0: tensor<?x?xf32>) -> tensor<?x16xf32>
+
+func.func @tensor_cast_into_for_dynamic_dim_yield(%t0: tensor<?x16xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %0 = tensor.cast %t0 : tensor<?x16xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c8 step %c1 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = func.call @resize_rows(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x16xf32>
+    %3 = tensor.cast %2 : tensor<?x16xf32> to tensor<?x?xf32>
+    scf.yield %3 : tensor<?x?xf32>
+  }
+  return %1 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @tensor_cast_into_for_dynamic_dim_yield
+//  CHECK-SAME:     %[[T0:[0-9a-z]*]]: tensor<?x16xf32>
+//   CHECK-NOT:   tensor.cast
+//       CHECK:   %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[ITER_T0:.*]] = %[[T0]]) -> (tensor<?x16xf32>) {
+//       CHECK:     %[[CAST:.*]] = tensor.cast %[[ITER_T0]] : tensor<?x16xf32> to tensor<?x?xf32>
+//       CHECK:     %[[DONE:.*]] = func.call @resize_rows(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x16xf32>
+//       CHECK:     scf.yield %[[DONE]] : tensor<?x16xf32>
+//       CHECK:   }
+//       CHECK:   %[[RES:.*]] = tensor.cast %[[FOR_RES]] : tensor<?x16xf32> to tensor<?x?xf32>
+//       CHECK:   return %[[RES]] : tensor<?x?xf32>
 
 // -----
 
@@ -2812,4 +2909,126 @@ func.func @mixed_signedness_parallel_not_merged(
     scf.reduce
   }
   return
+}
+
+// -----
+
+// The read of the tile that the iteration writes goes through the block
+// argument, so that bufferization sees one buffer. The offsets of the read and
+// of the write are different values with the same result.
+// CHECK-LABEL: func @forall_replace_init_use_with_block_arg(
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<8x8xf32>
+//       CHECK:   scf.forall (%[[IV:.*]]) in (2) shared_outs(%[[OUT:.*]] = %[[ARG0]])
+//       CHECK:     %[[SLICE:.*]] = tensor.extract_slice %[[OUT]]
+//       CHECK:     tensor.parallel_insert_slice %{{.*}} into %[[OUT]]
+func.func @forall_replace_init_use_with_block_arg(
+    %arg0: tensor<8x8xf32>) -> tensor<8x8xf32> {
+  %0 = scf.forall (%i) in (2) shared_outs(%out = %arg0) -> (tensor<8x8xf32>) {
+    %off = affine.apply affine_map<(d0) -> (d0 * 4)>(%i)
+    %slice = tensor.extract_slice %arg0[%off, 0] [4, 8] [1, 1]
+      : tensor<8x8xf32> to tensor<4x8xf32>
+    %neg = arith.negf %slice : tensor<4x8xf32>
+    %off2 = affine.apply affine_map<(d0) -> (d0 * 4)>(%i)
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %neg into %out[%off2, 0] [4, 8] [1, 1]
+        : tensor<4x8xf32> into tensor<8x8xf32>
+    }
+  }
+  return %0 : tensor<8x8xf32>
+}
+
+// -----
+
+// The read is also replaced in a loop nested in the body.
+// CHECK-LABEL: func @forall_replace_init_use_in_nested_loop(
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<8x8xf32>
+//       CHECK:   scf.forall (%{{.*}}) in (2) shared_outs(%[[OUT:.*]] = %[[ARG0]])
+//       CHECK:     scf.for
+//       CHECK:       tensor.extract_slice %[[OUT]]
+func.func @forall_replace_init_use_in_nested_loop(
+    %arg0: tensor<8x8xf32>, %t: tensor<4x8xf32>, %n: index) -> tensor<8x8xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.forall (%i) in (2) shared_outs(%out = %arg0) -> (tensor<8x8xf32>) {
+    %off = affine.apply affine_map<(d0) -> (d0 * 4)>(%i)
+    %res = scf.for %k = %c0 to %n step %c1 iter_args(%acc = %t)
+        -> (tensor<4x8xf32>) {
+      %slice = tensor.extract_slice %arg0[%off, 0] [4, 8] [1, 1]
+        : tensor<8x8xf32> to tensor<4x8xf32>
+      %sum = arith.addf %slice, %acc : tensor<4x8xf32>
+      scf.yield %sum : tensor<4x8xf32>
+    }
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %res into %out[%off, 0] [4, 8] [1, 1]
+        : tensor<4x8xf32> into tensor<8x8xf32>
+    }
+  }
+  return %0 : tensor<8x8xf32>
+}
+
+// -----
+
+// A read of a tile that the iteration does not write is not replaced. The
+// block argument of that tile is updated in place by another iteration, while
+// the init value is not.
+// CHECK-LABEL: func @forall_keep_read_of_other_tile(
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<8x8xf32>
+//       CHECK:   scf.forall (%{{.*}}) in (2) shared_outs(%{{.*}} = %[[ARG0]])
+//       CHECK:     tensor.extract_slice %[[ARG0]]
+func.func @forall_keep_read_of_other_tile(
+    %arg0: tensor<8x8xf32>) -> tensor<8x8xf32> {
+  %0 = scf.forall (%i) in (2) shared_outs(%out = %arg0) -> (tensor<8x8xf32>) {
+    %off = affine.apply affine_map<(d0) -> (d0 * 4)>(%i)
+    %other = affine.apply affine_map<(d0) -> ((1 - d0) * 4)>(%i)
+    %slice = tensor.extract_slice %arg0[%other, 0] [4, 8] [1, 1]
+      : tensor<8x8xf32> to tensor<4x8xf32>
+    %neg = arith.negf %slice : tensor<4x8xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %neg into %out[%off, 0] [4, 8] [1, 1]
+        : tensor<4x8xf32> into tensor<8x8xf32>
+    }
+  }
+  return %0 : tensor<8x8xf32>
+}
+
+// -----
+
+// A read that is not a tensor.extract_slice is not replaced.
+// CHECK-LABEL: func @forall_keep_read_of_whole_init(
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<8x8xf32>
+//       CHECK:   scf.forall (%{{.*}}) in (2) shared_outs(%{{.*}} = %[[ARG0]])
+//       CHECK:     arith.negf %[[ARG0]]
+func.func @forall_keep_read_of_whole_init(
+    %arg0: tensor<8x8xf32>) -> tensor<8x8xf32> {
+  %0 = scf.forall (%i) in (2) shared_outs(%out = %arg0) -> (tensor<8x8xf32>) {
+    %off = affine.apply affine_map<(d0) -> (d0 * 4)>(%i)
+    %neg = arith.negf %arg0 : tensor<8x8xf32>
+    %slice = tensor.extract_slice %neg[%off, 0] [4, 8] [1, 1]
+      : tensor<8x8xf32> to tensor<4x8xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %slice into %out[%off, 0] [4, 8] [1, 1]
+        : tensor<4x8xf32> into tensor<8x8xf32>
+    }
+  }
+  return %0 : tensor<8x8xf32>
+}
+
+// -----
+
+// A shared_outs that is not modified is folded the other way, by
+// ForallOpIterArgsFolder, so the two patterns do not undo each other.
+// CHECK-LABEL: func @forall_unmodified_shared_out_is_folded(
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<8x8xf32>
+//   CHECK-NOT:   shared_outs
+//       CHECK:   scf.forall (%{{.*}}) in (2) {
+//       CHECK:     tensor.extract_slice %[[ARG0]]
+func.func @forall_unmodified_shared_out_is_folded(
+    %arg0: tensor<8x8xf32>) -> tensor<8x8xf32> {
+  %0 = scf.forall (%i) in (2) shared_outs(%out = %arg0) -> (tensor<8x8xf32>) {
+    %off = affine.apply affine_map<(d0) -> (d0 * 4)>(%i)
+    %slice = tensor.extract_slice %out[%off, 0] [4, 8] [1, 1]
+      : tensor<8x8xf32> to tensor<4x8xf32>
+    "test.use"(%slice) : (tensor<4x8xf32>) -> ()
+  }
+  return %0 : tensor<8x8xf32>
 }

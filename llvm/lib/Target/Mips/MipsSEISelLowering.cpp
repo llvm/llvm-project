@@ -177,6 +177,17 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       }
     }
 
+    // Standard r6 has a fused multiply-add with a tied accumulator. Scalar
+    // FMA selection for the microMIPS encodings is not implemented here.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      // Keep strict nodes intact so their exception chains survive selection.
+      for (auto Op : {ISD::FMA, ISD::STRICT_FMA}) {
+        setOperationAction(Op, MVT::f32, Legal);
+        if (!Subtarget.isSingleFloat() && Subtarget.isFP64bit())
+          setOperationAction(Op, MVT::f64, Legal);
+      }
+    }
+
     // When dealing with single precision only, use libcalls
     if (!Subtarget.isSingleFloat()) {
       if (Subtarget.isFP64bit())
@@ -1179,9 +1190,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op1 = N->getOperand(1);
     SDValue NotOp;
 
-    if (ISD::isBuildVectorAllOnes(Op0.getNode()))
+    if (ISD::isBuildVectorAllOnes(Op0))
       NotOp = Op1;
-    else if (ISD::isBuildVectorAllOnes(Op1.getNode()))
+    else if (ISD::isBuildVectorAllOnes(Op1))
       NotOp = Op0;
     else
       return SDValue();
