@@ -5,13 +5,13 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.50 < %s | FileCheck -check-prefixes=GFX9X,GFX950,GFX950-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16 %s
 
 declare float @llvm.amdgcn.cvt.f32.bf8(i32, i32)
 declare float @llvm.amdgcn.cvt.f32.fp8(i32, i32)
@@ -29,17 +29,17 @@ define float @test_cvt_f32_bf8_byte0(i32 %a) {
 ; GFX942-NEXT:    v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_0
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX950-LABEL: test_cvt_f32_bf8_byte0:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cvt_f32_bf8_e32 v0, v0
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1170-LABEL: test_cvt_f32_bf8_byte0:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-NEXT:    v_cvt_f32_bf8_e32 v0, v0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: test_cvt_f32_bf8_byte0:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_f32_bf8_e32 v0, v0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_f32_bf8_byte0:
 ; GFX12:       ; %bb.0:
@@ -167,17 +167,17 @@ define float @test_cvt_f32_fp8_byte0(i32 %a) {
 ; GFX942-NEXT:    v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_0
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX950-LABEL: test_cvt_f32_fp8_byte0:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cvt_f32_fp8_e32 v0, v0
-; GFX950-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1170-LABEL: test_cvt_f32_fp8_byte0:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-NEXT:    v_cvt_f32_fp8_e32 v0, v0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: test_cvt_f32_fp8_byte0:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_f32_fp8_e32 v0, v0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_f32_fp8_byte0:
 ; GFX12:       ; %bb.0:
@@ -454,14 +454,6 @@ define i32 @test_cvt_pk_bf8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_bf8_f32_word0:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_bf8_f32 v2, v0, v1
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1170-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_bf8_f32_word0:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -486,18 +478,6 @@ define i32 @test_cvt_pk_bf8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-GISEL-LABEL: test_cvt_pk_bf8_f32_word0:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_cvt_pk_bf8_f32 v2.l, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_bf8_f32_word0:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -515,15 +495,6 @@ define i32 @test_cvt_pk_bf8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_bf8_f32_word0:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_cvt_pk_bf8_f32 v2, v0, v1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.bf8.f32(float %x, float %y, i32 %old, i1 false)
   ret i32 %ret
 }
@@ -553,14 +524,6 @@ define i32 @test_cvt_pk_bf8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_bf8_f32_word1:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_bf8_f32 v2, v0, v1 op_sel:[0,0,1]
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1170-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_bf8_f32_word1:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -585,18 +548,6 @@ define i32 @test_cvt_pk_bf8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-GISEL-LABEL: test_cvt_pk_bf8_f32_word1:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_cvt_pk_bf8_f32 v2.h, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_bf8_f32_word1:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -614,15 +565,6 @@ define i32 @test_cvt_pk_bf8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_bf8_f32_word1:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_cvt_pk_bf8_f32 v2, v0, v1 op_sel:[0,0,1]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.bf8.f32(float %x, float %y, i32 %old, i1 true)
   ret i32 %ret
 }
@@ -651,14 +593,6 @@ define i32 @test_cvt_pk_fp8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_fp8_f32_word0:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1170-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_fp8_f32_word0:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -683,18 +617,6 @@ define i32 @test_cvt_pk_fp8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-GISEL-LABEL: test_cvt_pk_fp8_f32_word0:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.l, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_fp8_f32_word0:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -712,15 +634,6 @@ define i32 @test_cvt_pk_fp8_f32_word0(float %x, float %y, i32 %old) {
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_fp8_f32_word0:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %x, float %y, i32 %old, i1 false)
   ret i32 %ret
 }
@@ -750,14 +663,6 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1170-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_fp8_f32_word1:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1170-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_fp8_f32_word1:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -782,18 +687,6 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-GISEL-LABEL: test_cvt_pk_fp8_f32_word1:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_fp8_f32_word1:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -811,15 +704,6 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_fp8_f32_word1:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_cvt_pk_fp8_f32 v2, v0, v1 op_sel:[0,0,1]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %x, float %y, i32 %old, i1 true)
   ret i32 %ret
 }
@@ -1348,16 +1232,16 @@ define amdgpu_ps <2 x float> @test_cvt_pk_f32_bf8_word1_s(i32 inreg %a) {
 ; GFX942-SDAG-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], s0 src0_sel:WORD_1
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
+; GFX950-SDAG-LABEL: test_cvt_pk_f32_bf8_word1_s:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], s0 src0_sel:WORD_1
+; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
 ; GFX942-GISEL-LABEL: test_cvt_pk_f32_bf8_word1_s:
 ; GFX942-GISEL:       ; %bb.0:
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-GISEL-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], v0 src0_sel:WORD_1
 ; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX950-SDAG-LABEL: test_cvt_pk_f32_bf8_word1_s:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_pk_f32_bf8_sdwa v[0:1], s0 src0_sel:WORD_1
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_pk_f32_bf8_word1_s:
 ; GFX950-GISEL:       ; %bb.0:
@@ -1421,16 +1305,16 @@ define amdgpu_ps <2 x float> @test_cvt_pk_f32_fp8_word1_s(i32 inreg %a) {
 ; GFX942-SDAG-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], s0 src0_sel:WORD_1
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
+; GFX950-SDAG-LABEL: test_cvt_pk_f32_fp8_word1_s:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], s0 src0_sel:WORD_1
+; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
 ; GFX942-GISEL-LABEL: test_cvt_pk_f32_fp8_word1_s:
 ; GFX942-GISEL:       ; %bb.0:
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-GISEL-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], v0 src0_sel:WORD_1
 ; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX950-SDAG-LABEL: test_cvt_pk_f32_fp8_word1_s:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_pk_f32_fp8_sdwa v[0:1], s0 src0_sel:WORD_1
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_pk_f32_fp8_word1_s:
 ; GFX950-GISEL:       ; %bb.0:
@@ -1472,11 +1356,6 @@ define amdgpu_ps float @test_cvt_f32_bf8_byte0_s(i32 inreg %a) {
 ; GFX942-GISEL-NEXT:    v_cvt_f32_bf8_sdwa v0, v0 src0_sel:BYTE_0
 ; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX950-LABEL: test_cvt_f32_bf8_byte0_s:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    v_cvt_f32_bf8_e32 v0, s0
-; GFX950-NEXT:    ; return to shader part epilog
-;
 ; GFX1170-LABEL: test_cvt_f32_bf8_byte0_s:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    v_cvt_f32_bf8_e32 v0, s0
@@ -1486,6 +1365,11 @@ define amdgpu_ps float @test_cvt_f32_bf8_byte0_s(i32 inreg %a) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_cvt_f32_bf8_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX950-LABEL: test_cvt_f32_bf8_byte0_s:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_cvt_f32_bf8_e32 v0, s0
+; GFX950-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: test_cvt_f32_bf8_byte0_s:
 ; GFX1250:       ; %bb.0:
@@ -1511,11 +1395,6 @@ define amdgpu_ps float @test_cvt_f32_fp8_byte0_s(i32 inreg %a) {
 ; GFX942-GISEL-NEXT:    v_cvt_f32_fp8_sdwa v0, v0 src0_sel:BYTE_0
 ; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX950-LABEL: test_cvt_f32_fp8_byte0_s:
-; GFX950:       ; %bb.0:
-; GFX950-NEXT:    v_cvt_f32_fp8_e32 v0, s0
-; GFX950-NEXT:    ; return to shader part epilog
-;
 ; GFX1170-LABEL: test_cvt_f32_fp8_byte0_s:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    v_cvt_f32_fp8_e32 v0, s0
@@ -1525,6 +1404,11 @@ define amdgpu_ps float @test_cvt_f32_fp8_byte0_s(i32 inreg %a) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_cvt_f32_fp8_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX950-LABEL: test_cvt_f32_fp8_byte0_s:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_cvt_f32_fp8_e32 v0, s0
+; GFX950-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: test_cvt_f32_fp8_byte0_s:
 ; GFX1250:       ; %bb.0:
@@ -1548,15 +1432,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX942-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX942-GISEL-LABEL: test_cvt_pk_bf8_f32_word0_sss:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-GISEL-NEXT:    v_cvt_pk_bf8_f32 v1, s0, v0
-; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX950-SDAG-LABEL: test_cvt_pk_bf8_f32_word0_sss:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s2
@@ -1565,6 +1440,15 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX942-GISEL-LABEL: test_cvt_pk_bf8_f32_word0_sss:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-GISEL-NEXT:    v_cvt_pk_bf8_f32 v1, s0, v0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_pk_bf8_f32_word0_sss:
 ; GFX950-GISEL:       ; %bb.0:
@@ -1591,14 +1475,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX1170-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_bf8_f32_word0_sss:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_bf8_f32 v0, s0, s1
-; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1170-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_bf8_f32_word0_sss:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
@@ -1616,15 +1492,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_cvt_pk_bf8_f32_word0_sss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cvt_pk_bf8_f32 v0.l, s0, s1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_bf8_f32_word0_sss:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -1649,18 +1516,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v0, s0, s1
 ; GFX1250-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_bf8_f32_word0_sss:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_pk_bf8_f32 v0, s0, s1
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.bf8.f32(float %x, float %y, i32 %old, i1 false)
   ret i32 %ret
 }
@@ -1675,15 +1530,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX942-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX942-GISEL-LABEL: test_cvt_pk_bf8_f32_word1_sss:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-GISEL-NEXT:    v_cvt_pk_bf8_f32 v1, s0, v0 op_sel:[0,0,1]
-; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX950-SDAG-LABEL: test_cvt_pk_bf8_f32_word1_sss:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s2
@@ -1692,6 +1538,15 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX942-GISEL-LABEL: test_cvt_pk_bf8_f32_word1_sss:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-GISEL-NEXT:    v_cvt_pk_bf8_f32 v1, s0, v0 op_sel:[0,0,1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_pk_bf8_f32_word1_sss:
 ; GFX950-GISEL:       ; %bb.0:
@@ -1718,14 +1573,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX1170-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_bf8_f32_word1_sss:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_bf8_f32 v0, s0, s1 op_sel:[0,0,1]
-; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1170-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_bf8_f32_word1_sss:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
@@ -1743,15 +1590,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_cvt_pk_bf8_f32_word1_sss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cvt_pk_bf8_f32 v0.h, s0, s1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_bf8_f32_word1_sss:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -1776,18 +1614,6 @@ define amdgpu_ps i32 @test_cvt_pk_bf8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf8_f32 v0, s0, s1 op_sel:[0,0,1]
 ; GFX1250-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_bf8_f32_word1_sss:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_pk_bf8_f32 v0, s0, s1 op_sel:[0,0,1]
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.bf8.f32(float %x, float %y, i32 %old, i1 true)
   ret i32 %ret
 }
@@ -1802,15 +1628,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX942-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX942-GISEL-LABEL: test_cvt_pk_fp8_f32_word0_sss:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-GISEL-NEXT:    v_cvt_pk_fp8_f32 v1, s0, v0
-; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX950-SDAG-LABEL: test_cvt_pk_fp8_f32_word0_sss:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s2
@@ -1819,6 +1636,15 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX942-GISEL-LABEL: test_cvt_pk_fp8_f32_word0_sss:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-GISEL-NEXT:    v_cvt_pk_fp8_f32 v1, s0, v0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_pk_fp8_f32_word0_sss:
 ; GFX950-GISEL:       ; %bb.0:
@@ -1845,14 +1671,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX1170-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_fp8_f32_word0_sss:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_fp8_f32 v0, s0, s1
-; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1170-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_fp8_f32_word0_sss:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
@@ -1870,15 +1688,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_cvt_pk_fp8_f32_word0_sss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cvt_pk_fp8_f32 v0.l, s0, s1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_fp8_f32_word0_sss:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -1903,18 +1712,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word0_sss(float inreg %x, float inreg 
 ; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, s0, s1
 ; GFX1250-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_fp8_f32_word0_sss:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_pk_fp8_f32 v0, s0, s1
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %x, float %y, i32 %old, i1 false)
   ret i32 %ret
 }
@@ -1929,15 +1726,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX942-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX942-GISEL-LABEL: test_cvt_pk_fp8_f32_word1_sss:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-GISEL-NEXT:    v_cvt_pk_fp8_f32 v1, s0, v0 op_sel:[0,0,1]
-; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX950-SDAG-LABEL: test_cvt_pk_fp8_f32_word1_sss:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s2
@@ -1946,6 +1734,15 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX942-GISEL-LABEL: test_cvt_pk_fp8_f32_word1_sss:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-GISEL-NEXT:    v_cvt_pk_fp8_f32 v1, s0, v0 op_sel:[0,0,1]
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_pk_fp8_f32_word1_sss:
 ; GFX950-GISEL:       ; %bb.0:
@@ -1972,14 +1769,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX1170-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX1170-GISEL-LABEL: test_cvt_pk_fp8_f32_word1_sss:
-; GFX1170-GISEL:       ; %bb.0:
-; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_cvt_pk_fp8_f32 v0, s0, s1 op_sel:[0,0,1]
-; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1170-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX12-TRUE16-LABEL: test_cvt_pk_fp8_f32_word1_sss:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
@@ -1997,15 +1786,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX12-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_cvt_pk_fp8_f32_word1_sss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cvt_pk_fp8_f32 v0.h, s0, s1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_fp8_f32_word1_sss:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -2030,18 +1810,6 @@ define amdgpu_ps i32 @test_cvt_pk_fp8_f32_word1_sss(float inreg %x, float inreg 
 ; GFX1250-FAKE16-NEXT:    v_cvt_pk_fp8_f32 v0, s0, s1 op_sel:[0,0,1]
 ; GFX1250-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: test_cvt_pk_fp8_f32_word1_sss:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_pk_fp8_f32 v0, s0, s1 op_sel:[0,0,1]
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %ret = tail call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %x, float %y, i32 %old, i1 true)
   ret i32 %ret
 }
@@ -2056,15 +1824,6 @@ define amdgpu_ps i32 @test_cvt_sr_bf8_f32_byte0_sss(float inreg %x, i32 inreg %r
 ; GFX942-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX942-GISEL-LABEL: test_cvt_sr_bf8_f32_byte0_sss:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-GISEL-NEXT:    v_cvt_sr_bf8_f32 v1, s0, v0
-; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX950-SDAG-LABEL: test_cvt_sr_bf8_f32_byte0_sss:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s2
@@ -2073,6 +1832,15 @@ define amdgpu_ps i32 @test_cvt_sr_bf8_f32_byte0_sss(float inreg %x, i32 inreg %r
 ; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX942-GISEL-LABEL: test_cvt_sr_bf8_f32_byte0_sss:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-GISEL-NEXT:    v_cvt_sr_bf8_f32 v1, s0, v0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_sr_bf8_f32_byte0_sss:
 ; GFX950-GISEL:       ; %bb.0:
@@ -2125,15 +1893,6 @@ define amdgpu_ps i32 @test_cvt_sr_fp8_f32_byte0_sss(float inreg %x, i32 inreg %r
 ; GFX942-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX942-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX942-GISEL-LABEL: test_cvt_sr_fp8_f32_byte0_sss:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-GISEL-NEXT:    v_cvt_sr_fp8_f32 v1, s0, v0
-; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX942-GISEL-NEXT:    ; return to shader part epilog
-;
 ; GFX950-SDAG-LABEL: test_cvt_sr_fp8_f32_byte0_sss:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s2
@@ -2142,6 +1901,15 @@ define amdgpu_ps i32 @test_cvt_sr_fp8_f32_byte0_sss(float inreg %x, i32 inreg %r
 ; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX942-GISEL-LABEL: test_cvt_sr_fp8_f32_byte0_sss:
+; GFX942-GISEL:       ; %bb.0:
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-GISEL-NEXT:    v_cvt_sr_fp8_f32 v1, s0, v0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX942-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-GISEL-LABEL: test_cvt_sr_fp8_f32_byte0_sss:
 ; GFX950-GISEL:       ; %bb.0:
