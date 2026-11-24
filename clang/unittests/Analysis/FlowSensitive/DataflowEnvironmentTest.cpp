@@ -552,6 +552,75 @@ TEST_F(EnvironmentTest, LambdaCapturingThisInFieldInitializer) {
   ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
 }
 
+/*
+TEST_F(EnvironmentTest, NestedLambdaCapturingThisInFieldInitializer) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct S {
+      int f{[this]() { return [this]() { return 1; }(); }()};
+      };
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results = match(cxxMethodDecl(hasName("operator()"), isDefinition(),
+                                     ofClass(cxxRecordDecl(isLambda())))
+                           .bind("method"),
+                       Context);
+
+  // Touch all methods and make sure initialization doesn't crash on any.
+  for (const auto& Node : Results) {
+    const auto *Method = Node.getNodeAs<CXXMethodDecl>("method");
+    if (Method->isDependentContext())
+      continue;
+    Environment Env(DAContext, *Method);
+    // Don't crash when initializing.
+    Env.initialize();
+    // And initialize the captured `this` pointee.
+    ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
+  }
+}
+*/
+
+TEST_F(EnvironmentTest,
+       NestedLambdaCapturingClassTemplateThisInFieldInitializer) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      template <class T>
+      struct S {
+        int f{[this]() { return [this]() { return 1; }(); }()};
+      };
+      S<int> s;
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results = match(cxxMethodDecl(hasName("operator()"), isDefinition(),
+                                     ofClass(cxxRecordDecl(isLambda())))
+                           .bind("method"),
+                       Context);
+
+  // Touch all methods and make sure initialization doesn't crash on any.
+  for (const auto &Node : Results) {
+    const auto *Method = Node.getNodeAs<CXXMethodDecl>("method");
+    if (Method->isDependentContext())
+      continue;
+    Environment Env(DAContext, *Method);
+    // Don't crash when initializing.
+    Env.initialize();
+    // And initialize the captured `this` pointee.
+    ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
+  }
+}
+
 TEST_F(EnvironmentTest, ThisExprLocInNonMemberIsInitListLoc) {
   using namespace ast_matchers;
   std::string Code = R"cc(
