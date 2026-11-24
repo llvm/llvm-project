@@ -3,8 +3,11 @@
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -slp-threshold=14 < %s | FileCheck %s
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -slp-threshold=14 < %s | FileCheck %s
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -slp-threshold=12 < %s | FileCheck %s --check-prefix=THR12
+; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -slp-threshold=12 -slp-use-vplan-codegen < %s | FileCheck %s --check-prefix=THR12
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -slp-threshold=12 < %s | FileCheck %s --check-prefix=THR12
+; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -slp-threshold=12 -slp-use-vplan-codegen < %s | FileCheck %s --check-prefix=THR12
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -slp-threshold=12 < %s | FileCheck %s --check-prefix=THR12
+; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -slp-threshold=12 -slp-use-vplan-codegen < %s | FileCheck %s --check-prefix=THR12
 
 ; Elementwise d = c + a * b, where the fmul is operand 1 of the fadd. These
 ; targets halve the cost of a packed fmul, so SLP is tempted to vectorize and
