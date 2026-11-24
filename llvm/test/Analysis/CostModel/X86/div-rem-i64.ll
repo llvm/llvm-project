@@ -65,6 +65,158 @@ define void @wide(<2 x i64> %a2, <2 x i64> %b2, <4 x i64> %a4, <4 x i64> %b4, <8
   ret void
 }
 
+define void @uniform_div(<2 x i64> %a2, i64 %b2, <4 x i64> %a4, i64 %b4, <8 x i64> %a8, i64 %b8) {
+; AVX2-LABEL: 'uniform_div'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %s2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %udiv2 = udiv <2 x i64> %a2, %s2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %s4
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %udiv4 = udiv <4 x i64> %a4, %s4
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %s8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %udiv8 = udiv <8 x i64> %a8, %s8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512BW-LABEL: 'uniform_div'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %s2
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %udiv2 = udiv <2 x i64> %a2, %s2
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %s4
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %udiv4 = udiv <4 x i64> %a4, %s4
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %s8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %udiv8 = udiv <8 x i64> %a8, %s8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'uniform_div'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %s2
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %udiv2 = udiv <2 x i64> %a2, %s2
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %s4
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %udiv4 = udiv <4 x i64> %a4, %s4
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %s8
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %udiv8 = udiv <8 x i64> %a8, %s8
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512DQ-SLOWMUL-LABEL: 'uniform_div'
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %sdiv2 = sdiv <2 x i64> %a2, %s2
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %udiv2 = udiv <2 x i64> %a2, %s2
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %sdiv4 = sdiv <4 x i64> %a4, %s4
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %udiv4 = udiv <4 x i64> %a4, %s4
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %sdiv8 = sdiv <8 x i64> %a8, %s8
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %udiv8 = udiv <8 x i64> %a8, %s8
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+  %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+  %sdiv2 = sdiv <2 x i64> %a2, %s2
+  %udiv2 = udiv <2 x i64> %a2, %s2
+  %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+  %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+  %sdiv4 = sdiv <4 x i64> %a4, %s4
+  %udiv4 = udiv <4 x i64> %a4, %s4
+  %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+  %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+  %sdiv8 = sdiv <8 x i64> %a8, %s8
+  %udiv8 = udiv <8 x i64> %a8, %s8
+  ret void
+}
+
+define void @uniform_rem(<2 x i64> %a2, i64 %b2, <4 x i64> %a4, i64 %b4, <8 x i64> %a8, i64 %b8) {
+; AVX2-LABEL: 'uniform_rem'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %srem2 = srem <2 x i64> %a2, %s2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %urem2 = urem <2 x i64> %a2, %s2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %srem4 = srem <4 x i64> %a4, %s4
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %urem4 = urem <4 x i64> %a4, %s4
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %srem8 = srem <8 x i64> %a8, %s8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %urem8 = urem <8 x i64> %a8, %s8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512BW-LABEL: 'uniform_rem'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %srem2 = srem <2 x i64> %a2, %s2
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1640 for instruction: %urem2 = urem <2 x i64> %a2, %s2
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %srem4 = srem <4 x i64> %a4, %s4
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3280 for instruction: %urem4 = urem <4 x i64> %a4, %s4
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %srem8 = srem <8 x i64> %a8, %s8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6560 for instruction: %urem8 = urem <8 x i64> %a8, %s8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'uniform_rem'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %srem2 = srem <2 x i64> %a2, %s2
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %urem2 = urem <2 x i64> %a2, %s2
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %srem4 = srem <4 x i64> %a4, %s4
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %urem4 = urem <4 x i64> %a4, %s4
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %srem8 = srem <8 x i64> %a8, %s8
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %urem8 = urem <8 x i64> %a8, %s8
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512DQ-SLOWMUL-LABEL: 'uniform_rem'
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %srem2 = srem <2 x i64> %a2, %s2
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %urem2 = urem <2 x i64> %a2, %s2
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %srem4 = srem <4 x i64> %a4, %s4
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %urem4 = urem <4 x i64> %a4, %s4
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %srem8 = srem <8 x i64> %a8, %s8
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %urem8 = urem <8 x i64> %a8, %s8
+; AVX512DQ-SLOWMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %i2 = insertelement <2 x i64> poison, i64 %b2, i64 0
+  %s2 = shufflevector <2 x i64> %i2, <2 x i64> poison, <2 x i32> zeroinitializer
+  %srem2 = srem <2 x i64> %a2, %s2
+  %urem2 = urem <2 x i64> %a2, %s2
+  %i4 = insertelement <4 x i64> poison, i64 %b4, i64 0
+  %s4 = shufflevector <4 x i64> %i4, <4 x i64> poison, <4 x i32> zeroinitializer
+  %srem4 = srem <4 x i64> %a4, %s4
+  %urem4 = urem <4 x i64> %a4, %s4
+  %i8 = insertelement <8 x i64> poison, i64 %b8, i64 0
+  %s8 = shufflevector <8 x i64> %i8, <8 x i64> poison, <8 x i32> zeroinitializer
+  %srem8 = srem <8 x i64> %a8, %s8
+  %urem8 = urem <8 x i64> %a8, %s8
+  ret void
+}
+
 define void @narrow_ext(<2 x i32> %x2, <2 x i32> %y2, <4 x i32> %x4, <4 x i32> %y4, <8 x i32> %x8, <8 x i32> %y8) {
 ; AVX2-LABEL: 'narrow_ext'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a2 = zext <2 x i32> %x2 to <2 x i64>
