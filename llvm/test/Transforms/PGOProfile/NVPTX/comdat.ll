@@ -9,7 +9,6 @@
 ; RUN:     -cspgo-kind=cspgo-instr-gen-pipeline -S | \
 ; RUN:   FileCheck -implicit-check-not=comdat %s
 
-target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 ; CHECK: @__llvm_profile_filename = weak hidden local_unnamed_addr constant [5 x i8] c"file\00"
