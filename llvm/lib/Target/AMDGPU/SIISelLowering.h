@@ -82,6 +82,10 @@ private:
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+  SDValue
+  lowerClusterWorkGroupValue(SelectionDAG &DAG,
+                             const SIMachineFunctionInfo &MFI, EVT VT,
+                             AMDGPUFunctionArgInfo::PreloadedValue PV) const;
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,
                             EVT VT,
@@ -569,8 +573,6 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
-  InlineAsm::ConstraintCode
-  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
   void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;

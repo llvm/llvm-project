@@ -574,10 +574,36 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (Subtarget->hasBF16()) {
     addRegisterClass(MVT::bf16, &ARM::HPRRegClass);
     setAllExpand(MVT::bf16);
-    if (!Subtarget->hasFullFP16())
+    if (!Subtarget->hasFullFP16()) {
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f16, Custom);
+      setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+    }
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::bf16, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+
+    for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
+                    ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
+                    ISD::FROUNDEVEN, ISD::FTRUNC})
+      setOperationAction(Op, MVT::bf16, Promote);
+
+    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                    ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                    ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                    ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                    ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                    ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                    ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                    ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                    ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                    ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                    ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                    ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                    ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                    ISD::STRICT_FTAN})
+      setOperationAction(Op, MVT::bf16, Promote);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
@@ -895,23 +921,20 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
 
   if (!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()) {
-    setOperationAction(ISD::FP_EXTEND,  MVT::f64, Custom);
-    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
     if (Subtarget->hasFullFP16()) {
       setOperationAction(ISD::FP_ROUND,  MVT::f16, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
     }
-  } else {
-    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
   }
 
-  if (!Subtarget->hasFP16()) {
-    setOperationAction(ISD::FP_EXTEND,  MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
-  } else {
-    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
+  if (Subtarget->hasFP16()) {
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
   }
+
+  setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
+  setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -6172,10 +6195,17 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = Op.getValueType();
   EVT DstVT = N->getValueType(0);
 
-  if ((SrcVT == MVT::i16 || SrcVT == MVT::i32) &&
+  if ((SrcVT == MVT::f16 || SrcVT == MVT::bf16) &&
       (DstVT == MVT::f16 || DstVT == MVT::bf16))
-    return MoveToHPR(SDLoc(N), DAG, MVT::i32, DstVT.getSimpleVT(),
-                     DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op));
+    return SDValue(N, 0);
+
+  if ((SrcVT == MVT::i16 || SrcVT == MVT::i32) &&
+      (DstVT == MVT::f16 || DstVT == MVT::bf16)) {
+    SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op);
+    if (Subtarget->hasFullFP16())
+      return DAG.getNode(ARMISD::VMOVhr, dl, DstVT, Ext);
+    return DAG.getNode(ARMISD::VMOVsr, dl, DstVT, Ext);
+  }
 
   if ((DstVT == MVT::i16 || DstVT == MVT::i32) &&
       (SrcVT == MVT::f16 || SrcVT == MVT::bf16)) {
@@ -7066,8 +7096,8 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
         return DAG.getNode(ARMISD::VMOVDRR, DL, MVT::f64, Lo, Hi);
       }
       case MVT::f32:
-          return DAG.getNode(ARMISD::VMOVSR, DL, VT,
-              DAG.getConstant(INTVal, DL, MVT::i32));
+        return DAG.getNode(ARMISD::VMOVsr, DL, VT,
+                           DAG.getConstant(INTVal, DL, MVT::i32));
     }
   }
 
@@ -15240,6 +15270,13 @@ static SDValue PerformVMOVrhCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue PerformVMOVrsCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = N->getOperand(0);
+  if (Op0->getOpcode() == ARMISD::VMOVsr)
+    return Op0->getOperand(0);
+  return SDValue();
+}
+
 /// hasNormalLoadOperand - Check if any of the operands of a BUILD_VECTOR node
 /// are normal, non-volatile loads.  If so, it is profitable to bitcast an
 /// i64 vector to have f64 elements, since the value can then be loaded
@@ -17219,6 +17256,57 @@ static SDValue PerformInterleavedStoreCombine(
   return NewStore;
 }
 
+static SDValue performSplitConstantStore(StoreSDNode *St, SelectionDAG &DAG,
+                                         const ARMSubtarget *Subtarget) {
+  SDValue Val = St->getValue();
+  EVT VT = Val.getValueType();
+  if (!Subtarget->isLittle() || !VT.isVector() ||
+      VT.getVectorNumElements() > 4 || VT.getScalarType() != MVT::i32 ||
+      St->isVolatile() || !ISD::isNormalStore(St) || !Val.hasOneUse() ||
+      Val.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  // We are looking for a build vector of constants that will not be lowered to
+  // a splat.
+  unsigned Cost = 0;
+  SmallSet<unsigned, 4> ImmSet;
+  for (unsigned I = 0; I < VT.getVectorNumElements(); I++) {
+    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(I));
+    if (!C)
+      return SDValue();
+    if (!ImmSet.insert(C->getZExtValue()).second)
+      continue;
+    Cost += ConstantMaterializationCost(C->getZExtValue(), Subtarget,
+                                        Subtarget->hasMinSize());
+    if (Cost > 4)
+      return SDValue();
+  }
+  if (ImmSet.size() == 1) // Don't include splats
+    return SDValue();
+
+  // Look for a simple single block loop, we can hoist the vector load out in
+  // that case.
+  const BasicBlock *Block = DAG.getBasicBlock();
+  assert(Block && "Expected a valid block!");
+  if (is_contained(successors(Block), Block))
+    return SDValue();
+
+  SDValue Chain = St->getChain();
+  SDLoc DL(St);
+
+  for (unsigned I = 0; I < VT.getVectorNumElements(); I++) {
+    unsigned Offset = I * VT.getScalarStoreSize();
+    SDValue OffsetPtr = DAG.getObjectPtrOffset(
+        DL, St->getBasePtr(), DAG.getConstant(Offset, DL, MVT::i32));
+    Chain = DAG.getStore(Chain, DL, Val.getOperand(I), OffsetPtr,
+                         St->getPointerInfo().getWithOffset(Offset),
+                         commonAlignment(St->getBaseAlign(), Offset),
+                         St->getMemOperand()->getFlags(), St->getAAInfo());
+  }
+
+  return Chain;
+}
+
 /// PerformSTORECombine - Target-specific dag combine xforms for
 /// ISD::STORE.
 static SDValue PerformSTORECombine(SDNode *N,
@@ -17295,6 +17383,9 @@ static SDValue PerformSTORECombine(SDNode *N,
                         St->getPointerInfo(), St->getAlign(),
                         St->getMemOperand()->getFlags(), St->getAAInfo());
   }
+
+  if (SDValue S = performSplitConstantStore(St, DCI.DAG, Subtarget))
+    return S;
 
   // If this is a legal vector store, try to combine it into a VST1_UPD.
   if (Subtarget->hasNEON() && ISD::isNormalStore(N) && VT.isVector() &&
@@ -19407,6 +19498,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::VMOVDRR: return PerformVMOVDRRCombine(N, DCI.DAG);
   case ARMISD::VMOVhr:  return PerformVMOVhrCombine(N, DCI);
   case ARMISD::VMOVrh:  return PerformVMOVrhCombine(N, DCI.DAG);
+  case ARMISD::VMOVrs:
+    return PerformVMOVrsCombine(N, DCI.DAG);
   case ISD::STORE:      return PerformSTORECombine(N, DCI, Subtarget);
   case ISD::BUILD_VECTOR: return PerformBUILD_VECTORCombine(N, DCI, Subtarget);
   case ISD::INSERT_VECTOR_ELT: return PerformInsertEltCombine(N, DCI);
@@ -21353,24 +21446,44 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
 SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
-  const unsigned DstSz = Op.getValueType().getSizeInBits();
-  const unsigned SrcSz = SrcVal.getValueType().getSizeInBits();
+  EVT DstTy = Op.getValueType();
+  const unsigned DstSz = DstTy.getSizeInBits();
+  EVT SrcTy = SrcVal.getValueType();
+  const unsigned SrcSz = SrcTy.getSizeInBits();
   assert(DstSz > SrcSz && DstSz <= 64 && SrcSz >= 16 &&
          "Unexpected type for custom-lowering FP_EXTEND");
 
-  assert((!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()) &&
-         "With both FP DP and 16, any FP conversion is legal!");
+  // f16->f32 is legal with hasFP16
+  if (DstTy == MVT::f32 && SrcTy == MVT::f16 && Subtarget->hasFP16())
+    return Op;
+  // f16->f64 is legal with hasFP16 and hasFP64
+  if (DstTy == MVT::f64 && SrcTy == MVT::f16 && Subtarget->hasFP16() &&
+      Subtarget->hasFP64() && Subtarget->hasFPARMv8Base())
+    return Op;
 
-  assert(!(DstSz == 32 && Subtarget->hasFP16()) &&
-         "With FP16, 16 to 32 conversion is legal!");
+  // Expand any bf16 ops into a shift and a possible further extend
+  if (SrcTy == MVT::bf16) {
+    SDLoc DL(Op);
+    SDValue Mov = DAG.getNode(ARMISD::VMOVrs, DL, MVT::i32, SrcVal);
+    SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i32, Mov,
+                               DAG.getConstant(16, DL, MVT::i32));
+    SDValue Res = DAG.getBitcast(MVT::f32, Shft);
+    if (DstTy == MVT::f32)
+      return IsStrict ? DAG.getMergeValues({Res, Op.getOperand(0)}, DL) : Res;
+
+    assert(DstTy == MVT::f64 && "Unexpected BF16 convert");
+    if (IsStrict)
+      return DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {DstTy, MVT::Other},
+                         {Op.getOperand(0), Res});
+    return DAG.getNode(ISD::FP_EXTEND, DL, DstTy, Res);
+  }
 
   // Converting from 32 -> 64 is valid if we have FP64.
-  if (SrcSz == 32 && DstSz == 64 && Subtarget->hasFP64()) {
+  if (SrcTy == MVT::f32 && DstTy == MVT::f64 && Subtarget->hasFP64()) {
     // FIXME: Remove this when we have strict fp instruction selection patterns
     if (IsStrict) {
       SDLoc Loc(Op);
-      SDValue Result = DAG.getNode(ISD::FP_EXTEND,
-                                   Loc, Op.getValueType(), SrcVal);
+      SDValue Result = DAG.getNode(ISD::FP_EXTEND, Loc, DstTy, SrcVal);
       return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
     }
     return Op;

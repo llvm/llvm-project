@@ -45,6 +45,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                         LLDB_OPT_SET_1);
   StringRef exclude_expr_options[] = {"debug", "top-level"};
   m_option_group.Append(&m_expr_options, exclude_expr_options);
+  m_expr_options.AppendLanguageOptions(m_option_group);
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
   m_option_group.Finalize();
 }

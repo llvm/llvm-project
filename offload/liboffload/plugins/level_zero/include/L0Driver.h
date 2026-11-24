@@ -21,7 +21,7 @@
 
 #include <atomic>
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class LevelZeroPluginTy;
 class LevelZeroPluginContextTy;
@@ -212,6 +212,6 @@ public:
   ZeDispatcher<zeIntelGetDriverVersionString> IntelGetDriverVersionString;
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DRIVER_H
