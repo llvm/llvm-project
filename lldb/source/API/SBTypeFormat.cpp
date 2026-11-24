@@ -12,6 +12,7 @@
 #include "lldb/API/SBStream.h"
 
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -59,9 +60,8 @@ const char *SBTypeFormat::GetTypeName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (IsValid() && m_opaque_sp->GetType() == TypeFormatImpl::Type::eTypeEnum)
-    return ConstString(
-               ((TypeFormatImpl_EnumType *)m_opaque_sp.get())->GetTypeName())
-        .AsCString("");
+    return StringPool::GetSystemPool().Intern(
+        ((TypeFormatImpl_EnumType *)m_opaque_sp.get())->GetTypeName());
   return "";
 }
 

@@ -957,6 +957,14 @@ public:
     return cir::CmpOp::create(*this, loc, kind, lhs, rhs, fenv);
   }
 
+  cir::FCmpOp createFCompare(mlir::Location loc, cir::FCmpOpKind kind,
+                             mlir::Value lhs, mlir::Value rhs,
+                             bool signaling = false) {
+    cir::FenvAttr fenv;
+    fenv = getConstrainedFPAttr();
+    return cir::FCmpOp::create(*this, loc, kind, lhs, rhs, signaling, fenv);
+  }
+
   /// Compares \p lhs and \p rhs element-wise.  Each result element is a
   /// signed integer of the operand element's bit width.
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
@@ -964,9 +972,10 @@ public:
     VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
     mlir::Type elemTy = vecCast.getElementType();
     IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
-    return createVecCompare(loc,
-                            cir::VectorType::get(integralTy, vecCast.getSize()),
-                            kind, lhs, rhs);
+    return createVecCompare(
+        loc,
+        cir::VectorType::get(integralTy, vecCast.getSize(), vecCast.getKind()),
+        kind, lhs, rhs);
   }
 
   /// Compares \p lhs and \p rhs element-wise, producing \p resultTy, which
@@ -998,7 +1007,8 @@ public:
                  &llvm::APFloat::x87DoubleExtended()) &&
            "an FP80 vector compare must name its result type");
     IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
-    auto resTy = cir::VectorType::get(integralTy, vecCast.getSize());
+    auto resTy =
+        cir::VectorType::get(integralTy, vecCast.getSize(), vecCast.getKind());
     return cir::VecFCmpOp::create(*this, loc, resTy, kind, lhs, rhs, signaling,
                                   getConstrainedFPAttr());
   }
@@ -1020,7 +1030,7 @@ public:
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
-    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
+    return createFCompare(loc, cir::FCmpOpKind::uno, operand, operand);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

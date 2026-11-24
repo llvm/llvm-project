@@ -1043,8 +1043,8 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX12-NEXT:    s_mov_b32 s54, s32
+; GFX12-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
 ; GFX12-NEXT:    ;;#ASMEND
@@ -1604,8 +1604,8 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX12-NEXT:    v_writelane_b32 v22, s55, 14
 ; GFX12-NEXT:    v_writelane_b32 v22, s30, 15
 ; GFX12-NEXT:    v_writelane_b32 v22, s31, 16
-; GFX12-NEXT:    s_add_co_i32 s58, s32, 0x4200
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s32
+; GFX12-NEXT:    s_add_co_i32 s58, s32, 0x4200
 ; GFX12-NEXT:    s_and_b32 s0, 0, exec_lo
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use alloca0 v0

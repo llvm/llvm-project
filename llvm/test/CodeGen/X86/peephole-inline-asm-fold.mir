@@ -1,9 +1,9 @@
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=peephole-opt %s -o - \
-# RUN:   | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=peephole-opt \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
 
 # The peephole optimizer folds a load from a stack slot into a foldable ("rm")
-# inline asm operand that reads the loaded value, so the asm reads the slot
-# itself.
+# inline asm operand that reads the loaded value, so that the asm reads the
+# slot itself.
 
 --- |
   define void @fold_load() { ret void }
@@ -11,7 +11,7 @@
     ret void }
   define void @invariant_load() { ret void }
   define void @narrow_load() { ret void }
-  define void @undef_uses() { ret void }
+  define void @test_undef_uses() { ret void }
 ...
 ---
 # CHECK-LABEL: name: fold_load
@@ -84,16 +84,19 @@ body: |
     RET 0
 ...
 ---
-# An asm that doesn't read the loaded value has nothing to fold.
-#
-# CHECK-LABEL: name: undef_uses
-# CHECK: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, undef %0, reguse:GR64 foldable, undef %0
-name: undef_uses
+# An undef use doesn't read the loaded value, so an asm whose only uses of it
+# are undef has nothing to fold. (There is no C source: instruction selection
+# doesn't emit undef inline asm operands.)
+name: test_undef_uses
 tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 8 }
 body: |
   bb.0:
+    ; CHECK-LABEL: name: test_undef_uses
+    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, undef [[MOV64rm]], reguse:GR64 foldable, undef [[MOV64rm]]
+    ; CHECK-NEXT: RET 0
     %0:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
     INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, undef %0, reguse:GR64 foldable, undef %0
     RET 0

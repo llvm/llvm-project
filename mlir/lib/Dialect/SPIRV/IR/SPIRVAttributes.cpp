@@ -687,8 +687,4 @@ void SPIRVDialect::printAttribute(Attribute attr,
 
 void spirv::SPIRVDialect::registerAttributes() {
   addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.cpp.inc"
-      >();
 }
