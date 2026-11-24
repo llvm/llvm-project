@@ -1108,9 +1108,9 @@ Environment::Environment(const Environment &Other)
 // initializer. In that case only the outermost closure has the `FieldDecl` as
 // its lambda context declaration. So walk out through the enclosing lambdas
 // until a context declaration is found.
-static const FieldDecl *getFieldBeingInitialized(const CXXRecordDecl *Closure) {
-  while (true) {
-    assert(Closure->isLambda());
+static const FieldDecl *
+getFieldBeingInitializedByLambda(const CXXRecordDecl *Closure) {
+  while (Closure->isLambda()) {
     if (const Decl *ContextDecl = Closure->getLambdaContextDecl())
       return dyn_cast<FieldDecl>(ContextDecl);
     const auto *EnclosingMethod =
@@ -1119,6 +1119,7 @@ static const FieldDecl *getFieldBeingInitialized(const CXXRecordDecl *Closure) {
       return nullptr;
     Closure = EnclosingMethod->getParent();
   }
+  return nullptr;
 }
 
 void Environment::initialize() {
@@ -1168,7 +1169,7 @@ void Environment::initialize() {
             setThisPointeeStorageLocation(
                 cast<RecordStorageLocation>(createObject(ThisPointeeType)));
           } else if (auto *FieldBeingInitialized =
-                         getFieldBeingInitialized(Parent)) {
+                         getFieldBeingInitializedByLambda(Parent)) {
             // This is in a field initializer, rather than a method.
             const RecordDecl *RD = FieldBeingInitialized->getParent();
             const ASTContext &Ctx = RD->getASTContext();

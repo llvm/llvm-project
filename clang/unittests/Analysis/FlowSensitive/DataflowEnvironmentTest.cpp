@@ -552,7 +552,6 @@ TEST_F(EnvironmentTest, LambdaCapturingThisInFieldInitializer) {
   ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
 }
 
-/*
 TEST_F(EnvironmentTest, NestedLambdaCapturingThisInFieldInitializer) {
   using namespace ast_matchers;
   std::string Code = R"cc(
@@ -572,8 +571,11 @@ TEST_F(EnvironmentTest, NestedLambdaCapturingThisInFieldInitializer) {
                            .bind("method"),
                        Context);
 
-  // Touch all methods and make sure initialization doesn't crash on any.
-  for (const auto& Node : Results) {
+  // We will get 4 matches (2 matches for the inner lambda, and 2 matches for
+  // the outer lambda). Make sure environment initialization doesn't fail on
+  // them.
+  int LambdaCount = 0;
+  for (const auto &Node : Results) {
     const auto *Method = Node.getNodeAs<CXXMethodDecl>("method");
     if (Method->isDependentContext())
       continue;
@@ -582,9 +584,10 @@ TEST_F(EnvironmentTest, NestedLambdaCapturingThisInFieldInitializer) {
     Env.initialize();
     // And initialize the captured `this` pointee.
     ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
+    LambdaCount++;
   }
+  ASSERT_EQ(LambdaCount, 4);
 }
-*/
 
 TEST_F(EnvironmentTest,
        NestedLambdaCapturingClassTemplateThisInFieldInitializer) {
@@ -608,7 +611,11 @@ TEST_F(EnvironmentTest,
                            .bind("method"),
                        Context);
 
-  // Touch all methods and make sure initialization doesn't crash on any.
+  // We will get 8 matches (2 for the inner lambda in the template and 2 for the
+  // outer lambda in the template. Similarly, we will get 2+2 matches for the
+  // lambdas in the template instantiation). Make sure environment
+  // initialization doesn't fail on them.
+  int LambdaCount = 0;
   for (const auto &Node : Results) {
     const auto *Method = Node.getNodeAs<CXXMethodDecl>("method");
     if (Method->isDependentContext())
@@ -618,7 +625,9 @@ TEST_F(EnvironmentTest,
     Env.initialize();
     // And initialize the captured `this` pointee.
     ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
+    LambdaCount++;
   }
+  ASSERT_EQ(LambdaCount, 8);
 }
 
 TEST_F(EnvironmentTest, ThisExprLocInNonMemberIsInitListLoc) {
