@@ -62,6 +62,7 @@ public:
   // Whether an access of this many bits is supported. Each supported width has
   // a load and a store pseudo of both forms.
   static bool isSupportedBitWidth(unsigned Bits);
+
   static bool classof(const MachineInstr *MI) {
     return SIInstrFlags::isVGPRAsMem(*MI);
   }

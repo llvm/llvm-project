@@ -549,16 +549,17 @@ define void @store_i16_align1(ptr addrspace(13) %p, i16 %v) {
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 2, v0
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX12-GISEL-NEXT:    v_lshrrev_b16 v2.l, 8, v1.l
+; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v3, 1, v0
+; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 2, v0
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-GISEL-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v3
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v4
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, s2
 ; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v5, v0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -566,30 +567,28 @@ define void @store_i16_align1(ptr addrspace(13) %p, i16 %v) {
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:
 ; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e64 v6, v4, 0xff
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v1, v4, v1
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e64 v6, v0, 0xff
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, v0, v1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_bfi_b32 v1, v6, v1, v5
+; GFX12-GISEL-NEXT:    v_bfi_b32 v0, v6, v0, v5
 ; GFX12-GISEL-NEXT:  .LBB4_3: ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v3
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v4
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, s2
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr3
-; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v1
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr4
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB4_3
 ; GFX12-GISEL-NEXT:  ; %bb.4:
 ; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v1, 1, v0
+; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v3
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 3, v3
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v1
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 3, v1
 ; GFX12-GISEL-NEXT:  .LBB4_5: ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
@@ -682,9 +681,9 @@ define void @store_i16_align1(ptr addrspace(13) %p, i16 %v) {
 ; GFX942-GISEL-LABEL: store_i16_align1:
 ; GFX942-GISEL:       ; %bb.0:
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v2, 1, v0
 ; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 2, v0
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX942-GISEL-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
 ; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
@@ -692,16 +691,16 @@ define void @store_i16_align1(ptr addrspace(13) %p, i16 %v) {
 ; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_set_gpr_idx_on s4, gpr_idx(SRC0)
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX942-GISEL-NEXT:    s_set_gpr_idx_off
 ; GFX942-GISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX942-GISEL-NEXT:  ; %bb.2:
 ; GFX942-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v6, 0xff
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v6, v4, v6
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v1, v4, v1
-; GFX942-GISEL-NEXT:    v_bfi_b32 v1, v6, v1, v5
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, 0xff
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, v0, v5
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v0, v0, v1
+; GFX942-GISEL-NEXT:    v_bfi_b32 v0, v5, v0, v4
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX942-GISEL-NEXT:  .LBB4_3: ; =>This Inner Loop Header: Depth=1
 ; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
@@ -709,17 +708,16 @@ define void @store_i16_align1(ptr addrspace(13) %p, i16 %v) {
 ; GFX942-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_set_gpr_idx_on s4, gpr_idx(DST)
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, v1
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, v0
 ; GFX942-GISEL-NEXT:    s_set_gpr_idx_off
 ; GFX942-GISEL-NEXT:    ; implicit-def: $vgpr3
-; GFX942-GISEL-NEXT:    ; implicit-def: $vgpr1
+; GFX942-GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GFX942-GISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX942-GISEL-NEXT:    s_cbranch_execnz .LBB4_3
 ; GFX942-GISEL-NEXT:  ; %bb.4:
 ; GFX942-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, 1, v0
-; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v1
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 3, v1
+; GFX942-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX942-GISEL-NEXT:  .LBB4_5: ; =>This Inner Loop Header: Depth=1
 ; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
@@ -734,8 +732,8 @@ define void @store_i16_align1(ptr addrspace(13) %p, i16 %v) {
 ; GFX942-GISEL-NEXT:  ; %bb.6:
 ; GFX942-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, 0xff
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, v1, v4
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v1, v1, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, v2, v4
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
 ; GFX942-GISEL-NEXT:    v_bfi_b32 v1, v4, v1, v3
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX942-GISEL-NEXT:  .LBB4_7: ; =>This Inner Loop Header: Depth=1

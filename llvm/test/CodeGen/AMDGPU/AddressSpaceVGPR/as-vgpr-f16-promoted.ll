@@ -122,22 +122,19 @@ define half @load_f16_align1(ptr addrspace(13) inreg %p) {
 ; GFX7-GISEL-NEXT:    s_mov_b32 s4, 8
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, v1, v2
+; GFX7-GISEL-NEXT:    v_bfe_u32 v1, v0, v1, v2
 ; GFX7-GISEL-NEXT:    s_mov_b32 s5, 1
 ; GFX7-GISEL-NEXT:    s_add_u32 s5, s16, s5
 ; GFX7-GISEL-NEXT:    s_lshr_b32 s6, s5, s6
 ; GFX7-GISEL-NEXT:    s_lshl_b32 s5, s5, s8
 ; GFX7-GISEL-NEXT:    s_and_b32 s5, s5, s7
 ; GFX7-GISEL-NEXT:    s_mov_b32 m0, s6
-; GFX7-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX7-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v3, s4
-; GFX7-GISEL-NEXT:    v_bfe_u32 v2, v1, v2, v3
-; GFX7-GISEL-NEXT:    s_mov_b32 s5, 0xff
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-GISEL-NEXT:    v_and_b32_e64 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, s4
-; GFX7-GISEL-NEXT:    v_lshlrev_b32_e64 v1, v1, v2
+; GFX7-GISEL-NEXT:    v_bfe_u32 v2, v0, v2, v3
+; GFX7-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7-GISEL-NEXT:    v_lshlrev_b32_e64 v0, v0, v2
 ; GFX7-GISEL-NEXT:    v_or_b32_e64 v0, v0, v1
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %x = load half, ptr addrspace(13) %p, align 1
@@ -253,22 +250,23 @@ define void @store_bf16_align1(ptr addrspace(13) inreg %p, bfloat %v) {
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX7-GISEL-NEXT:    s_mov_b32 s4, 8
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX7-GISEL-NEXT:    v_lshrrev_b32_e64 v0, v0, v1
+; GFX7-GISEL-NEXT:    v_mov_b32_e32 v2, s4
+; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v1, v0, v2
+; GFX7-GISEL-NEXT:    s_mov_b32 s4, 1
+; GFX7-GISEL-NEXT:    s_add_u32 s6, s16, s4
 ; GFX7-GISEL-NEXT:    s_mov_b32 s4, 2
-; GFX7-GISEL-NEXT:    s_lshr_b32 s6, s16, s4
+; GFX7-GISEL-NEXT:    s_lshr_b32 s8, s16, s4
 ; GFX7-GISEL-NEXT:    s_mov_b32 s7, 3
-; GFX7-GISEL-NEXT:    s_lshl_b32 s9, s16, s7
-; GFX7-GISEL-NEXT:    s_mov_b32 m0, s6
+; GFX7-GISEL-NEXT:    s_lshl_b32 s10, s16, s7
+; GFX7-GISEL-NEXT:    s_mov_b32 m0, s8
 ; GFX7-GISEL-NEXT:    v_movrels_b32_e32 v3, v0
 ; GFX7-GISEL-NEXT:    s_mov_b32 s5, 0xff
-; GFX7-GISEL-NEXT:    s_lshl_b32 s8, s5, s9
-; GFX7-GISEL-NEXT:    v_lshlrev_b32_e64 v2, s9, v1
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, s8
+; GFX7-GISEL-NEXT:    s_lshl_b32 s9, s5, s10
+; GFX7-GISEL-NEXT:    v_lshlrev_b32_e64 v2, s10, v1
+; GFX7-GISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX7-GISEL-NEXT:    v_bfi_b32 v1, v1, v2, v3
-; GFX7-GISEL-NEXT:    s_mov_b32 m0, s6
+; GFX7-GISEL-NEXT:    s_mov_b32 m0, s8
 ; GFX7-GISEL-NEXT:    v_movreld_b32_e32 v0, v1
-; GFX7-GISEL-NEXT:    s_mov_b32 s6, 1
-; GFX7-GISEL-NEXT:    s_add_u32 s6, s16, s6
 ; GFX7-GISEL-NEXT:    s_lshr_b32 s4, s6, s4
 ; GFX7-GISEL-NEXT:    s_lshl_b32 s6, s6, s7
 ; GFX7-GISEL-NEXT:    s_mov_b32 m0, s4

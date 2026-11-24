@@ -1114,52 +1114,63 @@ define void @store_v16i1_trunc_v16i16_align1(ptr addrspace(13) inreg %p, <16 x i
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 1
 ; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v2.l, 1
-; GFX12-GISEL-NEXT:    v_and_b16 v2.l, v2.h, 1
-; GFX12-GISEL-NEXT:    v_and_b16 v2.h, v4.h, 1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v2.h, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 4, v0.h
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
+; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v3.l, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 5, v1.l
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
+; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v3.h, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 6, v1.h
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
 ; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v4.l, 1
-; GFX12-GISEL-NEXT:    v_and_b16 v4.l, v5.l, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v2.h, 1, v2.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 4, v0.h
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 7, v0.h
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v5.h, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v4.l, 2, v4.l
-; GFX12-GISEL-NEXT:    v_or_b16 v1.l, v1.l, v2.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v2.l, 5, v2.l
+; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v4.h, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 8, v1.l
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v3.l, 1
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 3, v1.h
-; GFX12-GISEL-NEXT:    v_or_b16 v1.l, v1.l, v4.l
-; GFX12-GISEL-NEXT:    v_and_b16 v2.h, v6.l, 1
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v2.l
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 6, v0.h
-; GFX12-GISEL-NEXT:    v_and_b16 v2.l, v3.h, 1
-; GFX12-GISEL-NEXT:    v_or_b16 v1.l, v1.l, v1.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 4, v2.h
-; GFX12-GISEL-NEXT:    v_and_b16 v2.h, v6.h, 1
+; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v5.l, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 9, v1.h
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v5.h, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 10, v0.h
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
+; GFX12-GISEL-NEXT:    v_and_b16 v1.h, v6.l, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 11, v1.l
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 7, v2.l
-; GFX12-GISEL-NEXT:    v_and_b16 v2.l, v7.l, 1
-; GFX12-GISEL-NEXT:    v_or_b16 v1.l, v1.l, v1.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 5, v2.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_or_b16 v3.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 6, v2.l
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v1.l, v1.h
-; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v7.h, 1
+; GFX12-GISEL-NEXT:    v_and_b16 v0.h, v6.h, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.h, 12, v1.h
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+; GFX12-GISEL-NEXT:    v_and_b16 v1.l, v7.l, 1
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 13, v0.h
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.h
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v1.l, 14, v1.l
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
+; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 15, v7.h
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v3, s1, v3
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v2, s1, v0
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s1, 0xff, s1
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v2, v0
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    v_lshlrev_b16 v0.h, 7, v1.l
+; GFX12-GISEL-NEXT:    v_lshrrev_b16 v0.l, 8, v0.l
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_bfi_b32 v1, s1, v3, v2
-; GFX12-GISEL-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_bfi_b32 v1, s1, v2, v1
 ; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v1
 ; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 3

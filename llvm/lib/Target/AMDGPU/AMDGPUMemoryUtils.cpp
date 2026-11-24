@@ -70,6 +70,16 @@ MachineMemOperand *getVGPRDwordMemOperand(MachineFunction &MF,
                                  LLT::scalar(32), Align(4));
 }
 
+VGPRAccessKind getVGPRAccessKind(uint64_t Bits, Align Alignment) {
+  if ((Bits == 8 || Bits == 16) && Alignment >= Align(Bits / 8))
+    return VGPRAccessKind::SubDword;
+  if (Bits % 8 != 0)
+    return VGPRAccessKind::NotWholeBytes;
+  if (Bits % 32 == 0 && Alignment >= Align(4))
+    return VGPRAccessKind::WholeDwords;
+  return VGPRAccessKind::Split;
+}
+
 unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment) {
   if (Alignment >= Align(4) && Bits > 32)
     return alignDown(Bits - 1, 32);

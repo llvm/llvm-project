@@ -6990,13 +6990,13 @@ static MachineBasicBlock *emitStoreIdxBits(MachineInstr &MI,
               TII.get(IsGPRIdx ? AMDGPU::V_STORE_IDX_GPR_IDX_B32
                                : AMDGPU::V_STORE_IDX_B32))
           .addReg(NewDword);
-  if (IsGPRIdx) {
+  if (IsGPRIdx)
     Store.add(LdSt.getIdxOp());
-    const SIRegisterInfo &TRI = TII.getRegisterInfo();
-    Load->addRegisterDead(AMDGPU::M0, &TRI);
-    Store->addRegisterDead(AMDGPU::M0, &TRI);
-  }
   Store.add(LdSt.getOffsetOp());
+  if (IsGPRIdx) {
+    Load.setOperandDead(3);  // Dead m0
+    Store.setOperandDead(3); // Dead m0
+  }
 
   for (const MachineMemOperand *MMO : MI.memoperands()) {
     Load.addMemOperand(MF.getMachineMemOperand(
@@ -13621,32 +13621,20 @@ static SDValue splitLoadStoreVGPR(MemSDNode *MemOp,
   const unsigned Bits = MemVT.getSizeInBits();
   const unsigned PartBits =
       AMDGPU::getVGPRSplitPartSize(Bits, MemOp->getAlign());
+  const unsigned PartBytes = PartBits / 8;
   const unsigned NumParts = Bits / PartBits;
   const unsigned BodyBits = NumParts * PartBits;
   const unsigned RestBits = Bits - BodyBits;
   EVT IntVT = EVT::getIntegerVT(Ctx, Bits);
   EVT PartVT = EVT::getIntegerVT(Ctx, PartBits);
   EVT BodyVT = NumParts == 1 ? PartVT : EVT::getVectorVT(Ctx, PartVT, NumParts);
+  SDValue BasePtr = MemOp->getBasePtr();
   const MachineMemOperand *MMO = MemOp->getMemOperand();
   const bool InOrder = MMO->isVolatile();
+  // The chain of the next part: the access's own, or for a volatile access the
+  // part before's.
+  SDValue Chain = MemOp->getChain();
   SmallVector<SDValue, 16> Chains;
-
-  // The chain, address and memory operand of the part of \p PartBytes bytes at
-  // byte \p Offset.
-  auto getPartChain = [&]() {
-    return InOrder && !Chains.empty() ? Chains.back() : MemOp->getChain();
-  };
-  auto getPartPtr = [&](unsigned Offset) {
-    return DAG.getObjectPtrOffset(DL, MemOp->getBasePtr(),
-                                  TypeSize::getFixed(Offset));
-  };
-  auto getPartMMO = [&](unsigned Offset, unsigned PartBytes) {
-    return MF.getMachineMemOperand(MMO, Offset, PartBytes);
-  };
-  auto getChain = [&]() {
-    return InOrder ? Chains.back()
-                   : DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
-  };
 
   if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
     assert((Load->getExtensionType() == ISD::NON_EXTLOAD ||
@@ -13654,20 +13642,26 @@ static SDValue splitLoadStoreVGPR(MemSDNode *MemOp,
            "only integer extending loads are formed");
     SmallVector<SDValue, 16> Parts;
     for (unsigned I = 0; I != NumParts; ++I) {
-      const unsigned Offset = I * PartBits / 8;
-      SDValue Part = DAG.getLoad(PartVT, DL, getPartChain(), getPartPtr(Offset),
-                                 getPartMMO(Offset, PartBits / 8));
+      SDValue Part =
+          DAG.getLoad(PartVT, DL, Chain,
+                      DAG.getObjectPtrOffset(DL, BasePtr,
+                                             TypeSize::getFixed(I * PartBytes)),
+                      MF.getMachineMemOperand(MMO, I * PartBytes, PartBytes));
       Parts.push_back(Part);
       Chains.push_back(Part.getValue(1));
+      if (InOrder)
+        Chain = Part.getValue(1);
     }
     SDValue Value =
         NumParts == 1 ? Parts[0] : DAG.getBuildVector(BodyVT, DL, Parts);
     if (RestBits) {
-      EVT RestVT = EVT::getIntegerVT(Ctx, RestBits);
-      SDValue Rest =
-          DAG.getLoad(RestVT, DL, getPartChain(), getPartPtr(BodyBits / 8),
-                      getPartMMO(BodyBits / 8, RestBits / 8));
+      SDValue Rest = DAG.getLoad(
+          EVT::getIntegerVT(Ctx, RestBits), DL, Chain,
+          DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(BodyBits / 8)),
+          MF.getMachineMemOperand(MMO, BodyBits / 8, RestBits / 8));
       Chains.push_back(Rest.getValue(1));
+      if (InOrder)
+        Chain = Rest.getValue(1);
       EVT BodyIntVT = EVT::getIntegerVT(Ctx, BodyBits);
       Value = DAG.getNode(
           ISD::OR, DL, IntVT,
@@ -13678,7 +13672,8 @@ static SDValue splitLoadStoreVGPR(MemSDNode *MemOp,
     Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(),
                               DAG.getBitcast(MemVT, Value), DL,
                               Load->getValueType(0));
-    DCI.CombineTo(Load, Value, getChain());
+    DCI.CombineTo(Load, Value,
+                  InOrder ? Chain : DAG.getTokenFactor(DL, Chains));
     return SDValue(Load, 0);
   }
 
@@ -13692,22 +13687,30 @@ static SDValue splitLoadStoreVGPR(MemSDNode *MemOp,
   }
   Body = DAG.getBitcast(BodyVT, Body);
   for (unsigned I = 0; I != NumParts; ++I) {
-    const unsigned Offset = I * PartBits / 8;
     SDValue Part =
         NumParts == 1 ? Body : DAG.getExtractVectorElt(DL, PartVT, Body, I);
-    Chains.push_back(DAG.getStore(getPartChain(), DL, Part, getPartPtr(Offset),
-                                  getPartMMO(Offset, PartBits / 8)));
+    SDValue PartStore = DAG.getStore(
+        Chain, DL, Part,
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(I * PartBytes)),
+        MF.getMachineMemOperand(MMO, I * PartBytes, PartBytes));
+    Chains.push_back(PartStore);
+    if (InOrder)
+      Chain = PartStore;
   }
   if (RestBits) {
     SDValue Rest = DAG.getNode(
         ISD::TRUNCATE, DL, EVT::getIntegerVT(Ctx, RestBits),
         DAG.getNode(ISD::SRL, DL, IntVT, Value,
                     DAG.getShiftAmountConstant(BodyBits, IntVT, DL)));
-    Chains.push_back(DAG.getStore(getPartChain(), DL, Rest,
-                                  getPartPtr(BodyBits / 8),
-                                  getPartMMO(BodyBits / 8, RestBits / 8)));
+    SDValue RestStore = DAG.getStore(
+        Chain, DL, Rest,
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(BodyBits / 8)),
+        MF.getMachineMemOperand(MMO, BodyBits / 8, RestBits / 8));
+    Chains.push_back(RestStore);
+    if (InOrder)
+      Chain = RestStore;
   }
-  return getChain();
+  return InOrder ? Chain : DAG.getTokenFactor(DL, Chains);
 }
 
 // Lower a VGPR ("as memory") access of a type that is not a whole number of
@@ -13772,21 +13775,18 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
   unsigned BitWidth = MemVT.getSizeInBits();
   auto *Store = dyn_cast<StoreSDNode>(MemOp);
 
-  // Natural alignment keeps an 8- or 16-bit access inside one dword.
-  const bool IsSubDword = BitWidth == 8 || BitWidth == 16;
-  if (IsSubDword && MemOp->getAlign() >= Align(BitWidth / 8)) {
+  switch (AMDGPU::getVGPRAccessKind(BitWidth, MemOp->getAlign())) {
+  case AMDGPU::VGPRAccessKind::SubDword:
     if (Store)
       return lowerSubDwordStoreVGPR(Store, DAG);
     return lowerSubDwordLoadVGPR(cast<LoadSDNode>(MemOp), DCI);
-  }
-
-  if (!MemVT.isByteSized())
+  case AMDGPU::VGPRAccessKind::NotWholeBytes:
     return lowerNonByteLoadStoreVGPR(MemOp, DCI);
-
-  // The index is the pointer >> 2, so any other access that is not a whole
-  // number of dwords at dword alignment is split.
-  if (BitWidth % 32 != 0 || MemOp->getAlign() < Align(4))
+  case AMDGPU::VGPRAccessKind::Split:
     return splitLoadStoreVGPR(MemOp, DCI);
+  case AMDGPU::VGPRAccessKind::WholeDwords:
+    break;
+  }
 
   // Only a width some VGPR tuple has is looked up. A whole-dword access of any
   // other width is done as one of <N x i32>, which type legalization splits.

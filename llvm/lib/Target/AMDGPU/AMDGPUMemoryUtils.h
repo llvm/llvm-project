@@ -62,10 +62,27 @@ void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source);
 MachineMemOperand *getVGPRDwordMemOperand(MachineFunction &MF,
                                           MachineMemOperand::Flags Flags);
 
+// How a VGPR address space access of \p Bits bits in memory at \p Alignment is
+// lowered. A register is named by its dword index, the address >> 2, so only
+// whole dwords at dword alignment are accessed as they are.
+enum class VGPRAccessKind {
+  // A naturally aligned 8- or 16-bit access, which reads its dword and, for a
+  // store, writes it back.
+  SubDword,
+  // A type that is not a whole number of bytes, accessed as its store size.
+  NotWholeBytes,
+  // Whole dwords at dword alignment.
+  WholeDwords,
+  // Anything else, which is split into accesses of the other kinds.
+  Split,
+};
+VGPRAccessKind getVGPRAccessKind(uint64_t Bits, Align Alignment);
+
 // The width of the parts of a VGPR address space access of \p Bits bits at
 // \p Alignment that is neither a naturally aligned 8- or 16-bit one nor whole
 // dwords at dword alignment, when it is split: whole dwords if it is
-// dword-aligned, otherwise a half or a byte, as the alignment allows.
+// dword-aligned and wider than a dword, otherwise a half or a byte, as its
+// alignment and width allow.
 unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment);
 
 // The byte offset in its dword of an 8- or 16-bit VGPR address space access

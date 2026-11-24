@@ -552,6 +552,14 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(ST, Ty);
 }
 
+// A VGPR address space access its custom lowering takes: any but a scalar
+// narrower than a dword, which the load and store rules widen first.
+static bool isVGPRLoadStoreCustom(const LegalityQuery &Query) {
+  const LLT Ty = Query.Types[0];
+  return Query.Types[1].getAddressSpace() == AMDGPUAS::VGPR &&
+         (Ty.isVector() || Ty.getSizeInBits() >= 32);
+}
+
 // Whole-dword accesses with a pseudo of their width.
 static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
   return MemSize == ValSize && MemSize <= MaxRegisterSize &&
@@ -585,6 +593,10 @@ static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
   unsigned SizeInBits = MemoryTy.getSizeInBits();
   // We don't want to widen cases that are naturally legal.
   if (isPowerOf2_32(SizeInBits))
+    return false;
+
+  // A VGPR address space load already reads whole dwords.
+  if (AddrSpace == AMDGPUAS::VGPR)
     return false;
 
   // If we have 96-bit memory operations, we shouldn't touch them. Note we may
@@ -1716,11 +1728,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
     //
-    // VGPR accesses are always custom, to be lowered or diagnosed.
-    //
     // TODO: Should generalize bitcast action into coerce, which will also cover
     // inserting addrspacecasts.
-    Actions.customIf(typeInSet(1, {Constant32Ptr, VGPRPtr}));
+    Actions.customIf(typeInSet(1, {Constant32Ptr}));
+    Actions.customIf(isVGPRLoadStoreCustom);
 
     // Turn any illegal element vectors into something easier to deal
     // with. These will ultimately produce 32-bit scalar shifts to extract the
@@ -1869,11 +1880,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
   // 64-bits.
   //
-  // VGPR accesses are always custom, to be lowered or diagnosed.
-  //
   // TODO: Should generalize bitcast action into coerce, which will also cover
   // inserting addrspacecasts.
-  ExtLoads.customIf(typeInSet(1, {Constant32Ptr, VGPRPtr}));
+  ExtLoads.customIf(typeInSet(1, {Constant32Ptr}));
+  ExtLoads.customIf(isVGPRLoadStoreCustom);
 
   ExtLoads.narrowScalarIf(
       [](const LegalityQuery &Query) {
@@ -3741,10 +3751,10 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   const unsigned ValSize = ValTy.getSizeInBits();
   const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
   const LLT I32 = LLT::integer(32);
+  const AMDGPU::VGPRAccessKind Kind =
+      AMDGPU::getVGPRAccessKind(MemSize, LdSt.getAlign());
 
-  // Natural alignment keeps an 8- or 16-bit access inside one dword.
-  const bool IsSubDword = MemSize == 8 || MemSize == 16;
-  if (IsSubDword && LdSt.getAlign() >= Align(MemSize / 8)) {
+  if (Kind == AMDGPU::VGPRAccessKind::SubDword) {
     if (auto *St = dyn_cast<GStore>(&LdSt))
       lowerSubDwordStoreVGPR(Helper, *St);
     else
@@ -3755,18 +3765,30 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   // A type that is not a whole number of bytes is accessed as one of its store
   // size, with the extra bits zero, as in other address spaces. A vector is
   // made an integer first.
-  if (MemSize % 8 != 0) {
-    LegalizerHelper::LegalizeResult Res =
-        ValTy.isVector() ? Helper.bitcast(LdSt, 0, LLT::integer(ValSize))
-        : IsStore        ? Helper.lowerStore(cast<GStore>(LdSt))
-                         : Helper.lowerLoad(cast<GAnyLoad>(LdSt));
+  if (Kind == AMDGPU::VGPRAccessKind::NotWholeBytes) {
+    LegalizerHelper::LegalizeResult Res;
+    if (ValTy.isVector())
+      Res = Helper.bitcast(LdSt, 0, LLT::integer(ValSize));
+    else if (IsStore)
+      Res = Helper.lowerStore(cast<GStore>(LdSt));
+    else
+      Res = Helper.lowerLoad(cast<GAnyLoad>(LdSt));
     return Res == LegalizerHelper::Legalized;
   }
 
   // The combiner turns an extension of a load into an extending load, and a
-  // truncation of a stored value into a truncating store. Access the memory
-  // type, and extend or truncate in registers.
+  // truncation of a stored value into a truncating store, and the rules widen
+  // a narrow value. An access of less than a dword is split by the generic
+  // lowering, in extending and truncating parts: a narrower access would only
+  // be widened again. A wider one accesses the memory type, and extends or
+  // truncates in registers.
   if (MemSize != ValSize && MMO.getMemoryType().isScalar()) {
+    if (MemSize < 32) {
+      LegalizerHelper::LegalizeResult Res =
+          IsStore ? Helper.lowerStore(cast<GStore>(LdSt))
+                  : Helper.lowerLoad(cast<GAnyLoad>(LdSt));
+      return Res == LegalizerHelper::Legalized;
+    }
     const LLT MemTy = LLT::integer(MemSize);
     if (IsStore) {
       B.buildStore(B.buildTrunc(MemTy, ValReg), PtrReg, MMO);
@@ -3783,9 +3805,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
     return true;
   }
 
-  // The index is the pointer >> 2, so any other access that is not a whole
-  // number of dwords at dword alignment is split.
-  if (MemSize % 32 != 0 || LdSt.getAlign() < Align(4))
+  if (Kind == AMDGPU::VGPRAccessKind::Split)
     return splitLoadStoreVGPR(Helper, LdSt);
 
   assert(MemSize == ValSize &&
