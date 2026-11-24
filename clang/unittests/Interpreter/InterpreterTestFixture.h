@@ -9,6 +9,9 @@
 #ifndef LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 #define LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PreprocessorOptions.h"
+
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"

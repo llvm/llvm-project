@@ -884,6 +884,11 @@ LanguageRuntime *
 AppleObjCRuntimeV2::GetPreferredLanguageRuntime(ValueObject &in_value) {
   if (auto process_sp = in_value.GetProcessSP()) {
     assert(process_sp.get() == m_process);
+    // A runtime that is preferred for the object because of the code that uses
+    // it comes before the runtime of the language that implements its class.
+    for (LanguageRuntime *runtime : process_sp->GetLanguageRuntimes())
+      if (runtime != this && runtime->IsPreferredLanguageRuntimeFor(in_value))
+        return runtime;
     if (auto descriptor_sp = GetNonKVOClassDescriptor(in_value)) {
       LanguageType impl_lang = descriptor_sp->GetImplementationLanguage();
       if (impl_lang != eLanguageTypeUnknown)

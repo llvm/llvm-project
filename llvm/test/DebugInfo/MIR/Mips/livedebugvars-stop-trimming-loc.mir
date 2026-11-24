@@ -76,15 +76,7 @@ alignment:       4
 frameInfo:
   adjustsStack:    true
 registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
   - { id: 1, class: gpr32, preferred-register: '' }
-  - { id: 2, class: gpr32, preferred-register: '' }
-  - { id: 3, class: gpr32, preferred-register: '' }
-  - { id: 4, class: gpr32, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: gpr32, preferred-register: '' }
-  - { id: 7, class: gpr32, preferred-register: '' }
-  - { id: 8, class: gpr32, preferred-register: '' }
 liveins:
   - { reg: '$r4', virtual-reg: '%0' }
   - { reg: '$r5', virtual-reg: '%1' }

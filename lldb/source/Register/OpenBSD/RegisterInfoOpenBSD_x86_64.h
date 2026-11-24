@@ -11,8 +11,7 @@
 
 #include "Register/RegisterInfoInterface.h"
 
-class RegisterInfoOpenBSD_x86_64
-    : public lldb_private::RegisterInfoInterface {
+class RegisterInfoOpenBSD_x86_64 : public lldb_private::RegisterInfoInterface {
 public:
   RegisterInfoOpenBSD_x86_64(const lldb_private::ArchSpec &target_arch);
 

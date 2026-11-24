@@ -8,6 +8,7 @@ add_entrypoint_object(
     libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
+    libc.src.__support.net.byte_order
 )
 
 add_entrypoint_object(
@@ -20,6 +21,7 @@ add_entrypoint_object(
     libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
+    libc.src.__support.net.byte_order
 )
 
 add_entrypoint_object(
@@ -119,6 +121,7 @@ add_entrypoint_object(
     libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
+    libc.src.__support.net.byte_order
 )
 
 add_entrypoint_object(
@@ -131,4 +134,5 @@ add_entrypoint_object(
     libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
+    libc.src.__support.net.byte_order
 )

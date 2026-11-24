@@ -9,7 +9,7 @@
 #ifndef ATTRKINDDETAIL_H_
 #define ATTRKINDDETAIL_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "llvm/IR/Attributes.h"
 
 namespace mlir {
