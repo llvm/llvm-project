@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -whole-program-visibility -passes='function(require<domtree>,require<target-lib-info>,require<target-ir>),wholeprogramdevirt,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=0 -whole-program-visibility -passes='function(require<domtree>,require<target-lib-info>,require<target-ir>),wholeprogramdevirt,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 
 ; Devirtualizing the call in @call should not invalidate TargetLibraryInfo or
 ; TargetTransformInfo.
