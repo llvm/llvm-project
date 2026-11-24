@@ -1164,14 +1164,10 @@ PreservedAnalyses ExpandVariadicsPass::run(Module &M,
   if (!EV.runOnModule(M))
     return PreservedAnalyses::all();
 
-  // Invalidate each function individually to keep analyses like
-  // TargetLibraryInfo.
-  for (Function &F : M)
-    FAM.invalidate(F, PreservedAnalyses::none());
-
+  // Preserving the proxy invalidates each function individually, which keeps
+  // analyses like TargetLibraryInfo.
   PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
 
