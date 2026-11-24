@@ -620,6 +620,10 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
            Scope::OpenACCLoopConstructScope;
   case OpenACCDirectiveKind::Loop:
     return Scope::DeclScope | Scope::OpenACCLoopConstructScope;
+  case OpenACCDirectiveKind::Atomic:
+    // the associated statement gets its own scope, so a declaration in it
+    // (which is always invalid) cannot be referenced after the construct.
+    return Scope::DeclScope;
   case OpenACCDirectiveKind::Data:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
@@ -628,7 +632,6 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Cache:
-  case OpenACCDirectiveKind::Atomic:
   case OpenACCDirectiveKind::Declare:
   case OpenACCDirectiveKind::Routine:
   case OpenACCDirectiveKind::Set:

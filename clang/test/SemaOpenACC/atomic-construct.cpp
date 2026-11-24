@@ -1891,3 +1891,29 @@ template<class T> void bar(T baz) {
   baz = baz << foo;
 }
 }
+
+namespace gh245108 {
+template <typename T> void foo() {
+  // expected-error@+2{{statement associated with OpenACC 'atomic' directive is invalid}}
+  // expected-note@+2{{expected assignment, compound assignment, increment, or decrement expression}}
+#pragma acc atomic
+  int i;
+  // expected-error@+1{{use of undeclared identifier 'i'}}
+  i = 42;
+}
+
+void bar() { foo<int>(); }
+}
+
+namespace gh245108 {
+    template <typename T> void baz() {
+ // expected-error@+2{{statement associated with OpenACC 'atomic' directive is invalid}}
+ // expected-note@+2{{expected assignment, compound assignment, increment, or decrement expression}}
+#pragma acc atomic
+ int i;
+ // expected-error@+1{{use of undeclared identifier 'i'}}
+ i = 42;
+}
+
+void boom() { baz<int>(); }
+}
