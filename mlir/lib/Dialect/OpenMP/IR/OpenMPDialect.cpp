@@ -5606,13 +5606,7 @@ void ThreadprivateOp::getEffects(
   // caches or thread-local storage, do not attach this effect to an address to
   // avoid incorrectly implying it is new storage.
   effects.emplace_back(MemoryEffects::Allocate::get());
-
-  effects.emplace_back(MemoryEffects::Read::get(),
-                       ThreadprivateRuntimeResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(),
-                       ThreadprivateRuntimeResource::get());
 }
-
 //===----------------------------------------------------------------------===//
 // CancelOp
 //===----------------------------------------------------------------------===//
