@@ -953,3 +953,25 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+// The broadcast + transpose give the reduction result a layout that slices
+// dim 0, while the reduction removes dim 1. The two slices are the same layout
+// once the parent's dims are swapped, so the reduction reuses it.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_reuses_slice_on_other_dim(
+// CHECK: vector.multi_reduction <add>
+// CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [16, 1], lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>} [1]
+// CHECK: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1], order = [0, 1]>}
+func.func @reduction_reuses_slice_on_other_dim(%src: memref<32x16xf16>, %m: !xegpu.mem_desc<32x16xf16>) {
+  %c0 = arith.constant 0 : index
+  %t = xegpu.create_nd_tdesc %src : memref<32x16xf16> -> !xegpu.tensor_desc<32x16xf16>
+  %x = xegpu.load_nd %t[%c0, %c0] : !xegpu.tensor_desc<32x16xf16> -> vector<32x16xf16>
+  %init = arith.constant dense<0.0> : vector<32xf16>
+  %r = vector.multi_reduction <add>, %x, %init [1] : vector<32x16xf16> to vector<32xf16>
+  %b = vector.broadcast %r : vector<32xf16> to vector<16x32xf16>
+  %bt = vector.transpose %b, [1, 0] : vector<16x32xf16> to vector<32x16xf16>
+  xegpu.store_matrix %bt, %m[0, 0] <{layout = #xegpu.layout<inst_data = [16, 1], lane_layout = [16, 1], lane_data = [1, 1]>}> : vector<32x16xf16>, !xegpu.mem_desc<32x16xf16>
+  return
+}
+}

@@ -858,11 +858,11 @@ func.func @reduce_innermost_lanes_on_leading(%arg0: memref<64xf16>, %arg1: memre
 // -----
 gpu.module @test {
 // CHECK: func.func @vector_reduction_broadcast_transpose(%[[ARG0:.*]]: memref<1024x64xf32>, %[[ARG1:.*]]: memref<1024x64xf32>)
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} dense<0.000000e+00> : vector<1xf32>
-// CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0xFF800000> : vector<1x16xf32>
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>, dims = [1]>} dense<0.000000e+00> : vector<1xf32>
+// CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>} dense<0xFF800000> : vector<1x16xf32>
 // CHECK: %[[CST_1:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>, dims = [0]>} dense<0.000000e+00> : vector<8xf32>
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[CST_0]], %[[CST]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} [1] : vector<1x16xf32> to vector<1xf32>
+// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[CST_0]], %[[CST]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>, dims = [1]>} [1] : vector<1x16xf32> to vector<1xf32>
 // CHECK: %[[INS:.*]] = vector.insert_strided_slice %[[RED]], %[[CST_1]] offsets = [0], strides = [1] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>, dims = [0]>} : vector<1xf32> into vector<8xf32>
 // CHECK: %[[ADD:.*]] = arith.addf %[[INS]], %[[CST_1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>, dims = [0]>} : vector<8xf32>
 // CHECK: %[[BC:.*]] = vector.broadcast %[[ADD]] {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>} : vector<8xf32> to vector<16x8xf32>

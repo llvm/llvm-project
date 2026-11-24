@@ -1370,15 +1370,40 @@ compute2DBlockIOLaneLayout(ArrayRef<int64_t> instShape, int64_t subgroupSize,
   return {laneLayout, laneData, order};
 }
 
+/// Returns the parent of `sliceLayout` with its dims permuted so that it is
+/// sliced on `reductionDims`, or null if it slices a different number of dims.
+/// E.g. slice<P, dims = [0]> equals slice<P', dims = [1]> where P' is P with
+/// dims 0 and 1 swapped; the kept dims stay in the same order.
+static xegpu::DistributeLayoutAttr
+getSliceParentOnDims(xegpu::SliceAttr sliceLayout,
+                     ArrayRef<int64_t> reductionDims) {
+  if (!sliceLayout || sliceLayout.getDims().size() != reductionDims.size())
+    return nullptr;
+  xegpu::DistributeLayoutAttr parent = sliceLayout.getParent();
+  SmallVector<int64_t> slicedDims(sliceLayout.getDims().asArrayRef());
+  SmallVector<int64_t> keptDims;
+  for (int64_t dim = 0; dim < parent.getRank(); dim++)
+    if (!llvm::is_contained(slicedDims, dim))
+      keptDims.push_back(dim);
+  // perm[dim] is the parent dim that becomes `dim`.
+  SmallVector<int64_t> perm;
+  auto *sliced = slicedDims.begin(), *kept = keptDims.begin();
+  for (int64_t dim = 0; dim < parent.getRank(); dim++)
+    perm.push_back(llvm::is_contained(reductionDims, dim) ? *sliced++
+                                                          : *kept++);
+  return isIdentityPermutation(perm) ? parent : parent.transposeDims(perm);
+}
+
 /// Derives (lane_layout, lane_data, inst_data) for a vector.multi_reduction
 /// source from the layout requested by its result's consumer. Each returned
 /// vector has one entry per source dimension.
 ///
-/// Reuse the consumer's slice parent when the slice dimensions exactly match
-/// `reductionDims`, the parent's effective lane_layout and lane_data each have
-/// one entry per source dimension, and the lane layout uses all `subgroupSize`
-/// lanes. Clamp reused lane counts to srcShape[i] / lane_data[i], since the
-/// sliced dimensions may have different extents in the reduction source.
+/// Reuse the consumer's slice parent, permuted by getSliceParentOnDims to be
+/// sliced on `reductionDims`, when the parent's effective lane_layout and
+/// lane_data each have one entry per source dimension, and the lane layout uses
+/// all `subgroupSize` lanes. Clamp reused lane counts to srcShape[i] /
+/// lane_data[i], since the sliced dimensions may have different extents in the
+/// reduction source.
 ///
 /// If the consumer's slice parent cannot be reused, initialize lane_layout and
 /// lane_data to 1, then copy available consumer entries onto non-reduced source
@@ -1438,11 +1463,10 @@ computeReductionLaneLayoutAndData(
   // A matching slice parent provides lane information for reduced dimensions
   // as well as the dimensions present in the result.
   SmallVector<int64_t> parentInstData;
-  auto consumerSlice = dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
   bool reusedParent = false;
-  if (consumerSlice &&
-      consumerSlice.getDims().asArrayRef().equals(reductionDims)) {
-    auto parent = consumerSlice.getParent();
+  if (xegpu::DistributeLayoutAttr parent = getSliceParentOnDims(
+          dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout),
+          reductionDims)) {
     SmallVector<int64_t> parentLaneLayout =
         parent.getEffectiveLaneLayoutAsInt();
     SmallVector<int64_t> parentLaneData = parent.getEffectiveLaneDataAsInt();
@@ -2629,6 +2653,17 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 ///          Copy its effective sg_layout=[8] onto dim 0 and assign the
 ///          remaining four subgroups to dim 1.
 
+/// Whether each subgroup can hold the reduced dims whole: its tile, with
+/// `sgData` on the other dims, stays within 16K elements.
+static bool canCopyReducedDims(ArrayRef<int64_t> srcShape,
+                               ArrayRef<int64_t> sgData,
+                               ArrayRef<int64_t> reductionDims) {
+  int64_t elems = 1;
+  for (auto [dim, size] : llvm::enumerate(srcShape))
+    elems *= llvm::is_contained(reductionDims, dim) ? size : sgData[dim];
+  return elems <= 16 * 1024;
+}
+
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
     DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
@@ -2642,19 +2677,25 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   int64_t maxReduceVectorSize = 16; // extend to spirv vector Size
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    xegpu::SliceAttr consumerSliceLayout =
-        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
-    if (consumerSliceLayout &&
-        consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
-      srcLayout = consumerSliceLayout.getParent();
+    xegpu::DistributeLayoutAttr consumerParent = getSliceParentOnDims(
+        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout), reductionDims);
+    if (consumerParent) {
+      srcLayout = consumerParent;
       SmallVector<int64_t> sgLayoutFromConsumer =
           srcLayout.getEffectiveSgLayoutAsInt();
       auto srcSgData = computeShapeRatio(srcShape, sgLayoutFromConsumer);
+      // A reduced dim larger than numSg is kept whole per subgroup, so each
+      // reduces locally, if the subgroup's tile stays small enough.
+      bool canCopy = canCopyReducedDims(
+          srcShape, srcLayout.getEffectiveSgDataAsInt(), reductionDims);
       if (srcSgData)
         for (int dim = 0; dim < srcRank; dim++) {
           if (llvm::is_contained(reductionDims, dim))
-            srcLayout =
-                srcLayout.setDimData(dim, srcSgData.value()[dim], -1, -1);
+            srcLayout = srcLayout.setDimData(dim,
+                                             canCopy && srcShape[dim] > numSg
+                                                 ? srcShape[dim]
+                                                 : srcSgData.value()[dim],
+                                             -1, -1);
         }
     } else {
       SmallVector<int64_t> consumerSgLayout =
@@ -2685,9 +2726,18 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       }
 
       // Second pass: distribute remaining subgroups across the reduction dims.
-      // The reduction-to-scalar case is handled only by this loop.
+      // The reduction-to-scalar case is handled only by this loop. A reduced
+      // dim larger than numSg is kept whole per subgroup (copies that reduce
+      // locally) if the subgroup's tile stays small enough.
+      bool canCopy = canCopyReducedDims(srcShape, sgData, reductionDims);
       for (int i = 0; i < srcRank; i++) {
         if (llvm::is_contained(reductionDims, i)) {
+          if (canCopy && srcShape[i] > numSg) {
+            sgLayout[i] = remainingSgCount;
+            sgData[i] = srcShape[i];
+            remainingSgCount = 1;
+            continue;
+          }
           sgLayout[i] =
               std::min(srcShape[i], static_cast<int64_t>(remainingSgCount));
           assert((srcShape[i] % sgLayout[i] == 0) &&
@@ -2740,14 +2790,13 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     srcLayout =
         buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    xegpu::SliceAttr consumerSliceLayout =
-        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
-    if (consumerSliceLayout &&
-        consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
+    xegpu::DistributeLayoutAttr consumerParent = getSliceParentOnDims(
+        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout), reductionDims);
+    if (consumerParent) {
       // at the lane level, the consumerSliceLayout can be directly reused
       // since the inst_data propagation already insert convert_layout if
       // the layout is not consistent
-      srcLayout = consumerSliceLayout.getParent();
+      srcLayout = consumerParent;
     } else {
       auto [laneLayout, laneData, instData] = computeReductionLaneLayoutAndData(
           srcShape, reductionDims, subgroupSize, maxReduceVectorSize,

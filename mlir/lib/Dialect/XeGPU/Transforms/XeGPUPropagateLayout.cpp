@@ -480,12 +480,10 @@ bool LayoutInfoPropagation::hasParamsOfLayoutKind(
 
 FailureOr<int64_t> LayoutInfoPropagation::getNumSgOrFail(
     Operation *op, int sgSize, xegpu::DistributeLayoutAttr consumerLayout) {
-  // The consumer's sg_layout, when present, dictates the count.
-  if (consumerLayout) {
-    auto sgLayout = consumerLayout.getEffectiveSgLayoutAsInt();
-    if (!sgLayout.empty())
-      return llvm::product_of(sgLayout);
-  }
+  // The consumer's sg_layout, when present, dictates the count. Count all of
+  // its subgroups, including those on dims a slice removed.
+  if (consumerLayout && !consumerLayout.getEffectiveSgLayoutAsInt().empty())
+    return consumerLayout.getNumSubgroups();
   // Otherwise fall back to the kernel's known_block_size.
   if (FailureOr<int64_t> numSg =
           xegpu::getNumSubgroupsFromBlockSize(op, sgSize);
