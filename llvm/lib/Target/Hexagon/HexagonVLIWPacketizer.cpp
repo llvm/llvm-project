@@ -58,6 +58,14 @@ using namespace llvm;
 cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
                                 cl::desc("Disable Hexagon packetizer pass"));
 
+cl::opt<bool> OneFloatPerPacket(
+    "single-float-packet", cl::Hidden,
+    cl::desc("Allow only one single floating point instruction in a packet"));
+
+cl::opt<bool> OneComplexPerPacket(
+    "single-complex-packet", cl::Hidden,
+    cl::desc("Allow only one complex instruction in a packet"));
+
 static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
                                 cl::init(true),
                                 cl::desc("Allow slot1 store and slot0 load"));
@@ -1094,6 +1102,11 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
 // since every test would need to be repeated with the MI and MJ reversed.
 static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
       const HexagonInstrInfo &HII) {
+  if (OneFloatPerPacket && HII.isFloat(MI) && HII.isFloat(MJ))
+    return true;
+  if (OneComplexPerPacket && HII.isComplex(MI) && HII.isComplex(MJ))
+    return true;
+
   const MachineFunction *MF = MI.getParent()->getParent();
   if (MF->getSubtarget<HexagonSubtarget>().hasV60OpsOnly() &&
       HII.isHVXMemWithAIndirect(MI, MJ))

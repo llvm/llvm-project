@@ -303,6 +303,20 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   return entry;
 }
 
+static cir::VectorAbiKind getCIRVectorAbiKind(clang::VectorKind kind) {
+  switch (kind) {
+  case VectorKind::SveFixedLengthData:
+    return cir::VectorAbiKind::SVEData;
+  case VectorKind::SveFixedLengthPredicate:
+    return cir::VectorAbiKind::SVEPredicate;
+  default:
+    // Most vector kinds aren't needed during code generation. RISC-V vector
+    // kinds will be needed for ABI lowering.
+    assert(!cir::MissingFeatures::riscvVectorKinds());
+    return cir::VectorAbiKind::Generic;
+  }
+}
+
 mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
@@ -377,46 +391,36 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
                             /*isSigned=*/true);
       break;
 
-    // SVE types
-    case BuiltinType::SveInt8:
-      resultType = cir::VectorType::getScalable(builder.getSInt8Ty(), 16);
-      break;
-    case BuiltinType::SveUint8:
-      resultType = cir::VectorType::getScalable(builder.getUInt8Ty(), 16);
-      break;
-    case BuiltinType::SveInt16:
-      resultType = cir::VectorType::getScalable(builder.getSInt16Ty(), 8);
-      break;
-    case BuiltinType::SveUint16:
-      resultType = cir::VectorType::getScalable(builder.getUInt16Ty(), 8);
-      break;
-    case BuiltinType::SveFloat16:
-      resultType = cir::VectorType::getScalable(builder.getFp16Ty(), 8);
-      break;
-    case BuiltinType::SveBFloat16:
-      resultType = cir::VectorType::getScalable(builder.getBfloat16Ty(), 8);
-      break;
-    case BuiltinType::SveInt32:
-      resultType = cir::VectorType::getScalable(builder.getSInt32Ty(), 4);
-      break;
-    case BuiltinType::SveUint32:
-      resultType = cir::VectorType::getScalable(builder.getUInt32Ty(), 4);
-      break;
-    case BuiltinType::SveFloat32:
-      resultType = cir::VectorType::getScalable(builder.getSingleTy(), 4);
-      break;
-    case BuiltinType::SveInt64:
-      resultType = cir::VectorType::getScalable(builder.getSInt64Ty(), 2);
-      break;
-    case BuiltinType::SveUint64:
-      resultType = cir::VectorType::getScalable(builder.getUInt64Ty(), 2);
-      break;
-    case BuiltinType::SveFloat64:
-      resultType = cir::VectorType::getScalable(builder.getDoubleTy(), 2);
-      break;
-    case BuiltinType::SveBool:
-      resultType = cir::VectorType::getScalable(builder.getUIntNTy(1), 16);
-      break;
+      // SVE data and predicate types.
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
+#include "clang/Basic/AArch64ACLETypes.def"
+      {
+        ASTContext::BuiltinVectorTypeInfo info =
+            astContext.getBuiltinVectorTypeInfo(cast<BuiltinType>(ty));
+        if (info.NumVectors != 1) {
+          cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
+          resultType = cgm.sInt32Ty;
+          break;
+        }
+        // A predicate holds one bit per lane. An svmfloat8_t lane is an 8-bit
+        // integer, independent of how the scalar __mfp8 type is represented.
+        bool isPredicate = info.ElementType->isBooleanType();
+        mlir::Type eltTy;
+        if (isPredicate)
+          eltTy = builder.getUIntNTy(1);
+        else if (info.ElementType->isMFloat8Type())
+          eltTy = builder.getUInt8Ty();
+        else
+          eltTy = convertType(info.ElementType);
+        resultType =
+            cir::VectorType::get(eltTy, info.EC,
+                                 isPredicate ? cir::VectorAbiKind::SVEPredicate
+                                             : cir::VectorAbiKind::SVEData);
+        break;
+      }
 
     // Unsigned integral types.
     case BuiltinType::Char8:
@@ -597,7 +601,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
-    resultType = cir::VectorType::getFixed(elemTy, vec->getNumElements());
+    resultType =
+        cir::VectorType::getFixed(elemTy, vec->getNumElements(),
+                                  getCIRVectorAbiKind(vec->getVectorKind()));
     break;
   }
 

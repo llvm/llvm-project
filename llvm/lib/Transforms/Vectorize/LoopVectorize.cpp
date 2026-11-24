@@ -1332,8 +1332,7 @@ public:
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
-          NewMemCheckCost = std::max(NewMemCheckCost.getValue(),
-                                     (InstructionCost::CostType)1);
+          NewMemCheckCost = std::max(NewMemCheckCost, InstructionCost(1));
 
           if (BestTripCount > 1)
             LLVM_DEBUG(dbgs()
@@ -3538,8 +3537,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
         InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
         if (StallCycles.isValid() && RecipThroughput.isValid() &&
             StallCycles > 0 && RecipThroughput > 0) {
-          unsigned ThisIC = bit_floor<uint64_t>(
-              1 + (StallCycles / RecipThroughput).getValue());
+          InstructionCost ModifiedCycles = (StallCycles / RecipThroughput) + 1;
+          unsigned ThisIC = bit_floor<uint64_t>(ModifiedCycles.getValue());
           StallsIC = std::max(StallsIC, ThisIC);
         }
       }
@@ -3584,9 +3583,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // We assume that the cost overhead is 1 and we use the cost model
     // to estimate the cost of the loop and interleave until the cost of the
     // loop overhead is about 5% of the cost of the loop.
+    InstructionCost NumLoops = InstructionCost(Opts.small_loop_cost) / LoopCost;
     unsigned SmallIC =
-        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(Opts.small_loop_cost /
-                                                         LoopCost.getValue()));
+        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(NumLoops.getValue()));
 
     // Interleave until store/load ports (estimated by max interleave count) are
     // saturated.
@@ -5319,13 +5318,25 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   if (Opts.force_target_instruction_cost)
     return Cost;
 
+  // Only charge legacy scalarization costs for instructions VPlan replicates,
+  // and for forced scalars only if VPlan replicates them per lane.
+  SmallPtrSet<Instruction *, 8> Replicated, ReplicatedPerLane;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      Replicated.insert(RepR.getUnderlyingInstr());
+      if (!RepR.isSingleScalar())
+        ReplicatedPerLane.insert(RepR.getUnderlyingInstr());
+    }
+
   // Pre-compute costs for instructions that are forced-scalar or profitable to
   // scalarize. For most such instructions, their scalarization costs are
   // accounted for here using the legacy cost model. However, some opcodes
-  // are excluded from these precomputed scalarization costs and are instead
-  // modeled later by the VPlan cost model (see UseVPlanCostModel below).
+  // (see UseVPlanCostModel below) and instructions VPlan does not replicate
+  // are excluded and instead modeled by the VPlan cost model.
   for (Instruction *ForcedScalar : CostCtx.CM.ForcedScalars[VF]) {
-    if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
+    if (!ReplicatedPerLane.contains(ForcedScalar) ||
+        CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(ForcedScalar);
     InstructionCost ForcedCost = CostCtx.getLegacyCost(ForcedScalar, VF);
@@ -5352,12 +5363,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
-  // Only charge legacy scalarization costs for instructions VPlan replicates.
-  SmallPtrSet<Instruction *, 8> Replicated;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
-    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB))
-      Replicated.insert(RepR.getUnderlyingInstr());
   for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
     if (!Replicated.contains(Scalarized) || UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
