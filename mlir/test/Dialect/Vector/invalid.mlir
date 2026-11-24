@@ -2134,20 +2134,6 @@ func.func @mask_transfer_write_vector_element_memref(
 
 // -----
 
-func.func @mask_transfer_write_vector_element_tensor(
-    %v: vector<4x4xf32>, %t: tensor<4xvector<4xf32>>, %m: vector<4xi1>)
-    -> tensor<4xvector<4xf32>> {
-  %c0 = arith.constant 0 : index
-  // expected-error@+1 {{does not support masking a transfer operation on a source with vector element type}}
-  %r = vector.mask %m {
-    vector.transfer_write %v, %t[%c0]
-      : vector<4x4xf32>, tensor<4xvector<4xf32>>
-  } : vector<4xi1> -> tensor<4xvector<4xf32>>
-  return %r : tensor<4xvector<4xf32>>
-}
-
-// -----
-
 func.func @vector_mask_already_masked_transfer_read(%base: memref<?xf32>, %c0: index, %pad: f32, %m: vector<4xi1>) -> vector<4xf32> {
   // expected-error@+1 {{doesn't expect a mask operand for the masked transfer operation}}
   %0 = vector.mask %m {

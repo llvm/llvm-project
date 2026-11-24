@@ -8343,12 +8343,17 @@ LogicalResult MaskOp::verify() {
                      [](Type t) { return llvm::isa<VectorType>(t); }) > 1)
     return emitOpError("multiple vector results not supported");
 
+  // TODO: Remove once https://github.com/llvm/llvm-project/issues/239511 is
+  // completed
   auto transferOp =
       dyn_cast<VectorTransferOpInterface>(maskableOp.getOperation());
   if (transferOp && transferOp.getMask())
     return emitOpError(
         "doesn't expect a mask operand for the masked transfer operation");
 
+  // TODO: This does not belong here, but there is just no good way to mask
+  // transfer Ops with vector elements. Instead, cnsider removing support for
+  // vector elements in XFer ops.
   if (transferOp &&
       isa<VectorType>(transferOp.getShapedType().getElementType()))
     return emitOpError("does not support masking a transfer operation on a "
