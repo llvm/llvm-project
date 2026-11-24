@@ -55,6 +55,7 @@ public:
   std::string_view getClobbers() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
   bool setCPU(StringRef Name) override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
