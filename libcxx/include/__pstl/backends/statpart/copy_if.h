@@ -93,6 +93,8 @@ struct __copy_if<__statpart_backend_tag, _ExecutionPolicy> {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
+      // Each workers needs a scratch memory to keep the bitflags to avoid calling the user predicate twice per element,
+      // thus the setup callbacks allocates a dynamic bitset with enough storage for every worker.
       auto __setup = [](size_t __max_workers_count, size_t __max_partition_size) {
         return __statpart::__make_sharded_dynamic_bitset(__max_workers_count, __max_partition_size);
       };

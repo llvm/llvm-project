@@ -102,19 +102,19 @@ int main(int, char**) {
     { // A single bit occupies a full cache line
       std::optional<__sharded_dynamic_bitset> b = __make_sharded_dynamic_bitset(1, 1);
       assert(b.has_value());
-      assert(b->__shards_count_ == 1);
-      assert(b->__words_per_shard_ == words_per_line);
+      assert(b->__shards_count() == 1);
+      assert(b->__words_per_shard() == words_per_line);
       assert(b->__shard(0).__words_ == words_per_line);
     }
     { // Exactly one cache line worth of bits
       std::optional<__sharded_dynamic_bitset> b = __make_sharded_dynamic_bitset(2, bits_per_cacheline);
       assert(b.has_value());
-      assert(b->__words_per_shard_ == words_per_line);
+      assert(b->__words_per_shard() == words_per_line);
     }
     { // One bit over a cache line spills into the next cache line
       std::optional<__sharded_dynamic_bitset> b = __make_sharded_dynamic_bitset(3, bits_per_cacheline + 1);
       assert(b.has_value());
-      assert(b->__words_per_shard_ == 2 * words_per_line);
+      assert(b->__words_per_shard() == 2 * words_per_line);
     }
   }
 
@@ -124,13 +124,13 @@ int main(int, char**) {
     constexpr std::size_t bits                = 1000;
     std::optional<__sharded_dynamic_bitset> b = __make_sharded_dynamic_bitset(shards, bits);
     assert(b.has_value());
-    const std::size_t words = b->__words_per_shard_;
+    const std::size_t words = b->__words_per_shard();
     assert(words * bits_per_word >= bits);
 
     // Shards are adjacent, cover the whole allocation and don't overlap
     for (std::size_t i = 0; i < shards; ++i) {
       __bitset_view v = b->__shard(i);
-      assert(v.__bits_ == b->__bits_.get() + i * words);
+      assert(v.__bits_ == b->__shard(0).__bits_ + i * words);
       assert(v.__words_ == words);
     }
 
