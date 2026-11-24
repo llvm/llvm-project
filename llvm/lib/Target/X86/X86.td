@@ -875,6 +875,10 @@ def TuningFastVectorShiftMasks
         "Prefer a left/right vector logical shift pair over a shift+and pair",
         [], InlineIgnore>;
 
+def TuningMOVElim : SubtargetFeature<"mov-elim", "HasMOVElim", "true",
+    "MOV r32, r32 and MOVZX r32, r8 between different registers are "
+    "eliminated at register renaming", [], InlineIgnore>;
+
 def TuningFastMOVBE
     : SubtargetFeature<"fast-movbe", "HasFastMOVBE", "true",
     "Prefer a movbe over a single-use load + bswap / single-use bswap + store",
@@ -1114,6 +1118,7 @@ def ProcessorFeatures {
                                                   FeatureXSAVES,
                                                   FeatureCLFLUSHOPT];
   list<SubtargetFeature> SKLTuning = [TuningFastGather,
+                                      TuningMOVElim,
                                       TuningMacroFusion,
                                       TuningSlow3OpsLEA,
                                       TuningSlowDivide64,
@@ -1144,6 +1149,7 @@ def ProcessorFeatures {
                                                   FeaturePKU,
                                                   FeatureCLWB];
   list<SubtargetFeature> SKXTuning = [TuningFastGather,
+                                      TuningMOVElim,
                                       TuningMacroFusion,
                                       TuningSlow3OpsLEA,
                                       TuningSlowDivide64,
@@ -1187,6 +1193,7 @@ def ProcessorFeatures {
                                                   FeatureIFMA,
                                                   FeatureSHA];
   list<SubtargetFeature> CNLTuning = [TuningFastGather,
+                                      TuningMOVElim,
                                       TuningMacroFusion,
                                       TuningSlow3OpsLEA,
                                       TuningSlowDivide64,
@@ -1217,6 +1224,7 @@ def ProcessorFeatures {
                                                   FeatureRDPID,
                                                   FeatureFSRM];
   list<SubtargetFeature> ICLTuning = [TuningFastGather,
+                                      TuningMOVElim,
                                       TuningMacroFusion,
                                       TuningSlowDivide64,
                                       TuningFastScalarFSQRT,

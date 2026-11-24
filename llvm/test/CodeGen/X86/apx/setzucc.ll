@@ -175,13 +175,13 @@ bb2:
 }
 
 define i32 @def_use_eflag(i32 %a, i32 %b, i8 %c) {
-; PREFER_LEGACY_SETCC-LABEL: def_use_eflag:
-; PREFER_LEGACY_SETCC:       # %bb.0:
-; PREFER_LEGACY_SETCC-NEXT:    addb $-1, %dl
-; PREFER_LEGACY_SETCC-NEXT:    adcl %esi, %edi
-; PREFER_LEGACY_SETCC-NEXT:    setb %al
-; PREFER_LEGACY_SETCC-NEXT:    movzbl %al, %eax
-; PREFER_LEGACY_SETCC-NEXT:    retq
+; GENERIC-LABEL: def_use_eflag:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    addb $-1, %dl
+; GENERIC-NEXT:    adcl %esi, %edi
+; GENERIC-NEXT:    setb %al
+; GENERIC-NEXT:    movzbl %al, %eax
+; GENERIC-NEXT:    retq
 ;
 ; PREFER_SETZUCC-LABEL: def_use_eflag:
 ; PREFER_SETZUCC:       # %bb.0:
@@ -189,6 +189,22 @@ define i32 @def_use_eflag(i32 %a, i32 %b, i8 %c) {
 ; PREFER_SETZUCC-NEXT:    adcl %esi, %edi
 ; PREFER_SETZUCC-NEXT:    setzub %al
 ; PREFER_SETZUCC-NEXT:    retq
+;
+; NOVALAKE-LABEL: def_use_eflag:
+; NOVALAKE:       # %bb.0:
+; NOVALAKE-NEXT:    addb $-1, %dl
+; NOVALAKE-NEXT:    adcl %esi, %edi
+; NOVALAKE-NEXT:    setb %cl
+; NOVALAKE-NEXT:    movzbl %cl, %eax
+; NOVALAKE-NEXT:    retq
+;
+; DIAMONDRAPIDS-LABEL: def_use_eflag:
+; DIAMONDRAPIDS:       # %bb.0:
+; DIAMONDRAPIDS-NEXT:    addb $-1, %dl
+; DIAMONDRAPIDS-NEXT:    adcl %esi, %edi
+; DIAMONDRAPIDS-NEXT:    setb %cl
+; DIAMONDRAPIDS-NEXT:    movzbl %cl, %eax
+; DIAMONDRAPIDS-NEXT:    retq
   %1 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %c, i32 %a, i32 %b)
   %2 = extractvalue { i8, i32 } %1, 0
   %3 = zext i8 %2 to i32
