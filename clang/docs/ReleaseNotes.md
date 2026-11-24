@@ -153,6 +153,13 @@ features cannot lower the translation-unit ABI level;
   longer classified according to a single member. `-fclang-abi-compat=23`
   restores the previous behavior. (#GH227130)
 
+- `_Atomic(T)` is now never less aligned than `T`, matching GCC. Previously an
+  over-aligned `T`, such as an `int` typedef declared with
+  `__attribute__((aligned(8)))`, lost its alignment under `_Atomic`, which
+  affects the layout of structures with such members. In the Microsoft record
+  layout, an `_Atomic` member of such a typedef now also resists `#pragma pack`
+  like the typedef itself. (#GH111295)
+
 - Clang now considers matrix types in its isHomogeneousAggregate() handling,
   which can lead to differences in how structures containing matrix types are
   classified for ABI purposes. The previous exclusion of matrix types appears
@@ -597,6 +604,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
 
+- `-Wuninitialized` no longer warns about an uninitialized variable passed to
+  `__builtin_classify_type`, `__builtin_constant_p`,
+  `__builtin_infer_alloc_token` or `__builtin_os_log_format_buffer_size`,
+  none of which depends on its arguments' values.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
@@ -917,6 +929,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
+- Fixed an assertion failure when accessing an `_Atomic` object whose value type is more aligned than it is
+  wide, such as an `int` typedef declared with `__attribute__((aligned(8)))`. (#GH111295)
 - Fixed an assertion failure when converting between an x87 `long double` vector and another vector type of the same size. (#GH173254), (#GH63548)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
@@ -1072,6 +1086,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
   `-fms-extensions` or in HLSL mode.
+
+- Fixed a crash on partial variable template specializations when part of which are
+  imported from modules. (#GH244974)
 
 - Fixed the destruction timing of temporaries created by default member
   initializers during aggregate initialization. Such an initializer is part of
@@ -1551,6 +1568,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
+- Removed the `-Wcuda-compat` warning about a parenthesized argument to
+  `#pragma unroll` in CUDA and HIP. The warning matched `nvcc` before CUDA 8.0,
+  when the unroll factor had to be a literal; CUDA 8.0 added support for
+  integral constant expressions, and both `#pragma unroll N` and
+  `#pragma unroll (N)` are now documented and generate identical code. The
+  warning is therefore obsolete.
+
 - Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
 
 - Clang now provides device-side definitions of `__cxa_pure_virtual()` and
@@ -1590,6 +1614,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### DWARF Support in Clang
 
 ### Floating Point Support in Clang
+
+- Added support for the `__builtin_iseqsig` builtin, which GCC also provides,
+  for implementing the C23 `iseqsig` macro. It compares its arguments for
+  equality like `==`, but is a signaling comparison: it raises the "invalid"
+  floating-point exception if either argument is a NaN. Like GCC's, it never
+  sets `errno`, so it implements the macro only when `errno` need not be set
+  for a domain error (`math_errhandling & MATH_ERRNO` is zero, as with
+  `-fno-math-errno`).
 
 ### Fixed Point Support in Clang
 

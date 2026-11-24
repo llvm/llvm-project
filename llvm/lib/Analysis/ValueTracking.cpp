@@ -516,15 +516,10 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
 /// Infer non-negativity for R + (R < 0 ? A : 0), where R = srem X, Y.
 /// A must be a non-negative Y or abs(Y).
 static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
+                                             const APInt &DemandedElts,
                                              KnownBits &KnownOut,
                                              const SimplifyQuery &Q,
                                              unsigned Depth) {
-  Type *Ty = Op0->getType();
-
-  // Only handle scalars for now.
-  if (Ty->isVectorTy())
-    return;
-
   const Value *Divisor = nullptr, *Cond = nullptr, *Remainder = nullptr,
               *AdjustmentValue = nullptr;
   CmpPredicate Pred;
@@ -546,8 +541,10 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Accept Y itself if non-negative, or abs(Y).
+  // For vectors, only check the demanded elements.
   bool IsPositiveDivisorCase =
-      Divisor == AdjustmentValue && isKnownNonNegative(Divisor, Q, Depth + 1);
+      Divisor == AdjustmentValue &&
+      computeKnownBits(Divisor, DemandedElts, Q, Depth + 1).isNonNegative();
   bool IsAbsoluteValueCase =
       match(AdjustmentValue,
             m_Intrinsic<Intrinsic::abs>(m_Specific(Divisor), m_Value()));
@@ -556,6 +553,8 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Repeated uses must agree. An undef value could break this relationship.
+  // For vectors, this check is conservative (checks the entire vector, not just
+  // the demanded elements).
   if (!isGuaranteedNotToBeUndef(Remainder, Q.AC, Q.CtxI, Q.DT, Depth + 1) ||
       !isGuaranteedNotToBeUndef(Divisor, Q.AC, Q.CtxI, Q.DT, Depth + 1))
     return;
@@ -579,7 +578,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
       // Independent operand bits give no result, but the Euclidean remainder
       // pattern can establish non-negativity through the operands'
       // relationship.
-      computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+      computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                       Depth);
     }
     return;
   }
@@ -598,7 +598,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
     computeKnownBitsFromLerpPattern(Op0, Op1, DemandedElts, KnownOut, Q, Depth);
 
     // Use the relationship between the remainder and its adjustment.
-    computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+    computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                     Depth);
   }
 }
 
@@ -5358,7 +5359,7 @@ static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
   computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
 }
 
-static void computeKnownFPClassForFPTrunc(const Operator *Op,
+static void computeKnownFPClassForFPTrunc(const Operator *Op, RoundingMode RM,
                                           const APInt &DemandedElts,
                                           FPClassTest InterestedClasses,
                                           KnownFPClass &Known,
@@ -5383,7 +5384,7 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   DenormalMode SrcMode =
       F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, RM, DstMode, SrcMode);
 }
 
 static void
@@ -6058,8 +6059,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::fptrunc_round: {
-      computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known,
-                                    Q, Depth);
+      Metadata *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
+      RoundingMode RM =
+          *convertStrToRoundingMode(cast<MDString>(MD)->getString());
+      computeKnownFPClassForFPTrunc(Op, RM, DemandedElts, InterestedClasses,
+                                    Known, Q, Depth);
       break;
     }
     case Intrinsic::log:
@@ -6478,7 +6482,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FPTrunc: {
-    computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known, Q,
+    computeKnownFPClassForFPTrunc(Op, RoundingMode::NearestTiesToEven,
+                                  DemandedElts, InterestedClasses, Known, Q,
                                   Depth);
     break;
   }
@@ -11214,6 +11219,15 @@ void llvm::findValuesAffectedByCondition(
         AddAffected(A);
         if (IsAssume)
           AddAffected(B);
+
+        // If the remainder is zero, then the division is exact.
+        Value *RemLHS, *RemRHS;
+        if (match(B, m_Zero()) &&
+            match(A, m_IRem(m_Value(RemLHS), m_Value(RemRHS)))) {
+          AddAffected(RemLHS);
+          AddAffected(RemRHS);
+        }
+
         if (HasRHSC) {
           Value *Y;
           // (X << C) or (X >>_s C) or (X >>_u C).

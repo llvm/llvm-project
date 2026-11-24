@@ -5319,13 +5319,25 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   if (Opts.force_target_instruction_cost)
     return Cost;
 
+  // Only charge legacy scalarization costs for instructions VPlan replicates,
+  // and for forced scalars only if VPlan replicates them per lane.
+  SmallPtrSet<Instruction *, 8> Replicated, ReplicatedPerLane;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      Replicated.insert(RepR.getUnderlyingInstr());
+      if (!RepR.isSingleScalar())
+        ReplicatedPerLane.insert(RepR.getUnderlyingInstr());
+    }
+
   // Pre-compute costs for instructions that are forced-scalar or profitable to
   // scalarize. For most such instructions, their scalarization costs are
   // accounted for here using the legacy cost model. However, some opcodes
-  // are excluded from these precomputed scalarization costs and are instead
-  // modeled later by the VPlan cost model (see UseVPlanCostModel below).
+  // (see UseVPlanCostModel below) and instructions VPlan does not replicate
+  // are excluded and instead modeled by the VPlan cost model.
   for (Instruction *ForcedScalar : CostCtx.CM.ForcedScalars[VF]) {
-    if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
+    if (!ReplicatedPerLane.contains(ForcedScalar) ||
+        CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(ForcedScalar);
     InstructionCost ForcedCost = CostCtx.getLegacyCost(ForcedScalar, VF);
@@ -5352,12 +5364,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
-  // Only charge legacy scalarization costs for instructions VPlan replicates.
-  SmallPtrSet<Instruction *, 8> Replicated;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
-    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB))
-      Replicated.insert(RepR.getUnderlyingInstr());
   for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
     if (!Replicated.contains(Scalarized) || UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
