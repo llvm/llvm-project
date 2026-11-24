@@ -95,7 +95,7 @@ void bar() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z3fooIiET_v
-// CHECK1-SAME: () #[[ATTR1:[0-9]+]] comdat {
+// CHECK1-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZN2STIiE1mE, align 4
 // CHECK1-NEXT:    store i32 [[TMP0]], ptr @v, align 4

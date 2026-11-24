@@ -3,13 +3,13 @@
 // expected-no-diagnostics
 
 // Make sure both host and device compilation emit vtable for Dervied
-// CHECK-DAG: $_ZN7DerivedD1Ev = comdat any
-// CHECK-DAG: $_ZN7DerivedD0Ev = comdat any
-// CHECK-DAG: $_ZN7Derived5BaseAEi = comdat any
-// CHECK-DAG: $_ZN7Derived8DerivedBEv = comdat any
-// CHECK-DAG: $_ZN7DerivedD2Ev = comdat any
-// CHECK-DAG: $_ZN4BaseD2Ev = comdat any
-// CHECK-DAG: $_ZTV7Derived = comdat any
+// CHECK: @_ZTV7Derived = linkonce_odr unnamed_addr constant { [6 x ptr] }
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7DerivedD1Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7DerivedD0Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7Derived5BaseAEi(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7Derived8DerivedBEv(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7DerivedD2Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN4BaseD2Ev(
 class Base {
 public:
 
@@ -18,7 +18,6 @@ public:
   virtual void BaseA(int a) { }
 };
 
-// CHECK: @_ZTV7Derived = linkonce_odr unnamed_addr constant { [6 x ptr] }
 class Derived : public Base {
 public:
 

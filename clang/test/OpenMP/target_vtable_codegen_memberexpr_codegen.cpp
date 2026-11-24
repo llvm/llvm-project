@@ -3,17 +3,17 @@
 // expected-no-diagnostics
 
 
-// CHECK-DAG: $_ZN4Base5BaseAEi = comdat any
-// CHECK-DAG: $_ZN7Derived5BaseAEi = comdat any
-// CHECK-DAG: $_ZN7Derived8DerivedBEv = comdat any
-// CHECK-DAG: $_ZN4BaseD1Ev = comdat any
-// CHECK-DAG: $_ZN4BaseD0Ev = comdat any
-// CHECK-DAG: $_ZN7DerivedD1Ev = comdat any
-// CHECK-DAG: $_ZN7DerivedD0Ev = comdat any
-// CHECK-DAG: $_ZN4BaseD2Ev = comdat any
-// CHECK-DAG: $_ZN7DerivedD2Ev = comdat any
-// CHECK-DAG: $_ZTV4Base = comdat any
-// CHECK-DAG: $_ZTV7Derived = comdat any
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN4Base5BaseAEi(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7Derived5BaseAEi(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7Derived8DerivedBEv(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN4BaseD1Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN4BaseD0Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7DerivedD1Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7DerivedD0Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN4BaseD2Ev(
+// CHECK-DAG: define linkonce_odr {{.*}} @_ZN7DerivedD2Ev(
+// CHECK-DAG: @_ZTV4Base = linkonce_odr unnamed_addr constant { {{.*}} }
+// CHECK-DAG: @_ZTV7Derived = linkonce_odr unnamed_addr constant { {{.*}} }
 class Base {
 public:
 

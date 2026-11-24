@@ -1286,8 +1286,12 @@ public:
 
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
+    // NVPTX is formatted as ELF, which does support COMDAT, unlike the other
+    // formats listed here.  However, it is compiled to PTX, assembled by ptxas
+    // into a cubin, which is linked by nvlink, and neither of those tools
+    // honors COMDAT.
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF() ||
-             isOSBinFormatDXContainer());
+             isOSBinFormatDXContainer() || isNVPTX());
   }
 
   /// Tests whether the target supports debug entry values.
