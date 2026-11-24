@@ -436,8 +436,9 @@ static bool IsInvalidPointerPair(uptr a1, uptr a2) {
 
   // check whether left is a stack memory pointer
   if (uptr shadow_offset1 = t->GetStackVariableShadowStart(left)) {
-    uptr shadow_offset2 = t->GetStackVariableShadowStart(right);
-    return shadow_offset2 == 0 || shadow_offset1 != shadow_offset2;
+    uptr shadow_offset2 = t->GetStackVariableShadowStart(right - 1);
+    return shadow_offset2 == 0 || shadow_offset1 != shadow_offset2 ||
+           AddressIsPoisoned(left) || AddressIsPoisoned(right - 1);
   }
 
   // check whether left is a heap memory address
@@ -454,7 +455,7 @@ static bool IsInvalidPointerPair(uptr a1, uptr a2) {
     return !GetGlobalAddressInformation(right - 1, 0, &gdesc2) ||
         !gdesc1.PointsInsideTheSameVariable(gdesc2);
 
-  if (t->GetStackVariableShadowStart(right) ||
+  if (t->GetStackVariableShadowStart(right - 1) ||
       GetHeapAddressInformation(right, 0, &hdesc2) ||
       GetGlobalAddressInformation(right - 1, 0, &gdesc2))
     return true;
