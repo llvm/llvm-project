@@ -1745,7 +1745,7 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   llvm::Value *Implicit =
       getCXXDestructorImplicitParam(CGF, DD, Type, ForVirtualBase,
                                     Delegating); // = nullptr
-  // Implicit and cleanup destructor calls do not have a call-site location.
+  // FIXME: Plumb a SourceLocation from EmitDestructorCall callers.
   CGF.EmitCXXDestructorCall(
       GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy), ThisTy,
       /*ImplicitParam=*/Implicit,

@@ -1997,7 +1997,7 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   else
     Callee = CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
 
-  // Implicit and cleanup destructor calls do not have a call-site location.
+  // FIXME: Plumb a SourceLocation from EmitDestructorCall callers.
   CGF.EmitCXXDestructorCall(GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy),
                             ThisTy, VTT, VTTTy, nullptr, SourceLocation{});
 }
