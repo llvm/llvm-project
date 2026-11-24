@@ -128,6 +128,32 @@ TEST(SPSAllocActionTest, RunActionWithUndecodableArgs) {
                "Could not deserialize allocation action argument buffer");
 }
 
+// Handler that takes its string arguments by const lvalue reference and by
+// rvalue reference, and writes their concatenation to the given std::string*.
+static orc_rt_WrapperFunctionBuffer concat_sps_allocaction(const char *ArgData,
+                                                           size_t ArgSize) {
+  return SPSAllocActionFunction<SPSExecutorAddr, SPSString, SPSString>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr Out, const std::string &A, std::string &&B) {
+               *Out.toPtr<std::string *>() = A + std::move(B);
+               return WrapperFunctionBuffer();
+             })
+      .release();
+}
+
+TEST(SPSAllocActionTest, RunActionWithReferenceArgs) {
+  // Verifies that handlers may take arguments by reference:
+  // AllocActionFunction::handle should deserialize into decayed (value)
+  // types and bind those values to the handler's reference parameters.
+  std::string Result;
+  auto AA = *MakeAllocAction<SPSExecutorAddr, SPSString, SPSString>::from(
+      concat_sps_allocaction, ExecutorAddr::fromPtr(&Result),
+      std::string("hello, "), std::string("world!"));
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+  EXPECT_EQ(Result, "hello, world!");
+}
+
 // Test the ORC_RT_SPS_ALLOC_ACTION macro.
 static Error check_values_equal(int32_t X, int32_t Y) {
   if (X == Y)

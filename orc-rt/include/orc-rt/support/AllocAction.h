@@ -27,13 +27,31 @@ namespace orc_rt {
 typedef orc_rt_WrapperFunctionBuffer (*AllocActionFn)(const char *ArgData,
                                                       size_t ArgSize);
 
+namespace detail {
+
+// Computes the tuple type that AllocActionFunction::handle deserializes
+// arguments into before calling the handler. Parameter types are decayed so
+// that handlers may take arguments by value, const reference, or rvalue
+// reference (a tuple of references couldn't be default-constructed).
+template <typename ReturnT, typename... ArgTs> struct AAHandlerTraitsImpl {
+  typedef std::tuple<std::decay_t<ArgTs>...> ArgTupleType;
+};
+
+template <bool /* is_const */, bool /* is_noexcept */, typename... Ts>
+struct AAHandlerTraitsImplAdapter : AAHandlerTraitsImpl<Ts...> {};
+
+template <typename C>
+using AAHandlerTraits = CallableTraitsHelper<AAHandlerTraitsImplAdapter, C>;
+
+} // namespace detail
+
 struct AllocActionFunction {
 
   template <typename Deserializer, typename Serializer, typename Handler>
   static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
                                       Deserializer &&D, Serializer &&S,
                                       Handler &&H) {
-    typename CallableArgInfo<Handler>::args_tuple_type Args;
+    typename detail::AAHandlerTraits<Handler>::ArgTupleType Args;
     if (!D.deserialize(ArgData, ArgSize, Args))
       return WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize allocation action argument buffer");
