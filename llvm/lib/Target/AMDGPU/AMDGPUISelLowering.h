@@ -45,6 +45,9 @@ public:
   /// original size will not change the value.
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
+  virtual SDValue expandABS(SDNode *N, SelectionDAG &DAG,
+                            bool IsNegative = false) const override;
+
   /// \returns The known bits of a 24-bit multiply (MUL_U24/MUL_I24) with a
   /// \p BitWidth wide result, given the known bits of its operands. Only the
   /// low 24 bits of each operand are used, zero- or sign-extended depending on
