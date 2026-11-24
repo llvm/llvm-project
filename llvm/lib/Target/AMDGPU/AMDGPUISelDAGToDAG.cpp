@@ -3107,7 +3107,13 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
   if (IsGDS && !Subtarget->hasGDS()) {
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
         Fn, "GDS is not supported on this subtarget", DL.getDebugLoc()));
-    IsGDS = false;
+    SDValue Undef(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL,
+                                         N->getValueType(0)),
+                  0);
+    ReplaceUses(SDValue(N, 0), Undef);
+    ReplaceUses(SDValue(N, 1), N->getOperand(0));
+    CurDAG->RemoveDeadNode(N);
+    return;
   }
 
   uint64_t ImmOffset = 0;
