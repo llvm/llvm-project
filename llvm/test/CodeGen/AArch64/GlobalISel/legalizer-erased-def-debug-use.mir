@@ -30,7 +30,7 @@
 ...
 
 # CHECK-LABEL: name: dead_def
-# CHECK-NOT:   G_ADD
+# CHECK-NOT:   G_MUL
 # CHECK:       DBG_VALUE $noreg, $noreg
 ---
 name:            dead_def
@@ -39,7 +39,7 @@ body:             |
     liveins: $w0, $w1
     %a:_(i32) = COPY $w0
     %b:_(i32) = COPY $w1
-    %sum:_(i32) = G_ADD %a, %b
+    %sum:_(i32) = G_MUL %a, %b
     DBG_VALUE %sum(i32), $noreg, !5, !DIExpression(), debug-location !6
     RET_ReallyLR
 ...

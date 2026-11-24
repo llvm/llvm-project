@@ -12,7 +12,7 @@ define float @gep_folded_into_load(ptr %base, i64 %offset) !dbg !5 {
   ; O0-NEXT: {{  $}}
   ; O0-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; O0-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-  ; O0-NEXT:   DBG_VALUE $noreg, $noreg, !7, !DIExpression(), debug-location !6
+  ; O0-NEXT:   DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY]], [[COPY1]], debug-location !6
   ; O0-NEXT:   [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0, debug-location !6 :: (load (f32) from %ir.addr)
   ; O0-NEXT:   $s0 = COPY [[LDRSroX]], debug-location !6
   ; O0-NEXT:   RET_ReallyLR implicit $s0, debug-location !6
@@ -24,7 +24,7 @@ define float @gep_folded_into_load(ptr %base, i64 %offset) !dbg !5 {
   ; O2-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; O2-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
   ; O2-NEXT:   DBG_VALUE $noreg, $noreg, !7, !DIExpression(), debug-location !6
-  ; O2-NEXT:   DBG_VALUE $noreg, $noreg, !7, !DIExpression(), debug-location !6
+  ; O2-NEXT:   DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY]], [[COPY1]], debug-location !6
   ; O2-NEXT:   [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0, debug-location !6 :: (load (f32) from %ir.addr)
   ; O2-NEXT:   $s0 = COPY [[LDRSroX]], debug-location !6
   ; O2-NEXT:   RET_ReallyLR implicit $s0, debug-location !6

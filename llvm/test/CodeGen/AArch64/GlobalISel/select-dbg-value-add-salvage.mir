@@ -77,7 +77,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !4)
+    ; CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY]], [[COPY1]], debug-location !DILocation(line: 1, column: 1, scope: !4)
     ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY]], [[COPY1]], 0, 0 :: (load (i64))
     ; CHECK-NEXT: $x0 = COPY [[LDRXroX]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
@@ -100,7 +100,7 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !6)
+    ; CHECK-NEXT: DBG_VALUE [[COPY]], $noreg, !12, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !6)
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[COPY]], 1 :: (load (i64))
     ; CHECK-NEXT: $x0 = COPY [[LDRXui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
@@ -123,7 +123,7 @@ body: |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x1
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !7)
+    ; CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $x0, [[COPY]], debug-location !DILocation(line: 1, column: 1, scope: !7)
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(i64) = COPY $x0
@@ -143,7 +143,7 @@ body: |
     ; CHECK-LABEL: name: add_imm
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !8)
+    ; CHECK-NEXT: DBG_VALUE $x0, $noreg, !12, !DIExpression(DW_OP_plus_uconst, 3, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(i64) = COPY $x0
     %1:gpr(i64) = G_CONSTANT i64 3
@@ -161,7 +161,7 @@ body: |
     ; CHECK-LABEL: name: add_neg_imm
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !9)
+    ; CHECK-NEXT: DBG_VALUE $x0, $noreg, !12, !DIExpression(DW_OP_constu, 3, DW_OP_minus, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !9)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(i64) = COPY $x0
     %1:gpr(i64) = G_CONSTANT i64 -3
@@ -181,7 +181,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64all = COPY $x2
-    ; CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), $noreg, $noreg, debug-location !DILocation(line: 1, column: 1, scope: !10)
+    ; CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), $x0, [[COPY1]], [[COPY]], debug-location !DILocation(line: 1, column: 1, scope: !10)
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
     ; CHECK-NEXT: $x1 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
@@ -205,7 +205,7 @@ body: |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x1
-    ; CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), $noreg, $noreg, debug-location !DILocation(line: 1, column: 1, scope: !11)
+    ; CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_mul, DW_OP_stack_value), $x0, $x0, [[COPY]], [[COPY]], debug-location !DILocation(line: 1, column: 1, scope: !11)
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(i64) = COPY $x0
