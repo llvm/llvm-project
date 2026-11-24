@@ -516,10 +516,12 @@ def PromisedInterfacesOp : TEST_AttrOp<"promised_interfaces"> {
 //===----------------------------------------------------------------------===//
 
 // Define the enum attribute.
+let partition = Test_AttrTypeCorePartition in {
 def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
 
 def TestPrettyEnumAttr
     : EnumAttr<Test_Dialect, TestPrettyEnum, "pretty_enum">;
+} // let partition = Test_AttrTypeCorePartition
 
 // Define an op that contains the enum attribute.
 def OpWithEnum : TEST_AttrOp<"op_with_enum"> {
@@ -610,17 +612,22 @@ def OpWithSimpleEnum16Prop : TEST_AttrOp<"op_with_simple_enum_16_prop"> {
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
 
-// Define the enum attribute.
+// Define the enum attributes.
+let partition = Test_AttrTypeCorePartition in {
 def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum">;
+
+def TestBitEnumVerticalBarAttr
+    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
+
+def TestBitEnumSpaceAttr
+    : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
+} // let partition = Test_AttrTypeCorePartition
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnum : TEST_AttrOp<"op_with_bit_enum"> {
   let arguments = (ins TestBitEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
 }
-
-def TestBitEnumVerticalBarAttr
-    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnumVerticalBar : TEST_AttrOp<"op_with_bit_enum_vbar"> {
@@ -639,9 +646,6 @@ def OpWithBitEnumVerticalBarDirective
   let arguments = (ins TestBitEnumVerticalBarAttr:$value);
   let assemblyFormat = "enum($value) attr-dict";
 }
-
-def TestBitEnumSpaceAttr
-    : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
 
 def OpWithBitEnumSpace : TEST_Op<"op_with_bit_enum_space"> {
   let arguments = (ins TestBitEnumSpaceAttr:$value,
@@ -898,6 +902,14 @@ def ElementwiseMappableOp : TEST_Op<"elementwise_mappable",
   let results = (outs Variadic<AnyType>);
 }
 
+def PureElementwiseRegionOp : TEST_Op<"pure_elementwise_region",
+    [Elementwise, RecursivelySpeculatable, RecursiveMemoryEffects, SingleBlock]> {
+  let summary = "elementwise region op that can capture external values";
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs AnyType);
+  let regions = (region SizedRegion<1>:$body);
+}
+
 def ArgAndResHaveFixedElementTypesOp :
     TEST_Op<"arg_and_res_have_fixed_element_types",
       [PredOpTrait<"fixed type combination",
@@ -989,6 +1001,28 @@ def OperandRankEqualsResultSize :
                       "operand rank equals result size">]> {
   let arguments = (ins AnyShaped:$operand);
   let results = (outs AnyShaped:$result);
+}
+
+def VariadicOperandsHaveSameElementType :
+    TEST_Op<"variadic_operands_have_same_element_type",
+            [VariadicAllElementTypesMatch<"xs">]> {
+  let arguments = (ins AnyType:$first, Variadic<AnyType>:$xs);
+}
+
+def VariadicOperandsHaveSameRank :
+    TEST_Op<"variadic_operands_have_same_rank", [VariadicAllRanksMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyShaped>:$xs);
+}
+
+def VariadicOperandsHaveSameShape :
+    TEST_Op<"variadic_operands_have_same_shape",
+            [VariadicAllShapesMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyShaped>:$xs);
+}
+
+def VariadicOperandsHaveSameType :
+    TEST_Op<"variadic_operands_have_same_type", [VariadicAllTypesMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyType>:$xs);
 }
 
 def IfFirstOperandIsNoneThenSoIsSecond :

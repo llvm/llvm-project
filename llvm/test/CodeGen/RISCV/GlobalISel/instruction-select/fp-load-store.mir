@@ -21,8 +21,8 @@ body:             |
     ; CHECK-NEXT: FSW [[COPY1]], [[COPY]], 0 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
-    %1:fprb(s32) = COPY $f10_f
-    G_STORE %1(s32), %0(p0) :: (store (s32))
+    %1:fprb(f32) = COPY $f10_f
+    G_STORE %1(f32), %0(p0) :: (store (s32))
     PseudoRET
 
 ...
@@ -42,8 +42,8 @@ body:             |
     ; CHECK-NEXT: FSD [[COPY1]], [[COPY]], 0 :: (store (s64))
     ; CHECK-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
-    %1:fprb(s64) = COPY $f10_d
-    G_STORE %1(s64), %0(p0) :: (store (s64))
+    %1:fprb(f64) = COPY $f10_d
+    G_STORE %1(f64), %0(p0) :: (store (s64))
     PseudoRET
 
 ...
@@ -63,8 +63,8 @@ body:             |
     ; CHECK-NEXT: $f10_f = COPY [[FLW]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
     %0:gprb(p0) = COPY $x10
-    %1:fprb(s32) = G_LOAD %0(p0) :: (load (s32))
-    $f10_f = COPY %1(s32)
+    %1:fprb(f32) = G_LOAD %0(p0) :: (load (s32))
+    $f10_f = COPY %1(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -84,8 +84,8 @@ body:             |
     ; CHECK-NEXT: $f10_d = COPY [[FLD]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %0:gprb(p0) = COPY $x10
-    %1:fprb(s64) = G_LOAD %0(p0) :: (load (s64))
-    $f10_d = COPY %1(s64)
+    %1:fprb(f64) = G_LOAD %0(p0) :: (load (s64))
+    $f10_d = COPY %1(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -106,8 +106,8 @@ body:             |
     ; CHECK-NEXT: FSH [[COPY1]], [[COPY]], 0 :: (store (s16))
     ; CHECK-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
-    %1:fprb(s16) = COPY $f10_h
-    G_STORE %1(s16), %0(p0) :: (store (s16))
+    %1:fprb(f16) = COPY $f10_h
+    G_STORE %1(f16), %0(p0) :: (store (s16))
     PseudoRET
 
 ...
@@ -127,8 +127,8 @@ body:             |
     ; CHECK-NEXT: $f10_h = COPY [[FLH]]
     ; CHECK-NEXT: PseudoRET implicit $f10_h
     %0:gprb(p0) = COPY $x10
-    %1:fprb(s16) = G_LOAD %0(p0) :: (load (s16))
-    $f10_h = COPY %1(s16)
+    %1:fprb(f16) = G_LOAD %0(p0) :: (load (s16))
+    $f10_h = COPY %1(f16)
     PseudoRET implicit $f10_h
 
 ...

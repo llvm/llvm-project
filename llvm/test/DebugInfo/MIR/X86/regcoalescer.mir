@@ -36,11 +36,9 @@
 ---
 name:            main
 alignment:       16
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
 body:             |
   bb.0.entry:
-    %0 = MOV32r0 implicit-def dead $eflags, debug-location !20
+    %0:gr32 = MOV32r0 implicit-def dead $eflags, debug-location !20
     DBG_VALUE %0, _, !18, !DIExpression(), debug-location !21
     DBG_VALUE %0, _, !19, !DIExpression(), debug-location !22
     $eax = COPY %0, debug-location !22

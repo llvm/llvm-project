@@ -17,7 +17,6 @@
 #include "AMDGPUSelectionDAGInfo.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -52,9 +51,6 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // Subtarget - Keep a pointer to the AMDGPU Subtarget around so that we can
   // make the right decision when generating code for different targets.
   const GCNSubtarget *Subtarget;
-
-  // Default FP mode for the current function.
-  SIModeRegisterDefaults Mode;
 
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.
@@ -92,6 +88,7 @@ private:
 
   bool isVGPRImm(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
+  bool isVRegIdxFoldableAdd(const SDNode *N, unsigned NumDwords) const;
 
   MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
                                     const SDLoc &DL) const;
@@ -227,6 +224,7 @@ private:
                                        SDValue &SrcMods) const;
   bool SelectVOP3BMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
+  bool SelectVOP3NoOpSelMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                        SDValue &Clamp, SDValue &Omod) const;
   bool SelectVOP3BMods0(SDValue In, SDValue &Src, SDValue &SrcMods,

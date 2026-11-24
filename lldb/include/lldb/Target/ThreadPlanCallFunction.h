@@ -19,7 +19,7 @@ namespace lldb_private {
 
 class ThreadPlanCallFunction : public ThreadPlan {
   // Create a thread plan to call a function at the address passed in the
-  // "function" argument.  If you plan to call GetReturnValueObject, then pass
+  // "function" argument.  If you plan to call GetReturnValue, then pass
   // in the return type, otherwise just pass in an invalid CompilerType.
 public:
   ThreadPlanCallFunction(Thread &thread, const Address &function,
@@ -59,8 +59,10 @@ public:
   // plan is complete, you can call "GetReturnValue()" to retrieve the value
   // that was extracted.
 
-  lldb::ValueObjectSP GetReturnValueObject() override {
-    return m_return_valobj_sp;
+  ThreadPlanReturnValue GetReturnValue() override {
+    if (m_return_valobj_sp)
+      return ReturnedValue{m_return_valobj_sp};
+    return {};
   }
 
   // Return the stack pointer that the function received on entry.  Any stack

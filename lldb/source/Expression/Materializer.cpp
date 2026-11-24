@@ -507,6 +507,18 @@ public:
               GetName(), write_error.AsCString());
           return;
         }
+      } else if (valobj_sp->HasNoStorage()) {
+        // Without a location, a variable whose type occupies no memory has no
+        // data to copy into a temporary region. A null pointer serves as its
+        // address, because the expression never accesses any of its bytes.
+        Status write_error;
+        map.WritePointerToMemory(load_addr, 0, write_error);
+        if (!write_error.Success()) {
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't write the address of variable {0} to memory: {1}",
+              GetName(), write_error.AsCString());
+          return;
+        }
       } else {
         DataExtractor data;
         Status extract_error;

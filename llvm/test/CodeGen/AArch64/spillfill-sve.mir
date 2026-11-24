@@ -26,8 +26,6 @@
 ...
 ---
 name: spills_fills_stack_id_ppr
-registers:
-  - { id: 0, class: ppr }
 stack:
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
@@ -68,8 +66,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_ppr2
-registers:
-  - { id: 0, class: ppr2 }
 stack:
 liveins:
   - { reg: '$p0_p1', virtual-reg: '%0' }
@@ -112,8 +108,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_ppr2mul2
-registers:
-  - { id: 0, class: ppr2mul2 }
 stack:
 liveins:
   - { reg: '$p0_p1', virtual-reg: '%0' }
@@ -156,8 +150,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_pnr
-registers:
-  - { id: 0, class: pnr }
 stack:
 liveins:
   - { reg: '$pn0', virtual-reg: '%0' }
@@ -198,8 +190,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_virtreg_pnr
-registers:
-  - { id: 0, class: pnr_p8to15 }
 stack:
 body:             |
   bb.0.entry:
@@ -240,9 +230,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_virtreg_ppr_to_pnr
-registers:
-  - { id: 0, class: ppr }
-  - { id: 1, class: pnr_p8to15 }
 stack:
 body:             |
   bb.0.entry:
@@ -273,8 +260,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr
-registers:
-  - { id: 0, class: zpr }
 stack:
 liveins:
   - { reg: '$z0', virtual-reg: '%0' }
@@ -307,8 +292,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr2
-registers:
-  - { id: 0, class: zpr2 }
 stack:
 liveins:
   - { reg: '$z1_z2', virtual-reg: '%0' }
@@ -343,8 +326,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr2strided
-registers:
-  - { id: 0, class: zpr2strided }
 stack:
 liveins:
   - { reg: '$z0_z8', virtual-reg: '%0' }
@@ -387,8 +368,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr3
-registers:
-  - { id: 0, class: zpr3 }
 stack:
 liveins:
   - { reg: '$z0_z1_z2', virtual-reg: '%0' }
@@ -425,8 +404,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr4
-registers:
-  - { id: 0, class: zpr4 }
 stack:
 liveins:
   - { reg: '$z1_z2_z3_z4', virtual-reg: '%0' }
@@ -465,8 +442,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr4strided
-registers:
-  - { id: 0, class: zpr4strided }
 stack:
 liveins:
   - { reg: '$z0_z4_z8_z12', virtual-reg: '%0' }

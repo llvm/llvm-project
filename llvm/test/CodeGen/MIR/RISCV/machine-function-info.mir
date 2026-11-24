@@ -22,15 +22,6 @@ failedISel:      false
 hasWinCFI:       false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr, preferred-register: '' }
-  - { id: 5, class: gpr, preferred-register: '' }
-  - { id: 6, class: gpr, preferred-register: '' }
-  - { id: 7, class: gpr, preferred-register: '' }
 liveins:
   - { reg: '$x11', virtual-reg: '%1' }
   - { reg: '$x12', virtual-reg: '%2' }

@@ -26,7 +26,7 @@ XRay consists of three main parts:
 
   **NOTE:** As of July 25, 2018 , XRay is only available for the following
   architectures running Linux: x86_64, arm7 (no thumb), aarch64, powerpc64le,
-  mips, mipsel, mips64, mips64el, NetBSD: x86_64, FreeBSD: x86_64 and
+  mips, mipsel, mips64, mips64el, Hexagon, NetBSD: x86_64, FreeBSD: x86_64 and
   OpenBSD: x86_64.
 
 The compiler-inserted instrumentation points come in the form of nop-sleds in

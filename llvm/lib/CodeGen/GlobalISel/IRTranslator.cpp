@@ -3686,6 +3686,21 @@ bool IRTranslatorImpl::handleUnsupportedIntrinsic(
   return true;
 }
 
+/// Use Info.size as SelectionDAG does, but keep memVT's type when the sizes
+/// match. An invalid LLT means unknown size.
+static LLT getTgtMemIntrinsicMemTy(const TargetLowering::IntrinsicInfo &Info) {
+  LLT MemTy = Info.memVT.isSimple()
+                  ? getLLTForMVT(Info.memVT.getSimpleVT())
+                  : LLT::scalar(Info.memVT.getStoreSizeInBits());
+  if (!Info.size)
+    return MemTy;
+  LocationSize Size = LocationSize::precise(Info.size);
+  if (!Size.hasValue())
+    return LLT();
+  return MemTy.getSizeInBytes() == Size.getValue() ? MemTy
+                                                   : LLT::scalar(8 * Info.size);
+}
+
 /// Translate a call or callbr to an intrinsic.
 bool IRTranslatorImpl::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
@@ -3738,9 +3753,7 @@ bool IRTranslatorImpl::translateIntrinsic(
   for (const auto &Info : TgtMemIntrinsicInfos) {
     Align Alignment = Info.align.value_or(
         DL->getABITypeAlign(Info.memVT.getTypeForEVT(CB.getContext())));
-    LLT MemTy = Info.memVT.isSimple()
-                    ? getLLTForMVT(Info.memVT.getSimpleVT())
-                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
+    LLT MemTy = getTgtMemIntrinsicMemTy(Info);
 
     // TODO: We currently just fallback to address space 0 if
     // getTgtMemIntrinsic didn't yield anything useful.
@@ -4365,16 +4378,16 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   LLT BaseTy = MRI.getType(Base);
   LLT ValTy = MRI.getType(Val);
 
-  assert(BaseTy.getSizeInBits() >= ValTy.getSizeInBits() &&
+  assert(BaseTy.getScalarSizeInBits() >= ValTy.getScalarSizeInBits() &&
          "bitinsert val wider than base should be rejected by verifier");
 
   // If Val is a floating-point type, bitcast it to an integer of the same
   // size so buildZExtOrTrunc can safely extend or truncate it.
-  if (ValTy.isFloat()) {
-    ValTy = LLT::scalar(ValTy.getSizeInBits());
+  if (ValTy.isFloatOrFloatVector()) {
+    ValTy = ValTy.changeToInteger();
     Val = MIRBuilder.buildBitcast(ValTy, Val).getReg(0);
-  } else if (ValTy.isPointer()) {
-    ValTy = LLT::scalar(ValTy.getSizeInBits());
+  } else if (ValTy.isPointerOrPointerVector()) {
+    ValTy = ValTy.changeElementType(LLT::integer(ValTy.getScalarSizeInBits()));
     Val = MIRBuilder.buildPtrToInt(ValTy, Val).getReg(0);
   }
 
@@ -4386,8 +4399,8 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   // Truncate or extend Val to BaseTy so only the inserted bit range remains.
   Register ExtVal = MIRBuilder.buildZExtOrTrunc(BaseTy, Val).getReg(0);
 
-  unsigned BaseBitWidth = BaseTy.getSizeInBits();
-  unsigned ValBitWidth = ValTy.getSizeInBits();
+  unsigned BaseBitWidth = BaseTy.getScalarSizeInBits();
+  unsigned ValBitWidth = ValTy.getScalarSizeInBits();
   APInt InsertMask = APInt::getLowBitsSet(BaseBitWidth, ValBitWidth);
   Register MaskConst = MIRBuilder.buildConstant(BaseTy, InsertMask).getReg(0);
   Register ShiftedMask =
@@ -4409,7 +4422,7 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   LLT SrcTy = MRI.getType(Src);
   LLT ResTy = MRI.getType(Res);
 
-  assert(ResTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
+  assert(ResTy.getScalarSizeInBits() <= SrcTy.getScalarSizeInBits() &&
          "bitextract result wider than source should be rejected by verifier");
 
   // Convert Offset to the target's preferred shift amount type.
@@ -4420,9 +4433,9 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   // Shift right by Offset to bring the target field down to bit 0.
   Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
 
-  if (ResTy.isFloat()) {
+  if (ResTy.isFloatOrFloatVector()) {
     // Drop into the integer domain to safely handle the size conversion
-    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    LLT IntResTy = ResTy.changeToInteger();
     Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
 
     if (SrcTy == IntResTy)
@@ -4433,9 +4446,10 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
     // Bitcast the raw integer bits back into the requested floating-point
     // register
     MIRBuilder.buildBitcast(Res, IntRes);
-  } else if (ResTy.isPointer()) {
+  } else if (ResTy.isPointerOrPointerVector()) {
     // Drop into the integer domain to safely handle the size conversion
-    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    LLT IntResTy =
+        ResTy.changeElementType(LLT::integer(ResTy.getScalarSizeInBits()));
     Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
 
     if (SrcTy == IntResTy)
@@ -4916,19 +4930,16 @@ bool IRTranslatorImpl::translate(const Constant &C, Register Reg) {
 }
 
 bool IRTranslatorImpl::mayTranslateUserTypes(const User &U) const {
-  const TargetMachine &TM = TLI->getTargetMachine();
   if (LLT::getUseExtended())
     return true;
 
   // BF16 cannot currently be represented by default LLT. To avoid miscompiles
   // we prevent any instructions using them by default in all targets that do
   // not explicitly enable it via LLT::setUseExtended(true).
-  // SPIRV target is exception.
-  return TM.getTargetTriple().isSPIRV() ||
-         (!U.getType()->getScalarType()->isBFloatTy() &&
-          !any_of(U.operands(), [](Value *V) {
-            return V->getType()->getScalarType()->isBFloatTy();
-          }));
+  return !U.getType()->getScalarType()->isBFloatTy() &&
+         !any_of(U.operands(), [](Value *V) {
+           return V->getType()->getScalarType()->isBFloatTy();
+         });
 }
 
 bool IRTranslatorImpl::finalizeBasicBlock(const BasicBlock &BB,
@@ -5324,6 +5335,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   MRI->reserveVirtRegs(NumValues);
 
   MF->getFrameInfo().setHasMustTailInVarArgFunc(HasMustTailInVarArgFn);
+  MF->setExposesReturnsTwice(F.callsFunctionThatReturnsTwice());
 
   // Make our arguments/constants entry block fallthrough to the IR entry block.
   EntryBB->addSuccessor(&getMBB(F.front()));

@@ -89,16 +89,15 @@ subroutine unstructured_do_concurrent
     error stop "fail"
   enddo
 end
+! The ERROR STOP stays in the body, so the loop keeps its structured form and
+! only the body is folded into a region.
 ! CHECK-LABEL: func.func @_QPunstructured_do_concurrent
-! CHECK:         %[[ITER_VAR:.*]] = fir.alloca i32
-! CHECK:         scf.execute_region no_inline {
-! CHECK:           cf.br ^[[HEADER:.*]]
-! CHECK:         ^[[HEADER]]:
-! CHECK:           %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
-! CHECK:           cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
-! CHECK:         ^[[BODY]]:
-! CHECK-NEXT:      %{{.*}} = fir.alloca !fir.logical<4> <{bindc_name = "success", {{.*}}}>
-! CHECK:         ^[[EXIT]]:
-! CHECK-NEXT:      scf.yield
-! CHECK:         }
+! CHECK:         fir.do_concurrent {
+! CHECK:           fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) local(@{{.*}}success{{.*}}) {
+! CHECK:             scf.execute_region no_inline {
+! CHECK:               fir.call @_FortranAStopStatementText
+! CHECK-NEXT:          fir.unreachable
+! CHECK-NEXT:        }
+! CHECK-NEXT:      }
+! CHECK-NEXT:    }
 ! CHECK:         return

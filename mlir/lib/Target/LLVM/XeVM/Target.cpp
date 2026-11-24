@@ -166,7 +166,8 @@ void mlir::xevm::registerXeVMTargetInterfaceExternalModels(
 SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, XeVMTargetAttr xeTarget,
     const gpu::TargetOptions &targetOptions)
-    : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO()),
+    : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO(), {},
+                     {}, {}, {}, targetOptions.getLibraryOptions()),
       xeTarget(xeTarget), librariesToLink(targetOptions.getLibrariesToLink()),
       targetOptions(targetOptions) {
   if (xeTarget.getLinkFiles())
@@ -469,7 +470,7 @@ static const std::vector<std::string> getDefaultSPIRVExtensions() {
       "SPV_EXT_relaxed_printf_string_address_space",
       "SPV_INTEL_cache_controls",
       "SPV_INTEL_variable_length_array",
-      "SPV_INTEL_bfloat16_arithmetic",
+      "SPV_EXT_bfloat16_arithmetic",
   };
 }
 
