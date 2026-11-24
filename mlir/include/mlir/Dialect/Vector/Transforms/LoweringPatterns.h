@@ -157,6 +157,16 @@ void populateVectorTransposeLoweringPatterns(
 
 /// Populate the pattern set with the following patterns:
 ///
+/// [TransposeOpToInterleaveLowering]
+/// This pattern enables efficient lowering of fixed-size rank-2
+/// `vector.transpose` operations using `vector.interleave` or
+/// `vector.deinterleave` operations. One of the two transposed dimensions
+/// must be exactly 2.
+void populateVectorTransposeToInterleaveLoweringPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
 /// [TransferReadToVectorLoadLowering]
 /// Progressive lowering of transfer_read.This pattern supports lowering of
 /// `vector.transfer_read` to a combination of `vector.load` and

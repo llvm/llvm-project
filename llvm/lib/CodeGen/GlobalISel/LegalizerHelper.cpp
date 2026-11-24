@@ -8037,7 +8037,7 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
   auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
 
-  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::integer(1), Hi, Sign);
 
   // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
   // leading zeros, then the MSB of Lo is different than the MSB of Hi.
@@ -11002,7 +11002,7 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
   CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_ABDS)
                                 ? CmpInst::ICMP_SGT
                                 : CmpInst::ICMP_UGT;
-  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::scalar(1), LHS, RHS);
+  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::integer(1), LHS, RHS);
   MIRBuilder.buildSelect(DstReg, ICmp, LHSSub, RHSSub);
 
   MI.eraseFromParent();

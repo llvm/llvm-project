@@ -1668,14 +1668,14 @@ define double @f9() {
 ; MIPS1-PSX-NEXT:    lui $1, %hi(f) # <MCInst #[[#MCINST1]] LUi
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:R1>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(f)>>
-; MIPS1-PSX-NEXT:    lwc1 $f0, %lo(f)($1) # <MCInst #[[#MCINST28:]] LWC1
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:F0>
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:R1>
-; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(f)>>
-; MIPS1-PSX-NEXT:    lwc1 $f1, %lo(f+4)($1) # <MCInst #[[#MCINST28:]] LWC1
+; MIPS1-PSX-NEXT:    lwc1 $f1, %lo(f+4)($1) # <MCInst #[[#MCINST28]] LWC1
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:F1>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:R1>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(f+4)>>
+; MIPS1-PSX-NEXT:    lwc1 $f0, %lo(f)($1) # <MCInst #[[#MCINST28]] LWC1
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:F0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R1>
+; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(f)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:R31>>
 ; MIPS1-PSX-NEXT:    nop # <MCInst #[[#MCINST13]] SLL

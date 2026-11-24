@@ -1890,7 +1890,7 @@ def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 
 def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  AttrSizedOperandSegments, Terminator
+  AttrSizedOperandSegments, Pure, Terminator
 ]> {
   let summary = "A flattened version of cir.switch";
 
