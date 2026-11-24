@@ -343,10 +343,11 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
           ValueRange iterArgs) {
         subviewOffset[subviewOffset.size() - 2] = iv;
 
-        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16,
+        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16/f16,
         // retrieve one row of vector (32).
+        bool is16BitFloat = ipType.isBF16() || ipType.isF16();
         auto vectorType = VectorType::get({2, (16 * (offset / 2))}, ipType);
-        if (ipType.isBF16())
+        if (is16BitFloat)
           vectorType = VectorType::get((16 * offset), ipType);
 
         int64_t srcRank = (dyn_cast<ShapedType>(matB.getType())).getRank();
@@ -358,7 +359,7 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
             rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
             map, inBounds);
 
-        if (!ipType.isBF16())
+        if (!is16BitFloat)
           vec1 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec1);
 
@@ -370,14 +371,14 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
         Value vec2 = vector::TransferReadOp::create(
             rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
             map, inBounds);
-        if (!ipType.isBF16())
+        if (!is16BitFloat)
           vec2 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec2);
 
         vector::ShuffleOp writeVal1;
         vector::ShuffleOp writeVal2;
 
-        if (ipType.isBF16()) {
+        if (is16BitFloat) {
 
           writeVal1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
@@ -529,7 +530,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
     auto accTileType = amx::TileType::get({16, 16}, opType);
 
     Value dp;
-    if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
+    if (isa<FloatType>(ipType))
       dp = amx::TileMulFOp::create(rewriter, loc, accTileType, tilesLhs,
                                    tilesRhs, accIterArgs[i]);
 
@@ -917,19 +918,20 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
   matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
                                PatternRewriter &rewriter) const override {
 
+    Type lhsElemTy = contractOp.getLhsType().getElementType();
     unsigned int blockingFactor =
-        contractOp.getLhsType().getElementType().isBF16() ? 2 : 4;
+        (lhsElemTy.isBF16() || lhsElemTy.isF16()) ? 2 : 4;
     bool isVnni =
         isInVnniLayout(contractOp.getOperation(),
                        contractOp.getIndexingMapsArray(), blockingFactor);
 
     VectorType lhsTy = contractOp.getLhsType();
-    if (!lhsTy.getElementType().isBF16() &&
+    if (!lhsTy.getElementType().isBF16() && !lhsTy.getElementType().isF16() &&
         !lhsTy.getElementType().isSignlessInteger(8) &&
         !lhsTy.getElementType().isF8E4M3FN() &&
         !lhsTy.getElementType().isF8E5M2())
       return rewriter.notifyMatchFailure(
-          contractOp, "Only BF16/Int8/F8 lowering is supported.");
+          contractOp, "Only BF16/F16/Int8/F8 lowering is supported.");
 
     if (lhsTy.getElementType() != contractOp.getRhsType().getElementType())
       return rewriter.notifyMatchFailure(
@@ -939,14 +941,14 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
 
-    if (((lhsTy.getElementType().isBF16() ||
+    if (((lhsTy.getElementType().isBF16() || lhsTy.getElementType().isF16() ||
           lhsTy.getElementType().isF8E4M3FN() ||
           lhsTy.getElementType().isF8E5M2()) &&
          !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
          !accTy.getElementType().isSignlessInteger(32)))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "Only F32 for BF16 or Int32 for Int8 "
+                                         "Only F32 for BF16/F16/F8 or Int32 for Int8 "
                                          "accumulation type is supported.");
 
     Operation *accReadOp =
@@ -974,6 +976,9 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
       ipType = rewriter.getIntegerType(8);
       opType = rewriter.getIntegerType(32);
     }
+
+    if (lhsTy.getElementType().isF16())
+      ipType = rewriter.getF16Type();
 
     if (lhsTy.getElementType().isF8E4M3FN())
       ipType = rewriter.getF8E4M3FNType();
@@ -1178,7 +1183,7 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
 
       // Tiled dot-product.
       Value dp;
-      if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
+      if (isa<FloatType>(ipType))
         dp = amx::TileMulFOp::create(rewriter, loc, tileTypeAcc, loadLhs,
                                      loadRhs, loadAcc);
 
@@ -1388,7 +1393,7 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
           validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
-            contractOp, "Invalid loop step. The step should be 32 for BF16 and "
+            contractOp, "Invalid loop step. The step should be 32 for BF16/F16 and "
                         "64 for Int8/F8.");
 
       SmallVector<Value> loopItrArgs = createInitTiles(outerLoop);
@@ -1544,7 +1549,7 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
             contractOp,
-            "Invalid loop step. The step should be 32 for BF16 and "
+            "Invalid loop step. The step should be 32 for BF16/F16 and "
             "64 for Int8/F8 or 1 if it is rduction loop other than K.");
 
       SmallVector<Value> loopItrArgs = createInitTiles(innerLoop);
@@ -1754,7 +1759,7 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
                   rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
                   indicesAcc);
 
-              if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
+              if (isa<FloatType>(ipType)) {
                 writeVal1 =
                     arith::AddFOp::create(rewriter, loc, writeVal1, valueCRow1);
 
