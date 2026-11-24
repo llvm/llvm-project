@@ -941,12 +941,14 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
 
   Register DefReg = SrcReg;
   if (DstTy != LLT::scalar(8)) {
-    Register ImpDefReg =
-        MRI.createVirtualRegister(getRegClass(DstTy, DstReg, MRI));
+    // In 32-bit mode only some registers have 8-bit subregisters.
+    const TargetRegisterClass *ExtRC = TRI.getSubClassWithSubReg(
+        getRegClass(DstTy, DstReg, MRI), X86::sub_8bit);
+    Register ImpDefReg = MRI.createVirtualRegister(ExtRC);
     BuildMI(*I.getParent(), I, I.getDebugLoc(),
             TII.get(TargetOpcode::IMPLICIT_DEF), ImpDefReg);
 
-    DefReg = MRI.createVirtualRegister(getRegClass(DstTy, DstReg, MRI));
+    DefReg = MRI.createVirtualRegister(ExtRC);
     BuildMI(*I.getParent(), I, I.getDebugLoc(),
             TII.get(TargetOpcode::INSERT_SUBREG), DefReg)
         .addReg(ImpDefReg)
