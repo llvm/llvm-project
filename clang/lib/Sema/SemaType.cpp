@@ -2056,17 +2056,18 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
     // the converted constant expression rules (to properly convert the source)
     // when the source expression is of class type.
     //
-    // Convert the bound itself, then put the ExprWithCleanups ActOnArrayBound
-    // may have wrapped it in back around the result.
-    auto *Cleanups = dyn_cast<ExprWithCleanups>(ArraySize);
-    ExprResult R = S.CheckConvertedConstantExpression(
-        Cleanups ? Cleanups->getSubExpr() : ArraySize, S.Context.getSizeType(),
-        SizeVal, CCEKind::ArrayBound);
-    if (Cleanups && R.isUsable())
-      R = ExprWithCleanups::Create(S.Context, R.get(),
-                                   Cleanups->cleanupsHaveSideEffects(),
-                                   Cleanups->getObjects());
-    return R;
+    // Convert the bound itself. Hand the cleanups ActOnArrayBound wrapped it in
+    // back first, so that the full-expression the conversion finishes collects
+    // them together with any cleanups the conversion adds.
+    Expr *Bound = ArraySize;
+    if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Bound)) {
+      Bound = Cleanups->getSubExpr();
+      S.Cleanup.setExprNeedsCleanups(Cleanups->cleanupsHaveSideEffects());
+      S.ExprCleanupObjects.append(Cleanups->getObjects().begin(),
+                                  Cleanups->getObjects().end());
+    }
+    return S.CheckConvertedConstantExpression(Bound, S.Context.getSizeType(),
+                                              SizeVal, CCEKind::ArrayBound);
   }
 
   // If the size is an ICE, it certainly isn't a VLA. If we're in a GNU mode
