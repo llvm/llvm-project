@@ -990,6 +990,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
+- Clang no longer performs macro expansion on the direction argument to `#pragma STDC FENV_ROUND`. (#GH173098)
 
 #### Bug Fixes to Compiler Builtins
 

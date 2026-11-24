@@ -3529,7 +3529,7 @@ void PragmaSTDC_FENV_ROUNDHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  PP.Lex(Tok);
+  PP.LexUnexpandedToken(Tok);
   if (Tok.isNot(tok::identifier)) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
         << PragmaName.getIdentifierInfo()->getName();
@@ -3550,7 +3550,7 @@ void PragmaSTDC_FENV_ROUNDHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::warn_stdc_unknown_rounding_mode);
     return;
   }
-  PP.Lex(Tok);
+  PP.LexUnexpandedToken(Tok);
 
   if (Tok.isNot(tok::eod)) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
