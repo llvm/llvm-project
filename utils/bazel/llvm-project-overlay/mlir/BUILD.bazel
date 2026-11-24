@@ -11377,6 +11377,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/OpenACC/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
@@ -11398,6 +11399,7 @@ cc_library(
         ":OpenACCUtils",
         ":Pass",
         ":SCFDialect",
+        ":SCFUtils",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
