@@ -16,6 +16,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CALLDESCRIPTION_H
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
@@ -85,16 +86,8 @@ private:
   /// The properties of a call that are needed for matching it. They are
   /// computed once when a call is matched against many CallDescriptions.
   class Callee {
-    /// The callee-dependent data of CheckerContext::isCLibraryFunction.
-    struct CLibraryInfo {
-      std::string BuiltinName; // Empty if not a builtin.
-      bool IsPredefinedLibFunction;
-      bool IsCLibraryDecl;
-    };
-    /// Computed on first use, as only C library entries need it.
-    mutable std::optional<CLibraryInfo> CLib;
-
-    const CLibraryInfo &getCLibraryInfo() const;
+    /// Constructed on first use, as only C library entries need it.
+    mutable std::optional<CheckerContext::CLibraryCallee> CLib;
 
   public:
     const FunctionDecl *FD = nullptr;
@@ -269,6 +262,7 @@ public:
 
 private:
   const T *lookupImpl(const CallDescription::Callee &C) const {
+    // Null for ObjC messages, blocks and calls of unknown function pointers.
     if (!C.FD)
       return nullptr;
 

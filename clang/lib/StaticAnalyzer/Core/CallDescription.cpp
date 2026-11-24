@@ -57,7 +57,6 @@ ento::CallDescription::Callee::Callee(const CallEvent &Call) {
     return;
 
   ArgCount = Call.getNumArgs();
-  // Same as Call.parameters().size() for calls of FunctionDecls.
   ParamCount = FD->param_size();
   IsMethod = isa<CXXMethodDecl>(FD);
 }
@@ -72,22 +71,10 @@ ento::CallDescription::Callee::Callee(const CallExpr &CE) {
   IsMethod = isa<CXXMethodDecl>(FD);
 }
 
-const ento::CallDescription::Callee::CLibraryInfo &
-ento::CallDescription::Callee::getCLibraryInfo() const {
-  if (!CLib) {
-    unsigned BId = FD->getBuiltinID();
-    CLib = CLibraryInfo{CheckerContext::getBuiltinName(FD, BId),
-                        CheckerContext::isPredefinedLibFunction(FD, BId),
-                        CheckerContext::isCLibraryDecl(FD)};
-  }
-  return *CLib;
-}
-
 bool ento::CallDescription::Callee::isCLibraryFunction(StringRef Name) const {
-  const CLibraryInfo &Info = getCLibraryInfo();
-  return CheckerContext::isCLibraryFunction(FD, Name, Info.BuiltinName,
-                                            Info.IsPredefinedLibFunction,
-                                            Info.IsCLibraryDecl);
+  if (!CLib)
+    CLib.emplace(FD);
+  return CheckerContext::isCLibraryFunction(*CLib, Name);
 }
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
