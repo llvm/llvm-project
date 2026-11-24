@@ -6449,7 +6449,7 @@ static Value *widenDeinterleavedOperations(
 /// values and similarly, generalize the condition to non-loop code, it could be
 /// tricky to estimate costs in those situations, as we're generate new
 /// interleave operations: targeting loop-invariant splats is the safest bet
-/// that'll be benefitial in most cases.
+/// that'll be beneficial in most cases.
 bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
   auto *Interleave = dyn_cast<IntrinsicInst>(&I);
   if (!Interleave)
