@@ -124,7 +124,7 @@ static_assert(test(std::views::adjacent_transform<2>, a, [](int x, int y) { retu
 static_assert(test(std::views::adjacent<2>, a));
 // static_assert(test(std::views::as_const, a));
 static_assert(test(std::views::as_rvalue, a));
-// static_assert(test(std::views::cartesian_product, a, a, a));
+static_assert(test(std::views::cartesian_product, a, a, a));
 static_assert(test(std::views::chunk_by, a, [](int x, int y) { return x < y; }));
 // static_assert(test(std::views::chunk, a, 1));
 static_assert(test(std::views::enumerate, a));
