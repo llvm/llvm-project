@@ -21,10 +21,10 @@
 namespace llvm {
 namespace exegesis {
 
-Expected<LLVMState> LLVMState::Create(std::string TripleName,
-                                      std::string CpuName,
-                                      const StringRef Features,
-                                      bool UseDummyPerfCounters) {
+Expected<LLVMState>
+LLVMState::create(const cl::LibraryOptionsContext &LibraryOptions,
+                  std::string TripleName, std::string CpuName,
+                  const StringRef Features, bool UseDummyPerfCounters) {
   if (TripleName.empty())
     TripleName = Triple::normalize(sys::getDefaultTargetTriple());
 
@@ -69,7 +69,8 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
                                        .concat(TripleName),
                                    inconvertibleErrorCode());
   }
-  const TargetOptions Options;
+  TargetOptions Options;
+  Options.MCOptions.LibraryOptions = &LibraryOptions;
   std::unique_ptr<const TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, CpuName, Features, Options, Reloc::Model::Static));
   if (!TM) {

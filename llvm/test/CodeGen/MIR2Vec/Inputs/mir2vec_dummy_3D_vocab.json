@@ -17,13 +17,15 @@
     "PUSH": [4.3, 4.4, 4.5],
     "POP": [4.6, 4.7, 4.8],
     "NOP": [4.9, 5.0, 5.1],
-    "COPY": [5.2, 5.3, 5.4]
+    "COPY": [5.2, 5.3, 5.4],
+    "COPY_LANEMASK": [5.5, 5.6, 5.7]
   },
   "CommonOperands": {
     "Immediate": [0.1, 0.1, 0.1],
     "MBB": [0.2, 0.2, 0.2],
     "FrameIndex": [0.3, 0.3, 0.3],
-    "GlobalAddress": [0.4, 0.4, 0.4]
+    "GlobalAddress": [0.4, 0.4, 0.4],
+    "LaneMask": [0.01, 0.02, 0.03]
   },
   "PhysicalRegisters": {
     "GR32": [0.5, 0.5, 0.5],

@@ -526,3 +526,69 @@
     call swhere(1)            ! expected output: 42.
     call sforall(1)           ! expected output: 42.
   end
+
+  ! CHECK-LABEL: func.func @_QPsinteger16()
+  subroutine sinteger16()
+    integer(16) :: i
+
+    ! Test negative INTEGER(16) constant.
+    i = -3_16
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c-3_i128,
+    select case (i)
+    case (-3_16)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test INTEGER(16) constant greater than INT64_MAX.
+    i = 2_16**70
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c1180591620717411303424_i128,
+    select case (i)
+    case (2_16**70)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test negative INTEGER(16) constant less than INT64_MIN.
+    i = -2_16**70
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c-1180591620717411303424_i128,
+    select case (i)
+    case (-2_16**70)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test ordinary INTEGER(16) constant.
+    i = 3_16
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c3_i128,
+    select case (i)
+    case (3_16)
+      continue
+    case default
+      continue
+    end select
+  end subroutine sinteger16
+
+  ! CHECK-LABEL: func.func @_QPsinteger16range(
+  subroutine sinteger16range(i)
+    integer(16) :: i
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.upper, %c-1180591620717411303425_i128{{[_0-9]*}},
+    ! CHECK-SAME: #fir.interval, %c-1180591620717411303424_i128{{[_0-9]*}}, %c-3_i128{{[_0-9]*}},
+    ! CHECK-SAME: #fir.lower, %c1180591620717411303424_i128{{[_0-9]*}},
+    select case (i)
+    case (:-2_16**70 - 1_16)
+      continue
+    case (-2_16**70:-3_16)
+      continue
+    case (2_16**70:)
+      continue
+    end select
+  end subroutine sinteger16range

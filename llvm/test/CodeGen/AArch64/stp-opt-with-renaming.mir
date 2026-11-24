@@ -19,7 +19,6 @@
 
 name:            test1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -54,7 +53,6 @@ body:             |
 
 name:            test2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -90,7 +88,6 @@ body:             |
 #
 name:            test3
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -121,7 +118,6 @@ body:             |
 
 name:            test4
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -153,7 +149,6 @@ body:             |
 
 name:            test5
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -188,7 +183,6 @@ body:             |
 # XTN has a tied use-def.
 name:            test6
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -224,7 +218,6 @@ body:             |
 #
 name:            test7
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -262,7 +255,6 @@ body:             |
 
 name:            test8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -299,7 +291,6 @@ body:             |
 
 name:            test9
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -333,7 +324,6 @@ body:             |
 
 name:            test10
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -375,7 +365,6 @@ body:             |
 #
 name:            test11
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -416,7 +405,6 @@ body:             |
 
 name:            test12
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -455,7 +443,6 @@ body:             |
 #
 name:            test13
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -490,7 +477,6 @@ body:             |
 #
 name:            test14_pseudo
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -524,7 +510,6 @@ body:             |
 #
 name:            test15_undef_op
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -560,7 +545,6 @@ body:             |
 #
 name:            ldst32
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -584,7 +568,6 @@ body:             |
 #
 name:            ldst64
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -608,7 +591,6 @@ body:             |
 #
 name:            ldst128
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -635,7 +617,6 @@ body:             |
 #
 name:            ldst-no-reg-available
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -662,7 +643,6 @@ body:             |
 #
 name:            ldst-basereg-modified
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -687,7 +667,6 @@ body:             |
 #
 name:            ldr-dest-reg-implicit-killed
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -715,7 +694,6 @@ body:             |
 #
 name:            bundled
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -737,7 +715,6 @@ body:             |
 ---
 name:            bundled_load_rename
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:     1
   maxCallFrameSize: 0
@@ -778,7 +755,6 @@ body:             |
 #
 name:            bundled_use
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -805,7 +781,6 @@ body:             |
 #
 name:            bundle_at_limit
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0

@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SafeStack.h"
+#include "CodeGenOptions.h"
 #include "SafeStackLayout.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -86,16 +87,6 @@ STATISTIC(NumUnsafeDynamicAllocas, "Number of unsafe dynamic allocas");
 STATISTIC(NumUnsafeByValArguments, "Number of unsafe byval arguments");
 STATISTIC(NumUnsafeStackRestorePoints, "Number of setjmps and landingpads");
 
-/// Use __safestack_pointer_address even if the platform has a faster way of
-/// access safe stack pointer.
-static cl::opt<bool>
-    SafeStackUsePointerAddress("safestack-use-pointer-address",
-                                  cl::init(false), cl::Hidden);
-
-static cl::opt<bool> ClColoring("safe-stack-coloring",
-                                cl::desc("enable safe stack coloring"),
-                                cl::Hidden, cl::init(true));
-
 namespace {
 
 /// The SafeStack pass splits the stack of each function into the safe
@@ -104,6 +95,7 @@ namespace {
 /// local variables that are accessed in ways that we can't prove to
 /// be safe.
 class SafeStack {
+  const CodeGenOptions &Opts;
   Function &F;
   const TargetLoweringBase &TL;
   const LibcallLoweringInfo &Libcalls;
@@ -113,7 +105,6 @@ class SafeStack {
 
   Type *StackPtrTy;
   Type *AddrTy;
-  Type *Int32Ty;
 
   Value *UnsafeStackPtr = nullptr;
 
@@ -189,10 +180,9 @@ public:
   SafeStack(Function &F, const TargetLoweringBase &TL,
             const LibcallLoweringInfo &Libcalls, const DataLayout &DL,
             DomTreeUpdater *DTU, ScalarEvolution &SE)
-      : F(F), TL(TL), Libcalls(Libcalls), DL(DL), DTU(DTU), SE(SE),
-        StackPtrTy(DL.getAllocaPtrType(F.getContext())),
-        AddrTy(DL.getAddressType(StackPtrTy)),
-        Int32Ty(Type::getInt32Ty(F.getContext())) {}
+      : Opts(getCodeGenOptions(F)), F(F), TL(TL), Libcalls(Libcalls), DL(DL),
+        DTU(DTU), SE(SE), StackPtrTy(DL.getAllocaPtrType(F.getContext())),
+        AddrTy(DL.getAddressType(StackPtrTy)) {}
 
   // Run the transformation on the associated function.
   // Returns whether the function was changed.
@@ -486,12 +476,11 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, Instruction &RI,
     return;
   }
 
-  StringRef StackChkFailName =
-      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(StackChkFailImpl);
-
   FunctionCallee StackChkFail =
-      F.getParent()->getOrInsertFunction(StackChkFailName, IRB.getVoidTy());
-  IRBFail.CreateCall(StackChkFail, {});
+      Libcalls.getRuntimeLibcallsInfo().getOrInsertLibcallDecl(
+          *F.getParent(), StackChkFailImpl);
+  CallInst *Call = IRBFail.CreateCall(StackChkFail, {});
+  Call->setCallingConv(Libcalls.getLibcallImplCallingConv(StackChkFailImpl));
 }
 
 /// We explicitly compute and set the unsafe stack layout for all unsafe
@@ -508,7 +497,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   StackLifetime SSC(F, StaticAllocas, StackLifetime::LivenessType::May);
   static const StackLifetime::LiveRange NoColoringRange(1, true);
-  if (ClColoring)
+  if (Opts.safe_stack_coloring)
     SSC.run();
 
   for (const auto *I : SSC.getMarkers()) {
@@ -520,7 +509,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   }
 
   // Unsafe stack always grows down.
-  StackLayout SSL(StackAlignment);
+  StackLayout SSL(Opts, StackAlignment);
   if (StackGuardSlot) {
     SSL.addObject(StackGuardSlot, getStaticAllocaAllocationSize(StackGuardSlot),
                   StackGuardSlot->getAlign(), SSC.getFullLiveRange());
@@ -545,7 +534,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       Size = 1; // Don't create zero-sized stack objects.
 
     SSL.addObject(AI, Size, AI->getAlign(),
-                  ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
+                  Opts.safe_stack_coloring ? SSC.getLiveRange(AI)
+                                           : NoColoringRange);
   }
 
   SSL.computeLayout();
@@ -721,8 +711,7 @@ bool SafeStack::ShouldInlinePointerAddress(CallInst &CI) {
   if (CI.hasFnAttr(Attribute::AlwaysInline) &&
       isInlineViable(*Callee).isSuccess())
     return true;
-  if (Callee->isInterposable() || Callee->hasFnAttribute(Attribute::NoInline) ||
-      CI.isNoInline())
+  if (Callee->isInterposable() || CI.isNoInline())
     return false;
   return true;
 }
@@ -786,28 +775,21 @@ bool SafeStack::run() {
     ++NumUnsafeStackRestorePointsFunctions;
 
   IRBuilder<> IRB(F.begin()->getFirstInsertionPt());
+  IRB.disableGEPCanonicalization();
   // Calls must always have a debug location, or else inlining breaks. So
   // we explicitly set a artificial debug location here.
   if (DISubprogram *SP = F.getSubprogram())
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
-  if (SafeStackUsePointerAddress) {
-    // FIXME: A more correct implementation of SafeStackUsePointerAddress would
-    // change the libcall availability in RuntimeLibcallsInfo
-    StringRef SafestackPointerAddressName =
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-            RTLIB::impl___safestack_pointer_address);
-
-    FunctionCallee Fn = F.getParent()->getOrInsertFunction(
-        SafestackPointerAddressName, IRB.getPtrTy(0));
-    UnsafeStackPtr = IRB.CreateCall(Fn);
-  } else {
+  if (Opts.safe_stack_use_pointer_address)
+    UnsafeStackPtr = TL.getSafeStackPointerAddressCall(IRB, Libcalls);
+  else
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
-    if (!UnsafeStackPtr) {
-      F.getContext().emitError(
-          "no location available for safestack pointer address");
-      UnsafeStackPtr = PoisonValue::get(StackPtrTy);
-    }
+
+  if (!UnsafeStackPtr) {
+    F.getContext().emitError(
+        "no location available for safestack pointer address");
+    UnsafeStackPtr = PoisonValue::get(StackPtrTy);
   }
 
   // Load the current stack pointer (we'll also use it as a base pointer).

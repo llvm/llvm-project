@@ -1394,6 +1394,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
             {{VgprV2S16},
              {VgprV2S16, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
+  addRulesForGOpcs({G_AMDGPU_REG_LOAD}).Any({{BRC}, {{VgprBRC}, {Sgpr32_WF}}});
+
+  addRulesForGOpcs({G_AMDGPU_REG_STORE})
+      .Any({{BRC}, {{}, {VgprBRC, Sgpr32_WF}}});
+
   addRulesForGOpcs({G_PTR_ADD})
       .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})
       .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32, Vgpr32}}})
@@ -1427,6 +1432,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_DYN_STACKALLOC})
       .Any({{UniP5, UniS32}, {{SgprP5}, {Sgpr32}, DynStackAlloc}})
       .Any({{UniP5, DivS32}, {{SgprP5}, {Vgpr32}, DynStackAlloc}});
+
+  addRulesForGOpcs({G_STACKRESTORE}).Any({{P5}, {{}, {SgprB32_ReadFirstLane}}});
 
   addRulesForGOpcs({G_ABS}, Standard)
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}})

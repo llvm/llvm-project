@@ -1,0 +1,12 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_C = !cir.struct<"C" incomplete>
+
+// CHECK-LABEL: cir.func @get_virtual_fn_by_offset
+cir.func @get_virtual_fn_by_offset(%arg0: !cir.vptr, %arg1: !s64i) -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>> {
+  // CHECK: cir.vtable.get_virtual_fn_by_offset %arg0[%arg1 : !s64i] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+  %0 = cir.vtable.get_virtual_fn_by_offset %arg0[%arg1 : !s64i] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+  cir.return %0 : !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+}

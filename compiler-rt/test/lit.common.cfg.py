@@ -592,6 +592,33 @@ if config.target_os == "Darwin":
 
     config.darwin_os_version = darwin_os_version
 
+    # For simulators, darwin_os_version above is the host's. The simulator
+    # runtime's version is in SIMULATOR_RUNTIME_VERSION inside the simulator.
+    if config.apple_platform.endswith("sim"):
+        sim_os_version = None
+        sim_version = lit_config.run_command_cached(
+            [
+                config.darwin_run_wrapper,
+                "/bin/sh",
+                "-c",
+                "echo $SIMULATOR_RUNTIME_VERSION",
+            ],
+            text=True,
+            allow_failure=True,
+        )
+        if sim_version and re.fullmatch(r"\d+(\.\d+){1,2}", sim_version.strip()):
+            parts = tuple(int(x) for x in sim_version.strip().split("."))
+            sim_os_version = parts + (0,) * (3 - len(parts))
+
+        if sim_os_version is None:
+            lit_config.warning(
+                "Could not determine OS version of the simulator runtime"
+            )
+        # 27.0-27.2 simulators cannot interpose certain calls from the shared
+        # cache (e.g. memcpy/memcmp/strlen), so ASan cannot intercept them.
+        elif (27, 0, 0) <= sim_os_version < (27, 3, 0):
+            config.available_features.add("iossim-dyld-interpose-bug")
+
     # Detect x86_64h
     output = lit_config.run_command_cached(
         os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True, allow_failure=True

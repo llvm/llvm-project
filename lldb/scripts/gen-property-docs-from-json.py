@@ -4,7 +4,6 @@ from dataclasses import dataclass
 import json
 import re
 
-
 PropertyDef = Dict[str, Any]
 
 
@@ -14,6 +13,8 @@ class Property:
     type: str
     description: str
     default: Optional[str]
+    deprecated: bool
+    deprecation_message: str
 
     def __init__(self, definition: PropertyDef):
         self.name = definition["Name"]
@@ -21,6 +22,8 @@ class Property:
         self.type = definition["Type"]
         self.description = definition.get("Description", "").strip()
         self.default = None
+        self.deprecated = bool(definition.get("Deprecated"))
+        self.deprecation_message = definition.get("DeprecationMessage", "").strip()
 
         has_default_unsigned = definition.get("HasDefaultUnsignedValue")
         has_default_bool = definition.get("HasDefaultBooleanValue")
@@ -72,6 +75,11 @@ def print_property(f: TextIO, path: str, property: Property):
     # Invoke lldbsetting directive (lldb/docs/_ext/lldb_setting.py)
     f.write(f"```{{lldbsetting}} {path}\n")
     f.write(f':type: "{property.type}"\n\n')
+    if property.deprecated:
+        f.write("**Deprecated:** this setting may be removed in a future release")
+        if property.deprecation_message:
+            f.write(f"; {property.deprecation_message}")
+        f.write(".\n\n")
     f.write(property.description)
     f.write("\n\n")
     if property.default:

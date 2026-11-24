@@ -104,11 +104,8 @@ if (LLVM_LIB_WERROR_GLOBAL_CTORS)
       LLVMLoongArchDesc
       LLVMM68kAsmParser
       LLVMM68kCodeGen
-      LLVMMC
       LLVMMCJIT
-      LLVMMCParser
       LLVMMipsCodeGen
-      LLVMNVPTXCodeGen
       LLVMObjCARCOpts
       LLVMObject
       LLVMOrcDebugging

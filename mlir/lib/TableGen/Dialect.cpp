@@ -94,6 +94,14 @@ bool Dialect::hasOperationInterfaceFallback() const {
   return def->getValueAsBit("hasOperationInterfaceFallback");
 }
 
+bool Dialect::useDefaultAttributeRegistration() const {
+  return def->getValueAsBit("useDefaultAttributeRegistration");
+}
+
+bool Dialect::useDefaultTypeRegistration() const {
+  return def->getValueAsBit("useDefaultTypeRegistration");
+}
+
 bool Dialect::useDefaultAttributePrinterParser() const {
   return def->getValueAsBit("useDefaultAttributePrinterParser");
 }

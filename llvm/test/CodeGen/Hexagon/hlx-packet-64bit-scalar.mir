@@ -1,0 +1,124 @@
+# Check that an HLX instruction that uses a 64-bit scalar register is not
+# packetized with another HLX shift or multiply instruction that uses a
+# scalar or immediate source.
+# HLX load and store instructions can be packetized with an instruction
+# that uses a 64-bit scalar source.
+# Only shift and multiply instructions share the scalar resource.
+
+# RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN: -run-pass hexagon-packetizer -verify-machineinstrs \
+# RUN: %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: splat_reg
+# CHECK-NOT: BUNDLE
+# CHECK-LABEL: name: splat_imm
+# CHECK-NOT: BUNDLE
+# CHECK-LABEL: name: mpy
+# CHECK-NOT: BUNDLE
+# CHECK-LABEL: name: load
+# CHECK: BUNDLE
+# CHECK-LABEL: name: store
+# CHECK: BUNDLE
+
+--- |
+
+  define dso_local void @splat_reg() local_unnamed_addr {
+    ret void
+  }
+
+  define dso_local void @splat_imm() local_unnamed_addr {
+    ret void
+  }
+
+  define dso_local void @mpy() local_unnamed_addr {
+    ret void
+  }
+
+  define dso_local void @load() local_unnamed_addr {
+    ret void
+  }
+
+  define dso_local void @store() local_unnamed_addr {
+    ret void
+  }
+
+...
+---
+name:            splat_reg
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $d0, $l0
+
+    renamable $l1 = LX_assign_r killed renamable $r2
+    renamable $ll1 = LX_lut4_sh killed renamable $l0, killed renamable $d0
+
+...
+---
+name:            splat_imm
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $d0, $l0
+
+    renamable $l1 = LX_assign_s 4
+    renamable $ll1 = LX_lut4_sh killed renamable $l0, killed renamable $d0
+
+...
+---
+name:            mpy
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $d0, $l0, $l1, $ll0
+
+    renamable $ll1 = LX_mpyr_w_h killed renamable $l1, killed renamable $r2
+    renamable $ll2 = LX_lut4_sh_neg killed renamable $l0, killed renamable $d0
+
+...
+---
+name:            load
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $d0, $l0
+
+    renamable $l1 = LX_L16b_pseudo killed renamable $r2
+    renamable $ll1 = LX_lut4_sh killed renamable $l0, killed renamable $d0
+
+...
+---
+name:            store
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $d0, $l0, $l1, $ll0
+
+    LX_S16b_pseudo killed renamable $r2, killed renamable $l1
+    renamable $ll1 = LX_lut4_sh killed renamable $l0, killed renamable $d0
+
+...

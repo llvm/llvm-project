@@ -24,7 +24,8 @@ define void @addend_copyable(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC) {
 ; FMA-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; FMA-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; FMA-NEXT:    [[TMP9:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP5]], <4 x double> [[TMP8]], <4 x double> [[TMP2]])
-; FMA-NEXT:    store <4 x double> [[TMP9]], ptr [[DST]], align 8
+; FMA-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; FMA-NEXT:    store <4 x double> [[TMP10]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @addend_copyable(
@@ -102,7 +103,8 @@ define void @addend_two_copyables(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC) {
 ; FMA-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; FMA-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> <double poison, double poison, double -0.000000e+00, double -0.000000e+00>, <4 x double> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; FMA-NEXT:    [[TMP7:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP4]], <4 x double> [[TMP6]], <4 x double> [[TMP2]])
-; FMA-NEXT:    store <4 x double> [[TMP7]], ptr [[DST]], align 8
+; FMA-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; FMA-NEXT:    store <4 x double> [[TMP8]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @addend_two_copyables(
@@ -165,7 +167,8 @@ define void @mul_copyables(ptr %dst, ptr %srcA, ptr %srcB, double %c0, double %c
 ; FMA-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> <double poison, double poison, double -0.000000e+00, double -0.000000e+00>, double [[C0]], i64 0
 ; FMA-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[C1]], i64 1
 ; FMA-NEXT:    [[TMP6:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP0]], <4 x double> [[TMP3]], <4 x double> [[TMP5]])
-; FMA-NEXT:    store <4 x double> [[TMP6]], ptr [[DST]], align 8
+; FMA-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; FMA-NEXT:    store <4 x double> [[TMP7]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @mul_copyables(
@@ -355,7 +358,8 @@ define void @fast_math_flags(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC) {
 ; FMA-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; FMA-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; FMA-NEXT:    [[TMP9:%.*]] = call reassoc arcp contract afn <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP5]], <4 x double> [[TMP8]], <4 x double> [[TMP2]])
-; FMA-NEXT:    store <4 x double> [[TMP9]], ptr [[DST]], align 8
+; FMA-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; FMA-NEXT:    store <4 x double> [[TMP10]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @fast_math_flags(

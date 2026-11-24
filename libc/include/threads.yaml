@@ -101,6 +101,13 @@ functions:
     return_type: int
     arguments:
       - type: mtx_t *
+  - name: mtx_timedlock
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: mtx_t *__restrict
+      - type: const struct timespec *__restrict
   - name: mtx_trylock
     standards:
       - stdc

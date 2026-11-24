@@ -11,7 +11,7 @@
 
 #include "hdr/types/ACTION.h"
 #include "hdr/types/ENTRY.h"
-#include "include/llvm-libc-types/struct_hsearch_data.h"
+#include "hdr/types/struct_hsearch_data.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

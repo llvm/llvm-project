@@ -23,7 +23,7 @@ define void @outer_with_i20_access(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:    [[J2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER1]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[TMP0]], [[J2]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i20, ptr [[A]], <4 x i64> [[TMP1]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <4 x i64> [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i20> @llvm.masked.gather.v4i20.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i20> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i20> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i20.v4p0(<4 x i20> [[TMP2]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))

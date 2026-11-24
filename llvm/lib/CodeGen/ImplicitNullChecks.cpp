@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ImplicitNullChecks.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -53,22 +54,11 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
 
 using namespace llvm;
-
-static cl::opt<int> PageSize("imp-null-check-page-size",
-                             cl::desc("The page size of the target in bytes"),
-                             cl::init(4096), cl::Hidden);
-
-static cl::opt<unsigned> MaxInstsToConsider(
-    "imp-null-max-insts-to-consider",
-    cl::desc("The max number of instructions to consider hoisting loads over "
-             "(the algorithm is quadratic over this number)"),
-    cl::Hidden, cl::init(8));
 
 #define DEBUG_TYPE "implicit-null-checks"
 
@@ -160,6 +150,7 @@ class ImplicitNullChecksImpl {
     MachineInstr *getOnlyDependency() const { return OnlyDependency; }
   };
 
+  const CodeGenOptions &Opts;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   AliasAnalysis *AA = nullptr;
@@ -214,7 +205,7 @@ class ImplicitNullChecksImpl {
 
 public:
   ImplicitNullChecksImpl(MachineFunction &MF, AliasAnalysis *AA)
-      : TII(MF.getSubtarget().getInstrInfo()),
+      : Opts(getCodeGenOptions(MF)), TII(MF.getSubtarget().getInstrInfo()),
         TRI(MF.getRegInfo().getTargetRegisterInfo()), AA(AA),
         MFI(&MF.getFrameInfo()) {}
 
@@ -471,7 +462,8 @@ ImplicitNullChecksImpl::isSuitableMemoryOp(const MachineInstr &MI,
 
   // We want the mem access to be issued at a sane offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
-  if (!(-PageSize < Displacement && Displacement < PageSize))
+  if (!(-Opts.imp_null_check_page_size < Displacement &&
+        Displacement < Opts.imp_null_check_page_size))
     return SR_Unsuitable;
 
   // Finally, check whether the current memory access aliases with previous one.
@@ -683,10 +675,16 @@ bool ImplicitNullChecksImpl::analyzeBlockForNullChecks(
 
   SmallVector<MachineInstr *, 8> InstsSeenSoFar;
 
+  // Skip debug instructions and pseudo probes: neither has execution
+  // semantics, so neither can be the faulting operation nor consume
+  // -imp-null-max-insts-to-consider.  PSEUDO_PROBE is marked as having side
+  // effects to keep it from being dropped, so canHandle() would otherwise
+  // reject the block.  Only the faulting operation is hoisted; the probes stay
+  // in place.
   for (MachineInstr &MI :
-       instructionsWithoutDebug(NotNullSucc->begin(), NotNullSucc->end(),
-                                /*SkipPseudoOp=*/false)) {
-    if (!canHandle(&MI) || InstsSeenSoFar.size() >= MaxInstsToConsider)
+       instructionsWithoutDebug(NotNullSucc->begin(), NotNullSucc->end())) {
+    if (!canHandle(&MI) ||
+        InstsSeenSoFar.size() >= Opts.imp_null_max_insts_to_consider)
       return false;
 
     MachineInstr *Dependence;

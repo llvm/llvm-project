@@ -603,7 +603,7 @@ def : InstRW<[WLat1, LSU, GroupAlone], (instregex "TR$")>;
 def : InstRW<[WLat30, WLat30, WLat30, FXU3, LSU2, GroupAlone2],
              (instregex "TRT$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRTR$")>;
-def : InstRW<[WLat30, WLat30, MCD], (instregex "TRE$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRE$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRT(R)?E(Opt)?$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TR(T|O)(T|O)(Opt)?$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD],

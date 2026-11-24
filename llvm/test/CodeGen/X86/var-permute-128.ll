@@ -837,7 +837,7 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm4
-; SSE3-NEXT:    movl -28(%rsp), %eax
+; SSE3-NEXT:    movzbl -28(%rsp), %eax
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm3
@@ -853,7 +853,7 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm8
-; SSE3-NEXT:    movl -32(%rsp), %eax
+; SSE3-NEXT:    movzbl -32(%rsp), %eax
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm5
@@ -869,7 +869,7 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm12
-; SSE3-NEXT:    movl -36(%rsp), %eax
+; SSE3-NEXT:    movzbl -36(%rsp), %eax
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm11
@@ -885,7 +885,7 @@ define <16 x i8> @var_shuffle_zero_v16i8(<16 x i8> %v, <16 x i8> %indices) nounw
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm15
-; SSE3-NEXT:    movl -40(%rsp), %eax
+; SSE3-NEXT:    movzbl -40(%rsp), %eax
 ; SSE3-NEXT:    andl $15, %eax
 ; SSE3-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
 ; SSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
@@ -1925,11 +1925,11 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ;
 ; AVX1-LABEL: var_shuffle_v16i8_from_v32i8_v16i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpshufb %xmm1, %xmm3, %xmm3
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

@@ -13,6 +13,7 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
@@ -81,6 +82,7 @@ add_integration_test(
     libc.src.stdlib.exit
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.new
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.__support.threads.sleep
 )
 
@@ -398,6 +400,28 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_getcpuclockid_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_getcpuclockid_test.cpp
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.time_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.futex_utils
+    libc.src.__support.threads.thread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_getcpuclockid
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.time.clock_gettime
+)
+
+add_integration_test(
   pthread_kill_test
   SUITE
     libc-pthread-integration-tests
@@ -443,6 +467,7 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
 )
