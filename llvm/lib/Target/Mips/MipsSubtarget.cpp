@@ -251,6 +251,14 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   if (isABI_O32())
     IsGP64bit = false;
 
+  // Before MIPS32, single-precision arithmetic can only use the even FPRs
+  // when the FPRs are 32 bits wide. The odd FPRs only hold the upper half of
+  // a double. A single-float FPU such as the R5900 has 32 single-precision
+  // FPRs.
+  if (isABI_O32() && !IsSoftFloat && !IsSingleFloat && hasMips1() &&
+      !hasMips32() && !isFP64bit())
+    UseOddSPReg = false;
+
   if (InMips16Mode && !IsSoftFloat)
     InMips16HardFloat = true;
 
