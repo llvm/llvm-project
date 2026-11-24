@@ -117,7 +117,7 @@ public:
   /// Clear any CodeGen state associated with \p GD’s mangled name so that a
   /// new declaration using the same name is treated as if CodeGen has
   /// never seen it before.
-  void forgetDecl(GlobalDecl GD);
+  void forgetDecl(StringRef MangleName);
 };
 
 /// CreateLLVMCodeGen - Create a CodeGenerator instance.

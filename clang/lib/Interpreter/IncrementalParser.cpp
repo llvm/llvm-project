@@ -267,8 +267,18 @@ class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
   void forgetMangledNames(std::initializer_list<GlobalDecl> GDs) {
     if (!CodeGen)
       return;
-    for (GlobalDecl GD : GDs)
-      CodeGen->forgetDecl(GD);
+    for (GlobalDecl GD : GDs) {
+#if defined(_WIN32)
+      // MicrosoftMangle.cpp:mangleCXXDtorType calls llvm_unreachable when
+      // mangling Dtor_Comdat
+      if (isa<CXXDestructorDecl>(GD.getDecl()) &&
+          GD.getDtorType() == Dtor_Comdat) {
+        if (const IdentifierInfo *II = D->getIdentifier())
+          CodeGen->forgetDecl(II->getName());
+      } else
+#endif
+        CodeGen->forgetDecl(CodeGen->GetMangledName(GD));
+    }
   }
 
 public:

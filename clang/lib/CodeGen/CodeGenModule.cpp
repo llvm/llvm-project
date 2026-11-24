@@ -8617,8 +8617,7 @@ bool CodeGenModule::lookupRepresentativeDecl(StringRef MangledName,
   return true;
 }
 
-void CodeGenModule::forgetDecl(GlobalDecl GD) {
-  StringRef MangledName = getMangledName(GD);
+void CodeGenModule::forgetDecl(StringRef MangledName) {
   DeferredDecls.erase(MangledName);
   Manglings.erase(MangledName);
 }
