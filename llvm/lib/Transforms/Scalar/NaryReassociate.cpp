@@ -395,6 +395,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     return nullptr;
 
   IRBuilder<> Builder(GEP);
+  Builder.disableGEPCanonicalization();
   // Candidate should have the same pointer type as GEP.
   assert(Candidate->getType() == GEP->getType());
 

@@ -107,11 +107,12 @@ private:
   /// thunk.
   Defined *getThunkInRange(const ConcatInputSection &isec, const Relocation &r,
                            const ThunkInfo &thunkInfo) const;
+  Defined *findThunkInRange(const ConcatInputSection &isec,
+                            const Relocation &r) const;
   /// Update \p r to target \p thunk which is guaranteed to be in range.
   void updateBranchTargetToThunk(Relocation &r, Defined *thunk);
   /// Create a new thunk and update \p r to target the new thunk.
-  void createThunk(const ConcatInputSection &isec, Relocation &r,
-                   ThunkInfo &thunkInfo);
+  void createThunk(const ConcatInputSection &isec, Relocation &r);
   /// \return the largest possible stub section end VA or \p std::nullopt if we
   /// can't estimate this yet. Used to determine if stub symbol targets are in
   /// range.
@@ -146,7 +147,8 @@ struct ThunkKey {
   int64_t addend;
 
   ThunkKey(Symbol *sym, int64_t addend) : sym(sym), addend(addend) {}
-  ThunkKey(Relocation &r) : ThunkKey(cast<Symbol *>(r.referent), r.addend) {}
+  ThunkKey(const Relocation &r)
+      : ThunkKey(cast<Symbol *>(r.referent), r.getAddend()) {}
 
   bool operator==(const ThunkKey &other) const {
     if (addend != other.addend)

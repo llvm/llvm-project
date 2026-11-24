@@ -13,9 +13,8 @@ define amdgpu_kernel void @div_unif_div(ptr addrspace(1) %out, float %ubeta, i32
 ; CHECK-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  ; %bb.1: ; %A
-; CHECK-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, s0, 0
 ; CHECK-NEXT:    s_mov_b32 s1, exec_lo
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_7
 ; CHECK-NEXT:  ; %bb.2: ; %B
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
@@ -94,12 +93,10 @@ define amdgpu_kernel void @unif_div(ptr addrspace(1) %out, float %u1, float %u2,
 ; CHECK-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_7
 ; CHECK-NEXT:  ; %bb.1: ; %A
-; CHECK-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, s0, 0
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_4
 ; CHECK-NEXT:  ; %bb.2: ; %B
-; CHECK-NEXT:    v_cmp_eq_f32_e64 s0, s1, 0
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, s1, 0
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_5
 ; CHECK-NEXT:  ; %bb.3: ; %C
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, 7, v0

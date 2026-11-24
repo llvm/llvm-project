@@ -77,6 +77,7 @@ def APValueKind : EnumPropertyType<"APValue::ValueKind">;
 def ArraySizeModifier : EnumPropertyType<"ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def Attr : PropertyType<"const Attr *">;
+def DynAllocKind : PropertyType<"DynAllocKind">;
 def DeducedKind : EnumPropertyType;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
@@ -129,6 +130,13 @@ def LValuePathEntry : PropertyType<"APValue::LValuePathEntry">;
 def LValuePathSerializationHelper :
     PropertyType<"APValue::LValuePathSerializationHelper"> {
   let BufferElementTypes = [ LValuePathEntry ];
+}
+def MatrixLayoutKind : EnumPropertyType<"MatrixType::LayoutKind"> {
+  let PackOptional =
+    "value.value_or(static_cast<MatrixType::LayoutKind>(2))";
+  let UnpackOptional =
+    "value == static_cast<MatrixType::LayoutKind>(2) ? std::nullopt : "
+    "std::optional<MatrixType::LayoutKind>(value)";
 }
 def NestedNameSpecifier : PropertyType<"NestedNameSpecifier">;
 def NestedNameSpecifierKind : EnumPropertyType<"NestedNameSpecifier::Kind">;
@@ -537,6 +545,10 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     let Conditional = [{ hasBase && isDynamicAlloc }];
     let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getIndex() }];
   }
+  def : Property<"dynamicAlign", DynAllocKind> {
+    let Conditional = [{ hasBase && isDynamicAlloc }];
+    let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getAllocKind() }];
+  }
   def : Property<"type", QualType> {
     let Conditional = [{ hasBase && (isTypeInfo || isDynamicAlloc) }];
     let Read = [{
@@ -579,7 +591,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
             TypeInfoLValue(typeInfo->getTypePtr()), *type);
       } else if (isDynamicAlloc) {
         base = APValue::LValueBase::getDynamicAlloc(
-            DynamicAllocLValue(*dynamicAlloc), *type);
+            DynamicAllocLValue(*dynamicAlloc, *dynamicAlign), *type);
       } else if (isExpr) {
         base = APValue::LValueBase(cast<Expr>(*stmt),
                                    *callIndex, *version);
@@ -600,6 +612,31 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
         base, offset, pathLength, isLValueOnePastTheEnd, isNullPtr).data();
     llvm::copy(lvaluePath->Path, path);
     return result;
+  }]>;
+}
+
+def ReflectionKind : EnumPropertyType<"ReflectionKind">;
+
+let Class = PropertyTypeCase<APValue, "Reflection"> in {
+  def : Property<"reflectionKind", ReflectionKind> {
+    let Read = [{ node.getReflectionOperandKind() }];
+  }
+  def : Property<"reflectionType", QualType> {
+    let Conditional = [{ reflectionKind == ReflectionKind::Type }];
+    let Read = [{
+      QualType::getFromOpaquePtr(node.getReflectionOpaqueOperand())
+    }];
+  }
+  def : Creator<[{
+    switch (reflectionKind) {
+    // TODO(Reflection): Add support for TypeSourceInfo, NamespaceReference
+    // TemplateReference and DeclRefExpr
+    case ReflectionKind::Null:
+      return APValue(reflectionKind, nullptr);
+    case ReflectionKind::Type:
+      return APValue(reflectionKind, (*reflectionType).getAsOpaquePtr());
+    }
+    llvm_unreachable("unimplemented or unknow reflection entities");
   }]>;
 }
 
@@ -808,6 +845,26 @@ let Class = PropertyTypeCase<TemplateName, "DeducedTemplate"> in {
   }
   def : Creator<[{
     return ctx.getDeducedTemplateName(underlying, {startPos, defaultArgs});
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "PackIndexingTemplate"> in {
+  def : ReadHelper<[{
+    auto PI = node.getAsPackIndexingTemplate();
+  }]>;
+  def : Property<"pattern", TemplateName> {
+    let Read = [{ PI->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ PI->getIndexExpr() }];
+  }
+  def : Property<"isFullySubstituted", Bool> {
+    let Read = [{ PI->isFullySubstituted() }];
+  }
+  def : Property<"expansions", Array<TemplateName>> {
+    let Read = [{ PI->getExpansions() }];
+  }
+  def : Creator<[{
+    return ctx.getPackIndexingTemplateName(pattern, indexExpression, isFullySubstituted, expansions);
   }]>;
 }
 

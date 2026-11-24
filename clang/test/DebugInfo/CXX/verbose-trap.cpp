@@ -25,7 +25,7 @@ char const constCat[] = "category2";
 char const constMsg[] = "hello";
 
 // CHECK: ![[SUBPROG14:.*]] = distinct !DISubprogram(name: "f0", linkageName: "_Z2f0v",
-// CHECK: ![[LOC17]] = !DILocation(line: 0, scope: ![[SUBPROG18:.*]], inlinedAt: ![[LOC20:.*]])
+// CHECK: ![[LOC17]] = !DILocation(line: [[@LINE+4]], column: 3, scope: ![[SUBPROG18:.*]], inlinedAt: ![[LOC20:.*]])
 // CHECK: ![[SUBPROG18]] = distinct !DISubprogram(name: "__clang_trap_msg$category1$Argument_must_not_be_null", scope: ![[FILESCOPE]], file: ![[FILESCOPE]], type: !{{.*}}, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !{{.*}})
 // CHECK: ![[LOC20]] = !DILocation(line: [[@LINE+2]], column: 3, scope: ![[SUBPROG14]])
 void f0() {
@@ -33,10 +33,10 @@ void f0() {
 }
 
 // CHECK: ![[SUBPROG22:.*]] = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v",
-// CHECK: ![[LOC23]] = !DILocation(line: 0, scope: ![[SUBPROG18]], inlinedAt: ![[LOC24:.*]])
+// CHECK: ![[LOC23]] = !DILocation(line: [[@LINE+7]], column: 3, scope: ![[SUBPROG18]], inlinedAt: ![[LOC24:.*]])
 // CHECK: ![[LOC24]] = !DILocation(line: [[@LINE+6]], column: 3, scope: ![[SUBPROG22]])
 // CHECK: ![[SUBPROG_F1B:.*]] = distinct !DISubprogram(name: "f1_b", linkageName: "_Z4f1_bv",
-// CHECK: ![[LOC25]] = !DILocation(line: 0, scope: ![[SUBPROG26:.*]], inlinedAt: ![[LOC27:.*]])
+// CHECK: ![[LOC25]] = !DILocation(line: [[@LINE+7]], column: 3, scope: ![[SUBPROG26:.*]], inlinedAt: ![[LOC27:.*]])
 // CHECK: ![[SUBPROG26]] = distinct !DISubprogram(name: "__clang_trap_msg$category2$hello", scope: ![[FILESCOPE]], file: ![[FILESCOPE]], type: !{{.*}}, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !{{.*}})
 // CHECK: ![[LOC27]] = !DILocation(line: [[@LINE+5]], column: 3, scope: ![[SUBPROG_F1B]])
 void f1() {
@@ -47,7 +47,7 @@ void f1_b() {
 }
 
 // CHECK: ![[SUBPROG32:.*]] = distinct !DISubprogram(name: "f2<constCat, constMsg>", linkageName: "_Z2f2IXadsoKcL_ZL8constCatEEEXadsoS0_L_ZL8constMsgEEEEvv",
-// CHECK: ![[LOC36]] = !DILocation(line: 0, scope: ![[SUBPROG26]], inlinedAt: ![[LOC37:.*]])
+// CHECK: ![[LOC36]] = !DILocation(line: [[@LINE+4]], column: 3, scope: ![[SUBPROG26]], inlinedAt: ![[LOC37:.*]])
 // CHECK: ![[LOC37]] = !DILocation(line: [[@LINE+3]], column: 3, scope: ![[SUBPROG32]])
 template <const char * const category, const char * const reason>
 void f2() {

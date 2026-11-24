@@ -9,10 +9,10 @@ define amdgpu_kernel void @exp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[V_EXP_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_EXP_F16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_EXP_F16_fake16_e64_]]
-  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %val = load volatile half, ptr addrspace(1) %ptr
   %res = call half @llvm.amdgcn.exp2.f16(half %val)
@@ -28,10 +28,10 @@ define amdgpu_kernel void @log_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[V_LOG_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_LOG_F16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_LOG_F16_fake16_e64_]]
-  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %val = load volatile half, ptr addrspace(1) %ptr
   %res = call half @llvm.amdgcn.log.f16(half %val)
@@ -47,10 +47,10 @@ define amdgpu_kernel void @rcp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[V_RCP_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RCP_F16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_RCP_F16_fake16_e64_]]
-  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %val = load volatile half, ptr addrspace(1) %ptr
   %res = call half @llvm.amdgcn.rcp.f16(half %val)
@@ -66,10 +66,10 @@ define amdgpu_kernel void @rsq_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[V_RSQ_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RSQ_F16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_RSQ_F16_fake16_e64_]]
-  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %val = load volatile half, ptr addrspace(1) %ptr
   %res = call half @llvm.amdgcn.rsq.f16(half %val)
@@ -85,10 +85,10 @@ define amdgpu_kernel void @sqrt_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[V_SQRT_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_SQRT_F16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_SQRT_F16_fake16_e64_]]
-  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s16) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %val = load volatile half, ptr addrspace(1) %ptr
   %res = call half @llvm.amdgcn.sqrt.f16(half %val)

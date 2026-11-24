@@ -272,20 +272,18 @@ module @transforms attributes { transform.with_named_sequence } {
     // HANDLE MMT4D
     //==========================================================================
     %mmt4d = transform.collect_matching @match_mmt4d in %module : (!transform.any_op) -> (!transform.any_op)
-    %mmt4d_func = transform.get_parent_op %mmt4d {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+    %mmt4d_func = transform.get_parent_op %mmt4d <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
 
     // Step 1: Tile
-    // Tile parallel dims (note, the N dim is scalable!)
-    %tiled_mmt4d_parallel, %_:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, 8, [8], 0]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    // Tile reduction dims
-    %tiled_mmt4d, %_1:2 = transform.structured.tile_using_for %tiled_mmt4d_parallel tile_sizes [0, 0, 1, 0, 0, 1]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    // Tile the outer dims (m, n, k) one at a time (note, the N dim is
+    // scalable!); the inner tile is kept whole.
+    %tiled_mmt4d, %_:3 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 1, 0, 0, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
     // Step 2: Vectorize linalg.mmt4d (note, the N dim is scalable!)
     // TODO: Lower directly to named contractions: https://github.com/llvm/llvm-project/issues/159749
     transform.structured.vectorize %tiled_mmt4d
-      vector_sizes  [1, 1, 1, 8, [8], 1]  {assume_dynamic_dims_match_vec_sizes} : !transform.any_op
+      vector_sizes  [1, 1, 1, 8, [8], 1]  assume_dynamic_dims_match_vec_sizes : !transform.any_op
 
     // Step 3: Simplify
     // vector.multi_reduction --> vector.contract
@@ -331,7 +329,7 @@ module @transforms attributes { transform.with_named_sequence } {
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // 2.1. Decompose tiled PackOp into lower-level Ops + simplify
-    %func_op_pack = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+    %func_op_pack = transform.get_parent_op %tiled_pack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op_pack {
       transform.apply_patterns.linalg.decompose_pack_unpack
       transform.apply_patterns.linalg.decompose_pad
@@ -343,7 +341,7 @@ module @transforms attributes { transform.with_named_sequence } {
     } : !transform.op<"func.func">
 
     // 2.2. Decompose tiled UnpackOp into lower-level Ops + simplify
-    %func_op_unpack = transform.get_parent_op %tiled_unpack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+    %func_op_unpack = transform.get_parent_op %tiled_unpack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op_unpack {
       transform.apply_patterns.linalg.decompose_pack_unpack
     } : !transform.op<"func.func">
@@ -357,13 +355,13 @@ module @transforms attributes { transform.with_named_sequence } {
    // BUFFERIZATION
    //==========================================================================
    %bufferize = transform.bufferization.one_shot_bufferize %module
-     {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
+     <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
 
    //==========================================================================
    // SIMPLIFY THE CONTRACT Op
    //==========================================================================
    %contract = transform.collect_matching @match_contract in %bufferize : (!transform.any_op) -> (!transform.any_op)
-   %contract_func = transform.get_parent_op %contract {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+   %contract_func = transform.get_parent_op %contract <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
 
    // Drop trailing unit dims (the correspondong pattern works only
    // post-bufferization)

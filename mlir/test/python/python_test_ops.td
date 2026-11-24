@@ -17,8 +17,8 @@ def Python_Test_Dialect : Dialect {
   let name = "python_test";
   let cppNamespace = "python_test";
 
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
 }
 
 class TestType<string name, string typeMnemonic>
@@ -33,7 +33,8 @@ class TestAttr<string name, string attrMnemonic>
 
 class TestOp<string mnemonic, list<Trait> traits = []>
     : Op<Python_Test_Dialect, mnemonic, traits> {
-  let assemblyFormat = "operands attr-dict functional-type(operands, results)";
+  let assemblyFormat =
+      "operands prop-dict attr-dict functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//

@@ -12,8 +12,8 @@
 ! Two units in one file, each with a labeled END.  The second unit's END must
 ! not be recorded under the first unit's position.
 ! CHECK-LABEL: Subroutine two_first:
-! CHECK:         AssignedGotoStmt! -> [[E1:[0-9]+]]: go to j
-! CHECK:         [[E1]] ^EndSubroutineStmt: 41 end subroutine
+! CHECK:         [[G1:[0-9]+]] AssignedGotoStmt! -> [[E1:[0-9]+]]: go to j
+! CHECK:         [[E1]] ^EndSubroutineStmt <- [[G1]]: 41 end subroutine
 subroutine two_first(j)
   integer :: j
   assign 41 to j
@@ -21,8 +21,8 @@ subroutine two_first(j)
 41 end subroutine
 
 ! CHECK-LABEL: Subroutine two_second:
-! CHECK:         AssignedGotoStmt! -> [[E2:[0-9]+]]: go to j
-! CHECK:         [[E2]] ^EndSubroutineStmt: 42 end subroutine
+! CHECK:         [[G2:[0-9]+]] AssignedGotoStmt! -> [[E2:[0-9]+]]: go to j
+! CHECK:         [[E2]] ^EndSubroutineStmt <- [[G2]]: 42 end subroutine
 subroutine two_second(j)
   integer :: j
   assign 42 to j
@@ -33,8 +33,8 @@ subroutine two_second(j)
 ! marks the target except the GO TO itself, so this shape depends only on the
 ! recorded classification.
 ! CHECK-LABEL: Subroutine listed_end:
-! CHECK:         AssignedGotoStmt! -> [[E3:[0-9]+]]: go to j,(43)
-! CHECK:         [[E3]] ^EndSubroutineStmt: 43 end subroutine
+! CHECK:         [[G3:[0-9]+]] AssignedGotoStmt! -> [[E3:[0-9]+]]: go to j,(43)
+! CHECK:         [[E3]] ^EndSubroutineStmt <- [[G3]]: 43 end subroutine
 subroutine listed_end(j)
   integer :: j
   go to j, (43)
@@ -42,8 +42,8 @@ subroutine listed_end(j)
 
 ! A labeled END of an internal subprogram, reached through the host's CONTAINS.
 ! CHECK-LABEL: Subroutine inner:
-! CHECK:         AssignedGotoStmt! -> [[E4:[0-9]+]]: go to j
-! CHECK:         [[E4]] ^EndSubroutineStmt: 44 end subroutine
+! CHECK:         [[G4:[0-9]+]] AssignedGotoStmt! -> [[E4:[0-9]+]]: go to j
+! CHECK:         [[E4]] ^EndSubroutineStmt <- [[G4]]: 44 end subroutine
 program host
   call inner(1)
 contains

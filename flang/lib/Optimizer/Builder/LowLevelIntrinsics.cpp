@@ -37,6 +37,20 @@ fir::factory::getLlvmSetRounding(fir::FirOpBuilder &builder) {
                                 funcTy);
 }
 
+mlir::func::FuncOp fir::factory::getLlvmPpcReadflm(fir::FirOpBuilder &builder) {
+  auto f64Ty = builder.getF64Type();
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {}, {f64Ty});
+  return builder.createFunction(builder.getUnknownLoc(), "llvm.ppc.readflm",
+                                funcTy);
+}
+
+mlir::func::FuncOp fir::factory::getLlvmPpcSetflm(fir::FirOpBuilder &builder) {
+  auto f64Ty = builder.getF64Type();
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {f64Ty}, {f64Ty});
+  return builder.createFunction(builder.getUnknownLoc(), "llvm.ppc.setflm",
+                                funcTy);
+}
+
 mlir::func::FuncOp
 fir::factory::getLlvmInitTrampoline(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));

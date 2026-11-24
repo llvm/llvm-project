@@ -41,5 +41,5 @@ define void @directly_load_lds() {
 ; CHECK: }
 
 ; CHECK: define void @directly_load_lds() {
-; CHECK:   load ptr, {{.*}} (%[[LDS_STRUCT_TY]], {{.*}} @[[LDS_STRUCT]], i32 0, i32 1)
+; CHECK:   load ptr, {{.*}} (i8, {{.*}} @[[LDS_STRUCT]], i32 16)
 ; CHECK: }

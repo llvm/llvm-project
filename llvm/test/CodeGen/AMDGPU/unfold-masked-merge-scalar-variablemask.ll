@@ -364,9 +364,8 @@ define i32 @s_out_constant_varx_mone(i32 inreg %x, i32 inreg %y, i32 inreg %mask
 ; GCN-LABEL: s_out_constant_varx_mone:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_and_b32 s0, s2, s0
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GCN-NEXT:    s_or_not1_b32 s0, s0, s2
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %notmask = xor i32 %mask, -1
@@ -532,9 +531,8 @@ define i32 @s_out_constant_mone_vary_invmask(i32 inreg %x, i32 inreg %y, i32 inr
 ; GCN-LABEL: s_out_constant_mone_vary_invmask:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_and_b32 s0, s2, s1
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GCN-NEXT:    s_or_not1_b32 s0, s0, s2
+; GCN-NEXT:    s_or_not1_b32 s0, s1, s2
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %notmask = xor i32 %mask, -1

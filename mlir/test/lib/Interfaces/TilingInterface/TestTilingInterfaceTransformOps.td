@@ -44,7 +44,7 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
-    (`use_forall` $use_forall^)? attr-dict 
+    (`use_forall` $use_forall^)? attr-dict
     `:` functional-type(operands, results)
   }];
 }
@@ -64,7 +64,7 @@ def TestFuseConsumerUsingSliceOp : Op<Transform_Dialect, "test.fuse_consumer_usi
     fusion.
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
       Variadic<TransformHandleTypeInterface>:$targets,
       Variadic<TransformHandleTypeInterface>:$loops,
       DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
@@ -73,8 +73,7 @@ def TestFuseConsumerUsingSliceOp : Op<Transform_Dialect, "test.fuse_consumer_usi
 
   let assemblyFormat = [{
     $targets `in` `(` $loops `)`
-    (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
-    attr-dict `:` functional-type(operands, results)
+    (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -83,7 +82,7 @@ def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    For the `consumer` that uses the result of the outer-most loop of a loop nest passed in 
+    For the `consumer` that uses the result of the outer-most loop of a loop nest passed in
     as `loops` (that are typically generated through tiling), fuse the consumer into the
     loop.
 
@@ -137,8 +136,7 @@ def TestTileUsingForallOp : Op<Transform_Dialect, "test.tile_using_forall",
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` `=` $interchange^)?
-    (`mapping` `=` $mapping^)?
-    attr-dict `:` functional-type(operands, results)
+    (`mapping` `=` $mapping^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -160,8 +158,7 @@ def TestFuseUsingForallOp : Op<Transform_Dialect, "test.fuse_using_forall",
 
   let assemblyFormat = [{
     $root_op ($tile_sizes^)? (`interchange` $interchange^)?
-    (`mapping` `=` $mapping^)?
-    attr-dict `:` functional-type(operands, results)
+    (`mapping` `=` $mapping^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -184,8 +181,7 @@ def TestTileAndFuseOuterParallelPartialReductionOp : Op<
                  Variadic<TransformHandleTypeInterface>:$loops);
   let assemblyFormat = [{
     $root_op (`reduction_dims` `=` $reduction_dims^)?
-    (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)?
-    attr-dict `:` functional-type(operands, results)
+    (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -207,8 +203,7 @@ def TestTileUsingCustomLoopOp : Op<
                   Variadic<TransformHandleTypeInterface>:$loops);
 
   let assemblyFormat = [{
-    $root_op `tile_sizes` `=` $tile_sizes
-    attr-dict `:` functional-type(operands, results)
+    $root_op `tile_sizes` `=` $tile_sizes attr-dict `:` functional-type(operands, results)
   }];
 }
 

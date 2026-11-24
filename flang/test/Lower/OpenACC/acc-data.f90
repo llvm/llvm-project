@@ -7,15 +7,15 @@ subroutine acc_data
   real, pointer :: d, e
   logical :: ifCondition = .TRUE.
 
-! CHECK: %[[A:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Ea"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.array<10x10xf32> <{{{.*}}uniq_name = "{{.*}}Ea"}>
 ! CHECK:%[[DECLA:.*]]:2 = hlfir.declare %[[A]]
-! CHECK: %[[B:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Eb"}
+! CHECK: %[[B:.*]] = fir.alloca !fir.array<10x10xf32> <{{{.*}}uniq_name = "{{.*}}Eb"}>
 ! CHECK:%[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK: %[[C:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Ec"}
+! CHECK: %[[C:.*]] = fir.alloca !fir.array<10x10xf32> <{{{.*}}uniq_name = "{{.*}}Ec"}>
 ! CHECK:%[[DECLC:.*]]:2 = hlfir.declare %[[C]]
-! CHECK: %[[D:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "d", uniq_name = "{{.*}}Ed"}
+! CHECK: %[[D:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> <{bindc_name = "d", uniq_name = "{{.*}}Ed"}>
 ! CHECK:%[[DECLD:.*]]:2 = hlfir.declare %[[D]]
-! CHECK: %[[E:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "e", uniq_name = "{{.*}}Ee"}
+! CHECK: %[[E:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> <{bindc_name = "e", uniq_name = "{{.*}}Ee"}>
 ! CHECK:%[[DECLE:.*]]:2 = hlfir.declare %[[E]]
 
   !$acc data if(.TRUE.) copy(a)

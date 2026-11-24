@@ -310,8 +310,8 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8V4-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0)
+; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
@@ -336,8 +336,8 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
@@ -351,10 +351,12 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX9V4:       ; %bb.0:
 ; GFX9V4-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[6:7] glc
-; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
-; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
-; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
+; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
+; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
+; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
+; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
+; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V4-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX9V4-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX9V4-NEXT:    ; kill: killed $sgpr6_sgpr7
@@ -368,10 +370,12 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX9V5:       ; %bb.0:
 ; GFX9V5-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[6:7] glc
-; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
-; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
-; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
+; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
+; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
+; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
+; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
+; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V5-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX9V5-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX9V5-NEXT:    ; kill: killed $sgpr6_sgpr7

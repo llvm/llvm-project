@@ -121,8 +121,6 @@ public:
 
 private:
   void initializeProvider(LLVMContext &Ctx);
-  void initializeMLProvider(RegAllocPriorityAdvisorProvider::AdvisorMode Mode,
-                            LLVMContext &Ctx);
   std::unique_ptr<RegAllocPriorityAdvisorProvider> Provider;
 };
 
@@ -164,7 +162,7 @@ createReleaseModePriorityAdvisorAnalysis();
 LLVM_ABI RegAllocPriorityAdvisorAnalysisLegacy *
 createDevelopmentModePriorityAdvisorAnalysis();
 
-LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ABI RegAllocPriorityAdvisorProvider *
+LLVM_ABI RegAllocPriorityAdvisorProvider *
 createReleaseModePriorityAdvisorProvider();
 
 LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ABI RegAllocPriorityAdvisorProvider *

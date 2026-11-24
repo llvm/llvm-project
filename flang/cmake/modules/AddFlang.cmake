@@ -16,6 +16,12 @@ macro(add_flang_subdirectory name)
   add_llvm_subdirectory(FLANG TOOL ${name})
 endmacro()
 
+# Add a tablegen target that generates headers in the include directory.
+macro(add_flang_tablegen_target target)
+  add_public_tablegen_target(${target})
+  add_dependencies(flang-headers ${target})
+endmacro()
+
 function(add_flang_library name)
   set(options SHARED STATIC INSTALL_WITH_TOOLCHAIN)
   set(multiValueArgs ADDITIONAL_HEADERS CLANG_LIBS MLIR_LIBS MLIR_DEPS)

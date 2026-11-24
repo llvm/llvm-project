@@ -14,7 +14,7 @@ define void @_start() {
 }
 
 attributes #0 = { "wasm-import-module"="somewhere" "wasm-import-name"="something" }
-attributes #1 = { "wasm-import-module"="otherwhere" "wasm-import-name"="" }
+attributes #1 = { "wasm-import-module"="elsewhere" "wasm-import-name"="" }
 
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
@@ -22,7 +22,7 @@ attributes #1 = { "wasm-import-module"="otherwhere" "wasm-import-name"="" }
 ; CHECK-NEXT:         Field:           something
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        0
-; CHECK-NEXT:       - Module:          otherwhere
+; CHECK-NEXT:       - Module:          elsewhere
 ; CHECK-NEXT:         Field:           ''
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        0

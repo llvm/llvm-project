@@ -35,10 +35,21 @@ add_flang_nongtest_unittest(intrinsics
   FortranParser
 )
 
-add_flang_nongtest_unittest(logical
-  NonGTestTesting
+add_flang_unittest(FlangEvaluateTests
+  PARTIAL_SOURCES_INTENDED
+  CharacterValueTest.cpp
+  ComplexValueTest.cpp
+  IntegerValueTest.cpp
+  LogicalValueTest.cpp
+  RealValueTest.cpp
+)
+
+target_link_libraries(FlangEvaluateTests
+  PRIVATE
   FortranEvaluate
+  FortranDecimal
   FortranSemantics
+  FortranSupport
 )
 
 # GCC -fno-exceptions breaks the fenv.h interfaces needed to capture

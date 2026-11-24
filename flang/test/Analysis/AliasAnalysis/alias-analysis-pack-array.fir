@@ -24,9 +24,9 @@ func.func @_QFtest1(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %
   %c1 = arith.constant 1 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap whole : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-  %2:2 = hlfir.declare %1 dummy_scope %0 {uniq_name = "_QFtest1Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %2:2 = hlfir.declare %1 dummy_scope %0 uniq_name("_QFtest1Ex") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %3 = fir.pack_array %arg1 heap whole : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-  %4:2 = hlfir.declare %3 dummy_scope %0 {uniq_name = "_QFtest1Ey"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %4:2 = hlfir.declare %3 dummy_scope %0 uniq_name("_QFtest1Ey") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %5 = fir.box_addr %4#0 {test.ptr = "test1_y_repack(1)"} : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<f32>
   %52 = fir.box_addr %4#0 {test.ptr = "test1_y_repack2(1)"} : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<f32>
   %6 = fir.load %5 : !fir.ref<f32>

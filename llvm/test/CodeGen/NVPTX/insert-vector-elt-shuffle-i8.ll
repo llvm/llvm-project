@@ -19,7 +19,7 @@ define ptx_kernel void @pack_i8(<2 x i8> %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    // end inline asm
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
-; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x14U;
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x3214U;
 ; CHECK-NEXT:    mov.b64 %rd1, 0;
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd1], {%r3, 0, 0, 0};
 ; CHECK-NEXT:    ret;

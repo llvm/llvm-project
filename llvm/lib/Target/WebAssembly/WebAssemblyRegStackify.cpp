@@ -759,7 +759,7 @@ public:
   /// re-insert them starting from the beginning (because we've commuted them).
   void resetTopOperands(MachineInstr *Instr) {
     assert(hasRemainingOperands(Instr) &&
-           "Reseting operands should only be done when the instruction has "
+           "Resetting operands should only be done when the instruction has "
            "an operand still on the stack");
     Worklist.back() = reverse(Instr->explicit_uses());
   }

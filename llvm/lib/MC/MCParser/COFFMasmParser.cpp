@@ -451,7 +451,9 @@ bool COFFMasmParser::parseDirectiveOption(StringRef Directive, SMLoc Loc) {
 
 /// parseDirectiveProc
 /// TODO(epastor): Implement parameters and other attributes.
-///  ::= label "proc" [[distance]]
+/// Partially from
+/// https://learn.microsoft.com/en-us/cpp/assembler/masm/proc?view=msvc-170
+///  ::= label "proc" [[distance]] [[visibility]] [["frame"]]
 ///          statements
 ///      label "endproc"
 bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
@@ -468,26 +470,46 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
       // TODO(epastor): Handle far procedure definitions.
       Lex();
       return Error(nextLoc, "far procedure definitions not yet supported");
-    } else if (nextVal.equals_insensitive("near")) {
+    }
+    if (nextVal.equals_insensitive("near")) {
       Lex();
-      nextVal = getTok().getString();
-      nextLoc = getTok().getLoc();
     }
   }
 
-  // Define symbol as simple external function
-  auto *COFFSym = static_cast<MCSymbolCOFF *>(Sym);
-  COFFSym->setExternal(true);
-  COFFSym->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION
-                   << COFF::SCT_COMPLEX_TYPE_SHIFT);
+  bool External = true;
+  if (getLexer().is(AsmToken::Identifier)) {
+    StringRef nextVal = getTok().getString();
+    SMLoc nextLoc = getTok().getLoc();
+    if (nextVal.equals_insensitive("public")) {
+      Lex();
+      External = true;
+    } else if (nextVal.equals_insensitive("private")) {
+      Lex();
+      External = false;
+    } else if (nextVal.equals_insensitive("export")) {
+      // TODO(xfding): Emit export visibility.
+      Lex();
+      return Error(nextLoc, "export procedure definitions not yet supported");
+    }
+  }
 
   bool Framed = false;
   if (getLexer().is(AsmToken::Identifier) &&
       getTok().getString().equals_insensitive("frame")) {
     Lex();
     Framed = true;
-    getStreamer().emitWinCFIStartProc(Sym, Loc);
   }
+  if (parseEOL())
+    return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
+
+  // Define symbol as simple function
+  auto *COFFSym = static_cast<MCSymbolCOFF *>(Sym);
+  COFFSym->setExternal(COFFSym->isExternal() || External);
+  COFFSym->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                   << COFF::SCT_COMPLEX_TYPE_SHIFT);
+
+  if (Framed)
+    getStreamer().emitWinCFIStartProc(Sym, Loc);
   getStreamer().emitLabel(Sym, Loc);
 
   CurrentProcedures.push_back(Sym->getName());
@@ -511,6 +533,8 @@ bool COFFMasmParser::parseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
   }
   CurrentProcedures.pop_back();
   CurrentProceduresFramed.pop_back();
+  if (parseEOL())
+    return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
   return false;
 }
 

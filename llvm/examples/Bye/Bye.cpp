@@ -14,11 +14,18 @@ static cl::opt<bool> Wave("wave-goodbye", cl::init(false),
 static cl::opt<bool> LastWords("last-words", cl::init(false),
                                cl::desc("say last words (suppress codegen)"));
 
+static cl::opt<std::string> Greeting("bye-greeting",
+                                     cl::desc("also print this greeting"));
+
 namespace {
 
 bool runBye(Function &F) {
   if (Wave) {
     errs() << "Bye: ";
+    errs().write_escaped(F.getName()) << '\n';
+  }
+  if (!Greeting.empty()) {
+    errs() << Greeting << ": ";
     errs().write_escaped(F.getName()) << '\n';
   }
   return false;
@@ -54,8 +61,10 @@ void registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 }
 
-bool preCodeGenCallback(Module &M, TargetMachine &, CodeGenFileType CGFT,
-                        raw_pwrite_stream &OS) {
+bool preCodeGenCallback(TargetMachine &, Module &M, raw_pwrite_stream &OS,
+                        raw_pwrite_stream *DwoOS, CodeGenFileType CGFT, bool,
+                        bool, const ModuleSummaryIndex *,
+                        IntrusiveRefCntPtr<vfs::FileSystem>) {
   if (LastWords) {
     if (CGFT != CodeGenFileType::AssemblyFile) {
       // Test error emission.
@@ -63,6 +72,8 @@ bool preCodeGenCallback(Module &M, TargetMachine &, CodeGenFileType CGFT,
       return false;
     }
     OS << "CodeGen Bye\n";
+    if (DwoOS)
+      *DwoOS << "DwoGen Bye\n";
     return true; // Suppress remaining compilation pipeline.
   }
   // Do nothing.
@@ -77,10 +88,21 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
+static Error parseArguments(ArrayRef<const char *> Args) {
+  SmallVector<const char *, 0> Argv = {"Bye"};
+  append_range(Argv, Args);
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
+    return createStringError(StringRef(Msg).trim());
+  return Error::success();
+}
+
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
-          registerPassBuilderCallbacks, preCodeGenCallback};
+  return {LLVM_PLUGIN_API_VERSION, "Bye",
+          LLVM_VERSION_STRING,     registerPassBuilderCallbacks,
+          preCodeGenCallback,      parseArguments};
 }
 
 #ifndef LLVM_BYE_LINK_INTO_TOOLS

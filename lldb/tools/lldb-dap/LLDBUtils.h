@@ -23,8 +23,10 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Telemetry/Telemetry.h"
 #include <chrono>
 #include <string>
+#include <utility>
 
 namespace lldb_dap {
 
@@ -139,26 +141,22 @@ std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
 lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
                                          const lldb::SBAddress &address);
 
-/// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
-class TelemetryDispatcher {
+namespace detail {
+
+template <bool Enabled = llvm::telemetry::Config::BuildTimeEnableTelemetry>
+class TelemetryDispatcherImpl {
 public:
-  TelemetryDispatcher(lldb::SBDebugger *debugger) {
-    m_telemetry_json = llvm::json::Object();
+  TelemetryDispatcherImpl(lldb::SBDebugger *debugger) : debugger(debugger) {
     m_telemetry_json.try_emplace(
         "start_time",
         std::chrono::steady_clock::now().time_since_epoch().count());
-    this->debugger = debugger;
   }
 
-  void Set(std::string key, std::string value) {
-    m_telemetry_json.try_emplace(key, value);
+  template <typename T> void Set(llvm::StringRef key, T &&value) {
+    m_telemetry_json.try_emplace(key, std::forward<T>(value));
   }
 
-  void Set(std::string key, int64_t value) {
-    m_telemetry_json.try_emplace(key, value);
-  }
-
-  ~TelemetryDispatcher() {
+  ~TelemetryDispatcherImpl() {
     m_telemetry_json.try_emplace(
         "end_time",
         std::chrono::steady_clock::now().time_since_epoch().count());
@@ -175,6 +173,18 @@ private:
   llvm::json::Object m_telemetry_json;
   lldb::SBDebugger *debugger;
 };
+
+template <> class TelemetryDispatcherImpl<false> {
+public:
+  TelemetryDispatcherImpl(lldb::SBDebugger *) {}
+  template <typename T> void Set(llvm::StringRef, T &&) {}
+};
+
+} // namespace detail
+
+/// Helper for sending telemetry to lldb server, if built with telemetry and
+/// client-telemetry is enabled.
+using TelemetryDispatcher = detail::TelemetryDispatcherImpl<>;
 
 /// RAII utility to put the debugger temporarily  into synchronous mode.
 class ScopeSyncMode {

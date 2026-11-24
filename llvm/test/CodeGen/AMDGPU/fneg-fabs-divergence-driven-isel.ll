@@ -8,7 +8,7 @@ define amdgpu_kernel void @divergent_fneg_f32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: name:            divergent_fneg_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: V_XOR_B32_e64 killed %[[REG]]
+; GCN: V_XOR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -24,7 +24,7 @@ define amdgpu_kernel void @uniform_fneg_f32(ptr addrspace(1) %out, ptr addrspace
 ; GCN-LABEL: name:            uniform_fneg_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: S_XOR_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_XOR_B32 %{{[0-9]+}}, %[[REG]]
 
   %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %idx
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %idx
@@ -38,7 +38,7 @@ define amdgpu_kernel void @divergent_fabs_f32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: name:            divergent_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
-; GCN: V_AND_B32_e64 killed %[[REG]]
+; GCN: V_AND_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -54,7 +54,7 @@ define amdgpu_kernel void @uniform_fabs_f32(ptr addrspace(1) %out, ptr addrspace
 ; GCN-LABEL: name:            uniform_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
-; GCN: S_AND_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_AND_B32 %{{[0-9]+}}, %[[REG]]
 
   %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %idx
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %idx
@@ -68,7 +68,7 @@ define amdgpu_kernel void @divergent_fneg_fabs_f32(ptr addrspace(1) %out, ptr ad
 ; GCN-LABEL: name:            divergent_fneg_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: V_OR_B32_e64 killed %[[REG]]
+; GCN: V_OR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -85,7 +85,7 @@ define amdgpu_kernel void @uniform_fneg_fabs_f32(ptr addrspace(1) %out, ptr addr
 ; GCN-LABEL: name:            uniform_fneg_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: S_OR_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_OR_B32 %{{[0-9]+}}, %[[REG]]
 
   %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %idx
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %idx
@@ -101,7 +101,7 @@ define amdgpu_kernel void @divergent_fabs_f16(ptr addrspace(1) %in, ptr addrspac
 ; GCN-LABEL: name:            divergent_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32767
-; FP16: V_AND_B32_e64 killed %[[REG]]
+; FP16: V_AND_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -116,7 +116,7 @@ define amdgpu_kernel void @uniform_fabs_f16(ptr addrspace(1) %in, ptr addrspace(
 ; GCN-LABEL: name:            uniform_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32767
-; GCN: S_AND_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_AND_B32 %{{[0-9]+}}, %[[REG]]
 
   %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %idx
   %val = load volatile half, ptr addrspace(1) %in.gep
@@ -129,7 +129,7 @@ define amdgpu_kernel void @divergent_fneg_f16(ptr addrspace(1) %in, ptr addrspac
 ; GCN-LABEL: name:            divergent_fneg_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
-; FP16: V_XOR_B32_e64 killed %[[REG]]
+; FP16: V_XOR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -144,7 +144,7 @@ define amdgpu_kernel void @uniform_fneg_f16(ptr addrspace(1) %in, ptr addrspace(
 ; GCN-LABEL: name:            uniform_fneg_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
-; GCN: S_XOR_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_XOR_B32 %{{[0-9]+}}, %[[REG]]
 
   %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %idx
   %val = load volatile half, ptr addrspace(1) %in.gep
@@ -157,7 +157,7 @@ define amdgpu_kernel void @divergent_fneg_fabs_f16(ptr addrspace(1) %in, ptr add
 ; GCN-LABEL: name:            divergent_fneg_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
-; FP16: V_OR_B32_e64 killed %[[REG]]
+; FP16: V_OR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -173,7 +173,7 @@ define amdgpu_kernel void @uniform_fneg_fabs_f16(ptr addrspace(1) %in, ptr addrs
 ; GCN-LABEL: name:            uniform_fneg_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
-; GCN: S_OR_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_OR_B32 %{{[0-9]+}}, %[[REG]]
 
   %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %idx
   %val = load volatile half, ptr addrspace(1) %in.gep
@@ -187,7 +187,7 @@ define amdgpu_kernel void @divergent_fneg_v2f16(ptr addrspace(1) %out, ptr addrs
 ; GCN-LABEL: name:            divergent_fneg_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
-; FP16: V_XOR_B32_e64 killed %[[REG]]
+; FP16: V_XOR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
@@ -202,7 +202,7 @@ define amdgpu_kernel void @uniform_fneg_v2f16(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: name:            uniform_fneg_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
-; GCN: S_XOR_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_XOR_B32 %{{[0-9]+}}, %[[REG]]
 
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
   %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
@@ -216,7 +216,7 @@ define amdgpu_kernel void @divergent_fabs_v2f16(ptr addrspace(1) %out, ptr addrs
 ; GCN-LABEL: name:            divergent_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147450879
-; FP16: V_AND_B32_e64 killed %[[REG]]
+; FP16: V_AND_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
@@ -231,7 +231,7 @@ define amdgpu_kernel void @uniform_fabs_v2f16(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: name:            uniform_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147450879
-; GCN: S_AND_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_AND_B32 %{{[0-9]+}}, %[[REG]]
 
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
   %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
@@ -245,7 +245,7 @@ define amdgpu_kernel void @divergent_fneg_fabs_v2f16(ptr addrspace(1) %out, ptr 
 ; GCN-LABEL: name:            divergent_fneg_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
-; FP16: V_OR_B32_e64 killed %[[REG]]
+; FP16: V_OR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
@@ -261,7 +261,7 @@ define amdgpu_kernel void @uniform_fneg_fabs_v2f16(ptr addrspace(1) %out, ptr ad
 ; GCN-LABEL: name:            uniform_fneg_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
-; GCN: S_OR_B32 killed %{{[0-9]+}}, killed %[[REG]]
+; GCN: S_OR_B32 %{{[0-9]+}}, %[[REG]]
 
   %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
   %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
@@ -292,8 +292,8 @@ define amdgpu_kernel void @uniform_fneg_v2f32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: name:            uniform_fneg_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: S_XOR_B32 killed %{{[0-9]+}}, %[[REG]]
-; GCN: S_XOR_B32 killed %{{[0-9]+}}, %[[REG]]
+; GCN: S_XOR_B32 %{{[0-9]+}}, %[[REG]]
+; GCN: S_XOR_B32 %{{[0-9]+}}, %[[REG]]
 
   %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
   %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
@@ -323,8 +323,8 @@ define amdgpu_kernel void @uniform_fabs_v2f32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-LABEL: name:            uniform_fabs_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
-; GCN: S_AND_B32 killed %{{[0-9]+}}, %[[REG]]
-; GCN: S_AND_B32 killed %{{[0-9]+}}, %[[REG]]
+; GCN: S_AND_B32 %{{[0-9]+}}, %[[REG]]
+; GCN: S_AND_B32 %{{[0-9]+}}, %[[REG]]
 
   %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
   %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
@@ -355,8 +355,8 @@ define amdgpu_kernel void @uniform_fneg_fabs_v2f32(ptr addrspace(1) %out, ptr ad
 ; GCN-LABEL: name:            uniform_fneg_fabs_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: S_OR_B32 killed %{{[0-9]+}}, %[[REG]]
-; GCN: S_OR_B32 killed %{{[0-9]+}}, %[[REG]]
+; GCN: S_OR_B32 %{{[0-9]+}}, %[[REG]]
+; GCN: S_OR_B32 %{{[0-9]+}}, %[[REG]]
 
   %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
   %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
@@ -374,9 +374,9 @@ define amdgpu_kernel void @divergent_fneg_f64(ptr addrspace(1) %out, ptr addrspa
 ; FP16: %[[VREG64:[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR
 ; GCN: %[[HI32:[0-9]+]]:vgpr_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: %[[XOR:[0-9]+]]:vgpr_32 = V_XOR_B32_e64 killed %[[SREG_MASK]], killed  %[[HI32]]
+; GCN: %[[XOR:[0-9]+]]:vgpr_32 = V_XOR_B32_e64 %[[SREG_MASK]],  %[[HI32]]
 ; GCN: %[[LO32:[0-9]+]]:vgpr_32 = COPY %[[VREG64]].sub0
-; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[XOR]], %subreg.sub1
+; GCN: REG_SEQUENCE %[[LO32]], %subreg.sub0, %[[XOR]], %subreg.sub1
 
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -397,9 +397,9 @@ define amdgpu_kernel void @uniform_fneg_f64(ptr addrspace(1) %out, ptr addrspace
 ; GCN: %[[LO32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub0
 ; GCN: %[[HI32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: %[[XOR:[0-9]+]]:sreg_32 = S_XOR_B32 killed %[[HI32]], killed %[[SREG_MASK]]
-; GCN: %[[XOR_COPY:[0-9]+]]:sreg_32 = COPY killed %[[XOR]]
-; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[XOR_COPY]], %subreg.sub1
+; GCN: %[[XOR:[0-9]+]]:sreg_32 = S_XOR_B32 %[[HI32]], %[[SREG_MASK]]
+; GCN: %[[XOR_COPY:[0-9]+]]:sreg_32 = COPY %[[XOR]]
+; GCN: REG_SEQUENCE %[[LO32]], %subreg.sub0, %[[XOR_COPY]], %subreg.sub1
 
   %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %idx
   %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %idx
@@ -416,9 +416,9 @@ define amdgpu_kernel void @divergent_fabs_f64(ptr addrspace(1) %out, ptr addrspa
 ; FP16: %[[VREG64:[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR
 ; GCN: %[[HI32:[0-9]+]]:vgpr_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
-; GCN: %[[AND:[0-9]+]]:vgpr_32 = V_AND_B32_e64 killed %[[SREG_MASK]], killed  %[[HI32]]
+; GCN: %[[AND:[0-9]+]]:vgpr_32 = V_AND_B32_e64 %[[SREG_MASK]],  %[[HI32]]
 ; GCN: %[[LO32:[0-9]+]]:vgpr_32 = COPY %[[VREG64]].sub0
-; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[AND]], %subreg.sub1
+; GCN: REG_SEQUENCE %[[LO32]], %subreg.sub0, %[[AND]], %subreg.sub1
 
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -439,9 +439,9 @@ define amdgpu_kernel void @uniform_fabs_f64(ptr addrspace(1) %out, ptr addrspace
 ; GCN: %[[LO32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub0
 ; GCN: %[[HI32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
-; GCN: %[[AND:[0-9]+]]:sreg_32 = S_AND_B32 killed %[[HI32]], killed %[[SREG_MASK]]
-; GCN: %[[AND_COPY:[0-9]+]]:sreg_32 = COPY killed %[[AND]]
-; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[AND_COPY]], %subreg.sub1
+; GCN: %[[AND:[0-9]+]]:sreg_32 = S_AND_B32 %[[HI32]], %[[SREG_MASK]]
+; GCN: %[[AND_COPY:[0-9]+]]:sreg_32 = COPY %[[AND]]
+; GCN: REG_SEQUENCE %[[LO32]], %subreg.sub0, %[[AND_COPY]], %subreg.sub1
 
 
   %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %idx
@@ -459,9 +459,9 @@ define amdgpu_kernel void @divergent_fneg_fabs_f64(ptr addrspace(1) %out, ptr ad
 ; FP16: %[[VREG64:[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR
 ; GCN: %[[HI32:[0-9]+]]:vgpr_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: %[[OR:[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed %[[SREG_MASK]], killed  %[[HI32]]
+; GCN: %[[OR:[0-9]+]]:vgpr_32 = V_OR_B32_e64 %[[SREG_MASK]],  %[[HI32]]
 ; GCN: %[[LO32:[0-9]+]]:vgpr_32 = COPY %[[VREG64]].sub0
-; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[OR]], %subreg.sub1
+; GCN: REG_SEQUENCE %[[LO32]], %subreg.sub0, %[[OR]], %subreg.sub1
 
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -483,9 +483,9 @@ define amdgpu_kernel void @uniform_fneg_fabs_f64(ptr addrspace(1) %out, ptr addr
 ; GCN: %[[LO32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub0
 ; GCN: %[[HI32:[0-9]+]]:sreg_32 = COPY %[[VREG64]].sub1
 ; GCN: %[[SREG_MASK:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-; GCN: %[[OR:[0-9]+]]:sreg_32 = S_OR_B32 killed %[[HI32]], killed %[[SREG_MASK]]
-; GCN: %[[OR_COPY:[0-9]+]]:sreg_32 = COPY killed %[[OR]]
-; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[OR_COPY]], %subreg.sub1
+; GCN: %[[OR:[0-9]+]]:sreg_32 = S_OR_B32 %[[HI32]], %[[SREG_MASK]]
+; GCN: %[[OR_COPY:[0-9]+]]:sreg_32 = COPY %[[OR]]
+; GCN: REG_SEQUENCE %[[LO32]], %subreg.sub0, %[[OR_COPY]], %subreg.sub1
 
 
   %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %idx

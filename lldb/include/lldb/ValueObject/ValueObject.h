@@ -356,6 +356,11 @@ public:
 
   virtual bool CanProvideValue();
 
+  /// Returns whether objects of the type of this value occupy no memory, so
+  /// that the value has no data and needs no location. A value whose size is
+  /// unknown is assumed to occupy memory.
+  bool HasNoStorage();
+
   // Subclasses must implement the functions below.
   virtual llvm::Expected<uint64_t> GetByteSize() = 0;
 
@@ -496,6 +501,11 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
+  /// Return the index of the child named \c name.
+  ///
+  /// The error is for LLDB developers, not for the user: a missing child is the
+  /// ordinary negative answer to a lookup. Callers that cannot propagate it
+  /// should log it rather than call \c llvm::consumeError.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
@@ -590,8 +600,8 @@ public:
   lldb::ValueObjectSP GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
                                                 bool can_create);
 
-  lldb::ValueObjectSP GetSyntheticExpressionPathChild(const char *expression,
-                                                      bool can_create);
+  lldb::ValueObjectSP
+  GetSyntheticExpressionPathChild(llvm::StringRef expression, bool can_create);
 
   virtual lldb::ValueObjectSP
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
@@ -1281,7 +1291,7 @@ public:
 
   ValueImpl(lldb::ValueObjectSP in_valobj_sp,
             lldb::DynamicValueType use_dynamic, bool use_synthetic,
-            const char *name = nullptr);
+            std::string name = {});
 
   ValueImpl(const ValueImpl &rhs) = default;
 
@@ -1330,7 +1340,7 @@ private:
   lldb::ValueObjectSP m_valobj_sp;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  ConstString m_name;
+  std::string m_name;
 };
 
 class ValueLocker {

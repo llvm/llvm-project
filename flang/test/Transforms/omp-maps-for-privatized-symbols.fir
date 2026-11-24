@@ -14,14 +14,14 @@ module attributes {omp.is_target_device = false} {
   }
   func.func @_QPtarget_simple() {
     %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFtarget_simpleEa"}
-    %1:2 = hlfir.declare %0 {uniq_name = "_QFtarget_simpleEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %1:2 = hlfir.declare %0 uniq_name("_QFtarget_simpleEa") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %2 = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "simple_var", uniq_name = "_QFtarget_simpleEsimple_var"}
     %3 = fir.zero_bits !fir.heap<i32>
     %4 = fir.embox %3 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
     fir.store %4 to %2 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    %5:2 = hlfir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_simpleEsimple_var"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+    %5:2 = hlfir.declare %2 uniq_name("_QFtarget_simpleEsimple_var") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
     %6 = fir.alloca i32 {bindc_name = "fp_int", uniq_name = "_QFtarget_simpleEfp_int"}
-    %7:2 = hlfir.declare %6 {uniq_name = "_QFtarget_simpleEfp_int"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %7:2 = hlfir.declare %6 uniq_name("_QFtarget_simpleEfp_int") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c2_i32 = arith.constant 2 : i32
     hlfir.assign %c2_i32 to %1#0 : i32, !fir.ref<i32>
     %8 = omp.map.info var_ptr(%1#1 : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) name("a") -> !fir.ref<i32>
@@ -32,8 +32,8 @@ module attributes {omp.is_target_device = false} {
   }
 }
 // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) name("a") -> !fir.ref<i32>
-// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<i32>>>
-// CHECK: %[[MAP2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
+// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(tofrom) capture(ByRef) name("simple_var") -> !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK: %[[MAP2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) name("fp_int") -> !fir.ref<i32>
 // CHECK:  omp.target kernel_type(generic) map_entries(%[[MAP0]] -> %arg0, %[[MAP1]] -> %arg1, %[[MAP2]] -> %arg2 : !fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>)
 
 // -----
@@ -46,7 +46,7 @@ module attributes {omp.is_target_device = false} {
   }
   func.func @_QPtarget_gen() {
     %0 = fir.alloca !fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "dt", uniq_name = "_QFtarget_genEdt"}
-    %1:2 = hlfir.declare %0 {uniq_name = "_QFtarget_genEdt"} : (!fir.ref<!fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
+    %1:2 = hlfir.declare %0 uniq_name("_QFtarget_genEdt") : (!fir.ref<!fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
     omp.target kernel_type(generic) private(@_QFtarget_genEdt_private %1#0 -> %arg0 : !fir.ref<!fir.type<_QFTgen_t{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) {
       omp.terminator
     }
@@ -54,7 +54,7 @@ module attributes {omp.is_target_device = false} {
   }
 }
 // CHECK: omp.declare_mapper @[[GEN_MAPPER:_QFTgen_t_omp_default_mapper]]
-// CHECK: %[[GEN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTgen_t{{.*}}>>, !fir.type<_QFTgen_t{{.*}}>) map_clauses(tofrom) capture(ByRef) mapper(@[[GEN_MAPPER]]) -> !fir.ref<!fir.type<_QFTgen_t{{.*}}>>
+// CHECK: %[[GEN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTgen_t{{.*}}>>, !fir.type<_QFTgen_t{{.*}}>) map_clauses(tofrom) capture(ByRef) mapper(@[[GEN_MAPPER]]) name("dt") -> !fir.ref<!fir.type<_QFTgen_t{{.*}}>>
 // CHECK: omp.target kernel_type(generic) map_entries(%[[GEN_MAP]] -> %arg0 : !fir.ref<!fir.type<_QFTgen_t{{.*}}>>)
 
 // -----
@@ -67,7 +67,7 @@ module attributes {omp.is_target_device = false} {
   }
   func.func @_QPtarget_plain() {
     %0 = fir.alloca !fir.type<_QFTplain_t{x:i32,y:f32}> {bindc_name = "dt", uniq_name = "_QFtarget_plainEdt"}
-    %1:2 = hlfir.declare %0 {uniq_name = "_QFtarget_plainEdt"} : (!fir.ref<!fir.type<_QFTplain_t{x:i32,y:f32}>>) -> (!fir.ref<!fir.type<_QFTplain_t{x:i32,y:f32}>>, !fir.ref<!fir.type<_QFTplain_t{x:i32,y:f32}>>)
+    %1:2 = hlfir.declare %0 uniq_name("_QFtarget_plainEdt") : (!fir.ref<!fir.type<_QFTplain_t{x:i32,y:f32}>>) -> (!fir.ref<!fir.type<_QFTplain_t{x:i32,y:f32}>>, !fir.ref<!fir.type<_QFTplain_t{x:i32,y:f32}>>)
     omp.target kernel_type(generic) private(@_QFtarget_plainEdt_private %1#0 -> %arg0 : !fir.ref<!fir.type<_QFTplain_t{x:i32,y:f32}>>) {
       omp.terminator
     }
@@ -76,5 +76,5 @@ module attributes {omp.is_target_device = false} {
 }
 
 // CHECK-NOT: omp.declare_mapper @_QFTplain_t_omp_default_mapper
-// CHECK: %[[PLAIN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTplain_t{{.*}}>>, !fir.type<_QFTplain_t{{.*}}>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.type<_QFTplain_t{{.*}}>>
+// CHECK: %[[PLAIN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTplain_t{{.*}}>>, !fir.type<_QFTplain_t{{.*}}>) map_clauses(tofrom) capture(ByRef) name("dt") -> !fir.ref<!fir.type<_QFTplain_t{{.*}}>>
 // CHECK-NOT: mapper(

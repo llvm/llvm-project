@@ -1,7 +1,9 @@
+#include <pthread.h>
 #include <stdlib.h>
 
-// A simple, deterministic, single-threaded nested call chain.  We stop at the
-// innermost function and walk the stack.
+// A simple, deterministic nested call chain.  We stop at the innermost function
+// and walk the stack. The chain runs on a new thread to avoid the interference
+// from lldb reading from main thread stack before main.
 //
 // The breakpoint is in the innermost frame (func_e), and that frame carries
 // locals of every kind, so that examining *just the stopped frame* already
@@ -95,7 +97,14 @@ static int func_c(int x) {
 static int func_b(int x) { return func_c(x) + 1; }
 static int func_a(int x) { return func_b(x) + 1; }
 
-int main() {
+static void *thread_func(void *arg) {
   g_sink = func_a(0);
+  return NULL;
+}
+
+int main() {
+  pthread_t thread;
+  pthread_create(&thread, NULL, thread_func, NULL);
+  pthread_join(thread, NULL);
   return 0;
 }

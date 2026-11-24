@@ -1566,3 +1566,15 @@ void g() {
 }
 
 }
+
+namespace GH194298 {
+coro<promise_void> f1() : bar { co_await suspend_always{} }; // expected-error {{only constructors take base initializers}}
+coro<promise> f2() : bar { co_yield 0 }; // expected-error {{only constructors take base initializers}}
+coro<promise_void> f3() : bar { co_return }; // expected-error {{expected expression}} \
+                                             // expected-error {{only constructors take base initializers}}
+coro<good_promise_13> f4() try : bar { co_await suspend_always{} } { } catch (...) {} // expected-error {{only constructors take base initializers}}
+struct S {
+  coro<good_promise_13> m1() : bar { co_await suspend_always{} } { } // expected-error {{only constructors take base initializers}}
+  coro<good_promise_13> m2() try : bar { co_await suspend_always{} } { } catch (...) {} // expected-error {{only constructors take base initializers}}
+};
+}

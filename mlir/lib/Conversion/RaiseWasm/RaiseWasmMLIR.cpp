@@ -40,6 +40,15 @@ using namespace mlir;
 using namespace mlir::wasmssa;
 namespace {
 
+template <typename OpTy>
+static typename OpTy::Properties getDefaultProperties(MLIRContext *context) {
+  typename OpTy::Properties properties{};
+  if constexpr (!std::is_same_v<typename OpTy::Properties, EmptyProperties>)
+    OpTy::populateDefaultProperties(
+        OperationName(OpTy::getOperationName(), context), properties);
+  return properties;
+}
+
 template <typename SourceOp, typename TargetIntOp, typename TargetFPOp>
 struct IntFPDispatchMappingConversion : OpConversionPattern<SourceOp> {
   using OpConversionPattern<SourceOp>::OpConversionPattern;
@@ -49,14 +58,18 @@ struct IntFPDispatchMappingConversion : OpConversionPattern<SourceOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Type type = srcOp.getRhs().getType();
     if (type.isInteger()) {
-      rewriter.replaceOpWithNewOp<TargetIntOp>(srcOp, srcOp->getResultTypes(),
-                                               adaptor.getOperands());
+      rewriter.replaceOpWithNewOp<TargetIntOp>(
+          srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+          getDefaultProperties<TargetIntOp>(rewriter.getContext()),
+          ArrayRef<NamedAttribute>{});
       return success();
     }
     if (!type.isFloat())
       return failure();
-    rewriter.replaceOpWithNewOp<TargetFPOp>(srcOp, srcOp->getResultTypes(),
-                                            adaptor.getOperands());
+    rewriter.replaceOpWithNewOp<TargetFPOp>(
+        srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+        getDefaultProperties<TargetFPOp>(rewriter.getContext()),
+        ArrayRef<NamedAttribute>{});
     return success();
   }
 };
@@ -77,8 +90,10 @@ struct OpMappingConversion : OpConversionPattern<SourceOp> {
   LogicalResult
   matchAndRewrite(SourceOp srcOp, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<TargetOp>(srcOp, srcOp->getResultTypes(),
-                                          adaptor.getOperands());
+    rewriter.replaceOpWithNewOp<TargetOp>(
+        srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+        getDefaultProperties<TargetOp>(rewriter.getContext()),
+        ArrayRef<NamedAttribute>{});
     return success();
   }
 };
@@ -287,7 +302,7 @@ using WasmNeOpConversion =
                                 arith::CmpFPredicate::ONE>;
 
 struct WasmCallOpConversion : OpConversionPattern<FuncCallOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(FuncCallOp funcCallOp, FuncCallOp::Adaptor adaptor,
@@ -300,7 +315,7 @@ struct WasmCallOpConversion : OpConversionPattern<FuncCallOp> {
 };
 
 struct WasmConstOpConversion : OpConversionPattern<ConstOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ConstOp constOp, ConstOp::Adaptor adaptor,
@@ -311,7 +326,7 @@ struct WasmConstOpConversion : OpConversionPattern<ConstOp> {
 };
 
 struct WasmEqzOpConversion : OpConversionPattern<EqzOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(EqzOp eqzOp, EqzOp::Adaptor adaptor,
@@ -335,7 +350,7 @@ struct WasmEqzOpConversion : OpConversionPattern<EqzOp> {
 };
 
 struct WasmExtendLowBitsOpConversion : OpConversionPattern<ExtendLowBitsSOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ExtendLowBitsSOp extendLowBytesSOp,
@@ -353,7 +368,7 @@ struct WasmExtendLowBitsOpConversion : OpConversionPattern<ExtendLowBitsSOp> {
 };
 
 struct WasmFuncImportOpConversion : OpConversionPattern<FuncImportOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(FuncImportOp funcImportOp, FuncImportOp::Adaptor,
@@ -366,7 +381,7 @@ struct WasmFuncImportOpConversion : OpConversionPattern<FuncImportOp> {
 };
 
 struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   ///
   /// Control flow conversion needs shared state for tracking which block
   /// corresponds to which operation at which level.
@@ -574,7 +589,7 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
 };
 
 struct WasmGlobalImportOpConverter : OpConversionPattern<GlobalImportOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(GlobalImportOp gIOp, GlobalImportOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -590,7 +605,7 @@ struct WasmGlobalImportOpConverter : OpConversionPattern<GlobalImportOp> {
 
 template <typename CRTP, typename OriginOpType>
 struct GlobalOpConverter : OpConversionPattern<GlobalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(GlobalOp globalOp, GlobalOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -672,7 +687,7 @@ struct WasmGlobalWithGetGlobalInitConversion
 };
 
 struct WasmGlobalSetOpConversion : OpConversionPattern<GlobalSetOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(GlobalSetOp globalSetOp, GlobalSetOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -689,7 +704,7 @@ struct WasmGlobalSetOpConversion : OpConversionPattern<GlobalSetOp> {
 };
 
 struct WasmMemoryOpConversion : OpConversionPattern<MemOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(MemOp memOp, MemOp::Adaptor adaptor,
@@ -750,7 +765,7 @@ inline TypedAttr getInitializerAttr(Type t) {
 }
 
 struct WasmLocalConversion : OpConversionPattern<LocalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LocalOp localOp, LocalOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -767,7 +782,7 @@ struct WasmLocalConversion : OpConversionPattern<LocalOp> {
 };
 
 struct WasmLocalGetConversion : OpConversionPattern<LocalGetOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LocalGetOp localGetOp, LocalGetOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -779,7 +794,7 @@ struct WasmLocalGetConversion : OpConversionPattern<LocalGetOp> {
 };
 
 struct WasmLocalSetConversion : OpConversionPattern<LocalSetOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LocalSetOp localSetOp, LocalSetOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -790,7 +805,7 @@ struct WasmLocalSetConversion : OpConversionPattern<LocalSetOp> {
 };
 
 struct WasmLocalTeeConversion : OpConversionPattern<LocalTeeOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LocalTeeOp localTeeOp, LocalTeeOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -802,7 +817,7 @@ struct WasmLocalTeeConversion : OpConversionPattern<LocalTeeOp> {
 };
 
 struct WasmReturnOpConversion : OpConversionPattern<ReturnOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ReturnOp returnOp, ReturnOp::Adaptor adaptor,
@@ -814,7 +829,7 @@ struct WasmReturnOpConversion : OpConversionPattern<ReturnOp> {
 };
 
 struct WasmSelectOpConversion : OpConversionPattern<SelectOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(SelectOp selectOp, SelectOp::Adaptor adaptor,

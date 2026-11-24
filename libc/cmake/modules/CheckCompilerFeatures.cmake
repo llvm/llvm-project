@@ -12,6 +12,7 @@ set(
     "builtin_roundeven"
     "float16"
     "float16_conversion"
+    "float80"
     "float128"
     "fixed_point"
     "cfloat16"
@@ -26,6 +27,7 @@ list(SORT ALL_COMPILER_FEATURES)
 # Compiler features that are unavailable on GPU targets with the in-tree Clang.
 set(
   CPU_ONLY_COMPILER_FEATURES
+    "float80"
     "float128"
 )
 
@@ -117,6 +119,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_TYPES_HAS_FLOAT16 TRUE)
     elseif(${feature} STREQUAL "float16_conversion")
       add_compile_definitions(__LIBC_USE_FLOAT16_CONVERSION)
+    elseif(${feature} STREQUAL "float80")
+      set(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80 TRUE)
     elseif(${feature} STREQUAL "float128")
       set(LIBC_TYPES_HAS_NATIVE_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")

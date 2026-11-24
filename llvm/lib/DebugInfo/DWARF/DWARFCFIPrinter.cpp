@@ -12,11 +12,9 @@
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cinttypes>
 #include <cstdint>
 #include <optional>
 
@@ -108,7 +106,7 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
   case CFIProgram::OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    printDwarfExpression(&Instr.Expression.value(), OS, DumpOpts, nullptr);
+    printDwarfExpression(&Instr.Expression.value(), OS, DumpOpts);
     break;
   }
 }

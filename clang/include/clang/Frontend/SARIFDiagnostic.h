@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a utility class that provides support for constructing a SARIF object
-// containing diagnostics.
+// This file implements SARIF diagnostic emission, including the SARIFDiagnostic
+// renderer and helper utilities for mapping diagnostic levels and annotating
+// SARIF rules.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +20,14 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
+
+// Maps clang DiagnosticsEngine level to SARIF result levels.
+SarifResultLevel getSarifResultLevel(DiagnosticsEngine::Level level);
+
+// Creates configuration for a SARIF rule based on the diagnostic level and sets
+// the rank.
+SarifRule addDiagnosticLevelToRule(SarifRule Rule,
+                                   DiagnosticsEngine::Level Level);
 
 class SARIFDiagnostic : public DiagnosticRenderer {
 public:
@@ -69,9 +78,6 @@ private:
   llvm::SmallVector<CharSourceRange>
   getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
                    ArrayRef<CharSourceRange> Ranges);
-
-  SarifRule addDiagnosticLevelToRule(SarifRule Rule,
-                                     DiagnosticsEngine::Level Level);
 
   llvm::StringRef emitFilename(StringRef Filename, const SourceManager &SM);
 

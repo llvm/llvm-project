@@ -20,7 +20,10 @@
 
 namespace llvm {
   class MSP430Subtarget;
+  struct MSP430Options;
   class MSP430TargetLowering : public TargetLowering {
+    const MSP430Options &CLOpts;
+
   public:
     explicit MSP430TargetLowering(const TargetMachine &TM,
                                   const MSP430Subtarget &STI);
@@ -29,8 +32,8 @@ namespace llvm {
       return MVT::i8;
     }
 
-    MVT::SimpleValueType getCmpLibcallReturnType() const override {
-      return MVT::i16;
+    IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const override {
+      return Type::getInt16Ty(Ctx);
     }
 
     /// LowerOperation - Provide custom lowering hooks for some operations.
@@ -74,6 +77,18 @@ namespace llvm {
     bool isZExtFree(EVT VT1, EVT VT2) const override;
 
     bool isLegalICmpImmediate(int64_t) const override;
+
+    /// If a physical register, this returns the register that receives the
+    /// exception address on entry to an EH pad.
+    Register
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override;
+
+    /// If a physical register, this returns the register that receives the
+    /// exception typeid on entry to a landing pad.
+    Register
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override;
     bool shouldAvoidTransformToShift(EVT VT, unsigned Amount) const override;
 
     MachineBasicBlock *

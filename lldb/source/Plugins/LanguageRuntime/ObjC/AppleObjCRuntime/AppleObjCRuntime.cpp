@@ -40,6 +40,8 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "llvm/Support/Error.h"
+
 #include <vector>
 
 using namespace lldb;
@@ -584,10 +586,12 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   size_t ptr_size = m_process->GetAddressByteSize();
   std::vector<lldb::addr_t> pcs;
   for (size_t idx = 0; idx < count; idx++) {
-    Status error;
-    addr_t pc = m_process->ReadPointerFromMemory(
-        frames_addr + (ignore + idx) * ptr_size, error);
-    pcs.push_back(pc);
+    // Record unreadable frames as invalid rather than dropping them, so the
+    // history thread keeps one entry per frame in the exception.
+    pcs.push_back(
+        llvm::expectedToOptional(m_process->ReadPointerFromMemory(
+                                     frames_addr + (ignore + idx) * ptr_size))
+            .value_or(LLDB_INVALID_ADDRESS));
   }
 
   if (pcs.empty())

@@ -9,6 +9,7 @@
 #include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
 #include "clang/CIR/Dialect/Analysis/CIRBasicAliasAnalysis.h"
 
-void cir::registerCIRAliasAnalyses(mlir::AliasAnalysis &aa) {
-  aa.addAnalysisImplementation(CIRBasicAliasAnalysis());
+void cir::registerCIRAliasAnalyses(mlir::AliasAnalysis &aa,
+                                   mlir::Operation *op) {
+  aa.addAnalysisImplementation(CIRBasicAliasAnalysis(op));
 }

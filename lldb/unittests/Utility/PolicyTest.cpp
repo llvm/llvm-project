@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/Policy.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/Process.h"
 #include "gtest/gtest.h"
 
 #include <thread>
@@ -73,11 +74,24 @@ TEST(PolicyTest, PublicStateRunningExpression) {
 TEST(PolicyTest, ScriptedExtensionCall) {
   Policy p = Policy::CreateScriptedExtensionCall();
   EXPECT_TRUE(p.capabilities.can_bypass_target_api_mutex);
+  EXPECT_FALSE(p.capabilities.can_run_all_threads);
+  EXPECT_FALSE(p.capabilities.can_try_all_threads);
+  // An extension may still evaluate expressions and run commands; it just
+  // can't let the inferior's other threads run while doing so.
+  EXPECT_TRUE(p.capabilities.can_evaluate_expressions);
 
   PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState();
   Policy nested = Policy::CreateScriptedExtensionCall();
   EXPECT_EQ(nested.view, Policy::View::Private);
   EXPECT_TRUE(nested.capabilities.can_bypass_target_api_mutex);
+  EXPECT_FALSE(nested.capabilities.can_run_all_threads);
+}
+
+TEST(PolicyTest, ScriptedExtensionCallWithdrawalIsInherited) {
+  PolicyStack::Guard guard = PolicyStack::Get().PushScriptedExtensionCall();
+  Policy nested = Policy::CreatePrivateState();
+  EXPECT_FALSE(nested.capabilities.can_run_all_threads);
+  EXPECT_FALSE(nested.capabilities.can_try_all_threads);
 }
 
 TEST(PolicyTest, StackDefaultIsPublicState) {
@@ -202,6 +216,11 @@ TEST(PolicyStackDeathTest, GuardDestroyedOnDifferentThread) {
   // where the violation is detected.
   EXPECT_DEATH(
       {
+        // The abort below is expected, so keep it away from the system crash
+        // reporter, which would otherwise record it as a real crash. This must
+        // stay inside the death-test statement so only the forked child is
+        // affected.
+        llvm::sys::Process::PreventCoreFiles();
         std::thread t([guard = std::move(outer)]() mutable { (void)guard; });
         t.join();
       },

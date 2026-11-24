@@ -43,7 +43,7 @@ attributes #1 = { "no-trapping-math"="true" }
 attributes #3 = { "frame-pointer"="all" }
 attributes #6 = { builtin }
 
-!0 = !{!1, !3, !5}
+!0 = !{!3, !5, !1}
 !1 = !{!2, !"cold"}
 !2 = !{i64 -3461278137325233666, i64 -7799663586031895603, i64 -7799663586031895603}
 !3 = !{!4, !"notcold"}

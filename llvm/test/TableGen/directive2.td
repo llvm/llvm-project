@@ -40,6 +40,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
   let isDefault = 1;
   let association = AS_Block;
   let category = CA_Declarative;
+  let pureSince = 0x00DEEA;
 }
 
 // CHECK:       #ifndef LLVM_Tdl_INC
@@ -50,6 +51,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include "llvm/ADT/STLExtras.h"
 // CHECK-NEXT:  #include "llvm/ADT/StringRef.h"
 // CHECK-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
+// CHECK-NEXT:  #include "llvm/Frontend/Directive/Version.h"
 // CHECK-NEXT:  #include "llvm/Support/Compiler.h"
 // CHECK-NEXT:  #include <cstddef>
 // CHECK-NEXT:  #include <utility>
@@ -63,14 +65,15 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    First_ = Block,
 // CHECK-NEXT:    Declaration,
 // CHECK-NEXT:    Delimited,
+// CHECK-NEXT:    Explicit,
 // CHECK-NEXT:    LoopNest,
-// CHECK-NEXT:    LoopSeq,
+// CHECK-NEXT:    LoopSequence,
 // CHECK-NEXT:    None,
 // CHECK-NEXT:    Separating,
 // CHECK-NEXT:    Last_ = Separating,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 7;
+// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 8;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Category {
 // CHECK-NEXT:    Declarative,
@@ -155,10 +158,12 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:  constexpr unsigned getDirectivePureSince(Directive Dir) {
+// CHECK-NEXT:  constexpr directive::Version getDirectivePureSince(Directive Dir) {
 // CHECK-NEXT:    switch (Dir) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return directive::Version(57066);
 // CHECK-NEXT:    default:
-// CHECK-NEXT:      return 0x7FFFFFFF;
+// CHECK-NEXT:      return directive::Version(2147483647);
 // CHECK-NEXT:    } // switch (Dir)
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
@@ -180,7 +185,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    return getTdlDirectiveKindAndVersions(Str).first;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI StringRef getTdlDirectiveName(Directive D, unsigned Ver = 0);
+// CHECK-NEXT:  LLVM_ABI StringRef getTdlDirectiveName(Directive D, directive::Version V = directive::Version(0));
 // CHECK-EMPTY:
 // CHECK-NEXT:  LLVM_ABI std::pair<Clause, directive::VersionRange> getTdlClauseKindAndVersions(StringRef Str);
 // CHECK-EMPTY:
@@ -188,14 +193,14 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    return getTdlClauseKindAndVersions(Str).first;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI StringRef getTdlClauseName(Clause C, unsigned Ver = 0);
+// CHECK-NEXT:  LLVM_ABI StringRef getTdlClauseName(Clause C, directive::Version V = directive::Version(0));
 // CHECK-EMPTY:
-// CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
-// CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
+// CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p V.
+// CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, directive::Version V);
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
 // CHECK-NEXT:  LLVM_ABI bool isAllowedLoopModifier(Directive D, LoopModifier LM);
-// CHECK-NEXT:  LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, unsigned Ver = 0);
+// CHECK-NEXT:  LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, directive::Version V = directive::Version(0));
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-EMPTY:
@@ -362,6 +367,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:  #undef GEN_DIRECTIVES_IMPL
 // IMPL-EMPTY:
 // IMPL-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
+// IMPL-NEXT:  #include "llvm/Frontend/Directive/Version.h"
 // IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
 // IMPL-NEXT:  #include <utility>
 // IMPL-EMPTY:
@@ -372,7 +378,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:     .Default({TDLD_dira, All});
 // IMPL-NEXT: }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(llvm::tdl::Directive Kind, unsigned Version) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(llvm::tdl::Directive Kind, llvm::directive::Version V) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLD_dira:
 // IMPL-NEXT:        return "dira";
@@ -390,7 +396,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:     .Default({TDLC_clauseb, All});
 // IMPL-NEXT: }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(llvm::tdl::Clause Kind, unsigned Version) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(llvm::tdl::Clause Kind, llvm::directive::Version V) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLC_clausea:
 // IMPL-NEXT:        return "clausea";
@@ -404,16 +410,16 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(llvm::tdl::Directive D, llvm::tdl::Clause C, unsigned Version) {
+// IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(llvm::tdl::Directive D, llvm::tdl::Clause C, llvm::directive::Version V) {
 // IMPL-NEXT:    assert(unsigned(D) <= Directive_enumSize);
 // IMPL-NEXT:    assert(unsigned(C) <= Clause_enumSize);
 // IMPL-NEXT:    switch (D) {
 // IMPL-NEXT:      case TDLD_dira:
 // IMPL-NEXT:        switch (C) {
 // IMPL-NEXT:          case TDLC_clausea:
-// IMPL-NEXT:            return 2 <= Version && 4 >= Version;
+// IMPL-NEXT:            return V >= 2 && V <= 4;
 // IMPL-NEXT:          case TDLC_clauseb:
-// IMPL-NEXT:            return 2 <= Version && 2147483647 >= Version;
+// IMPL-NEXT:            return V >= 2 && V <= 2147483647;
 // IMPL-NEXT:          default:
 // IMPL-NEXT:            return false;
 // IMPL-NEXT:        }
@@ -432,7 +438,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getLoopModifierName(llvm::tdl::LoopModifier Kind, unsigned Version) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getLoopModifierName(llvm::tdl::LoopModifier Kind, llvm::directive::Version V) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case flattened:
 // IMPL-NEXT:        return "flattened";

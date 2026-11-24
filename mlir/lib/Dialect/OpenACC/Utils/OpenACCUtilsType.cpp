@@ -10,7 +10,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -28,7 +30,7 @@ getTypeSizeAndAlignmentHelper(Type ty, ModuleOp module, const DataLayout &dl,
 
 std::optional<TypeSizeAndAlignment>
 getTypeSizeAndAlignment(Type ty, ModuleOp module, const DataLayout &dl,
-                        OpenACCSupport *support) {
+                        OpenACCSupport *support, Value var) {
   if (ty.isIntOrIndexOrFloat() ||
       isa<ComplexType, VectorType, DataLayoutTypeInterface>(ty))
     return TypeSizeAndAlignment{
@@ -77,15 +79,47 @@ getTypeSizeAndAlignment(Type ty, ModuleOp module, const DataLayout &dl,
     return getTypeSizeAndAlignmentHelper(
         LLVM::LLVMPointerType::get(ty.getContext()), module, dl, support);
 
+  // Mapped-object size for MappableType when a value is available.
+  if (var) {
+    if (auto mappableTy = dyn_cast<MappableType>(ty)) {
+      std::optional<llvm::TypeSize> size =
+          mappableTy.getSizeInBytes(var, /*accBounds=*/{}, dl);
+      if (!size || size->isScalable())
+        return std::nullopt;
+      llvm::TypeSize alignment = llvm::TypeSize::getFixed(1);
+      if (ty.isIntOrIndexOrFloat() || isa<DataLayoutTypeInterface>(ty))
+        alignment = llvm::TypeSize::getFixed(dl.getTypeABIAlignment(ty));
+      return TypeSizeAndAlignment{*size, alignment};
+    }
+  }
+
   return std::nullopt;
 }
 
 std::optional<TypeSizeAndAlignment>
-getTypeSizeAndAlignment(Type ty, ModuleOp module, OpenACCSupport *support) {
+getTypeSizeAndAlignment(Type ty, ModuleOp module, OpenACCSupport *support,
+                        Value var) {
   std::optional<DataLayout> dl = getDataLayout(module);
   if (!dl)
     return std::nullopt;
-  return getTypeSizeAndAlignment(ty, module, *dl, support);
+  return getTypeSizeAndAlignment(ty, module, *dl, support, var);
+}
+
+Value castPointerLikeTypeIfNeeded(OpBuilder &builder, Location loc, Value value,
+                                  Type resultType) {
+  if (value.getType() == resultType)
+    return value;
+  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(value.getType())) {
+    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
+      return casted;
+  }
+  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(resultType)) {
+    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
+      return casted;
+  }
+  emitError(loc) << "unsupported pointer-like type cast from "
+                 << value.getType() << " to " << resultType;
+  return value;
 }
 
 } // namespace acc

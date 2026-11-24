@@ -1,5 +1,5 @@
 
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt -o - %s | FileCheck %s
 
 --- |
   define i1 @no-clobber-zr(ptr %p, i64 %x) { ret i1 0 }
@@ -14,7 +14,7 @@
 name: no-clobber-zr
 body: |
   bb.0:
-    liveins: $x0,  $x1
+    liveins: $lr, $x0, $x1
     STRXui $xzr, $x0, 0 :: (store (s64) into %ir.p)
     dead $xzr = SUBSXri killed $x1, 0, 0, implicit-def $nzcv
     $w8 = CSINCWr $wzr, $wzr, 1, implicit killed $nzcv

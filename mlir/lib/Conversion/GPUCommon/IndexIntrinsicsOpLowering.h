@@ -10,7 +10,7 @@
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 namespace mlir {
@@ -87,7 +87,7 @@ public:
       opBound = static_cast<uint32_t>(bound->getZExtValue());
     if (auto range = getIndexOpRange(op, op.getDimension(), opBound, indexKind,
                                      intrType, /*bitWidth=*/32))
-      newOp->setAttr("range", range);
+      newOp->setInherentAttr(rewriter.getStringAttr("range"), range);
 
     if (indexBitwidth > 32) {
       newOp = LLVM::SExtOp::create(rewriter, loc,

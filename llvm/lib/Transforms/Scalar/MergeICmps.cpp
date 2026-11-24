@@ -64,9 +64,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mergeicmps"
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
 namespace {
 
 // A BCE atom "Binary Compare Expression Atom" represents an integer load
@@ -625,8 +622,6 @@ private:
 static std::optional<SmallVector<uint32_t, 2>>
 computeMergedBranchWeights(ArrayRef<BCECmpBlock> Comparisons) {
   assert(!Comparisons.empty());
-  if (ProfcheckDisableMetadataFixes)
-    return std::nullopt;
   if (Comparisons.size() == 1) {
     SmallVector<uint32_t, 2> Weights;
     if (!extractBranchWeights(*Comparisons[0].BB->getTerminator(), Weights))
@@ -767,7 +762,7 @@ bool BCECmpChain::isDereferenceable() {
   // exception to this is if the entry block performs "other work" and will
   // get split. In that case, we need to consider frees prior to the splitting
   // point.
-  Instruction *CxtI = SplitAt ? SplitAt : &EntryBlock_->front();
+  Instruction *CtxI = SplitAt ? SplitAt : &EntryBlock_->front();
 
   for (const auto &Blocks : MergedBlocks_) {
     const BCECmpBlock &LowestBlock = Blocks.front();
@@ -780,7 +775,7 @@ bool BCECmpChain::isDereferenceable() {
       SizeInBits += Block.SizeBits();
 
     APInt Size(64, SizeInBits / 8);
-    SimplifyQuery SQ(DL, CxtI);
+    SimplifyQuery SQ(DL, CtxI);
     if (!isDereferenceablePointer(Lhs, Size, SQ) ||
         !isDereferenceablePointer(Rhs, Size, SQ))
       return false;

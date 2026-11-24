@@ -678,17 +678,10 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture inreg %ou
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB13_0:
-; GFX942-NEXT:    s_lshr_b32 s1, s4, 24
-; GFX942-NEXT:    s_and_b32 s0, s4, 0xffff
-; GFX942-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX942-NEXT:    s_bfe_u32 s4, s4, 0x80010
-; GFX942-NEXT:    s_or_b32 s1, s4, s1
-; GFX942-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX942-NEXT:    s_or_b32 s0, s0, s1
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX942-NEXT:    global_store_byte v0, v1, s[2:3] offset:4
-; GFX942-NEXT:    v_mov_b32_e32 v1, s0
+; GFX942-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX942-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -700,17 +693,10 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture inreg %ou
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB13_0:
-; GFX90a-NEXT:    s_lshr_b32 s1, s10, 24
-; GFX90a-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX90a-NEXT:    s_bfe_u32 s2, s10, 0x80010
-; GFX90a-NEXT:    s_or_b32 s1, s2, s1
-; GFX90a-NEXT:    s_and_b32 s0, s10, 0xffff
-; GFX90a-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX90a-NEXT:    s_or_b32 s0, s0, s1
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX90a-NEXT:    global_store_byte v0, v1, s[8:9] offset:4
-; GFX90a-NEXT:    v_mov_b32_e32 v1, s0
+; GFX90a-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX90a-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX90a-NEXT:    s_endpgm
 ;
@@ -720,12 +706,8 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture inreg %ou
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_pack_lh_b32_b16 s0, 0, s4
-; GFX1250-NEXT:    s_and_b32 s1, s4, 0xffff
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s5
-; GFX1250-NEXT:    s_or_b32 s0, s1, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3] offset:4
 ; GFX1250-NEXT:    global_store_b32 v0, v2, s[2:3]
@@ -824,22 +806,8 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) inreg %out, <8 x i8
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB15_0:
-; GFX942-NEXT:    s_lshr_b32 s1, s5, 24
-; GFX942-NEXT:    s_and_b32 s0, s5, 0xffff
-; GFX942-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX942-NEXT:    s_bfe_u32 s5, s5, 0x80010
-; GFX942-NEXT:    s_or_b32 s1, s5, s1
-; GFX942-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX942-NEXT:    s_lshr_b32 s5, s4, 24
-; GFX942-NEXT:    s_or_b32 s0, s0, s1
-; GFX942-NEXT:    s_and_b32 s1, s4, 0xffff
-; GFX942-NEXT:    s_lshl_b32 s5, s5, 8
-; GFX942-NEXT:    s_bfe_u32 s4, s4, 0x80010
-; GFX942-NEXT:    s_or_b32 s4, s4, s5
-; GFX942-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX942-NEXT:    s_or_b32 s1, s1, s4
-; GFX942-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-NEXT:    v_mov_b32_e32 v1, s0
+; GFX942-NEXT:    v_mov_b32_e32 v0, s4
+; GFX942-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX942-NEXT:    s_endpgm
@@ -852,22 +820,8 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) inreg %out, <8 x i8
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB15_0:
-; GFX90a-NEXT:    s_lshr_b32 s1, s11, 24
-; GFX90a-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX90a-NEXT:    s_bfe_u32 s2, s11, 0x80010
-; GFX90a-NEXT:    s_or_b32 s1, s2, s1
-; GFX90a-NEXT:    s_lshr_b32 s2, s10, 24
-; GFX90a-NEXT:    s_lshl_b32 s2, s2, 8
-; GFX90a-NEXT:    s_bfe_u32 s3, s10, 0x80010
-; GFX90a-NEXT:    s_and_b32 s0, s11, 0xffff
-; GFX90a-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX90a-NEXT:    s_or_b32 s2, s3, s2
-; GFX90a-NEXT:    s_or_b32 s0, s0, s1
-; GFX90a-NEXT:    s_and_b32 s1, s10, 0xffff
-; GFX90a-NEXT:    s_lshl_b32 s2, s2, 16
-; GFX90a-NEXT:    s_or_b32 s1, s1, s2
-; GFX90a-NEXT:    v_mov_b32_e32 v0, s1
-; GFX90a-NEXT:    v_mov_b32_e32 v1, s0
+; GFX90a-NEXT:    v_mov_b32_e32 v0, s10
+; GFX90a-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90a-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX90a-NEXT:    s_endpgm
@@ -878,14 +832,7 @@ define amdgpu_kernel void @v8i8_preload_arg(ptr addrspace(1) inreg %out, <8 x i8
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_pack_lh_b32_b16 s0, 0, s5
-; GFX1250-NEXT:    s_pack_lh_b32_b16 s1, 0, s4
-; GFX1250-NEXT:    s_and_b32 s4, s4, 0xffff
-; GFX1250-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX1250-NEXT:    s_or_b32 s1, s4, s1
-; GFX1250-NEXT:    s_or_b32 s0, s5, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX1250-NEXT:    s_endpgm
@@ -1365,18 +1312,11 @@ define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) inreg %out, 
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB26_0:
-; GFX942-NEXT:    s_lshr_b32 s1, s4, 24
-; GFX942-NEXT:    s_and_b32 s0, s4, 0xffff
-; GFX942-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX942-NEXT:    s_bfe_u32 s4, s4, 0x80010
-; GFX942-NEXT:    s_or_b32 s1, s4, s1
-; GFX942-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX942-NEXT:    s_or_b32 s0, s0, s1
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX942-NEXT:    global_store_byte_d16_hi v0, v1, s[2:3] offset:6
 ; GFX942-NEXT:    global_store_short v0, v1, s[2:3] offset:4
-; GFX942-NEXT:    v_mov_b32_e32 v1, s0
+; GFX942-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX942-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -1388,18 +1328,11 @@ define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) inreg %out, 
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB26_0:
-; GFX90a-NEXT:    s_lshr_b32 s1, s10, 24
-; GFX90a-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX90a-NEXT:    s_bfe_u32 s2, s10, 0x80010
-; GFX90a-NEXT:    s_or_b32 s1, s2, s1
-; GFX90a-NEXT:    s_and_b32 s0, s10, 0xffff
-; GFX90a-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX90a-NEXT:    s_or_b32 s0, s0, s1
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX90a-NEXT:    global_store_byte_d16_hi v0, v1, s[8:9] offset:6
 ; GFX90a-NEXT:    global_store_short v0, v1, s[8:9] offset:4
-; GFX90a-NEXT:    v_mov_b32_e32 v1, s0
+; GFX90a-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX90a-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX90a-NEXT:    s_endpgm
 ;
@@ -1409,12 +1342,8 @@ define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) inreg %out, 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_pack_lh_b32_b16 s0, 0, s4
-; GFX1250-NEXT:    s_and_b32 s1, s4, 0xffff
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s5
-; GFX1250-NEXT:    s_or_b32 s0, s1, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX1250-NEXT:    s_clause 0x2
 ; GFX1250-NEXT:    global_store_d16_hi_b8 v0, v1, s[2:3] offset:6
 ; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3] offset:4
@@ -1641,15 +1570,15 @@ define amdgpu_kernel void @i16_v2i8_kernel_preload_arg(ptr addrspace(1) inreg %o
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB31_0:
-; GFX942-NEXT:    s_lshr_b32 s0, s4, 24
-; GFX942-NEXT:    s_lshl_b32 s0, s0, 8
-; GFX942-NEXT:    s_bfe_u32 s1, s4, 0x80010
-; GFX942-NEXT:    s_or_b32 s0, s1, s0
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NEXT:    global_store_short v0, v1, s[2:3]
-; GFX942-NEXT:    v_mov_b32_e32 v1, s0
-; GFX942-NEXT:    global_store_short v0, v1, s[6:7]
+; GFX942-NEXT:    s_lshr_b32 s0, s4, 16
+; GFX942-NEXT:    s_lshr_b32 s1, s4, 24
+; GFX942-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-NEXT:    v_mov_b32_e32 v1, 0x6050400
+; GFX942-NEXT:    v_perm_b32 v0, s1, v0, v1
+; GFX942-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942-NEXT:    v_mov_b32_e32 v2, s4
+; GFX942-NEXT:    global_store_short v1, v2, s[2:3]
+; GFX942-NEXT:    global_store_short v1, v0, s[6:7]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX90a-LABEL: i16_v2i8_kernel_preload_arg:
@@ -1661,15 +1590,15 @@ define amdgpu_kernel void @i16_v2i8_kernel_preload_arg(ptr addrspace(1) inreg %o
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB31_0:
-; GFX90a-NEXT:    s_lshr_b32 s0, s10, 24
-; GFX90a-NEXT:    s_lshl_b32 s0, s0, 8
-; GFX90a-NEXT:    s_bfe_u32 s1, s10, 0x80010
-; GFX90a-NEXT:    s_or_b32 s0, s1, s0
-; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NEXT:    v_mov_b32_e32 v1, s10
-; GFX90a-NEXT:    global_store_short v0, v1, s[8:9]
-; GFX90a-NEXT:    v_mov_b32_e32 v1, s0
-; GFX90a-NEXT:    global_store_short v0, v1, s[12:13]
+; GFX90a-NEXT:    s_lshr_b32 s0, s10, 16
+; GFX90a-NEXT:    s_lshr_b32 s1, s10, 24
+; GFX90a-NEXT:    v_mov_b32_e32 v0, s0
+; GFX90a-NEXT:    v_mov_b32_e32 v1, 0x6050400
+; GFX90a-NEXT:    v_perm_b32 v0, s1, v0, v1
+; GFX90a-NEXT:    v_mov_b32_e32 v1, 0
+; GFX90a-NEXT:    v_mov_b32_e32 v2, s10
+; GFX90a-NEXT:    global_store_short v1, v2, s[8:9]
+; GFX90a-NEXT:    global_store_short v1, v0, s[12:13]
 ; GFX90a-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: i16_v2i8_kernel_preload_arg:

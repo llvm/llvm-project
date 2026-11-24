@@ -1,5 +1,6 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror -fno-out-of-bounds-subscripts
 ! Check out-of-range subscripts
+! These are warnings by default; -fno-out-of-bounds-subscripts makes them errors.
 subroutine subr(da)
   real a(10), da(2,1), empty(1:0,1)
   integer, parameter :: n(2) = [1, 2]

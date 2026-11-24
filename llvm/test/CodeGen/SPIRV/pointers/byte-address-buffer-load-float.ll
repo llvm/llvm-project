@@ -1,6 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s
-; FIXME: spirv-val rejects the generated OpStore for float global sinks (separate
-; from ptrcast legalization); legalizer coverage is in SPIRVLegalizePointerCast.ll.
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: [[AC:%[0-9]+]] = OpAccessChain {{.*}}
 ; CHECK-DAG: OpLoad {{.*}} [[AC]]

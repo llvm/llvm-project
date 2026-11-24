@@ -1,5 +1,7 @@
 // RUN: %clang_cc1           -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir           -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s %}
 // RUN: %clang_cc1 -DDYNAMIC -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -DDYNAMIC -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s %}
 
 #ifdef DYNAMIC
 #define OBJECT_SIZE_BUILTIN __builtin_dynamic_object_size

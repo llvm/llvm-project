@@ -14,12 +14,27 @@
 #define ORC_RT_BEDROCK_SPS_MEMORYACCESSSPSCI_H
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
-namespace orc_rt::sps_ci {
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_write_uint8s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_write_uint16s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_write_uint32s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_write_uint64s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_write_pointers)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_write_buffers)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_read_uint8s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_read_uint16s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_read_uint32s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_read_uint64s)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_read_pointers)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_read_buffers)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_mem_read_strings)
+
+namespace orc_rt::sps::ci {
 
 /// Add the MemoryAccess SPS interface to the controller interface.
 Error addMemoryAccess(SimpleSymbolTable &ST);
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci
 
 #endif // ORC_RT_BEDROCK_SPS_MEMORYACCESSSPSCI_H

@@ -1,4 +1,4 @@
-//===- AutomapToTargetData.cpp -------------------------------------------===//
+//===- AutomapToTargetData.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -97,11 +97,13 @@ class AutomapToTargetDataPass
     llvm::DenseSet<fir::GlobalOp> automapGlobals;
     module.walk([&](fir::GlobalOp globalOp) {
       if (auto iface =
-              dyn_cast<omp::DeclareTargetInterface>(globalOp.getOperation()))
-        if (iface.isDeclareTarget() && iface.getDeclareTargetAutomap() &&
-            iface.getDeclareTargetDeviceType() !=
+              dyn_cast<omp::DeclareTargetInterface>(globalOp.getOperation())) {
+        omp::DeclareTargetAttr declareTargetAttr = iface.getDeclareTarget();
+        if (declareTargetAttr && declareTargetAttr.getAutomap() &&
+            declareTargetAttr.getDeviceType() !=
                 omp::DeclareTargetDeviceType::host)
           automapGlobals.insert(globalOp);
+      }
     });
 
     auto addMapInfo = [&](auto globalOp, auto memOp) {

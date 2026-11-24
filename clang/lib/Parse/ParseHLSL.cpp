@@ -16,6 +16,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/SemaHLSL.h"
+#include <limits>
 
 using namespace clang;
 
@@ -30,16 +31,11 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
   // Only allow function, variable, record, and empty decls inside HLSLBuffer.
   for (DeclGroupRef::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
     Decl *D = *I;
-    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl>(D))
+    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl,
+            EnumDecl, UsingDecl, UsingDirectiveDecl, TypeAliasDecl,
+            TemplateDecl, TypedefDecl, ExportDecl, StaticAssertDecl,
+            NamespaceAliasDecl>(D))
       continue;
-
-    // FIXME: support nested HLSLBuffer and namespace inside HLSLBuffer.
-    if (isa<HLSLBufferDecl, NamespaceDecl>(D)) {
-      P.Diag(D->getLocation(), diag::err_invalid_declaration_in_hlsl_buffer)
-          << IsCBuffer;
-      IsValid = false;
-      continue;
-    }
 
     IsValid = false;
     P.Diag(D->getLocation(), diag::err_invalid_declaration_in_hlsl_buffer)
@@ -87,14 +83,14 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd,
     if (!validateDeclsInsideHLSLBuffer(Result, IdentifierLoc, IsCBuffer,
                                        *this)) {
       T.skipToEnd();
-      DeclEnd = T.getCloseLocation();
-      BufferScope.Exit();
-      Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
-      return nullptr;
+      D->setInvalidDecl();
+      break;
     }
   }
 
-  T.consumeClose();
+  if (!D->isInvalidDecl())
+    T.consumeClose();
+
   DeclEnd = T.getCloseLocation();
   BufferScope.Exit();
   Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
@@ -139,14 +135,16 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   StringRef SemanticName = Identifier.take_front(IndexIndex);
   assert(SemanticName.size() > 0);
 
-  unsigned Index = 0;
+  uint32_t Index = 0;
   bool Explicit = false;
   if (IndexIndex != Identifier.size()) {
     Explicit = true;
-    [[maybe_unused]] bool Failure =
-        Identifier.substr(IndexIndex).getAsInteger(10, Index);
-    // Given the logic above, this should never fail.
-    assert(!Failure);
+    StringRef IndexStr = Identifier.substr(IndexIndex);
+    if (IndexStr.getAsInteger(10, Index)) {
+      Diag(Tok, diag::err_hlsl_semantic_index_out_of_range)
+          << PP.getIdentifierInfo(SemanticName) << IndexStr
+          << std::numeric_limits<uint32_t>::max();
+    }
   }
 
   return {SemanticName, Index, Explicit};

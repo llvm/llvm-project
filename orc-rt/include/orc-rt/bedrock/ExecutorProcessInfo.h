@@ -16,10 +16,7 @@
 
 #include "orc-rt/support/Error.h"
 
-#include <initializer_list>
 #include <string>
-#include <string_view>
-#include <vector>
 
 namespace orc_rt {
 
@@ -43,29 +40,7 @@ public:
   /// Returns the host process's page size.
   size_t pageSize() const noexcept { return PageSize; }
 
-  /// This will return a string that can be forwarded to SubtargetFeatures
-  /// It will only return "+" turning off features, is left to caller.
-  /// This calls syscalls so result is cached
-  static std::string detectCPUFeatures() noexcept;
-  /// This calls syscalls so result is cached
-  static std::string detectTargetTriple() noexcept;
-
-  static Expected<size_t> detectPageSize() noexcept;
-
 private:
-  friend struct ExecutorProcessInfoTestAccess;
-
-  // Storage of string_views is static, so will last the lifetime of the runtime
-  static std::vector<std::string_view> detectTargetCPUFeatures();
-
-  /// Formats vector of feature names as an SubtargetFeatures valid string, e.g.
-  /// "+avx,+avx2".
-  static std::string
-  formatCPUFeatures(const std::vector<std::string_view> &Features);
-
-  static std::string
-  makeTargetTriple(std::initializer_list<std::string_view> Components);
-
   std::string Triple;
   size_t PageSize;
   std::string CPUFeatures;

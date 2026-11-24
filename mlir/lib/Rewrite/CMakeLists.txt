@@ -1,5 +1,10 @@
 set(LLVM_OPTIONAL_SOURCES ByteCode.cpp)
 
+set(pdl_header_deps)
+if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+  list(APPEND pdl_header_deps MLIRPDLOpsIncGen MLIRPDLInterpOpsIncGen)
+endif()
+
 add_mlir_library(MLIRRewrite
   FrozenRewritePatternSet.cpp
   PatternApplicator.cpp
@@ -10,6 +15,7 @@ add_mlir_library(MLIRRewrite
   DEPENDS
   mlir-generic-headers
   MLIRConversionPassIncGen
+  ${pdl_header_deps}
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -27,6 +33,7 @@ if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
     mlir-generic-headers
 
     LINK_LIBS PUBLIC
+    MLIRAnalysisBase
     MLIRIR
     MLIRPDLDialect
     MLIRPDLInterpDialect

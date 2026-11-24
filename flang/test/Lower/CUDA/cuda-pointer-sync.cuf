@@ -18,4 +18,4 @@ end
 ! CHECK: fir.embox
 ! CHECK: fir.store
 ! CHECK-COUNT-3: cuf.sync_descriptor @_QMdevptrEdev_ptr
-! CHECK: fir.global @_QMdevptrEdev_ptr {data_attr = #cuf.cuda<device>} : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK: fir.global @_QMdevptrEdev_ptr <{data_attr = #cuf.cuda<device>}> : !fir.box<!fir.ptr<!fir.array<?xf32>>>

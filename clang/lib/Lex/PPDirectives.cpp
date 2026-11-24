@@ -325,8 +325,8 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 ///
 /// \returns a similar string if exists. If no similar string exists,
 /// returns std::nullopt.
-static std::optional<StringRef>
-findSimilarStr(StringRef LHS, const std::vector<StringRef> &Candidates) {
+static std::optional<StringRef> findSimilarStr(StringRef LHS,
+                                               ArrayRef<StringRef> Candidates) {
   // We need to check if `Candidates` has the exact case-insensitive string
   // because the Levenshtein distance match does not care about it.
   for (StringRef C : Candidates) {
@@ -514,11 +514,23 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   // directives.
   if (getLangOpts().AsmPreprocessor) return;
 
-  std::vector<StringRef> Candidates = {
-      "if", "ifdef", "ifndef", "elif", "else", "endif"
-  };
-  if (LangOpts.C23 || LangOpts.CPlusPlus23)
-    Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
+  // A known directive (e.g. #include or #define inside a skipped conditional
+  // block) is not a typo of a conditional; don't scan it.
+  if (getIdentifierInfo(Directive)->getPPKeywordID() != tok::pp_not_keyword)
+    return;
+
+  // The scan only feeds this diagnostic; skip it when the diagnostic is
+  // disabled at this location (e.g. -w).
+  if (getDiagnostics().isIgnored(diag::warn_pp_invalid_directive,
+                                 Tok.getLocation()))
+    return;
+
+  static constexpr StringRef AllCandidates[] = {
+      "if", "ifdef", "ifndef", "elif", "else", "endif", "elifdef", "elifndef"};
+  ArrayRef<StringRef> Candidates(AllCandidates);
+  // #elifdef/#elifndef are only suggested in C23/C++23 and later.
+  if (!LangOpts.C23 && !LangOpts.CPlusPlus23)
+    Candidates = Candidates.drop_back(2);
 
   if (std::optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
     // Directive cannot be coming from macro.
@@ -852,7 +864,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           // looked up, etc, inside the #elif expression.
           assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
           CurPPLexer->LexingRawMode = false;
-          IdentifierInfo *IfNDefMacro = nullptr;
+          IdentifierLoc IfNDefMacro;
           DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
           // Stop if Lexer became invalid after hitting code completion token.
           if (!CurPPLexer)
@@ -882,14 +894,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
 
         // Warn if using `#elifdef` & `#elifndef` in not C23 & C++23 mode even
         // if this branch is in a skipping block.
-        unsigned DiagID;
-        if (LangOpts.CPlusPlus)
-          DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                        : diag::ext_cxx23_pp_directive;
-        else
-          DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                                : diag::ext_c23_pp_directive;
-        Diag(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
+        unsigned DiagID = LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive;
+        DiagCompat(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
 
         // If this is a #elif with a #else before it, report the error.
         if (CondInfo.FoundElse)
@@ -2002,11 +2009,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   // FIXME: Produce this as the current token directly, rather than
   // allocating a new token for it.
   auto Tok = std::make_unique<Token[]>(1);
-  Tok[0].startToken();
-  Tok[0].setKind(Kind);
-  Tok[0].setLocation(Range.getBegin());
-  Tok[0].setAnnotationEndLoc(Range.getEnd());
-  Tok[0].setAnnotationValue(AnnotationVal);
+  Tok[0] = Token::createAnnotation(Kind, Range, AnnotationVal);
   EnterTokenStream(std::move(Tok), 1, true, /*IsReinject*/ false);
 }
 
@@ -2451,6 +2454,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // determining valid cases).
 
   enum { Enter, Import, Skip, IncludeLimitReached } Action = Enter;
+  bool DependencyScanModuleImport = false;
 
   if (PPOpts.SingleFileParseMode)
     Action = IncludeLimitReached;
@@ -2515,41 +2519,49 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (!IsImportDecl)
       diagnoseAutoModuleImport(*this, StartLoc, IncludeTok, Path, CharEnd);
 
-    // Load the module to import its macros. We'll make the declarations
-    // visible when the parser gets here.
-    // FIXME: Pass ModuleToImport in here rather than converting it to a path
-    // and making the module loader convert it back again.
-    ModuleLoadResult Imported = TheModuleLoader.loadModule(
-        IncludeTok.getLocation(), Path, Module::Hidden,
-        /*IsInclusionDirective=*/true);
-    assert((Imported == nullptr || Imported == ModuleToImport) &&
-           "the imported module is different than the suggested one");
-
-    if (Imported) {
-      Action = Import;
-    } else if (Imported.isMissingExpected()) {
-      markClangModuleAsAffecting(
-          static_cast<Module *>(Imported)->getTopLevelModule());
-      // We failed to find a submodule that we assumed would exist (because it
-      // was in the directory of an umbrella header, for instance), but no
-      // actual module containing it exists (because the umbrella header is
-      // incomplete).  Treat this as a textual inclusion.
-      ModuleToImport = nullptr;
-      UsableClangHeaderModule = false;
-    } else if (Imported.isConfigMismatch()) {
-      // On a configuration mismatch, enter the header textually. We still know
-      // that it's part of the corresponding module.
+    if (PPOpts.DependencyScanningModuleMapImports &&
+        ModuleToImport->Kind == Module::ModuleMapModule) {
+      // Dependency scanning only needs the module name. Avoid requiring the
+      // module file, which may not have been built yet.
+      Action = Skip;
+      DependencyScanModuleImport = true;
     } else {
-      // We hit an error processing the import. Bail out.
-      if (hadModuleLoaderFatalFailure()) {
-        // With a fatal failure in the module loader, we abort parsing.
-        Token &Result = IncludeTok;
-        assert(CurLexer && "#include but no current lexer set!");
-        Result.startToken();
-        CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-        CurLexer->cutOffLexing();
+      // Load the module to import its macros. We'll make the declarations
+      // visible when the parser gets here.
+      // FIXME: Pass ModuleToImport in here rather than converting it to a path
+      // and making the module loader convert it back again.
+      ModuleLoadResult Imported = TheModuleLoader.loadModule(
+          IncludeTok.getLocation(), Path, Module::Hidden,
+          /*IsInclusionDirective=*/true);
+      assert((Imported == nullptr || Imported == ModuleToImport) &&
+             "the imported module is different than the suggested one");
+
+      if (Imported) {
+        Action = Import;
+      } else if (Imported.isMissingExpected()) {
+        markClangModuleAsAffecting(
+            static_cast<Module *>(Imported)->getTopLevelModule());
+        // We failed to find a submodule that we assumed would exist (because it
+        // was in the directory of an umbrella header, for instance), but no
+        // actual module containing it exists (because the umbrella header is
+        // incomplete).  Treat this as a textual inclusion.
+        ModuleToImport = nullptr;
+        UsableClangHeaderModule = false;
+      } else if (Imported.isConfigMismatch()) {
+        // On a configuration mismatch, enter the header textually. We still
+        // know that it's part of the corresponding module.
+      } else {
+        // We hit an error processing the import. Bail out.
+        if (hadModuleLoaderFatalFailure()) {
+          // With a fatal failure in the module loader, we abort parsing.
+          Token &Result = IncludeTok;
+          assert(CurLexer && "#include but no current lexer set!");
+          Result.startToken();
+          CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+          CurLexer->cutOffLexing();
+        }
+        return {ImportAction::None};
       }
-      return {ImportAction::None};
     }
   }
 
@@ -2610,10 +2622,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (Callbacks && !IsImportDecl) {
     // Notify the callback object that we've seen an inclusion directive.
     // FIXME: Use a different callback for a pp-import?
-    Callbacks->InclusionDirective(HashLoc, IncludeTok, LookupFilename, isAngled,
-                                  FilenameRange, File, SearchPath, RelativePath,
-                                  SuggestedModule.getModule(), Action == Import,
-                                  FileCharacter);
+    Callbacks->InclusionDirective(
+        HashLoc, IncludeTok, LookupFilename, isAngled, FilenameRange, File,
+        SearchPath, RelativePath, SuggestedModule.getModule(),
+        Action == Import || DependencyScanModuleImport, FileCharacter);
     if (Action == Skip && File)
       Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
@@ -3571,9 +3583,10 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   ++NumIf;
 
   // Parse and evaluate the conditional expression.
-  IdentifierInfo *IfNDefMacro = nullptr;
+  IdentifierLoc IfNDefMacro;
   const DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
   const bool ConditionalTrue = DER.Conditional;
+  const IdentifierInfo *IfNDefMacroInfo = IfNDefMacro.getIdentifierInfo();
   // Lexer might become invalid if we hit code completion point while evaluating
   // expression.
   if (!CurPPLexer)
@@ -3582,9 +3595,9 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   // If this condition is equivalent to #ifndef X, and if this is the first
   // directive seen, handle it for the multiple-include optimization.
   if (CurPPLexer->getConditionalStackDepth() == 0) {
-    if (!ReadAnyTokensBeforeDirective && IfNDefMacro && ConditionalTrue)
-      // FIXME: Pass in the location of the macro name, not the 'if' token.
-      CurPPLexer->MIOpt.EnterTopLevelIfndef(IfNDefMacro, IfToken.getLocation());
+    if (!ReadAnyTokensBeforeDirective && IfNDefMacroInfo && ConditionalTrue)
+      CurPPLexer->MIOpt.EnterTopLevelIfndef(IfNDefMacroInfo,
+                                            IfNDefMacro.getLoc());
     else
       CurPPLexer->MIOpt.EnterTopLevelConditional();
   }
@@ -3702,14 +3715,9 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
   switch (DirKind) {
   case PED_Elifdef:
   case PED_Elifndef:
-    unsigned DiagID;
-    if (LangOpts.CPlusPlus)
-      DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                    : diag::ext_cxx23_pp_directive;
-    else
-      DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                            : diag::ext_c23_pp_directive;
-    Diag(ElifToken, DiagID) << DirKind;
+    DiagCompat(ElifToken, LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive)
+        << DirKind;
     break;
   default:
     break;
@@ -3847,7 +3855,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
     // We do not consume the ( because EvaluateDirectiveExpression will lex
     // the next token for us.
-    IdentifierInfo *ParameterIfNDef = nullptr;
+    IdentifierLoc ParameterIfNDef;
     bool EvaluatedDefined;
     DirectiveEvalResult LimitEvalResult = EvaluateDirectiveExpression(
         ParameterIfNDef, CurTok, EvaluatedDefined, /*CheckForEOD=*/false);
@@ -3869,6 +3877,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     // expression.
     if (EvaluatedDefined) {
       Diag(CurTok, diag::err_defined_in_pp_embed);
+      if (!CurTok.isOneOf(EndTokenKind, tok::eod))
+        DiscardUntilEndOfDirective(CurTok);
       return std::nullopt;
     }
 
@@ -3877,7 +3887,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
-        if (CurTok.isNot(EndTokenKind))
+        if (!CurTok.isOneOf(EndTokenKind, tok::eod))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
@@ -4064,10 +4074,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   Data->BinaryData = BinaryContents;
   Data->FileName = FileName;
 
-  Toks[CurIdx].startToken();
-  Toks[CurIdx].setKind(tok::annot_embed);
-  Toks[CurIdx].setAnnotationRange(HashLoc);
-  Toks[CurIdx++].setAnnotationValue(Data);
+  Toks[CurIdx++] = Token::createAnnotation(tok::annot_embed, HashLoc, Data);
 
   // Now add the suffix tokens, if any.
   if (Params.MaybeSuffixParam) {
@@ -4082,11 +4089,9 @@ void Preprocessor::HandleEmbedDirectiveImpl(
 void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
                                         Token &EmbedTok) {
   // Give the usual extension/compatibility warnings.
-  if (LangOpts.C23)
-    Diag(EmbedTok, diag::warn_compat_pp_embed_directive);
-  else
-    Diag(EmbedTok, diag::ext_pp_embed_directive)
-        << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
+  DiagCompat(EmbedTok, LangOpts.CPlusPlus
+                           ? diag_compat::cxx26_pp_embed_directive
+                           : diag_compat::c23_pp_embed_directive);
 
   // Parse the filename header
   Token FilenameTok;
@@ -4293,12 +4298,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 
     case ImportAction::ModuleBegin:
       // Let the parser know we're textually entering the module.
-      DirToks.emplace_back();
-      DirToks.back().startToken();
-      DirToks.back().setKind(tok::annot_module_begin);
-      DirToks.back().setLocation(SemiLoc);
-      DirToks.back().setAnnotationEndLoc(SemiLoc);
-      DirToks.back().setAnnotationValue(Action.ModuleForHeader);
+      DirToks.push_back(Token::createAnnotation(
+          tok::annot_module_begin, SemiLoc, Action.ModuleForHeader));
       [[fallthrough]];
 
     case ImportAction::ModuleImport:

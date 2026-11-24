@@ -1,3 +1,5 @@
+add_subdirectory(ether)
+
 add_entrypoint_object(
   in6addr_any
   SRCS

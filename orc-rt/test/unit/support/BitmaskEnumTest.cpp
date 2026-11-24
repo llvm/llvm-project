@@ -19,7 +19,7 @@ using namespace orc_rt;
 
 namespace {
 
-enum Flags { F0 = 0, F1 = 1, F2 = 2, F3 = 4, F4 = 8 };
+enum Flags : unsigned { F0 = 0, F1 = 1, F2 = 2, F3 = 4, F4 = 8 };
 
 } // namespace
 
@@ -107,7 +107,7 @@ TEST(BitmaskEnumTest, BitwiseNot) {
   EXPECT_EQ(15, ~F0);
 }
 
-enum class FlagsClass {
+enum class FlagsClass : unsigned {
   F0 = 0,
   F1 = 1,
   F2 = 2,
@@ -122,7 +122,7 @@ TEST(BitmaskEnumTest, ScopedEnum) {
 }
 
 struct Container {
-  enum Flags {
+  enum Flags : unsigned {
     F0 = 0,
     F1 = 1,
     F2 = 2,
@@ -138,5 +138,21 @@ struct Container {
 };
 
 TEST(BitmaskEnumTest, EnumInStruct) { EXPECT_EQ(3, Container::getFlags()); }
+
+// A largest bit in the top position of the underlying type: the mask is every
+// bit, and computing it must not shift by the full width of the type.
+enum class TopBitFlags : uint32_t {
+  Low = 1,
+  High = 0x80000000,
+  ORC_RT_MARK_AS_BITMASK_ENUM(High)
+};
+
+TEST(BitmaskEnumTest, LargestBitInTopPosition) {
+  EXPECT_EQ(0xffffffffU, bitmask_enum_mask<TopBitFlags>());
+  EXPECT_EQ(32, bitmask_enum_num_bits_v<TopBitFlags>);
+  EXPECT_EQ(0x80000001U,
+            static_cast<uint32_t>(TopBitFlags::Low | TopBitFlags::High));
+  EXPECT_EQ(0xfffffffeU, static_cast<uint32_t>(~TopBitFlags::Low));
+}
 
 } // namespace

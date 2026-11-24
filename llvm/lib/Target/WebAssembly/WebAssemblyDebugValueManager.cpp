@@ -14,7 +14,6 @@
 #include "WebAssemblyDebugValueManager.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
-#include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -184,8 +183,8 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
       }
       Register OtherReg = DbgOp.getReg();
       MachineInstr *OtherDef = MRI.getUniqueVRegDef(OtherReg);
-      // We have an exception to allow encoutering other DBG_VALUEs with the
-      // smae DebugVariables, only when they are referring to the same scalar
+      // We have an exception to allow encountering other DBG_VALUEs with the
+      // same DebugVariables, only when they are referring to the same scalar
       // CONST instruction. For example,
       //   %0 = CONST_I32 1
       //   DBG_VALUE %0, !"a", !DIExpression() // Can sink with %0

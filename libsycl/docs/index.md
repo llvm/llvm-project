@@ -91,6 +91,8 @@ which doesn't currently support Windows.
 
 - `exception`: methods with context are not implemented, to add once context is ready
 
+- `backend`: CUDA and HIP backends are not supported, to add together with the corresponding backend extensions; devices of these liboffload backends are ignored
+
 - `platform`: deprecated info descriptor is not implemented (`info::platform::extensions`), to implement on RT level with `device::get_info<info::device::aspects>()`
 
 - `device`:
@@ -102,7 +104,7 @@ which doesn't currently support Windows.
 
 - device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
 
-- `context`: to implement get_info, properties & public constructors once context support is added to liboffload
+- `context`: to implement get_info, properties once context support is added to liboffload
 
 - `queue`:
 
@@ -112,7 +114,19 @@ which doesn't currently support Windows.
 
   - to implement submit & copy with accessors (low priority)
 
-  - get_info & properties
+  - get_info
+
+  - properties:
+
+    - every queue is in-order: liboffload creates in-order queues only, so the
+      `in_order` property does not change how a queue behaves and
+      `is_in_order()` reports whether the property was passed, not the actual
+      behavior of the queue. To revisit once liboffload supports out-of-order
+      queues
+    - `enable_profiling` is accepted only to be rejected with
+      `errc::feature_not_supported`: the queue does not capture profiling
+      information and `event::get_profiling_info` cannot report it, to
+      implement once liboffload supports profiling
 
   - ctors that accepts context (blocked by lack of liboffload support)
 
@@ -127,9 +141,6 @@ which doesn't currently support Windows.
 - `property_list`: to fully implement and integrate with existing SYCL runtime classes supporting it
 
 - usm allocations:
-
-  - add aligned functions (blocked by liboffload support)
-  - forward templated funcs to alignment methods (rewrite current impl)
   - handle sub devices once they are implemented (blocked by liboffload support)
 
 - `event`:

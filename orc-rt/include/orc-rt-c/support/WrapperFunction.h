@@ -88,7 +88,8 @@ static inline orc_rt_WrapperFunctionBuffer
 orc_rt_WrapperFunctionBufferAllocate(size_t Size) {
   orc_rt_WrapperFunctionBuffer B;
   B.Size = Size;
-  // If Size is 0 ValuePtr must be 0 or it is considered an out-of-band error.
+  /* If Size is 0 ValuePtr must be 0 or it is considered an out-of-band
+     error. */
   B.Data.ValuePtr = 0;
   if (Size > sizeof(B.Data.Value))
     B.Data.ValuePtr = (char *)malloc(Size);
@@ -102,7 +103,8 @@ static inline orc_rt_WrapperFunctionBuffer
 orc_rt_CreateWrapperFunctionBufferFromRange(const char *Data, size_t Size) {
   orc_rt_WrapperFunctionBuffer B;
   B.Size = Size;
-  // If Size is 0 ValuePtr must be 0 or it is considered an out-of-band error.
+  /* If Size is 0 ValuePtr must be 0 or it is considered an out-of-band
+     error. */
   B.Data.ValuePtr = 0;
   if (B.Size > sizeof(B.Data.Value)) {
     char *Tmp = (char *)malloc(Size);

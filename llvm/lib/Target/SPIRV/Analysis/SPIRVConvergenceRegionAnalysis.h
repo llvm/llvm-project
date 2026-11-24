@@ -160,7 +160,6 @@ public:
   bool runOnFunction(Function &F) override;
 
   SPIRV::ConvergenceRegionInfo &getRegionInfo() { return CRI; }
-  const SPIRV::ConvergenceRegionInfo &getRegionInfo() const { return CRI; }
 };
 
 // Wrapper around the function above to use it with the new pass manager.

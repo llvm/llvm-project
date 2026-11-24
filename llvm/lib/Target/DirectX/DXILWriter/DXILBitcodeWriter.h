@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 #include <vector>
@@ -37,10 +36,6 @@ class BitcodeWriter {
 
   StringTableBuilder StrtabBuilder{StringTableBuilder::RAW};
 
-  // Owns any strings created by the irsymtab writer until we create the
-  // string table.
-  BumpPtrAllocator Alloc;
-
   void writeBlob(unsigned Block, unsigned Record, StringRef Blob);
 
   std::vector<Module *> Mods;
@@ -59,8 +54,7 @@ public:
 ///
 /// For streams where it matters, the given stream should be in "binary"
 /// mode.
-void WriteDXILToFile(const Module &M, raw_ostream &Out,
-                     const DXILDebugInfoMap &DebugInfo);
+void WriteDXILToFile(Module &M, raw_ostream &Out);
 
 } // namespace dxil
 

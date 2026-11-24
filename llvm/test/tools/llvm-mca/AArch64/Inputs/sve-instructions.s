@@ -505,6 +505,7 @@ dupm	z0.d, #0xfffffffffffffff9
 dupm	z0.s, #0xfffffff9
 dupm	z23.h, #0xfff9
 dupm	z5.b, #0xf9
+dup	z0.s, w1
 eor	p0.b, p0/z, p0.b, p1.b
 eor	z0.d, z0.d, #0x6
 eor	z0.d, z0.d, #0xfffffffffffffff9

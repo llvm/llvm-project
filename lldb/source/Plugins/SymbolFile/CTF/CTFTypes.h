@@ -12,6 +12,8 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <vector>
+
 namespace lldb_private {
 
 struct CTFType {
@@ -39,6 +41,8 @@ struct CTFType {
 
   CTFType(Kind kind, lldb::user_id_t uid, llvm::StringRef name)
       : kind(kind), uid(uid), name(name) {}
+
+  virtual ~CTFType() = default;
 };
 
 struct CTFInteger : public CTFType {

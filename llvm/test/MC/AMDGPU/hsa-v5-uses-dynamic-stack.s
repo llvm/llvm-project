@@ -1,10 +1,10 @@
-// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
-// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa --amdhsa-code-object-version=6 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa --amdhsa-code-object-version=6 -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa --amdhsa-code-object-version=6 < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgpu9.04-amd-amdhsa --amdhsa-code-object-version=6 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 

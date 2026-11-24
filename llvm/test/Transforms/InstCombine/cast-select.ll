@@ -131,3 +131,80 @@ define <2 x float> @fptrunc_vec(<2 x double> %x, <2 x double> %y, <2 x double> %
   ret <2 x float> %r
 }
 
+define i64 @zext_trunc_cond(i32 %x, i32 %z) {
+; CHECK-LABEL: @zext_trunc_cond(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[CMP]], i32 0, i32 [[Z1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Z]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %cmp = trunc i32 %x to i1
+  %sel = select i1 %cmp, i32 0, i32 %z
+  %r = zext i32 %sel to i64
+  ret i64 %r
+}
+
+define <2 x i32> @zext_trunc_cond_vec(<2 x i8> %x, <2 x i8> %z) {
+; CHECK-LABEL: @zext_trunc_cond_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[Z:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[Z1:%.*]], <2 x i8> <i8 42, i8 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i8> [[Z]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %cmp = trunc <2 x i8> %x to <2 x i1>
+  %sel = select <2 x i1> %cmp, <2 x i8> %z, <2 x i8> <i8 42, i8 7>
+  %r = zext <2 x i8> %sel to <2 x i32>
+  ret <2 x i32> %r
+}
+
+define i64 @sext_trunc_cond(i8 %x, i8 %z) {
+; CHECK-LABEL: @sext_trunc_cond(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[CMP]], i8 42, i8 [[Z1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Z]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %cmp = trunc i8 %x to i1
+  %sel = select i1 %cmp, i8 42, i8 %z
+  %r = sext i8 %sel to i64
+  ret i64 %r
+}
+
+define <2 x i32> @sext_trunc_cond_vec(<2 x i8> %x, <2 x i8> %z) {
+; CHECK-LABEL: @sext_trunc_cond_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[Z:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[Z1:%.*]], <2 x i8> <i8 42, i8 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[Z]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %cmp = trunc <2 x i8> %x to <2 x i1>
+  %sel = select <2 x i1> %cmp, <2 x i8> %z, <2 x i8> <i8 42, i8 7>
+  %r = sext <2 x i8> %sel to <2 x i32>
+  ret <2 x i32> %r
+}
+
+define i16 @trunc_trunc_cond(i32 %x, i32 %z) {
+; CHECK-LABEL: @trunc_trunc_cond(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Z:%.*]] to i16
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i16 42, i16 [[TMP1]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %cmp = trunc i32 %x to i1
+  %sel = select i1 %cmp, i32 42, i32 %z
+  %r = trunc i32 %sel to i16
+  ret i16 %r
+}
+
+define <2 x i32> @trunc_trunc_cond_vec(<2 x i64> %x, <2 x i64> %z) {
+; CHECK-LABEL: @trunc_trunc_cond_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc <2 x i64> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[Z:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[Z1:%.*]], <2 x i64> <i64 42, i64 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[Z]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %cmp = trunc <2 x i64> %x to <2 x i1>
+  %sel = select <2 x i1> %cmp, <2 x i64> %z, <2 x i64> <i64 42, i64 7>
+  %r = trunc <2 x i64> %sel to <2 x i32>
+  ret <2 x i32> %r
+}

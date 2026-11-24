@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-void dumpOffloadSections(const object::OffloadBinary &OB);
+void dumpOffloadSections(MemoryBufferRef Buffer);
 void dumpOffloadBinary(const object::ObjectFile &O, StringRef ArchName);
 
 /// Dump fat binary in binary clang-offload-bundler format

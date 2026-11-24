@@ -7,13 +7,15 @@ void __init_cpu_features_resolver(unsigned long hwcap,
 }
 
 void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
-  unsigned long hwcap, hwcap2 = 0;
+  unsigned long hwcap, hwcap2;
   // CPU features already initialized.
   if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
     return;
 
-  elf_aux_info(AT_HWCAP, &hwcap, sizeof hwcap);
-  elf_aux_info(AT_HWCAP2, &hwcap2, sizeof hwcap2);
+  if (elf_aux_info(AT_HWCAP, &hwcap, sizeof hwcap) != 0)
+    hwcap = 0;
+  if (elf_aux_info(AT_HWCAP2, &hwcap2, sizeof hwcap2) != 0)
+    hwcap2 = 0;
 
   __ifunc_arg_t arg;
   arg._size = sizeof(__ifunc_arg_t);

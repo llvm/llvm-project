@@ -74,7 +74,7 @@ llvm.func @nvvm_fence_proxy_tensormap_generic_release() {
 
 // CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_acquire
 llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
-  %c128 = llvm.mlir.constant(128) : i32
+  %c128 = llvm.mlir.constant(128 : i32) : i32
   // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr {{%[0-9]+}}, i32 128)
   nvvm.fence.proxy.acquire cta %addr, %c128
 

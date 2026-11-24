@@ -14,39 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
+#include "orc-rt-internal/bedrock/host/Memory.h"
 #include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/bedrock/Session.h"
 
 #include <optional>
 
-#if defined(__APPLE__) || defined(__linux__)
-#include "Unix/NativeMemoryAPIs.inc"
-#else
-#error "Target OS memory APIs unsupported"
-#endif
-
 namespace orc_rt {
-
-Expected<std::unique_ptr<SimpleNativeMemoryMap>>
-SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
-                              const char *InstanceName,
-                              SimpleSymbolTable::MutatorFn AddInterface) {
-
-  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap(S));
-
-  SimpleSymbolTable SNMMST;
-  if (auto Err = AddInterface(SNMMST))
-    return Err;
-  std::pair<const char *, const void *> InstanceSym[] = {
-      {InstanceName, static_cast<const void *>(Instance.get())}};
-  if (auto Err = SNMMST.addUnique(InstanceSym))
-    return std::move(Err);
-
-  if (auto Err = ST.addUnique(SNMMST))
-    return std::move(Err);
-
-  return std::move(Instance);
-}
 
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
@@ -57,14 +31,13 @@ void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
             .str()));
   }
 
-  auto Addr = hostOSMemoryReserve(Size);
+  auto Addr = host::reserveMemory(Size);
   if (!Addr)
     return OnComplete(Addr.takeError());
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    assert(!Slabs.count(*Addr) &&
-           "hostOSMemoryReserve returned duplicate addresses");
+    assert(!Slabs.count(*Addr) && "reserveMemory returned duplicate addresses");
     Slabs.emplace(std::make_pair(*Addr, SlabInfo(Size)));
   }
 
@@ -95,7 +68,7 @@ void SimpleNativeMemoryMap::release(OnReleaseCompleteFn &&OnComplete,
   for (auto &[Addr, DAAs] : SI->DeallocActions)
     runDeallocActions(std::move(DAAs), ReportErrorsViaSession(S));
 
-  OnComplete(hostOSMemoryRelease(Addr, SI->Size));
+  OnComplete(host::releaseMemory(Addr, SI->Size));
 }
 
 void SimpleNativeMemoryMap::releaseMultiple(OnReleaseCompleteFn &&OnComplete,
@@ -132,7 +105,7 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
     if (size_t ZeroFillSize = S.Size - S.Content.size())
       memset(S.Address + S.Content.size(), 0, ZeroFillSize);
 
-    if (auto Err = hostOSMemoryProtect(S.Address, S.Size, S.AG.getMemProt()))
+    if (auto Err = host::protectMemory(S.Address, S.Size, S.AG.getMemProt()))
       return OnComplete(std::move(Err));
 
     switch (S.AG.getMemLifetime()) {

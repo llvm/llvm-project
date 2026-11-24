@@ -53,14 +53,10 @@ void ExprEngine::processCallEnter(CallEnter CE, ExplodedNode *Pred) {
   // Construct an edge representing the starting location in the callee.
   BlockEdge Loc(Entry, Succ, CE.getCalleeStackFrame());
 
-  ProgramStateRef state = Pred->getState();
-
   // Construct a new node, notify checkers that analysis of the function has
   // begun, and add the resultant nodes to the worklist.
-  bool isNew;
-  ExplodedNode *Node = G.getNode(Loc, state, false, &isNew);
-  Node->addPredecessor(Pred, G);
-  if (isNew) {
+  ExplodedNode *Node = Engine.makeNode(Loc, Pred->getState().get(), Pred);
+  if (Node) {
     // FIXME: In the `processBeginOfFunction` callback
     // `ExprEngine::getCurrStackFrame()` can be different from the
     // `StackFrame` queried from e.g. the `ExplodedNode`s. I'm not
@@ -357,7 +353,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
                    : ProgramPoint{EpsilonPoint(CalleeSF, /*Data1=*/nullptr,
                                                /*Data2=*/nullptr, &RetValBind)};
 
-    ExplodedNode *BoundRetNode = Engine.makeNode(Loc, State, CEBNode);
+    ExplodedNode *BoundRetNode = Engine.makeNode(Loc, State.get(), CEBNode);
     if (!BoundRetNode)
       return;
 
@@ -382,7 +378,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallExitEnd Loc(CalleeSF, CallerSF);
     ProgramStateRef CEEState = (N == CEBNode) ? State : N->getState();
 
-    ExplodedNode *CEENode = Engine.makeNode(Loc, CEEState, N);
+    ExplodedNode *CEENode = Engine.makeNode(Loc, CEEState.get(), N);
     if (!CEENode)
       continue;
 
@@ -545,12 +541,8 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   // formal arguments.
   State = State->enterStackFrame(Call, CalleeSF);
 
-  bool isNew;
-  if (ExplodedNode *N = G.getNode(Loc, State, false, &isNew)) {
-    N->addPredecessor(Pred, G);
-    if (isNew)
-      WList->enqueue(N);
-  }
+  if (ExplodedNode *N = Engine.makeNode(Loc, State.get(), Pred))
+    WList->enqueue(N);
 
   NumInlinedCalls++;
   Engine.FunctionSummaries->bumpNumTimesInlined(D);
@@ -595,7 +587,7 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
             createTemporaryRegionIfNeeded(State, SF, OCE->getArg(0));
         if (NewState != State) {
           PreStmt PS(OCE, SF, /*tag=*/nullptr);
-          Pred = Engine.makeNode(PS, NewState, Pred);
+          Pred = Engine.makeNode(PS, NewState.get(), Pred);
           if (!Pred)
             return; // Cached out.
         }
@@ -669,7 +661,7 @@ void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
   const StackFrame *SF = Call.getStackFrame();
   static SimpleProgramPointTag Tag("ExprEngine",
                                    "Finish argument construction");
-  Dst.insert(Engine.makeNode(PreStmt(E, SF, &Tag), CleanedState, Pred));
+  Dst.insert(Engine.makeNode(PreStmt(E, SF, &Tag), CleanedState.get(), Pred));
 }
 
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -732,7 +724,7 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                         PSK_EscapeOutParameters, &*Call);
 
     if (State != I->getState())
-      I = Engine.makeNode(I->getLocation(), State, I);
+      I = Engine.makeNode(I->getLocation(), State.get(), I);
 
     Dst.insert(I);
   }
@@ -837,7 +829,7 @@ ExplodedNode *ExprEngine::conservativeEvalCall(const CallEvent &Call,
 
   // And make the result node.
   static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
-  return Engine.makeNode(Call.getProgramPoint(false, &PT), State, Pred);
+  return Engine.makeNode(Call.getProgramPoint(false, &PT), State.get(), Pred);
 }
 
 ExprEngine::CallInlinePolicy
@@ -1304,14 +1296,9 @@ void ExprEngine::dynDispatchBifurcate(const MemRegion *BifurReg,
 
 void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  ExplodedNodeSet DstPreVisit;
-  getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, RS, *this);
-
   if (RS->getRetValue()) {
-    for (ExplodedNode *N : DstPreVisit) {
-      Dst.insert(Engine.makePostStmtNode(RS, N->getState(), N));
-    }
+    Dst.insert(Engine.makePostStmtNode(RS, Pred->getState().get(), Pred));
   } else {
-    Dst.insert(DstPreVisit);
+    Dst.insert(Pred);
   }
 }

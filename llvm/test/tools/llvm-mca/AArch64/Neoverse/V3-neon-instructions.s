@@ -398,7 +398,7 @@
 # CHECK-NEXT:  1      3     0.50                        frecpe	h20, h8
 # CHECK-NEXT:  1      3     0.50                        frecpe	d13, d13
 # CHECK-NEXT:  1      3     0.50                        frecpe	s19, s14
-# CHECK-NEXT:  1      2     0.25                        frecpe	v0.2d, v0.2d
+# CHECK-NEXT:  1      3     0.50                        frecpe	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        frecpe	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        frecpe	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        frecpe	v0.4s, v0.4s
@@ -450,7 +450,7 @@
 # CHECK-NEXT:  1      3     0.50                        frsqrte	h23, h26
 # CHECK-NEXT:  1      3     0.50                        frsqrte	d21, d12
 # CHECK-NEXT:  1      3     0.50                        frsqrte	s22, s13
-# CHECK-NEXT:  1      2     0.25                        frsqrte	v0.2d, v0.2d
+# CHECK-NEXT:  1      3     0.50                        frsqrte	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        frsqrte	v0.2s, v0.2s
 # CHECK-NEXT:  2      4     1.00                        frsqrte	v0.4h, v0.4h
 # CHECK-NEXT:  2      4     1.00                        frsqrte	v0.4s, v0.4s
@@ -1601,7 +1601,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     106.00 106.00 189.00 19.13  6.13   6.13   6.13   6.13   6.13   6.13   6.13   83.00  750.50 529.00 591.50 330.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     106.00 106.00 189.00 19.13  6.13   6.13   6.13   6.13   6.13   6.13   6.13   83.00  751.00 528.50 592.00 329.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   Instructions:
@@ -1993,7 +1993,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frecpe	h20, h8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frecpe	d13, d13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frecpe	s19, s14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   frecpe	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frecpe	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frecpe	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     frecpe	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     frecpe	v0.4s, v0.4s
@@ -2045,7 +2045,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frsqrte	h23, h26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frsqrte	d21, d12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frsqrte	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   frsqrte	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frsqrte	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     frsqrte	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     frsqrte	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     frsqrte	v0.4s, v0.4s

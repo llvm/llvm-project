@@ -1,15 +1,21 @@
 # RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
-# RUN:     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MACHO
+# RUN:     %s -o - | FileCheck %s --check-prefix=MACHO
+# RUN: llc -mtriple=arm64-apple-darwin \
+# RUN:     -run-pass=mir-strip-debug,prolog-epilog,machine-outliner \
+# RUN:     -mir-strip-debugify-only=0 -verify-machineinstrs %s -o - | \
+# RUN:     FileCheck %s --check-prefix=MACHO
 # RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
-# RUN:     -aarch64-outliner-compact-unwind-frame=false -verify-machineinstrs %s -o - | \
+# RUN:     -aarch64-outliner-compact-unwind-frame=false %s -o - | \
 # RUN:     FileCheck %s --check-prefix=NOFRAME
 # RUN: llc -mtriple=aarch64-linux-gnu -run-pass=prolog-epilog -run-pass=machine-outliner \
-# RUN:     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ELF
+# RUN:     %s -o - | FileCheck %s --check-prefix=ELF
 
 # A non-leaf outlined function must save LR. On MachO, save it as a full frame
 # record (stp x29,x30 ; mov x29,sp) so the compact-unwind encoder can use the
 # small FRAME encoding instead of falling back to a DWARF FDE. Everywhere else
 # keep the cheaper LR-alone save (str x30), which is all DWARF unwind needs.
+# The debug-only FP references inside the repeated sequence must not change the
+# frame choice; the first two RUN lines check both raw and stripped MIR.
 
 --- |
   define void @baz() #0 { ret void }
@@ -18,7 +24,6 @@
 ...
 ---
 name:            bar
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8
@@ -29,38 +34,50 @@ body:             |
     ; Calls interleaved with single defs so the only repeated sequence is the
     ; call-containing one, forcing a MachineOutlinerDefault (LR-save) frame.
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 6
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 5
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 4
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 3
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 2
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 1
 
@@ -70,12 +87,11 @@ body:             |
 ...
 ---
 name:            baz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8
     RET undef $lr
-
+...
 # MachO: full frame record + canonical CFI -> compact unwind FRAME encoding.
 # MACHO: name:            OUTLINED_FUNCTION_0
 # MACHO: early-clobber $sp = STPXpre $fp, $lr, $sp, -2

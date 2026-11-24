@@ -15,7 +15,7 @@
     (!defined(__GNUC__) || __GNUC__ >= 13 ||                                   \
      (defined(__clang__) && __clang_major__ >= 12)) &&                         \
     !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&              \
-    !defined(_WIN32)
+    !defined(_WIN32) && (!defined(__i386__) || defined(__SSE2__))
 #define LIBC_TYPES_HAS_FLOAT16
 
 // TODO: This would no longer be required if HdrGen let us guard function

@@ -43,7 +43,58 @@ DynamicRegisterInfo::operator=(DynamicRegisterInfo &&info) {
   return *this;
 }
 
+const char *DynamicRegisterInfo::Intern(llvm::StringRef str) {
+  if (str.empty())
+    return nullptr;
+  return m_strings.insert(str).first->getKeyData();
+}
+
+DynamicRegisterInfo::DynamicRegisterInfo(const DynamicRegisterInfo &info) {
+  CopyFrom(info);
+}
+
+DynamicRegisterInfo &
+DynamicRegisterInfo::operator=(const DynamicRegisterInfo &info) {
+  if (this != &info)
+    CopyFrom(info);
+  return *this;
+}
+
+void DynamicRegisterInfo::CopyFrom(const DynamicRegisterInfo &info) {
+  m_strings.clear();
+  m_regs = info.m_regs;
+  m_sets = info.m_sets;
+  m_set_reg_nums = info.m_set_reg_nums;
+  m_value_regs_map = info.m_value_regs_map;
+  m_invalidate_regs_map = info.m_invalidate_regs_map;
+  m_value_reg_offset_map = info.m_value_reg_offset_map;
+  m_reg_data_byte_size = info.m_reg_data_byte_size;
+  m_finalized = info.m_finalized;
+  m_is_reconfigurable = info.m_is_reconfigurable;
+
+  for (RegisterInfo &reg : m_regs) {
+    reg.name = Intern(reg.name);
+    reg.alt_name = Intern(reg.alt_name);
+  }
+  for (RegisterSet &set : m_sets) {
+    set.name = Intern(set.name);
+  }
+
+  if (m_finalized) {
+    for (size_t i = 0; i < m_sets.size(); ++i)
+      m_sets[i].registers = m_set_reg_nums[i].data();
+    for (size_t i = 0; i < m_regs.size(); ++i) {
+      if (auto it = m_value_regs_map.find(i); it != m_value_regs_map.end())
+        m_regs[i].value_regs = it->second.data();
+      if (auto it = m_invalidate_regs_map.find(i);
+          it != m_invalidate_regs_map.end())
+        m_regs[i].invalidate_regs = it->second.data();
+    }
+  }
+}
+
 void DynamicRegisterInfo::MoveFrom(DynamicRegisterInfo &&info) {
+  m_strings = std::move(info.m_strings);
   m_regs = std::move(info.m_regs);
   m_sets = std::move(info.m_sets);
   m_set_reg_nums = std::move(info.m_set_reg_nums);
@@ -208,8 +259,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       std::optional<llvm::StringRef> maybe_set_name =
           sets->GetItemAtIndexAsString(i);
       if (maybe_set_name && !maybe_set_name->empty()) {
-        m_sets.push_back({ConstString(*maybe_set_name).AsCString(nullptr),
-                          nullptr, 0, nullptr});
+        m_sets.push_back({Intern(*maybe_set_name), "", 0, nullptr});
       } else {
         Clear();
         printf("error: register sets must have valid names\n");
@@ -253,11 +303,11 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       reg_info_dict->DumpToStdout();
       return 0;
     }
-    reg_info.name = ConstString(name_val).GetCString();
+    reg_info.name = Intern(name_val);
 
     llvm::StringRef alt_name_val;
     if (reg_info_dict->GetValueForKeyAsString("alt-name", alt_name_val))
-      reg_info.alt_name = ConstString(alt_name_val).GetCString();
+      reg_info.alt_name = Intern(alt_name_val);
     else
       reg_info.alt_name = nullptr;
 
@@ -402,8 +452,8 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
     uint32_t local_regnum = it.index();
     const DynamicRegisterInfo::Register &reg = it.value();
 
-    assert(reg.name);
-    assert(reg.set_name);
+    assert(!reg.name.empty());
+    assert(!reg.set_name.empty());
 
     if (!reg.value_regs.empty())
       m_value_regs_map[local_regnum] = std::move(reg.value_regs);
@@ -415,8 +465,8 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
     }
 
     struct RegisterInfo reg_info{
-        reg.name.AsCString(nullptr),
-        reg.alt_name.AsCString(nullptr),
+        Intern(reg.name),
+        Intern(reg.alt_name),
         reg.byte_size,
         reg.byte_offset,
         reg.encoding,
@@ -436,8 +486,7 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
 
       set_name_to_idx.insert({reg.set_name, next_idx++});
       m_set_reg_nums.resize(m_set_reg_nums.size() + 1);
-      RegisterSet new_set = {reg.set_name.GetCString(), nullptr, 0, nullptr};
-      m_sets.push_back(new_set);
+      m_sets.push_back({Intern(reg.set_name), "", 0, nullptr});
     } else {
       set_idx = set_name_to_idx.lookup(reg.set_name);
     }
@@ -737,6 +786,7 @@ DynamicRegisterInfo::ConvertRegisterKindToRegisterNumber(uint32_t kind,
 void DynamicRegisterInfo::Clear() {
   m_regs.clear();
   m_sets.clear();
+  m_strings.clear();
   m_set_reg_nums.clear();
   m_value_regs_map.clear();
   m_invalidate_regs_map.clear();

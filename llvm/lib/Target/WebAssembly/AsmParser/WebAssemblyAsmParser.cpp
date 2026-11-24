@@ -26,7 +26,6 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -292,7 +291,6 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   std::vector<Nested> NestingStack;
 
   MCSymbolWasm *DefaultFunctionTable = nullptr;
-  MCSymbol *LastFunctionLabel = nullptr;
 
   bool Is64;
 
@@ -515,9 +513,10 @@ public:
                   .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
                   .Default(-1);
       if (Order != -1) {
-        if (!STI->checkFeatures("+relaxed-atomics"))
-          return error("memory ordering requires relaxed-atomics feature: ",
-                       Tok);
+        if (!STI->checkFeatures("+acquire-release-atomics"))
+          return error(
+              "memory ordering requires acquire-release-atomics feature: ",
+              Tok);
         Parser.Lex();
       } else {
         Order = wasm::WASM_MEM_ORDER_SEQ_CST;
@@ -1106,7 +1105,6 @@ public:
           push(Function);
         }
         CurrentState = FunctionStart;
-        LastFunctionLabel = WasmSym;
       }
       auto *Signature = Ctx.createWasmSignature();
       if (parseSignature(Signature))
@@ -1373,7 +1371,6 @@ public:
       //   ...  . Not this line, which can contain any instruction
       ensureEmptyNestingStack(IDLoc);
       CurrentState = FunctionLabel;
-      LastFunctionLabel = Symbol;
       push(Function);
     }
   }

@@ -1792,10 +1792,10 @@ define ppc_fp128 @u64_to_ppcq(i64 %m) #0 {
 ; PC64-NEXT:    bl __floatditf
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addis 3, 2, .LCPI36_0@toc@ha
-; PC64-NEXT:    fmr 31, 2
+; PC64-NEXT:    fmr 30, 1
 ; PC64-NEXT:    lfs 3, .LCPI36_0@toc@l(3)
 ; PC64-NEXT:    addis 3, 2, .LCPI36_1@toc@ha
-; PC64-NEXT:    fmr 30, 1
+; PC64-NEXT:    fmr 31, 2
 ; PC64-NEXT:    lfs 4, .LCPI36_1@toc@l(3)
 ; PC64-NEXT:    bl __gcc_qadd
 ; PC64-NEXT:    nop
@@ -1944,10 +1944,10 @@ define ppc_fp128 @u128_to_ppcq(i128 %m) #0 {
 ; PC64-NEXT:    bl __floattitf
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addis 3, 2, .LCPI38_0@toc@ha
-; PC64-NEXT:    fmr 31, 2
+; PC64-NEXT:    fmr 30, 1
 ; PC64-NEXT:    lfd 3, .LCPI38_0@toc@l(3)
 ; PC64-NEXT:    addis 3, 2, .LCPI38_1@toc@ha
-; PC64-NEXT:    fmr 30, 1
+; PC64-NEXT:    fmr 31, 2
 ; PC64-NEXT:    lfs 4, .LCPI38_1@toc@l(3)
 ; PC64-NEXT:    bl __gcc_qadd
 ; PC64-NEXT:    nop

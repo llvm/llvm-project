@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -83,14 +82,17 @@ const MipsFrameLowering *MipsFrameLowering::create(const MipsSubtarget &ST) {
 // hasFPImpl - Return true if the specified function should have a dedicated
 // frame pointer register.  This is true if the function has variable sized
 // allocas, if it needs dynamic stack realignment, if frame pointer elimination
-// is disabled, or if the frame address is taken.
+// is disabled, if the frame address is taken, or if the call frame is not
+// reserved.
 bool MipsFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
-         TRI->hasStackRealignment(MF);
+  // Without a reserved call frame, SP moves around every call, so address
+  // frame objects from FP instead.
+  return MF.disableFramePointerElim() || MFI.hasVarSizedObjects() ||
+         MFI.isFrameAddressTaken() || TRI->hasStackRealignment(MF) ||
+         (MFI.isMaxCallFrameSizeComputed() && !hasReservedCallFrame(MF));
 }
 
 bool MipsFrameLowering::hasBP(const MachineFunction &MF) const {

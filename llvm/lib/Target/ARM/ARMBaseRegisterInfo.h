@@ -91,8 +91,6 @@ public:
                               MCRegister PhysReg) const override;
 
   const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
-  const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
   const TargetRegisterClass *
@@ -103,12 +101,16 @@ public:
                                MachineFunction &MF) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
   void updateRegAllocHint(Register Reg, Register NewReg,
                           MachineFunction &MF) const override;
+
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
 
   bool hasBasePointer(const MachineFunction &MF) const;
 
@@ -160,6 +162,13 @@ public:
                       LiveIntervals &LIS) const override;
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
+
+  bool isIgnoredCVReg(MCRegister LLVMReg) const override;
+
+  const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const override {
+    return &ARM::DPRRegClass;
+  }
 };
 
 } // end namespace llvm

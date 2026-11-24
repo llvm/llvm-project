@@ -18,6 +18,7 @@
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -197,13 +198,10 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   const MemberExpr *ME = cast<MemberExpr>(callee);
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(ME->getMemberDecl());
 
-  if (MD->isStatic()) {
-    // The method is static, emit it as we would a regular call.
-    CGCallee callee =
-        CGCallee::forDirect(CGM.GetAddrOfFunction(MD), GlobalDecl(MD));
-    return EmitCall(getContext().getPointerType(MD->getType()), callee, CE,
-                    ReturnValue, /*Chain=*/nullptr, CallOrInvoke);
-  }
+  // Sema represents calls to static member functions as ordinary CallExpr
+  // nodes rather than CXXMemberCallExpr.
+  assert(!MD->isStatic() &&
+         "static member call is unexpected in EmitCXXMemberCallExpr");
 
   bool HasQualifier = ME->hasQualifier();
   NestedNameSpecifier Qualifier = ME->getQualifier();
@@ -253,12 +251,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  bool TrivialForCodegen =
-      MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion());
-  bool TrivialAssignment =
-      TrivialForCodegen &&
-      (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) &&
-      !MD->getParent()->mayInsertExtraPadding();
+  bool TrivialAssignment = MD->isMemcpyEquivalentSpecialMember(getContext());
 
   // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
   // operator before the LHS.
@@ -278,8 +271,18 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  auto getLValueForThis = [this, IsArrow,
-                           Base](bool EmitCheckedForStore = false) {
+  std::optional<LValue> HLSLThisLValue;
+  if (auto *HLSLOutArg = dyn_cast<HLSLOutArgExpr>(Base)) {
+    if (!RtlArgs)
+      RtlArgs = &RtlArgStorage;
+    HLSLThisLValue = EmitHLSLOutArgExpr(
+        HLSLOutArg, *RtlArgs, HLSLOutArg->getType(), /*IsImplicitObject=*/true);
+    EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
+                 drop_begin(CE->arguments(), 0), CE->getDirectCallee());
+  }
+
+  auto getLValueForThis = [this, IsArrow, Base,
+                           HLSLThisLValue](bool EmitCheckedForStore = false) {
     // FIXME: Respect EmitCheckedForStore for the IsArrow case.
     if (IsArrow) {
       LValueBaseInfo BaseInfo;
@@ -288,6 +291,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
                             BaseInfo, TBAAInfo);
     }
+    if (HLSLThisLValue)
+      return *HLSLThisLValue;
     if (EmitCheckedForStore)
       return EmitCheckedLValue(Base, TCK_Store);
     return EmitLValue(Base);
@@ -312,29 +317,24 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
   }
 
-  if (TrivialForCodegen) {
-    if (isa<CXXDestructorDecl>(MD)) {
-      (void)getLValueForThis(); // Emit LHS for side effects.
-      return RValue::get(nullptr);
-    }
+  if (isa<CXXDestructorDecl>(MD) && MD->isTrivial()) {
+    (void)getLValueForThis(); // Emit LHS for side effects.
+    return RValue::get(nullptr);
+  }
 
-    if (TrivialAssignment) {
-      // We don't like to generate the trivial copy/move assignment operator
-      // when it isn't necessary; just produce the proper effect here.
-      LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
+  if (TrivialAssignment) {
+    // We don't like to generate the trivial copy/move assignment operator
+    // when it isn't necessary; just produce the proper effect here.
+    LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
 
-      // It's important that we use the result of EmitCheckedLValue here rather
-      // than emitting call arguments, in order to preserve TBAA information
-      // from the RHS.
-      LValue RHS = isa<CXXOperatorCallExpr>(CE)
-                       ? TrivialAssignmentRHS
-                       : EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
-      EmitAggregateAssign(This, RHS, CE->getType());
-      return RValue::get(This.getPointer(*this));
-    }
-
-    assert(MD->getParent()->mayInsertExtraPadding() &&
-           "unknown trivial member function");
+    // It's important that we use the result of EmitCheckedLValue here rather
+    // than emitting call arguments, in order to preserve TBAA information
+    // from the RHS.
+    LValue RHS = isa<CXXOperatorCallExpr>(CE)
+                     ? TrivialAssignmentRHS
+                     : EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
+    EmitAggregateAssign(This, RHS, CE->getType());
+    return RValue::get(This.getPointer(*this));
   }
 
   // Compute the function type we're calling.
@@ -1103,7 +1103,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
     ArrayRef<const Expr *> InitExprs =
         ILE ? ILE->inits() : CPLIE->getInitExprs();
-    InitListElements = InitExprs.size();
+    InitListElements =
+        ILE ? ILE->getNumInitsWithEmbedExpanded() : InitExprs.size();
 
     // If this is a multi-dimensional array new, we will initialize multiple
     // elements with each init list element.
@@ -1138,6 +1139,14 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
     CharUnits StartAlign = CurPtr.getAlignment();
     unsigned i = 0;
+    auto AdvanceToNextElement = [&]() {
+      CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
+                                                 CurPtr.emitRawPointer(*this),
+                                                 Builder.getSize(1),
+                                                 "array.exp.next"),
+                       CurPtr.getElementType(),
+                       StartAlign.alignmentAtOffset((++i) * ElementSize));
+    };
     for (const Expr *IE : InitExprs) {
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -1145,17 +1154,32 @@ void CodeGenFunction::EmitNewArrayInitializer(
       if (EndOfInit.isValid()) {
         Builder.CreateStore(CurPtr.emitRawPointer(*this), EndOfInit);
       }
+      // A multi-element EmbedExpr initializes several array elements at once.
+      // A single-element embed can be wrapped in a conversion to a non-scalar
+      // element type (e.g. _Complex) and is emitted like any other
+      // initializer.
+      const auto *EmbedS = dyn_cast<EmbedExpr>(IE->IgnoreParenImpCasts());
+      if (EmbedS && EmbedS->getDataElementCount() > 1) {
+        const StringLiteral *SL = EmbedS->getDataStringLiteral();
+        llvm::Type *DataTy = ConvertType(EmbedS->getType());
+        for (unsigned I = EmbedS->getStartingElementPos(),
+                      End = I + EmbedS->getDataElementCount();
+             I != End; ++I) {
+          llvm::Value *Val = EmitScalarConversion(
+              llvm::ConstantInt::get(DataTy, SL->getCodeUnit(I)),
+              EmbedS->getType(), ElementType, EmbedS->getLocation());
+          EmitStoreOfScalar(Val, MakeAddrLValue(CurPtr, ElementType),
+                            /*isInit=*/true);
+          AdvanceToNextElement();
+        }
+        continue;
+      }
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
       StoreAnyExprIntoOneUnit(*this, IE, IE->getType(), CurPtr,
                               AggValueSlot::DoesNotOverlap);
-      CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
-                                                 CurPtr.emitRawPointer(*this),
-                                                 Builder.getSize(1),
-                                                 "array.exp.next"),
-                       CurPtr.getElementType(),
-                       StartAlign.alignmentAtOffset((++i) * ElementSize));
+      AdvanceToNextElement();
     }
 
     // The remaining elements are filled with the array filler expression.
@@ -1367,9 +1391,53 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   ///
   /// We model such elidable calls with the 'builtin' attribute.
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
-  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn &&
-      Fn->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
-    CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+  UnsignedOrNone AlignArg = std::nullopt;
+  if (CalleeDecl->isReplaceableGlobalAllocationFunction(&AlignArg)) {
+    auto &Ctx = CallOrInvoke->getContext();
+    llvm::AllocFnKind AK = llvm::AllocFnKind::Unknown;
+    OverloadedOperatorKind Op = CalleeDecl->getOverloadedOperator();
+    bool IsDeleter = Op == OO_Array_Delete || Op == OO_Delete;
+    if (IsDeleter) {
+      AK = AK | llvm::AllocFnKind::Free;
+    } else {
+      if (AlignArg)
+        AK = llvm::AllocFnKind::Aligned;
+      AK = AK | llvm::AllocFnKind::Alloc | llvm::AllocFnKind::Uninitialized;
+    }
+
+    bool IsArray = Op == OO_Array_New || Op == OO_Array_Delete;
+    StringRef Family;
+    if (CGF.CGM.getTarget().getCXXABI().isMicrosoft()) {
+      if (IsArray)
+        Family =
+            AlignArg ? "??_U@YAPAXIW4align_val_t@std@@@Z" : "??_U@YAPAXI@Z";
+      else
+        Family = AlignArg ? "??2@YAPAXIW4align_val_t@std@@@Z" : "??2@YAPAXI@Z";
+    } else {
+      assert(CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
+             "unknown C++ ABI when resolving alloc-family for operator "
+             "new/delete");
+      if (IsArray)
+        Family = AlignArg ? "_ZnamSt11align_val_t" : "_Znam";
+      else
+        Family = AlignArg ? "_ZnwmSt11align_val_t" : "_Znwm";
+    }
+
+    CallOrInvoke->addFnAttr(llvm::Attribute::get(Ctx, "alloc-family", Family));
+    if (Fn && Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
+      CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+    CallOrInvoke->addFnAttr(llvm::Attribute::get(
+        Ctx, llvm::Attribute::AllocKind, static_cast<uint64_t>(AK)));
+
+    // A sane operator new does not read or write accessible memory.
+    if (Fn && CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
+        CalleeDecl->getDeclName().isAnyOperatorNew()) {
+      // FIXME: inaccessiblemem could cause issues if LTO makes the
+      // previously inaccessible memory accessible after linking.
+      CallOrInvoke->setMemoryEffects(
+          llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
+              llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
+    }
   }
 
   return RV;
@@ -1591,7 +1659,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
               ->getZExtSize();
     } else if (ILE || CPLIE) {
-      minElements = ILE ? ILE->getNumInits() : CPLIE->getInitExprs().size();
+      minElements = ILE ? ILE->getNumInitsWithEmbedExpanded()
+                        : CPLIE->getInitExprs().size();
     }
   }
 
@@ -1751,11 +1820,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     EnterNewDeleteCleanup(*this, E, TypeIdentityArg, allocation, allocSize,
                           allocAlign, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
-    cleanupDominator = Builder.CreateUnreachable();
+    cleanupDominator =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
   }
 
-  assert((allocSize == allocSizeWithoutCookie) ==
-         CalculateCookiePadding(*this, E).isZero());
+  // Without a cookie the two sizes must match. With a cookie they usually
+  // differ, but on overflow the allocation size is all-ones, which can
+  // coincide with the size without the cookie.
+  assert(allocSize == llvm::Constant::getAllOnesValue(SizeTy) ||
+         ((allocSize == allocSizeWithoutCookie) ==
+          CalculateCookiePadding(*this, E).isZero()));
   if (allocSize != allocSizeWithoutCookie) {
     assert(E->isArray());
     allocation = CGM.getCXXABI().InitializeArrayCookie(

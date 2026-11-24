@@ -11,10 +11,12 @@
 #include "clc/internal/clc.h"
 #include "clc/math/clc_exp_helper.h"
 #include "clc/math/clc_fma.h"
+#include "clc/math/clc_ldexp.h"
 #include "clc/math/clc_mad.h"
 #include "clc/math/clc_rint.h"
 #include "clc/math/math.h"
 #include "clc/relational/clc_isnan.h"
+#include "clc/shared/clc_clamp.h"
 
 #define __CLC_BODY "clc_exp2.inc"
 #include "clc/math/gentype.inc"

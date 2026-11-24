@@ -6,9 +6,6 @@
 DataFlowSanitizerDesign
 ```
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

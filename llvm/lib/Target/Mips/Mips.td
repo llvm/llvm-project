@@ -81,9 +81,9 @@ def FeatureNoOddSPReg  : SubtargetFeature<"nooddspreg", "UseOddSPReg", "false",
 def FeatureVFPU        : SubtargetFeature<"vfpu", "HasVFPU",
                                 "true", "Enable vector FPU instructions">;
 def FeatureMips1       : SubtargetFeature<"mips1", "MipsArchVersion", "Mips1",
-                                "Mips I ISA Support [highly experimental]">;
+                                "Mips I ISA Support">;
 def FeatureMips2       : SubtargetFeature<"mips2", "MipsArchVersion", "Mips2",
-                                "Mips II ISA Support [highly experimental]",
+                                "Mips II ISA Support",
                                 [FeatureMips1]>;
 def FeatureMips3_32    : SubtargetFeature<"mips3_32", "HasMips3_32", "true",
                                 "Subset of MIPS-III that is also in MIPS32 "
@@ -92,7 +92,7 @@ def FeatureMips3_32r2  : SubtargetFeature<"mips3_32r2", "HasMips3_32r2", "true",
                                 "Subset of MIPS-III that is also in MIPS32r2 "
                                 "[highly experimental]">;
 def FeatureMips3       : SubtargetFeature<"mips3", "MipsArchVersion", "Mips3",
-                                "MIPS III ISA Support [highly experimental]",
+                                "MIPS III ISA Support",
                                 [FeatureMips2, FeatureMips3_32,
                                  FeatureMips3_32r2, FeatureGP64Bit,
                                  FeatureFP64Bit]>;
@@ -148,6 +148,10 @@ def FeatureMips64r6    : SubtargetFeature<"mips64r6", "MipsArchVersion",
                                 "Mips64r6 ISA Support [experimental]",
                                 [FeatureMips32r6, FeatureMips64r5,
                                  FeatureNaN2008, FeatureAbs2008]>;
+def FeatureNanoMips    : SubtargetFeature<"nanomips", "MipsArchVersion",
+                                "NanoMips",
+                                "NanoMips ISA Support [experimental]",
+                                [FeatureNoABICalls]>;
 def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
                                           "Symbols are 32 bit on Mips64">;
 
@@ -231,7 +235,7 @@ def FeatureUseCompactBranches
 def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
                       AssemblerPredicate<(all_of FeaturePTR64Bit)>;
 def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
+                      AssemblerPredicate<(none_of FeaturePTR64Bit)>;
 def UseCompactBranches : Predicate<"Subtarget->useCompactBranches()">,
                          AssemblerPredicate<(all_of FeatureUseCompactBranches)>;
 
@@ -251,6 +255,11 @@ include "MipsInstrInfo.td"
 include "MipsCallingConv.td"
 include "MipsRegisterBanks.td"
 include "MipsCombine.td"
+
+foreach i = {1-31} in
+  def FeatureReserveGPR#i :
+      SubtargetFeature<"reserve-gpr"#i, "UserReservedGPR["#i#"]", "true",
+                       "Reserve MIPS GPR "#i>;
 
 // Avoid forward declaration issues.
 include "MipsScheduleI6400.td"
@@ -306,9 +315,11 @@ def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
 def : Proc<"r5900", [FeatureR5900]>;
 def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
 def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
+def : Proc<"nanomips", [FeatureNanoMips]>;
 
 def MipsAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltNameWithIndex = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def MipsAsmParserVariant : AsmParserVariant {

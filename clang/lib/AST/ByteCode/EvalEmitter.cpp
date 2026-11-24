@@ -8,6 +8,7 @@
 
 #include "EvalEmitter.h"
 #include "Context.h"
+#include "EvalSettings.h"
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
@@ -17,17 +18,14 @@
 using namespace clang;
 using namespace clang::interp;
 
-EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Settings, P, Stk, FA, Ctx, this), EvalResult(Ctx),
+      ConstexprKind(Settings.ConstexprKind) {}
 
-EvalEmitter::~EvalEmitter() {
-  for (auto &V : Locals) {
-    Block *B = reinterpret_cast<Block *>(V.get());
-    if (B->isInitialized())
-      B->invokeDtor();
-  }
-}
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Status, P, Stk, FA, Ctx, this), EvalResult(Ctx) {}
 
 /// Clean up all our resources. This needs to done in failed evaluations before
 /// we call InterpStack::clear(), because there might be a Pointer on the stack
@@ -149,28 +147,24 @@ void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
-Scope::Local EvalEmitter::createLocal(Descriptor *D) {
+Scope::Local EvalEmitter::createLocal(const Descriptor *D,
+                                      bool IsConstexprUnknown) {
+
+  BlockFlags Flags = BlockFlags().withConstexprUnknown(IsConstexprUnknown);
   // Allocate memory for a local.
-  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
-                                         Block::InlineDescMD);
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
-                                     /*IsStatic=*/false);
-  B->invokeCtorNoMemset();
+  char *Memory =
+      reinterpret_cast<char *>(S.allocate(Block::allocSize(D, Block::Local)));
+  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::Local, Flags);
+  B->invokeCtor();
 
   // Initialize local variable inline descriptor.
-  auto &Desc = B->getBlockDesc<InlineDescriptor>();
-  Desc.Desc = D;
-  Desc.Offset = sizeof(InlineDescriptor);
-  Desc.IsActive = false;
-  Desc.IsBase = false;
-  Desc.IsFieldMutable = false;
-  Desc.IsConst = false;
-  Desc.IsInitialized = false;
+  auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
+  new (&Desc) LocalInlineDescriptor();
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.push_back(std::move(Memory));
-  return {Off, D};
+  Locals.push_back(Memory);
+  return {D, Off};
 }
 
 bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
@@ -244,6 +238,18 @@ template <PrimType OpType> bool EvalEmitter::emitRet(SourceInfo Info) {
   return true;
 }
 
+template <> bool EvalEmitter::emitRet<PT_MemberPtr>(SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  const MemberPointer &MP = S.Stk.pop<MemberPointer>();
+  if (!EvalResult.checkMemberPointer(S, MP, Info, ConstexprKind))
+    return false;
+
+  EvalResult.takeValue(MP.toAPValue(Ctx.getASTContext()));
+  return true;
+}
+
 template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (!isActive())
     return true;
@@ -255,60 +261,59 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
+
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
   // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
+    if (ConvertResultToRValue && Ptr.asFunctionPointer().Func->getDecl())
+      return false;
+    if (!EvalResult.checkFunctionPointer(S, Ptr, Info, ConstexprKind))
+      return false;
+
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
   }
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (Ptr.isPastEnd())
-      return false;
-
     if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))
       return false;
 
-    // Never allow reading from a non-const pointer, unless the memory
-    // has been created in this evaluation.
-    if (!Ptr.isZero() && !Ptr.isConst() && Ptr.isBlockPointer() &&
-        Ptr.block()->getEvalID() != Ctx.getEvalID())
+    if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
       return false;
 
     if (std::optional<APValue> V =
             Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
       EvalResult.takeValue(std::move(*V));
-    } else {
-      return false;
-    }
-  } else {
-    // If this is pointing to a local variable, just return
-    // the result, even if the pointer is dead.
-    // This will later be diagnosed by CheckLValueConstantExpression.
-    if (Ptr.isBlockPointer() && !Ptr.block()->isStatic()) {
-      EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
       return true;
     }
-
-    if (!Ptr.isLive() && !Ptr.isTemporary())
-      return false;
-
-    // If the variable of this pointer is being evaluated when returning
-    // its value, mark it as constexpr-unknown.
-    APValue V = Ptr.toAPValue(Ctx.getASTContext());
-    if (const Descriptor *DeclDesc = Ptr.getDeclDesc();
-        DeclDesc && S.EvaluatingDecl &&
-        DeclDesc->asVarDecl() == S.EvaluatingDecl &&
-        S.getLangOpts().CPlusPlus23 &&
-        S.EvaluatingDecl->getType()->isReferenceType()) {
-      V.setConstexprUnknown(true);
-    }
-    EvalResult.takeValue(std::move(V));
+    return false;
   }
 
+  // Return as lvalue.
+  if (!EvalResult.checkLValue(S, Ptr, Info, ConstexprKind))
+    return false;
+
+  if (!Ptr.isLive() && !Ptr.isTemporary())
+    return false;
+
+  if (const Descriptor *DeclDesc = Ptr.getDeclDesc();
+      DeclDesc && S.EvaluatingDecl &&
+      ((DeclDesc->asVarDecl() == S.EvaluatingDecl &&
+        S.getLangOpts().CPlusPlus23 &&
+        S.EvaluatingDecl->getType()->isReferenceType()) ||
+       Ptr.isConstexprUnknown())) {
+    S.FFDiag(Info, diag::note_constexpr_var_init_non_constant, 1)
+        << DeclDesc->asVarDecl();
+    S.Note(DeclDesc->asVarDecl()->getLocation(), diag::note_declared_at);
+
+    return false;
+  }
+
+  APValue V = Ptr.toAPValue(Ctx.getASTContext());
+  EvalResult.takeValue(std::move(V));
   return true;
 }
 
@@ -322,7 +327,9 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
 
   if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
-  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+  if (!EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+  if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
     return false;
 
   if (std::optional<APValue> APV =
@@ -340,7 +347,7 @@ bool EvalEmitter::emitGetPtrLocal(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+  S.Stk.push<Pointer>(B);
   return true;
 }
 
@@ -377,9 +384,9 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
 
   Block *B = getLocal(I);
   B->deref<T>() = S.Stk.pop<T>();
-  auto &Desc = B->getBlockDesc<InlineDescriptor>();
+  auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
   Desc.IsInitialized = true;
-  Desc.LifeState = Lifetime::Started;
+  Desc.setLifetime(Lifetime::Started);
 
   return true;
 }
@@ -401,9 +408,9 @@ bool EvalEmitter::emitGetLocalEnabled(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
+  const auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
 
-  S.Stk.push<bool>(Desc.IsActive);
+  S.Stk.push<bool>(Desc.IsEnabled);
   return true;
 }
 
@@ -411,14 +418,9 @@ bool EvalEmitter::emitEnableLocal(uint32_t I, SourceInfo Info) {
   if (!isActive())
     return true;
 
-  // FIXME: This is a little dirty, but to avoid adding a flag to
-  // InlineDescriptor that's only ever useful on the toplevel of local
-  // variables, we reuse the IsActive flag for the enabled state. We should
-  // probably use a different struct than InlineDescriptor for the block-level
-  // inline descriptor of local varaibles.
   Block *B = getLocal(I);
-  auto &Desc = B->getBlockDesc<InlineDescriptor>();
-  Desc.IsActive = true;
+  auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
+  Desc.IsEnabled = true;
   return true;
 }
 

@@ -10,13 +10,14 @@
 #define LLDB_TARGET_DYNAMICREGISTERINFO_H
 
 #include <map>
+#include <string>
 #include <vector>
 
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace lldb_private {
 class Stream;
@@ -24,9 +25,9 @@ class Stream;
 class DynamicRegisterInfo {
 public:
   struct Register {
-    ConstString name;
-    ConstString alt_name;
-    ConstString set_name;
+    std::string name;
+    std::string alt_name;
+    std::string set_name;
     uint32_t byte_size = LLDB_INVALID_INDEX32;
     uint32_t byte_offset = LLDB_INVALID_INDEX32;
     lldb::Encoding encoding = lldb::eEncodingUint;
@@ -43,9 +44,8 @@ public:
   };
 
   DynamicRegisterInfo() = default;
-  DynamicRegisterInfo(DynamicRegisterInfo &) = default;
-  DynamicRegisterInfo &operator=(DynamicRegisterInfo &) = default;
-
+  DynamicRegisterInfo(const DynamicRegisterInfo &info);
+  DynamicRegisterInfo &operator=(const DynamicRegisterInfo &info);
 
   static std::unique_ptr<DynamicRegisterInfo>
   Create(const StructuredData::Dictionary &dict, const ArchSpec &arch);
@@ -117,8 +117,16 @@ protected:
 
   void MoveFrom(DynamicRegisterInfo &&info);
 
+  void CopyFrom(const DynamicRegisterInfo &info);
+
   void Finalize(const lldb_private::ArchSpec &arch);
 
+  // Returns a NUL-terminated copy of `str` owned by m_strings, or nullptr if
+  // `str` is empty.
+  const char *Intern(llvm::StringRef str);
+
+  // Owns the storage for all strings referenced by m_regs and m_sets.
+  llvm::StringSet<> m_strings;
   reg_collection m_regs;
   set_collection m_sets;
   set_reg_num_collection m_set_reg_nums;

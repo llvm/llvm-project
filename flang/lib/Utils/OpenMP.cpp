@@ -65,7 +65,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
     mlir::omp::ClauseMapFlags mapType,
     mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-    bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
+    bool partialMap, mlir::FlatSymbolRefAttr mapperId, mlir::Type varPtrTy) {
 
   auto getPtrVarType = [](mlir::Type ptrType) {
     mlir::TypeAttr varType = mlir::TypeAttr::get(
@@ -85,7 +85,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     retTy = baseAddr.getType();
   }
 
-  auto varPtrType = getPtrVarType(retTy);
+  auto varPtrType = getPtrVarType(varPtrTy ? varPtrTy : retTy);
   auto varPtrPtrTy =
       varPtrPtr ? getPtrVarType(varPtrPtr.getType()) : mlir::TypeAttr{};
 
@@ -214,7 +214,7 @@ void cloneOrMapRegionOutsiders(
 mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr,
-    RecordMemberMapperMangler mangler) {
+    RecordMemberMapperMangler mangler, bool emitAllocatableMemberMaps) {
   auto getKindlessDefaultMapperName =
       [](fir::RecordType recType) -> std::string {
     auto [nameKind, deconstructed] =
@@ -334,34 +334,41 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     if (auto recType = mlir::dyn_cast<fir::RecordType>(
             fir::getFortranElementType(memberType))) {
       std::string mapperIdName = getCanonicalDefaultDeclareMapperName(recType);
-      mangler(mapperIdName, memberName);
-      mapperId = getOrGenImplicitDefaultDeclareMapper(
-          firOpBuilder, loc, recType, mapperIdName, mangler);
+      if (mangler)
+        mangler(mapperIdName, memberName);
+      mapperId = getOrGenImplicitDefaultDeclareMapper(firOpBuilder, loc,
+          recType, mapperIdName, mangler, emitAllocatableMemberMaps);
     }
 
-    auto ref =
-        getFieldRef(declareOp.getBase(), memberName, memberType, recordType);
-    llvm::SmallVector<mlir::Value> bounds;
-    genBoundsOps(ref, bounds);
-    mlir::Value mapOp = Fortran::utils::openmp::createMapInfoOp(firOpBuilder,
-        loc, ref, /*varPtrPtr=*/mlir::Value{}, /*name=*/"", bounds,
-        /*members=*/{},
-        /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind, ref.getType(),
-        /*partialMap=*/false, mapperId);
-    memberMapOps.emplace_back(mapOp);
-    memberPlacementIndices.emplace_back(
-        llvm::SmallVector<int64_t>{(int64_t)entry.index()});
+    bool isAllocatable = fir::isAllocatableType(fir::unwrapRefType(memberType));
+    if ((isAllocatable && emitAllocatableMemberMaps) ||
+        mlir::isa<fir::RecordType>(fir::getFortranElementType(memberType))) {
+      auto ref =
+          getFieldRef(declareOp.getBase(), memberName, memberType, recordType);
+      llvm::SmallVector<mlir::Value> bounds;
+      genBoundsOps(ref, bounds);
+      mlir::Value mapOp = Fortran::utils::openmp::createMapInfoOp(firOpBuilder,
+          loc, ref, /*varPtrPtr=*/mlir::Value{}, /*name=*/"", bounds,
+          /*members=*/{},
+          /*membersIndex=*/mlir::ArrayAttr{},
+          isAllocatable ? mapFlag | mlir::omp::ClauseMapFlags::ref_ptee
+                        : mapFlag,
+          captureKind, ref.getType(),
+          /*partialMap=*/false, mapperId);
+      memberMapOps.emplace_back(mapOp);
+      memberPlacementIndices.emplace_back(
+          llvm::SmallVector<int64_t>{(int64_t)entry.index()});
+    }
   }
 
   llvm::SmallVector<mlir::Value> bounds;
   genBoundsOps(declareOp.getOriginalBase(), bounds);
-  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::implicit;
   mlir::omp::MapInfoOp mapOp = Fortran::utils::openmp::createMapInfoOp(
       firOpBuilder, loc, declareOp.getOriginalBase(),
       /*varPtrPtr=*/mlir::Value(), /*name=*/"", bounds, memberMapOps,
-      firOpBuilder.create2DI64ArrayAttr(memberPlacementIndices), parentMapFlag,
+      firOpBuilder.create2DI64ArrayAttr(memberPlacementIndices), mapFlag,
       captureKind, declareOp.getType(0),
-      /*partialMap=*/true);
+      /*partialMap=*/false);
 
   mlir::omp::DeclareMapperInfoOperands clauseOps;
   clauseOps.mapVars.emplace_back(mapOp);

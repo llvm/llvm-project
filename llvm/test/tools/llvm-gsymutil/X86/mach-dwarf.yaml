@@ -110,6 +110,7 @@
 # DUMP-NEXT:   [0x0000000100000faa - 0x0000000100000fb0) _Z3fooi called from /tmp/main.cpp:5
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

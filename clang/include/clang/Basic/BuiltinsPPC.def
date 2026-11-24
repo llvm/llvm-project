@@ -349,6 +349,8 @@ TARGET_BUILTIN(__builtin_altivec_vmulosd, "V1SLLLiV2SLLiV2SLLi", "",
                "power10-vector")
 TARGET_BUILTIN(__builtin_altivec_vmsumcud, "V1ULLLiV2ULLiV2ULLiV1ULLLi", "",
                "power10-vector")
+TARGET_BUILTIN(__builtin_altivec_vmsumudm, "V1ULLLiV2ULLiV2ULLiV1ULLLi", "",
+               "power9-vector")
 
 TARGET_BUILTIN(__builtin_altivec_vnmsubfp, "V4fV4fV4fV4f", "", "altivec")
 

@@ -55,7 +55,13 @@ void DefinitionBlockSeparator::separateBlocks(
                                   tok::kw_union) ||
             (Style.isJavaScript() &&
              CurrentToken->is(ExtraKeywords.kw_function))) {
-          return true;
+          if (!ExcludeEnum)
+            return true;
+          // The class/struct keyword in a scoped enum is not a record
+          // definition.
+          const auto *Previous = CurrentToken->getPreviousNonComment();
+          if (!Previous || Previous->isNot(tok::kw_enum))
+            return true;
         }
         if (!ExcludeEnum && CurrentToken->is(tok::kw_enum))
           return true;
@@ -79,7 +85,12 @@ void DefinitionBlockSeparator::separateBlocks(
           : Style.LineEnding == FormatStyle::LE_CRLF);
   for (unsigned I = 0; I < Lines.size(); ++I) {
     const auto &CurrentLine = Lines[I];
-    if (CurrentLine->InPPDirective)
+    // In the macro expansion pass, MatchingOpeningBlockLineIndex still refers
+    // to the unexpanded line sequence. Expanding a macro into multiple lines
+    // changes line positions, so a closing brace can be matched to the wrong
+    // opening line. Skip this pass and separate blocks in the subsequent pass
+    // over reconstructed macro calls, where the indices are valid.
+    if (CurrentLine->InPPDirective || CurrentLine->InMacroExpansion)
       continue;
     FormatToken *TargetToken = nullptr;
     AnnotatedLine *TargetLine;

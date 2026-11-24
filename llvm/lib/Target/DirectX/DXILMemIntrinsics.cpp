@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILMemIntrinsics.h"
 #include "DirectX.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/IRBuilder.h"
@@ -25,8 +24,7 @@ void expandMemSet(MemSetInst *MemSet) {
   ConstantInt *LengthCI = dyn_cast<ConstantInt>(MemSet->getLength());
   assert(LengthCI && "Expected length to be a ConstantInt");
 
-  [[maybe_unused]] const DataLayout &DL =
-      Builder.GetInsertBlock()->getModule()->getDataLayout();
+  [[maybe_unused]] const DataLayout &DL = Builder.getDataLayout();
   [[maybe_unused]] uint64_t OrigLength = LengthCI->getZExtValue();
 
   AllocaInst *Alloca = dyn_cast<AllocaInst>(Dst);
@@ -55,7 +53,8 @@ void expandMemSet(MemSetInst *MemSet) {
   for (uint64_t I = 0; I < Size; ++I) {
     Value *Zero = Builder.getInt32(0);
     Value *Offset = Builder.getInt32(I);
-    Value *Ptr = Builder.CreateGEP(ArrTy, Dst, {Zero, Offset}, "gep");
+    Value *Ptr = GetElementPtrInst::Create(ArrTy, Dst, {Zero, Offset}, "gep",
+                                           MemSet->getIterator());
     Builder.CreateStore(TypedVal, Ptr);
   }
 
@@ -140,7 +139,7 @@ void expandMemCpy(MemCpyInst *MemCpy) {
   if (ByteLength == 0)
     return;
 
-  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
 
   SmallVector<std::pair<Type *, size_t>> FlattenedTypes;
   [[maybe_unused]] size_t MaxLength =
@@ -167,11 +166,11 @@ void expandMemCpy(MemCpyInst *MemCpy) {
     if (Offset >= ByteLength)
       break;
     // TODO: Should we skip padding types here?
-    Type *Int8Ty = Builder.getInt8Ty();
-    Value *ByteOffset = Builder.getInt32(Offset);
-    Value *SrcPtr = Builder.CreateInBoundsGEP(Int8Ty, Src, ByteOffset);
+    Value *SrcPtr = Builder.CreatePtrAddWithUnsignedOffset(
+        Src, Offset, "", GEPNoWrapFlags::inBounds());
     Value *SrcVal = Builder.CreateLoad(Ty, SrcPtr);
-    Value *DstPtr = Builder.CreateInBoundsGEP(Int8Ty, Dst, ByteOffset);
+    Value *DstPtr = Builder.CreatePtrAddWithUnsignedOffset(
+        Dst, Offset, "", GEPNoWrapFlags::inBounds());
     Builder.CreateStore(SrcVal, DstPtr);
   }
 
@@ -213,7 +212,8 @@ static bool eliminateMemIntrinsics(Module &M) {
   return HadMemIntrinsicUses;
 }
 
-PreservedAnalyses DXILMemIntrinsics::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses DXILMemIntrinsicsPass::run(Module &M,
+                                             ModuleAnalysisManager &) {
   if (eliminateMemIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

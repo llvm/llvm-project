@@ -553,4 +553,22 @@ TEST(LlvmLibcWctypeUtilsTest, IsCntrlUtf8) {
   }
 }
 
+TEST(LlvmLibcWctypeUtilsTest, ThreewayCmpSingle) {
+  using utf8_mode::LIBC_NAMESPACE::internal::threeway_cmp_single;
+
+  EXPECT_EQ(threeway_cmp_single(L'A', L'A'), 0);
+
+  EXPECT_LT(threeway_cmp_single(wchar_t{67}, wchar_t{120}), 0);
+  EXPECT_GT(threeway_cmp_single(wchar_t{120}, wchar_t{67}), 0);
+
+  EXPECT_LT(threeway_cmp_single(wchar_t{1}, WCHAR_MAX), 0);
+  EXPECT_GT(threeway_cmp_single(WCHAR_MAX, wchar_t{1}), 0);
+
+  EXPECT_LT(threeway_cmp_single(WCHAR_MIN, wchar_t{1}), 0);
+  EXPECT_GT(threeway_cmp_single(wchar_t{1}, WCHAR_MIN), 0);
+
+  EXPECT_LT(threeway_cmp_single(WCHAR_MIN, WCHAR_MAX), 0);
+  EXPECT_GT(threeway_cmp_single(WCHAR_MAX, WCHAR_MIN), 0);
+}
+
 } // namespace

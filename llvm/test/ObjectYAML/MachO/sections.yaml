@@ -5,6 +5,7 @@
 # RUN: yaml2obj --docnum=1 %s | obj2yaml | FileCheck %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -294,6 +295,7 @@ LoadCommands:
 # OVERLAP: yaml2obj: error: wrote too much data somewhere, section offsets in section __sec2 for segment __SEC don't line up: [cursor=0x121], [fileStart=0x0], [sectionOffset=0x1]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

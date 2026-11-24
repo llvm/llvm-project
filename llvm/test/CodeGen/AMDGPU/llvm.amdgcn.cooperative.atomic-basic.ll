@@ -48,12 +48,195 @@ entry:
   ret void
 }
 
+define void @test_store_16x8B_global(ptr addrspace(1) noundef %addr, <2 x i32> noundef %val)  {
+; GCN-LABEL: test_store_16x8B_global:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SYS
+; GCN-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  tail call void @llvm.amdgcn.cooperative.atomic.store.16x8B.p1(ptr addrspace(1) %addr, <2 x i32> %val, i32 0, metadata !0)
+  ret void
+}
+
+define void @test_store_8x16B_global(ptr addrspace(1) noundef %addr, <4 x i32> noundef %val)  {
+; GCN-LABEL: test_store_8x16B_global:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    global_store_b128 v[0:1], v[2:5], off scope:SCOPE_SYS
+; GCN-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p1(ptr addrspace(1) %addr, <4 x i32> %val, i32 0, metadata !0)
+  ret void
+}
+
+define i32 @test_load_16x8B_extract_and(ptr addrspace(1) noundef readonly %addr)  {
+; GCN-LABEL: test_load_16x8B_extract_and:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_SYS
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_wait_xcnt 0x0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GCN-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.16x8B.p1(ptr addrspace(1) %addr, i32 0, metadata !0)
+  %elt = extractelement <2 x i32> %0, i32 0
+  %and = and i32 %elt, 255
+  ret i32 %and
+}
+
+define i32 @test_load_8x16B_extract_and(ptr addrspace(1) noundef readonly %addr)  {
+; GCN-LABEL: test_load_8x16B_extract_and:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_wait_xcnt 0x0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GCN-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) %addr, i32 0, metadata !0)
+  %elt = extractelement <4 x i32> %0, i32 0
+  %and = and i32 %elt, 255
+  ret i32 %and
+}
+
+define half @test_load_8x16B_bitcast_v8f16(ptr addrspace(1) noundef readonly %addr)  {
+; GCN-LABEL: test_load_8x16B_bitcast_v8f16:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_wait_xcnt 0x0
+; GCN-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GCN-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) %addr, i32 0, metadata !0)
+  %cast = bitcast <4 x i32> %0 to <8 x half>
+  %lo = extractelement <8 x half> %cast, i32 0
+  %hi = extractelement <8 x half> %cast, i32 1
+  %add = fadd half %lo, %hi
+  ret half %add
+}
+
+define i32 @test_load_8x16B_sext_inreg(ptr addrspace(1) noundef readonly %addr)  {
+; GCN-LABEL: test_load_8x16B_sext_inreg:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_wait_xcnt 0x0
+; GCN-NEXT:    v_bfe_i32 v0, v3, 0, 16
+; GCN-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) %addr, i32 0, metadata !0)
+  %elt = extractelement <4 x i32> %0, i32 3
+  %shl = shl i32 %elt, 16
+  %ashr = ashr i32 %shl, 16
+  ret i32 %ashr
+}
+
+define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, ptr addrspace(1) noundef %out, i1 %cond)  {
+; GFX1250-SDAG-LABEL: test_load_8x16B_live_out:
+; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX1250-SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v4
+; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB9_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %use
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SDAG-NEXT:    global_store_b128 v[2:3], v[6:9], off
+; GFX1250-SDAG-NEXT:  .LBB9_2: ; %exit
+; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1250-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1251-SDAG-LABEL: test_load_8x16B_live_out:
+; GFX1251-SDAG:       ; %bb.0: ; %entry
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX1251-SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1251-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v4
+; GFX1251-SDAG-NEXT:    s_cbranch_execz .LBB9_2
+; GFX1251-SDAG-NEXT:  ; %bb.1: ; %use
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    global_store_b128 v[2:3], v[6:9], off
+; GFX1251-SDAG-NEXT:  .LBB9_2: ; %exit
+; GFX1251-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1251-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: test_load_8x16B_live_out:
+; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v4
+; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB9_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %use
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    global_store_b128 v[2:3], v[6:9], off
+; GFX1250-GISEL-NEXT:  .LBB9_2: ; %exit
+; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1251-GISEL-LABEL: test_load_8x16B_live_out:
+; GFX1251-GISEL:       ; %bb.0: ; %entry
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX1251-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1251-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v4
+; GFX1251-GISEL-NEXT:    s_cbranch_execz .LBB9_2
+; GFX1251-GISEL-NEXT:  ; %bb.1: ; %use
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    global_store_b128 v[2:3], v[6:9], off
+; GFX1251-GISEL-NEXT:  .LBB9_2: ; %exit
+; GFX1251-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1251-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) %addr, i32 0, metadata !0)
+  br i1 %cond, label %use, label %exit
+
+use:
+  store <4 x i32> %0, ptr addrspace(1) %out
+  br label %exit
+
+exit:
+  ret void
+}
+
 !0 = !{ !"" }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX1250: {{.*}}
-; GFX1250-GISEL: {{.*}}
-; GFX1250-SDAG: {{.*}}
 ; GFX1251: {{.*}}
-; GFX1251-GISEL: {{.*}}
-; GFX1251-SDAG: {{.*}}

@@ -12,16 +12,14 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_gather_v2i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ptrue p1.d, vl2
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cmpne p2.d, p1/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x1]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ld1b { z0.d }, p1/z, [z0.d]
+; CHECK-NEXT:    ld1b { z0.d }, p2/z, [z0.d]
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -566,21 +564,18 @@ define void @masked_gather_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    fcmeq v1.4h, v1.4h, #0.0
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z0.d, z0.s
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fcmeq v0.4h, v0.4h, #0.0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    shl v0.2s, v0.2s, #31
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1h { z0.d }, p1/z, [z0.d]
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %cval = load <2 x half>, ptr %a
@@ -707,21 +702,16 @@ define void @masked_gather_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v2bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
-; CHECK-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z0.d, z0.s
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1h { z0.d }, p1/z, [z0.d]
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %cval = load <2 x bfloat>, ptr %a

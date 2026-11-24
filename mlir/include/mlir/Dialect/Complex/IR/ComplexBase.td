@@ -14,7 +14,6 @@ include "mlir/IR/OpBase.td"
 
 def Complex_Dialect : Dialect {
   let name = "complex";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::complex";
   let description = [{
     The complex dialect is intended to hold complex numbers creation and
@@ -23,7 +22,7 @@ def Complex_Dialect : Dialect {
 
   let dependentDialects = ["arith::ArithDialect"];
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -299,11 +299,11 @@ define i32 @nested_mul_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmul.i32 q0, q0, q1
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov r12, lr, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    mul r12, r12, lr
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vmov r12, lr, d0
 ; CHECK-NEXT:    muls r2, r3, r2
-; CHECK-NEXT:    mul r1, r2, r12
+; CHECK-NEXT:    mul r3, r12, lr
+; CHECK-NEXT:    mul r1, r3, r2
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    pop {r7, pc}
   %r1 = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %a)
@@ -321,11 +321,11 @@ define i32 @nested_and_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    ands r0, r1
-; CHECK-NEXT:    vmov r12, lr, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    and.w r12, r12, lr
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vmov r12, lr, d0
 ; CHECK-NEXT:    ands r2, r3
-; CHECK-NEXT:    and.w r2, r2, r12
+; CHECK-NEXT:    and.w r3, r12, lr
+; CHECK-NEXT:    ands r2, r3
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
   %r1 = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %a)
@@ -343,11 +343,11 @@ define i32 @nested_or_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vorr q0, q0, q1
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    vmov r12, lr, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    orr.w r12, r12, lr
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vmov r12, lr, d0
 ; CHECK-NEXT:    orrs r2, r3
-; CHECK-NEXT:    orr.w r2, r2, r12
+; CHECK-NEXT:    orr.w r3, r12, lr
+; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    orrs r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
   %r1 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %a)
@@ -365,11 +365,11 @@ define i32 @nested_xor_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    veor q0, q0, q1
 ; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    vmov r12, lr, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    eor.w r12, r12, lr
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vmov r12, lr, d0
 ; CHECK-NEXT:    eors r2, r3
-; CHECK-NEXT:    eor.w r2, r2, r12
+; CHECK-NEXT:    eor.w r3, r12, lr
+; CHECK-NEXT:    eors r2, r3
 ; CHECK-NEXT:    eors r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
   %r1 = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %a)

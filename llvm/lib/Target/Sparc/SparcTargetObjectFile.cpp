@@ -15,9 +15,10 @@
 
 using namespace llvm;
 
-void SparcELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                          const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void SparcELFTargetObjectFile::initialize(MCContext &Ctx,
+                                          const TargetMachine &TM,
+                                          const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 }
 
 const MCExpr *SparcELFTargetObjectFile::getTTypeGlobalReference(
@@ -43,4 +44,14 @@ const MCExpr *SparcELFTargetObjectFile::getTTypeGlobalReference(
 
   return TargetLoweringObjectFileELF::getTTypeGlobalReference(GV, Encoding, TM,
                                                               MMI, Streamer);
+}
+
+const MCExpr *
+SparcELFTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
+  // The DWARF location of a TLS variable is its offset within the module's TLS
+  // block, i.e. %r_tls_dtpoff32/%r_tls_dtpoff64 as emitted by GCC.
+  uint16_t Spec = TM->getTargetTriple().isArch64Bit()
+                      ? ELF::R_SPARC_TLS_DTPOFF64
+                      : ELF::R_SPARC_TLS_DTPOFF32;
+  return MCSpecifierExpr::create(Sym, Spec, getContext());
 }

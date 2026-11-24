@@ -43,6 +43,8 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  void emitStartOfAsmFile(Module &M) override;
+
   void emitInstruction(const MachineInstr *MI) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

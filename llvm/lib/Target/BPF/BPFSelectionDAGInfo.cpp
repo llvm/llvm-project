@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFSelectionDAGInfo.h"
-#include "BPFTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 
 #define GET_SDNODE_DESC
@@ -36,8 +35,9 @@ unsigned BPFSelectionDAGInfo::getCommonMaxStoresPerMemFunc() const {
 SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
-    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    bool AlwaysInline, bool &IsTailCall, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
+  IsTailCall = false;
   Align Alignment = std::min(DstAlign, SrcAlign);
 
   // Requires the copy size to be a constant.

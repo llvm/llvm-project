@@ -30,6 +30,15 @@ def _cc_library_wrapper_impl(ctx):
                 defines = depset(ctx.attr.defines),
             ),
         ))
+    if ctx.attr.linkopts:
+        all_cc_infos.append(CcInfo(
+            linking_context = cc_common.create_linking_context(
+                linker_inputs = depset([cc_common.create_linker_input(
+                    owner = ctx.label,
+                    user_link_flags = depset(ctx.attr.linkopts),
+                )]),
+            ),
+        ))
 
     return cc_common.merge_cc_infos(direct_cc_infos = all_cc_infos)
 
@@ -42,6 +51,10 @@ cc_library_wrapper = rule(
         ),
         "defines": attr.string_list(
             doc = "Additional preprocessor definitions to add to all dependent targets.",
+            default = [],
+        ),
+        "linkopts": attr.string_list(
+            doc = "Additional linker flags to add to all dependent targets.",
             default = [],
         ),
     },

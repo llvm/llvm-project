@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Attribute 'range(i8 1, 0)' applied to incompatible type!
 ; CHECK-NEXT: ptr @bit_widths_do_not_match

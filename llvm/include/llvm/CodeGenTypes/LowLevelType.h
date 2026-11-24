@@ -29,12 +29,12 @@
 #define LLVM_CODEGEN_LOWLEVELTYPE_H
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <atomic>
 #include <cassert>
 
 namespace llvm {
@@ -483,8 +483,7 @@ public:
   /// \p Factor elements.
   LLT multiplyElements(int Factor) const {
     if (isVector()) {
-      return scalarOrVector(getElementCount().multiplyCoefficientBy(Factor),
-                            getElementType());
+      return scalarOrVector(getElementCount() * Factor, getElementType());
     }
 
     return fixed_vector(Factor, *this);
@@ -538,6 +537,9 @@ public:
 #endif
 
   bool operator==(const LLT &RHS) const {
+    if (Info == RHS.Info && RawData == RHS.RawData)
+      return true;
+
     if (isAnyScalar() || RHS.isAnyScalar())
       return isScalar() == RHS.isScalar() &&
              getScalarSizeInBits() == RHS.getScalarSizeInBits();
@@ -546,12 +548,11 @@ public:
       return getElementType() == RHS.getElementType() &&
              getElementCount() == RHS.getElementCount();
 
-    return Info == RHS.Info && RawData == RHS.RawData;
+    return false;
   }
 
   bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
 
-  friend struct DenseMapInfo<LLT>;
   friend class GISelInstProfileBuilder;
 
 private:
@@ -704,25 +705,26 @@ public:
     return ((uint64_t)RawData) | ((uint64_t)Info) << 60;
   }
 
-  static bool getUseExtended() { return ExtendedLLT; }
-  static void setUseExtended(bool Enable) { ExtendedLLT = Enable; }
+  static bool getUseExtended() {
+    return ExtendedLLT.load(std::memory_order_relaxed);
+  }
+  static void setUseExtended(bool Enable) {
+    ExtendedLLT.store(Enable, std::memory_order_relaxed);
+  }
 
 private:
-  LLVM_ABI static bool ExtendedLLT;
+  // Enabled during target construction, which may run concurrently. Relaxed
+  // ordering suffices because the flag publishes no other state.
+  //
+  // FIXME: Scope this per target rather than globally:
+  // https://github.com/llvm/llvm-project/issues/219517.
+  LLVM_ABI static std::atomic<bool> ExtendedLLT;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
   Ty.print(OS);
   return OS;
 }
-
-template <> struct DenseMapInfo<LLT> {
-  static inline unsigned getHashValue(const LLT &Ty) {
-    uint64_t Val = Ty.getUniqueRAWLLTData();
-    return DenseMapInfo<uint64_t>::getHashValue(Val);
-  }
-  static bool isEqual(const LLT &LHS, const LLT &RHS) { return LHS == RHS; }
-};
 
 } // namespace llvm
 

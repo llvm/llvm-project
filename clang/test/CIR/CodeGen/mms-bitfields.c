@@ -3,16 +3,15 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fms-layout-compatibility=microsoft -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fms-layout-compatibility=microsoft -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
 struct s1 {
   int       f32 : 2;
   long long f64 : 30;
 } s1;
 
-// CIR-DAG: !rec_s1 = !cir.struct<"s1" {bitfield !s32i, bitfield !s64i}>
+// CIR-DAG: !rec_s1 = !cir.struct<"s1" {bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 2>]>, bitfield !cir.bitfield<!s64i, [#cir.bitfield_decl<!s64i, 30>]>}>
 // LLVM-DAG: %struct.s1 = type { i32, i64 }
-// OGCG-DAG: %struct.s1 = type { i32, i64 }
 
 struct s2 {
     int a : 24;
@@ -20,9 +19,8 @@ struct s2 {
     int c : 30;
 } Clip;
 
-// CIR-DAG: !rec_s2 = !cir.struct<"s2" {bitfield !s32i, data !s8i, bitfield !s32i}>
+// CIR-DAG: !rec_s2 = !cir.struct<"s2" {bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 24>]>, data !s8i, bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 30>]>}>
 // LLVM-DAG: %struct.s2 = type { i32, i8, i32 }
-// OGCG-DAG: %struct.s2 = type { i32, i8, i32 }
 
 struct s3 {
     int a : 18;
@@ -30,9 +28,8 @@ struct s3 {
     int c : 14;
 } zero_bit;
 
-// CIR-DAG:  !rec_s3 = !cir.struct<"s3" {bitfield !s32i, bitfield !cir.array<!s32i x 0>, bitfield !s32i}>
-// LLVM-DAG: %struct.s3 = type { i32, [0 x i8], i32 }
-// OGCG-DAG: %struct.s3 = type { i32, i32 }
+// CIR-DAG:  !rec_s3 = !cir.struct<"s3" {bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 18>]>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 14>]>}>
+// LLVM-DAG: %struct.s3 = type { i32, i32 }
 
 #pragma pack (push,1)
 
@@ -45,9 +42,8 @@ struct Inner {
 
 #pragma pack (pop)
 
-// CIR-DAG: !rec_Inner = !cir.struct<"Inner" {bitfield !u32i, bitfield !u32i}>
+// CIR-DAG: !rec_Inner = !cir.struct<"Inner" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!u32i, 1>, #cir.bitfield_decl<!u32i, 1>, #cir.bitfield_decl<!u32i, 1>]>, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!u32i, 30>]>}>
 // LLVM-DAG: %struct.Inner = type { i32, i32 }
-// OGCG-DAG: %struct.Inner = type { i32, i32 }
 
 #pragma pack(push, 1)
 
@@ -67,9 +63,7 @@ union HEADER {
 
 #pragma pack(pop)
 
-// CIR-DAG: !rec_A = !cir.struct<"A" {bitfield !s32i, bitfield !s32i, bitfield !s32i}>
+// CIR-DAG: !rec_A = !cir.struct<"A" {bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 3, unnamed>, #cir.bitfield_decl<!s32i, 9>, #cir.bitfield_decl<!s32i, 12, unnamed>]>, bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 17>, #cir.bitfield_decl<!s32i, 7, unnamed>, #cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 4, unnamed>]>, bitfield !cir.bitfield<!s32i, [#cir.bitfield_decl<!s32i, 3>, #cir.bitfield_decl<!s32i, 5, unnamed>]>}>
 // CIR-DAG: !rec_HEADER = !cir.union<"HEADER" {data !rec_A}>
 // LLVM-DAG: %struct.A = type { i32, i32, i32 }
 // LLVM-DAG: %union.HEADER = type { %struct.A }
-// OGCG-DAG: %struct.A = type { i32, i32, i32 }
-// OGCG-DAG: %union.HEADER = type { %struct.A }

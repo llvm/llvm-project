@@ -23,7 +23,7 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin %s 2>&1 | FileCheck %s --check-prefix=OPENMP-NVPTX
 // OPENMP-NVPTX: clang-linker-wrapper{{.*}}"--device-linker=nvptx64-nvidia-cuda=-lc"
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx908 \
-// RUN:     --offload-new-driver --rocm-path=%S/Inputs/rocm --sysroot=%S/Inputs/basic_gpu_tree \
+// RUN:     --rocm-path=%S/Inputs/rocm --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin -x hip %s 2>&1 | FileCheck %s --check-prefix=HIP
 // HIP-NOT: "--device-linker=amdgcn-amd-amdhsa=-lc"
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fgpu-rdc --offload-arch=sm_52 \

@@ -20,7 +20,6 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -1565,6 +1564,7 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
     S = Parser.getTok().getLoc();
 
     int64_t IntVal;
+    bool RParenConsumed = false;
     switch (getLexer().getKind()) {
     case AsmToken::Percent: {
       if (!matchRegisterName(IntVal))
@@ -1577,12 +1577,18 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
         return Error(S, "invalid register number");
       break;
     case AsmToken::Identifier:
+      if (getParser().parseParenExpression(EVal, E))
+        return Error(S, "identifier does not expand to register number");
+      if (!EVal->evaluateAsAbsolute(IntVal) || IntVal < 0 || IntVal > 31)
+        return Error(S, "identifier expands to invalid register number");
+      RParenConsumed = true;
+      break;
     default:
       return Error(S, "invalid memory operand");
     }
 
     E = Parser.getTok().getLoc();
-    if (parseToken(AsmToken::RParen, "missing ')'"))
+    if (!RParenConsumed && parseToken(AsmToken::RParen, "missing ')'"))
       return true;
     Operands.push_back(PPCOperand::CreateImm(
         IntVal, S, E, isPPC64(), getContext(), /*IsMemOpBase=*/true));

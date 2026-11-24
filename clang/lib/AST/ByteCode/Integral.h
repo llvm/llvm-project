@@ -22,8 +22,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Block.h"
 #include "Descriptor.h"
-#include "InterpBlock.h"
 #include "Primitives.h"
 
 namespace clang {
@@ -281,6 +281,11 @@ public:
       return llvm::countl_zero<typename AsUnsigned::ReprT>(
           static_cast<typename AsUnsigned::ReprT>(V));
     llvm_unreachable("Don't call countLeadingZeros() on negative values.");
+  }
+
+  unsigned getActiveBits() const {
+    assert(isNumber());
+    return Bits - countLeadingZeros();
   }
 
   Integral truncate(unsigned TruncBits) const {

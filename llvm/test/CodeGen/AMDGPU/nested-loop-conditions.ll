@@ -13,36 +13,34 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    s_and_b64 s[2:3], exec, -1
+; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
-; GCN-NEXT:    s_and_b64 s[0:1], exec, 0
-; GCN-NEXT:    s_branch .LBB0_2
-; GCN-NEXT:  .LBB0_1: ; %Flow
-; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
-; GCN-NEXT:    s_cbranch_vccz .LBB0_4
-; GCN-NEXT:  .LBB0_2: ; %bb5
+; GCN-NEXT:    s_mov_b64 s[0:1], -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
+; GCN-NEXT:  .LBB0_1: ; %bb5
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_mov_b64 s[4:5], -1
-; GCN-NEXT:    s_mov_b64 vcc, s[2:3]
+; GCN-NEXT:    s_cmp_eq_u32 s2, 1
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_4
+; GCN-NEXT:  ; %bb.2: ; %bb10
+; GCN-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; GCN-NEXT:    ; implicit-def: $sgpr2
+; GCN-NEXT:    s_mov_b64 vcc, vcc
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_1
-; GCN-NEXT:  ; %bb.3: ; %bb10
-; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    s_branch .LBB0_1
+; GCN-NEXT:  ; %bb.3:
+; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:  .LBB0_4: ; %loop.exit.guard
-; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_7
 ; GCN-NEXT:  ; %bb.5: ; %bb8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_b32 v0, v0
-; GCN-NEXT:    s_and_b64 vcc, exec, 0
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB0_6: ; %bb9
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
-; GCN-NEXT:    s_cbranch_vccz .LBB0_6
+; GCN-NEXT:    s_cbranch_vccnz .LBB0_6
 ; GCN-NEXT:  .LBB0_7: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
 ; IR-LABEL: define amdgpu_kernel void @reduced_nested_loop_conditions(
@@ -93,7 +91,6 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; IR:       [[BB23]]:
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP6]])
 ; IR-NEXT:    ret void
-;
 bb:
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %my.tmp1 = getelementptr inbounds i64, ptr addrspace(3) %arg, i32 %my.tmp
@@ -152,39 +149,31 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 8, v0
-; GCN-NEXT:    s_cbranch_vccnz .LBB1_6
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_5
 ; GCN-NEXT:  ; %bb.1: ; %bb14.lr.ph
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GCN-NEXT:    s_branch .LBB1_3
-; GCN-NEXT:  .LBB1_2: ; %Flow
-; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
-; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b64 vcc, vcc
-; GCN-NEXT:    s_cbranch_vccnz .LBB1_6
-; GCN-NEXT:  .LBB1_3: ; %bb14
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GCN-NEXT:  .LBB1_2: ; %bb14
 ; GCN-NEXT:    ; =>This Loop Header: Depth=1
-; GCN-NEXT:    ; Child Loop BB1_4 Depth 2
+; GCN-NEXT:    ; Child Loop BB1_3 Depth 2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s4, 1
-; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
-; GCN-NEXT:  .LBB1_4: ; %bb18
-; GCN-NEXT:    ; Parent Loop BB1_3 Depth=1
+; GCN-NEXT:    s_cmp_lg_u32 s0, 1
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_5
+; GCN-NEXT:  .LBB1_3: ; %bb18
+; GCN-NEXT:    ; Parent Loop BB1_2 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 8, v0
-; GCN-NEXT:    s_cbranch_vccnz .LBB1_4
-; GCN-NEXT:  ; %bb.5: ; %bb21
-; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_3
+; GCN-NEXT:  ; %bb.4: ; %bb21
+; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_lt_i32_e64 s[0:1], 8, v0
-; GCN-NEXT:    s_branch .LBB1_2
-; GCN-NEXT:  .LBB1_6: ; %bb31
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 9, v0
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_2
+; GCN-NEXT:  .LBB1_5: ; %bb31
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -278,7 +267,6 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
 ; IR-NEXT:    store volatile i32 0, ptr addrspace(1) poison, align 4
 ; IR-NEXT:    ret void
-;
 bb:
   %my.tmp1134 = load volatile i32, ptr addrspace(1) poison
   %my.tmp1235 = icmp slt i32 %my.tmp1134, 9
@@ -320,7 +308,7 @@ bb21:                                             ; preds = %bb18
   %my.tmp24 = select i1 false, i32 0, i32 %my.tmp23
   %my.tmp25 = uitofp i32 %my.tmp24 to float
   %my.tmp26 = fmul float %my.tmp25, 0x3EF0001000000000
-  %my.tmp27 = fsub float %my.tmp26, 0x7FF8000000000000
+  %my.tmp27 = fsub float %my.tmp26, +qnan
   %my.tmp28 = fcmp olt float %my.tmp27, 5.000000e-01
   %my.tmp29 = select i1 %my.tmp28, i64 1, i64 2
   %my.tmp30 = extractelement <4 x i32> %my.tmp936, i64 %my.tmp29

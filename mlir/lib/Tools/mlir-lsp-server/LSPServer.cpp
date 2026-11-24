@@ -32,7 +32,6 @@ using llvm::lsp::Hover;
 using llvm::lsp::InitializedParams;
 using llvm::lsp::InitializeParams;
 using llvm::lsp::JSONTransport;
-using llvm::lsp::Location;
 using llvm::lsp::Logger;
 using llvm::lsp::MessageHandler;
 using llvm::lsp::MLIRConvertBytecodeParams;
@@ -72,9 +71,9 @@ struct LSPServer {
   // Definitions and References
 
   void onGoToDefinition(const TextDocumentPositionParams &params,
-                        Callback<std::vector<Location>> reply);
+                        Callback<std::vector<llvm::lsp::Location>> reply);
   void onReference(const ReferenceParams &params,
-                   Callback<std::vector<Location>> reply);
+                   Callback<std::vector<llvm::lsp::Location>> reply);
 
   //===--------------------------------------------------------------------===//
   // Hover
@@ -240,16 +239,17 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 // Definitions and References
 //===----------------------------------------------------------------------===//
 
-void LSPServer::onGoToDefinition(const TextDocumentPositionParams &params,
-                                 Callback<std::vector<Location>> reply) {
-  std::vector<Location> locations;
+void LSPServer::onGoToDefinition(
+    const TextDocumentPositionParams &params,
+    Callback<std::vector<llvm::lsp::Location>> reply) {
+  std::vector<llvm::lsp::Location> locations;
   server.getLocationsOf(params.textDocument.uri, params.position, locations);
   reply(std::move(locations));
 }
 
 void LSPServer::onReference(const ReferenceParams &params,
-                            Callback<std::vector<Location>> reply) {
-  std::vector<Location> locations;
+                            Callback<std::vector<llvm::lsp::Location>> reply) {
+  std::vector<llvm::lsp::Location> locations;
   server.findReferencesOf(params.textDocument.uri, params.position, locations);
   reply(std::move(locations));
 }

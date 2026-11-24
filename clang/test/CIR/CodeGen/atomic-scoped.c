@@ -119,6 +119,19 @@ void scoped_atomic_exchange_n(int *ptr, int value) {
   // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
 }
 
+void scoped_atomic_exchange_n_volatile(volatile int *ptr, int value) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_exchange_n_volatile
+  // CIR-LABEL: @scoped_atomic_exchange_n_volatile
+  // LLVM-LABEL: @scoped_atomic_exchange_n_volatile
+  // OGCG-LABEL: @scoped_atomic_exchange_n_volatile
+
+  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) volatile %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) volatile %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // LLVM: %{{.+}} = atomicrmw volatile xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw volatile xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+}
+
 void scoped_atomic_cmpxchg(int *ptr, int *expected, int *desired) {
   // CIR-BEFORE-TL-LABEL: @scoped_atomic_cmpxchg
   // CIR-LABEL: @scoped_atomic_cmpxchg

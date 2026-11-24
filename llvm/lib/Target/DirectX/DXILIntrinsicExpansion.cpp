@@ -10,7 +10,6 @@
 //  opcodes in DirectX Intermediate Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -220,14 +219,12 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log10:
   case Intrinsic::pow:
   case Intrinsic::powi:
-  case Intrinsic::dx_all:
-  case Intrinsic::dx_any:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
+  case Intrinsic::dx_isfinite:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
-  case Intrinsic::dx_normalize:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
@@ -241,6 +238,13 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_load_input:
   case Intrinsic::dx_store_output:
     return true;
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+    return F.getParent()->getTargetTriple().getDXILVersion() <
+           VersionTuple(1, 9);
+  case Intrinsic::dx_quad_all:
+    return F.getParent()->getTargetTriple().getDXILVersion() <
+           VersionTuple(1, 7);
   case Intrinsic::dx_fdot:
     return shouldExpandFloatDotIntrinsic(F);
   case Intrinsic::dx_resource_load_rawbuffer:
@@ -396,6 +400,23 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   }
 
   return Sum;
+}
+
+static Value *expandVecReduceAndOr(CallInst *Orig, Intrinsic::ID IntrinsicId) {
+  assert(IntrinsicId == Intrinsic::vector_reduce_and ||
+         IntrinsicId == Intrinsic::vector_reduce_or);
+
+  IRBuilder<> Builder(Orig);
+  Value *X = Orig->getArgOperand(0);
+  auto *XVec = cast<FixedVectorType>(X->getType());
+  Value *Result = Builder.CreateExtractElement(X, static_cast<uint64_t>(0));
+  for (unsigned I = 1; I < XVec->getNumElements(); ++I) {
+    Value *Elt = Builder.CreateExtractElement(X, I);
+    Result = IntrinsicId == Intrinsic::vector_reduce_or
+                 ? Builder.CreateOr(Result, Elt)
+                 : Builder.CreateAnd(Result, Elt);
+  }
+  return Result;
 }
 
 static Value *expandAbs(CallInst *Orig) {
@@ -578,9 +599,8 @@ static Value *expandIsFPClass(CallInst *Orig) {
   Value *FBitCast = Builder.CreateBitCast(F, BitCastTy);
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcNegZero: {
-    Value *NegZero =
-        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1),
-                         /*IsSigned=*/true);
+    Value *NegZero = ConstantInt::get(Builder.getIntNTy(BitWidth),
+                                      APInt::getSignMask(BitWidth));
     Value *RetVal;
     if (FNumElem) {
       Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
@@ -593,47 +613,6 @@ static Value *expandIsFPClass(CallInst *Orig) {
   default:
     reportFatalUsageError("Unsupported FPClassTest");
   }
-}
-
-static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
-                                      Intrinsic::ID IntrinsicId) {
-  Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig);
-  Type *Ty = X->getType();
-  Type *EltTy = Ty->getScalarType();
-
-  auto ApplyOp = [&Builder](Intrinsic::ID IntrinsicId, Value *Result,
-                            Value *Elt) {
-    if (IntrinsicId == Intrinsic::dx_any)
-      return Builder.CreateOr(Result, Elt);
-    assert(IntrinsicId == Intrinsic::dx_all);
-    return Builder.CreateAnd(Result, Elt);
-  };
-
-  Value *Result = nullptr;
-  if (!Ty->isVectorTy()) {
-    Result = EltTy->isFloatingPointTy()
-                 ? Builder.CreateFCmpUNE(X, ConstantFP::get(EltTy, 0))
-                 : Builder.CreateICmpNE(X, ConstantInt::get(EltTy, 0));
-  } else {
-    auto *XVec = dyn_cast<FixedVectorType>(Ty);
-    Value *Cond =
-        EltTy->isFloatingPointTy()
-            ? Builder.CreateFCmpUNE(
-                  X, ConstantVector::getSplat(
-                         ElementCount::getFixed(XVec->getNumElements()),
-                         ConstantFP::get(EltTy, 0)))
-            : Builder.CreateICmpNE(
-                  X, ConstantVector::getSplat(
-                         ElementCount::getFixed(XVec->getNumElements()),
-                         ConstantInt::get(EltTy, 0)));
-    Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
-    for (unsigned I = 1; I < XVec->getNumElements(); I++) {
-      Value *Elt = Builder.CreateExtractElement(Cond, I);
-      Result = ApplyOp(IntrinsicId, Result, Elt);
-    }
-  }
-  return Result;
 }
 
 static Value *expandLogIntrinsic(CallInst *Orig,
@@ -656,43 +635,6 @@ static Value *expandLogIntrinsic(CallInst *Orig,
 }
 static Value *expandLog10Intrinsic(CallInst *Orig) {
   return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
-}
-
-// Use dot product of vector operand with itself to calculate the length.
-// Divide the vector by that length to normalize it.
-static Value *expandNormalizeIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  Type *Ty = Orig->getType();
-  Type *EltTy = Ty->getScalarType();
-  IRBuilder<> Builder(Orig);
-
-  auto *XVec = dyn_cast<FixedVectorType>(Ty);
-  if (!XVec) {
-    if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
-      const APFloat &fpVal = constantFP->getValueAPF();
-      if (fpVal.isZero())
-        reportFatalUsageError("Invalid input scalar: length is zero");
-    }
-    return Builder.CreateFDiv(X, X);
-  }
-
-  Value *DotProduct = expandFloatDotChunk(Orig, X, X);
-
-  // verify that the length is non-zero
-  // (if the dot product is non-zero, then the length is non-zero)
-  if (auto *constantFP = dyn_cast<ConstantFP>(DotProduct)) {
-    const APFloat &fpVal = constantFP->getValueAPF();
-    if (fpVal.isZero())
-      reportFatalUsageError("Invalid input vector: length is zero");
-  }
-
-  Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
-                                                ArrayRef<Value *>{DotProduct},
-                                                nullptr, "dx.rsqrt");
-
-  Value *MultiplicandVec =
-      Builder.CreateVectorSplat(XVec->getNumElements(), Multiplicand);
-  return Builder.CreateFMul(X, MultiplicandVec);
 }
 
 static Value *expandAtan2Intrinsic(CallInst *Orig) {
@@ -752,8 +694,7 @@ static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
 
   IRBuilder<> Builder(Orig);
 
-  unsigned BitWidth = Ty->getScalarSizeInBits();
-  assert(llvm::isPowerOf2_32(BitWidth) &&
+  assert(llvm::isPowerOf2_32(Ty->getScalarSizeInBits()) &&
          "Can't use Mask to compute modulo and inverse");
 
   // Note: if (Shift % BitWidth) == 0 then (BitWidth - Shift) == BitWidth,
@@ -852,7 +793,11 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
     if (IsRaw) {
       LoadIntrinsic = Intrinsic::dx_resource_load_rawbuffer;
       Value *Tmp = Builder.getInt32(4 * Base * 2);
-      Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
+      Value *Offset = Orig->getOperand(2);
+      Args.push_back(Offset);
+      unsigned AddressArg = isa<PoisonValue>(Offset) ? 1 : 2;
+      if (Base != 0)
+        Args[AddressArg] = Builder.CreateAdd(Args[AddressArg], Tmp);
     }
 
     Value *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
@@ -1008,7 +953,11 @@ static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
     if (IsRaw) {
       StoreIntrinsic = Intrinsic::dx_resource_store_rawbuffer;
       Value *Tmp = Builder.getInt32(4 * Base);
-      Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
+      Value *Offset = Orig->getOperand(2);
+      Args.push_back(Offset);
+      unsigned AddressArg = isa<PoisonValue>(Offset) ? 1 : 2;
+      if (Base != 0)
+        Args[AddressArg] = Builder.CreateAdd(Args[AddressArg], Tmp);
     }
 
     SmallVector<int, 4> Mask;
@@ -1315,6 +1264,24 @@ static Value *expandLoadInput(CallInst *Orig) {
   return Vec;
 }
 
+static Value *expandQuadAll(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+  SmallVector<OperandBundleDef, 1> Bundles;
+  Orig->getOperandBundlesAsDefs(Bundles);
+
+  Value *Cond =
+      Builder.CreateSExt(Orig->getArgOperand(0), Builder.getInt32Ty());
+  Value *Result = Cond;
+  for (Intrinsic::ID ID :
+       {Intrinsic::dx_quad_read_across_x, Intrinsic::dx_quad_read_across_y,
+        Intrinsic::dx_quad_read_across_diagonal}) {
+    Value *QuadValue = Builder.CreateIntrinsic(ID, {Builder.getInt32Ty()}, Cond,
+                                               nullptr, "", Bundles);
+    Result = Builder.CreateAnd(Result, QuadValue);
+  }
+  return Builder.CreateTrunc(Result, Builder.getInt1Ty());
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
   Intrinsic::ID IntrinsicId = F.getIntrinsicID();
@@ -1353,23 +1320,23 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::powi:
     Result = expandPowIntrinsic(Orig, IntrinsicId);
     break;
-  case Intrinsic::dx_all:
-  case Intrinsic::dx_any:
-    Result = expandAnyOrAllIntrinsic(Orig, IntrinsicId);
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+    Result = expandVecReduceAndOr(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
+  case Intrinsic::dx_isfinite:
+    Result = expand16BitIsFinite(Orig);
+    break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);
     break;
   case Intrinsic::dx_isnan:
     Result = expand16BitIsNaN(Orig);
-    break;
-  case Intrinsic::dx_normalize:
-    Result = expandNormalizeIntrinsic(Orig);
     break;
   case Intrinsic::dx_fdot:
     Result = expandFloatDotIntrinsic(Orig);
@@ -1380,6 +1347,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_sign:
     Result = expandSignIntrinsic(Orig);
+    break;
+  case Intrinsic::dx_quad_all:
+    Result = expandQuadAll(Orig);
     break;
   case Intrinsic::dx_load_input:
     Result = expandLoadInput(Orig);
@@ -1448,8 +1418,8 @@ static bool expansionIntrinsics(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
-                                              ModuleAnalysisManager &) {
+PreservedAnalyses DXILIntrinsicExpansionPass::run(Module &M,
+                                                  ModuleAnalysisManager &) {
   if (expansionIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

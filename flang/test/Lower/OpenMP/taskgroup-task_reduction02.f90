@@ -15,9 +15,9 @@
 !CHECK-LABEL:  func.func @_QPin_reduction() {
 !                [...]
 !CHECK:          omp.taskgroup task_reduction(@[[RED_I32_NAME]] %[[VAL_1:.*]]#0 -> %[[VAL_3:.*]] : !fir.ref<i32>) {
-!CHECK:             %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFin_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:             %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFin_reductionEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:             omp.task in_reduction(@[[RED_I32_NAME]] %[[VAL_4]]#0 -> %[[VAL_5:.*]] : !fir.ref<i32>) {
-!CHECK:               %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFin_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:               %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFin_reductionEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !                     [...]
 !CHECK:               omp.terminator
 !CHECK:             }

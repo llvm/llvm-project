@@ -98,24 +98,136 @@ fb:
   ret void
 }
 
+; Scopes of a domain with disjoint scopes have to be cloned into a clone of
+; that domain: the copies of a duplicated access are in the same memory region,
+; so they must not become implicitly noalias with each other.
+define void @clone_disjoint_domain(ptr %p) {
+; CHECK-LABEL: @clone_disjoint_domain(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = call i1 @opaque()
+; CHECK-NEXT:    br i1 [[C]], label [[PRED:%.*]], label [[BB:%.*]]
+; CHECK:       pred:
+; CHECK-NEXT:    [[PV:%.*]] = call i1 @opaque()
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META9:![0-9]+]])
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META12:![0-9]+]])
+; CHECK-NEXT:    store i8 0, ptr [[P:%.*]], align 1, !alias.scope [[META9]]
+; CHECK-NEXT:    store i8 1, ptr [[P]], align 1, !alias.scope [[META12]]
+; CHECK-NEXT:    br i1 [[PV]], label [[TB:%.*]], label [[FB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[OV:%.*]] = call i1 @opaque()
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META14:![0-9]+]])
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META17:![0-9]+]])
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !alias.scope [[META14]]
+; CHECK-NEXT:    store i8 1, ptr [[P]], align 1, !alias.scope [[META17]]
+; CHECK-NEXT:    br i1 [[OV]], label [[TB]], label [[FB]]
+; CHECK:       tb:
+; CHECK-NEXT:    ret void
+; CHECK:       fb:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c = call i1 @opaque()
+  br i1 %c, label %pred, label %other
+
+pred:
+  %pv = call i1 @opaque()
+  br label %bb
+
+other:
+  %ov = call i1 @opaque()
+  br label %bb
+
+bb:
+  %x = phi i1 [ %pv, %pred ], [ %ov, %other ]
+  call void @llvm.experimental.noalias.scope.decl(metadata !5)
+  call void @llvm.experimental.noalias.scope.decl(metadata !7)
+  store i8 0, ptr %p, !alias.scope !5
+  store i8 1, ptr %p, !alias.scope !7
+  br i1 %x, label %tb, label %fb
+
+tb:
+  ret void
+
+fb:
+  ret void
+}
+
+; A scope without a declaration in the duplicated block has to go into the
+; clone of its disjoint-scope domain together with the declared scopes, so that
+; the !alias.scope list of the duplicated store isn't split across two domains.
+define void @clone_disjoint_domain_undeclared_scope(ptr %p, i1 %c) {
+; CHECK-LABEL: @clone_disjoint_domain_undeclared_scope(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TB:%.*]], label [[FB:%.*]]
+; CHECK:       tb:
+; CHECK-NEXT:    store i8 1, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META19:![0-9]+]])
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !alias.scope [[META22:![0-9]+]]
+; CHECK-NEXT:    ret void
+; CHECK:       fb:
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META14]])
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !alias.scope [[META24:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %pred, label %bb
+
+pred:
+  store i8 1, ptr %p
+  br label %bb
+
+bb:
+  call void @llvm.experimental.noalias.scope.decl(metadata !5)
+  store i8 0, ptr %p, !alias.scope !10
+  br i1 %c, label %tb, label %fb
+
+tb:
+  ret void
+
+fb:
+  ret void
+}
+
 declare i1 @opaque()
 declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"scope1"}
-!2 = distinct !{!2, !"domain"}
+!2 = distinct !{!2, i1 false, !"domain"}
 !3 = !{!4}
 !4 = distinct !{!4, !2, !"scope2"}
+!5 = !{!6}
+!6 = distinct !{!6, !8, !"disjoint scope1"}
+!7 = !{!9}
+!8 = distinct !{!8, i1 true, !"disjoint domain"}
+!9 = distinct !{!9, !8, !"disjoint scope2"}
+!10 = !{!6, !9}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"scope1"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"domain"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"domain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]], !"scope2"}
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META2]], !"scope2:thread"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META2]], !"scope1:thread"}
+; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
+; CHECK: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]], !"disjoint scope1:thread"}
+; CHECK: [[META11]] = distinct !{[[META11]], i1 true, !"disjoint domain"}
+; CHECK: [[META12]] = !{[[META13:![0-9]+]]}
+; CHECK: [[META13]] = distinct !{[[META13]], [[META11]], !"disjoint scope2:thread"}
+; CHECK: [[META14]] = !{[[META15:![0-9]+]]}
+; CHECK: [[META15]] = distinct !{[[META15]], [[META16:![0-9]+]], !"disjoint scope1"}
+; CHECK: [[META16]] = distinct !{[[META16]], i1 true, !"disjoint domain"}
+; CHECK: [[META17]] = !{[[META18:![0-9]+]]}
+; CHECK: [[META18]] = distinct !{[[META18]], [[META16]], !"disjoint scope2"}
+; CHECK: [[META19]] = !{[[META20:![0-9]+]]}
+; CHECK: [[META20]] = distinct !{[[META20]], [[META21:![0-9]+]], !"disjoint scope1:thread"}
+; CHECK: [[META21]] = distinct !{[[META21]], i1 true, !"disjoint domain"}
+; CHECK: [[META22]] = !{[[META20]], [[META23:![0-9]+]]}
+; CHECK: [[META23]] = distinct !{[[META23]], [[META21]], !"disjoint scope2:thread"}
+; CHECK: [[META24]] = !{[[META15]], [[META18]]}
 ;.

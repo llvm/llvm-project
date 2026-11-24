@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -398,7 +397,7 @@ TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
 }
 
 // Make sure that the references to implicit operator new/delete are reported as
-// ambigious.
+// ambiguous.
 TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotMissing) {
   ExtraFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   ExtraFS->addFile("header.h",
@@ -706,5 +705,83 @@ TEST_F(WalkUsedTest, MacroConcat) {
       AllOf(Contains(Pair(Code.point("bar"), UnorderedElementsAre(Header))),
             Contains(Pair(Code.point("xyz"), UnorderedElementsAre(Header)))));
 }
+
+TEST(FixIncludes, MainHeaderGrouping) {
+  AnalysisResults Results;
+  Results.Missing.push_back({"\"b.h\"", Header("\"b.h\"")});
+  Results.Missing.push_back({"\"foo.h\"", Header("\"foo.h\"")});
+  Results.Missing.push_back({"<vector>", Header("<vector>")});
+  Results.Missing.push_back({"\"a.h\"", Header("\"a.h\"")});
+
+  format::FormatStyle Style = format::getLLVMStyle();
+  Style.Language = format::FormatStyle::LK_Cpp;
+
+  std::string Code = R"cpp(
+void test();
+)cpp";
+
+  std::string Fixed = fixIncludes(Results, "foo.cc", Code, Style);
+  EXPECT_EQ(Fixed, "\n#include \"foo.h\"\n#include \"a.h\"\n#include "
+                   "\"b.h\"\n#include <vector>\nvoid test();\n");
+}
+
+TEST(FixIncludes, MultipleInsertionsAndDeletions) {
+  AnalysisResults Results;
+  Include UnusedInc;
+  UnusedInc.Spelled = "unused.h";
+  UnusedInc.Line = 1;
+  Results.Unused.push_back(&UnusedInc);
+
+  Results.Missing.push_back({"\"a.h\"", Header("\"a.h\"")});
+  Results.Missing.push_back({"<foo>", Header("<foo>")});
+
+  format::FormatStyle Style = format::getLLVMStyle();
+  Style.Language = format::FormatStyle::LK_Cpp;
+
+  std::string Code = R"cpp(#include "unused.h"
+
+void test();
+)cpp";
+
+  std::string Fixed = fixIncludes(Results, "test.cc", Code, Style);
+  EXPECT_EQ(Fixed, R"cpp(#include "a.h"
+#include <foo>
+
+void test();
+)cpp");
+}
+
+TEST(FixIncludes, MultipleInsertionsSameOffset) {
+  AnalysisResults Results;
+  Results.Missing.emplace_back("\"a.h\"", Header(""));
+  Results.Missing.emplace_back("\"b.h\"", Header(""));
+
+  // Empty code guarantees HeaderIncludes chooses offset 0 for both.
+  llvm::StringRef Code = "";
+
+  // Should concatenate them without conflict errors in Replacements::add
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
+            "#include \"a.h\"\n#include \"b.h\"\n");
+}
+
+TEST(FixIncludes, MissingIncludesSortingAndGrouping) {
+  AnalysisResults Results;
+  Results.Missing.push_back({"\"b.h\"", Header("\"b.h\"")});
+  Results.Missing.push_back({"\"a.h\"", Header("\"a.h\"")});
+  Results.Missing.push_back({"<foo>", Header("<foo>")});
+
+  format::FormatStyle Style = format::getLLVMStyle();
+  Style.Language = format::FormatStyle::LK_Cpp;
+
+  std::string Code = R"cpp(
+void bar();
+)cpp";
+
+  std::string Fixed = fixIncludes(Results, "test.cc", Code, Style);
+  EXPECT_EQ(
+      Fixed,
+      "\n#include \"a.h\"\n#include \"b.h\"\n#include <foo>\nvoid bar();\n");
+}
+
 } // namespace
 } // namespace clang::include_cleaner

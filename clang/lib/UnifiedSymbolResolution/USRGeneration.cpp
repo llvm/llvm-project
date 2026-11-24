@@ -228,7 +228,7 @@ bool USRGenerator::ShouldGenerateLocation(const NamedDecl *D) {
 void USRGenerator::VisitDeclContext(const DeclContext *DC) {
   if (const NamedDecl *D = dyn_cast<NamedDecl>(DC))
     Visit(D);
-  else if (isa<LinkageSpecDecl>(DC)) // Linkage specs are transparent in USRs.
+  else if (DC->isTransparentContext()) // e.g. linkage specs and exports.
     VisitDeclContext(DC->getParent());
 }
 
@@ -806,6 +806,9 @@ void USRGenerator::VisitType(QualType T) {
       case BuiltinType::NullPtr:
         Out << 'n';
         break;
+      case BuiltinType::MetaInfo:
+        Out << "@BT@MetaInfo";
+        break;
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << #Suffix << "_" << #ImgType;                               \
@@ -858,6 +861,11 @@ void USRGenerator::VisitType(QualType T) {
     Out << "@BT@" << #Name;                                                    \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << #Name;                                                    \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << Name;                                                     \

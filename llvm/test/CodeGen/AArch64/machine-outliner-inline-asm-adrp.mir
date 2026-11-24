@@ -1,4 +1,4 @@
-# RUN: llc -simplify-mir -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -simplify-mir -run-pass=machine-outliner %s -o - | FileCheck %s
 # CHECK-NOT: OUTLINED_FUNCTION
 --- |
   target triple = "arm64----"
@@ -23,7 +23,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
     liveins: $x27, $lr
@@ -35,7 +34,6 @@ body:             |
 ---
 name:            foo2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
     liveins: $x27, $lr
@@ -47,7 +45,6 @@ body:             |
 ---
 name:            foo3
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
     liveins: $x27, $lr

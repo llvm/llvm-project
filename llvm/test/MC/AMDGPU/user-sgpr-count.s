@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgpu9.0a-amd-amdhsa --amdhsa-code-object-version=4 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgpu9.0a-amd-amdhsa --amdhsa-code-object-version=4 < %s | FileCheck --check-prefix=ASM %s
 
 .amdgcn_target "amdgpu9.0a-amd-amdhsa--gfx90a:xnack+"
 // ASM: .amdgcn_target "amdgpu9.0a-amd-amdhsa-unknown-gfx90a:xnack+"

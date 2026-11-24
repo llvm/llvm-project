@@ -8,9 +8,11 @@
 
 #include "mlir/Transforms/ViewOpGraph.h"
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "llvm/ADT/STLExtras.h"
@@ -71,7 +73,6 @@ static std::string escapeLabelString(const std::string &str) {
 using AttributeMap = std::map<std::string, std::string>;
 
 namespace {
-
 /// This struct represents a node in the DOT language. Each node has an
 /// identifier and an optional identifier for the cluster (subgraph) that
 /// contains the node.
@@ -94,31 +95,47 @@ struct DataFlowEdge {
   std::string port;
 };
 
-/// This pass generates a Graphviz dataflow visualization of an MLIR operation.
+/// Printer options for Graphviz visualization of an MLIR operation.
+struct OpGraphPrinterOptions {
+  /// Limit attribute/type length to number of chars.
+  unsigned maxLabelLen = 20;
+  /// Print attributes of operations.
+  bool printAttrs = true;
+  /// Print control flow edges.
+  bool printControlFlowEdges = false;
+  /// Print data flow edges.
+  bool printDataFlowEdges = true;
+  /// Print result types of operations.
+  bool printResultTypes = true;
+
+  /// Default options for printing a CFG region.
+  static OpGraphPrinterOptions cfgRegionDefaults() {
+    OpGraphPrinterOptions options;
+    options.printControlFlowEdges = true;
+    options.printDataFlowEdges = false;
+    return options;
+  }
+};
+
+/// Printer to emit a Graphviz dataflow visualization of an MLIR operation.
 /// Note: See https://www.graphviz.org/doc/info/lang.html for more information
 /// about the Graphviz DOT language.
-class PrintOpPass : public impl::ViewOpGraphPassBase<PrintOpPass> {
+class OpGraphPrinter {
 public:
-  PrintOpPass() : os(llvm::errs()) {}
-  explicit PrintOpPass(ViewOpGraphPassOptions options)
-      : impl::ViewOpGraphPassBase<PrintOpPass>(std::move(options)),
-        os(llvm::errs()) {}
-  PrintOpPass(raw_ostream &os) : os(os) {}
-  PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}
+  OpGraphPrinter(const OpGraphPrinterOptions &options, raw_ostream &os,
+                 Operation *asmStateOp,
+                 const OpPrintingFlags &opPrintingFlags = OpPrintingFlags())
+      : opts(options), os(os), asmState(asmStateOp, opPrintingFlags) {}
 
-  void runOnOperation() override {
-    initColorMapping(*getOperation());
+  void emitOperationGraph(Operation &op) {
+    initColorMapping(op);
     emitGraph([&]() {
-      processOperation(getOperation());
+      processOperation(&op);
       emitAllEdgeStmts();
     });
-    markAllAnalysesPreserved();
   }
 
-  /// Create a CFG graph for a region. Used in `Region::viewGraph`.
-  void emitRegionCFG(Region &region) {
-    printControlFlowEdges = true;
-    printDataFlowEdges = false;
+  void emitRegionCFGGraph(Region &region) {
     initColorMapping(region);
     emitGraph([&]() { processRegion(region); });
   }
@@ -149,7 +166,7 @@ private:
   /// Emit all edges. This function should be called after all nodes have been
   /// emitted.
   void emitAllEdgeStmts() {
-    if (printDataFlowEdges) {
+    if (opts.printDataFlowEdges) {
       for (const auto &e : dataFlowEdges) {
         emitEdgeStmt(valueToNode[e.value], e.node, e.port, kLineStyleDataFlow);
       }
@@ -234,7 +251,7 @@ private:
 
   // Print a truncated and escaped MLIR operand to `os`.
   void emitMlirOperand(raw_ostream &os, Value operand) {
-    operand.printAsOperand(os, OpPrintingFlags());
+    operand.printAsOperand(os, asmState);
   }
 
   /// Append an edge to the list of edges.
@@ -292,9 +309,8 @@ private:
 
   std::string getValuePortName(Value operand) {
     // Print value as an operand and omit the leading '%' character.
-    auto str = strFromOs([&](raw_ostream &os) {
-      operand.printAsOperand(os, OpPrintingFlags());
-    });
+    auto str = strFromOs(
+        [&](raw_ostream &os) { operand.printAsOperand(os, asmState); });
     // Replace % and # with _
     llvm::replace(str, '%', '_');
     llvm::replace(str, '#', '_');
@@ -305,7 +321,7 @@ private:
     return strFromOs([&](raw_ostream &os) {
       // Print operation name and type.
       os << op->getName();
-      if (printResultTypes) {
+      if (opts.printResultTypes) {
         os << " : (";
         std::string buf;
         llvm::raw_string_ostream ss(buf);
@@ -314,7 +330,7 @@ private:
       }
 
       // Print attributes.
-      if (printAttrs) {
+      if (opts.printAttrs) {
         os << "\\l";
         NamedAttrList attrs(op->getDiscardableAttrDictionary());
         op->getName().walkInherentAttrs(
@@ -348,17 +364,19 @@ private:
       os << op->getName() << "\\l";
 
       // Print attributes.
-      NamedAttrList attrs(op->getDiscardableAttrDictionary());
-      op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
-        attrs.append(name, attr);
-      });
-      if (printAttrs && !attrs.empty()) {
-        // Extra line break to separate attributes from the operation name.
-        os << "\\l";
-        for (const NamedAttribute &attr : attrs) {
-          os << attr.getName().getValue() << ": ";
-          emitMlirAttr(os, attr.getValue());
+      if (opts.printAttrs) {
+        NamedAttrList attrs(op->getDiscardableAttrDictionary());
+        op->getName().walkInherentAttrs(
+            op,
+            [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+        if (!attrs.empty()) {
+          // Extra line break to separate attributes from the operation name.
           os << "\\l";
+          for (const NamedAttribute &attr : attrs) {
+            os << attr.getName().getValue() << ": ";
+            emitMlirAttr(os, attr.getValue());
+            os << "\\l";
+          }
         }
       }
 
@@ -367,7 +385,7 @@ private:
         auto resultToPort = [&](Value result) {
           os << "<res" << getValuePortName(result) << "> ";
           emitMlirOperand(os, result);
-          if (printResultTypes) {
+          if (opts.printResultTypes) {
             os << " ";
             emitMlirType(os, result.getType());
           }
@@ -384,8 +402,8 @@ private:
   std::string getLabel(BlockArgument arg) {
     return strFromOs([&](raw_ostream &os) {
       os << "<res" << getValuePortName(arg) << "> ";
-      arg.printAsOperand(os, OpPrintingFlags());
-      if (printResultTypes) {
+      arg.printAsOperand(os, asmState);
+      if (opts.printResultTypes) {
         os << " ";
         emitMlirType(os, arg.getType());
       }
@@ -402,7 +420,7 @@ private:
       std::optional<Node> prevNode;
       for (Operation &op : block) {
         Node nextNode = processOperation(&op);
-        if (printControlFlowEdges && prevNode)
+        if (opts.printControlFlowEdges && prevNode)
           emitEdgeStmt(*prevNode, nextNode, /*port=*/"", kLineStyleControlFlow);
         prevNode = nextNode;
       }
@@ -427,7 +445,7 @@ private:
     }
 
     // Insert data flow edges originating from each operand.
-    if (printDataFlowEdges) {
+    if (opts.printDataFlowEdges) {
       unsigned numOperands = op->getNumOperands();
       for (unsigned i = 0; i < numOperands; i++) {
         auto operand = op->getOperand(i);
@@ -449,13 +467,17 @@ private:
 
   /// Truncate long strings.
   std::string truncateString(std::string str) {
-    if (str.length() <= maxLabelLen)
+    if (str.length() <= opts.maxLabelLen)
       return str;
-    return str.substr(0, maxLabelLen) + "...";
+    return str.substr(0, opts.maxLabelLen) + "...";
   }
 
+  /// Printing configuration.
+  OpGraphPrinterOptions opts;
   /// Output stream to write DOT file to.
   raw_indented_ostream os;
+  /// Re-usable assembly printer state for efficient printing.
+  AsmState asmState;
   /// A list of edges. For simplicity, should be emitted after all nodes were
   /// emitted.
   std::vector<std::string> edges;
@@ -469,6 +491,34 @@ private:
   DenseMap<OperationName, std::pair<int, std::string>> backgroundColors;
 };
 
+/// This pass generates a Graphviz dataflow visualization of an MLIR operation.
+/// Note: See https://www.graphviz.org/doc/info/lang.html for more information
+/// about the Graphviz DOT language.
+class PrintOpPass : public impl::ViewOpGraphPassBase<PrintOpPass> {
+public:
+  PrintOpPass() : os(&llvm::errs()) {}
+  explicit PrintOpPass(ViewOpGraphPassOptions options)
+      : impl::ViewOpGraphPassBase<PrintOpPass>(std::move(options)),
+        os(&llvm::errs()) {}
+  PrintOpPass(raw_ostream &os) : os(&os) {}
+  PrintOpPass(const PrintOpPass &other)
+      : impl::ViewOpGraphPassBase<PrintOpPass>(other), os(other.os) {}
+
+  void runOnOperation() override {
+    OpGraphPrinterOptions opts;
+    opts.maxLabelLen = maxLabelLen;
+    opts.printAttrs = printAttrs;
+    opts.printControlFlowEdges = printControlFlowEdges;
+    opts.printDataFlowEdges = printDataFlowEdges;
+    opts.printResultTypes = printResultTypes;
+    OpGraphPrinter printer(opts, *os, getOperation(), OpPrintingFlags());
+    printer.emitOperationGraph(*getOperation());
+    markAllAnalysesPreserved();
+  }
+
+private:
+  raw_ostream *os;
+};
 } // namespace
 
 std::unique_ptr<Pass> mlir::createViewOpGraphPass(raw_ostream &os) {
@@ -485,8 +535,9 @@ static void llvmViewGraph(Region &region, const Twine &name) {
       llvm::errs() << "error opening file '" << filename << "' for writing\n";
       return;
     }
-    PrintOpPass pass(os);
-    pass.emitRegionCFG(region);
+    OpGraphPrinter printer(OpGraphPrinterOptions::cfgRegionDefaults(), os,
+                           region.getParentOp());
+    printer.emitRegionCFGGraph(region);
   }
   llvm::DisplayGraph(filename, /*wait=*/false, llvm::GraphProgram::DOT);
 }

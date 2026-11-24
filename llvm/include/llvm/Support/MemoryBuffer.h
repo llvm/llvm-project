@@ -21,23 +21,13 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/File.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
-namespace sys {
-namespace fs {
-// Duplicated from FileSystem.h to avoid a dependency.
-#if defined(_WIN32)
-// A Win32 HANDLE is a typedef of void*
-using file_t = void *;
-#else
-using file_t = int;
-#endif
-} // namespace fs
-} // namespace sys
 
 /// This interface provides simple read-only access to a block of memory, and
 /// provides simple methods for reading files and standard input into a memory
@@ -79,7 +69,7 @@ public:
   /// For read-only MemoryBuffer_MMap, mark the buffer as unused in the near
   /// future and the kernel can free resources associated with it. Further
   /// access is supported but may be expensive. This calls
-  /// madvise(MADV_DONTNEED) on read-only file mappings on *NIX systems. This
+  /// madvise(MADV_DONTNEED) on read-only file mappings on Linux. This
   /// function should not be called on a writable buffer.
   virtual void dontNeedIfMmap() {}
 

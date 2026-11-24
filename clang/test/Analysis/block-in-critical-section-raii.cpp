@@ -51,3 +51,30 @@ void top(std::mutex &m) {
   callee(m);
   sleep(1);  // no-warning: the lock from `callee` was released by ~unique_lock before this sleep.
 }
+
+void implicit_dtor(std::mutex &m) {
+  {
+    std::unique_lock<std::mutex> lk(m);
+    sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+  }
+  sleep(1); // no-warning
+}
+
+// Explicit destructor call is a CXXMemberCall, not a CXXDestructorCall.
+void explicit_dtor(std::mutex &m) {
+  auto *g = new std::unique_lock<std::mutex>(m);
+  sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+  g->~unique_lock();
+  sleep(1); // no-warning
+}
+
+// Destroying one guard releases only its own critical section, not another
+// lock held on the same mutex.
+void no_double_unlock(std::mutex &m) {
+  std::unique_lock<std::mutex> outer(m);
+  {
+    std::unique_lock<std::mutex> inner(m);
+    sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+  }
+  sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+}

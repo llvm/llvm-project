@@ -782,16 +782,18 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
     // Default hidden visibility
     Fn->setVisibility(llvm::Function::HiddenVisibility);
     if (CGM.isObjCDirectPreconditionThunkEnabled()) {
-      // However, if we expose the symbol, and the decl (property or method)
-      // have visibility attribute set ...
-      const NamedDecl *Decl = OMD;
-      if (const auto *PD = OMD->findPropertyDecl()) {
-        Decl = PD;
+      // However, if we expose the symbol, respect an explicit visibility
+      // attribute. If the method is an accessor and the property also sets
+      // the attribute, prefer the method's, as it's the more specific one.
+      auto V = OMD->getExplicitVisibility(NamedDecl::VisibilityForValue);
+      if (!V) {
+        // Find the property through the method's declaration: a hand-written
+        // accessor isn't marked as an accessor, but its declaration is.
+        if (const auto *PD = OMD->getCanonicalDecl()->findPropertyDecl())
+          V = PD->getExplicitVisibility(NamedDecl::VisibilityForValue);
       }
-      // ... then respect source level visibility setting
-      if (auto V = Decl->getExplicitVisibility(NamedDecl::VisibilityForValue)) {
+      if (V)
         Fn->setVisibility(CGM.GetLLVMVisibility(*V));
-      }
     }
     CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
@@ -1032,7 +1034,7 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
 
   // If the size of the ivar is not a power of two, give up.  We don't
   // want to get into the business of doing compare-and-swaps.
-  if (!IvarSize.isPowerOfTwo()) {
+  if (!IvarSize.isZero() && !IvarSize.isPowerOfTwo()) {
     Kind = CopyStruct;
     return;
   }
@@ -3035,13 +3037,12 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
     value = doFallback(CGF, value);
   } else if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
     // Place the retain immediately following the call.
-    CGF.Builder.SetInsertPoint(call->getParent(),
-                               ++llvm::BasicBlock::iterator(call));
+    CGF.Builder.SetInsertPoint(++llvm::BasicBlock::iterator(call));
     value = doAfterCall(CGF, value);
   } else if (llvm::InvokeInst *invoke = dyn_cast<llvm::InvokeInst>(value)) {
     // Place the retain at the beginning of the normal destination block.
     llvm::BasicBlock *BB = invoke->getNormalDest();
-    CGF.Builder.SetInsertPoint(BB, BB->begin());
+    CGF.Builder.SetInsertPoint(BB->begin());
     value = doAfterCall(CGF, value);
 
   // Bitcasts can arise because of related-result returns.  Rewrite
@@ -3049,7 +3050,7 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
   } else if (llvm::BitCastInst *bitcast = dyn_cast<llvm::BitCastInst>(value)) {
     // Change the insert point to avoid emitting the fall-back call after the
     // bitcast.
-    CGF.Builder.SetInsertPoint(bitcast->getParent(), bitcast->getIterator());
+    CGF.Builder.SetInsertPoint(bitcast->getIterator());
     llvm::Value *operand = bitcast->getOperand(0);
     operand = emitARCOperationAfterCall(CGF, operand, doAfterCall, doFallback);
     bitcast->setOperand(0, operand);

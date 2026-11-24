@@ -208,7 +208,7 @@ struct DenseMapInfo<mlir::TypeRange> {
   static unsigned getHashValue(mlir::TypeRange val) { return hash_value(val); }
 
   static bool isEqual(mlir::TypeRange lhs, mlir::TypeRange rhs) {
-    return lhs == rhs;
+    return operator==(lhs, rhs);
   }
 };
 

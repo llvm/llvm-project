@@ -27,3 +27,37 @@ define void @alloca_value_cross_reference() {
   store float 0.000000e+00, ptr addrspace(5) %p, align 4
   ret void
 }
+
+; The full-vector store in %bb2 forwards %v (a load from the same alloca in a
+; dominating block) as bb2's live-out value. When the worklist visits the
+; store before the load (they are in different blocks), that operand is the
+; original load instruction, which is later replaced and deleted while the
+; SSAUpdater still references it. The freeze in the full-vector store path
+; creates a fresh instruction the SSAUpdater can safely hold; the freeze's
+; operand is a proper IR use that RAUW does update.
+define half @forwarded_load_across_blocks() {
+; CHECK-LABEL: define half @forwarded_load_across_blocks() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ARR:%.*]] = freeze <4 x half> poison
+; CHECK-NEXT:    br label %[[BB2:.*]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>
+; CHECK-NEXT:    br label %[[BB3:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> [[TMP0]], i32 0
+; CHECK-NEXT:    ret half [[TMP1]]
+;
+entry:
+  %arr = alloca [4 x half], align 8, addrspace(5)
+  store <4 x half> <half 1.0, half 2.0, half 3.0, half 4.0>, ptr addrspace(5) %arr, align 8
+  %v = load <4 x half>, ptr addrspace(5) %arr, align 8
+  br label %bb2
+
+bb2:
+  store <4 x half> %v, ptr addrspace(5) %arr, align 8
+  br label %bb3
+
+bb3:
+  %e = load half, ptr addrspace(5) %arr, align 2
+  ret half %e
+}

@@ -80,6 +80,7 @@ void __tgt_register_lib(__tgt_bin_desc *Desc) {
   RuntimeState &State = RuntimeState::get();
   ThreadState &Thread = ThreadState::get();
   ol_device_handle_t Device = Thread.getDefaultDevice();
+  ol_context_handle_t Context = State.getContext();
 
   for (int32_t I = 0, E = Desc->NumDeviceImages; I < E; ++I) {
     ol_program_handle_t Program = nullptr;
@@ -89,7 +90,7 @@ void __tgt_register_lib(__tgt_bin_desc *Desc) {
     size_t ProgramSize =
         (char *)DeviceImage.ImageEnd - (char *)DeviceImage.ImageStart;
     ol_result_t Result =
-        olCreateProgram(Device, ProgramData, ProgramSize, &Program);
+        olCreateProgram(Context, Device, ProgramData, ProgramSize, &Program);
 
     if (Result && Result->Code) {
       fprintf(stderr, "Failed to register device code (%i): %s\n", Result->Code,

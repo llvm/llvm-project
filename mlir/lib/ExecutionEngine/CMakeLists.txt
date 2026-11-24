@@ -271,7 +271,6 @@ if(LLVM_ENABLE_PIC)
     # dlopen-ed.
     DISABLE_PCH_REUSE
   )
-  target_compile_definitions(mlir_arm_sme_abi_stubs PRIVATE mlir_arm_sme_abi_stubs_EXPORTS)
 
   add_mlir_library(mlir_arm_runner_utils
     SHARED

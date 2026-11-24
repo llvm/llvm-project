@@ -448,7 +448,7 @@ void Rematerializer::preDeletion(RegisterIdx DeleteRegIdx) {
 }
 
 Rematerializer::Rematerializer(MachineFunction &MF,
-                               SmallVectorImpl<RegionBoundaries> &Regions,
+                               MutableArrayRef<RegionBoundaries> Regions,
                                LiveIntervals &LIS)
     : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
       TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {
@@ -655,7 +655,8 @@ bool Rematerializer::isMIRematerializable(const MachineInstr &MI) const {
     // We can't remat physreg uses, unless it is a constant or an ignorable
     // use (e.g. implicit exec use on VALU instructions)
     if (MO.getReg().isPhysical()) {
-      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
+      if (MRI.isConstantPhysReg(MO.getReg()) ||
+          TII.isIgnorableUse(MI, MI.getOperandNo(&MO)))
         continue;
       return false;
     }

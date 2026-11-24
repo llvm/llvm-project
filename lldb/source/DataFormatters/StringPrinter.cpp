@@ -340,7 +340,7 @@ static bool DumpEncodedBufferToStream(
           GetDefaultEscapingHelper(style, dump_options.GetEscapeStyle());
 
     // since we tend to accept partial data (and even partially malformed data)
-    // we might end up with no NULL terminator before the end_ptr hence we need
+    // we might end up with no null terminator before the end_ptr hence we need
     // to take a slower route and ensure we stay within boundaries
     for (; utf8_data_ptr < utf8_data_end_ptr;) {
       if (zero_is_terminator && !*utf8_data_ptr)

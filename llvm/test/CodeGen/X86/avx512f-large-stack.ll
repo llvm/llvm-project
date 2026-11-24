@@ -10,7 +10,8 @@ define void @f(i16 %LGV2, i1 %LGV3) {
 ; CHECK-NEXT:    movswq %ax, %rax
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    movabsq $-2147483768, %rdx # imm = 0xFFFFFFFF7FFFFF88
-; CHECK-NEXT:    movb %cl, (%rsp,%rdx)
+; CHECK-NEXT:    leaq (%rsp,%rdx), %rdx
+; CHECK-NEXT:    movb %cl, (%rdx,%rax)
 ; CHECK-NEXT:    addq $2147483528, %rsp # imm = 0x7FFFFF88
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

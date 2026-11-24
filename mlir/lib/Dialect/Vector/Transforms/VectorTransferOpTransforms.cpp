@@ -571,8 +571,12 @@ class TransferReadDropUnitDimsPattern
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
           loc, reducedVectorType.cloneWith(std::nullopt, rewriter.getI1Type()),
           maskingOp.getMask());
+      Value passthru;
+      if (maskingOp.hasPassthru())
+        passthru = rewriter.createOrFold<vector::ShapeCastOp>(
+            loc, reducedVectorType, maskingOp.getPassthru());
       newTransferReadOp = mlir::vector::maskOperation(
-          rewriter, newTransferReadOp, shapeCastMask);
+          rewriter, newTransferReadOp, shapeCastMask, passthru);
     }
 
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
@@ -848,7 +852,7 @@ public:
       LDBG() << "  -> Not minor identity permutation map, skipping";
       return failure();
     }
-    if (transferReadOp.getMask()) {
+    if (transferReadOp.getMask() || transferReadOp.isMasked()) {
       LDBG() << "  -> Has mask, skipping";
       return failure();
     }
@@ -962,7 +966,7 @@ public:
       return failure();
     if (!transferWriteOp.getPermutationMap().isMinorIdentity())
       return failure();
-    if (transferWriteOp.getMask())
+    if (transferWriteOp.getMask() || transferWriteOp.isMasked())
       return failure();
 
     // Determine vector dimensions to collapse.
@@ -1124,7 +1128,7 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
     if (!llvm::all_of(vecType.getShape(), [](int64_t sz) { return sz == 1; }))
       return failure();
     // Mask not supported.
-    if (xferOp.getMask())
+    if (xferOp.getMask() || xferOp.isMasked())
       return failure();
     // Map not supported.
     if (!xferOp.getPermutationMap().isMinorIdentity())

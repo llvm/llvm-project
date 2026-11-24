@@ -10,7 +10,7 @@
 
 #include "NativeRegisterContextAIX_ppc64.h"
 #include "NativeThreadAIX.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64.h"
+#include "Register/Common/RegisterInfo_ppc64.h"
 #include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb;
@@ -105,8 +105,8 @@ NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
 
 NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_ppc64(target_arch)),
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        new RegisterInfo_ppc64(target_arch)),
       NativeRegisterContextAIX(native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::ppc:

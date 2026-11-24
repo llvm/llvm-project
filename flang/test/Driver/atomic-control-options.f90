@@ -18,7 +18,7 @@ program test
     !$omp end target parallel
 end program test
 
-!UNSAFE-FP-ATOMICS: %{{.*}} = atomicrmw add ptr {{.*}}, i32 1 monotonic, align 4, !amdgpu.ignore.denormal.mode !{{.*}}, !amdgpu.no.fine.grained.memory !{{.*}}, !amdgpu.no.remote.memory !{{.*}}
-!IGNORE-DENORMAL-MODE: %{{.*}} = atomicrmw add ptr {{.*}}, i32 1 monotonic, align 4, !amdgpu.ignore.denormal.mode !{{.*}}, !amdgpu.no.fine.grained.memory !{{.*}}, !amdgpu.no.remote.memory !{{.*}}
+!UNSAFE-FP-ATOMICS: %{{.*}} = atomicrmw add ptr {{.*}}, i32 1 monotonic, align 4, !atomic.ignore.denormal.mode !{{.*}}, !amdgpu.no.fine.grained.memory !{{.*}}, !amdgpu.no.remote.memory !{{.*}}
+!IGNORE-DENORMAL-MODE: %{{.*}} = atomicrmw add ptr {{.*}}, i32 1 monotonic, align 4, !atomic.ignore.denormal.mode !{{.*}}, !amdgpu.no.fine.grained.memory !{{.*}}, !amdgpu.no.remote.memory !{{.*}}
 !FINE-GRAINED-MEMORY: %{{.*}} = atomicrmw add ptr {{.*}}, i32 1 monotonic, align 4, !amdgpu.no.remote.memory !{{.*}}
 !REMOTE-MEMORY: %{{.*}} = atomicrmw add ptr {{.*}}, i32 1 monotonic, align 4, !amdgpu.no.fine.grained.memory !{{.*}}

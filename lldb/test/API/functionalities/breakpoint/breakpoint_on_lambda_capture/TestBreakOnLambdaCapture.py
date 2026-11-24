@@ -11,6 +11,8 @@ from lldbsuite.test.lldbtest import *
 
 
 @requireThreadSupport
+# Flakey and stalls locally - https://github.com/llvm/llvm-project/issues/220942.
+@skipIf(oslist=["windows"], archs=["aarch64"])
 class TestBreakOnLambdaCapture(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

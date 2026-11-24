@@ -116,11 +116,13 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x200;
   if (withInternalizeAndPromote())
     Flags |= 0x400;
+  if (withSpeculativeDevirt())
+    Flags |= 0x800;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0x7ff && "Unexpected bits in flag");
+  assert(Flags <= 0xfff && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -163,6 +165,10 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x400)
     setWithInternalizeAndPromote();
+  // 1 bit: WithSpeculativeDevirt flag.
+  // Set on combined index only.
+  if (Flags & 0x800)
+    setWithSpeculativeDevirt();
 }
 
 // Collect for the given module the list of function it defines
@@ -689,10 +695,14 @@ void ModuleSummaryIndex::exportToDot(
         A.addComment("dsoLocal");
       if (Flags.CanAutoHide)
         A.addComment("canAutoHide");
-      if (Flags.ImportType == GlobalValueSummary::ImportKind::Definition)
+      switch (SummaryIt.second->importType()) {
+      case GlobalValueSummary::ImportKind::Definition:
         A.addComment("definition");
-      else if (Flags.ImportType == GlobalValueSummary::ImportKind::Declaration)
+        break;
+      case GlobalValueSummary::ImportKind::Declaration:
         A.addComment("declaration");
+        break;
+      }
       if (Flags.NoRenameOnPromotion)
         A.addComment("noRenameOnPromotion");
       if (GUIDPreservedSymbols.count(SummaryIt.first))

@@ -175,6 +175,10 @@ public:
 /// Context-sensitive CaptureAnalysis provider, which computes and caches the
 /// earliest common dominator closure of all captures. It provides a good
 /// approximation to a precise "captures before" analysis.
+///
+/// Users must call removeInstruction() and insertPotentialCapture() on IR
+/// changes. The CFG must not gain paths between existing blocks and blocks
+/// must not be renumbered.
 class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DominatorTree &DT;
   const LoopInfo *LI;
@@ -192,15 +196,32 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
+  /// Cached result of Function::callsFunctionThatReturnsTwice(), used to
+  /// account for longjmp re-entry paths not visible to the forward CFG.
+  std::optional<bool> CallsReturnsTwiceFn;
+
+  /// Cached reachability between block numbers.
+  DenseMap<std::pair<unsigned, unsigned>, bool> IsReachableCache;
+
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
+
+  /// Whether the function contains a call that may return twice (e.g., setjmp).
+  bool callsReturnsTwiceFn();
+
 public:
   EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
-                         const CycleInfo *CI = nullptr)
-      : DT(DT), LI(LI), CI(CI) {}
+                         const CycleInfo *CI = nullptr);
 
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
                                       bool OrAt, bool ReturnCaptures) override;
 
   void removeInstruction(Instruction *I);
+
+  /// Notify the analysis that \p I is about to be inserted or moved.
+  /// If \p I may capture a pointer, any cached earliest escape may no longer
+  /// precede all captures, so the whole cache is dropped.
+  void insertPotentialCapture(const Instruction *I);
 };
 
 /// Cache key for BasicAA results. It only includes the pointer and size from
@@ -298,6 +319,9 @@ public:
   /// Whether alias analysis is allowed to use the dominator tree, for use by
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
+
+  /// Whether ephemeral values should be allowed when checking assumes.
+  bool AllowEphemerals = true;
 
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
@@ -456,21 +480,6 @@ public:
     return getMemoryEffects(Call).doesNotAccessMemory();
   }
 
-  /// Checks if the specified function is known to never read or write memory.
-  ///
-  /// Note that if the function only reads from known-constant memory, it is
-  /// also legal to return true. Also, function that unwind the stack are legal
-  /// for this predicate.
-  ///
-  /// Many optimizations (such as CSE and LICM) can be performed on such calls
-  /// to such functions without worrying about aliasing properties, and many
-  /// functions have this property (e.g. 'sin' and 'cos').
-  ///
-  /// This property corresponds to the GCC 'const' attribute.
-  bool doesNotAccessMemory(const Function *F) {
-    return getMemoryEffects(F).doesNotAccessMemory();
-  }
-
   /// Checks if the specified call is known to only read from non-volatile
   /// memory (or not access memory at all).
   ///
@@ -482,19 +491,6 @@ public:
   /// This property corresponds to the GCC 'pure' attribute.
   bool onlyReadsMemory(const CallBase *Call) {
     return getMemoryEffects(Call).onlyReadsMemory();
-  }
-
-  /// Checks if the specified function is known to only read from non-volatile
-  /// memory (or not access memory at all).
-  ///
-  /// Functions that unwind the stack are legal for this predicate.
-  ///
-  /// This property allows many common optimizations to be performed in the
-  /// absence of interfering store instructions, such as CSE of strlen calls.
-  ///
-  /// This property corresponds to the GCC 'pure' attribute.
-  bool onlyReadsMemory(const Function *F) {
-    return getMemoryEffects(F).onlyReadsMemory();
   }
 
   /// Check whether or not an instruction may read or write the optionally
@@ -528,22 +524,6 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
                                     const Instruction *I2);
 
-  /// Return information about whether a particular call site modifies
-  /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock.
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc,
-                                DominatorTree *DT) {
-    SimpleAAQueryInfo AAQIP(*this);
-    return callCapturesBefore(I, MemLoc, DT, AAQIP);
-  }
-
-  /// A convenience wrapper to synthesize a memory location.
-  ModRefInfo callCapturesBefore(const Instruction *I, const Value *P,
-                                LocationSize Size, DominatorTree *DT) {
-    return callCapturesBefore(I, MemoryLocation(P, Size), DT);
-  }
-
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Higher level methods for querying mod/ref information.
@@ -554,12 +534,6 @@ public:
   LLVM_ABI bool canBasicBlockModify(const BasicBlock &BB,
                                     const MemoryLocation &Loc);
 
-  /// A convenience wrapper synthesizing a memory location.
-  bool canBasicBlockModify(const BasicBlock &BB, const Value *P,
-                           LocationSize Size) {
-    return canBasicBlockModify(BB, MemoryLocation(P, Size));
-  }
-
   /// Check if it is possible for the execution of the specified instructions
   /// to mod\ref (according to the mode) the location Loc.
   ///
@@ -569,13 +543,6 @@ public:
                                           const Instruction &I2,
                                           const MemoryLocation &Loc,
                                           const ModRefInfo Mode);
-
-  /// A convenience wrapper synthesizing a memory location.
-  bool canInstructionRangeModRef(const Instruction &I1, const Instruction &I2,
-                                 const Value *Ptr, LocationSize Size,
-                                 const ModRefInfo Mode) {
-    return canInstructionRangeModRef(I1, I2, MemoryLocation(Ptr, Size), Mode);
-  }
 
   // CtxI can be nullptr, in which case the query is whether or not the aliasing
   // relationship holds through the entire function.
@@ -639,9 +606,9 @@ private:
 
   const TargetLibraryInfo &TLI;
 
-  std::vector<std::unique_ptr<Concept>> AAs;
+  SmallVector<std::unique_ptr<Concept>, 4> AAs;
 
-  std::vector<AnalysisKey *> AADeps;
+  SmallVector<AnalysisKey *, 4> AADeps;
 
   friend class BatchAAResults;
 };

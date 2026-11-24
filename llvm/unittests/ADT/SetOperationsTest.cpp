@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -207,52 +208,106 @@ TEST(SetOperationsTest, SetSubtractSmallVector) {
   EXPECT_THAT(Set1, UnorderedElementsAre(&A[1]));
 }
 
-TEST(SetOperationsTest, SetSubtractRemovedRemaining) {
-  std::set<int> Removed, Remaining;
+TEST(SetOperationsTest, SetSubtractRemoved) {
+  std::set<int> Removed;
 
   std::set<int> Set1 = {1, 2, 3, 4};
   std::set<int> Set2 = {3, 4, 5, 6};
 
-  set_subtract(Set1, Set2, Removed, Remaining);
+  set_subtract(Set1, Set2, Removed);
   // Set1 should get Set1 - Set2, leaving only {1, 2}.
   EXPECT_THAT(Set1, UnorderedElementsAre(1, 2));
   // Set2 should not be touched.
   EXPECT_THAT(Set2, UnorderedElementsAre(3, 4, 5, 6));
-  // We should get back that {3, 4} from Set2 were removed from Set1, and {5, 6}
-  // were not removed from Set1.
+  // We should get back that {3, 4} from Set2 were removed from Set1.
   EXPECT_THAT(Removed, UnorderedElementsAre(3, 4));
-  EXPECT_THAT(Remaining, UnorderedElementsAre(5, 6));
 
   Set1 = {1, 2, 3, 4};
   Set2 = {1, 2, 3, 4};
   Removed.clear();
-  Remaining.clear();
 
-  set_subtract(Set1, Set2, Removed, Remaining);
+  set_subtract(Set1, Set2, Removed);
   // Set1 should get Set1 - Set2, which should be empty.
   EXPECT_THAT(Set1, IsEmpty());
   // Set2 should not be touched.
   EXPECT_THAT(Set2, UnorderedElementsAre(1, 2, 3, 4));
-  // Set should get back that all of Set2 was removed from Set1, and nothing
-  // left in Set2 was not removed from Set1.
+  // Set should get back that all of Set2 was removed from Set1.
   EXPECT_THAT(Removed, UnorderedElementsAre(1, 2, 3, 4));
-  EXPECT_THAT(Remaining, IsEmpty());
 
   Set1 = {1, 2, 3, 4};
   Set2 = {5, 6};
   Removed.clear();
-  Remaining.clear();
 
-  set_subtract(Set1, Set2, Removed, Remaining);
+  set_subtract(Set1, Set2, Removed);
   // Set1 should get Set1 - Set2, which should be Set1 as they are
   // non-overlapping.
   EXPECT_THAT(Set1, UnorderedElementsAre(1, 2, 3, 4));
   // Set2 should not be touched.
   EXPECT_THAT(Set2, UnorderedElementsAre(5, 6));
   EXPECT_THAT(Removed, IsEmpty());
-  // Set should get back that none of Set2 was removed from Set1, and all
-  // of Set2 was not removed from Set1.
-  EXPECT_THAT(Remaining, UnorderedElementsAre(5, 6));
+}
+
+TEST(SetOperationsTest, SetSubtractRemovedSmallPtrSet) {
+  int A[4];
+
+  // Set1.size() < Set2.size()
+  SmallPtrSet<int *, 4> Removed;
+  SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
+  SmallPtrSet<int *, 4> Set2 = {&A[1], &A[2], &A[3]};
+  set_subtract(Set1, Set2, Removed);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[0]));
+  EXPECT_THAT(Set2, UnorderedElementsAre(&A[1], &A[2], &A[3]));
+  EXPECT_THAT(Removed, UnorderedElementsAre(&A[1]));
+
+  // Set1.size() > Set2.size()
+  Removed.clear();
+  Set1 = {&A[0], &A[1], &A[2]};
+  Set2 = {&A[0], &A[2]};
+  set_subtract(Set1, Set2, Removed);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[1]));
+  EXPECT_THAT(Set2, UnorderedElementsAre(&A[0], &A[2]));
+  EXPECT_THAT(Removed, UnorderedElementsAre(&A[0], &A[2]));
+}
+
+TEST(SetOperationsTest, SetSubtractRemovedSmallVector) {
+  int A[4];
+
+  // Set1.size() < Set2.size()
+  SmallPtrSet<int *, 4> Removed;
+  SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
+  SmallVector<int *> Set2 = {&A[1], &A[2], &A[3]};
+  set_subtract(Set1, Set2, Removed);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[0]));
+  EXPECT_THAT(Removed, UnorderedElementsAre(&A[1]));
+
+  // Set1.size() > Set2.size()
+  Removed.clear();
+  Set1 = {&A[0], &A[1], &A[2]};
+  Set2 = {&A[0], &A[2]};
+  set_subtract(Set1, Set2, Removed);
+  EXPECT_THAT(Set1, UnorderedElementsAre(&A[1]));
+  EXPECT_THAT(Removed, UnorderedElementsAre(&A[0], &A[2]));
+}
+
+TEST(SetOperationsTest, SetSubtractRemovedDenseSet) {
+  DenseSet<int> Removed;
+
+  // Set1.size() < Set2.size()
+  DenseSet<int> Set1 = {1, 2};
+  DenseSet<int> Set2 = {2, 3, 4};
+  set_subtract(Set1, Set2, Removed);
+  EXPECT_THAT(Set1, UnorderedElementsAre(1));
+  EXPECT_THAT(Set2, UnorderedElementsAre(2, 3, 4));
+  EXPECT_THAT(Removed, UnorderedElementsAre(2));
+
+  // Set1.size() > Set2.size()
+  Removed.clear();
+  Set1 = {1, 2, 3};
+  Set2 = {1, 3};
+  set_subtract(Set1, Set2, Removed);
+  EXPECT_THAT(Set1, UnorderedElementsAre(2));
+  EXPECT_THAT(Set2, UnorderedElementsAre(1, 3));
+  EXPECT_THAT(Removed, UnorderedElementsAre(1, 3));
 }
 
 TEST(SetOperationsTest, SetIsSubset) {

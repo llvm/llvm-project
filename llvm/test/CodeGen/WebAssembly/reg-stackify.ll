@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s --check-prefix=NOREGS
+; RUN: llc < %s -mattr=+simd128 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mattr=+simd128 -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s --check-prefix=NOREGS
 
 ; Test the register stackifier pass.
 
@@ -424,6 +424,50 @@ define i32 @commute() {
   %call2 = call i32 @blue()
   %add3 = add i32 %add, %call2
   ret i32 %add3
+}
+
+; CHECK-LABEL: commute_simd_min:
+; CHECK:  .functype commute_simd_min () -> (v128){{$}}
+; CHECK-NEXT:  call        $push0=, red_v4f32{{$}}
+; CHECK-NEXT:  call        $push1=, green_v4f32{{$}}
+; CHECK-NEXT:  f32x4.min   $push2=, $pop0, $pop1{{$}}
+; CHECK-NEXT:  return      $pop2{{$}}
+; NOREGS-LABEL: commute_simd_min:
+; NOREGS:  .functype commute_simd_min () -> (v128){{$}}
+; NOREGS-NEXT:  call        red_v4f32{{$}}
+; NOREGS-NEXT:  call        green_v4f32{{$}}
+; NOREGS-NEXT:  f32x4.min{{$}}
+; NOREGS-NEXT:  return{{$}}
+declare <4 x float> @red_v4f32()
+declare <4 x float> @green_v4f32()
+declare <4 x float> @llvm.minimum.v4f32(<4 x float>, <4 x float>)
+define <4 x float> @commute_simd_min() {
+  %red = call <4 x float> @red_v4f32()
+  %green = call <4 x float> @green_v4f32()
+  %min = call <4 x float> @llvm.minimum.v4f32(<4 x float> %green,
+                                              <4 x float> %red)
+  ret <4 x float> %min
+}
+
+; CHECK-LABEL: commute_simd_max:
+; CHECK:  .functype commute_simd_max () -> (v128){{$}}
+; CHECK-NEXT:  call        $push0=, red_v4f32{{$}}
+; CHECK-NEXT:  call        $push1=, green_v4f32{{$}}
+; CHECK-NEXT:  f32x4.max   $push2=, $pop0, $pop1{{$}}
+; CHECK-NEXT:  return      $pop2{{$}}
+; NOREGS-LABEL: commute_simd_max:
+; NOREGS:  .functype commute_simd_max () -> (v128){{$}}
+; NOREGS-NEXT:  call        red_v4f32{{$}}
+; NOREGS-NEXT:  call        green_v4f32{{$}}
+; NOREGS-NEXT:  f32x4.max{{$}}
+; NOREGS-NEXT:  return{{$}}
+declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
+define <4 x float> @commute_simd_max() {
+  %red = call <4 x float> @red_v4f32()
+  %green = call <4 x float> @green_v4f32()
+  %max = call <4 x float> @llvm.maximum.v4f32(<4 x float> %green,
+                                              <4 x float> %red)
+  ret <4 x float> %max
 }
 
 ; Don't stackify a register when it would move a the def of the register past

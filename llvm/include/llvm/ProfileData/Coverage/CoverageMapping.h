@@ -30,6 +30,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -51,10 +52,6 @@ class IndexedInstrProfReader;
 namespace object {
 class BuildIDFetcher;
 } // namespace object
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 namespace coverage {
 

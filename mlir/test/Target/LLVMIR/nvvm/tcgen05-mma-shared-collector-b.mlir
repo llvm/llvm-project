@@ -1,4 +1,5 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
+// RUN: %if has_llc_binary && host-supports-nvptx %{ mlir-translate --mlir-to-llvmir %s | %llc-verify -march=nvptx64 -mcpu=sm_107f -mattr=+ptx94 %}
 
 // CHECK-LABEL: @nvvm_tcgen05_mma_collector_b
 llvm.func @nvvm_tcgen05_mma_collector_b(%d_tmem : !llvm.ptr<6>, %a_desc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1) {

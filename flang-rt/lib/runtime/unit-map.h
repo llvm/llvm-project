@@ -12,9 +12,9 @@
 #ifndef FLANG_RT_RUNTIME_UNIT_MAP_H_
 #define FLANG_RT_RUNTIME_UNIT_MAP_H_
 
-#include "unit.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/memory.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Common/fast-int-set.h"
 #include <cstdint>
 #include <cstdlib>

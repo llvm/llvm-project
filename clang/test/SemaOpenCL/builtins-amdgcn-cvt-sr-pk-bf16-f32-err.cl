@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx950 -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx942 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.50 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.42 -verify -S -o - %s
 
 typedef __bf16 bfloat2 __attribute__((ext_vector_type(2)));
 

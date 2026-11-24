@@ -32,7 +32,8 @@ define void @test_mul_copyable(ptr %dst, ptr %srcB, float %p, float %q, float %r
 ; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP18]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP22:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP21]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP23:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP10]], <4 x float> [[TMP20]], <4 x float> [[TMP22]])
-; ENABLED-NEXT:    store <4 x float> [[TMP23]], ptr [[DST]], align 4
+; ENABLED-NEXT:    [[TMP25:%.*]] = shufflevector <4 x float> [[TMP23]], <4 x float> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; ENABLED-NEXT:    store <4 x float> [[TMP25]], ptr [[DST]], align 4
 ; ENABLED-NEXT:    ret void
 ;
 ; DISABLED-LABEL: define void @test_mul_copyable(
@@ -112,7 +113,8 @@ define void @test_mul_copyable_args(ptr %dst, ptr %srcB, float %p, float %q, flo
 ; ENABLED-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP16:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP20]], <4 x float> [[TMP13]], <4 x float> [[TMP15]])
-; ENABLED-NEXT:    store <4 x float> [[TMP16]], ptr [[DST]], align 4
+; ENABLED-NEXT:    [[TMP22:%.*]] = shufflevector <4 x float> [[TMP16]], <4 x float> [[TMP20]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; ENABLED-NEXT:    store <4 x float> [[TMP22]], ptr [[DST]], align 4
 ; ENABLED-NEXT:    ret void
 ;
 ; DISABLED-LABEL: define void @test_mul_copyable_args(

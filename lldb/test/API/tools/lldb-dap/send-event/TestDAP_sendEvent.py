@@ -23,7 +23,6 @@ class CustomEvent(Event, event="my-custom-event"):
 
 
 class TestDAP_sendEvent(DAPTestCaseBase):
-    @skipIfWindows
     def test_send_event(self):
         """
         Test sending a custom event.
@@ -56,7 +55,6 @@ class TestDAP_sendEvent(DAPTestCaseBase):
         self.assertEqual(custom_event_with_body.event, "my-custom-event")
         self.assertEqual(custom_event_with_body.body, custom_event_body)
 
-    @skipIfWindows
     def test_send_internal_event(self):
         """
         Test sending an internal event produces an error.
@@ -66,9 +64,10 @@ class TestDAP_sendEvent(DAPTestCaseBase):
         process_event = session.launch(LaunchArgs(program, stopOnEntry=True))
 
         session.verify_stopped_on_entry(after=process_event)
-        expr_resp = session.do_evaluate("`lldb-dap send-event stopped").result()
+        error_resp = session.do_evaluate("`lldb-dap send-event stopped").error()
 
+        error = self.expect_not_none(error_resp.body and error_resp.body.error)
         self.assertRegex(
-            expr_resp.body.result,
+            error.format,
             r"Invalid use of lldb-dap send-event, event \"stopped\" should be handled by lldb-dap internally.",
         )

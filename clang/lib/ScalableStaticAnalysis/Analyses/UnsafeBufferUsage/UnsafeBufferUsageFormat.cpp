@@ -21,12 +21,6 @@ using Object = llvm::json::Object;
 
 static constexpr llvm::StringLiteral SummarySerializationKey = "UnsafeBuffers";
 
-extern UnsafeBufferUsageEntitySummary
-ssaf::buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers);
-
-extern llvm::iterator_range<EntityPointerLevelSet::const_iterator>
-ssaf::getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &S);
-
 static Object serialize(const EntitySummary &S,
                         JSONFormat::EntityIdToJSONFn Fn) {
   const auto &SS = static_cast<const UnsafeBufferUsageEntitySummary &>(S);
