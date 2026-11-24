@@ -819,3 +819,31 @@ func.func @no_hoist_isolated_region() -> memref<1xi32> {
   }) : () -> memref<1xi32>
   return %result : memref<1xi32>
 }
+
+// -----
+
+// Realloc must remain conditional: the false branch still owns the source.
+// CHECK-LABEL: func.func @conditional_realloc(
+// CHECK-SAME: %[[TAKE:.*]]: i1, %[[OLD:.*]]: memref<1xi32>)
+// CHECK-NOT: memref.realloc
+// CHECK: %[[SELECTED:.*]] = scf.if %[[TAKE]] -> (memref<?xi32>) {
+// CHECK-NEXT: %[[NEW:.*]] = memref.realloc %[[OLD]] : memref<1xi32> to memref<2xi32>
+// CHECK-NEXT: %[[CAST:.*]] = memref.cast %[[NEW]] : memref<2xi32> to memref<?xi32>
+// CHECK-NEXT: scf.yield %[[CAST]] : memref<?xi32>
+// CHECK-NEXT: } else {
+// CHECK-NEXT: %[[OLD_CAST:.*]] = memref.cast %[[OLD]] : memref<1xi32> to memref<?xi32>
+// CHECK-NEXT: scf.yield %[[OLD_CAST]] : memref<?xi32>
+// CHECK-NEXT: }
+// CHECK-NEXT: return %[[SELECTED]] : memref<?xi32>
+func.func @conditional_realloc(%take: i1, %old: memref<1xi32>)
+    -> memref<?xi32> {
+  %selected = scf.if %take -> (memref<?xi32>) {
+    %new = memref.realloc %old : memref<1xi32> to memref<2xi32>
+    %cast = memref.cast %new : memref<2xi32> to memref<?xi32>
+    scf.yield %cast : memref<?xi32>
+  } else {
+    %cast = memref.cast %old : memref<1xi32> to memref<?xi32>
+    scf.yield %cast : memref<?xi32>
+  }
+  return %selected : memref<?xi32>
+}

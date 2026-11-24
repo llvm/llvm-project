@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-asm-matcher -asmparsernum=1 -I %p/../../include %s | FileCheck %s --check-prefix CHECK-CLASS-NAME
 
 include "llvm/Target/Target.td"
 
@@ -6,10 +7,14 @@ def ArchInstrInfo : InstrInfo { }
 def ArchAsmParser : AsmParser {
   let EmitTokenDiagnosticTypes = true;
 }
+def ArchAnotherAsmParser : AsmParser {
+  let AsmParserClassName = "AnotherAsmParser";
+  let EmitTokenDiagnosticTypes = true;
+}
 
 def Arch : Target {
   let InstructionSet = ArchInstrInfo;
-  let AssemblyParsers = [ArchAsmParser];
+  let AssemblyParsers = [ArchAsmParser, ArchAnotherAsmParser];
 }
 
 def Reg : Register<"reg">;
@@ -74,3 +79,5 @@ def Instr2 : ArchInstruction<"Instr2 shift $foo", (outs RegClass:$foo), (ins)> {
 // CHECK-NEXT:       return MCTargetAsmParser::Match_Success;
 // CHECK-NEXT:     return getDiagKindFromTokenClass(Kind);
 // CHECK-NEXT:   }
+
+// CHECK-CLASS-NAME: return ArchAnotherAsmParser::Match_InvalidTokenshift;

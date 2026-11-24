@@ -135,17 +135,21 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
+  // StringToOffloadArch also recognizes other vendors' GPUs, so accept only an
+  // NVPTX one.
   bool isValidCPUName(StringRef Name) const override {
-    return !StringToOffloadArch(Name).isUnknown();
+    return StringToOffloadArch(Name).isNVPTX();
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
-    fillValidOffloadArchList(Values);
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  Values.push_back(NAME);
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   }
 
   bool setCPU(StringRef Name) override {
     GPU = StringToOffloadArch(Name);
-    return !GPU.isUnknown();
+    return GPU.isNVPTX();
   }
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override;

@@ -12,18 +12,31 @@
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
-llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
-  return llvm::codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple());
+llvm::TargetOptions
+lld::getTargetOptions(const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getTargetOptions(libraryOptions, llvm::Triple());
 }
 
-std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
-  return llvm::codegen::getExplicitRelocModel();
+llvm::ArrayRef<const llvm::cl::LibraryOptions *> lld::getToolOptions() {
+  return llvm::codegen::getToolOptions();
 }
 
-std::optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel() {
-  return llvm::codegen::getExplicitCodeModel();
+std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel(
+    const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getExplicitRelocModel(libraryOptions);
 }
 
-std::string lld::getCPUStr() { return llvm::codegen::getCPUStr(); }
+std::optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel(
+    const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getExplicitCodeModel(libraryOptions);
+}
 
-std::vector<std::string> lld::getMAttrs() { return llvm::codegen::getMAttrs(); }
+std::string
+lld::getCPUStr(const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getCPUStr(libraryOptions);
+}
+
+std::vector<std::string>
+lld::getMAttrs(const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getMAttrs(libraryOptions);
+}

@@ -5,6 +5,8 @@ define void @convolve(ptr %k, ptr %pix, i64 %width, i64 %n, double %bias, ptr %o
 ; CHECK-LABEL: define void @convolve(
 ; CHECK-SAME: ptr [[K:%.*]], ptr [[PIX:%.*]], i64 [[WIDTH:%.*]], i64 [[N:%.*]], double [[BIAS:%.*]], ptr [[OUT:%.*]], ptr [[GSUM:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[BIAS]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[PIXEL:.*]]
 ; CHECK:       [[PIXEL]]:
 ; CHECK-NEXT:    [[X:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[X_NEXT:%.*]], %[[PIXEL_END:.*]] ]
@@ -13,8 +15,7 @@ define void @convolve(ptr %k, ptr %pix, i64 %width, i64 %n, double %bias, ptr %o
 ; CHECK-NEXT:    [[U:%.*]] = phi i64 [ 0, %[[PIXEL]] ], [ [[U_NEXT:%.*]], %[[TAP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[KP:%.*]] = phi ptr [ [[K]], %[[PIXEL]] ], [ [[KP_NEXT:%.*]], %[[TAP_LATCH]] ]
 ; CHECK-NEXT:    [[GAMMA:%.*]] = phi double [ 0.000000e+00, %[[PIXEL]] ], [ [[GAMMA_NEXT:%.*]], %[[TAP_LATCH]] ]
-; CHECK-NEXT:    [[GREEN:%.*]] = phi double [ [[BIAS]], %[[PIXEL]] ], [ [[GREEN_NEXT:%.*]], %[[TAP_LATCH]] ]
-; CHECK-NEXT:    [[BLUE:%.*]] = phi double [ [[BIAS]], %[[PIXEL]] ], [ [[BLUE_NEXT:%.*]], %[[TAP_LATCH]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ [[TMP1]], %[[PIXEL]] ], [ [[TMP8:%.*]], %[[TAP_LATCH]] ]
 ; CHECK-NEXT:    [[KV:%.*]] = load double, ptr [[KP]], align 8
 ; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno double [[KV]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISNAN]], label %[[TAP_LATCH]], label %[[TAP_BODY:.*]]
@@ -27,27 +28,22 @@ define void @convolve(ptr %k, ptr %pix, i64 %width, i64 %n, double %bias, ptr %o
 ; CHECK-NEXT:    [[A:%.*]] = fmul nnan double [[INV_D]], f0x3EF0001000100010
 ; CHECK-NEXT:    [[ALPHA:%.*]] = fmul double [[KV]], [[A]]
 ; CHECK-NEXT:    [[GAMMA_ADD:%.*]] = fadd double [[GAMMA]], [[ALPHA]]
-; CHECK-NEXT:    [[G_P:%.*]] = getelementptr inbounds nuw i8, ptr [[PP]], i64 2
-; CHECK-NEXT:    [[G:%.*]] = load i16, ptr [[G_P]], align 2
-; CHECK-NEXT:    [[G_D:%.*]] = uitofp i16 [[G]] to double
-; CHECK-NEXT:    [[GREEN_ADD:%.*]] = call double @llvm.fmuladd.f64(double [[ALPHA]], double [[G_D]], double [[GREEN]])
-; CHECK-NEXT:    [[B:%.*]] = load i16, ptr [[PP]], align 2
-; CHECK-NEXT:    [[B_D:%.*]] = uitofp i16 [[B]] to double
-; CHECK-NEXT:    [[BLUE_ADD:%.*]] = call double @llvm.fmuladd.f64(double [[ALPHA]], double [[B_D]], double [[BLUE]])
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i16>, ptr [[PP]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i16> [[TMP3]] to <2 x double>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[ALPHA]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[TMP4]], <2 x double> [[TMP2]])
 ; CHECK-NEXT:    br label %[[TAP_LATCH]]
 ; CHECK:       [[TAP_LATCH]]:
 ; CHECK-NEXT:    [[GAMMA_NEXT]] = phi double [ [[GAMMA]], %[[TAP]] ], [ [[GAMMA_ADD]], %[[TAP_BODY]] ]
-; CHECK-NEXT:    [[GREEN_NEXT]] = phi double [ [[GREEN]], %[[TAP]] ], [ [[GREEN_ADD]], %[[TAP_BODY]] ]
-; CHECK-NEXT:    [[BLUE_NEXT]] = phi double [ [[BLUE]], %[[TAP]] ], [ [[BLUE_ADD]], %[[TAP_BODY]] ]
+; CHECK-NEXT:    [[TMP8]] = phi <2 x double> [ [[TMP2]], %[[TAP]] ], [ [[TMP7]], %[[TAP_BODY]] ]
 ; CHECK-NEXT:    [[U_NEXT]] = add nuw nsw i64 [[U]], 1
 ; CHECK-NEXT:    [[KP_NEXT]] = getelementptr inbounds i8, ptr [[KP]], i64 -8
 ; CHECK-NEXT:    [[TAP_DONE:%.*]] = icmp eq i64 [[U_NEXT]], [[WIDTH]]
 ; CHECK-NEXT:    br i1 [[TAP_DONE]], label %[[PIXEL_END]], label %[[TAP]]
 ; CHECK:       [[PIXEL_END]]:
 ; CHECK-NEXT:    [[O:%.*]] = getelementptr inbounds [2 x double], ptr [[OUT]], i64 [[X]]
-; CHECK-NEXT:    store double [[BLUE_NEXT]], ptr [[O]], align 8
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds i8, ptr [[O]], i64 8
-; CHECK-NEXT:    store double [[GREEN_NEXT]], ptr [[O1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[O]], align 8
 ; CHECK-NEXT:    [[GS:%.*]] = getelementptr inbounds double, ptr [[GSUM]], i64 [[X]]
 ; CHECK-NEXT:    store double [[GAMMA_NEXT]], ptr [[GS]], align 8
 ; CHECK-NEXT:    [[X_NEXT]] = add nuw nsw i64 [[X]], 1

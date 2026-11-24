@@ -23,7 +23,7 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
 
   InternalSymbolPrefix = "L..";
   SupportsQuotedNames = false;
-  if (MCCLOptions::Global.use_leb128_directives == BoolOrDefault::Default)
+  if (getMCCLOptions(Options).use_leb128_directives == BoolOrDefault::Default)
     HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";
   AsciiDirective = nullptr; // not supported
@@ -39,8 +39,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
   HasDotTypeDotSizeDirective = false;
   ParseInlineAsmUsingAsmParser = true;
-
-  ExceptionsType = ExceptionHandling::AIX;
 }
 
 bool MCAsmInfoXCOFF::useCodeAlign(const MCSection &Sec) const {

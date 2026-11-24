@@ -83,3 +83,30 @@ add_entrypoint_object(
     libc.include.threads
     libc.src.__support.threads.CndVar
 )
+
+add_entrypoint_object(
+  thrd_sleep
+  SRCS
+    thrd_sleep.cpp
+  HDRS
+    ../thrd_sleep.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.OSUtil.linux.syscall_wrappers.nanosleep
+)
+
+add_entrypoint_object(
+  thrd_yield
+  SRCS
+    thrd_yield.cpp
+  HDRS
+    ../thrd_yield.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_yield
+)

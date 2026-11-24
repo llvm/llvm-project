@@ -10,9 +10,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
@@ -34,10 +32,6 @@ void complex::ComplexDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Complex/IR/ComplexOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc"
       >();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ComplexDialect>();
   addInterfaces<ComplexInlinerInterface>();

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fms-extensions -emit-llvm < %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -fms-extensions -emit-llvm < %s | FileCheck %s %}
 
 // CHECK: @a1 ={{.*}} global i32 1, align 1
 __unaligned int a1 = 1;

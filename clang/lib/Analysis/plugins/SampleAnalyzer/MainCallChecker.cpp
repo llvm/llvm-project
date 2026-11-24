@@ -33,7 +33,7 @@ void MainCallChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   if (II->isStr("main")) {
-    ExplodedNode *N = C.generateErrorNode();
+    ExplodedNode *N = C.addSink();
     if (!N)
       return;
 

@@ -3600,6 +3600,14 @@ LLVM_C_ABI LLVMValueRef LLVMMetadataAsValue(LLVMContextRef C,
 LLVM_C_ABI LLVMMetadataRef LLVMValueAsMetadata(LLVMValueRef Val);
 
 /**
+ * Return a string representation of the metadata. Use
+ * LLVMDisposeMessage to free the string.
+ *
+ * @see llvm::Metadata::print()
+ */
+LLVM_C_ABI char *LLVMPrintMetadataToString(LLVMMetadataRef MD);
+
+/**
  * Obtain the underlying string from a MDString value.
  *
  * @param V Instance to obtain string from.
@@ -4629,11 +4637,16 @@ LLVM_C_ABI const unsigned *LLVMGetIndices(LLVMValueRef Inst);
  * @{
  */
 
-LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C),
+    "Use LLVMCreateBuilderForModule instead");
 LLVM_C_ABI
 LLVM_ATTRIBUTE_C_DEPRECATED(LLVMBuilderRef LLVMCreateBuilder(void),
                             "Use of the global context is deprecated, use "
-                            "LLVMCreateBuilderInContext instead");
+                            "LLVMCreateBuilderForModule instead");
+
+LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilderForModule(LLVMModuleRef M);
 /**
  * Set the builder position before Instr but after any attached debug records,
  * or if Instr is null set the position to the end of Block.

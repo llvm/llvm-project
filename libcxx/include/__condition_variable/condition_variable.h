@@ -100,6 +100,20 @@ _LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Durat
   return chrono::steady_clock::now() + chrono::__ceil<chrono::steady_clock::duration>(__rel_time);
 }
 
+// Destroying a condvar is a nop on Windows.
+//
+// This optimization can't be performed on Apple platforms, where
+// pthread_cond_destroy can allow the kernel to release resources.
+// See https://llvm.org/D64298 for details.
+//
+// TODO(EricWF): This is potentially true for some pthread implementations
+// as well.
+#  if (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) || _LIBCPP_HAS_THREAD_API_WIN32
+#    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 1
+#  else
+#    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 0
+#  endif
+
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
@@ -158,7 +172,7 @@ public:
   }
 
   template <class _Rep, class _Period, class _Predicate>
-  bool _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI bool
   wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
 
   typedef __libcpp_condvar_t* native_handle_type;

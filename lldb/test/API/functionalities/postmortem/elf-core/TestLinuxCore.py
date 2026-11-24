@@ -1044,16 +1044,16 @@ class LinuxCoreTestCase(TestBase):
             "qc.mclicie5": ("0x00000000", "csr_0x7fd"),
             "qc.mclicie6": ("0x00000000", "csr_0x7fe"),
             "qc.mclicie7": ("0x00000000", "csr_0x7ff"),
-            "qc.mclicilvl0": ("0x00000000", "csr_0xbc0"),
-            "qc.mclicilvl1": ("0x00000000", "csr_0xbc1"),
-            "qc.mclicilvl2": ("0x00000000", "csr_0xbc2"),
-            "qc.mclicilvl3": ("0x00000000", "csr_0xbc3"),
-            "qc.mclicilvl4": ("0x00000000", "csr_0xbc4"),
-            "qc.mclicilvl5": ("0x00000000", "csr_0xbc5"),
-            "qc.mclicilvl6": ("0x00000000", "csr_0xbc6"),
-            "qc.mclicilvl7": ("0x00000000", "csr_0xbc7"),
-            "qc.mclicilvl8": ("0x00000000", "csr_0xbc8"),
-            "qc.mclicilvl9": ("0x00000000", "csr_0xbc9"),
+            "qc.mclicilvl00": ("0x00000000", "csr_0xbc0"),
+            "qc.mclicilvl01": ("0x00000000", "csr_0xbc1"),
+            "qc.mclicilvl02": ("0x00000000", "csr_0xbc2"),
+            "qc.mclicilvl03": ("0x00000000", "csr_0xbc3"),
+            "qc.mclicilvl04": ("0x00000000", "csr_0xbc4"),
+            "qc.mclicilvl05": ("0x00000000", "csr_0xbc5"),
+            "qc.mclicilvl06": ("0x00000000", "csr_0xbc6"),
+            "qc.mclicilvl07": ("0x00000000", "csr_0xbc7"),
+            "qc.mclicilvl08": ("0x00000000", "csr_0xbc8"),
+            "qc.mclicilvl09": ("0x00000000", "csr_0xbc9"),
             "qc.mclicilvl10": ("0x00000000", "csr_0xbca"),
             "qc.mclicilvl11": ("0x00000000", "csr_0xbcb"),
             "qc.mclicilvl12": ("0x00000000", "csr_0xbcc"),
@@ -1442,6 +1442,56 @@ class LinuxCoreTestCase(TestBase):
 
         self.check_all(process, pid, region_count, thread_name)
 
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_build_id_with_moved_program_headers(self):
+        # /tmp/libmoved.so is mapped at 0x400000 and its e_phoff is 0x1000,
+        # but file offset 0x1000 is mapped at 0x600000, as happens after
+        # patchelf moves the program headers. 0x400000 + e_phoff is the start
+        # of /tmp/libother.so, whose bytes read as a PT_NOTE with a huge
+        # p_memsz. The build ID must come from the real program headers.
+        yaml_path = self.getSourcePath("elf-NT_FILE-moved-program-headers.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-moved-program-headers.core")
+        log_path = self.getBuildArtifact("elf-NT_FILE-moved-program-headers.log")
+        self.yaml2obj(yaml_path, core_path)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        self.addTearDownHook(lambda: self.runCmd("log disable lldb process"))
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+        with open(log_path, "r") as f:
+            self.assertIn(
+                '01020304-0506-0708-090A-0B0C0D0E0F10-11121314 "/tmp/libmoved.so"',
+                f.read(),
+            )
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_build_id_with_file_mapped_twice(self):
+        # /tmp/libdup.so is loaded twice. The first load is at 0x400000 with
+        # file offset 0x1000 at 0x401000, but none of its memory is in the
+        # core. The second load is at 0x500000 with file offset 0x1000, which
+        # holds the program headers, at 0x600000. The build ID of the second
+        # load must come from its own mapping of the program headers, not from
+        # the first load's mapping below its ELF header.
+        yaml_path = self.getSourcePath("elf-NT_FILE-file-mapped-twice.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-file-mapped-twice.core")
+        log_path = self.getBuildArtifact("elf-NT_FILE-file-mapped-twice.log")
+        self.yaml2obj(yaml_path, core_path)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        self.addTearDownHook(lambda: self.runCmd("log disable lldb process"))
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+        with open(log_path, "r") as f:
+            self.assertIn(
+                "@ 0000000000500000: "
+                '01020304-0506-0708-090A-0B0C0D0E0F10-11121314 "/tmp/libdup.so"',
+                f.read(),
+            )
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")

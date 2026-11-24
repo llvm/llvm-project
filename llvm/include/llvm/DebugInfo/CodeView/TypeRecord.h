@@ -55,6 +55,10 @@ struct MemberAttributes {
     Attrs |= static_cast<uint16_t>(Flags);
   }
 
+  constexpr bool operator==(const MemberAttributes &Rhs) const noexcept {
+    return Attrs == Rhs.Attrs;
+  }
+
   /// Get the access specifier. Valid for any kind of member.
   MemberAccess getAccess() const {
     return MemberAccess(unsigned(Attrs) & unsigned(MethodOptions::AccessMask));

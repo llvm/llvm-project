@@ -4,7 +4,7 @@
 
 ;--- err1.ll
 
-; RUN: not llvm-as err1.ll -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as err1.ll -disable-output 2>&1 | FileCheck %s
 
 !llvm.module.flags = !{!0}
 
@@ -12,7 +12,7 @@
 
 ;--- err2.ll
 
-; RUN: not llvm-as err2.ll -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as err2.ll -disable-output 2>&1 | FileCheck %s
 
 !llvm.module.flags = !{!0}
 

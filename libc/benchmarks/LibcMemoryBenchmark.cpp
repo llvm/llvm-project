@@ -146,13 +146,24 @@ MoveSetup::MoveSetup()
 ComparisonSetup::ComparisonSetup()
     : ParameterBatch(2), lhs_buffer(ParameterBatch::buffer_size),
       rhs_buffer(ParameterBatch::buffer_size) {
-  // The memcmp buffers always compare equal.
-  memset(lhs_buffer.begin(), 0xF, buffer_size);
-  memset(rhs_buffer.begin(), 0xF, buffer_size);
+  // The memcmp/strcmp buffers always compare equal, with a null terminator at
+  // the end for strcmp.
+  memset(lhs_buffer.begin(), 0xF, buffer_size - 1);
+  memset(rhs_buffer.begin(), 0xF, buffer_size - 1);
+  lhs_buffer[buffer_size - 1] = '\0';
+  rhs_buffer[buffer_size - 1] = '\0';
 }
 
 SetSetup::SetSetup()
     : ParameterBatch(1), dst_buffer(ParameterBatch::buffer_size) {}
+
+SearchSetup::SearchSetup()
+    : ParameterBatch(1), src_buffer(ParameterBatch::buffer_size) {
+  // Fill with a non-matching byte so memchr scans all size_bytes, and place a
+  // null terminator at the end for strlen.
+  memset(src_buffer.begin(), 0xF, buffer_size - 1);
+  src_buffer[buffer_size - 1] = '\0';
+}
 
 } // namespace libc_benchmarks
 } // namespace llvm

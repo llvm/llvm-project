@@ -29,7 +29,7 @@ module helper
   integer, parameter :: primes(3) = [2, 3, 5]
 
 ! CHECK-DAG: ![[TAG:.*]] = distinct !DIGlobalVariable(name: "tag", linkageName: "_QMhelperECtag", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+3]], type: ![[STR:.*]], isLocal: false, isDefinition: true)
-! CHECK-DAG: ![[STR]] = !DIStringType(size: 40, encoding: DW_ATE_ASCII)
+! CHECK-DAG: ![[STR]] = !DIStringType(size: 40, encoding: DW_ATE_ASCII, charType: !{{.*}})
 ! CHECK-DAG: !DIGlobalVariableExpression(var: ![[TAG]], expr: !DIExpression())
   character(len=5), parameter :: tag = "hello"
 end module helper

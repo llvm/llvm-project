@@ -67,14 +67,25 @@ public:
 
   // Stack frame accessors.
   const Frame *getCurrentFrame() override;
-  unsigned getCallStackDepth() override {
-    return Current ? (Current->getDepth() + 1) : 1;
-  }
+  unsigned getCallStackDepth() override { return FrameDepth + 1; }
   bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
 
   /// Deallocates a pointer.
-  void deallocate(Block *B);
+  void deallocate(Block *B) {
+    // The block might have a pointer saved in a field in its data
+    // that points to the block itself. We call the dtor first,
+    // which will destroy all the data but leave InlineDescriptors
+    // intact. If the block THEN still has pointers, we create a
+    // DeadBlock for it in deallocateWithPointers().
+    if (B->IsInitialized)
+      B->invokeDtor();
+
+    if (LLVM_LIKELY(!B->hasPointers()))
+      return;
+
+    deallocateWithPointers(B);
+  }
 
   /// Delegates source mapping to the mapper.
   SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
@@ -212,15 +223,23 @@ public:
     return NewFrame;
   }
 
+  /// Set the given frame as the current one.
+  void enterFrame(InterpFrame *F) {
+    Current = F;
+    ++FrameDepth;
+  }
+
   /// Free resources associated with the current frame and set the caller to be
   /// the new current frame.
-  void resetCurrentFrame() {
+  void exitFrame() {
     assert(Current);
+    assert(FrameDepth > 0);
     unsigned CurrentSize = InterpFrame::allocSize(Current->getFunction());
     InterpFrame *Caller = Current->Caller;
     Current->~InterpFrame();
     FrameAlloc.pop(CurrentSize);
     Current = Caller;
+    --FrameDepth;
   }
 
 private:
@@ -238,6 +257,9 @@ private:
   bool diagnoseStepLimitExceeded(CodePtr OpPC);
 
   FrameAllocator &FrameAlloc;
+
+  /// Deallocate a block that still has pointers pointing to it.
+  void deallocateWithPointers(Block *B);
 
 public:
   CodePtr PC;
@@ -262,6 +284,7 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+  unsigned FrameDepth = 0;
 
   unsigned StringID = 0;
 

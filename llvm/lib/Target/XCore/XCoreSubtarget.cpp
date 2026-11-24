@@ -13,6 +13,7 @@
 #include "XCoreSubtarget.h"
 #include "XCore.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 
 using namespace llvm;
 
@@ -21,6 +22,9 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "XCoreGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "XCoreOptions.inc"
 
 void XCoreSubtarget::anchor() { }
 

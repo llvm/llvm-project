@@ -1,5 +1,5 @@
+import type { dap } from "@protocol/dap";
 import type { CellComponent, ColumnDefinition } from "tabulator-tables";
-import type { SymbolType } from "..";
 
 /// SVG from https://github.com/olifolkerd/tabulator/blob/master/src/js/modules/Format/defaults/formatters/tickCross.js
 /// but with the default font color.
@@ -115,7 +115,7 @@ const SYMBOLS_TABLE = new Tabulator("#symbols-table", {
   data: previousState?.symbols || [],
 });
 
-function updateSymbolsTable(symbols: SymbolType[]) {
+function updateSymbolsTable(symbols: dap.ModuleSymbol[]) {
   SYMBOLS_TABLE.setData(symbols);
 }
 

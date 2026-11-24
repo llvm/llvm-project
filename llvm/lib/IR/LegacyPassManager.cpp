@@ -1159,9 +1159,6 @@ void PMDataManager::dumpPassInfo(Pass *P, enum PassDebuggingString S1,
   case ON_MODULE_MSG:
     dbgs() << "' on Module '"  << Msg << "'...\n";
     break;
-  case ON_REGION_MSG:
-    dbgs() << "' on Region '"  << Msg << "'...\n";
-    break;
   case ON_LOOP_MSG:
     dbgs() << "' on Loop '" << Msg << "'...\n";
     break;

@@ -180,6 +180,9 @@ public:
   /// Returns the number of rows in the constraint system.
   unsigned size() const { return Constraints.size(); }
 
+  /// Returns the rows currently in the system.
+  ArrayRef<RowTy> getConstraints() const { return Constraints; }
+
   /// Print the constraints in the system.
   LLVM_ABI void dump() const;
 };

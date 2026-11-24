@@ -44,9 +44,9 @@ body:             |
     %8:sreg_64_xexec_xnull = PHI %5, %bb.0, %9, %bb.1
     %10:sreg_32 = PHI %6, %bb.0, %11, %bb.1
     %12:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR %8, %7, -4, 0, implicit $exec :: (load (s32), addrspace 1)
-    %13:vgpr_32 = nofpexcept V_ADD_F32_e32 1065353216, killed %12, implicit $mode, implicit $exec
+    %13:vgpr_32 = nofpexcept V_ADD_F32_e32 1065353216, %12, implicit $mode, implicit $exec
     %11:sreg_32 = S_ADD_I32 %10, 1, implicit-def dead $scc
-    GLOBAL_STORE_DWORD_SADDR %7, killed %13, %8, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    GLOBAL_STORE_DWORD_SADDR %7, %13, %8, 0, 0, implicit $exec :: (store (s32), addrspace 1)
     %14:sreg_32 = S_ADD_U32 %8.sub0, 4, implicit-def $scc
     %15:sreg_32 = S_ADDC_U32 %8.sub1, 0, implicit-def $scc, implicit $scc
     %9:sreg_64 = REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1

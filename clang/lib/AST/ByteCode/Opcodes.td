@@ -267,9 +267,6 @@ def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
 }
-def InitScope : SuccessOpcode {
-  let Args = [ArgUint32];
-}
 
 def GetLocalEnabled : SuccessOpcode {
   let Args = [ArgUint32];
@@ -970,6 +967,10 @@ def InvalidShuffleVectorIndex : Opcode {
   let Args = [ArgUint32];
 }
 
+def InvalidTargetLabel : Opcode {
+  let Args = [ArgBool];
+}
+
 def Assume : Opcode;
 
 def ArrayDecay : Opcode;
@@ -1076,4 +1077,8 @@ def PopMSVCCE : SuccessOpcode;
 
 def GetStringPtr : SuccessOpcode {
   let Args = [ArgExpr];
+}
+
+def InvalidAccessIndexAttr : Opcode {
+  let Args = [ArgValueDecl, ArgTypePtr];
 }

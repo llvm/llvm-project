@@ -22,6 +22,7 @@
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
+using Fortran::common::numeric_limits;
 
 struct NamelistTests : CrashHandlerFixture {};
 
@@ -44,11 +45,10 @@ TEST(NamelistTests, BasicSanity) {
   for (int j{0}; j < 20; ++j) {
     ints.push_back(j % 2 == 0 ? (1 << j) : -(1 << j));
   }
-  std::vector<double> reals{0.0, -0.0, std::numeric_limits<double>::infinity(),
-      -std::numeric_limits<double>::infinity(),
-      std::numeric_limits<double>::quiet_NaN(),
-      std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest(),
-      std::numeric_limits<double>::epsilon()};
+  std::vector<double> reals{0.0, -0.0, numeric_limits<double>::infinity(),
+      -numeric_limits<double>::infinity(), numeric_limits<double>::quiet_NaN(),
+      numeric_limits<double>::max(), numeric_limits<double>::lowest(),
+      numeric_limits<double>::epsilon()};
   std::vector<std::uint8_t> logicals;
   logicals.push_back(false);
   logicals.push_back(true);
@@ -544,6 +544,33 @@ TEST(NamelistTests, BangAsValueSeparator) {
   std::string gotC{
       cDesc->ZeroBasedIndexedElement<char>(0), cDesc->ElementBytes()};
   EXPECT_EQ(gotC, "a!b     ");
+}
+
+// A tab separates names, '=' and values in NAMELIST input (see
+// flang/docs/Extensions.md).
+TEST(NamelistTests, TabAsValueSeparator) {
+  OwningPtr<Descriptor> aDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{2}, std::vector<int>(2, -1))};
+  OwningPtr<Descriptor> bDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{-1})};
+  const NamelistGroup::Item items[]{{"a", *aDesc}, {"b", *bDesc}};
+  const NamelistGroup group{"nl", 2, items};
+  static char t1[]{"&nl\ta\t=\t1\t2\tb\t=\t3\t/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  SubscriptValue shape{1};
+  internalDesc.Establish(
+      1, sizeof t1 - 1, t1, 1, &shape, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist input with tab separators";
+  EXPECT_EQ(*aDesc->ZeroBasedIndexedElement<int>(0), 1);
+  EXPECT_EQ(*aDesc->ZeroBasedIndexedElement<int>(1), 2);
+  EXPECT_EQ(*bDesc->ZeroBasedIndexedElement<int>(0), 3);
 }
 
 // TODO: Internal NAMELIST error tests

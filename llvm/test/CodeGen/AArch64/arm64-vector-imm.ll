@@ -19,17 +19,15 @@ define <8 x i8> @v_orrimm(ptr %A) nounwind {
 ;
 ; CHECK-NOFP16-GI-LABEL: v_orrimm:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NOFP16-GI-NEXT:    movi.2s v0, #1, lsl #24
 ; CHECK-NOFP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI0_0]
 ; CHECK-NOFP16-GI-NEXT:    orr.8b v0, v1, v0
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: v_orrimm:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI0_0
+; CHECK-FP16-GI-NEXT:    movi.2s v0, #1, lsl #24
 ; CHECK-FP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-FP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI0_0]
 ; CHECK-FP16-GI-NEXT:    orr.8b v0, v1, v0
 ; CHECK-FP16-GI-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
@@ -52,17 +50,15 @@ define <16 x i8> @v_orrimmQ(ptr %A) nounwind {
 ;
 ; CHECK-NOFP16-GI-LABEL: v_orrimmQ:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI1_0
+; CHECK-NOFP16-GI-NEXT:    movi.4s v0, #1, lsl #24
 ; CHECK-NOFP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
 ; CHECK-NOFP16-GI-NEXT:    orr.16b v0, v1, v0
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: v_orrimmQ:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI1_0
+; CHECK-FP16-GI-NEXT:    movi.4s v0, #1, lsl #24
 ; CHECK-FP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-FP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
 ; CHECK-FP16-GI-NEXT:    orr.16b v0, v1, v0
 ; CHECK-FP16-GI-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %A
@@ -85,17 +81,15 @@ define <8 x i8> @v_bicimm(ptr %A) nounwind {
 ;
 ; CHECK-NOFP16-GI-LABEL: v_bicimm:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NOFP16-GI-NEXT:    movi d0, #0xffffff00ffffff
 ; CHECK-NOFP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
 ; CHECK-NOFP16-GI-NEXT:    and.8b v0, v1, v0
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: v_bicimm:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI2_0
+; CHECK-FP16-GI-NEXT:    movi d0, #0xffffff00ffffff
 ; CHECK-FP16-GI-NEXT:    ldr d1, [x0]
-; CHECK-FP16-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
 ; CHECK-FP16-GI-NEXT:    and.8b v0, v1, v0
 ; CHECK-FP16-GI-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
@@ -118,17 +112,15 @@ define <16 x i8> @v_bicimmQ(ptr %A) nounwind {
 ;
 ; CHECK-NOFP16-GI-LABEL: v_bicimmQ:
 ; CHECK-NOFP16-GI:       // %bb.0:
-; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NOFP16-GI-NEXT:    movi.2d v0, #0xffffff00ffffff
 ; CHECK-NOFP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
 ; CHECK-NOFP16-GI-NEXT:    and.16b v0, v1, v0
 ; CHECK-NOFP16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: v_bicimmQ:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI3_0
+; CHECK-FP16-GI-NEXT:    movi.2d v0, #0xffffff00ffffff
 ; CHECK-FP16-GI-NEXT:    ldr q1, [x0]
-; CHECK-FP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
 ; CHECK-FP16-GI-NEXT:    and.16b v0, v1, v0
 ; CHECK-FP16-GI-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %A
@@ -276,19 +268,29 @@ define <8 x i16> @splat16_3c80() {
 ;
 ; CHECK-FP16-GI-LABEL: splat16_3c80:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI17_0
-; CHECK-FP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI17_0]
+; CHECK-FP16-GI-NEXT:    fmov.8h v0, #1.12500000
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   ret <8 x i16> <i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80>
 }
 
 define <16 x i8> @splat8_3c80() {
-; CHECK-LABEL: splat8_3c80:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI18_0]
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-LABEL: splat8_3c80:
+; CHECK-NOFP16:       // %bb.0: // %entry
+; CHECK-NOFP16-NEXT:    adrp x8, .LCPI18_0
+; CHECK-NOFP16-NEXT:    ldr q0, [x8, :lo12:.LCPI18_0]
+; CHECK-NOFP16-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: splat8_3c80:
+; CHECK-FP16-SD:       // %bb.0: // %entry
+; CHECK-FP16-SD-NEXT:    adrp x8, .LCPI18_0
+; CHECK-FP16-SD-NEXT:    ldr q0, [x8, :lo12:.LCPI18_0]
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: splat8_3c80:
+; CHECK-FP16-GI:       // %bb.0: // %entry
+; CHECK-FP16-GI-NEXT:    fmov.8h v0, #1.12500000
+; CHECK-FP16-GI-NEXT:    ret
 entry:
   ret <16 x i8> <i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c>
 }
@@ -300,20 +302,12 @@ define <16 x i8> @splat8_803c() {
 ; CHECK-NOFP16-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
 ; CHECK-NOFP16-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: splat8_803c:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    movi.8h v0, #60
-; CHECK-FP16-SD-NEXT:    fneg.8h v0, v0
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: splat8_803c:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI19_0
-; CHECK-FP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-FP16-LABEL: splat8_803c:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    movi.8h v0, #60
+; CHECK-FP16-NEXT:    fneg.8h v0, v0
+; CHECK-FP16-NEXT:    ret
 entry:
   ret <16 x i8> <i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80>
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-FP16: {{.*}}

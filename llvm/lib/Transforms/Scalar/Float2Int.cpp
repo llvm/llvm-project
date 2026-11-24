@@ -484,8 +484,8 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   ConvertedInsts.clear();
   Roots.clear();
 
-  MaxIntegerBW = ScalarOptions::Global.float2int_max_integer_bw;
   Ctx = &F.getParent()->getContext();
+  MaxIntegerBW = getScalarOptions(*Ctx).float2int_max_integer_bw;
 
   findRoots(F, DT);
 

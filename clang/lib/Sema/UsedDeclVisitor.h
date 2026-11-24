@@ -89,6 +89,10 @@ public:
     Inherited::VisitCXXConstructExpr(E);
   }
 
+  void VisitCXXInheritedCtorInitExpr(CXXInheritedCtorInitExpr *E) {
+    asImpl().visitUsedDecl(E->getBeginLoc(), E->getConstructor());
+  }
+
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
     asImpl().Visit(E->getExpr());
     Inherited::VisitCXXDefaultArgExpr(E);

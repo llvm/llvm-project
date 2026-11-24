@@ -16,17 +16,17 @@
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv32.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
-#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "Register/Common/RegisterInfo_riscv32.h"
+#include "Register/Common/RegisterInfo_riscv64.h"
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 
 struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
-  RegisterInfoPOSIX_riscv64::GPR gpr;
-  RegisterInfoPOSIX_riscv64::FPR fpr;
+  RegisterInfo_riscv64::GPR gpr;
+  RegisterInfo_riscv64::FPR fpr;
   uint8_t memory[1024] = {0};
 
   RISCVEmulatorTester(std::string triple = "riscv64-unknown-linux-gnu")
@@ -275,6 +275,13 @@ TEST_F(RISCVEmulatorTester, TestAtomicSequence) {
   *(uint32_t *)(this->memory + 12) = 0xfe069ae3; // bnez	a3,-12
   ASSERT_TRUE(this->DecodeAndExecute(*(uint32_t *)this->memory, false));
   ASSERT_EQ(this->gpr.gpr[0], uint64_t(16));
+}
+
+TEST_F(RISCVEmulatorTester, TestStoreConditionalOutsideSequence) {
+  // sc.w t0, t0, (t0)
+  ASSERT_FALSE(this->DecodeAndExecute(0x1852a2af, false));
+  // sc.d t0, t0, (t0)
+  ASSERT_FALSE(this->DecodeAndExecute(0x1852b2af, false));
 }
 
 struct TestDecode {

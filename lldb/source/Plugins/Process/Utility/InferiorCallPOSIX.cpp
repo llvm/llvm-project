@@ -73,8 +73,8 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
   function_options.include_inlines = false;
 
   SymbolContextList sc_list;
-  process->GetTarget().GetImages().FindFunctions(
-      ConstString("mmap"), eFunctionNameTypeFull, function_options, sc_list);
+  process->GetTarget().GetImages().FindFunctions("mmap", eFunctionNameTypeFull,
+                                                 function_options, sc_list);
   const uint32_t count = sc_list.GetSize();
   if (count > 0) {
     EvaluateExpressionOptions options;
@@ -128,10 +128,13 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
           ExpressionResults result = process->RunThreadPlan(
               exe_ctx, call_plan_sp, options, diagnostics);
           if (result == eExpressionCompleted) {
+            ThreadPlanReturnValue return_value = call_plan_sp->GetReturnValue();
+            auto *returned = std::get_if<ReturnedValue>(&return_value);
+            if (!returned)
+              return false;
 
             allocated_addr =
-                call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(
-                    LLDB_INVALID_ADDRESS);
+                returned->valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
             if (process->GetAddressByteSize() == 4) {
               if (allocated_addr == UINT32_MAX)
                 return false;
@@ -162,7 +165,7 @@ bool lldb_private::InferiorCallMunmap(Process *process, addr_t addr,
 
   SymbolContextList sc_list;
   process->GetTarget().GetImages().FindFunctions(
-      ConstString("munmap"), eFunctionNameTypeFull, function_options, sc_list);
+      "munmap", eFunctionNameTypeFull, function_options, sc_list);
   const uint32_t count = sc_list.GetSize();
   if (count > 0) {
     EvaluateExpressionOptions options;

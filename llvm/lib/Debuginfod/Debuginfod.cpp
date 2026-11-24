@@ -258,8 +258,10 @@ Expected<std::string> getCachedOrDownloadArtifact(
       HTTPRequest Request(ArtifactUrl);
       Request.Headers = getHeaders();
       Error Err = Client.perform(Request, Handler);
-      if (Err)
+      if (Err) {
+        consumeError(Handler.abort());
         return std::move(Err);
+      }
       if ((Err = Handler.commit()))
         return std::move(Err);
 

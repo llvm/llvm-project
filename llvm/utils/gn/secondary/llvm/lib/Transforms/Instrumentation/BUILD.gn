@@ -24,6 +24,7 @@ static_library("Instrumentation") {
     "BlockCoverageInference.cpp",
     "BoundsChecking.cpp",
     "CGProfile.cpp",
+    "ConcurrencySanitizer.cpp",
     "ControlHeightReduction.cpp",
     "CopyProf.cpp",
     "DataFlowSanitizer.cpp",

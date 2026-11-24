@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpointLocation.h"
+#include "Utils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
@@ -180,7 +181,7 @@ const char *SBBreakpointLocation::GetCondition() {
   StopCondition cond = loc_sp->GetCondition();
   if (!cond)
     return nullptr;
-  return ConstString(cond.GetText()).GetCString();
+  return GetDebuggerStringPool(loc_sp->GetTarget()).Intern(cond.GetText());
 }
 
 void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {
@@ -234,23 +235,21 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
   BreakpointLocationSP loc_sp = GetSP();
 
   if (loc_sp) {
-    Status error;
     TargetAPIMutex api_lock = loc_sp->GetTarget().GetAPIMutex();
     std::lock_guard<TargetAPIMutex> guard(api_lock);
     BreakpointOptions &bp_options = loc_sp->GetLocationOptions();
-    error = loc_sp->GetBreakpoint()
-        .GetTarget()
-        .GetDebugger()
-        .GetScriptInterpreter()
-        ->SetBreakpointCommandCallbackFunction(bp_options,
-                                               callback_function_name,
-                                               extra_args.m_impl_up
-                                                   ->GetObjectSP());
-    sb_error.SetError(std::move(error));
-    } else
-      sb_error = Status::FromErrorString("invalid breakpoint");
+    llvm::Error error = loc_sp->GetBreakpoint()
+                            .GetTarget()
+                            .GetDebugger()
+                            .GetScriptInterpreter()
+                            ->SetBreakpointCommandCallbackFunction(
+                                bp_options, callback_function_name,
+                                extra_args.m_impl_up->GetObjectSP());
+    sb_error.SetError(Status::FromError(std::move(error)));
+  } else
+    sb_error = Status::FromErrorString("invalid breakpoint");
 
-    return sb_error;
+  return sb_error;
 }
 
 SBError
@@ -264,14 +263,14 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
     TargetAPIMutex api_lock = loc_sp->GetTarget().GetAPIMutex();
     std::lock_guard<TargetAPIMutex> guard(api_lock);
     BreakpointOptions &bp_options = loc_sp->GetLocationOptions();
-    Status error =
+    llvm::Error error =
         loc_sp->GetBreakpoint()
             .GetTarget()
             .GetDebugger()
             .GetScriptInterpreter()
             ->SetBreakpointCommandCallback(bp_options, callback_body_text,
                                            /*is_callback=*/false);
-    sb_error.SetError(std::move(error));
+    sb_error.SetError(Status::FromError(std::move(error)));
   } else
     sb_error = Status::FromErrorString("invalid breakpoint");
 
@@ -377,7 +376,8 @@ const char *SBBreakpointLocation::GetThreadName() const {
 
   TargetAPIMutex api_lock = loc_sp->GetTarget().GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
-  return ConstString(loc_sp->GetThreadName()).GetCString();
+  return GetDebuggerStringPool(loc_sp->GetTarget())
+      .Intern(loc_sp->GetThreadName());
 }
 
 void SBBreakpointLocation::SetQueueName(const char *queue_name) {
@@ -400,7 +400,8 @@ const char *SBBreakpointLocation::GetQueueName() const {
 
   TargetAPIMutex api_lock = loc_sp->GetTarget().GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
-  return ConstString(loc_sp->GetQueueName()).GetCString();
+  return GetDebuggerStringPool(loc_sp->GetTarget())
+      .Intern(loc_sp->GetQueueName());
 }
 
 bool SBBreakpointLocation::IsResolved() {

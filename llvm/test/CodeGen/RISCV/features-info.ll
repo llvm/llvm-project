@@ -7,6 +7,7 @@
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
+; CHECK-NEXT:   avoid-vxrm                       - Instructions that use VXRM should be avoided.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
 ; CHECK-NEXT:   conditional-cmv-fusion           - Enable branch+c.mv fusion.
@@ -23,8 +24,6 @@
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
-; CHECK-NEXT:   experimental-rva23p1s64          - RISC-V experimental-rva23p1s64 profile.
-; CHECK-NEXT:   experimental-rvb23p1s64          - RISC-V experimental-rvb23p1s64 profile.
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
 ; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
@@ -68,7 +67,9 @@
 ; CHECK-NEXT:   experimental-zvvmtls             - 'Zvvmtls' (Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvvmttls            - 'Zvvmttls' (Transposing Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
+; CHECK-NEXT:   experimental-zyhybrid            - 'Zyhybrid' (Hybrid Extension for RVI Compatibility).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
+; CHECK-NEXT:   fix-sifive-mal-9174              - Workaround SiFive erratum MAL-9174 by disallowing overlapping source and destination for vector indexed loads.
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK-NEXT:   fusion-add-load                  - Enable ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   fusion-add-mem                   - Enable ADD+LOAD/STORE macrofusion.
@@ -153,8 +154,10 @@
 ; CHECK-NEXT:   rva20u64                         - RISC-V rva20u64 profile.
 ; CHECK-NEXT:   rva22s64                         - RISC-V rva22s64 profile.
 ; CHECK-NEXT:   rva22u64                         - RISC-V rva22u64 profile.
+; CHECK-NEXT:   rva23p1s64                       - RISC-V rva23p1s64 profile.
 ; CHECK-NEXT:   rva23s64                         - RISC-V rva23s64 profile.
 ; CHECK-NEXT:   rva23u64                         - RISC-V rva23u64 profile.
+; CHECK-NEXT:   rvb23p1s64                       - RISC-V rvb23p1s64 profile.
 ; CHECK-NEXT:   rvb23s64                         - RISC-V rvb23s64 profile.
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.
@@ -282,6 +285,7 @@
 ; CHECK-NEXT:   xsfvfexpa                        - 'XSfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction).
 ; CHECK-NEXT:   xsfvfexpa64e                     - 'XSfvfexpa64e' (SiFive Vector Floating-Point Exponential Approximation Instruction with Double-Precision).
 ; CHECK-NEXT:   xsfvfnrclipxfqf                  - 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions).
+; CHECK-NEXT:   xsfvfofp4min                     - 'XSfvfofp4min' (SiFive Vector OFP4 Conversion Instruction).
 ; CHECK-NEXT:   xsfvfwmaccqqq                    - 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4)).
 ; CHECK-NEXT:   xsfvqmaccdod                     - 'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2)).
 ; CHECK-NEXT:   xsfvqmaccqoq                     - 'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)).

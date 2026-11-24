@@ -84,3 +84,37 @@ float4 no_collide(NoCollide C) : SV_Target { return C.A; }
 // The same semantic index is allowed in separate input and output signatures.
 [shader("vertex")]
 float4 separate_signatures(float4 C : USER0) : USER0 { return C; }
+
+// Each row of a row_major matrix reserves a semantic index.
+struct CollideRowMatrix {
+  row_major float2x3 A : USER0;
+// expected-note@-1 {{previous use is here}}
+  float4 B : USER1;
+// expected-error@-1 {{semantic index overlap USER1}}
+// expected-note@-2 {{'B' used here}}
+};
+
+[shader("pixel")]
+float4 collide_row_matrix(CollideRowMatrix C) : SV_Target { return C.B; }
+// expected-note@-1 {{'C' declared here}}
+
+// Each column of a column_major matrix reserves a semantic index.
+struct CollideColumnMatrix {
+  column_major float2x3 A[2] : USER0;
+// expected-note@-1 {{previous use is here}}
+  float4 B : USER5;
+// expected-error@-1 {{semantic index overlap USER5}}
+// expected-note@-2 {{'B' used here}}
+};
+
+[shader("pixel")]
+float4 collide_column_matrix(CollideColumnMatrix C) : SV_Target { return C.B; }
+// expected-note@-1 {{'C' declared here}}
+
+struct NoCollideMatrix {
+  column_major float2x3 A[2] : USER0;
+  float4 B : USER6;
+};
+
+[shader("pixel")]
+float4 no_collide_matrix(NoCollideMatrix C) : SV_Target { return C.B; }

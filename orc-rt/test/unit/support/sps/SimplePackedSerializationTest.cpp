@@ -172,6 +172,25 @@ TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   blobSerializationRoundTrip<SPSString, std::string_view>(std::string_view(HW));
 }
 
+TEST(SimplePackedSerializationTest, StringPoolPtrSerialization) {
+  // Interned strings serialize as their value, readable as a std::string.
+  StringPool SP;
+  auto P = SP.intern("Hello, world!");
+  StringPool::WeakPtr WP(P);
+
+  auto BP = spsSerialize<SPSArgList<SPSString>>(P);
+  ASSERT_TRUE(BP);
+  std::string S;
+  ASSERT_TRUE(spsDeserialize<SPSArgList<SPSString>>(*BP, S));
+  EXPECT_EQ(S, "Hello, world!");
+
+  auto BWP = spsSerialize<SPSArgList<SPSString>>(WP);
+  ASSERT_TRUE(BWP);
+  S.clear();
+  ASSERT_TRUE(spsDeserialize<SPSArgList<SPSString>>(*BWP, S));
+  EXPECT_EQ(S, "Hello, world!");
+}
+
 TEST(SimplePackedSerializationTest, SpanSerialization) {
   const char Data[] = {3, 2, 1, 0, 1, 2, 3}; // Span should handle nulls.
   span<const char> OutS(Data, sizeof(Data));

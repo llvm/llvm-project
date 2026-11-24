@@ -13,6 +13,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+class PassManagerTest_FunctionPassReturnValue_Test;
+class PassManagerTest_RegionPassReturnValue_Test;
+
 namespace llvm {
 
 class AAResults;
@@ -30,6 +33,9 @@ class Analyses {
   TargetTransformInfo *TTI = nullptr;
 
   Analyses() = default;
+  // Friends for default constructor in tests.
+  friend class ::PassManagerTest_FunctionPassReturnValue_Test;
+  friend class ::PassManagerTest_RegionPassReturnValue_Test;
 
 public:
   Analyses(AAResults &AA, ScalarEvolution &SE, TargetTransformInfo &TTI)
@@ -44,7 +50,7 @@ public:
 };
 
 /// The base class of a Sandbox IR Pass.
-class Pass {
+class LLVM_ABI Pass {
 protected:
   /// The pass name. This is also used as a command-line flag and should not
   /// contain whitespaces.
@@ -66,7 +72,7 @@ public:
     return OS;
   }
   virtual void print(raw_ostream &OS) const { OS << Name; }
-  LLVM_ABI LLVM_DUMP_METHOD virtual void dump() const;
+  LLVM_DUMP_METHOD virtual void dump() const;
 #endif
   /// Similar to print() but adds a newline. Used for testing.
   virtual void printPipeline(raw_ostream &OS) const { OS << Name << "\n"; }
@@ -111,8 +117,8 @@ public:
   bool operator=(bool NewVal) { return set(NewVal); }
 
 #ifndef NDEBUG
-  void print(raw_ostream &OS) const;
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -138,8 +144,8 @@ public:
   LLVM_ABI void parse(StringRef ArgsStr);
 
 #ifndef NDEBUG
-  void print(raw_ostream &OS) const;
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 

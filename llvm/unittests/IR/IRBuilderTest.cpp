@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm-c/Core.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
@@ -1470,5 +1471,62 @@ TEST_F(IRBuilderTest, CreateAggregateRet) {
   CalleeBuilder.CreateAggregateRet({RV0, RV1});
 
   EXPECT_FALSE(verifyModule(*M));
+}
+
+TEST_F(IRBuilderTest, CreateInContext) {
+  // Test compatibility shim for LLVMCreateBuilderInContext API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
+  LLVMBuilderRef Builder0 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMDisposeBuilder(Builder0);
+
+  LLVMBuilderRef Builder1 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMPositionBuilderAtEnd(Builder1, wrap(BB));
+  LLVMValueRef Instr = LLVMBuildRetVoid(Builder1);
+  LLVMDisposeBuilder(Builder1);
+
+  LLVMBuilderRef Builder2 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMPositionBuilderBefore(Builder2, Instr);
+  LLVMBuildFreeze(Builder2, wrap(GV), "");
+  LLVMDisposeBuilder(Builder2);
+
+#if GTEST_HAS_DEATH_TEST
+  LLVMBuilderRef Builder3 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  EXPECT_DEATH(LLVMBuildFreeze(Builder3, wrap(GV), ""),
+               "Cannot use Builder without known module.");
+  LLVMDisposeBuilder(Builder3);
+
+  LLVMBuilderRef Builder4 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  Instruction *FloatingInst = new FreezeInst(GV);
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  BasicBlock *FloatingBB = BasicBlock::Create(Ctx);
+  FloatingInst->insertBefore(*FloatingBB, FloatingBB->end());
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  Function *FloatingFn =
+      Function::Create(FunctionType::get(Type::getVoidTy(Ctx), false),
+                       Function::ExternalLinkage);
+  FloatingBB->insertInto(FloatingFn);
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  M->getFunctionList().push_back(FloatingFn);
+  LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst));
+  LLVMDisposeBuilder(Builder4);
+#endif
+
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+}
+
+TEST_F(IRBuilderTest, Unwrap) {
+  // unwrap() on LLVMBuilderRef is available to interact with it via
+  // the C++ API.
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(wrap(&*M));
+  LLVMPositionBuilderAtEnd(Builder, wrap(BB));
+  unwrap(Builder)->CreateRetVoid();
+  LLVMDisposeBuilder(Builder);
 }
 }

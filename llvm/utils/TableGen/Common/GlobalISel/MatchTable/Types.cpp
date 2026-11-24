@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Types.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 namespace gi {
@@ -14,6 +16,14 @@ namespace gi {
 //===- Global Data --------------------------------------------------------===//
 
 std::set<LLTCodeGen> KnownTypes;
+std::map<LLTByHwMode, unsigned> LLTByHwModeIDs;
+
+unsigned getLLTByHwModeID(const LLTByHwMode &Ty) {
+  auto [It, Inserted] = LLTByHwModeIDs.try_emplace(Ty, LLTByHwModeIDs.size());
+  if (Inserted && It->second >= 256)
+    report_fatal_error("More LLT by HwMode than fit in a 8-bit index");
+  return It->second;
+}
 
 //===- LLTCodeGen ---------------------------------------------------------===//
 
@@ -155,6 +165,41 @@ std::optional<LLTCodeGen> MVTToGenericLLT(MVT VT) {
     return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));
 
   return std::nullopt;
+}
+
+std::optional<LLTOrLLTByHwMode> getLLTOrLLTByHwMode(const TypeSetByHwMode &VTy,
+                                                    bool Generic) {
+  if (!VTy.isValueTypeByHwMode(/*AllowEmpty=*/true))
+    return std::nullopt;
+
+  LLTByHwMode Result;
+  for (const auto &[Mode, Types] : VTy) {
+    // A HwMode with no types means the pattern can't match in that mode. Use
+    // an invalid LLT so the type check always fails.
+    if (Types.empty()) {
+      Result.insertTypeForMode(Mode, LLTCodeGen());
+      continue;
+    }
+
+    MVT VT = *Types.begin();
+    std::optional<LLTCodeGen> Ty;
+    if (VTy.isPointer())
+      Ty = LLTCodeGen(LLT::pointer(VTy.getPtrAddrSpace(), VT.getSizeInBits()));
+    else
+      Ty = Generic ? MVTToGenericLLT(VT) : MVTToLLT(VT);
+    if (!Ty)
+      return std::nullopt;
+    Result.insertTypeForMode(Mode, *Ty);
+  }
+
+  // If every HwMode has the same type and there is a default, there's no need
+  // to look up the type by HwMode.
+  const LLTCodeGen &First = Result.begin()->second;
+  if (Result.hasDefault() && First.get().isValid() &&
+      all_of(Result, [&](const auto &P) { return P.second == First; }))
+    return First;
+
+  return Result;
 }
 } // namespace gi
 } // namespace llvm

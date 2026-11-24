@@ -9,8 +9,6 @@
 #ifndef MLIR_INTERFACES_RUNTIMEVERIFIABLEOPINTERFACE_H_
 #define MLIR_INTERFACES_RUNTIMEVERIFIABLEOPINTERFACE_H_
 
-#include "mlir/IR/OpDefinition.h"
-
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h.inc"
 

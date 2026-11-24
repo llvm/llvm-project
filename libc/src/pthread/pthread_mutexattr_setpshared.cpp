@@ -9,8 +9,8 @@
 #include "pthread_mutexattr_setpshared.h"
 #include "pthread_mutexattr.h"
 
+#include "hdr/errno_macros.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include <pthread.h>

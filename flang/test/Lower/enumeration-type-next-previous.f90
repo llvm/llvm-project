@@ -1,6 +1,6 @@
 ! Test lowering of the NEXT and PREVIOUS intrinsics for enumeration types.
-! RUN: %flang_fc1 -fenumeration-type -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fenumeration-type -emit-fir %s -o /dev/null
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir %s -o /dev/null
 
 module enum_np_mod
   enumeration type :: color

@@ -15,12 +15,28 @@ module {
     %1 = fir.embox %0 typeparams %c0 : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.char<1,?>>>
   } loc(#loc1)
+  fir.global @_QMhelperEstr4 : !fir.box<!fir.heap<!fir.char<4,?>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.char<4,?>>
+    %1 = fir.embox %0 typeparams %c0 : (!fir.heap<!fir.char<4,?>>, index) -> !fir.box<!fir.heap<!fir.char<4,?>>>
+    fir.has_value %1 : !fir.box<!fir.heap<!fir.char<4,?>>>
+  } loc(#loc1)
 }
 #loc1 = loc("string.f90":1:1)
 
-// CHECK-DAG: #[[TY1:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 320, encoding = DW_ATE_ASCII>
+// CHECK-DAG: #[[TY1:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 320, encoding = DW_ATE_ASCII, charType = #{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str1"{{.*}}type = #[[TY1]]{{.*}}>
-// CHECK-DAG: #[[TY2:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 640, encoding = DW_ATE_UCS>
+// CHECK-DAG: #[[TY2:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 640, encoding = DW_ATE_UCS, charType = #{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str2"{{.*}}type = #[[TY2]]{{.*}}>
-// CHECK-DAG: #[[TY3:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type{{.*}}stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, encoding = DW_ATE_ASCII>
+
+// str3: descriptor-based deferred-length character(kind=1). The length is read
+// from the descriptor (elem_len in bytes). Since kind=1 characters are a single
+// byte, no division is needed to convert the byte length to a character count.
+// CHECK-DAG: #[[TY3:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type{{.*}}stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, encoding = DW_ATE_ASCII, charType = #{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str3"{{.*}}type = #[[TY3]]{{.*}}>
+
+// str4: descriptor-based deferred-length character(kind=4). The length is read
+// from the descriptor (elem_len in bytes) and divided by the kind (4 bytes per
+// character) to recover the character count.
+// CHECK-DAG: #[[TY4:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type{{.*}}stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8), DW_OP_deref, DW_OP_constu(4), DW_OP_div, DW_OP_stack_value]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, encoding = DW_ATE_UCS, charType = #{{.*}}>
+// CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str4"{{.*}}type = #[[TY4]]{{.*}}>

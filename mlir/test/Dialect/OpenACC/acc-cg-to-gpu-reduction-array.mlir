@@ -453,3 +453,84 @@ func.func @thread_only_array_reduction_single_block() {
   } <{origin = "acc.parallel"}>
   return
 }
+
+// A block dim launched one wide is one block, so a thread-only accumulate is
+// just as complete as it is with no block dim at all.
+//
+// CHECK-LABEL: func.func @thread_only_array_reduction_unit_block
+// CHECK: gpu.launch
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK: scf.for %[[UB_IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[UB_ELT:.*]] = memref.load %[[UB_ALLOCA:.*]][%[[UB_IV]]] : memref<8xi32>
+// CHECK:   %[[UB_RED:.*]] = gpu.all_reduce add %[[UB_ELT]]
+// CHECK:   memref.store %[[UB_RED]], %[[UB_ALLOCA]][%[[UB_IV]]] : memref<8xi32>
+// CHECK: }
+func.func @thread_only_array_reduction_unit_block() {
+  %c1_pw = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1_pw par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c8 = arith.constant 8 : index
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<8xi32>
+    scf.for %i = %c0 to %c8 step %c1 {
+      memref.store %c0_i32, %local[%i] : memref<8xi32>
+    }
+    %bounds = acc.bounds extent(%c8 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        par_dims(#acc<par_dims[thread_x]>) : memref<8xi32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// A dimension launched one wide partitions nothing, so an accumulate over
+// block_x and a one-wide thread_y reduces to the block-only case: the per-gang
+// copy already holds the result and no cross-thread merge is emitted.
+//
+// CHECK-LABEL: func.func @unit_thread_dim_array_reduction_is_block_only
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK-NOT: gpu.all_reduce
+// CHECK-NOT: memref.atomic_rmw
+func.func @unit_thread_dim_array_reduction_is_block_only() {
+  %c1_pw = arith.constant 1 : index
+  %c8_pw = arith.constant 8 : index
+  %bx = acc.par_width %c8_pw par_dim(#acc.par_dim<block_x>)
+  %ty = acc.par_width %c1_pw par_dim(#acc.par_dim<thread_y>)
+  acc.compute_region launch(%kbx = %bx, %kty = %ty) {
+    %c2 = arith.constant 2 : index
+    %local = memref.alloca() : memref<2xi32>
+    %bounds = acc.bounds extent(%c2 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : memref<2xi32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// When every dimension the accumulate names is launched one wide, nothing
+// partitions the reduction at all and the accumulator already holds the result.
+//
+// CHECK-LABEL: func.func @all_unit_dims_array_reduction_is_nop
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK-NOT: gpu.all_reduce
+// CHECK-NOT: memref.atomic_rmw
+func.func @all_unit_dims_array_reduction_is_nop() {
+  %c1_pw = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1_pw par_dim(#acc.par_dim<block_x>)
+  %ty = acc.par_width %c1_pw par_dim(#acc.par_dim<thread_y>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+  acc.compute_region launch(%kbx = %bx, %kty = %ty, %ktx = %tx) {
+    %c2 = arith.constant 2 : index
+    %local = memref.alloca() : memref<2xi32>
+    %bounds = acc.bounds extent(%c2 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : memref<2xi32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}

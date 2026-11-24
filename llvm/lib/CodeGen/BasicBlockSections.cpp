@@ -233,7 +233,7 @@ updateBranches(MachineFunction &MF,
 
 // This function generates the machine basic block clusters of "hot" blocks.
 // Currently, only support one cluster creation.
-// TODO: Support multi-cluster creation and path cloning.
+// TODO: Support multi-cluster creation.
 static SmallVector<BBClusterInfo>
 createBBClusterInfoForFunction(MachineFunction &MF,
                                const BasicBlockMatchingAndInference &BMI) {
@@ -293,11 +293,8 @@ createBBClusterInfoForFunction(MachineFunction &MF,
   // Generate the "hot" basic block cluster.
   if (!HotMBBs.empty()) {
     unsigned CurrentPosition = 0;
-    for (auto &MBB : HotMBBs) {
-      if (MBB->getBBID()) {
-        BBClusterInfos.push_back({*(MBB->getBBID()), 0, CurrentPosition++});
-      }
-    }
+    for (auto &MBB : HotMBBs)
+      BBClusterInfos.push_back({*MBB->getBBID(), 0, CurrentPosition++});
   }
   return BBClusterInfos;
 }
@@ -399,7 +396,8 @@ void llvm::sortBasicBlocksAndUpdateBranches(
 void llvm::avoidZeroOffsetLandingPad(MachineFunction &MF) {
   std::optional<MBBSectionID> CurrentSection;
   auto IsFirstNonEmptyBBInSection = [&](const MachineBasicBlock &MBB) {
-    if (MBB.empty() || MBB.getSectionID() == CurrentSection)
+    if (MBB.getFirstNonDebugInstr() == MBB.end() ||
+        MBB.getSectionID() == CurrentSection)
       return false;
     CurrentSection = MBB.getSectionID();
     return true;

@@ -596,7 +596,7 @@
 // MSP430:#define __WCHAR_MAX__ 32767
 // MSP430:#define __WCHAR_TYPE__ int
 // MSP430:#define __WCHAR_WIDTH__ 16
-// MSP430:#define __WINT_TYPE__ int
+// MSP430:#define __WINT_TYPE__ unsigned int
 // MSP430:#define __WINT_WIDTH__ 16
 // MSP430:#define __clang__ 1
 //
@@ -1010,7 +1010,7 @@
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-LDBL64 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-rtems-elf < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-LDBL64 %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD -check-prefix SPARC-LDBL128 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD -check-prefix SPARC-LDBL64 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-unknown-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix SPARC-LDBL128 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-sun-solaris < /dev/null | FileCheck -match-full-lines -check-prefix SPARC-LDBL128 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-LDBL64 -check-prefix SPARC-DEFAULT-CXX %s
@@ -1050,6 +1050,7 @@
 // SPARC:#define __FLT_MIN_EXP__ (-125)
 // SPARC:#define __FLT_MIN__ 1.17549435e-38F
 // SPARC:#define __FLT_RADIX__ 2
+// SPARC:#define __GCC_ATOMIC_INT_LOCK_FREE 1
 // SPARC:#define __GCC_ATOMIC_LLONG_LOCK_FREE 1
 // SPARC:#define __INT16_C(c) c
 // SPARC:#define __INT16_C_SUFFIX__
@@ -2900,6 +2901,8 @@
 
 // RUN: %clang_cc1 -dM -triple=x86_64-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
 // RUN: %clang_cc1 -dM -triple=x86_64-unknown-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
+// RUN: %clang_cc1 -dM -triple=aarch64-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
+// RUN: %clang_cc1 -dM -triple=aarch64-unknown-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
 
 // UEFI: #define __UEFI__ 1
 

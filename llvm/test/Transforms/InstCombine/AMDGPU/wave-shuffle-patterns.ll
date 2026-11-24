@@ -208,8 +208,8 @@ define i32 @test_row_xmask5_w32(i32 %val) {
 ; Half-wave swap (wave64 only): lane ^ 32.
 define i32 @test_half_wave_swap_w64(i32 %val) {
 ; GFX11-LABEL: @test_half_wave_swap_w64(
-; GFX11-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LO]], 32
+; GFX11-NEXT:    [[LO:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-NEXT:    [[IDX:%.*]] = or disjoint i32 [[LO]], 32
 ; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
 ; GFX11-NEXT:    ret i32 [[RESULT]]
 ;
@@ -219,7 +219,7 @@ define i32 @test_half_wave_swap_w64(i32 %val) {
 ;
 ; GFX9-LABEL: @test_half_wave_swap_w64(
 ; GFX9-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 32
 ; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
 ; GFX9-NEXT:    ret i32 [[RESULT]]
@@ -495,7 +495,7 @@ define <2 x i16> @test_half_row_share3_v2i16(<2 x i16> %val) {
 ; Negative: 64-bit type, should not optimize.
 define i64 @test_quad_perm_xor1_i64_negative(i64 %val) {
 ; GFX11-LABEL: @test_quad_perm_xor1_i64_negative(
-; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
 ; GFX11-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.wave.shuffle.i64(i64 [[VAL:%.*]], i32 [[IDX]])
 ; GFX11-NEXT:    ret i64 [[RESULT]]
@@ -521,7 +521,7 @@ define i64 @test_quad_perm_xor1_i64_negative(i64 %val) {
 ; Negative: 64-bit pointer, should not optimize.
 define ptr @test_quad_perm_xor1_p0_negative(ptr %val) {
 ; GFX11-LABEL: @test_quad_perm_xor1_p0_negative(
-; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
 ; GFX11-NEXT:    [[RESULT:%.*]] = call ptr @llvm.amdgcn.wave.shuffle.p0(ptr [[VAL:%.*]], i32 [[IDX]])
 ; GFX11-NEXT:    ret ptr [[RESULT]]
@@ -547,7 +547,7 @@ define ptr @test_quad_perm_xor1_p0_negative(ptr %val) {
 ; Negative: 16-bit type, should not optimize.
 define i16 @test_quad_perm_xor1_i16_negative(i16 %val) {
 ; GFX11-LABEL: @test_quad_perm_xor1_i16_negative(
-; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
 ; GFX11-NEXT:    [[RESULT:%.*]] = call i16 @llvm.amdgcn.wave.shuffle.i16(i16 [[VAL:%.*]], i32 [[IDX]])
 ; GFX11-NEXT:    ret i16 [[RESULT]]
@@ -629,8 +629,8 @@ define i32 @test_identity_shuffle_w32(i32 %val) {
 ; Negative: index out of range (lane + 32 >= 32 for wave32).
 define i32 @test_out_of_range_w32(i32 %val) {
 ; GFX11-LABEL: @test_out_of_range_w32(
-; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-NEXT:    [[IDX:%.*]] = add nuw nsw i32 [[LANE]], 32
+; GFX11-NEXT:    [[LANE:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-NEXT:    [[IDX:%.*]] = or disjoint i32 [[LANE]], 32
 ; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
 ; GFX11-NEXT:    ret i32 [[RESULT]]
 ;
@@ -869,15 +869,14 @@ define i32 @test_rotate_add1_w64(i32 %val) {
 ; hasPeriodicLayout<32> rejects it and no fold occurs.
 define i32 @test_rotate_add1_full_w64(i32 %val) {
 ; GFX11-LABEL: @test_rotate_add1_full_w64(
-; GFX11-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-NEXT:    [[LO:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; GFX11-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LO]], 1
-; GFX11-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 63
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[ADD]])
 ; GFX11-NEXT:    ret i32 [[RESULT]]
 ;
 ; GFX11-W64-LABEL: @test_rotate_add1_full_w64(
 ; GFX11-W64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 1
 ; GFX11-W64-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 63
 ; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
@@ -885,7 +884,7 @@ define i32 @test_rotate_add1_full_w64(i32 %val) {
 ;
 ; GFX9-LABEL: @test_rotate_add1_full_w64(
 ; GFX9-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 1
 ; GFX9-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 63
 ; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
@@ -936,9 +935,9 @@ define i32 @test_rotate_asymmetric_w64(i32 %val) {
 ;
 ; GFX11-W64-LABEL: @test_rotate_asymmetric_w64(
 ; GFX11-W64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; GFX11-W64-NEXT:    [[HI:%.*]] = and i32 [[LANE]], 32
-; GFX11-W64-NEXT:    [[HIGH_EXTRA:%.*]] = lshr exact i32 [[HI]], 5
+; GFX11-W64-NEXT:    [[HIGH_EXTRA:%.*]] = lshr i32 [[LANE]], 5
 ; GFX11-W64-NEXT:    [[SHIFT:%.*]] = add nuw nsw i32 [[HIGH_EXTRA]], 1
 ; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], [[SHIFT]]
 ; GFX11-W64-NEXT:    [[ROT:%.*]] = and i32 [[ADD]], 31
@@ -948,9 +947,9 @@ define i32 @test_rotate_asymmetric_w64(i32 %val) {
 ;
 ; GFX9-LABEL: @test_rotate_asymmetric_w64(
 ; GFX9-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; GFX9-NEXT:    [[HI:%.*]] = and i32 [[LANE]], 32
-; GFX9-NEXT:    [[HIGH_EXTRA:%.*]] = lshr exact i32 [[HI]], 5
+; GFX9-NEXT:    [[HIGH_EXTRA:%.*]] = lshr i32 [[LANE]], 5
 ; GFX9-NEXT:    [[SHIFT:%.*]] = add nuw nsw i32 [[HIGH_EXTRA]], 1
 ; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], [[SHIFT]]
 ; GFX9-NEXT:    [[ROT:%.*]] = and i32 [[ADD]], 31
@@ -1032,10 +1031,7 @@ define ptr addrspace(3) @test_rotate_add3_ptr_w32(ptr addrspace(3) %val) {
 
 define amdgpu_kernel void @test_tid_masked_w32(i32 %val, ptr addrspace(1) %out) #2 !reqd_work_group_size !2 {
 ; GFX11-LABEL: @test_tid_masked_w32(
-; GFX11-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-NEXT:    [[LANE:%.*]] = and i32 [[ID]], 31
-; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-NEXT:    ret void
 ;
@@ -1065,10 +1061,7 @@ define amdgpu_kernel void @test_tid_masked_w32(i32 %val, ptr addrspace(1) %out) 
 
 define amdgpu_kernel void @test_tid_masked_2d_w32(i32 %val, ptr addrspace(1) %out) #3 !reqd_work_group_size !3 {
 ; GFX11-LABEL: @test_tid_masked_2d_w32(
-; GFX11-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-NEXT:    [[LANE:%.*]] = and i32 [[ID]], 31
-; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-NEXT:    ret void
 ;
@@ -1098,23 +1091,17 @@ define amdgpu_kernel void @test_tid_masked_2d_w32(i32 %val, ptr addrspace(1) %ou
 
 define amdgpu_kernel void @test_tid_bare_32_threads(i32 %val, ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
 ; GFX11-LABEL: @test_tid_bare_32_threads(
-; GFX11-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-NEXT:    ret void
 ;
 ; GFX11-W64-LABEL: @test_tid_bare_32_threads(
-; GFX11-W64-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-W64-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-W64-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-W64-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_tid_bare_32_threads(
-; GFX9-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX9-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX9-NEXT:    ret void
 ;
@@ -1134,16 +1121,12 @@ define amdgpu_kernel void @test_tid_bare_64_threads(i32 %val, ptr addrspace(1) %
 ; GFX11-NEXT:    ret void
 ;
 ; GFX11-W64-LABEL: @test_tid_bare_64_threads(
-; GFX11-W64-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-W64-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-W64-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-W64-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_tid_bare_64_threads(
-; GFX9-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX9-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX9-NEXT:    ret void
 ;

@@ -714,10 +714,14 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-output_no_suffix");
   CmdArgs.push_back("-spirv_input");
 
-  StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
-  assert(!Arch.empty() && "Arch must be specified for AOT compilation");
+  // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target,
+  // or otherwise for the Intel GPU in --arch.
+  std::string Devices = llvm::join(Args.getAllArgValues(OPT_code_EQ), ",");
+  if (Devices.empty())
+    Devices = Args.getLastArgValue(OPT_arch_EQ);
+  assert(!Devices.empty() && "a device must be specified for AOT compilation");
   CmdArgs.push_back("-device");
-  CmdArgs.push_back(Arch);
+  CmdArgs.push_back(Devices);
 
   // getAllArgValues returns a temporary vector; retain it so the StringRefs
   // remain valid through the executeCommands call below.
@@ -744,7 +748,7 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
-  if (OA.isIntelGPU())
+  if (OA.isIntelGPU() || OA.isIntelIGCA())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
@@ -999,8 +1003,10 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
+  // An IGCA target is compiled ahead of time only for its --code list.
+  OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
+      OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntel();
 
   StringRef OutputFileNameExt = ".spv";
 
@@ -1043,8 +1049,10 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     OffloadingImage TheImage{};
     TheImage.TheImageKind = IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;
     TheImage.TheOffloadKind = OFK_SYCL;
-    TheImage.StringData["triple"] =
-        Args.MakeArgString(Result.TargetTriple.str());
+    // Normalize to the three-part form so that the recorded string does not
+    // depend on how the inputs spelled the target.
+    TheImage.StringData["triple"] = Args.MakeArgString(
+        Result.TargetTriple.normalize(Triple::CanonicalForm::THREE_IDENT));
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;

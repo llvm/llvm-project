@@ -18,15 +18,15 @@ set(ORC_RT_CONNECT_TCP_SOURCES
 )
 
 set(ORC_RT_CONNECT_TCP_POSIX_SOURCES
-  sys/posix/TCPConnect.cpp
-  sys/posix/TCPListen.cpp
-  sys/posix/TCPSocket.cpp
+  host/posix/TCPConnect.cpp
+  host/posix/TCPListen.cpp
+  host/posix/TCPSocket.cpp
 )
 
 # TODO: Windows has stubs only, which report TCP as not yet supported.
 set(ORC_RT_CONNECT_TCP_WINDOWS_SOURCES
-  sys/windows/TCPConnect.cpp
-  sys/windows/TCPListen.cpp
+  host/windows/TCPConnect.cpp
+  host/windows/TCPListen.cpp
 )
 
 # Composed the way lib/bedrock/CMakeLists.txt composes its per-system sources;
@@ -38,7 +38,7 @@ elseif (WIN32)
 else()
   message(WARNING
     "orc-rt: no TCP implementation for ${CMAKE_SYSTEM_NAME}; "
-    "add an orc-rt/lib/connect-tcp/sys/<system>/ directory and compose it "
+    "add an orc-rt/lib/connect-tcp/host/<system>/ directory and compose it "
     "above")
 endif()
 
@@ -62,9 +62,7 @@ target_compile_options(orc-rt-connect-tcp-objects
 add_library(orc-rt-connect-tcp ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
 target_link_libraries(orc-rt-connect-tcp
-  PUBLIC orc-rt-headers orc-rt-connect-socket)
-
-target_link_libraries(orc-rt-connect-tcp
+  PUBLIC orc-rt-headers orc-rt-connect-socket
   PRIVATE $<BUILD_INTERFACE:orc-rt-connect-tcp-objects>)
 
 # TODO: Use common runtimes infrastructure for output and install paths

@@ -32,6 +32,7 @@ target_link_libraries(CoreTests
   )
 
 foreach (tgt ${BOLT_TARGETS_TO_BUILD})
+  target_link_libraries(CoreTests PRIVATE LLVMBOLTTarget${tgt})
   include_directories(
     ${LLVM_MAIN_SRC_DIR}/lib/Target/${tgt}
     ${LLVM_BINARY_DIR}/lib/Target/${tgt}

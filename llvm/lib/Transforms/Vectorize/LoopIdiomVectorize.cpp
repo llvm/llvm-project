@@ -92,7 +92,6 @@ class LoopIdiomVectorize {
   DominatorTree *DT;
   LoopInfo *LI;
   const TargetTransformInfo *TTI;
-  const DataLayout *DL;
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
@@ -107,10 +106,10 @@ class LoopIdiomVectorize {
 public:
   LoopIdiomVectorize(const VectorizeOptions &Opts, LoopIdiomVectorizeStyle S,
                      unsigned VF, DominatorTree *DT, LoopInfo *LI,
-                     const TargetTransformInfo *TTI, const DataLayout *DL,
+                     const TargetTransformInfo *TTI,
                      OptimizationRemarkEmitter &ORE)
       : Opts(Opts), VectorizeStyle(S), ByteCompareVF(VF), DT(DT), LI(LI),
-        TTI(TTI), DL(DL), ORE(ORE) {}
+        TTI(TTI), ORE(ORE) {}
 
   bool run(Loop *L);
 
@@ -160,11 +159,9 @@ private:
 PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts = getVectorizeOptions(L);
   if (Opts.disable_loop_idiom_vectorize_all)
     return PreservedAnalyses::all();
-
-  const auto *DL = &L.getHeader()->getDataLayout();
 
   LoopIdiomVectorizeStyle VecStyle =
       Opts.loop_idiom_vectorize_style.value_or(VectorizeStyle);
@@ -180,8 +177,7 @@ PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
     ORE = &*ORELocal;
   }
 
-  LoopIdiomVectorize LIV(Opts, VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, DL,
-                         *ORE);
+  LoopIdiomVectorize LIV(Opts, VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, *ORE);
   if (!LIV.run(&L))
     return PreservedAnalyses::all();
 
@@ -203,7 +199,7 @@ bool LoopIdiomVectorize::run(Loop *L) {
 
   // Bail if vectorization is disabled on loop.
   LoopVectorizeHints Hints(Opts, L, /*InterleaveOnlyWhenForced=*/true, ORE);
-  if (!Hints.allowVectorization(&F, L, /*VectorizeOnlyWhenForced=*/false)) {
+  if (!Hints.allowVectorization(L, /*VectorizeOnlyWhenForced=*/false)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on " << L->getName()
                       << " due to vectorization hints\n");
     return false;
@@ -992,13 +988,11 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
     return false;
 
   auto *InnerLoop = CurLoop->getSubLoops().front();
-  Function &F = *InnerLoop->getHeader()->getParent();
 
   // Bail if vectorization is disabled on inner loop.
   LoopVectorizeHints Hints(Opts, InnerLoop, /*InterleaveOnlyWhenForced=*/true,
                            ORE);
-  if (!Hints.allowVectorization(&F, InnerLoop,
-                                /*VectorizeOnlyWhenForced=*/false)) {
+  if (!Hints.allowVectorization(InnerLoop, /*VectorizeOnlyWhenForced=*/false)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on inner loop "
                       << InnerLoop->getName()
                       << " due to vectorization hints\n");
@@ -1415,6 +1409,7 @@ void LoopIdiomVectorize::transformFindFirstByte(
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   UncondBrInst *PHBranch = cast<UncondBrInst>(Preheader->getTerminator());
   IRBuilder<> Builder(PHBranch);
+  Builder.disableGEPCanonicalization();
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 

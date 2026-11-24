@@ -24,8 +24,7 @@ class RISCVInstPrinter : public MCInstPrinter {
 
 public:
   RISCVInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
-                   const MCRegisterInfo &MRI)
-      : MCInstPrinter(MAI, MII, MRI), CLOpts(RISCVMCOptions::Global) {}
+                   const MCRegisterInfo &MRI);
 
   bool applyTargetSpecificCLOption(StringRef Opt) override;
 
@@ -84,7 +83,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(const RISCVMCOptions &CLOpts,
+                                     MCRegister Reg);
   static const char *getRegisterName(MCRegister Reg, unsigned AltIdx);
 };
 } // namespace llvm

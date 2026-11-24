@@ -47,8 +47,8 @@ private:
 
   void runAfterPassModule(StringRef PassID, const Module *M);
 
-  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
-  /// after a pass has run to facilitate dropped variable calculation for an
+  /// Populate DebugVariablesBefore or DebugVariablesAfter before or after a
+  /// pass has run to facilitate dropped variable calculation for an
   /// llvm::Function.
   void runOnFunction(StringRef PassID, const Function *F, bool Before);
 
@@ -58,8 +58,8 @@ private:
                                           StringRef FuncOrModName,
                                           StringRef PassLevel);
 
-  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
-  /// after a pass has run to facilitate dropped variable calculation for an
+  /// Populate DebugVariablesBefore or DebugVariablesAfter before or after a
+  /// pass has run to facilitate dropped variable calculation for an
   /// llvm::Module. Calls runOnFunction on every Function in the Module.
   void runOnModule(StringRef PassID, const Module *M, bool Before);
 
@@ -71,15 +71,10 @@ private:
                                         StringRef PassLevel);
 
   /// Override base class method to run on an llvm::Function specifically.
-  void visitEveryInstruction(unsigned &DroppedCount,
-                             DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                             VarID Var) override;
+  void visitEveryInstruction(unsigned &DroppedCount, VarID Var) override;
 
   /// Override base class method to run on #dbg_values specifically.
-  void visitEveryDebugRecord(
-      DenseSet<VarID> &VarIDSet,
-      DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-      StringRef FuncName, bool Before) override;
+  void visitEveryDebugRecord(DenseSet<VarID> &VarIDSet) override;
 };
 
 } // namespace llvm

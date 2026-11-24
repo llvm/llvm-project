@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=z13 2>&1 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z13
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z14 \
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=z14 2>&1 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z14
 
 define void @fun(i128 %a)  {

@@ -9,7 +9,6 @@
 #ifndef MLIR_CONVERSION_CONVERTTOEMITC_TOEMITCINTERFACE_H
 #define MLIR_CONVERSION_CONVERTTOEMITC_TOEMITCINTERFACE_H
 
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 
