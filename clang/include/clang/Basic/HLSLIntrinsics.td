@@ -1637,7 +1637,6 @@ between 0 and 1.
   let ParamNames = ["Min", "Max", "X"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the square root of the input value, Val.
