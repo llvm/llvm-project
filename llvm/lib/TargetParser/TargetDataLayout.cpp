@@ -235,9 +235,10 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
   // which is 256 and 512 bytes - way over aligned.
-  // FreeBSD uses the ELFv2 ABI and has the same 16-byte stack alignment as
-  // Linux.
-  if (is64Bit && (T.isOSAIX() || T.isOSLinux() || T.isOSFreeBSD()))
+  // FreeBSD and OpenBSD use the ELFv2 ABI and have the same 16-byte stack
+  // alignment as Linux.
+  if (is64Bit &&
+      (T.isOSAIX() || T.isOSLinux() || T.isOSFreeBSD() || T.isOSOpenBSD()))
     Ret += "-S128-v256:256:256-v512:512:512";
 
   return Ret;
