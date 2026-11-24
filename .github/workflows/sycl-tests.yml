@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+        uses: hendrikmuhs/ccache-action@dbeefd73e8e2ffc1bbc412570072735eb4db3607 # v1.2.25
         with:
           max-size: 2G
           key: sycl-ubuntu-26.04

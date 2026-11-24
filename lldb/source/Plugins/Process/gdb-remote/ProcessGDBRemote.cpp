@@ -68,6 +68,8 @@
 #include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/TargetGroup.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
@@ -105,6 +107,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -537,9 +540,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
 
         while (response.GetNameColonValue(name, value)) {
           if (name == "name") {
-            reg_info.name.SetString(value);
+            reg_info.name = value.str();
           } else if (name == "alt-name") {
-            reg_info.alt_name.SetString(value);
+            reg_info.alt_name = value.str();
           } else if (name == "bitsize") {
             if (!value.getAsInteger(BASE_10, reg_info.byte_size))
               reg_info.byte_size /= CHAR_BIT;
@@ -596,7 +599,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("float128", eFormatFloat128)
                       .Default(eFormatInvalid);
           } else if (name == "set") {
-            reg_info.set_name.SetString(value);
+            reg_info.set_name = value.str();
           } else if (name == "gcc" || name == "ehframe") {
             value.getAsInteger(BASE_AUTOSENSE, reg_info.regnum_ehframe);
           } else if (name == "dwarf") {
@@ -890,6 +893,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     // Send the environment and the program + arguments after we connect
     m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
 
+    StringExtractorGDBRemote response;
     {
       // Scope for the scoped timeout object
       GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
@@ -911,11 +915,14 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                       exe_file.GetPath(/*denormalize=*/true));
         }
       }
-      if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
+      llvm::Expected<StringExtractorGDBRemote> launch_response =
+          m_gdb_comm.LaunchProcess(args);
+      if (!launch_response) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
-            llvm::fmt_consume(std::move(err)));
+            llvm::fmt_consume(launch_response.takeError()));
       } else {
+        response = std::move(*launch_response);
         SetID(m_gdb_comm.GetCurrentProcessID());
       }
     }
@@ -927,8 +934,8 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       return error;
     }
 
-    StringExtractorGDBRemote response;
-    if (m_gdb_comm.GetStopReply(response)) {
+    if (response.IsStopReply(StringExtractorGDBRemote::ValidStop) ||
+        m_gdb_comm.GetStopReply(response)) {
       SetLastStopPacket(response);
 
       const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
@@ -941,11 +948,19 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
           GetTarget().MergeArchitecture(host_arch);
       }
 
-      SetPrivateState(SetThreadStopInfo(response));
+      StateType state = SetThreadStopInfo(response);
+      if (state == eStateExited)
+        SetExitStatusFromStopReply(response);
+      else
+        SetPrivateState(state);
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
+#ifdef _WIN32
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+#else
+          SetSTDIOPseudoTerminal(pty);
+#endif
         }
 #ifdef _WIN32
         else if (m_stdin_forward) {
@@ -1179,6 +1194,7 @@ void ProcessGDBRemote::LoadStubBinaries() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (!module)
@@ -1684,10 +1700,10 @@ size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
 bool ProcessGDBRemote::UpdateThreadIDList() {
   std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (threads_info_sp) {
     // If we have the JSON threads info, we can get the thread list from that
-    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetArray();
     if (thread_infos && thread_infos->GetSize() > 0) {
       m_thread_ids.clear();
       m_thread_pcs.clear();
@@ -1811,41 +1827,77 @@ void ProcessGDBRemote::SetThreadPc(const ThreadSP &thread_sp, uint64_t index) {
   }
 }
 
-bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
-    ThreadGDBRemote *thread, const StructuredData::ObjectSP &thread_infos_sp) {
-  // See if we got thread stop infos for all threads via the "jThreadsInfo"
-  // packet
-  if (thread_infos_sp) {
-    StructuredData::Array *thread_infos = thread_infos_sp->GetAsArray();
-    if (thread_infos) {
-      lldb::tid_t tid;
-      const size_t n = thread_infos->GetSize();
-      for (size_t i = 0; i < n; ++i) {
-        StructuredData::Dictionary *thread_dict =
-            thread_infos->GetItemAtIndex(i)->GetAsDictionary();
-        if (thread_dict) {
-          if (thread_dict->GetValueForKeyAsInteger<lldb::tid_t>(
-                  "tid", tid, LLDB_INVALID_THREAD_ID)) {
-            if (tid == thread->GetID())
-              return (bool)SetThreadStopInfo(thread_dict);
-          }
-        }
-      }
-    }
+std::optional<size_t> ProcessGDBRemote::FindThreadIDIndex(lldb::tid_t tid) {
+  // This runs for every thread at a stop, so searching m_thread_ids would make
+  // the stop quadratic in the number of threads. m_thread_ids is rewritten in
+  // several places that leave m_thread_id_positions alone, so trust a cached
+  // position only if m_thread_ids still has tid there, and rebuild otherwise.
+  std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+  auto it = m_thread_id_positions.find(tid);
+  if (it != m_thread_id_positions.end() && it->second < m_thread_ids.size() &&
+      m_thread_ids[it->second] == tid)
+    return it->second;
+
+  m_thread_id_positions.clear();
+  for (auto [i, id] : llvm::enumerate(m_thread_ids))
+    m_thread_id_positions.try_emplace(id, i);
+  it = m_thread_id_positions.find(tid);
+  if (it == m_thread_id_positions.end())
+    return std::nullopt;
+  return it->second;
+}
+
+ProcessGDBRemote::ThreadInfos::ThreadInfos(StructuredData::ObjectSP json_sp)
+    : m_json_sp(std::move(json_sp)) {
+  StructuredData::Array *array = m_json_sp->GetAsArray();
+  if (!array)
+    return;
+  const size_t n = array->GetSize();
+  m_thread_dicts.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    StructuredData::Dictionary *thread_dict =
+        array->GetItemAtIndex(i)->GetAsDictionary();
+    lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+    // If a reply lists a thread more than once, use its first entry.
+    if (thread_dict && thread_dict->GetValueForKeyAsInteger("tid", tid))
+      m_thread_dicts.try_emplace(tid, thread_dict);
   }
-  return false;
+}
+
+StructuredData::Dictionary *
+ProcessGDBRemote::ThreadInfos::FindThread(lldb::tid_t tid) const {
+  auto it = m_thread_dicts.find(tid);
+  return it == m_thread_dicts.end() ? nullptr : it->second;
+}
+
+ProcessGDBRemote::ThreadInfosSP
+ProcessGDBRemote::IndexThreadInfos(StructuredData::ObjectSP json_sp) {
+  if (!json_sp)
+    return nullptr;
+  return std::make_shared<const ThreadInfos>(std::move(json_sp));
+}
+
+bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
+    ThreadGDBRemote *thread, const ThreadInfosSP &thread_infos_sp) {
+  if (!thread_infos_sp)
+    return false;
+  StructuredData::Dictionary *thread_dict =
+      thread_infos_sp->FindThread(thread->GetID());
+  if (!thread_dict)
+    return false;
+  return SetThreadStopInfo(thread_dict, thread->shared_from_this()) != nullptr;
 }
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
   // packet (we're at a public stop).
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (GetThreadStopInfoFromJSON(thread, threads_info_sp))
     return true;
 
   // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
   // with a mach exception description for any thread that has a stop reason.
-  StructuredData::ObjectSP stop_info_sp = *m_jstopinfo.Lock();
+  ThreadInfosSP stop_info_sp = *m_jstopinfo.Lock();
   if (stop_info_sp) {
     // Any thread not described in `jstopinfo` has no stop reason.
     // If a no-stop-reason thread is stopped at a breakpoint site (but
@@ -1901,14 +1953,14 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     LazyBool associated_with_dispatch_queue, addr_t dispatch_queue_t,
     std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial,
     std::vector<lldb::addr_t> &added_binaries,
-    StructuredData::ObjectSP &detailed_binaries_info) {
+    StructuredData::ObjectSP &detailed_binaries_info, ThreadSP thread_sp) {
 
   if (tid == LLDB_INVALID_THREAD_ID)
     return nullptr;
 
-  ThreadSP thread_sp;
-  // Scope for "locker" below
-  {
+  // Stop info is set for every thread at a stop, so a search of the thread
+  // list for each would take time quadratic in the number of threads.
+  if (!thread_sp || thread_sp->GetProtocolID() != tid) {
     // m_thread_list_real does have its own mutex, but we need to hold onto the
     // mutex between the call to m_thread_list_real.FindThreadByID(...) and the
     // m_thread_list_real.AddThread(...) so it doesn't change on us
@@ -1927,9 +1979,8 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
-  auto iter = llvm::find(m_thread_ids, tid);
-  if (iter != m_thread_ids.end())
-    SetThreadPc(thread_sp, iter - m_thread_ids.begin());
+  if (std::optional<size_t> index = FindThreadIDIndex(tid))
+    SetThreadPc(thread_sp, *index);
 
   ParseExpeditedRegisters(expedited_register_map, thread_sp);
 
@@ -2128,6 +2179,15 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
+        } else if (reason == "dyld") {
+          if (llvm::Error error = LoadModules()) {
+            Log *log = GetLog(GDBRLog::Process);
+            LLDB_LOG_ERROR(log, std::move(error),
+                           "failed to load modules: {0}");
+          }
+          thread_sp->SetStopInfo(
+              StopInfo::CreateStopReasonDyld(*thread_sp, description.c_str()));
+          handled = true;
         }
       }
 
@@ -2236,7 +2296,8 @@ ProcessGDBRemote::HandleThreadAsyncInterrupt(uint8_t signo,
 }
 
 lldb::ThreadSP
-ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
+ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict,
+                                    lldb::ThreadSP thread_sp) {
   static constexpr llvm::StringLiteral g_key_tid("tid");
   static constexpr llvm::StringLiteral g_key_name("name");
   static constexpr llvm::StringLiteral g_key_reason("reason");
@@ -2419,7 +2480,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
       tid, expedited_register_map, signo, thread_name, reason, description,
       exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
       associated_with_dispatch_queue, dispatch_queue_t, queue_name, queue_kind,
-      queue_serial_number, added_binaries, detailed_binaries_info);
+      queue_serial_number, added_binaries, detailed_binaries_info,
+      std::move(thread_sp));
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
@@ -2507,7 +2569,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         // This JSON contains thread IDs and thread stop info for all threads.
         // It doesn't contain expedited registers, memory or queue info.
-        *m_jstopinfo.Lock() = StructuredData::ParseJSON(json);
+        *m_jstopinfo.Lock() = IndexThreadInfos(StructuredData::ParseJSON(json));
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
         // Now convert the HEX bytes into a string value
@@ -2865,6 +2927,24 @@ void ProcessGDBRemote::SetLastStopPacket(
   m_last_stop_packet = response;
 }
 
+void ProcessGDBRemote::SetExitStatusFromStopReply(
+    StringExtractorGDBRemote &response) {
+  response.SetFilePos(1);
+  int exit_status = response.GetHexU8();
+  std::string desc_string;
+  if (response.GetBytesLeft() > 0 && response.GetChar() == ';') {
+    llvm::StringRef desc_str;
+    llvm::StringRef desc_token;
+    while (response.GetNameColonValue(desc_token, desc_str)) {
+      if (desc_token != "description")
+        continue;
+      StringExtractor extractor(desc_str);
+      extractor.GetHexByteString(desc_string);
+    }
+  }
+  SetExitStatus(exit_status, desc_string);
+}
+
 void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
   Process::SetUnixSignals(std::make_shared<GDBRemoteSignals>(signals_sp));
 }
@@ -2900,19 +2980,27 @@ void ProcessGDBRemote::WillPublicStop() {
   // memory will help stack backtracing be much faster. Expediting registers
   // will make sure we don't have to read the thread registers for GPRs.
   StructuredData::ObjectSP threads_info_sp = m_gdb_comm.GetThreadsInfo();
-  *m_jthreadsinfo.Lock() = threads_info_sp;
+  *m_jthreadsinfo.Lock() = IndexThreadInfos(threads_info_sp);
 
   if (threads_info_sp) {
     // Now set the stop info for each thread and also expedite any registers
     // and memory that was in the jThreadsInfo response.
     StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
     if (thread_infos) {
+      std::unordered_map<lldb::tid_t, ThreadSP> threads;
+      for (const ThreadSP &thread_sp : m_thread_list_real.Threads())
+        threads.try_emplace(thread_sp->GetProtocolID(), thread_sp);
       const size_t n = thread_infos->GetSize();
       for (size_t i = 0; i < n; ++i) {
         StructuredData::Dictionary *thread_dict =
             thread_infos->GetItemAtIndex(i)->GetAsDictionary();
-        if (thread_dict)
-          SetThreadStopInfo(thread_dict);
+        if (!thread_dict)
+          continue;
+        lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+        thread_dict->GetValueForKeyAsInteger("tid", tid);
+        auto thread = threads.find(tid);
+        SetThreadStopInfo(thread_dict,
+                          thread == threads.end() ? nullptr : thread->second);
       }
     }
   }
@@ -3401,6 +3489,27 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                               packet.GetData());
   }
   return 0;
+}
+
+bool ProcessGDBRemote::DoCanAllocateMemory() {
+  // Probe the _M packet. Falling back to mmap() only needs its symbol.
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolCalculate) {
+    addr_t addr = m_gdb_comm.AllocateMemory(8, ePermissionsReadable |
+                                                   ePermissionsWritable |
+                                                   ePermissionsExecutable);
+    if (addr != LLDB_INVALID_ADDRESS)
+      m_gdb_comm.DeallocateMemory(addr);
+  }
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+    return true;
+
+  ModuleFunctionSearchOptions options;
+  options.include_symbols = true;
+  options.include_inlines = false;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindFunctions("mmap", eFunctionNameTypeFull, options,
+                                        sc_list);
+  return !sc_list.IsEmpty();
 }
 
 lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
@@ -4183,21 +4292,7 @@ thread_result_t ProcessGDBRemote::AsyncThread() {
             case eStateExited: {
               SetLastStopPacket(response);
               ClearThreadIDList();
-              response.SetFilePos(1);
-
-              int exit_status = response.GetHexU8();
-              std::string desc_string;
-              if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';') {
-                llvm::StringRef desc_str;
-                llvm::StringRef desc_token;
-                while (response.GetNameColonValue(desc_token, desc_str)) {
-                  if (desc_token != "description")
-                    continue;
-                  StringExtractor extractor(desc_str);
-                  extractor.GetHexByteString(desc_string);
-                }
-              }
-              SetExitStatus(exit_status, desc_string.c_str());
+              SetExitStatusFromStopReply(response);
               done = true;
               break;
             }
@@ -4357,12 +4452,45 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!accelerator_target_sp)
     return llvm::createStringError("failed to create accelerator target");
 
+  llvm::scope_exit delete_accelerator_target([&] {
+    debugger.GetTargetList().DeleteTarget(accelerator_target_sp);
+    accelerator_target_sp->Destroy();
+  });
+
   PlatformSP platform_sp = accelerator_target_sp->GetPlatform();
   if (!platform_sp)
     return llvm::createStringErrorV(
         "no platform '{0}' compatible with triple '{1}' for the accelerator "
         "target",
         connect_info.platform_name, connect_info.triple);
+
+  TargetSP native_target_sp = GetTarget().shared_from_this();
+  std::shared_ptr<TargetGroupCPUAndAccelerators> group_sp =
+      native_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>();
+
+  bool created_group = !group_sp;
+  if (created_group) {
+    group_sp = debugger.GetTargetGroupList()
+                   .CreateTargetGroup<TargetGroupCPUAndAccelerators>(
+                       "CPU and accelerator targets");
+  }
+
+  llvm::scope_exit restore_target_group([&] {
+    group_sp->RemoveTarget(accelerator_target_sp);
+    if (created_group) {
+      group_sp->RemoveTarget(native_target_sp);
+      debugger.GetTargetGroupList().DeleteTargetGroup(group_sp);
+    }
+  });
+
+  if (llvm::Error membership_error =
+          group_sp->AddTarget(native_target_sp, TargetGroup::Role::CPU))
+    return membership_error;
+  if (llvm::Error membership_error = group_sp->AddTarget(
+          accelerator_target_sp, TargetGroup::Role::Accelerator))
+    return membership_error;
+
   ProcessSP process_sp =
       connect_info.synchronous
           ? platform_sp->ConnectProcessSynchronous(
@@ -4377,6 +4505,8 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!process_sp)
     return llvm::createStringError("failed to connect to the accelerator");
 
+  restore_target_group.release();
+  delete_accelerator_target.release();
   accelerator_target_sp->SetTargetSessionName(actions.session_name);
 
   // Broadcast the new-target event so API clients can detect it.
@@ -4485,7 +4615,7 @@ bool ProcessGDBRemote::AcceleratorBreakpointHit(
   for (size_t i = 0; i < symbol_names.size(); ++i) {
     args.symbol_values[i].name = symbol_names[i];
     SymbolContextList sc_list;
-    target.GetImages().FindSymbolsWithNameAndType(ConstString(symbol_names[i]),
+    target.GetImages().FindSymbolsWithNameAndType(symbol_names[i],
                                                   eSymbolTypeAny, sc_list);
     for (const SymbolContext &sc : sc_list) {
       if (!sc.symbol)
@@ -4606,8 +4736,12 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    std::string plugin_name;
+    if (std::optional<LLDBSettings> settings = m_gdb_comm.GetLLDBSettings())
+      plugin_name = settings->dyld_plugin_name;
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, plugin_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -4988,7 +5122,7 @@ typedef std::vector<std::string> stringVec;
 
 typedef std::vector<struct GdbServerRegisterInfo> GDBServerRegisterVec;
 struct RegisterSetInfo {
-  ConstString name;
+  std::string name;
 };
 
 typedef std::map<uint32_t, RegisterSetInfo> RegisterSetMap;
@@ -5716,7 +5850,7 @@ bool ParseRegisters(
                                    log](const llvm::StringRef &name,
                                         const llvm::StringRef &value) -> bool {
           if (name == "name") {
-            reg_info.name.SetString(value);
+            reg_info.name = value.str();
           } else if (name == "bitsize") {
             if (llvm::to_integer(value, reg_info.byte_size))
               reg_info.byte_size =
@@ -5730,7 +5864,7 @@ bool ParseRegisters(
           } else if (name == "offset") {
             llvm::to_integer(value, reg_info.byte_offset);
           } else if (name == "altname") {
-            reg_info.alt_name.SetString(value);
+            reg_info.alt_name = value.str();
           } else if (name == "encoding") {
             encoding_set = true;
             reg_info.encoding = Args::StringToEncoding(value, eEncodingUint);
@@ -5896,13 +6030,13 @@ bool ParseRegisters(
         // Only update the register set name if we didn't get a "reg_set"
         // attribute. "set_name" will be empty if we didn't have a "reg_set"
         // attribute.
-        if (!reg_info.set_name) {
+        if (reg_info.set_name.empty()) {
           if (!gdb_group.empty()) {
-            reg_info.set_name.SetCString(gdb_group.c_str());
+            reg_info.set_name = gdb_group;
           } else {
             // If no register group name provided anywhere,
             // we'll create a 'general' register set
-            reg_info.set_name.SetCString("general");
+            reg_info.set_name = "general";
           }
         }
 
@@ -5969,7 +6103,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
                       if (name == "id")
                         llvm::to_integer(value, set_id);
                       if (name == "name")
-                        set_info.name = ConstString(value);
+                        set_info.name = value.str();
                       return true; // Keep iterating through all attributes
                     });
 
@@ -6285,6 +6419,9 @@ lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
 llvm::Error ProcessGDBRemote::LoadModules() {
   using lldb_private::process_gdb_remote::ProcessGDBRemote;
 
+  if (m_dyld_up && m_dyld_up->HandleStopReasonDynamicLoader())
+    return llvm::ErrorSuccess();
+
   // request a list of loaded libraries from GDBServer
   llvm::Expected<LoadedModuleInfoList> module_list = GetLoadedModuleList();
   if (!module_list)
@@ -6355,7 +6492,7 @@ llvm::Error ProcessGDBRemote::LoadModules() {
         return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
+      target.RebuildModuleListWithExecutable(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
     });
 
@@ -6566,17 +6703,19 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "qSaveCore returned no core path");
 
-    // now transfer the core file
     FileSpec remote_core{llvm::StringRef(path)};
+    FileSpec local_core{outfile};
     Platform &platform = *GetTarget().GetPlatform();
-    Status error = platform.GetFile(remote_core, FileSpec(outfile));
 
-    if (platform.IsRemote()) {
-      // NB: we unlink the file on error too
-      platform.Unlink(remote_core);
-      if (error.Fail())
-        return error.ToError();
-    }
+    if (!platform.IsRemote() && remote_core == local_core)
+      return true;
+
+    // now transfer the core file
+    Status error = platform.GetFile(remote_core, local_core);
+    // NB: we unlink the file on error too
+    platform.Unlink(remote_core);
+    if (error.Fail())
+      return error.ToError();
 
     return true;
   }

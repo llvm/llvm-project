@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks | FileCheck %s --check-prefixes=ALL,WITH-RANGE
-// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks=fixed-size | FileCheck %s --check-prefixes=ALL,NO-RANGE
+// RUN: mlir-opt %s -split-input-file -eliminate-vector-masks="vscale-min=1 vscale-max=16" | FileCheck %s --check-prefixes=ALL,WITH-RANGE
+// RUN: mlir-opt %s -split-input-file -eliminate-vector-masks | FileCheck %s --check-prefixes=ALL,NO-RANGE
 
 // Each scalable test below is paired with a fixed-size equivalent, so that both
 // widths get the same coverage. Only the one case that needs a vscale range to
@@ -144,6 +144,27 @@ func.func @trivially_all_true_case_fixed_size()
   %mask = vector.create_mask %c2, %c4 : vector<2x4xi1>
   "test.some_use"(%mask) : (vector<2x4xi1>) -> ()
   return
+}
+
+// -----
+
+// ALL-LABEL: @trivially_all_true_case_fixed_size_rank_0
+// ALL: %[[MASK:.*]] = vector.create_mask %arg0 : vector<i1>
+// ALL: return %[[MASK]]
+func.func @trivially_all_true_case_fixed_size_rank_0(%n: index) -> vector<i1> {
+  %mask = vector.create_mask %n : vector<i1>
+  return %mask : vector<i1>
+}
+
+// -----
+
+// ALL-LABEL: @rank_zero_const_one
+// ALL: %[[MASK:.*]] = vector.constant_mask [1] : vector<i1>
+// ALL: return %[[MASK]]
+func.func @rank_zero_const_one() -> vector<i1> {
+  %c1 = arith.constant 1 : index
+  %mask = vector.create_mask %c1 : vector<i1>
+  return %mask : vector<i1>
 }
 
 // -----

@@ -13,6 +13,7 @@ def LLVMTranslationDialectInterface : DialectInterface<"LLVMTranslationDialectIn
     available in DialectRegistry.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Target/LLVMIR/LLVMTranslationInterface.h"];
 
   let methods = [
     InterfaceMethod<[{

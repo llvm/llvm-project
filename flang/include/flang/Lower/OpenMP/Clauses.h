@@ -76,6 +76,11 @@ struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
   using IdTy = Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>;
   using ExprTy = Fortran::lower::omp::ExprTy;
 
+  ObjectT() = default;
+  ObjectT(IdTy id) : identity(std::move(id)) {}
+  ObjectT(Fortran::semantics::Symbol *symbol, std::optional<ExprTy> designator)
+      : identity{symbol, std::move(designator)} {}
+
   IdTy id() const { return identity; }
   Fortran::semantics::Symbol *sym() const { return identity.symbol; }
   const std::optional<ExprTy> &ref() const { return identity.designator; }
@@ -85,6 +90,13 @@ struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
   }
 
   IdTy identity;
+
+  // Resolved iterator references in the source locator, before expression
+  // folding can remove them. This is per-occurrence metadata, not object
+  // identity: a(j) and a(j + 0*i) may have equal folded designators.
+  // An engaged, empty list means the locator references no clause iterators.
+  std::optional<Fortran::lower::omp::List<const Fortran::semantics::Symbol *>>
+      sourceIteratorReferences = std::nullopt;
 };
 } // namespace tomp::type
 
@@ -183,6 +195,7 @@ using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
 using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
+using IntrinsicOperator = tomp::type::IntrinsicOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
 using ReductionOperatorList = List<ReductionOperator>;

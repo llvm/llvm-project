@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=arm-low-overhead-loops -o - -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -O0 -run-pass=arm-low-overhead-loops -o - %s | FileCheck %s
 # CHECK-NOT: WLS
 # CHECK-NOT: WhileLoopStart
 
@@ -65,9 +65,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

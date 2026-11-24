@@ -14,6 +14,7 @@
 #define LLVM_PLUGINS_PASSPLUGIN_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -24,8 +25,12 @@
 
 namespace llvm {
 class Module;
+class ModuleSummaryIndex;
 class PassBuilder;
 class TargetMachine;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 /// \macro LLVM_PLUGIN_API_VERSION
 /// Identifies the API version understood by this plugin.
@@ -42,12 +47,15 @@ extern "C" {
 /// This struct defines the core interface for pass plugins and is supposed to
 /// be filled out by plugin implementors. Unused function pointers can be set to
 /// nullptr. LLVM-side users of a plugin are expected to use the \c PassPlugin
-/// class below to interface with it.
+/// class below to interface with it. Hosts may invoke callbacks concurrently,
+/// e.g. for parallel ThinLTO backends, so plugins must guard any state they
+/// share between invocations.
 struct PassPluginLibraryInfo {
   /// The API version understood by this plugin, usually \c
   /// LLVM_PLUGIN_API_VERSION
   uint32_t APIVersion;
-  /// A meaningful name of the plugin.
+  /// A meaningful name of the plugin. -plugin-arg=<PluginName>,<arg> passes
+  /// <arg> to the plugin with this name.
   const char *PluginName;
   /// The version of the plugin.
   const char *PluginVersion;
@@ -57,11 +65,24 @@ struct PassPluginLibraryInfo {
   void (*RegisterPassBuilderCallbacks)(PassBuilder &) = nullptr;
 
   /// Callback called before running the back-end passes on the module. The
-  /// callback can generate code itself by writing the expected output to OS and
-  /// returning true to prevent the default pipeline and further plugin
-  /// callbacks from running.
-  bool (*PreCodeGenCallback)(Module &, TargetMachine &, CodeGenFileType,
-                             raw_pwrite_stream &OS) = nullptr;
+  /// callback can generate code itself by writing the expected output to OS
+  /// and returning true to prevent the default pipeline and further plugin
+  /// callbacks from running. DwoOS behaves the same way with respect to the
+  /// return value. It is null unless the .dwo contents go to a separate file.
+  ///
+  /// The parameters match those of \c llvm::runCodeGenPipeline(), so the
+  /// callback can forward them to run an LLVM-based pipeline of its own.
+  /// Both signatures must be kept in lockstep.
+  ///
+  /// The callback might be invoked from a worker thread, so exiting inside the
+  /// callback is unsafe. Failures should be reported through the module's
+  /// context instead and return false.
+  bool (*PreCodeGenCallback)(TargetMachine &TM, Module &M,
+                             raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS,
+                             CodeGenFileType CGFT, bool DisableVerify,
+                             bool DisableSimplifyLibCalls,
+                             const ModuleSummaryIndex *MSI,
+                             IntrusiveRefCntPtr<vfs::FileSystem> VFS) = nullptr;
 
   /// Callback receiving the arguments given to the plugin, e.g. by
   /// -plugin-arg=<PluginName>,<arg>, in order.
@@ -102,14 +123,14 @@ public:
       Info.RegisterPassBuilderCallbacks(PB);
   }
 
-  /// Invoke the pre-codegen callback.
-  bool invokePreCodeGenCallback(Module &M, TargetMachine &TM,
-                                CodeGenFileType CGFT,
-                                raw_pwrite_stream &OS) const {
-    if (Info.PreCodeGenCallback)
-      return Info.PreCodeGenCallback(M, TM, CGFT, OS);
-    return false;
-  }
+  /// Invoke the pre-codegen callback. Keep the signature in sync with
+  /// llvm::runCodeGenPipeline().
+  LLVM_ABI bool
+  invokePreCodeGenCallback(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
+                           raw_pwrite_stream *DwoOS, CodeGenFileType CGFT,
+                           bool DisableVerify, bool DisableSimplifyLibCalls,
+                           const ModuleSummaryIndex *MSI,
+                           IntrusiveRefCntPtr<vfs::FileSystem> VFS) const;
 
 private:
   PassPlugin(const std::string &Filename, const sys::DynamicLibrary &Library)
@@ -121,14 +142,10 @@ private:
 };
 
 /// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
-/// callback of the extension in \p Infos with that name. If two extensions have
-/// the same name, the last one receives the arguments.
+/// callback of the extension in \p Infos with that name. Two extensions with
+/// the same name are an error.
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                    ArrayRef<std::string> Args);
-
-// Deprecated: a migration aid for plugins that still use cl::opt.
-LLVM_ABI Error parsePassPluginCommandLine(const char *PluginName,
-                                          ArrayRef<const char *> Args);
 } // namespace llvm
 
 // The function returns a struct with default initializers.
@@ -150,9 +167,8 @@ LLVM_ABI Error parsePassPluginCommandLine(const char *PluginName,
 ///   };
 /// }
 /// ```
-extern "C" LLVM_ABI_NOT_EXPORTED ::llvm::PassPluginLibraryInfo
-    LLVM_ATTRIBUTE_WEAK
-    llvmGetPassPluginInfo();
+extern "C" LLVM_ABI_EXPORT ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
+llvmGetPassPluginInfo();
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

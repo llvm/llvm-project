@@ -1834,9 +1834,13 @@ private:
     }
 
     if (Opts.EnableInsertReplace) {
-      ReplaceRange.emplace();
-      ReplaceRange->start = InsertRange.start;
-      ReplaceRange->end = getEndOfCodeCompletionReplace(SM);
+      // Header-name completion always provides a replace-like range,
+      // including delimiters, even in the Insert mode.
+      const Position ReplaceRangeEnd =
+          CCContextKind == CodeCompletionContext::CCC_IncludedFile
+              ? InsertRange.end
+              : getEndOfCodeCompletionReplace(SM);
+      ReplaceRange = Range{InsertRange.start, ReplaceRangeEnd};
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
@@ -2410,10 +2414,9 @@ SignatureHelp signatureHelp(PathRef FileName, Position Pos,
 
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   auto InTopLevelScope = [](const NamedDecl &ND) {
-    switch (ND.getDeclContext()->getDeclKind()) {
+    switch (ND.getNonTransparentDeclContext()->getDeclKind()) {
     case Decl::TranslationUnit:
     case Decl::Namespace:
-    case Decl::LinkageSpec:
       return true;
     default:
       break;

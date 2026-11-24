@@ -79,22 +79,21 @@ addr_t DYLDRendezvous::ResolveRendezvousAddress() {
   // If the process fails to return an address, fall back to seeing if the
   // local object file can help us find it.
   if (info_location == LLDB_INVALID_ADDRESS) {
-    Target *target = &m_process->GetTarget();
-    if (target) {
-      ObjectFile *obj_file = target->GetExecutableModule()->GetObjectFile();
-      Address addr = obj_file->GetImageInfoAddress(target);
+    Target &target = m_process->GetTarget();
+    if (ModuleSP executable_sp = target.GetExecutableModule()) {
+      ObjectFile *obj_file = executable_sp->GetObjectFile();
+      Address addr = obj_file->GetImageInfoAddress(&target);
 
       if (addr.IsValid()) {
-        info_location = addr.GetLoadAddress(target);
+        info_location = addr.GetLoadAddress(&target);
         LLDB_LOGF(log,
                   "%s resolved via direct object file approach to 0x%" PRIx64,
                   __FUNCTION__, info_location);
       } else {
-        const Symbol *_r_debug =
-            target->GetExecutableModule()->FindFirstSymbolWithNameAndType(
-                ConstString("_r_debug"));
+        const Symbol *_r_debug = executable_sp->FindFirstSymbolWithNameAndType(
+            ConstString("_r_debug"));
         if (_r_debug) {
-          info_addr = _r_debug->GetAddress().GetLoadAddress(target);
+          info_addr = _r_debug->GetAddress().GetLoadAddress(&target);
           if (info_addr != LLDB_INVALID_ADDRESS) {
             LLDB_LOGF(log,
                       "%s resolved by finding symbol '_r_debug' whose value is "
@@ -711,8 +710,7 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   Target &target = m_process->GetTarget();
 
   SymbolContextList list;
-  target.GetImages().FindSymbolsWithNameAndType(ConstString(name),
-                                                eSymbolTypeAny, list);
+  target.GetImages().FindSymbolsWithNameAndType(name, eSymbolTypeAny, list);
   if (list.IsEmpty())
     return false;
 

@@ -57,12 +57,12 @@ protected:
                            spirv::Version::V_1_0, ArrayRef<spirv::Capability>(),
                            ArrayRef<spirv::Extension>(), &context));
     spirv::ModuleOp::build(builder, state);
-    module = cast<spirv::ModuleOp>(Operation::create(state));
+    moduleOp = cast<spirv::ModuleOp>(Operation::create(state));
   }
 
   /// Gets the `struct { float }` type.
   spirv::StructType getFloatStructType() {
-    OpBuilder builder(module->getRegion());
+    OpBuilder builder(moduleOp->getRegion());
     llvm::SmallVector<Type, 1> elementTypes{builder.getF32Type()};
     llvm::SmallVector<spirv::StructType::OffsetInfo, 1> offsetInfo{0};
     return spirv::StructType::get(elementTypes, offsetInfo);
@@ -70,7 +70,7 @@ protected:
 
   /// Inserts a global variable of the given `type` and `name`.
   spirv::GlobalVariableOp addGlobalVar(Type type, llvm::StringRef name) {
-    OpBuilder builder(module->getRegion());
+    OpBuilder builder(moduleOp->getRegion());
     auto ptrType = spirv::PointerType::get(type, spirv::StorageClass::Uniform);
     return spirv::GlobalVariableOp::create(
         builder, UnknownLoc::get(&context), TypeAttr::get(ptrType),
@@ -79,7 +79,7 @@ protected:
 
   // Inserts an Integer or a Vector of Integers constant of value 'val'.
   spirv::ConstantOp addConstInt(Type type, const APInt &val) {
-    OpBuilder builder(module->getRegion());
+    OpBuilder builder(moduleOp->getRegion());
     auto loc = UnknownLoc::get(&context);
 
     if (auto intType = dyn_cast<IntegerType>(type)) {
@@ -128,7 +128,7 @@ protected:
 
 protected:
   MLIRContext context;
-  OwningOpRef<spirv::ModuleOp> module;
+  OwningOpRef<spirv::ModuleOp> moduleOp;
   SmallVector<uint32_t, 0> binary;
 };
 
@@ -140,7 +140,7 @@ TEST_F(SerializationTest, ContainsBlockDecoration) {
   auto structType = getFloatStructType();
   addGlobalVar(structType, "var0");
 
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
 
   auto hasBlockDecoration = [](spirv::Opcode opcode,
                                ArrayRef<uint32_t> operands) {
@@ -157,7 +157,7 @@ TEST_F(SerializationTest, ContainsNoDuplicatedBlockDecoration) {
   addGlobalVar(structType, "var0");
   addGlobalVar(structType, "var1");
 
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
 
   unsigned count = 0;
   auto countBlockDecoration = [&count](spirv::Opcode opcode,
@@ -184,7 +184,7 @@ TEST_F(SerializationTest, SignlessVsSignedIntegerConstantBitExtension) {
 
   addConstInt(signlessInt16Type, signlessIntConstVal);
   addConstInt(signedInt16Type, signedIntConstVal);
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
 
   auto hasSignlessVal = [&](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {
     return opcode == spirv::Opcode::OpConstant && operands.size() == 3 &&
@@ -205,7 +205,7 @@ TEST_F(SerializationTest, ContainsSymbolName) {
 
   spirv::SerializationOptions options;
   options.emitSymbolName = true;
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary, options)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary, options)));
 
   auto hasVarName = [](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {
     unsigned index = 1; // Skip the result <id>
@@ -221,7 +221,7 @@ TEST_F(SerializationTest, DoesNotContainSymbolName) {
 
   spirv::SerializationOptions options;
   options.emitSymbolName = false;
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary, options)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary, options)));
 
   auto hasVarName = [](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {
     unsigned index = 1; // Skip the result <id>
@@ -305,7 +305,7 @@ bool allInstructionsWithinWordLimit(SmallVectorImpl<uint32_t> &binary) {
 } // namespace
 
 TEST_F(SerializationTest, LongTypeStructIsSplit) {
-  OpBuilder builder(module->getRegion());
+  OpBuilder builder(moduleOp->getRegion());
   Type i32Type = builder.getIntegerType(32);
   Type f32Type = builder.getF32Type();
   SmallVector<Type> memberTypes;
@@ -316,7 +316,7 @@ TEST_F(SerializationTest, LongTypeStructIsSplit) {
   auto structType = spirv::StructType::get(memberTypes, offsets);
   addGlobalVar(structType, "var0");
 
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
   EXPECT_TRUE(allInstructionsWithinWordLimit(binary));
   EXPECT_TRUE(hasOpcode(binary, spirv::Opcode::OpTypeStruct));
   EXPECT_TRUE(hasOpcode(binary, spirv::Opcode::OpTypeStructContinuedINTEL));
@@ -352,7 +352,7 @@ TEST_F(SerializationTest, LongTypeStructIsSplit) {
 }
 
 TEST_F(SerializationTest, LongConstantCompositeIsSplit) {
-  OpBuilder builder(module->getRegion());
+  OpBuilder builder(moduleOp->getRegion());
   Location loc = UnknownLoc::get(&context);
   Type i32Type = builder.getIntegerType(32);
   auto arrayType = spirv::ArrayType::get(i32Type, kLongCompositeSize);
@@ -370,7 +370,7 @@ TEST_F(SerializationTest, LongConstantCompositeIsSplit) {
   auto cst = spirv::ConstantOp::create(bodyBuilder, loc, arrayType, arrayAttr);
   spirv::ReturnValueOp::create(bodyBuilder, loc, cst.getResult());
 
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
   EXPECT_TRUE(allInstructionsWithinWordLimit(binary));
   EXPECT_TRUE(hasOpcode(binary, spirv::Opcode::OpConstantComposite));
   EXPECT_TRUE(
@@ -403,7 +403,7 @@ TEST_F(SerializationTest, LongConstantCompositeIsSplit) {
 }
 
 TEST_F(SerializationTest, LongSpecConstantCompositeIsSplit) {
-  OpBuilder builder(module->getRegion());
+  OpBuilder builder(moduleOp->getRegion());
   Location loc = UnknownLoc::get(&context);
   Type i32Type = builder.getIntegerType(32);
   auto arrayType = spirv::ArrayType::get(i32Type, kLongCompositeSize);
@@ -422,7 +422,7 @@ TEST_F(SerializationTest, LongSpecConstantCompositeIsSplit) {
                                          builder.getArrayAttr(constituents),
                                          /*sym_visibility=*/nullptr);
 
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
   EXPECT_TRUE(allInstructionsWithinWordLimit(binary));
   EXPECT_TRUE(hasOpcode(binary, spirv::Opcode::OpSpecConstantComposite));
   EXPECT_TRUE(
@@ -454,7 +454,7 @@ TEST_F(SerializationTest, LongSpecConstantCompositeIsSplit) {
 }
 
 TEST_F(SerializationTest, LongCompositeConstructIsSplit) {
-  OpBuilder builder(module->getRegion());
+  OpBuilder builder(moduleOp->getRegion());
   Location loc = UnknownLoc::get(&context);
   Type i32Type = builder.getIntegerType(32);
   auto arrayType = spirv::ArrayType::get(i32Type, kLongCompositeSize);
@@ -475,7 +475,7 @@ TEST_F(SerializationTest, LongCompositeConstructIsSplit) {
                                                 constituents);
   spirv::ReturnValueOp::create(bodyBuilder, loc, cc.getResult());
 
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
   EXPECT_TRUE(allInstructionsWithinWordLimit(binary));
   EXPECT_TRUE(hasOpcode(binary, spirv::Opcode::OpCompositeConstruct));
   EXPECT_TRUE(
@@ -532,20 +532,20 @@ TEST_F(SerializationTest, LongCompositeDoesNotDuplicateDeclaredCapability) {
   // Pre-declare LongCompositesINTEL / SPV_INTEL_long_composites in the VCE
   // triple. The serializer must not emit a second OpCapability/OpExtension
   // when a long composite triggers `addLongCompositesCapability()`.
-  module->getOperation()->setDiscardableAttr(
+  moduleOp->getOperation()->setDiscardableAttr(
       spirv::ModuleOp::getVCETripleAttrName(),
       spirv::VerCapExtAttr::get(
           spirv::Version::V_1_0, {spirv::Capability::LongCompositesINTEL},
           {spirv::Extension::SPV_INTEL_long_composites}, &context));
 
-  OpBuilder builder(module->getRegion());
+  OpBuilder builder(moduleOp->getRegion());
   Type i32Type = builder.getIntegerType(32);
   SmallVector<Type> memberTypes(kLongCompositeSize, i32Type);
   SmallVector<spirv::StructType::OffsetInfo> offsets(kLongCompositeSize, 0);
   auto structType = spirv::StructType::get(memberTypes, offsets);
   addGlobalVar(structType, "var0");
 
-  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  ASSERT_TRUE(succeeded(spirv::serialize(moduleOp.get(), binary)));
   EXPECT_TRUE(allInstructionsWithinWordLimit(binary));
   EXPECT_TRUE(hasOpcode(binary, spirv::Opcode::OpTypeStructContinuedINTEL));
   EXPECT_EQ(countOpcode(binary, spirv::Opcode::OpCapability), 1u);

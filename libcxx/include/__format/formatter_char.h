@@ -34,14 +34,14 @@ template <__fmt_char_type _CharT>
 struct __formatter_char {
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_integral);
     __format_spec::__process_parsed_char(__parser_, "a character");
     return __result;
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_CharT __value, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(_CharT __value, _FormatContext& __ctx) const {
     if (__parser_.__type_ == __format_spec::__type::__default || __parser_.__type_ == __format_spec::__type::__char)
       return __formatter::__format_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 
@@ -61,14 +61,14 @@ public:
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(char __value, _FormatContext& __ctx) const
+  typename _FormatContext::iterator format(char __value, _FormatContext& __ctx) const
     requires(same_as<_CharT, wchar_t>)
   {
     return format(static_cast<wchar_t>(static_cast<unsigned char>(__value)), __ctx);
   }
 
 #  if _LIBCPP_STD_VER >= 23
-  _LIBCPP_HIDE_FROM_ABI constexpr void set_debug_format() { __parser_.__type_ = __format_spec::__type::__debug; }
+  constexpr void set_debug_format() { __parser_.__type_ = __format_spec::__type::__debug; }
 #  endif
 
   __format_spec::__parser<_CharT> __parser_;

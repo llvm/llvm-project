@@ -9,7 +9,7 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
@@ -51,21 +51,36 @@ Expected<PassPlugin> PassPlugin::load(StringRef Filename) {
   return P;
 }
 
+bool PassPlugin::invokePreCodeGenCallback(
+    TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
+    raw_pwrite_stream *DwoOS, CodeGenFileType CGFT, bool DisableVerify,
+    bool DisableSimplifyLibCalls, const ModuleSummaryIndex *MSI,
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS) const {
+  if (Info.PreCodeGenCallback)
+    return Info.PreCodeGenCallback(TM, M, OS, DwoOS, CGFT, DisableVerify,
+                                   DisableSimplifyLibCalls, MSI,
+                                   std::move(VFS));
+  return false;
+}
+
 Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                 ArrayRef<std::string> Args) {
   DenseMap<StringRef, unsigned> Index;
   for (auto [I, Info] : enumerate(Infos))
-    Index[Info.PluginName] = I;
-  // The argument follows the first comma, so it is NUL-terminated.
+    if (!Index.try_emplace(Info.PluginName, I).second)
+      return createStringError("multiple pass plugins are named '" +
+                               Twine(Info.PluginName) + "'");
+  // ParseArguments takes argv-style C strings. The argument is the suffix of
+  // Arg after the first comma, so it is NUL-terminated and needs no copy.
   SmallVector<SmallVector<const char *, 0>, 0> PluginArgs(Infos.size());
   for (const std::string &Arg : Args) {
     auto [Name, Rest] = StringRef(Arg).split(',');
-    if (Rest.empty())
-      return createStringError("expected <plugin>,<arg> in -plugin-arg=" + Arg);
+    // Rest is null without a comma and empty for an empty argument.
+    if (!Rest.data())
+      return createStringError("expected <plugin>,<arg>, got '" + Arg + "'");
     auto It = Index.find(Name);
     if (It == Index.end())
-      return createStringError("no pass plugin named '" + Name +
-                               "' is loaded, in -plugin-arg=" + Arg);
+      return createStringError("no pass plugin named '" + Name + "' is loaded");
     PluginArgs[It->second].push_back(Rest.data());
   }
   for (auto [Info, PArgs] : zip_equal(Infos, PluginArgs)) {
@@ -77,16 +92,5 @@ Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
     if (Error E = Info.ParseArguments(PArgs))
       return E;
   }
-  return Error::success();
-}
-
-Error llvm::parsePassPluginCommandLine(const char *PluginName,
-                                       ArrayRef<const char *> Args) {
-  SmallVector<const char *, 0> Argv = {PluginName};
-  append_range(Argv, Args);
-  std::string Msg;
-  raw_string_ostream OS(Msg);
-  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
-    return createStringError(StringRef(Msg).trim());
   return Error::success();
 }

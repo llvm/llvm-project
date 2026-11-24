@@ -3,31 +3,17 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -lower-interleaved-accesses=false < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IADISABLED
 
 define void @aarch64_vector_deinterleave_idx_ld2(ptr %ptr, i64 %idx) {
-; CHECK-IAENABLED-LABEL: aarch64_vector_deinterleave_idx_ld2:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    lsl x8, x1, #2
-; CHECK-IAENABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; CHECK-IAENABLED-NEXT:    add x8, x8, #16
-; CHECK-IAENABLED-NEXT:    add x10, x0, x9
-; CHECK-IAENABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-IAENABLED-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
-; CHECK-IAENABLED-NEXT:    str q0, [x0, x9]
-; CHECK-IAENABLED-NEXT:    str q1, [x0, x8]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: aarch64_vector_deinterleave_idx_ld2:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    lsl x8, x1, #2
-; CHECK-IADISABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; CHECK-IADISABLED-NEXT:    add x8, x8, #16
-; CHECK-IADISABLED-NEXT:    add x9, x0, x9
-; CHECK-IADISABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x9]
-; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    str q2, [x9]
-; CHECK-IADISABLED-NEXT:    str q0, [x0, x8]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsl x8, x1, #2
+; CHECK-NEXT:    and x9, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
+; CHECK-NEXT:    str q0, [x0, x9]
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %a1 = add i64 %idx, 4
@@ -133,25 +119,13 @@ entry:
 }
 
 define void @aarch64_vector_deinterleave_v8f64_load(ptr %src, ptr %dst0, ptr %dst1) {
-; CHECK-IAENABLED-LABEL: aarch64_vector_deinterleave_v8f64_load:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ld2 { v0.2d, v1.2d }, [x0], #32
-; CHECK-IAENABLED-NEXT:    ld2 { v2.2d, v3.2d }, [x0]
-; CHECK-IAENABLED-NEXT:    stp q0, q2, [x1]
-; CHECK-IAENABLED-NEXT:    stp q1, q3, [x2]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: aarch64_vector_deinterleave_v8f64_load:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0, #32]
-; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x0]
-; CHECK-IADISABLED-NEXT:    zip1 v4.2d, v1.2d, v0.2d
-; CHECK-IADISABLED-NEXT:    zip2 v0.2d, v1.2d, v0.2d
-; CHECK-IADISABLED-NEXT:    zip1 v5.2d, v3.2d, v2.2d
-; CHECK-IADISABLED-NEXT:    zip2 v1.2d, v3.2d, v2.2d
-; CHECK-IADISABLED-NEXT:    stp q5, q4, [x1]
-; CHECK-IADISABLED-NEXT:    stp q1, q0, [x2]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_deinterleave_v8f64_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld2 { v0.2d, v1.2d }, [x0], #32
+; CHECK-NEXT:    ld2 { v2.2d, v3.2d }, [x0]
+; CHECK-NEXT:    stp q0, q2, [x1]
+; CHECK-NEXT:    stp q1, q3, [x2]
+; CHECK-NEXT:    ret
 entry:
   %wide.vec = load <8 x double>, ptr %src, align 8
   %strided.vec = tail call { <4 x double>, <4 x double> } @llvm.vector.deinterleave2.v8f64(<8 x double> %wide.vec)
@@ -206,3 +180,50 @@ entry:
   store <4 x double> %stream3, ptr %dst3, align 8
   ret void
 }
+
+define void @aarch64_vector_deinterleave8_v16f64_load(ptr %src, ptr %dst) {
+; CHECK-LABEL: aarch64_vector_deinterleave8_v16f64_load:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0], #64
+; CHECK-NEXT:    ld4 { v4.2d, v5.2d, v6.2d, v7.2d }, [x0]
+; CHECK-NEXT:    zip1 v20.2d, v0.2d, v4.2d
+; CHECK-NEXT:    zip2 v16.2d, v3.2d, v7.2d
+; CHECK-NEXT:    zip2 v17.2d, v2.2d, v6.2d
+; CHECK-NEXT:    zip2 v18.2d, v1.2d, v5.2d
+; CHECK-NEXT:    zip2 v19.2d, v0.2d, v4.2d
+; CHECK-NEXT:    zip1 v21.2d, v3.2d, v7.2d
+; CHECK-NEXT:    zip1 v22.2d, v2.2d, v6.2d
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v5.2d
+; CHECK-NEXT:    // fake_use: $q20
+; CHECK-NEXT:    // fake_use: $q0
+; CHECK-NEXT:    // fake_use: $q22
+; CHECK-NEXT:    // fake_use: $q21
+; CHECK-NEXT:    // fake_use: $q19
+; CHECK-NEXT:    // fake_use: $q18
+; CHECK-NEXT:    // fake_use: $q17
+; CHECK-NEXT:    // fake_use: $q16
+; CHECK-NEXT:    ret
+  %wide = load <16 x double>, ptr %src, align 8
+  %parts = call { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } @llvm.vector.deinterleave8.v16f64(<16 x double> %wide)
+  %p0 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 0
+  %p1 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 1
+  %p2 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 2
+  %p3 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 3
+  %p4 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 4
+  %p5 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 5
+  %p6 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 6
+  %p7 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 7
+  call void (...) @llvm.fake.use(<2 x double> %p0)
+  call void (...) @llvm.fake.use(<2 x double> %p1)
+  call void (...) @llvm.fake.use(<2 x double> %p2)
+  call void (...) @llvm.fake.use(<2 x double> %p3)
+  call void (...) @llvm.fake.use(<2 x double> %p4)
+  call void (...) @llvm.fake.use(<2 x double> %p5)
+  call void (...) @llvm.fake.use(<2 x double> %p6)
+  call void (...) @llvm.fake.use(<2 x double> %p7)
+  ret void
+}
+
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-IADISABLED: {{.*}}
+; CHECK-IAENABLED: {{.*}}

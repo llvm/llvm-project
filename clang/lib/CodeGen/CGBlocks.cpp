@@ -582,9 +582,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
   // First, 'this'.
   if (block->capturesCXXThis()) {
-    assert(CGF && isa_and_nonnull<CXXMethodDecl>(CGF->CurFuncDecl) &&
-           "Can't capture 'this' outside a method");
-    QualType thisType = cast<CXXMethodDecl>(CGF->CurFuncDecl)->getThisType();
+    QualType thisType = block->getCXXThisType();
 
     // Theoretically, this could be in a different address space, so
     // don't assume standard pointer size/align.
@@ -1588,7 +1586,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     entry_ptr = entry_ptr->getNextNode()->getIterator();
   else
     entry_ptr = entry->end();
-  Builder.SetInsertPoint(entry, entry_ptr);
+  Builder.SetInsertPoint(entry_ptr);
 
   // Emit debug information for all the DeclRefExprs.
   // FIXME: also for 'this'

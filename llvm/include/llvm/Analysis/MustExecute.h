@@ -25,6 +25,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/PassManager.h"
@@ -327,13 +330,6 @@ struct MustBeExecutedIterator {
 
   /// Return the underlying instruction.
   const Instruction *&operator*() { return CurInst; }
-  const Instruction *getCurrentInst() const { return CurInst; }
-
-  /// Return true if \p I was encountered by this iterator already.
-  bool count(const Instruction *I) const {
-    return Visited.count({I, ExplorationDirection::FORWARD}) ||
-           Visited.count({I, ExplorationDirection::BACKWARD});
-  }
 
 private:
   using VisitedSetTy =
@@ -450,41 +446,19 @@ struct MustBeExecutedContextExplorer {
   }
   ///}
 
-  /// Check \p Pred on all instructions in the context.
+  /// Return true if \p I is in the context of \p PP.
   ///
-  /// This method will evaluate \p Pred and return
-  /// true if \p Pred holds in every instruction.
-  bool checkForAllContext(const Instruction *PP,
-                          function_ref<bool(const Instruction *)> Pred) {
-    for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; ++EIt)
-      if (!Pred(*EIt))
-        return false;
-    return true;
-  }
+  /// That is the case if iterating over the context of \p PP visits \p I.
+  /// This does not explore the context of every program point separately but
+  /// uses summaries of the contexts of basic blocks that are shared by all
+  /// program points.
+  LLVM_ABI bool isInContextOf(const Instruction *I, const Instruction *PP);
 
-  /// Helper to look for \p I in the context of \p PP.
-  ///
-  /// The context is expanded until \p I was found or no more expansion is
-  /// possible.
-  ///
-  /// \returns True, iff \p I was found.
-  bool findInContextOf(const Instruction *I, const Instruction *PP) {
-    auto EIt = begin(PP), EEnd = end(PP);
-    return findInContextOf(I, EIt, EEnd);
-  }
-
-  /// Helper to look for \p I in the context defined by \p EIt and \p EEnd.
-  ///
-  /// The context is expanded until \p I was found or no more expansion is
-  /// possible.
-  ///
-  /// \returns True, iff \p I was found.
-  bool findInContextOf(const Instruction *I, iterator &EIt, iterator &EEnd) {
-    bool Found = EIt.count(I);
-    while (!Found && EIt != EEnd)
-      Found = (++EIt).getCurrentInst() == I;
-    return Found;
-  }
+  /// Check \p Pred on all terminators in the context of \p PP and return
+  /// true if it holds for all of them.
+  LLVM_ABI bool
+  checkForAllTerminatorsInContext(const Instruction *PP,
+                                  function_ref<bool(const Instruction *)> Pred);
 
   /// Return the next instruction that is guaranteed to be executed after \p PP.
   ///
@@ -537,6 +511,47 @@ private:
   /// Map from instructions to associated must be executed iterators.
   DenseMap<const Instruction *, std::unique_ptr<MustBeExecutedIterator>>
       InstructionIteratorMap;
+
+  /// Return the first instruction at or after \p PP in its block that is not
+  /// guaranteed to transfer execution to its successor, or null if there is
+  /// none.
+  const Instruction *getForwardStop(const Instruction *PP);
+
+  /// Return the block in which the forward exploration continues after the
+  /// terminator of \p BB, or null if it stops.
+  const BasicBlock *getForwardNextBlock(const BasicBlock *BB);
+
+  /// Return the block in which the backward exploration continues before the
+  /// first instruction of \p BB, or null if it stops.
+  const BasicBlock *getBackwardNextBlock(const BasicBlock *BB);
+
+  /// Caches for getForwardNextBlock and getBackwardNextBlock.
+  DenseMap<const BasicBlock *, const BasicBlock *> ForwardNextBlockMap;
+  DenseMap<const BasicBlock *, const BasicBlock *> BackwardNextBlockMap;
+
+  /// Map from blocks to the instructions in them that are not guaranteed to
+  /// transfer execution to their successor, in order.
+  DenseMap<const BasicBlock *, SmallVector<const Instruction *, 2>>
+      NonTransferringMap;
+
+  /// Map from blocks to the blocks in the forward context after their
+  /// terminator. Each block maps to the last instruction in the context, or
+  /// null if all of its instructions are in the context.
+  using ForwardContextTy = MapVector<const BasicBlock *, const Instruction *>;
+  DenseMap<const BasicBlock *, std::unique_ptr<ForwardContextTy>>
+      ForwardContextMap;
+
+  /// Map from blocks to the blocks in the backward context before their first
+  /// instruction. All instructions of these blocks are in the context.
+  using BackwardContextTy = SmallSetVector<const BasicBlock *, 8>;
+  DenseMap<const BasicBlock *, std::unique_ptr<BackwardContextTy>>
+      BackwardContextMap;
+
+  /// Return the forward context after the terminator of \p BB.
+  const ForwardContextTy &getForwardContext(const BasicBlock *BB);
+
+  /// Return the backward context before the first instruction of \p BB.
+  const BackwardContextTy &getBackwardContext(const BasicBlock *BB);
 
   /// A unique end iterator.
   MustBeExecutedIterator EndIterator;

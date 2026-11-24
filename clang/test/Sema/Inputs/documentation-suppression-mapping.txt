@@ -1,0 +1,4 @@
+# Suppresses -Wdocumentation everywhere except in foo/.
+[documentation]
+src:*
+src:*foo/*=emit

@@ -329,12 +329,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Integer arithmetic ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse2_pmulhu_w : ClangBuiltin<"__builtin_ia32_pmulhuw128">,
-      DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
-                             llvm_v8i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_sse2_pmulh_w : ClangBuiltin<"__builtin_ia32_pmulhw128">,
-      DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
-                             llvm_v8i16_ty], [IntrNoMem, Commutative]>;
   def int_x86_sse2_pmadd_wd : ClangBuiltin<"__builtin_ia32_pmaddwd128">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v8i16_ty,
                              llvm_v8i16_ty], [IntrNoMem, Commutative]>;
@@ -1336,12 +1330,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Integer arithmetic ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_avx2_pmulhu_w : ClangBuiltin<"__builtin_ia32_pmulhuw256">,
-      DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty,
-                             llvm_v16i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_avx2_pmulh_w : ClangBuiltin<"__builtin_ia32_pmulhw256">,
-      DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty,
-                             llvm_v16i16_ty], [IntrNoMem, Commutative]>;
   def int_x86_avx2_pmadd_wd : ClangBuiltin<"__builtin_ia32_pmaddwd256">,
       DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v16i16_ty,
                              llvm_v16i16_ty], [IntrNoMem, Commutative]>;
@@ -3760,12 +3748,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 }
 // Integer arithmetic ops
 let TargetPrefix = "x86" in {
-  def int_x86_avx512_pmulhu_w_512 : ClangBuiltin<"__builtin_ia32_pmulhuw512">,
-      DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty],
-                            [IntrNoMem, Commutative]>;
-  def int_x86_avx512_pmulh_w_512 : ClangBuiltin<"__builtin_ia32_pmulhw512">,
-      DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty],
-                            [IntrNoMem, Commutative]>;
   def int_x86_avx512_pavg_b_512 : ClangBuiltin<"__builtin_ia32_pavgb512">,
       DefaultAttrsIntrinsic<[llvm_v64i8_ty], [llvm_v64i8_ty, llvm_v64i8_ty],
                             [IntrNoMem]>;
@@ -5453,120 +5435,161 @@ let TargetPrefix = "x86" in {
 //===----------------------------------------------------------------------===//
 // AMX - Intel AMX extensions
 
+// The tile registers and the tile configuration, which no other IR operation
+// can access, as a target memory location. Every intrinsic below reads or
+// writes it, which keeps tile operations ordered with each other, and otherwise
+// declares only the memory it accesses through its pointer argument. The
+// _internal intrinsics further down keep their conservative declarations.
+defvar X86TileState = TargetMem0;
+
 let TargetPrefix = "x86" in {
   def int_x86_ldtilecfg : ClangBuiltin<"__builtin_ia32_tile_loadconfig">,
-              Intrinsic<[], [llvm_ptr_ty], []>;
+      DefaultAttrsIntrinsic<[], [llvm_ptr_ty],
+                            [IntrRead<[ArgMem]>, IntrWrite<[X86TileState]>]>;
   def int_x86_sttilecfg : ClangBuiltin<"__builtin_ia32_tile_storeconfig">,
-              Intrinsic<[], [llvm_ptr_ty], []>;
+      DefaultAttrsIntrinsic<[], [llvm_ptr_ty],
+                            [IntrRead<[X86TileState]>, IntrWrite<[ArgMem]>]>;
   def int_x86_tilerelease : ClangBuiltin<"__builtin_ia32_tilerelease">,
-              Intrinsic<[], [], []>;
+      DefaultAttrsIntrinsic<[], [],
+                            [IntrWrite<[X86TileState]>, IntrWriteOnly]>;
   def int_x86_tilezero : ClangBuiltin<"__builtin_ia32_tilezero">,
-              Intrinsic<[], [llvm_i8_ty], [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>]>;
   def int_x86_tileloadd64 : ClangBuiltin<"__builtin_ia32_tileloadd64">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                            [IntrRead<[ArgMem, X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>]>;
   def int_x86_tileloaddt164 : ClangBuiltin<"__builtin_ia32_tileloaddt164">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                            [IntrRead<[ArgMem, X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>]>;
   def int_x86_tilestored64 : ClangBuiltin<"__builtin_ia32_tilestored64">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                            [IntrRead<[X86TileState]>, IntrWrite<[ArgMem]>,
+                             ImmArg<ArgIndex<0>>]>;
   def int_x86_tileloaddrs64 : ClangBuiltin<"__builtin_ia32_tileloaddrs64">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                            [IntrRead<[ArgMem, X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>]>;
   def int_x86_tileloaddrst164 : ClangBuiltin<"__builtin_ia32_tileloaddrst164">,
-              Intrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_ptr_ty, llvm_i64_ty],
+                            [IntrRead<[ArgMem, X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>]>;
   def int_x86_tdpbssd : ClangBuiltin<"__builtin_ia32_tdpbssd">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tdpbsud : ClangBuiltin<"__builtin_ia32_tdpbsud">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tdpbusd : ClangBuiltin<"__builtin_ia32_tdpbusd">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tdpbuud : ClangBuiltin<"__builtin_ia32_tdpbuud">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tdpbf16ps : ClangBuiltin<"__builtin_ia32_tdpbf16ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   // AMX-FP16 - Intel FP16 AMX extensions
   def int_x86_tdpfp16ps : ClangBuiltin<"__builtin_ia32_tdpfp16ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   // AMX-COMPLEX
   def int_x86_tcmmimfp16ps : ClangBuiltin<"__builtin_ia32_tcmmimfp16ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tcmmrlfp16ps : ClangBuiltin<"__builtin_ia32_tcmmrlfp16ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
   // AMX-FP8
   def int_x86_tdpbf8ps : ClangBuiltin<"__builtin_ia32_tdpbf8ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>,
-                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tdpbhf8ps : ClangBuiltin<"__builtin_ia32_tdpbhf8ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>,
-                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tdphbf8ps : ClangBuiltin<"__builtin_ia32_tdphbf8ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>,
-                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
   def int_x86_tdphf8ps : ClangBuiltin<"__builtin_ia32_tdphf8ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>,
-                        ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+      DefaultAttrsIntrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                            [IntrRead<[X86TileState]>,
+                             IntrWrite<[X86TileState]>, ImmArg<ArgIndex<0>>,
+                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
   // AMX-AVX512
   def int_x86_tcvtrowd2ps : ClangBuiltin<"__builtin_ia32_tcvtrowd2ps">,
-              Intrinsic<[llvm_v16f32_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16f32_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
   def int_x86_tcvtrowps2bf16h : ClangBuiltin<"__builtin_ia32_tcvtrowps2bf16h">,
-              Intrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
   def int_x86_tcvtrowps2bf16l : ClangBuiltin<"__builtin_ia32_tcvtrowps2bf16l">,
-              Intrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
   def int_x86_tcvtrowps2phh : ClangBuiltin<"__builtin_ia32_tcvtrowps2phh">,
-              Intrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
   def int_x86_tcvtrowps2phl : ClangBuiltin<"__builtin_ia32_tcvtrowps2phl">,
-              Intrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
   def int_x86_tilemovrow : ClangBuiltin<"__builtin_ia32_tilemovrow">,
-              Intrinsic<[llvm_v16i32_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>]>;
   def int_x86_tcvtrowd2psi : ClangBuiltin<"__builtin_ia32_tcvtrowd2psi">,
-              Intrinsic<[llvm_v16f32_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16f32_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_x86_tcvtrowps2bf16hi : ClangBuiltin<"__builtin_ia32_tcvtrowps2bf16hi">,
-              Intrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_x86_tcvtrowps2bf16li : ClangBuiltin<"__builtin_ia32_tcvtrowps2bf16li">,
-              Intrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32bf16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_x86_tcvtrowps2phhi : ClangBuiltin<"__builtin_ia32_tcvtrowps2phhi">,
-              Intrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_x86_tcvtrowps2phli : ClangBuiltin<"__builtin_ia32_tcvtrowps2phli">,
-              Intrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+      DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_x86_tilemovrowi : ClangBuiltin<"__builtin_ia32_tilemovrowi">,
-              Intrinsic<[llvm_v16i32_ty], [llvm_i8_ty, llvm_i32_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_i8_ty, llvm_i32_ty],
+                            [IntrRead<[X86TileState]>, IntrReadOnly,
+                             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
   // AMX - internal intrinsics
   def int_x86_ldtilecfg_internal :

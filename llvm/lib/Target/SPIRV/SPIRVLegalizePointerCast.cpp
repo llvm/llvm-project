@@ -105,7 +105,7 @@ class SPIRVLegalizePointerCastImpl {
     buildAssignType(B, SourceType, NewLoad);
     Value *AssignValue = NewLoad;
     if (TargetType->getElementType() != SourceType->getElementType()) {
-      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      const DataLayout &DL = B.getDataLayout();
       TypeSize TargetTypeSize = DL.getTypeSizeInBits(TargetType);
       TypeSize SourceTypeSize = DL.getTypeSizeInBits(SourceType);
 
@@ -173,6 +173,9 @@ class SPIRVLegalizePointerCastImpl {
     auto *DVT = dyn_cast<FixedVectorType>(ToTy);
     if (SVT && DVT)
       return true;
+    if (SVT && (ToTy->isIntegerTy() || ToTy->isFloatingPointTy()) &&
+        ToTy->getPrimitiveSizeInBits() == SVT->getPrimitiveSizeInBits())
+      return true;
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     if (SAT && DVT) {
       if (SAT->getElementType() == DVT->getElementType())
@@ -236,12 +239,14 @@ class SPIRVLegalizePointerCastImpl {
       Value *Handle = ResourcePtr->getOperand(0);
       Value *BaseOffset = ResourcePtr->getOperand(1);
       Value *NewOffset;
-      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
+      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset)) {
         NewOffset =
             ConstantInt::get(CI->getType(), CI->getZExtValue() + ByteOffset);
-      else
+      } else {
         NewOffset = B.CreateAdd(
             BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
+        buildAssignType(B, NewOffset->getType(), NewOffset);
+      }
       SmallVector<OperandBundleDef> OpBundles;
       ResourcePtr->getOperandBundlesAsDefs(OpBundles);
       CallInst *ResourcePtrAtOffset = B.CreateCall(
@@ -259,7 +264,7 @@ class SPIRVLegalizePointerCastImpl {
 
   Value *scalarToStoreInt(IRBuilder<> &B, Value *Scalar) {
     Type *Ty = Scalar->getType();
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    const DataLayout &DL = B.getDataLayout();
     Type *IntTy =
         IntegerType::get(B.getContext(), DL.getTypeStoreSizeInBits(Ty));
     if (Ty == IntTy)
@@ -282,7 +287,7 @@ class SPIRVLegalizePointerCastImpl {
                                Align Alignment) {
     LLVMContext &Ctx = B.getContext();
     Type *I8Ty = Type::getInt8Ty(Ctx);
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    const DataLayout &DL = B.getDataLayout();
     Value *IntVal = scalarToStoreInt(B, Src);
     if (IntVal != Src)
       buildAssignType(B, IntVal->getType(), IntVal);
@@ -310,7 +315,7 @@ class SPIRVLegalizePointerCastImpl {
                                   Align Alignment) {
     LLVMContext &Ctx = B.getContext();
     Type *I8Ty = Type::getInt8Ty(Ctx);
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    const DataLayout &DL = B.getDataLayout();
     unsigned NumBytes = DL.getTypeStoreSize(AccessTy);
     Type *IntTy = IntegerType::get(Ctx, DL.getTypeStoreSizeInBits(AccessTy));
     Value *IntVal = ConstantInt::get(IntTy, 0);
@@ -345,12 +350,17 @@ class SPIRVLegalizePointerCastImpl {
   bool shouldReinterpretByteWise(IRBuilder<> &B, Type *AccessTy,
                                  Value *OriginalPtr) {
     Type *OriginalElemTy = GR->findDeducedElementType(OriginalPtr);
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-    if (OriginalElemTy && OriginalElemTy == Type::getInt8Ty(B.getContext()) &&
+    const DataLayout &DL = B.getDataLayout();
+    if (getResourceGetPointer(OriginalPtr) &&
+        OriginalElemTy == Type::getInt8Ty(B.getContext()) &&
         AccessTy->isSingleValueType() && DL.getTypeStoreSize(AccessTy) > 1)
       return true;
 
     return false;
+  }
+
+  static bool canReinterpretType(Type *FromTy, Type *ToTy) {
+    return FromTy && ToTy && CastInst::isBitCastable(FromTy, ToTy);
   }
 
   bool tryReinterpretLoad(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
@@ -361,7 +371,7 @@ class SPIRVLegalizePointerCastImpl {
 
     Align Alignment = IllegalLoad->getAlign();
     if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
-      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      const DataLayout &DL = B.getDataLayout();
       Value *Loaded;
       if (auto *VT = dyn_cast<FixedVectorType>(AccessTy)) {
         unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
@@ -382,23 +392,34 @@ class SPIRVLegalizePointerCastImpl {
       return true;
     }
 
-    GR->buildAssignPtr(B, AccessTy, OriginalPtr);
-    LoadInst *LI = B.CreateLoad(AccessTy, OriginalPtr);
+    Type *OriginalTy = GR->findDeducedElementType(OriginalPtr);
+    if (!canReinterpretType(OriginalTy, AccessTy))
+      report_fatal_error(
+          "Cannot lower a pointer cast without equal-width numeric types for "
+          "Logical SPIR-V",
+          false);
+    LoadInst *LI = B.CreateLoad(OriginalTy, OriginalPtr);
     LI->setAlignment(Alignment);
-    buildAssignType(B, AccessTy, LI);
-    GR->replaceAllUsesWith(IllegalLoad, LI, /* DeleteOld= */ true);
+    LI->setVolatile(IllegalLoad->isVolatile());
+    LI->setAtomic(IllegalLoad->getOrdering(), IllegalLoad->getSyncScopeID());
+    buildAssignType(B, OriginalTy, LI);
+    Value *Loaded =
+        B.CreateIntrinsic(Intrinsic::spv_bitcast, {AccessTy, OriginalTy}, {LI});
+    buildAssignType(B, AccessTy, Loaded);
+    GR->replaceAllUsesWith(IllegalLoad, Loaded, /* DeleteOld= */ true);
     DeadInstructions.push_back(IllegalLoad);
     return true;
   }
 
   bool tryReinterpretStore(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
-                           Value *CastedPtr, Value *StoreSrc, Align Alignment) {
+                           Value *CastedPtr, Value *StoreSrc, Align Alignment,
+                           Instruction *IllegalStore) {
     Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
     if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
 
     if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
-      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      const DataLayout &DL = B.getDataLayout();
       if (auto *VT = dyn_cast<FixedVectorType>(StoreSrc->getType())) {
         unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
         for (unsigned I = 0; I < VT->getNumElements(); ++I) {
@@ -413,9 +434,21 @@ class SPIRVLegalizePointerCastImpl {
       return true;
     }
 
-    GR->buildAssignPtr(B, AccessTy, OriginalPtr);
-    StoreInst *SI = B.CreateStore(StoreSrc, OriginalPtr);
+    Type *OriginalTy = GR->findDeducedElementType(OriginalPtr);
+    if (!canReinterpretType(AccessTy, OriginalTy))
+      report_fatal_error(
+          "Cannot lower a pointer cast without equal-width numeric types for "
+          "Logical SPIR-V",
+          false);
+    Value *Stored = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                      {OriginalTy, AccessTy}, {StoreSrc});
+    buildAssignType(B, OriginalTy, Stored);
+    StoreInst *SI = B.CreateStore(Stored, OriginalPtr);
     SI->setAlignment(Alignment);
+    if (auto *OldSI = dyn_cast<StoreInst>(IllegalStore)) {
+      SI->setVolatile(OldSI->isVolatile());
+      SI->setAtomic(OldSI->getOrdering(), OldSI->getSyncScopeID());
+    }
     return true;
   }
 
@@ -445,6 +478,15 @@ class SPIRVLegalizePointerCastImpl {
       LI->setAlignment(IllegalLoad->getAlign());
       buildAssignType(B, ElementType, LI);
       return LI;
+    }
+    if (SVT && !DVT) {
+      LoadInst *LI = B.CreateLoad(CurrentTy, GEP);
+      LI->setAlignment(IllegalLoad->getAlign());
+      buildAssignType(B, CurrentTy, LI);
+      Value *Result = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                        {ElementType, CurrentTy}, {LI});
+      buildAssignType(B, ElementType, Result);
+      return Result;
     }
     if (SVT && DVT)
       return loadVectorFromVector(B, SVT, DVT, GEP, IllegalLoad->getAlign());
@@ -496,7 +538,7 @@ class SPIRVLegalizePointerCastImpl {
                                    Align OriginalAlign) {
     Type *TargetElemTy = TargetType->getElementType();
     unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    const DataLayout &DL = B.getDataLayout();
     uint64_t ArrElemVecSize = DL.getTypeAllocSize(ArrElemVecTy);
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
@@ -526,7 +568,7 @@ class SPIRVLegalizePointerCastImpl {
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
     std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    const DataLayout &DL = B.getDataLayout();
     uint64_t ElemSize = DL.getTypeAllocSize(TargetType->getElementType());
     for (unsigned I = 0, E = TargetType->getNumElements(); I < E; ++I) {
       // Create a GEP to access the i-th element of the array.
@@ -560,7 +602,7 @@ class SPIRVLegalizePointerCastImpl {
 
     std::array<Type *, 2> Types = {DstArrayPtr->getType(),
                                    DstArrayPtr->getType()};
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    const DataLayout &DL = B.getDataLayout();
     uint64_t ArrElemVecSize = DL.getTypeAllocSize(ArrElemVecTy);
 
     for (unsigned I = 0; I < SrcNumElements; I += ScalarsPerArrayElement) {
@@ -596,7 +638,7 @@ class SPIRVLegalizePointerCastImpl {
            "Element types of array and vector must be the same.");
     std::array<Type *, 2> Types = {DstArrayPtr->getType(),
                                    DstArrayPtr->getType()};
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    const DataLayout &DL = B.getDataLayout();
     uint64_t ElemSize = DL.getTypeAllocSize(ElemTy);
 
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; ++I) {
@@ -698,7 +740,6 @@ class SPIRVLegalizePointerCastImpl {
       Src =
           B.CreateIntrinsic(Intrinsic::spv_bitcast, {DstType, SrcType}, {Src});
       buildAssignType(B, DstType, Src);
-      SrcType = DstType;
 
       StoreInst *SI = B.CreateStore(Src, Dst);
       SI->setAlignment(Alignment);
@@ -729,8 +770,8 @@ class SPIRVLegalizePointerCastImpl {
     auto ResultOpt = getPointerToFirstCompatibleType(B, Dst, Dst->getType(),
                                                      Src->getType(), true);
     if (!ResultOpt) {
-      if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src,
-                              Alignment))
+      if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src, Alignment,
+                              IllegalStore))
         return;
       llvm_unreachable("Failed to store to aggregate: "
                        "Could not find compatible memory layout.");
@@ -745,6 +786,14 @@ class SPIRVLegalizePointerCastImpl {
 
     if (Src->getType() == CurrentTy) {
       StoreInst *SI = B.CreateStore(Src, GEP);
+      SI->setAlignment(Alignment);
+      return;
+    }
+    if (DVT && !SVT) {
+      Value *Result = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                        {CurrentTy, Src->getType()}, {Src});
+      buildAssignType(B, CurrentTy, Result);
+      StoreInst *SI = B.CreateStore(Result, GEP);
       SI->setAlignment(Alignment);
       return;
     }
@@ -777,7 +826,7 @@ class SPIRVLegalizePointerCastImpl {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
 
-    IRBuilder<> B(II->getContext());
+    IRBuilder<> B(*II->getModule());
     std::vector<Value *> Users;
     for (Use &U : II->uses())
       Users.push_back(U.getUser());

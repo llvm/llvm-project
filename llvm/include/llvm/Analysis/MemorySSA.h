@@ -98,6 +98,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -108,6 +109,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 template <class GraphType> struct GraphTraits;
 class Function;
 class Loop;
@@ -316,10 +318,6 @@ public:
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
       : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB, AllocMarker) {}
 
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
-
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
   }
@@ -380,10 +378,6 @@ public:
             unsigned Ver)
       : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB, AllocMarker),
         ID(Ver) {}
-
-  // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -618,13 +612,6 @@ public:
         [&](const MemoryAccess *, const BasicBlock *B) { return BB == B; });
   }
 
-  // After deleting incoming memory access MA, the incoming accesses order may
-  // be changed.
-  void unorderedDeleteIncomingValue(const MemoryAccess *MA) {
-    unorderedDeleteIncomingIf(
-        [&](const MemoryAccess *M, const BasicBlock *) { return MA == M; });
-  }
-
   static bool classof(const Value *V) {
     return V->getValueID() == MemoryPhiVal;
   }
@@ -756,15 +743,15 @@ public:
 
   /// Return the list of MemoryAccess's for a given basic block.
   AccessList *getBlockAccesses(const BasicBlock *BB) const {
-    auto It = PerBlockAccesses.find(BB);
-    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Accesses.get() : nullptr;
   }
 
   /// Return the list of MemoryDef's and MemoryPhi's for a given basic
   /// block.
   DefsList *getBlockDefs(const BasicBlock *BB) const {
-    auto It = PerBlockDefs.find(BB);
-    return It == PerBlockDefs.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Defs.get() : nullptr;
   }
 
   /// Given two memory accesses in the same basic block, determine
@@ -848,8 +835,35 @@ private:
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
 
-  using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
-  using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
+  // The per-block lists live in UseOrDefAllocator, so only destroy them.
+  struct ListDeleter {
+    template <typename ListT> void operator()(ListT *L) const { L->~ListT(); }
+  };
+  template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
+
+  /// Per-block state.
+  struct BlockInfo {
+    /// The list of all accesses in the block. Owns the accesses.
+    ListPtr<AccessList> Accesses;
+    /// The list of MemoryDefs and MemoryPhis in the block.
+    ListPtr<DefsList> Defs;
+  };
+
+  /// Return the index of \p BB in the per-block lists. Blocks must not be
+  /// renumbered or moved to a different function while MemorySSA is alive.
+  unsigned getBlockIndex(const BasicBlock *BB) const {
+    assert(BB->getParent()->getBlockNumberEpoch() == BlockNumberEpoch &&
+           "Blocks were renumbered while MemorySSA was alive");
+    return BB->getNumber();
+  }
+
+  /// Return the per-block state of \p BB, or nullptr if there is none.
+  const BlockInfo *getBlockInfo(const BasicBlock *BB) const {
+    unsigned N = getBlockIndex(BB);
+    return N < PerBlock.size() ? &PerBlock[N] : nullptr;
+  }
+  BlockInfo &getOrCreateBlockInfo(const BasicBlock *BB);
+  template <typename ListT> ListT *getOrCreateList(ListPtr<ListT> &List);
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
@@ -863,25 +877,25 @@ private:
                            SmallPtrSetImpl<BasicBlock *> &Visited,
                            bool SkipVisited = false,
                            bool RenameAllUses = false);
-  AccessList *getOrCreateAccessList(const BasicBlock *);
-  DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
+  const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function *F = nullptr;
   Loop *L = nullptr;
 
+  // Memory for MemoryUses, MemoryDefs and the per-block lists.
+  BumpPtrAllocatorImpl<MallocAllocator, 512, 512, 1> UseOrDefAllocator;
+
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
 
-  // These two mappings contain the main block to access/def mappings for
-  // MemorySSA. The list contained in PerBlockAccesses really owns all the
-  // MemoryAccesses.
-  // Both maps maintain the invariant that if a block is found in them, the
-  // corresponding list is not empty, and if a block is not found in them, the
-  // corresponding list is empty.
-  AccessMap PerBlockAccesses;
-  DefsMap PerBlockDefs;
+  // The main block to access/def mappings for MemorySSA, indexed by block
+  // number. The Accesses lists really own all the MemoryAccesses. A block's
+  // Accesses and Defs are non-null iff the corresponding list is not empty.
+  SmallVector<BlockInfo, 0> PerBlock;
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
   std::unique_ptr<MemoryAccess, ValueDeleter> LiveOnEntryDef;
 
   // Domination mappings
@@ -1320,11 +1334,6 @@ inline upward_defs_iterator upward_defs_begin(const UpwardDefsElem &Pair,
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
-
-inline iterator_range<upward_defs_iterator>
-upward_defs(const UpwardDefsElem &Pair, DominatorTree &DT) {
-  return make_range(upward_defs_begin(Pair, DT), upward_defs_end());
-}
 
 /// Walks the defining accesses of MemoryDefs. Stops after we hit something that
 /// has no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when

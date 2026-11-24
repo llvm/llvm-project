@@ -1,8 +1,6 @@
 
 set(ORC_RT_BEDROCK_SOURCES
   BootstrapInfo.cpp
-  ConnectionSpec.cpp
-  ConnectorRegistry.cpp
   ExecutorProcessInfo.cpp
   GDBJITRegistrar.cpp
   InProcessControllerAccess.cpp
@@ -15,22 +13,24 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/AllSPSCI.cpp
   sps/CallSPSCI.cpp
   sps/GDBJITRegistrarSPSCI.cpp
+  sps/LookupInJITDylibSPS.cpp
   sps/MemoryAccessSPSCI.cpp
   sps/NativeDylibManagerSPSCI.cpp
+  sps/SessionSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
-  sps/SimpleRemoteCA.cpp
+  sys/posix/DlfcnLoaderAdapter.cpp
   )
 
-# System implementations are composed, not merely selected: a target gets one
-# source list per capability it has. POSIX systems share sys/posix/, and add
+# Host implementations are composed, not merely selected: a target gets one
+# source list per capability it has. POSIX systems share host/posix/, and add
 # their OS-specific list on top; Windows shares nothing with them.
 #
 # A file belongs in a shared list only if it is uniform across every member of
 # it. Where a function needs an OS conditional, it moves down into the
 # per-OS lists instead of growing an #ifdef here -- or, if it wants to inline,
-# becomes a header with per-system definitions under
-# include/orc-rt-internal/support/ (see support/sys/CacheControl.h and
-# support/sys/Errno.h).
+# becomes a header with per-host definitions under
+# include/orc-rt-internal/support/ (see support/host/CacheControl.h and
+# support/host/Errno.h).
 #
 # These live in Bedrock rather than Support because Support is embedded into
 # SPIRE, which is JIT-linked on every execution of every JIT'd program. SPIRE
@@ -38,48 +38,48 @@ set(ORC_RT_BEDROCK_SOURCES
 # copy of them.
 
 set(ORC_RT_BEDROCK_POSIX_SOURCES
-  sys/posix/DWARFEHFrameRegistrar.cpp
-  sys/posix/DynamicLibrary.cpp
-  sys/posix/Memory.cpp
-  sys/posix/PageSize.cpp
-  sys/posix/SocketConnector.cpp
-  sys/posix/SocketHandle.cpp
-  sys/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
-  sys/posix/sps/SimpleRemoteCAOverSocket.cpp
+  host/posix/DWARFEHFrameRegistrar.cpp
+  host/posix/DynamicLibrary.cpp
+  host/posix/Memory.cpp
+  host/posix/PageSize.cpp
+  host/posix/dlfcn-host.cpp
+  host/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
 )
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
-  sys/darwin/CPUFeatures.cpp
-  sys/darwin/StandaloneMachOUnwindInfoRegistrar.cpp
-  sys/darwin/TargetTriple.cpp
-  sys/darwin/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
+  host/darwin/CPUFeatures.cpp
+  host/darwin/StandaloneMachOUnwindInfoRegistrar.cpp
+  host/darwin/TargetTriple.cpp
+  host/darwin/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
 )
 
 set(ORC_RT_BEDROCK_LINUX_SOURCES
-  sys/linux/CPUFeatures.cpp
-  sys/linux/TargetTriple.cpp
+  host/linux/CPUFeatures.cpp
+  host/linux/TargetTriple.cpp
 )
 
 set(ORC_RT_BEDROCK_WINDOWS_SOURCES
-  sys/windows/DynamicLibrary.cpp
-  sys/windows/Memory.cpp
-  sys/windows/CPUFeatures.cpp
-  sys/windows/PageSize.cpp
-  sys/windows/TargetTriple.cpp
+  host/windows/DynamicLibrary.cpp
+  host/windows/Memory.cpp
+  host/windows/CPUFeatures.cpp
+  host/windows/PageSize.cpp
+  host/windows/TargetTriple.cpp
 )
 
+if (ORC_RT_TARGET_POSIX)
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_POSIX_SOURCES})
+endif()
+
 if (APPLE)
-  list(APPEND ORC_RT_BEDROCK_SOURCES
-    ${ORC_RT_BEDROCK_POSIX_SOURCES} ${ORC_RT_BEDROCK_DARWIN_SOURCES})
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_DARWIN_SOURCES})
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  list(APPEND ORC_RT_BEDROCK_SOURCES
-    ${ORC_RT_BEDROCK_POSIX_SOURCES} ${ORC_RT_BEDROCK_LINUX_SOURCES})
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_LINUX_SOURCES})
 elseif (WIN32)
   list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_WINDOWS_SOURCES})
 else()
   message(WARNING
     "orc-rt: no system implementation for ${CMAKE_SYSTEM_NAME}; "
-    "add an orc-rt/lib/bedrock/sys/<system>/ directory and compose it above")
+    "add an orc-rt/lib/bedrock/host/<system>/ directory and compose it above")
 endif()
 
 add_library(orc-rt-bedrock-objects OBJECT ${ORC_RT_BEDROCK_SOURCES})
@@ -100,9 +100,8 @@ target_compile_options(orc-rt-bedrock-objects PRIVATE ${ORC_RT_COMPILE_FLAGS})
 # shipped on its own).
 add_library(orc-rt-bedrock ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
-target_link_libraries(orc-rt-bedrock PUBLIC orc-rt-headers)
-
 target_link_libraries(orc-rt-bedrock
+  PUBLIC orc-rt-headers
   PRIVATE $<BUILD_INTERFACE:orc-rt-bedrock-objects>
           $<BUILD_INTERFACE:orc-rt-support-objects>)
 

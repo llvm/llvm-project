@@ -107,17 +107,13 @@ mlir::Block *cir::replaceThrowWithTryThrow(cir::ThrowOp throwOp,
                                            mlir::Location loc,
                                            mlir::RewriterBase &rewriter) {
   // The throw never returns, so the try_throw's normal destination is
-  // literally unreachable. Place it at the end of the parent function
-  // rather than splitting it out of the throw's block in the middle of
-  // the normal control flow.
-  auto funcOp = throwOp->getParentOfType<cir::FuncOp>();
-  assert(funcOp && "throw must be inside a function");
-  mlir::Region &body = funcOp.getBody();
-
+  // literally unreachable. Place it after the throw block in the same region.
+  mlir::Block *throwBlock = throwOp->getBlock();
   mlir::Block *normalDest;
   {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
-    normalDest = rewriter.createBlock(&body, body.end());
+    normalDest = rewriter.createBlock(throwBlock->getParent(),
+                                      std::next(throwBlock->getIterator()));
     cir::UnreachableOp::create(rewriter, loc);
   }
 
@@ -136,7 +132,6 @@ mlir::Block *cir::replaceThrowWithTryThrow(cir::ThrowOp throwOp,
   // parent block (typically a cir.unreachable left over from CIR codegen).
   // They must be removed because try_throw is a terminator and a block
   // can have only one terminator.
-  mlir::Block *throwBlock = throwOp->getBlock();
   while (&throwBlock->back() != tryThrowOp)
     rewriter.eraseOp(&throwBlock->back());
 

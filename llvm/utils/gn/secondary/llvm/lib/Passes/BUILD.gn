@@ -1,12 +1,21 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("PassesOptions") {
+  visibility = [ ":Passes" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("Passes") {
   output_name = "LLVMPasses"
   deps = [
+    ":PassesOptions",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Transforms/AggressiveInstCombine",
@@ -26,6 +35,7 @@ static_library("Passes") {
     "PassBuilder.cpp",
     "PassBuilderBindings.cpp",
     "PassBuilderPipelines.cpp",
+    "PassesOptions.cpp",
     "RunCodeGen.cpp",
     "StandardInstrumentations.cpp",
     "TriggerCrashPasses.cpp",

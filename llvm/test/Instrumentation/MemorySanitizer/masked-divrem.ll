@@ -7,25 +7,24 @@ target triple = "x86_64-unknown-linux-gnu"
 define <4 x i32> @masked_udiv(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) sanitize_memory {
 ; CHECK-LABEL: @masked_udiv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <4 x i1> [[M:%.*]], <4 x i32> [[TMP1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select <4 x i1> [[M]], <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[_MSMASKEDDIVISOR]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP8]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i4 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       6:
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK:       6:
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M]])
+; CHECK-NEXT:    store <4 x i32> [[_MSMASKEDDIV]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
 entry:
@@ -36,25 +35,24 @@ entry:
 define <4 x i32> @masked_sdiv(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) sanitize_memory {
 ; CHECK-LABEL: @masked_sdiv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <4 x i1> [[M:%.*]], <4 x i32> [[TMP1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select <4 x i1> [[M]], <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[_MSMASKEDDIVISOR]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP8]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i4 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
-; CHECK:       6:
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.sdiv.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK:       6:
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.sdiv.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M]])
+; CHECK-NEXT:    store <4 x i32> [[_MSMASKEDDIV]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
 entry:
@@ -65,25 +63,24 @@ entry:
 define <4 x i32> @masked_urem(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) sanitize_memory {
 ; CHECK-LABEL: @masked_urem(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <4 x i1> [[M:%.*]], <4 x i32> [[TMP1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select <4 x i1> [[M]], <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[_MSMASKEDDIVISOR]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP8]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i4 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
-; CHECK:       6:
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.urem.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK:       6:
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.urem.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M]])
+; CHECK-NEXT:    store <4 x i32> [[_MSMASKEDDIV]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
 entry:
@@ -94,25 +91,24 @@ entry:
 define <4 x i32> @masked_srem(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) sanitize_memory {
 ; CHECK-LABEL: @masked_srem(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <4 x i1> [[M:%.*]], <4 x i32> [[TMP1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select <4 x i1> [[M]], <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[_MSMASKEDDIVISOR]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP8]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i4 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF1]]
-; CHECK:       6:
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.srem.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK:       6:
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.srem.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> [[M]])
+; CHECK-NEXT:    store <4 x i32> [[_MSMASKEDDIV]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
 entry:
@@ -150,18 +146,17 @@ define <4 x i32> @urem_masked_loads(ptr %pa, ptr %pb) sanitize_memory {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PB]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> poison)
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[_MSMASKEDLD]] to i128
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> [[_MSMASKEDLD1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> [[_MSMASKEDLD]], <4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[_MSMASKEDDIVISOR]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i32> [[_MSMASKEDLD1]] to i128
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF1]]
-; CHECK:       14:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP13:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
+; CHECK:       13:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       15:
+; CHECK:       14:
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.masked.urem.v4i32(<4 x i32> [[A]], <4 x i32> [[B]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[_MSMASKEDDIV]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
 entry:
@@ -178,7 +173,8 @@ define i1 @udiv_clean_dividend_poisons_disabled_lanes(<4 x i32> %b) sanitize_mem
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> [[TMP0]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[_MSMASKEDDIVISOR]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
 ; CHECK:       2:
@@ -188,9 +184,9 @@ define i1 @udiv_clean_dividend_poisons_disabled_lanes(<4 x i32> %b) sanitize_mem
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> splat (i32 100), <4 x i32> [[B:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; CHECK-NEXT:    [[LANE3:%.*]] = extractelement <4 x i32> [[R]], i32 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[LANE3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 -1, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 0, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 false, [[TMP6]]
+; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 true, [[TMP6]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LANE3]], 0
 ; CHECK-NEXT:    br i1 [[_MSPROP_ICMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
@@ -221,21 +217,20 @@ f:
 define <4 x i32> @udiv_all_lanes_enabled(<4 x i32> %x, <4 x i32> %y) sanitize_memory {
 ; CHECK-LABEL: @udiv_all_lanes_enabled(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <4 x i1> splat (i1 true), <4 x i32> [[TMP0]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select <4 x i1> splat (i1 true), <4 x i32> [[TMP1]], <4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[_MSMASKEDDIVISOR]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP6]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
+; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK:       4:
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i1> splat (i1 true))
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[_MSMASKEDDIV]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
 entry:
@@ -253,7 +248,7 @@ define void @masked_udiv_scalable(ptr %pa, ptr %pb, ptr %pr, <vscale x 4 x i1> %
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP19:%.*]], label [[TMP20:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP18:%.*]], label [[TMP19:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
@@ -264,7 +259,7 @@ define void @masked_udiv_scalable(ptr %pa, ptr %pb, ptr %pr, <vscale x 4 x i1> %
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP2]], align 16
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP12]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP8:%.*]], label [[TMP21:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP8:%.*]], label [[TMP20:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
@@ -274,27 +269,26 @@ define void @masked_udiv_scalable(ptr %pa, ptr %pb, ptr %pr, <vscale x 4 x i1> %
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[_MSLD]])
+; CHECK-NEXT:    [[_MSMASKEDDIVISOR:%.*]] = select <vscale x 4 x i1> [[M:%.*]], <vscale x 4 x i32> [[_MSLD1]], <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSMASKEDDIV:%.*]] = select <vscale x 4 x i1> [[M]], <vscale x 4 x i32> [[_MSLD]], <vscale x 4 x i32> splat (i32 -1)
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[_MSMASKEDDIVISOR]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[_MSLD1]])
-; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i32 [[TMP14]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP5]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF1]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       16:
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.masked.udiv.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i1> [[M:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.masked.udiv.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i1> [[M]])
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF1]]
-; CHECK:       17:
+; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP16:%.*]], label [[TMP17:%.*]], !prof [[PROF1]]
+; CHECK:       16:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       18:
+; CHECK:       17:
 ; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[PR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[TMP11]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> [[_MSMASKEDDIV]], ptr [[TMP11]], align 16
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[R]], ptr [[PR]], align 16
 ; CHECK-NEXT:    ret void
 ;

@@ -7,13 +7,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     %0 = fir.alloca i32
     %1 = fir.alloca i32
     %2 = fir.undefined !fir.dscope
-    %3 = fircg.ext_declare %arg1 dummy_scope %2 {uniq_name = "_QFfnEc"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc2)
-    %4 = fircg.ext_declare %arg2 dummy_scope %2 {uniq_name = "_QFfnEd"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
+    %3 = fircg.ext_declare %arg1 dummy_scope %2 uniq_name("_QFfnEc") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc2)
+    %4 = fircg.ext_declare %arg2 dummy_scope %2 uniq_name("_QFfnEd") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
     %5 = fir.load %3 : !fir.ref<i32>
     %6 = fir.convert %5 : (i32) -> index
     %9 = fir.load %4 : !fir.ref<i32>
     %10 = fir.convert %9 : (i32) -> index
-    %15 = fircg.ext_declare %arg0(%6, %10) dummy_scope %2 {uniq_name = "_QFfnEb"} : (!fir.ref<!fir.array<?x?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc4)
+    %15 = fircg.ext_declare %arg0(%6, %10) dummy_scope %2 uniq_name("_QFfnEb") : (!fir.ref<!fir.array<?x?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc4)
     %16 = fircg.ext_embox %15(%6, %10) : (!fir.ref<!fir.array<?x?xi32>>, index, index) -> !fir.box<!fir.array<?x?xi32>>
     %17:3 = fir.box_dims %16, %c0 : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
     %18 = arith.subi %17#1, %c1 : index
@@ -30,7 +30,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
       %28 = fir.load %arg4 : !fir.ref<i32>
       %29 = fir.convert %27 : (i32) -> index
       %31 = fir.convert %28 : (i32) -> index
-      %37 = fircg.ext_declare %arg3(%29, %31) {uniq_name = "_QFfnEb"} : (!fir.ref<!fir.array<?x?xi32>>, index, index) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc5)
+      %37 = fircg.ext_declare %arg3(%29, %31) uniq_name("_QFfnEb") : (!fir.ref<!fir.array<?x?xi32>>, index, index) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc5)
       omp.terminator
     } loc(#loc6)
     return

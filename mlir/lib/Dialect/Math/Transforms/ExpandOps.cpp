@@ -393,32 +393,10 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
     base = arith::MulFOp::create(b, baseType, base, base);
   }
 
-  // Make sure not to introduce UB in case of negative power.
-  if (isNegative) {
-    auto &sem = dyn_cast<mlir::FloatType>(getElementTypeOrSelf(baseType))
-                    .getFloatSemantics();
-    Value zero =
-        createFloatConst(op->getLoc(), baseType,
-                         APFloat::getZero(sem, /*Negative=*/false), rewriter);
-    Value negZero =
-        createFloatConst(op->getLoc(), baseType,
-                         APFloat::getZero(sem, /*Negative=*/true), rewriter);
-    Value posInfinity =
-        createFloatConst(op->getLoc(), baseType,
-                         APFloat::getInf(sem, /*Negative=*/false), rewriter);
-    Value negInfinity =
-        createFloatConst(op->getLoc(), baseType,
-                         APFloat::getInf(sem, /*Negative=*/true), rewriter);
-    Value zeroEqCheck =
-        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, zero);
-    Value negZeroEqCheck =
-        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, negZero);
+  // A zero `res` makes this a division by a signed zero, which yields the
+  // correctly signed infinity.
+  if (isNegative)
     res = arith::DivFOp::create(b, baseType, one, res);
-    res =
-        arith::SelectOp::create(b, op->getLoc(), zeroEqCheck, posInfinity, res);
-    res = arith::SelectOp::create(b, op->getLoc(), negZeroEqCheck, negInfinity,
-                                  res);
-  }
 
   rewriter.replaceOp(op, res);
   return success();
@@ -515,6 +493,65 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   Value mult = arith::MulFOp::create(b, opType, operand, ln2);
   Value exp = math::ExpOp::create(b, op->getLoc(), mult);
   rewriter.replaceOp(op, exp);
+  return success();
+}
+
+static LogicalResult convertRoundF64Op(math::RoundOp op,
+                                       PatternRewriter &rewriter) {
+  Location loc = op.getLoc();
+  ImplicitLocOpBuilder b(loc, rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+  Type opEType = getElementTypeOrSelf(opType);
+
+  if (!opEType.isF64() || isUnrankedShaped(opType))
+    return failure();
+
+  Type intType = b.getI64Type();
+  if (auto shapedType = dyn_cast<ShapedType>(opType))
+    intType = shapedType.clone(intType);
+
+  auto intConst = [&](int64_t value) {
+    return createIntConst(loc, intType, value, b, operand);
+  };
+
+  Value zero = intConst(0);
+  Value one = intConst(1);
+  Value allOnes = intConst(-1);
+  Value cFractionBits = intConst(52);
+  Value cBias = intConst(1023);
+  Value cRoundShiftBase = intConst(51);
+  Value cShiftMask = intConst(63);
+  Value magnitudeMask = intConst(0x7fffffffffffffffLL);
+  Value halfBits = intConst(0x3fe0000000000000LL);
+  Value oneBits = intConst(0x3ff0000000000000LL);
+
+  Value bits = arith::BitcastOp::create(b, intType, operand);
+  Value magnitude = arith::AndIOp::create(b, bits, magnitudeMask);
+  Value sign = arith::XOrIOp::create(b, bits, magnitude);
+  Value exponentField = arith::ShRUIOp::create(b, magnitude, cFractionBits);
+  Value exponent = arith::SubIOp::create(b, exponentField, cBias);
+  Value roundShift = arith::SubIOp::create(b, cRoundShiftBase, exponent);
+  roundShift = arith::AndIOp::create(b, roundShift, cShiftMask);
+  Value roundBit = arith::ShLIOp::create(b, one, roundShift);
+  Value mask =
+      arith::SubIOp::create(b, arith::ShLIOp::create(b, roundBit, one), one);
+  Value invertedMask = arith::XOrIOp::create(b, mask, allOnes);
+  Value incremented = arith::AddIOp::create(b, magnitude, roundBit);
+  Value roundedMagnitude = arith::AndIOp::create(b, incremented, invertedMask);
+  Value atLeastHalf =
+      arith::CmpIOp::create(b, arith::CmpIPredicate::uge, magnitude, halfBits);
+  Value smallMagnitude = arith::SelectOp::create(b, atLeastHalf, oneBits, zero);
+  Value isSmall =
+      arith::CmpIOp::create(b, arith::CmpIPredicate::slt, exponent, zero);
+  Value resultMagnitude =
+      arith::SelectOp::create(b, isSmall, smallMagnitude, roundedMagnitude);
+  Value isLarge = arith::CmpIOp::create(b, arith::CmpIPredicate::sge, exponent,
+                                        cFractionBits);
+  resultMagnitude =
+      arith::SelectOp::create(b, isLarge, magnitude, resultMagnitude);
+  Value resultBits = arith::OrIOp::create(b, resultMagnitude, sign);
+  rewriter.replaceOp(op, arith::BitcastOp::create(b, opType, resultBits));
   return success();
 }
 
@@ -860,6 +897,9 @@ struct MathExpandOpsPass final
     SmallVector<StringRef> mnemonics =
         llvm::to_vector_of<StringRef>(opMnemonics);
     math::populateExpansionPatterns(patterns, mnemonics);
+    if (expandRoundF64 &&
+        (mnemonics.empty() || llvm::count(mnemonics, "round") > 0))
+      patterns.add(convertRoundF64Op);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }

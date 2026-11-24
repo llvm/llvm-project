@@ -35,7 +35,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,11 +49,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
-
-static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
-                                   cl::desc("Expand double precision loads and "
-                                            "stores to their single precision "
-                                            "counterparts"));
 
 // Widen the v2 vectors to the register width, i.e. v2i16 -> v8i16,
 // v2i32 -> v4i32, etc, to ensure the correct rail size is used, i.e.
@@ -173,6 +167,27 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat()) {
     addRegisterClass(MVT::f32, &Mips::FGR32RegClass);
 
+    // RINT uses the current rounding mode and may raise inexact.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      setOperationAction(ISD::FRINT, MVT::f32, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::f32, Legal);
+      if (!Subtarget.isSingleFloat()) {
+        setOperationAction(ISD::FRINT, MVT::f64, Legal);
+        setOperationAction(ISD::STRICT_FRINT, MVT::f64, Legal);
+      }
+    }
+
+    // Standard r6 has a fused multiply-add with a tied accumulator. Scalar
+    // FMA selection for the microMIPS encodings is not implemented here.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      // Keep strict nodes intact so their exception chains survive selection.
+      for (auto Op : {ISD::FMA, ISD::STRICT_FMA}) {
+        setOperationAction(Op, MVT::f32, Legal);
+        if (!Subtarget.isSingleFloat() && Subtarget.isFP64bit())
+          setOperationAction(Op, MVT::f64, Legal);
+      }
+    }
+
     // When dealing with single precision only, use libcalls
     if (!Subtarget.isSingleFloat()) {
       if (Subtarget.isFP64bit())
@@ -185,6 +200,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
                     ISD::STRICT_FDIV, ISD::STRICT_FSQRT}) {
       setOperationAction(Op, MVT::f32, Legal);
       setOperationAction(Op, MVT::f64, Legal);
+    }
+
+    // MIPS I has no sqrt.fmt, use a libcall.
+    if (!Subtarget.hasMips2()) {
+      for (auto Op : {ISD::FSQRT, ISD::STRICT_FSQRT}) {
+        setOperationAction(Op, MVT::f32, Expand);
+        setOperationAction(Op, MVT::f64, Expand);
+      }
     }
   }
 
@@ -251,7 +274,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i64, Custom);
   }
 
-  if (NoDPLoadStore || (Subtarget.hasMips1() && !Subtarget.hasMips2())) {
+  if (Subtarget.getCLOpts().mno_ldc1_sdc1 ||
+      (Subtarget.hasMips1() && !Subtarget.hasMips2())) {
     setOperationAction(ISD::LOAD, MVT::f64, Custom);
     setOperationAction(ISD::STORE, MVT::f64, Custom);
   }
@@ -280,12 +304,12 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::i32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 
-    setOperationAction(ISD::SETCC, MVT::f32, Legal);
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
     setOperationAction(ISD::SELECT, MVT::f32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
-    setOperationAction(ISD::SETCC, MVT::f64, Legal);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
     setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
@@ -475,21 +499,6 @@ addMSAFloatType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC) {
   }
 }
 
-SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
-  if(!Subtarget.hasMips32r6())
-    return MipsTargetLowering::LowerOperation(Op, DAG);
-
-  EVT ResTy = Op->getValueType(0);
-  SDLoc DL(Op);
-
-  // Although MTC1_D64 takes an i32 and writes an f64, the upper 32 bits of the
-  // floating point register are undefined. Not really an issue as sel.d, which
-  // is produced from an FSELECT node, only looks at bit 0.
-  SDValue Tmp = DAG.getNode(MipsISD::MTC1_D64, DL, MVT::f64, Op->getOperand(0));
-  return DAG.getNode(MipsISD::FSELECT, DL, ResTy, Tmp, Op->getOperand(1),
-                     Op->getOperand(2));
-}
-
 // Lower FP16_TO_FP (the soft-promote-half representation of an f16 -> f32/f64
 // conversion).
 SDValue MipsSETargetLowering::lowerFP16_TO_FP(SDValue Op,
@@ -610,9 +619,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::INTRINSIC_VOID:     return lowerINTRINSIC_VOID(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
-  case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::SELECT:
-    return lowerSELECT(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::FP16_TO_FP:
   case ISD::STRICT_FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
@@ -1154,7 +1162,7 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   if ((Ty != MVT::v2i16) && (Ty != MVT::v4i8))
     return SDValue();
 
-  if (!isLegalDSPCondCode(Ty, cast<CondCodeSDNode>(N->getOperand(2))->get()))
+  if (!isLegalDSPCondCode(Ty, N->getOperandCondCode(2)))
     return SDValue();
 
   return DAG.getNode(MipsISD::SETCC_DSP, SDLoc(N), Ty, N->getOperand(0),
@@ -1190,9 +1198,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op1 = N->getOperand(1);
     SDValue NotOp;
 
-    if (ISD::isBuildVectorAllOnes(Op0.getNode()))
+    if (ISD::isBuildVectorAllOnes(Op0))
       NotOp = Op1;
-    else if (ISD::isBuildVectorAllOnes(Op1.getNode()))
+    else if (ISD::isBuildVectorAllOnes(Op1))
       NotOp = Op0;
     else
       return SDValue();
@@ -1274,6 +1282,10 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return MipsTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   case Mips::BPOSGE32_PSEUDO:
     return emitBPOSGE32(MI, BB);
+  case Mips::PseudoTRUNC_W_S_M1:
+    return emitTRUNC_W_M1(MI, BB, Mips::CVT_W_S);
+  case Mips::PseudoTRUNC_W_D32_M1:
+    return emitTRUNC_W_M1(MI, BB, Mips::CVT_W_D32);
   case Mips::SNZ_B_PSEUDO:
     return emitMSACBranchPseudo(MI, BB, Mips::BNZ_B);
   case Mips::SNZ_H_PSEUDO:
@@ -1346,22 +1358,22 @@ bool MipsSETargetLowering::isEligibleForTailCallOptimization(
   return NextStackOffset <= FI.getIncomingArgSize();
 }
 
-void MipsSETargetLowering::
-getOpndList(SmallVectorImpl<SDValue> &Ops,
-            std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-            bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-            bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-            SDValue Chain) const {
+void MipsSETargetLowering::getOpndList(
+    SmallVectorImpl<SDValue> &Ops,
+    std::deque<std::pair<unsigned, SDValue>> &RegsToPass, bool IsPICCall,
+    bool GlobalOrExternal, bool LocalLinkage, bool IsCallReloc,
+    CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const {
   Ops.push_back(Callee);
   MipsTargetLowering::getOpndList(Ops, RegsToPass, IsPICCall, GlobalOrExternal,
-                                  InternalLinkage, IsCallReloc, CLI, Callee,
+                                  LocalLinkage, IsCallReloc, CLI, Callee,
                                   Chain);
 }
 
 SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode &Nd = *cast<LoadSDNode>(Op);
 
-  if (Nd.getMemoryVT() != MVT::f64 || (!NoDPLoadStore && Subtarget.hasMips2()))
+  if (Nd.getMemoryVT() != MVT::f64 ||
+      (!Subtarget.getCLOpts().mno_ldc1_sdc1 && Subtarget.hasMips2()))
     return MipsTargetLowering::lowerLOAD(Op, DAG);
 
   // Replace a double precision load with two i32 loads and a buildpair64.
@@ -1387,7 +1399,7 @@ SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.hasMips2())
     BP = DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
   else
-    BP = DAG.getNode(MipsISD::BuildPairF64_FPR, DL, MVT::f64, Hi, Lo);
+    BP = DAG.getNode(MipsISD::BuildPairF64_FPR, DL, MVT::f64, Lo, Hi);
 
   SDValue Ops[2] = {BP, Hi.getValue(1)};
   return DAG.getMergeValues(Ops, DL);
@@ -1396,7 +1408,8 @@ SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 SDValue MipsSETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode &Nd = *cast<StoreSDNode>(Op);
 
-  if (Nd.getMemoryVT() != MVT::f64 || (!NoDPLoadStore && Subtarget.hasMips2()))
+  if (Nd.getMemoryVT() != MVT::f64 ||
+      (!Subtarget.getCLOpts().mno_ldc1_sdc1 && Subtarget.hasMips2()))
     return MipsTargetLowering::lowerSTORE(Op, DAG);
 
   // Replace a double precision store with two extractelement64s and i32 stores.
@@ -1559,7 +1572,9 @@ static SDValue lowerDSPIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
 static SDValue lowerMSACopyIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
   SDLoc DL(Op);
   SDValue Vec = Op->getOperand(1);
-  SDValue Idx = Op->getOperand(2);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Idx = DAG.getZExtOrTrunc(Op->getOperand(2), DL,
+                                   TLI.getVectorIdxTy(DAG.getDataLayout()));
   EVT ResTy = Op->getValueType(0);
   EVT EltTy = Vec->getValueType(0).getVectorElementType();
 
@@ -2095,9 +2110,11 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::mips_flog2_d:
     return DAG.getNode(ISD::FLOG2, DL, Op->getValueType(0), Op->getOperand(1));
   case Intrinsic::mips_fmadd_w:
-  case Intrinsic::mips_fmadd_d:
+  case Intrinsic::mips_fmadd_d: {
+    // The mips intrinsics compute `a + b*c`, which is `fma(b, c, a)`.
     return DAG.getNode(ISD::FMA, SDLoc(Op), Op->getValueType(0),
-                       Op->getOperand(1), Op->getOperand(2), Op->getOperand(3));
+                       Op->getOperand(2), Op->getOperand(3), Op->getOperand(1));
+  }
   case Intrinsic::mips_fmul_w:
   case Intrinsic::mips_fmul_d:
     return DAG.getNode(ISD::FMUL, DL, Op->getValueType(0), Op->getOperand(1),
@@ -3235,6 +3252,40 @@ SDValue MipsSETargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, false, DAG);
 }
 
+// MIPS I has no trunc.w.fmt. Do the conversion with cvt.w.fmt and the
+// rounding mode set to round toward zero, then restore the FCSR. This is the
+// same sequence the assembler uses for the trunc.w.fmt macro.
+//
+//   cfc1 $old, $31
+//   ori  $tmp, $old, 3
+//   xori $tmp, $tmp, 2
+//   ctc1 $tmp, $31
+//   cvt.w.fmt $dst, $src
+//   ctc1 $old, $31
+MachineBasicBlock *MipsSETargetLowering::emitTRUNC_W_M1(MachineInstr &MI,
+                                                        MachineBasicBlock *BB,
+                                                        unsigned CvtOpc) const {
+  MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &Mips::GPR32RegClass;
+  DebugLoc DL = MI.getDebugLoc();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Old = RegInfo.createVirtualRegister(RC);
+  Register Tmp0 = RegInfo.createVirtualRegister(RC);
+  Register Tmp1 = RegInfo.createVirtualRegister(RC);
+
+  BuildMI(*BB, MI, DL, TII->get(Mips::CFC1), Old).addReg(Mips::FCR31);
+  BuildMI(*BB, MI, DL, TII->get(Mips::ORi), Tmp0).addReg(Old).addImm(3);
+  BuildMI(*BB, MI, DL, TII->get(Mips::XORi), Tmp1).addReg(Tmp0).addImm(2);
+  BuildMI(*BB, MI, DL, TII->get(Mips::CTC1), Mips::FCR31).addReg(Tmp1);
+  BuildMI(*BB, MI, DL, TII->get(CvtOpc), Dst).addReg(Src);
+  BuildMI(*BB, MI, DL, TII->get(Mips::CTC1), Mips::FCR31).addReg(Old);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 MachineBasicBlock *
 MipsSETargetLowering::emitBPOSGE32(MachineInstr &MI,
                                    MachineBasicBlock *BB) const {
@@ -3284,13 +3335,15 @@ MipsSETargetLowering::emitBPOSGE32(MachineInstr &MI,
   // Fill $FBB.
   Register VR2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), VR2)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register VR1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), VR1)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3353,13 +3406,15 @@ MachineBasicBlock *MipsSETargetLowering::emitMSACBranchPseudo(
   // Fill $FBB.
   Register RD1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), RD1)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register RD2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), RD2)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3633,7 +3688,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   Register LaneTmp2 = RegInfo.createVirtualRegister(GPRRC);
   BuildMI(*BB, MI, DL, TII->get(Subtarget.isABI_N64() ? Mips::DSUB : Mips::SUB),
           LaneTmp2)
-      .addReg(Subtarget.isABI_N64() ? Mips::ZERO_64 : Mips::ZERO)
+      .addReg(Subtarget.isABI_N64() ? Mips::R0_64 : Mips::R0)
       .addReg(LaneReg);
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)

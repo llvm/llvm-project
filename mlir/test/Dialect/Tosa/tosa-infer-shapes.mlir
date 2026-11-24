@@ -306,6 +306,30 @@ func.func @test_dynamic_argmax(%arg0 : tensor<2x?xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_static_argmin
+func.func @test_static_argmin(%arg0 : tensor<2x3xi32>) -> () {
+  // CHECK: tosa.argmin %arg0 axis(0) : (tensor<2x3xi32>) -> tensor<3xi32>
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<2x3xi32>) -> tensor<?xi32>
+
+  // CHECK: tosa.argmin %arg0 axis(1) : (tensor<2x3xi32>) -> tensor<2xi32>
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<2x3xi32>) -> tensor<?xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_dynamic_argmin
+func.func @test_dynamic_argmin(%arg0 : tensor<2x?xi32>) -> () {
+  // CHECK: tosa.argmin %arg0 axis(0) : (tensor<2x?xi32>) -> tensor<?xi32>
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<2x?xi32>) -> tensor<?xi32>
+
+  // CHECK: tosa.argmin %arg0 axis(1) : (tensor<2x?xi32>) -> tensor<2xi32>
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<2x?xi32>) -> tensor<?xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_static_matmul
 func.func @test_static_matmul(%arg0 : tensor<2x3x4xi32>, %arg1 : tensor<2x4x5xi32>) -> () {
   // CHECK tosa.matmul %arg0, %arg1, %0, %1 : (tensor<2x3x4xi32>, tensor<2x4x5xi32>, tensor<1xi32>, tensor<1xi32>)  -> tensor<2x3x5xi32>
@@ -313,6 +337,61 @@ func.func @test_static_matmul(%arg0 : tensor<2x3x4xi32>, %arg1 : tensor<2x4x5xi3
   %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   %2 = tosa.matmul %arg0, %arg1, %0, %1 : (tensor<2x3x4xi32>, tensor<2x4x5xi32>, tensor<1xi32>, tensor<1xi32>)  -> tensor<?x?x?xi32>
 
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_rank2_matmul
+func.func @test_rank2_matmul(%arg0 : tensor<3x4xi32>, %arg1 : tensor<4x5xi32>) -> () {
+  // CHECK: tosa.matmul %arg0, %arg1, %0, %1 : (tensor<3x4xi32>, tensor<4x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<3x5xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul %arg0, %arg1, %0, %1 : (tensor<3x4xi32>, tensor<4x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_rank6_broadcast_matmul
+func.func @test_rank6_broadcast_matmul(%arg0 : tensor<2x1x3x1x4x7xi32>, %arg1 : tensor<1x5x1x6x7x5xi32>) -> () {
+  // CHECK: tosa.matmul %arg0, %arg1, %0, %1 : (tensor<2x1x3x1x4x7xi32>, tensor<1x5x1x6x7x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<2x5x3x6x4x5xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul %arg0, %arg1, %0, %1 : (tensor<2x1x3x1x4x7xi32>, tensor<1x5x1x6x7x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_dynamic_batch_broadcast_matmul
+func.func @test_dynamic_batch_broadcast_matmul(%arg0 : tensor<?x3x?x4xi32>, %arg1 : tensor<2x1x4x5xi32>) -> () {
+  // CHECK: tosa.matmul %arg0, %arg1, %0, %1 : (tensor<?x3x?x4xi32>, tensor<2x1x4x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<2x3x?x5xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul %arg0, %arg1, %0, %1 : (tensor<?x3x?x4xi32>, tensor<2x1x4x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_missing_lhs_batch_matmul
+func.func @test_missing_lhs_batch_matmul(%arg0 : tensor<3x4x7xi32>, %arg1 : tensor<4x3x7x5xi32>) -> () {
+  // CHECK: tosa.matmul %arg0, %arg1, %0, %1 : (tensor<3x4x7xi32>, tensor<4x3x7x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<4x3x4x5xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul %arg0, %arg1, %0, %1 : (tensor<3x4x7xi32>, tensor<4x3x7x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_unit_lhs_dynamic_batch_matmul
+func.func @test_unit_lhs_dynamic_batch_matmul(%arg0 : tensor<1x4x7xi32>, %arg1 : tensor<?x7x5xi32>) -> () {
+  // CHECK: tosa.matmul %arg0, %arg1, %0, %1 : (tensor<1x4x7xi32>, tensor<?x7x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<?x4x5xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul %arg0, %arg1, %0, %1 : (tensor<1x4x7xi32>, tensor<?x7x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
   return
 }
 
@@ -354,6 +433,17 @@ func.func @test_dynamic_mixed_matmul(%arg0 : tensor<?x3x?xi32>, %arg1 : tensor<?
 
 // -----
 
+// CHECK-LABEL: @test_unranked_input_matmul
+func.func @test_unranked_input_matmul(%arg0 : tensor<*xi32>, %arg1 : tensor<2x4x5xi32>) -> () {
+  // CHECK: tosa.matmul %arg0, %arg1, %0, %1 : (tensor<*xi32>, tensor<2x4x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul %arg0, %arg1, %0, %1 : (tensor<*xi32>, tensor<2x4x5xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_unranked_zero_points_matmul
 func.func @test_unranked_zero_points_matmul(%arg0: tensor<1x2x3xf32>, %arg1: tensor<1x3x4xf32>, %zero_point: tensor<1xf32>) -> tensor<1x2x4xf32> {
     // CHECK: %[[ZP:.*]] = tosa.cast %arg2 input_unsigned(false) : (tensor<1xf32>) -> tensor<1xf32>
@@ -371,6 +461,28 @@ func.func @test_static_matmul_t(%arg0 : tensor<2x3x4xi32>, %arg1 : tensor<2x5x4x
   %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   %2 = tosa.matmul_t %arg0, %arg1, %0, %1 : (tensor<2x3x4xi32>, tensor<2x5x4xi32>, tensor<1xi32>, tensor<1xi32>)  -> tensor<*xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_rank2_matmul_t
+func.func @test_rank2_matmul_t(%arg0 : tensor<3x4xi32>, %arg1 : tensor<5x4xi32>) -> () {
+  // CHECK: tosa.matmul_t %arg0, %arg1, %0, %1 : (tensor<3x4xi32>, tensor<5x4xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<3x5xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul_t %arg0, %arg1, %0, %1 : (tensor<3x4xi32>, tensor<5x4xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_rank6_different_rank_broadcast_matmul_t
+func.func @test_rank6_different_rank_broadcast_matmul_t(%arg0 : tensor<2x1x3x1x4x7xi32>, %arg1 : tensor<5x3x1x6x7xi32>) -> () {
+  // CHECK: tosa.matmul_t %arg0, %arg1, %0, %1 : (tensor<2x1x3x1x4x7xi32>, tensor<5x3x1x6x7xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<2x5x3x1x4x6xi32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %2 = tosa.matmul_t %arg0, %arg1, %0, %1 : (tensor<2x1x3x1x4x7xi32>, tensor<5x3x1x6x7xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
   return
 }
 
@@ -726,6 +838,17 @@ func.func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_padding_constant_arithmetic
+func.func @test_padding_constant_arithmetic(%arg0 : tensor<10x20xf32>) {
+  %0 = tosa.const_shape values(dense<[-1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %1 = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // CHECK: tosa.pad %arg0, %0, %1 : (tensor<10x20xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<11x27xf32>
+  %2 = tosa.pad %arg0, %0, %1 : (tensor<10x20xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_slice
 func.func @test_slice(%arg0 : tensor<?xi32>) -> () {
   // CHECK-DAG: %[[SIZE:.+]] = tosa.const_shape values(dense<2> : tensor<1xindex>) : () -> !tosa.shape<1>
@@ -787,6 +910,18 @@ func.func @test_tile_unknown_multiples(%arg0 : tensor<2x3x?xi32>) -> () {
   // CHECK: tosa.tile %arg0, %[[CST]] : (tensor<2x3x?xi32>, !tosa.shape<3>) -> tensor<4x?x?xi32>
   %cst = tosa.const_shape values(dense<[2, -1, 5]> : tensor<3xindex>) : () -> !tosa.shape<3>
   %0 = tosa.tile %arg0, %cst : (tensor<2x3x?xi32>, !tosa.shape<3>) -> tensor<?x?x?xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_tile_invalid_multiples
+func.func @test_tile_invalid_multiples(%arg0 : tensor<2x3x4x5xi32>) {
+  // Invalid multiples must not produce invalid dimensions during inference.
+  // CHECK: %[[CST:.*]] = tosa.const_shape values(dense<[2, 0, -2, -1]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  // CHECK: tosa.tile %arg0, %[[CST]] : (tensor<2x3x4x5xi32>, !tosa.shape<4>) -> tensor<4x?x?x?xi32>
+  %cst = tosa.const_shape values(dense<[2, 0, -2, -1]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.tile %arg0, %cst : (tensor<2x3x4x5xi32>, !tosa.shape<4>) -> tensor<?x?x?x?xi32>
   return
 }
 
@@ -2216,4 +2351,59 @@ func.func @while_with_sparse_tensor_encoding() {
     tosa.yield %3 : tensor<1xi32>
   }
   return
+}
+
+// -----
+
+// A resize with invalid (non-positive) scale values cannot infer an output
+// shape, so the result type is left unchanged.
+// CHECK-LABEL: @resize_invalid_scale
+func.func @resize_invalid_scale(%arg0: tensor<1x50x48x1xf32>) {
+  %scale = tosa.const_shape values(dense<[2, 0, -1, 2]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: -> tensor<?x?x?x?xf32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border mode<NEAREST_NEIGHBOR> : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// A zero-sized dimension in the shape operand must make shape inference fall
+// back to a fully dynamic result instead of building an invalid
+// `tensor<0x...>` type (and it must not divide by zero when a -1 is present).
+// CHECK-LABEL: @test_reshape_zero_and_inferable_dim
+func.func @test_reshape_zero_and_inferable_dim(%arg0: tensor<8xf32>) -> tensor<?x?xf32> {
+  %shape = tosa.const_shape values(dense<[0, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape %arg0, %{{.*}} : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
+  %0 = tosa.reshape %arg0, %shape : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// An out-of-range dimension must not reach RankedTensorType::get(). The
+// inferred type is fully dynamic and is joined with the declared result type,
+// so the statically known `4` is preserved.
+// CHECK-LABEL: @test_reshape_invalid_dimension
+func.func @test_reshape_invalid_dimension(%arg0: tensor<4x4xf32>) -> tensor<?x4xf32> {
+  %shape = tosa.const_shape values(dense<[-2, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape %arg0, %{{.*}} : (tensor<4x4xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
+  %0 = tosa.reshape %arg0, %shape : (tensor<4x4xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %0 : tensor<?x4xf32>
+}
+
+// -----
+
+// Same, with an unranked input, which takes the non-constant/unranked
+// inference path and needs a cast back to the original function type.
+// CHECK-LABEL: @test_reshape_invalid_dimension_unranked
+func.func @test_reshape_invalid_dimension_unranked(%arg0: tensor<*xf32>) -> tensor<*xf32> {
+  %shape = tosa.const_shape values(dense<[-2, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: %[[RESHAPE:.+]] = tosa.reshape %arg0, %[[SHAPE:.+]] : (tensor<*xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
+  // DEFAULT: %[[CAST:.+]] = tensor.cast %[[RESHAPE]] : tensor<?x?xf32> to tensor<*xf32>
+  // DEFAULT: return %[[CAST]] : tensor<*xf32>
+  // FUNCBOUND: return %[[RESHAPE]] : tensor<?x?xf32>
+  %0 = tosa.reshape %arg0, %shape : (tensor<*xf32>, !tosa.shape<2>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
 }

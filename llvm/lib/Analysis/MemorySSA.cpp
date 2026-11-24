@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemorySSA.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -61,22 +62,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "memoryssa"
 
-static cl::opt<std::string>
-    DotCFGMSSA("dot-cfg-mssa",
-               cl::value_desc("file name for generated dot file"),
-               cl::desc("file name for generated dot file"), cl::init(""));
-
 INITIALIZE_PASS_BEGIN(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                       true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                     true)
-
-static cl::opt<unsigned> MaxCheckLimit(
-    "memssa-check-limit", cl::Hidden, cl::init(100),
-    cl::desc("The maximum number of stores/phis MemorySSA"
-             "will consider trying to walk past (default = 100)"));
 
 // Always verify MemorySSA if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -294,10 +285,6 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     case Intrinsic::experimental_noalias_scope_decl:
     case Intrinsic::pseudoprobe:
       return false;
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_label:
-    case Intrinsic::dbg_value:
-      llvm_unreachable("debuginfo shouldn't have associated defs!");
     default:
       break;
     }
@@ -720,16 +707,9 @@ class ClobberWalker {
   };
 
   using def_path_iterator = generic_def_path_iterator<DefPath, ClobberWalker>;
-  using const_def_path_iterator =
-      generic_def_path_iterator<const DefPath, const ClobberWalker>;
 
   iterator_range<def_path_iterator> def_path(ListIndex From) {
     return make_range(def_path_iterator(this, From), def_path_iterator());
-  }
-
-  iterator_range<const_def_path_iterator> const_def_path(ListIndex From) const {
-    return make_range(const_def_path_iterator(this, From),
-                      const_def_path_iterator());
   }
 
   struct OptznResult {
@@ -1039,13 +1019,13 @@ public:
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, BAA, UpwardWalkLimit);
   }
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           const MemoryLocation &Loc,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, Loc, BAA, UpwardWalkLimit);
   }
 
@@ -1077,13 +1057,13 @@ public:
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, BAA, UpwardWalkLimit);
   }
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           const MemoryLocation &Loc,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, Loc, BAA, UpwardWalkLimit);
   }
 
@@ -1099,11 +1079,10 @@ void MemorySSA::renameSuccessorPhis(BasicBlock *BB, MemoryAccess *IncomingVal,
                                     bool RenameAllUses) {
   // Pass through values to our successors
   for (const BasicBlock *S : successors(BB)) {
-    auto It = PerBlockAccesses.find(S);
+    AccessList *Accesses = getBlockAccesses(S);
     // Rename the phi nodes in our successor block
-    if (It == PerBlockAccesses.end() || !isa<MemoryPhi>(It->second->front()))
+    if (!Accesses || !isa<MemoryPhi>(Accesses->front()))
       continue;
-    AccessList *Accesses = It->second.get();
     auto *Phi = cast<MemoryPhi>(&Accesses->front());
     if (RenameAllUses) {
       bool ReplacementDone = false;
@@ -1124,10 +1103,8 @@ void MemorySSA::renameSuccessorPhis(BasicBlock *BB, MemoryAccess *IncomingVal,
 /// \returns The new incoming value.
 MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB, MemoryAccess *IncomingVal,
                                      bool RenameAllUses) {
-  auto It = PerBlockAccesses.find(BB);
   // Skip most processing if the list is empty.
-  if (It != PerBlockAccesses.end()) {
-    AccessList *Accesses = It->second.get();
+  if (AccessList *Accesses = getBlockAccesses(BB)) {
     for (MemoryAccess &L : *Accesses) {
       if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(&L)) {
         if (MUD->getDefiningAccess() == nullptr || RenameAllUses)
@@ -1207,20 +1184,18 @@ void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
   for (const BasicBlock *S : successors(BB)) {
     if (!DT->isReachableFromEntry(S))
       continue;
-    auto It = PerBlockAccesses.find(S);
+    AccessList *Accesses = getBlockAccesses(S);
     // Rename the phi nodes in our successor block
-    if (It == PerBlockAccesses.end() || !isa<MemoryPhi>(It->second->front()))
+    if (!Accesses || !isa<MemoryPhi>(Accesses->front()))
       continue;
-    AccessList *Accesses = It->second.get();
     auto *Phi = cast<MemoryPhi>(&Accesses->front());
     Phi->addIncoming(LiveOnEntryDef.get(), BB);
   }
 
-  auto It = PerBlockAccesses.find(BB);
-  if (It == PerBlockAccesses.end())
+  AccessList *Accesses = getBlockAccesses(BB);
+  if (!Accesses)
     return;
 
-  auto &Accesses = It->second;
   for (auto AI = Accesses->begin(), AE = Accesses->end(); AI != AE;) {
     auto Next = std::next(AI);
     // If we have a phi, just remove it. We are going to replace all
@@ -1234,8 +1209,9 @@ void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
 }
 
 MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
-    : DT(DT), F(&Func), LiveOnEntryDef(nullptr), Walker(nullptr),
-      SkipWalker(nullptr) {
+    : Opts(getAnalysisOptions(Func)), DT(DT), F(&Func),
+      BlockNumberEpoch(Func.getBlockNumberEpoch()), LiveOnEntryDef(nullptr),
+      Walker(nullptr), SkipWalker(nullptr) {
   // Build MemorySSA using a batch alias analysis. This reuses the internal
   // state that AA collects during an alias()/getModRefInfo() call. This is
   // safe because there are no CFG changes while building MemorySSA and can
@@ -1252,8 +1228,9 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
 }
 
 MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
-    : DT(DT), L(&L), LiveOnEntryDef(nullptr), Walker(nullptr),
-      SkipWalker(nullptr) {
+    : Opts(getAnalysisOptions(L)), DT(DT), L(&L),
+      BlockNumberEpoch(L.getHeader()->getParent()->getBlockNumberEpoch()),
+      LiveOnEntryDef(nullptr), Walker(nullptr), SkipWalker(nullptr) {
   // Build MemorySSA using a batch alias analysis. This reuses the internal
   // state that AA collects during an alias()/getModRefInfo() call. This is
   // safe because there are no CFG changes while building MemorySSA and can
@@ -1274,25 +1251,24 @@ MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
 
 MemorySSA::~MemorySSA() {
   // Drop all our references
-  for (const auto &Pair : PerBlockAccesses)
-    for (MemoryAccess &MA : *Pair.second)
-      MA.dropAllReferences();
+  for (const BlockInfo &Info : PerBlock)
+    if (Info.Accesses)
+      for (MemoryAccess &MA : *Info.Accesses)
+        MA.dropAllReferences();
 }
 
-MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
-  auto Res = PerBlockAccesses.try_emplace(BB);
-
-  if (Res.second)
-    Res.first->second = std::make_unique<AccessList>();
-  return Res.first->second.get();
+MemorySSA::BlockInfo &MemorySSA::getOrCreateBlockInfo(const BasicBlock *BB) {
+  unsigned N = getBlockIndex(BB);
+  if (N >= PerBlock.size())
+    PerBlock.resize(BB->getParent()->getMaxBlockNumber());
+  return PerBlock[N];
 }
 
-MemorySSA::DefsList *MemorySSA::getOrCreateDefsList(const BasicBlock *BB) {
-  auto Res = PerBlockDefs.try_emplace(BB);
-
-  if (Res.second)
-    Res.first->second = std::make_unique<DefsList>();
-  return Res.first->second.get();
+template <typename ListT>
+ListT *MemorySSA::getOrCreateList(ListPtr<ListT> &List) {
+  if (!List)
+    List.reset(new (UseOrDefAllocator) ListT());
+  return List.get();
 }
 
 namespace llvm {
@@ -1438,7 +1414,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     // In any case, the new upper bound is the top of the stack.
     unsigned long UpperBound = VersionStack.size() - 1;
 
-    if (UpperBound - LocInfo.LowerBound > MaxCheckLimit) {
+    if (UpperBound - LocInfo.LowerBound > MSSA->Opts.memssa_check_limit) {
       LLVM_DEBUG(dbgs() << "MemorySSA skipping optimization of " << *MU << " ("
                         << *(MU->getMemoryInst()) << ")"
                         << " because there are "
@@ -1450,7 +1426,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       continue;
     }
     bool FoundClobberResult = false;
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     while (UpperBound > LocInfo.LowerBound) {
       if (isa<MemoryPhi>(VersionStack[UpperBound])) {
         // For phis, use the walker, see where we ended up, go there.
@@ -1518,6 +1494,16 @@ void MemorySSA::placePHINodes(
     createMemoryPhi(BB);
 }
 
+/// Allocate a MemoryUse or MemoryDef from \p Allocator, with its operands in
+/// front of it like User::operator new.
+template <typename AccessT, typename AllocatorT, typename... ArgTs>
+static AccessT *allocateUseOrDef(AllocatorT &Allocator, ArgTs &&...Args) {
+  size_t OpsSize = sizeof(Use) * OperandTraits<AccessT>::operands(nullptr);
+  char *Mem = static_cast<char *>(
+      Allocator.Allocate(OpsSize + sizeof(AccessT), alignof(AccessT)));
+  return ::new (Mem + OpsSize) AccessT(std::forward<ArgTs>(Args)...);
+}
+
 template <typename IterT>
 void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // We create an access to represent "live on entry", for things like
@@ -1527,8 +1513,9 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // semantics do *not* imply that something with no immediate uses can simply
   // be removed.
   BasicBlock &StartingPoint = *Blocks.begin();
-  LiveOnEntryDef.reset(new MemoryDef(StartingPoint.getContext(), nullptr,
-                                     nullptr, &StartingPoint, NextID++));
+  LiveOnEntryDef.reset(
+      allocateUseOrDef<MemoryDef>(UseOrDefAllocator, StartingPoint.getContext(),
+                                  nullptr, nullptr, &StartingPoint, NextID++));
 
   // We maintain lists of memory accesses per-block, trading memory for time. We
   // could just look up the memory access for every possible instruction in the
@@ -1546,12 +1533,12 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
         continue;
 
       if (!Accesses)
-        Accesses = getOrCreateAccessList(&B);
+        Accesses = getOrCreateList(getOrCreateBlockInfo(&B).Accesses);
       Accesses->push_back(MUD);
       if (isa<MemoryDef>(MUD)) {
         InsertIntoDef = true;
         if (!Defs)
-          Defs = getOrCreateDefsList(&B);
+          Defs = getOrCreateList(getOrCreateBlockInfo(&B).Defs);
         Defs->push_back(*MUD);
       }
     }
@@ -1621,20 +1608,20 @@ MemorySSAWalker *MemorySSA::getSkipSelfWalker() {
 void MemorySSA::insertIntoListsForBlock(MemoryAccess *NewAccess,
                                         const BasicBlock *BB,
                                         InsertionPlace Point) {
-  auto *Accesses = getOrCreateAccessList(BB);
+  BlockInfo &Info = getOrCreateBlockInfo(BB);
+  AccessList *Accesses = getOrCreateList(Info.Accesses);
   if (Point == Beginning) {
     // If it's a phi node, it goes first, otherwise, it goes after any phi
     // nodes.
     if (isa<MemoryPhi>(NewAccess)) {
       Accesses->push_front(NewAccess);
-      auto *Defs = getOrCreateDefsList(BB);
-      Defs->push_front(*NewAccess);
+      getOrCreateList(Info.Defs)->push_front(*NewAccess);
     } else {
       auto AI = find_if_not(
           *Accesses, [](const MemoryAccess &MA) { return isa<MemoryPhi>(MA); });
       Accesses->insert(AI, NewAccess);
       if (!isa<MemoryUse>(NewAccess)) {
-        auto *Defs = getOrCreateDefsList(BB);
+        DefsList *Defs = getOrCreateList(Info.Defs);
         auto DI = find_if_not(
             *Defs, [](const MemoryAccess &MA) { return isa<MemoryPhi>(MA); });
         Defs->insert(DI, *NewAccess);
@@ -1642,21 +1629,20 @@ void MemorySSA::insertIntoListsForBlock(MemoryAccess *NewAccess,
     }
   } else {
     Accesses->push_back(NewAccess);
-    if (!isa<MemoryUse>(NewAccess)) {
-      auto *Defs = getOrCreateDefsList(BB);
-      Defs->push_back(*NewAccess);
-    }
+    if (!isa<MemoryUse>(NewAccess))
+      getOrCreateList(Info.Defs)->push_back(*NewAccess);
   }
   BlockNumberingValid.erase(BB);
 }
 
 void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
                                       AccessList::iterator InsertPt) {
-  auto *Accesses = getBlockAccesses(BB);
+  BlockInfo &Info = PerBlock[getBlockIndex(BB)];
+  AccessList *Accesses = Info.Accesses.get();
   bool WasEnd = InsertPt == Accesses->end();
   Accesses->insert(AccessList::iterator(InsertPt), What);
   if (!isa<MemoryUse>(What)) {
-    auto *Defs = getOrCreateDefsList(BB);
+    DefsList *Defs = getOrCreateList(Info.Defs);
     // If we got asked to insert at the end, we have an easy job, just shove it
     // at the end. If we got asked to insert before an existing def, we also get
     // an iterator. If we got asked to insert before a use, we have to hunt for
@@ -1826,9 +1812,11 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
 
   MemoryUseOrDef *MUD;
   if (Def) {
-    MUD = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
+    MUD = allocateUseOrDef<MemoryDef>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent(), NextID++);
   } else {
-    MUD = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
+    MUD = allocateUseOrDef<MemoryUse>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent());
     if (isUseTriviallyOptimizableToLiveOnEntry(*AAP, I)) {
       MemoryAccess *LiveOnEntry = getLiveOnEntryDef();
       MUD->setOptimized(LiveOnEntry);
@@ -1868,27 +1856,24 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
 /// deleted, not just removed.
 void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
   BasicBlock *BB = MA->getBlock();
+  BlockInfo &Info = PerBlock[getBlockIndex(BB)];
   // The access list owns the reference, so we erase it from the non-owning list
   // first.
   if (!isa<MemoryUse>(MA)) {
-    auto DefsIt = PerBlockDefs.find(BB);
-    std::unique_ptr<DefsList> &Defs = DefsIt->second;
-    Defs->remove(*MA);
-    if (Defs->empty())
-      PerBlockDefs.erase(DefsIt);
+    Info.Defs->remove(*MA);
+    if (Info.Defs->empty())
+      Info.Defs.reset();
   }
 
   // The erase call here will delete it. If we don't want it deleted, we call
   // remove instead.
-  auto AccessIt = PerBlockAccesses.find(BB);
-  std::unique_ptr<AccessList> &Accesses = AccessIt->second;
   if (ShouldDelete)
-    Accesses->erase(MA);
+    Info.Accesses->erase(MA);
   else
-    Accesses->remove(MA);
+    Info.Accesses->remove(MA);
 
-  if (Accesses->empty()) {
-    PerBlockAccesses.erase(AccessIt);
+  if (Info.Accesses->empty()) {
+    Info.Accesses.reset();
     BlockNumberingValid.erase(BB);
   }
 }
@@ -2387,9 +2372,10 @@ PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   if (EnsureOptimizedUses)
     MSSA.ensureOptimizedUses();
-  if (DotCFGMSSA != "") {
+  StringRef DotCFGMSSA = getAnalysisOptions(F).dot_cfg_mssa;
+  if (!DotCFGMSSA.empty()) {
     DOTFuncMSSAInfo CFGInfo(F, MSSA);
-    WriteGraph(&CFGInfo, "", false, "MSSA", DotCFGMSSA);
+    WriteGraph(&CFGInfo, "", false, "MSSA", DotCFGMSSA.str());
   } else {
     OS << "MemorySSA for function: " << F.getName() << "\n";
     MSSA.print(OS);
@@ -2632,11 +2618,11 @@ void MemoryPhi::deleteMe(DerivedUser *Self) {
 }
 
 void MemoryDef::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryDef *>(Self);
+  static_cast<MemoryDef *>(Self)->~MemoryDef();
 }
 
 void MemoryUse::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryUse *>(Self);
+  static_cast<MemoryUse *>(Self)->~MemoryUse();
 }
 
 bool upward_defs_iterator::IsGuaranteedLoopInvariant(const Value *Ptr) const {

@@ -38,7 +38,11 @@ int main(int, char**) {
         ASSERT_SAME_TYPE(size_t,        decltype(strxfrm(cp, cpc, s)));
         ASSERT_SAME_TYPE(size_t,        decltype(strcspn(cpc, cpc)));
         ASSERT_SAME_TYPE(size_t,        decltype(strspn(cpc, cpc)));
+        TEST_DIAGNOSTIC_PUSH
+        TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+        TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
         ASSERT_SAME_TYPE(char*,         decltype(strtok(cp, cpc)));
+        TEST_DIAGNOSTIC_POP
         ASSERT_SAME_TYPE(void*,         decltype(memset(vp, 0, s)));
         ASSERT_SAME_TYPE(char*,         decltype(strerror(0)));
         ASSERT_SAME_TYPE(size_t,        decltype(strlen(cpc)));

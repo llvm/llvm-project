@@ -3,10 +3,10 @@
 // check inlining one elemental into another
 // a = b * c + d
 func.func @inline_to_elemental(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "c"}, %arg3: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "d"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "b"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %2:2 = hlfir.declare %arg2 {uniq_name = "c"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %3:2 = hlfir.declare %arg3 {uniq_name = "d"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("b") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg2 uniq_name("c") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %3:2 = hlfir.declare %arg3 uniq_name("d") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
@@ -65,10 +65,10 @@ func.func @inline_to_elemental(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_nam
 
 // check inlining into a do_loop
 func.func @inline_to_loop(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "c"}, %arg3: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "d"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "b"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %2:2 = hlfir.declare %arg2 {uniq_name = "c"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %3:2 = hlfir.declare %arg3 {uniq_name = "d"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("b") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg2 uniq_name("c") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %3:2 = hlfir.declare %arg3 uniq_name("d") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
@@ -127,9 +127,9 @@ func.func @inline_to_loop(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
 // inlining into a single hlfir.apply
 // a = (b * c)[1]
 func.func @inline_to_apply(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "c"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "b"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %2:2 = hlfir.declare %arg2 {uniq_name = "c"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg1 uniq_name("b") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg2 uniq_name("c") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
@@ -173,7 +173,7 @@ func.func @inline_to_apply(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !
 //   a = sqrt(a * (a - 1))
 // end subroutine
 func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFreproducerEa"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFreproducerEa") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %cst = arith.constant 1.000000e+00 : f32
   %c0 = arith.constant 0 : index
   %1:3 = fir.box_dims %0#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
@@ -243,10 +243,10 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 // Check that the ordered elemental is not inlined into another:
 // a = b + c + d
 func.func @noinline_ordered(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "c"}, %arg3: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "d"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "b"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %2:2 = hlfir.declare %arg2 {uniq_name = "c"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %3:2 = hlfir.declare %arg3 {uniq_name = "d"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("b") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg2 uniq_name("c") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %3:2 = hlfir.declare %arg3 uniq_name("d") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
@@ -278,10 +278,10 @@ func.func @noinline_ordered(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name =
 // CHECK-SAME:      %[[VAL_2:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "c"},
 // CHECK-SAME:      %[[VAL_3:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "d"}) {
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "b"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "c"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "d"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("a") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("b") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("c") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("d") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 // CHECK:           %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_6]]#0, %[[VAL_4]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]]#1 : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_11:.*]] = hlfir.elemental %[[VAL_10]] : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
@@ -315,7 +315,7 @@ func.func @noinline_ordered(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name =
 func.func @noinline_due_to_finalization(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>> {fir.bindc_name = "x"}) {
   %c0 = arith.constant 0 : index
   %0 = fir.alloca !fir.type<_QMtypesTt1{x:f32}> {bindc_name = ".result"}
-  %1:2 = hlfir.declare %arg0 {uniq_name = "_QFtest1Ex"} : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>)
+  %1:2 = hlfir.declare %arg0 uniq_name("_QFtest1Ex") : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>)
   %2:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>, index) -> (index, index, index)
   %3 = fir.shape %2#1 : (index) -> !fir.shape<1>
   %4 = hlfir.elemental %3 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>> {
@@ -323,7 +323,7 @@ func.func @noinline_due_to_finalization(%arg0: !fir.box<!fir.array<?x!fir.type<_
     %6 = hlfir.designate %1#0 (%arg1)  : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>, index) -> !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
     %7 = fir.call @_QPelem1(%6) fastmath<contract> : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> !fir.type<_QMtypesTt1{x:f32}>
     fir.save_result %7 to %0 : !fir.type<_QMtypesTt1{x:f32}>, !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
-    %8:2 = hlfir.declare %0 {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>, !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>)
+    %8:2 = hlfir.declare %0 uniq_name(".tmp.func_result") : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>, !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>)
     hlfir.yield_element %8#0 : !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
   }
   %5 = hlfir.elemental %3 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>> {
@@ -343,3 +343,33 @@ func.func @noinline_due_to_finalization(%arg0: !fir.box<!fir.array<?x!fir.type<_
 // CHECK:             %[[VAL_13:.*]] = hlfir.apply %[[VAL_6]], %{{.*}} : (!hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>, index) -> !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
 // CHECK:           hlfir.destroy %[[VAL_11]] : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
 // CHECK:           hlfir.destroy %[[VAL_6]] finalize : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
+
+// Outside an elemental consumer, clone cleanup after the scalar's uses at
+// the original array destruction point, including through no_reassoc.
+func.func @scalar_character_cleanup(%a: !fir.ref<!fir.array<10x!fir.char<1,2>>>, %out: !fir.ref<!fir.char<1,4>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %expr = hlfir.elemental %shape typeparams %c4 unordered : (!fir.shape<1>, index) -> !hlfir.expr<10x!fir.char<1,4>> {
+  ^bb0(%i: index):
+    %a_i = hlfir.designate %a (%i) typeparams %c2 : (!fir.ref<!fir.array<10x!fir.char<1,2>>>, index, index) -> !fir.ref<!fir.char<1,2>>
+    %temp = hlfir.concat %a_i, %a_i len %c4 : (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, index) -> !hlfir.expr<!fir.char<1,4>>
+    %alias = hlfir.no_reassoc %temp : !hlfir.expr<!fir.char<1,4>>
+    hlfir.yield_element %alias : !hlfir.expr<!fir.char<1,4>> cleanup {
+      hlfir.destroy %temp : !hlfir.expr<!fir.char<1,4>>
+    }
+  }
+  %element = hlfir.apply %expr, %c1 typeparams %c4 : (!hlfir.expr<10x!fir.char<1,4>>, index, index) -> !hlfir.expr<!fir.char<1,4>>
+  hlfir.assign %element to %out : !hlfir.expr<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
+  hlfir.destroy %expr : !hlfir.expr<10x!fir.char<1,4>>
+  return
+}
+// CHECK-LABEL: func.func @scalar_character_cleanup
+// CHECK-NOT: hlfir.elemental
+// CHECK: %[[TEMP:.*]] = hlfir.concat
+// CHECK: %[[ALIAS:.*]] = hlfir.no_reassoc %[[TEMP]]
+// CHECK-NEXT: hlfir.assign %[[ALIAS]]
+// CHECK-NEXT: hlfir.destroy %[[TEMP]]
+// CHECK-NEXT: return

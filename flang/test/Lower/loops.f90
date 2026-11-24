@@ -64,8 +64,12 @@ subroutine loop_test
   6 continue
   enddo
 
-  ! CHECK-NOT: fir.do_loop
-  ! CHECK-NOT: fir.if
+  ! The computed GOTO's targets are inside the body, so only the body is
+  ! folded into a region, inside the mask test.
+  ! CHECK: fir.do_concurrent.loop (%{{.*}}) = {{.*}}
+  ! CHECK: fir.if
+  ! CHECK: scf.execute_region no_inline {
+  ! CHECK: fir.select
   do concurrent (integer(2)::i=1:5, i.ne.3)
     goto (7, 7) i+1
     ! CHECK: fir.call @_FortranAioBeginExternalListOutput
@@ -114,7 +118,7 @@ subroutine lis(n)
   ! CHECK:       fir.do_concurrent.loop (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) {
   ! CHECK:         fir.if %{{.*}} {
   ! CHECK:           %[[V_T_ALLOC:[0-9]+]] = fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} <{bindc_name = "t", pinned, uniq_name = "_QFlisEt"}>
-  ! CHECK:           %[[V_T_DECL:.*]]:2 = hlfir.declare %[[V_T_ALLOC]]({{.*}}) {uniq_name = "_QFlisEt"}
+  ! CHECK:           %[[V_T_DECL:.*]]:2 = hlfir.declare %[[V_T_ALLOC]]({{.*}}) uniq_name("_QFlisEt")
   ! CHECK:           %[[V_P_ALLOC:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?x?xi32>>> <{bindc_name = "p", pinned, uniq_name = "_QFlisEp"}>
   ! CHECK:           fir.store %{{.*}} to %[[V_P_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
   ! CHECK:           %[[V_P_DECL:.*]]:2 = hlfir.declare %[[V_P_ALLOC]]

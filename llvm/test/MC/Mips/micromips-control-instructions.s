@@ -51,6 +51,10 @@
 # CHECK-EL:    tlbwi                      # encoding: [0x00,0x00,0x7c,0x23]
 # CHECK-EL:    tlbwr                      # encoding: [0x00,0x00,0x7c,0x33]
 # CHECK-EL:    prefx 1, $3($5)            # encoding: [0x65,0x54,0xa0,0x09]
+# CHECK-EL:    mfc0 $2, $12, 0            # encoding: [0x4c,0x00,0xfc,0x00]
+# CHECK-EL:    mfc0 $3, $16, 7            # encoding: [0x70,0x00,0xfc,0x38]
+# CHECK-EL:    mtc0 $4, $12, 0            # encoding: [0x8c,0x00,0xfc,0x02]
+# CHECK-EL:    mtc0 $5, $16, 7            # encoding: [0xb0,0x00,0xfc,0x3a]
 #------------------------------------------------------------------------------
 # Big endian
 #------------------------------------------------------------------------------
@@ -85,6 +89,10 @@
 # CHECK-EB:   tlbwi                       # encoding: [0x00,0x00,0x23,0x7c]
 # CHECK-EB:   tlbwr                       # encoding: [0x00,0x00,0x33,0x7c]
 # CHECK-EB:   prefx 1, $3($5)             # encoding: [0x54,0x65,0x09,0xa0]
+# CHECK-EB:   mfc0 $2, $12, 0             # encoding: [0x00,0x4c,0x00,0xfc]
+# CHECK-EB:   mfc0 $3, $16, 7             # encoding: [0x00,0x70,0x38,0xfc]
+# CHECK-EB:   mtc0 $4, $12, 0             # encoding: [0x00,0x8c,0x02,0xfc]
+# CHECK-EB:   mtc0 $5, $16, 7             # encoding: [0x00,0xb0,0x3a,0xfc]
 
     sdbbp
     sdbbp 34
@@ -114,4 +122,7 @@
     tlbwi
     tlbwr
     prefx 1, $3($5)
-
+    mfc0 $2, $12
+    mfc0 $3, $16, 7
+    mtc0 $4, $12
+    mtc0 $5, $16, 7

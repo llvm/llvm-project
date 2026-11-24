@@ -463,7 +463,7 @@ define fastcc i32 @Search(i64 %idxprom.i, i64 %idxprom.i89, i32 %c) {
 ; CHECK-NEXT:    [[ARRAYIDX185:%.*]] = getelementptr inbounds [65 x i32], ptr @hash_move, i64 0, i64 [[IDXPROM_I]]
 ; CHECK-NEXT:    [[ARRAYIDX307:%.*]] = getelementptr inbounds [65 x i32], ptr @current_move, i64 0, i64 [[IDXPROM_I]]
 ; CHECK-NEXT:    [[ARRAYIDX89:%.*]] = getelementptr inbounds [65 x ptr], ptr @last, i64 0, i64 [[IDXPROM_I]]
-; CHECK-NEXT:    [[PHASE:%.*]] = getelementptr inbounds [65 x %struct.NEXT_MOVE], ptr @next_status, i64 0, i64 [[IDXPROM_I]], i32 0
+; CHECK-NEXT:    [[PHASE:%.*]] = getelementptr inbounds [65 x [[STRUCT_NEXT_MOVE:%.*]]], ptr @next_status, i64 0, i64 [[IDXPROM_I]], i32 0
 ; CHECK-NEXT:    switch i32 [[C]], label %[[CLEANUP:.*]] [
 ; CHECK-NEXT:      i32 1, label %[[SW_BB_I:.*]]
 ; CHECK-NEXT:      i32 0, label %[[SW_BB21_I:.*]]
@@ -700,7 +700,7 @@ right_x:
 !3 = !{!"int", !1}
 !4 = !{ i32 0, i32 1 }
 !5 = !{ i32 8, i32 10 }
-!6 = !{!6}
+!6 = !{!6, i1 false}
 !7 = !{!7, !6}
 !8 = !{!8, !6}
 !9 = !{!7}
@@ -714,7 +714,7 @@ right_x:
 ; CHECK: [[RNG4]] = !{i32 0, i32 1}
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
-; CHECK: [[META7]] = distinct !{[[META7]]}
+; CHECK: [[META7]] = distinct !{[[META7]], i1 false}
 ; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
 ; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
 ; CHECK: [[META10]] = !{}

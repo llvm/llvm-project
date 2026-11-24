@@ -290,7 +290,6 @@ class SPIRVStructurizerImpl {
   // the boundary of multiple constructs.
   struct Splitter {
     Function &F;
-    DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
     std::optional<PartialOrderingVisitor> POV;
 

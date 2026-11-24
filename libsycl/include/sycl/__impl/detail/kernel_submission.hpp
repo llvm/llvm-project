@@ -23,6 +23,7 @@
 #include <sycl/__impl/nd_range.hpp>
 
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -30,10 +31,10 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 template <int Dims>
-void checkNDRangeAndThrow(const sycl::nd_range<Dims> executionRange) {
-  if (executionRange.get_global_range() != range<Dims>{} &&
-      (executionRange.get_local_range().size() == 0 ||
-       executionRange.get_global_range() % executionRange.get_local_range() !=
+void checkNDRangeAndThrow(const sycl::nd_range<Dims> &ExecutionRange) {
+  if (ExecutionRange.get_global_range() != range<Dims>{} &&
+      (ExecutionRange.get_local_range().size() == 0 ||
+       ExecutionRange.get_global_range() % ExecutionRange.get_local_range() !=
            range<Dims>{}))
     throw sycl::exception(sycl::make_error_code(sycl::errc::nd_range),
                           "Invalid nd_range submission: global size must be "
@@ -59,13 +60,13 @@ protected:
   }
 
   template <typename KN, typename... Args>
-  void sycl_kernel_launch(const char *KernelName, Args &&...args) {
+  void sycl_kernel_launch(const char *KernelName, Args &&...KernelArgs) {
     static_assert(
-        sizeof...(args) == 1,
+        sizeof...(KernelArgs) == 1,
         "sycl_kernel_launch expects only 2 arguments now: name of kernel and "
         "callable object passed to kernel invocation by the user.");
 
-    auto FirstArg = std::get<0>(std::tie(args...));
+    auto FirstArg = std::get<0>(std::tie(KernelArgs...));
     static_cast<DerivedT *>(this)->submitKernelImpl(
         detail::getDeviceKernelInfo<KN>(KernelName), &FirstArg,
         sizeof(FirstArg));
@@ -73,9 +74,10 @@ protected:
 
   template <typename KernelName, int Dims, template <int> class Range,
             typename... Rest>
-  void parallelForImpl(Range<Dims> numWorkItems, Rest &&...rest) {
+  void parallelForImpl(const Range<Dims> & /*NumWorkItems*/,
+                       Rest &&...RestArgs) {
     if constexpr (sizeof...(Rest) != 1)
-      throw sycl::exception(errc::feature_not_supported,
+      throw sycl::exception(sycl::make_error_code(errc::feature_not_supported),
                             "Reductions are not supported");
 
     using KernelType =
@@ -111,7 +113,7 @@ protected:
     using NameT =
         typename detail::get_kernel_name_t<KernelName, KernelType>::name;
     return submitParallelFor<NameT, TransformedLambdaArgType, KernelType>(
-        std::forward<Rest>(rest)...);
+        std::forward<Rest>(RestArgs)...);
   }
 };
 

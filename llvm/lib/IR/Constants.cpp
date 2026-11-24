@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Constants.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -34,14 +36,6 @@
 
 using namespace llvm;
 using namespace PatternMatch;
-
-// As set of temporary options to help migrate how splats are represented.
-static cl::opt<bool> UseConstantIntForFixedLengthSplat(
-    "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native fixed-length vector splat support."));
-static cl::opt<bool> UseConstantIntForScalableSplat(
-    "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native scalable vector splat support."));
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -757,8 +751,14 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   }
 
   PossibleRelocationsTy Result = NoRelocation;
-  for (const Value *Op : operands())
-    Result = std::max(cast<Constant>(Op)->getRelocationInfo(), Result);
+  for (const Value *Op : operands()) {
+    PossibleRelocationsTy R = cast<Constant>(Op)->getRelocationInfo();
+    if (R > Result) {
+      Result = R;
+      if (Result == GlobalRelocation) // We hit the max.
+        break;
+    }
+  }
 
   return Result;
 }
@@ -796,6 +796,14 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
 }
 
 void Constant::removeDeadConstantUsers() const {
+  // Only constants other than globals can be dead users. Globals track whether
+  // they may have such users, which lets us skip walking the use list of a
+  // function that is only called.
+  const auto *GV = dyn_cast<GlobalValue>(this);
+  if (GV && !GV->mayHaveConstantUsers())
+    return;
+
+  bool HasLiveConstantUser = false;
   Value::const_user_iterator I = user_begin(), E = user_end();
   Value::const_user_iterator LastNonDeadUser = E;
   while (I != E) {
@@ -809,6 +817,7 @@ void Constant::removeDeadConstantUsers() const {
     if (!constantIsDead(User, /* RemoveDeadUsers= */ true)) {
       // If the constant wasn't dead, remember that this was the last live use
       // and move on to the next constant.
+      HasLiveConstantUser |= !isa<GlobalValue>(User);
       LastNonDeadUser = I;
       ++I;
       continue;
@@ -820,6 +829,11 @@ void Constant::removeDeadConstantUsers() const {
     else
       I = std::next(LastNonDeadUser);
   }
+
+  // Every remaining user is an instruction or a global, so later calls can
+  // return early until a new constant uses this global.
+  if (GV && !HasLiveConstantUser)
+    const_cast<GlobalValue *>(GV)->MayHaveConstantUsers = false;
 }
 
 bool Constant::hasOneLiveUse() const { return hasNLiveUses(1); }
@@ -1585,7 +1599,9 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = isa<ConstantFP>(C);
-  bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
+  bool isSplatInt =
+      isa<ConstantInt>(C) &&
+      getIROptions(C->getContext()).use_constant_int_for_fixed_length_splat;
   bool isSplatByte = isa<ConstantByte>(C);
   bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
@@ -1642,7 +1658,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
     if (!V->isNullValue()) {
-      if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
+      if (isa<ConstantInt>(V) &&
+          getIROptions(V->getContext()).use_constant_int_for_fixed_length_splat)
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
     }
@@ -1659,7 +1676,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   // Maintain special handling of zero.
   if (!V->isNullValue()) {
-    if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
+    if (isa<ConstantInt>(V) &&
+        getIROptions(V->getContext()).use_constant_int_for_scalable_splat)
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
   }
@@ -1720,14 +1738,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   Type *OnlyIfReducedTy = OnlyIfReduced ? Ty : nullptr;
   switch (getOpcode()) {
   case Instruction::Trunc:
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
   case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
@@ -1745,9 +1755,11 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::GetElementPtr: {
     auto *GEPO = cast<GEPOperator>(this);
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
         GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   }
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
@@ -1998,6 +2010,44 @@ ConstantRange Constant::toConstantRange() const {
   return ConstantRange::getFull(BitWidth);
 }
 
+ConstantFPRange Constant::toConstantFPRange() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return ConstantFPRange(CFP->getValue());
+
+  const fltSemantics &Sem = getType()->getScalarType()->getFltSemantics();
+  if (!getType()->isVectorTy())
+    return ConstantFPRange::getFull(Sem);
+
+  if (auto *CFP =
+          dyn_cast_or_null<ConstantFP>(getSplatValue(/*AllowPoison=*/true)))
+    return ConstantFPRange(CFP->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(ConstantFPRange(CDV->getElementAsAPFloat(I)));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantFPRange::getFull(Sem);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CFP = dyn_cast<ConstantFP>(Elem);
+      if (!CFP)
+        return ConstantFPRange::getFull(Sem);
+      CR = CR.unionWith(ConstantFPRange(CFP->getValue()));
+    }
+    return CR;
+  }
+
+  return ConstantFPRange::getFull(Sem);
+}
+
 //---- ConstantPointerNull::get() implementation.
 //
 
@@ -2146,6 +2196,7 @@ DSOLocalEquivalent *DSOLocalEquivalent::get(GlobalValue *GV) {
 DSOLocalEquivalent::DSOLocalEquivalent(GlobalValue *GV)
     : Constant(GV->getType(), Value::DSOLocalEquivalentVal, AllocMarker) {
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 }
 
 /// Remove the constant from the constant table.
@@ -2174,6 +2225,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
   getContext().pImpl->DSOLocalEquivalents[GV] = this;
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 
   if (GV->getType() != getType()) {
     // It is ok to mutate the type here because this constant should always
@@ -2196,6 +2248,7 @@ NoCFIValue *NoCFIValue::get(GlobalValue *GV) {
 NoCFIValue::NoCFIValue(GlobalValue *GV)
     : Constant(GV->getType(), Value::NoCFIValueVal, AllocMarker) {
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 }
 
 /// Remove the constant from the constant table.
@@ -2217,6 +2270,7 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
   getContext().pImpl->NoCFIValues.erase(getGlobalValue());
   getContext().pImpl->NoCFIValues[GV] = this;
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 
   if (GV->getType() != getType())
     mutateType(GV->getType());
@@ -2667,9 +2721,11 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
   // sizeof is implemented as: (i64) gep (Ty*)null, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Constant *GEPIdx = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(
       Ty, Constant::getNullValue(PointerType::getUnqual(Ty->getContext())),
       GEPIdx);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP,
                      Type::getInt64Ty(Ty->getContext()));
 }
@@ -2683,7 +2739,9 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *Indices[2] = {Zero, One};
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   Constant *GEP = getGetElementPtr(AligningTy, NullPtr, Indices);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return getPtrToInt(GEP, Type::getInt64Ty(Ty->getContext()));
 }
 

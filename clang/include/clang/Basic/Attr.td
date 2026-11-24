@@ -266,6 +266,7 @@ class DeclArgument<DeclNode kind, string name, bit opt = 0, bit fake = 0>
 //
 class OMPTraitInfoArgument<string name> : Argument<name, 0>;
 class VariadicOMPInteropInfoArgument<string name> : Argument<name, 0>;
+class VariadicOMPAdjustArgsDescriptorArgument<string name> : Argument<name, 0>;
 
 class TypeArgument<string name, bit opt = 0> : Argument<name, opt>;
 class UnsignedArgument<string name, bit opt = 0> : Argument<name, opt>;
@@ -481,6 +482,7 @@ def TargetAMDGPU : TargetArch<["amdgpu", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
+def TargetHexagon : TargetArch<["hexagon"]>;
 def TargetLoongArch : TargetArch<["loongarch32", "loongarch64"]>;
 def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
@@ -2576,7 +2578,7 @@ def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
-  let Subjects = SubjectList<[Record], ErrorDiag>;
+  let Subjects = SubjectList<[Record, Enum], ErrorDiag>;
   let Documentation = [BPFPreserveAccessIndexDocs];
   let LangOpts = [COnly];
 }
@@ -3340,9 +3342,34 @@ def SwiftPrivate : InheritableAttr {
 def SwiftVersionedAddition : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // A "slice" is one element of an APINotesReader::VersionedInfo: the
+  // annotations that one version of a sidecar '.apinotes' file supplies for one
+  // declaration, paired with that version. An unversioned section supplies a
+  // slice whose version is empty.
+  //
+  // A "group" is all the slices one lookup returned, which is one whole
+  // VersionedInfo. Clang selects at most one slice per group and applies it, so
+  // a slice can only suppress other slices in its own group.
+  //
+  // SliceGroup says which group this slice came from.
+  //
+  // This is needed because capture mode (version-independent apinotes) attaches
+  // every slice from every lookup to the same declaration, which erases the
+  // VersionedInfo boundaries. SliceGroup restores them, so a consumer redoes
+  // the selection once per group instead of pooling unrelated slices.
+  // One group is one lookup: a second API notes reader is a different lookup,
+  // and so is an exact parameter-selector query beside a broad one.
+  //
+  // Group numbers also carry precedence. Clang applies each group's winner in
+  // ascending group order, and when two winners set the same key the last one
+  // applied owns it. So a consumer partitions by group, selects within each
+  // group, then resolves any remaining collision in ascending group order.
+  //
   let Spellings = [];
   let Args = [VersionArgument<"Version">, WrappedAttr<"AdditionalAttr">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
 }
@@ -3350,9 +3377,13 @@ def SwiftVersionedAddition : Attr {
 def SwiftVersionedRemoval : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // SliceGroup says which lookup this slice belongs to. See the
+  // SwiftVersionedAddition comment above.
   let Spellings = [];
   let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
   let AdditionalMembers = [{
@@ -3360,6 +3391,24 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
+
+def SwiftVersionedSlice : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes, and only under -fswift-version-independent-apinotes.
+  //
+  // One of these records each Swift version slice an API notes lookup supplied
+  // for the declaration, whether or not that slice set any keyed values.
+  // A slice that sets no key still takes part in version selection, selecting it
+  // suppresses the annotations of every other slice in its group, so a
+  // consumer that recomputes the selection has to know the slice exists.
+  //
+  // SliceGroup says which group this slice came from. See the
+  // SwiftVersionedAddition comment above.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"SliceGroup">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def NoDeref : TypeAttr {
@@ -3644,6 +3693,14 @@ def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
                   Clang<"riscv_vls_cc">];
  let Args = [UnsignedArgument<"VectorWidth", /*opt*/1>];
  let Documentation = [RISCVVLSCCDocs];
+}
+
+def HexagonHLXVectorStackLimit : InheritableAttr,
+                                 TargetSpecificAttr<TargetHexagon> {
+  let Spellings = [Clang<"hlx_vector_stack_limit">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [UnsignedArgument<"Limit">];
+  let Documentation = [HexagonHLXVectorStackLimitDocs];
 }
 
 def Target : InheritableAttr {
@@ -3995,6 +4052,8 @@ def Weak : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def : MutualExclusions<[IFunc, Weak]>;
+
 def WeakImport : InheritableAttr {
   let Spellings = [Clang<"weak_import">];
   let Documentation = [Undocumented];
@@ -4166,7 +4225,7 @@ def AssertCapability : InheritableAttr {
                    GNU<"assert_exclusive_lock">,
                    GNU<"assert_shared_lock">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4185,7 +4244,7 @@ def AcquireCapability : InheritableAttr {
                    GNU<"exclusive_lock_function">,
                    GNU<"shared_lock_function">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4204,7 +4263,7 @@ def TryAcquireCapability : InheritableAttr {
                    GNU<"exclusive_trylock_function">,
                    GNU<"shared_trylock_function">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4223,7 +4282,7 @@ def ReleaseCapability : InheritableAttr {
                    Clang<"release_generic_capability", 0>,
                    Clang<"unlock_function", 0>];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4245,7 +4304,7 @@ def RequiresCapability : InheritableAttr {
                    Clang<"shared_locks_required", 0>];
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4312,10 +4371,11 @@ def AcquiredBefore : InheritableAttr {
 def LockReturned : InheritableAttr {
   let Spellings = [GNU<"lock_returned">];
   let Args = [ExprArgument<"Arg">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
-  let Subjects = SubjectList<[Function]>;
+  let ParseArgsInFunctionScope = 1;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let Documentation = [Undocumented];
 }
 
@@ -4323,7 +4383,7 @@ def LocksExcluded : InheritableAttr {
   let Spellings = [GNU<"locks_excluded">];
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4623,7 +4683,16 @@ def MSInheritance : InheritableAttr {
   let Spellings = [CustomKeyword<"__single_inheritance">,
                    CustomKeyword<"__multiple_inheritance">,
                    CustomKeyword<"__virtual_inheritance">,
-                   CustomKeyword<"__unspecified_inheritance">];
+                   CustomKeyword<"__unspecified_inheritance">,
+                   // The single underscore spellings are aliases defined in
+                   // TokenKinds.def; they must come *after* all of the other
+                   // spellings because otherwise the MSInheritanceModel
+                   // enumeration will break (we're relying on token
+                   // normalization converting the alias to the normal form).
+                   CustomKeyword<"_single_inheritance">,
+                   CustomKeyword<"_multiple_inheritance">,
+                   CustomKeyword<"_virtual_inheritance">
+                   ];
   let AdditionalMembers = [{
   MSInheritanceModel getInheritanceModel() const {
     // The spelling enum should agree with MSInheritanceModel.
@@ -4647,12 +4716,16 @@ def MSVtorDisp : InheritableAttr {
 
 def InitSeg : Attr {
   let Spellings = [Pragma<"", "init_seg">];
-  let Args = [StringArgument<"Section">];
+  let Args = [StringArgument<"Section">,
+              DeclArgument<Function, "Func", /*optional=*/1>];
   let SemaHandler = 0;
   let Documentation = [InitSegDocs];
   let AdditionalMembers = [{
   void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-    OS << " (" << getSection() << ')';
+    OS << " (" << getSection();
+    if (const auto *FD = getFunc())
+      OS << ", " << FD->getName();
+    OS << ')';
   }
   }];
 }
@@ -4892,9 +4965,7 @@ def OMPDeclareVariant : InheritableAttr {
   let Args = [
     ExprArgument<"VariantFuncRef">,
     OMPTraitInfoArgument<"TraitInfos">,
-    VariadicExprArgument<"AdjustArgsNothing">,
-    VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
-    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
+    VariadicOMPAdjustArgsDescriptorArgument<"AdjustArgs">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
@@ -5044,7 +5115,9 @@ def ReleaseHandle : InheritableParamAttr {
 }
 
 def UnsafeBufferUsage : InheritableAttr {
-  let Spellings = [Clang<"unsafe_buffer_usage">];
+  let Spellings = [Clang<"unsafe_buffer_usage">,
+                   Clang<"unsafe_buffer_usage_in_container">];
+  let Args = [StringArgument<"Category", 1>];
   let Subjects = SubjectList<[Function, Field]>;
   let Documentation = [UnsafeBufferUsageDocs];
 }
@@ -5321,6 +5394,20 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
 }
 
+def HLSLInterpolationModifiersArgument : UnsignedArgument<"Modifiers"> {
+  let Fake = 1;
+}
+
+def HLSLInterpolationModifier : InheritableAttr {
+  let Spellings = [CustomKeyword<"nointerpolation">, CustomKeyword<"linear">,
+                   CustomKeyword<"centroid">, CustomKeyword<"noperspective">,
+                   CustomKeyword<"sample">, CustomKeyword<"center">];
+  let Args = [HLSLInterpolationModifiersArgument];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLInterpolationModifierDocs];
+}
+
 def HLSLParamModifier : ParameterABIAttr {
   let Spellings = [CustomKeyword<"in">, CustomKeyword<"inout">, CustomKeyword<"out">];
   let Accessors = [Accessor<"isIn", [CustomKeyword<"in">]>,
@@ -5388,6 +5475,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Documentation = [HLSLVkLocationDocs];
 }
 
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
+}
+
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
 // layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {
@@ -5422,19 +5517,19 @@ def VTablePointerAuthentication : InheritableAttr {
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [Undocumented];
   let StrictEnumParameters = 1;
-  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ true,
+  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ false,
                 ["default_key", "no_authentication", "process_dependent",
                  "process_independent"],
                 ["DefaultKey", "NoKey", "ProcessDependent",
                  "ProcessIndependent"]>,
               EnumArgument<"AddressDiscrimination", "AddressDiscriminationMode",
-                /*is_string=*/ true,
+                /*is_string=*/ false,
                 ["default_address_discrimination", "no_address_discrimination",
                  "address_discrimination"],
                 ["DefaultAddressDiscrimination", "NoAddressDiscrimination",
                  "AddressDiscrimination"]>,
               EnumArgument<"ExtraDiscrimination", "ExtraDiscrimination",
-                /*is_string=*/ true,
+                /*is_string=*/ false,
                 ["default_extra_discrimination", "no_extra_discrimination",
                  "type_discrimination", "custom_discrimination"],
                 ["DefaultExtraDiscrimination", "NoExtraDiscrimination",

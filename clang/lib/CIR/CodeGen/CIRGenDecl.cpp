@@ -22,13 +22,58 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
+
+namespace {
+/// Call the function named by a variable's `cleanup` attribute with the
+/// variable's address when it goes out of scope.
+struct CallCleanupFunction final : EHScopeStack::Cleanup {
+  const CIRGenFunctionInfo &fnInfo;
+  Address addr;
+  QualType varType;
+  CIRGenCallee callee;
+  SourceRange attrRange;
+
+  CallCleanupFunction(cir::FuncOp cleanupFn, const CIRGenFunctionInfo *info,
+                      Address addr, QualType varType, const CleanupAttr *attr)
+      : fnInfo(*info), addr(addr), varType(varType),
+        callee(CIRGenCallee::forDirect(
+            cleanupFn, CIRGenCalleeInfo(attr->getFunctionDecl()))),
+        attrRange(attr->getRange()) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!fnInfo.arguments().empty());
+    QualType argTy = fnInfo.arguments()[0];
+    // Sema only guarantees that these are assignable/convertible pointers (that
+    // is, the address-of the cleanup variable and the function parameter type),
+    // which don't necessarily match in either pointee type or address space.
+    // For example: address-of-g is void**, but the function takes void*.
+    // void f(void* arg);
+    // __attribute__((cleanup(f))) void *g;
+    // Likewise `int *__ptr32` parameters are accepted for an `int` variable.
+    // Classic codegen only emits a bitcast, which asserts for the latter.
+    // Both casts are no-ops when the types already match.
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    auto argPtrTy = mlir::cast<cir::PointerType>(cgf.convertType(argTy));
+    mlir::Value arg =
+        builder.createPtrBitcast(addr.getPointer(), argPtrTy.getPointee());
+    arg = cgf.performAddrSpaceCast(arg, argPtrTy);
+
+    CallArgList args;
+    args.add(RValue::get(arg), cgf.getContext().getPointerType(varType));
+    cgf.emitCall(fnInfo, callee, ReturnValueSlot(), args,
+                 /*callOp=*/nullptr, /*isMustTail=*/false, attrRange);
+  }
+};
+} // namespace
 
 struct CallLifetimeEnd final : EHScopeStack::Cleanup {
   // The raw alloca pointer (in the alloca address space). Mirrors classic
@@ -190,6 +235,9 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
 
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
+
+  if (d.hasAttr<AnnotateAttr>() && haveInsertPoint())
+    emitVarAnnotations(&d, address.getPointer());
 
   // The lifetime marker must reference the original alloca, so peel any
   // address-space cast back to it.
@@ -374,8 +422,18 @@ void CIRGenFunction::emitAutoVarCleanups(
   assert(!cir::MissingFeatures::opAllocaPreciseLifetime());
 
   // Handle the cleanup attribute.
-  if (d.hasAttr<CleanupAttr>())
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: CleanupAttr");
+  if (const CleanupAttr *ca = d.getAttr<CleanupAttr>()) {
+    const FunctionDecl *fd = ca->getFunctionDecl();
+
+    cir::FuncOp f = cgm.getAddrOfFunction(fd);
+    assert(f && "Could not find function!");
+
+    const CIRGenFunctionInfo &info =
+        cgm.getTypes().arrangeFunctionDeclaration(fd);
+    ehStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, f, &info,
+                                             emission.getObjectAddress(*this),
+                                             d.getType(), ca);
+  }
 }
 
 /// Emit code and set up symbol table for a variable declaration with auto,
@@ -387,14 +445,69 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
   emitAutoVarCleanups(emission);
 }
 
+namespace {
+/// Finds the temporaries with a destructor that the initializer of a variable
+/// with automatic storage duration lifetime-extends. Their cleanups are pushed
+/// onto the EH stack when the initializer's full-expression ends.
+class LifetimeExtendedTemporaryFinder
+    : public RecursiveASTVisitor<LifetimeExtendedTemporaryFinder> {
+  const VarDecl &var;
+  llvm::SmallPtrSet<const MaterializeTemporaryExpr *, 2> visited;
+  SmallVector<QualType, 2> types;
+
+public:
+  explicit LifetimeExtendedTemporaryFinder(const VarDecl &var) : var(var) {}
+
+  /// The types of the temporaries that were found.
+  ArrayRef<QualType> found() const { return types; }
+
+  // Look into the semantic form of initializer lists, which holds the backing
+  // array of a std::initializer_list, and into default member initializers.
+  // The array filler of an initializer list is not visited.
+  bool shouldVisitImplicitCode() const { return true; }
+
+  /// Records the type of each temporary requiring destruction whose lifetime
+  /// is extended by \c var.
+  bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *m) {
+    if (m->getExtendingDecl() != &var ||
+        m->getStorageDuration() != SD_Automatic || !visited.insert(m).second)
+      return true;
+    // Like pushTemporaryCleanup, look at the type of the whole temporary, not
+    // at the subobject that the reference binds to.
+    SmallVector<const Expr *, 2> commaLHSs;
+    SmallVector<SubobjectAdjustment, 2> adjustments;
+    const Expr *e =
+        m->getSubExpr()->skipRValueSubobjectAdjustments(commaLHSs, adjustments);
+    if (e->getType().isDestructedType() != QualType::DK_none)
+      types.push_back(e->getType());
+    return true;
+  }
+};
+} // namespace
+
+bool CIRGenFunction::destructorMayThrow(QualType type) {
+  const CXXRecordDecl *rd =
+      type->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+  if (!rd || rd->hasTrivialDestructor())
+    return false;
+  const auto *fpt = rd->getDestructor()->getType()->castAs<FunctionProtoType>();
+  return isUnresolvedExceptionSpec(fpt->getExceptionSpecType()) ||
+         !fpt->isNothrow();
+}
+
+SmallVector<QualType, 2>
+CIRGenFunction::getLifetimeExtendedTemporariesWithDestructor(const VarDecl &d) {
+  const Expr *init = d.getInit();
+  if (!init)
+    return {};
+  LifetimeExtendedTemporaryFinder finder(d);
+  finder.TraverseStmt(const_cast<Expr *>(init));
+  return SmallVector<QualType, 2>(finder.found());
+}
+
 void CIRGenFunction::emitLoopConditionVariable(
-    const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
-  // A condition variable always has automatic storage duration, so this
-  // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. Capture the
-  // lifetime-end cleanup pushed while emitting the alloca, but emit the
-  // initializer with capturing disabled so its own cleanups get their normal
-  // cir.cleanup.scope handling. The variable's destructor cleanup is captured
-  // separately after initialization.
+    const VarDecl &d, CapturedCleanups &condCleanup,
+    ArrayRef<QualType> extendedTemporaries) {
   assert(d.hasLocalStorage() && "loop condition variable is not local");
 
   // Mirror the diagnostic emitted by emitVarDecl on the automatic-storage path.
@@ -404,24 +517,49 @@ void CIRGenFunction::emitLoopConditionVariable(
     cgm.errorNYI(d.getSourceRange(),
                  "emitLoopConditionVariable: OpenCL local address space");
 
+  // The loop's cleanup region destroys the variable first, then the
+  // temporaries in reverse order of construction. A throw would skip the
+  // remaining destructors because CFG flattening does not yet support EH paths
+  // in loop cleanup regions.
+  if (getLangOpts().Exceptions && !extendedTemporaries.empty() &&
+      ((d.needsDestruction(getContext()) != QualType::DK_none &&
+        destructorMayThrow(d.getType())) ||
+       (extendedTemporaries.size() > 1 &&
+        llvm::any_of(extendedTemporaries, destructorMayThrow))))
+    cgm.errorNYI(d.getSourceRange(),
+                 "loop condition variable cleanup with a potentially-throwing "
+                 "destructor before another destructor");
+
+  // The loop's cleanup region covers the initialization of the variable.
+  emitAutoVarDeclWithCapturedCleanups(d, condCleanup,
+                                      /*guardDestruction=*/true,
+                                      extendedTemporaries);
+}
+
+void CIRGenFunction::emitAutoVarDeclWithCapturedCleanups(
+    const VarDecl &d, CapturedCleanups &cleanups, bool guardDestruction,
+    ArrayRef<QualType> extendedTemporaries) {
+  assert(d.hasLocalStorage() && "captured cleanups for a non-local variable");
+  assert((guardDestruction || extendedTemporaries.empty()) &&
+         "lifetime-extended temporaries need a guarded cleanup region");
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
   CIRGenFunction::AutoVarEmission emission = [&] {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(cleanups);
     return emitAutoVarAlloca(d);
   }();
 
-  // The condition variable's destructor is captured into the loop op's
-  // per-iteration cleanup region, which structurally spans the initializer.
-  // If the initializer throws, the variable was never constructed and its
-  // destructor must not run. Classic codegen avoids this by pushing the
-  // cleanup only after the initializer, but our deferred cleanup necessarily
-  // covers the whole condition region, so guard it with an active flag that is
-  // false while the initializer runs and set to true once construction
-  // completes. The flag is stored to on every iteration, so it also resets
-  // correctly across iterations.
-  bool needsCleanup = d.needsDestruction(getContext()) != QualType::DK_none;
+  // If the cleanup region covers initialization, guard destruction with an
+  // active flag so that it cannot run when the initializer throws. The flag is
+  // cleared each time control reaches the declaration and set once the
+  // variable is constructed. The temporaries that the initializer
+  // lifetime-extends are destroyed with the variable ([class.temporary]p6), so
+  // capture their cleanups under the same flag.
+  bool needsCleanup =
+      guardDestruction && d.needsDestruction(getContext()) != QualType::DK_none;
+  bool extendsTemporaries = !extendedTemporaries.empty();
+
   Address activeFlag = Address::invalid();
-  if (needsCleanup) {
+  if (needsCleanup || extendsTemporaries) {
     mlir::Location loc = getLoc(d.getSourceRange());
     activeFlag = createTempAllocaWithoutCast(
         builder.getBoolTy(), CharUnits::One(), loc, "cond.cleanup.isactive",
@@ -430,16 +568,44 @@ void CIRGenFunction::emitLoopConditionVariable(
     builder.createFlagStore(loc, false, activeFlag.getPointer());
   }
 
-  emitAutoVarInit(emission);
+  // Initializer temporaries keep their normal cleanup handling, except for the
+  // lifetime-extended ones, which are captured when the full-expression ends.
+  // For unguarded regions, initialization must not leave uncaptured cleanups.
+  EHScopeStack::stable_iterator initDepth = ehStack.stable_begin();
+  {
+    LifetimeExtensionCapture capture{&d, &cleanups, activeFlag};
+    llvm::SaveAndRestore<const LifetimeExtensionCapture *> captureExtended(
+        lifetimeExtensionCapture, extendsTemporaries ? &capture : nullptr);
+    emitAutoVarInit(emission);
+  }
+  assert((guardDestruction || ehStack.stable_begin() == initDepth) &&
+         "initializer left cleanups that cannot be captured");
 
-  if (needsCleanup) {
-    // Construction has completed, so activate the destructor cleanup.
+  // Only lifetime-extended cleanups remain after initialization. If the AST
+  // walk found no extended temporaries (e.g. for initializer-list array
+  // fillers), these cleanups are uncaptured and would wrap the code that
+  // follows the declaration, such as a loop's cir.condition, in a
+  // cir.cleanup.scope.
+  if (!extendsTemporaries && ehStack.stable_begin() != initDepth) {
+    cgm.errorNYI(d.getSourceRange(),
+                 "variable with captured cleanups whose initializer leaves "
+                 "uncaptured cleanups");
+    popCleanupBlocks(initDepth);
+  }
+#ifndef NDEBUG
+  for (auto it = ehStack.begin(), ie = ehStack.find(initDepth); it != ie; ++it)
+    assert(!cast<EHCleanupScope>(*it).getCleanupScopeOp() &&
+           "variable initializer left an uncaptured cleanup");
+#endif
+
+  if (activeFlag.isValid()) {
+    // Construction has completed, so activate the destructor cleanups.
     mlir::Location loc = getLoc(d.getSourceRange());
     builder.createFlagStore(loc, true, activeFlag.getPointer());
   }
 
   {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(cleanups);
     emitAutoVarCleanups(emission);
   }
 
@@ -522,10 +688,11 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   assert(ty->isConstantSizeType() && "VLAs can't be static");
 
   // Use the label if the variable is renamed with the asm-label extension.
+  std::string name;
   if (d.hasAttr<AsmLabelAttr>())
-    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: asm label");
-
-  std::string name = getStaticDeclName(*this, d);
+    name = std::string(getMangledName(&d));
+  else
+    name = getStaticDeclName(*this, d);
 
   mlir::Type lty = getTypes().convertTypeForMem(ty);
 
@@ -536,10 +703,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
       d.hasAttr<CUDASharedAttr>() || d.hasAttr<LoaderUninitializedAttr>())
     init = cir::UndefAttr::get(lty);
   else
-    init = builder.getZeroInitAttr(convertType(ty));
+    init = emitNullConstantAttr(ty);
 
-  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
-      getMLIRContext(), getGlobalVarAddressSpace(&d));
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      getGlobalCIRAddressSpace(getGlobalVarAddressSpace(&d));
 
   cir::GlobalOp gv =
       builder.createVersionedGlobal(getModule(), getLoc(d.getLocation()), name,
@@ -551,22 +718,15 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   gv.setAlignment(getASTContext().getDeclAlign(&d).getAsAlign().value());
 
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    gv.setComdat(true);
+    gv.setSelfComdat();
 
   if (d.getTLSKind())
     setTLSMode(gv, d);
 
   setGVProperties(gv, &d);
 
-  // OG checks if the expected address space, denoted by the type, is the
-  // same as the actual address space indicated by attributes. If they aren't
-  // the same, an addrspacecast is emitted when this variable is accessed.
-  // In CIR however, cir.get_global already carries that information in
-  // !cir.ptr type - if this global is in OpenCL local address space, then its
-  // type would be !cir.ptr<..., addrspace(offload_local)>. Therefore we don't
-  // need an explicit address space cast in CIR: they will get emitted when
-  // lowering to LLVM IR.
-
+  // The global may live in a different address space than the declared type.
+  // Users of the address cast it through castGlobalToDeclAddrSpace.
   setStaticLocalDeclAddress(&d, gv);
 
   // Ensure that the static local gets initialized by making sure the parent
@@ -653,10 +813,11 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
         cir::GlobalLinkageKind::PrivateLinkage));
     gv.setInitialValueAttr(constAttr);
     gv.setAlignment(align.getAsAlign().value());
-    // TODO(cir): Set unnamed address attribute when available in CIR
+    gv.setUnnamedAddr(true);
 
     cacheEntry = gv;
-  } else if (cacheEntry.getAlignment() < align.getQuantity()) {
+  } else if (cacheEntry.getAlignment() <
+             static_cast<uint64_t>(align.getQuantity())) {
     cacheEntry.setAlignment(align.getAsAlign().value());
   }
 
@@ -768,10 +929,11 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
 
   cir::GlobalOp var = globalOp;
 
-  assert(!cir::MissingFeatures::cudaSupport());
-
+  // Sema ensures any initializer of a CUDA __shared__ variable is a no-op.
+  bool isCudaSharedVar = getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+                         d.hasAttr<CUDASharedAttr>();
   // If this value has an initializer, emit it.
-  if (d.getInit())
+  if (d.getInit() && !isCudaSharedVar)
     var = addInitializerToStaticVarDecl(d, var, getAddrOp);
 
   var.setAlignment(alignment.getAsAlign().value());
@@ -807,6 +969,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // RAUW's the GV uses of this constant will be invalid.
   mlir::Value castedAddr =
       builder.createBitcast(getAddrOp.getAddr(), expectedType);
+  castedAddr = cgm.castGlobalToDeclAddrSpace(castedAddr, d);
   localDeclMap.find(&d)->second = Address(castedAddr, elemTy, alignment);
   cgm.setStaticLocalDeclAddress(&d, var);
 
@@ -1123,7 +1286,9 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
     QualType baseElementType = cgf.getContext().getBaseElementType(elementType);
 
     mlir::Type cirElementType = cgf.convertTypeForMem(baseElementType);
-    cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+    cir::PointerType ptrToElmType = builder.getPointerTo(
+        cirElementType,
+        mlir::cast<cir::PointerType>(arrayBegin.getType()).getAddrSpace());
 
     mlir::Value begin = arrayBegin;
     if (baseElementType != elementType) {
@@ -1170,8 +1335,8 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
 } // namespace
 
 /// Push an EH cleanup to destroy already-constructed elements of the given
-/// array.  The cleanup may be popped with deactivateCleanupBlock or
-/// popCleanupBlock.
+/// array. The cleanup is deactivated when the enclosing
+/// CleanupDeactivationScope exits.
 ///
 /// \param elementType - the immediate element type of the array;
 ///   possibly still an array type
@@ -1180,7 +1345,7 @@ void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
                                                       QualType elementType,
                                                       CharUnits elementAlign,
                                                       Destroyer *destroyer) {
-  ehStack.pushCleanup<IrregularPartialArrayDestroy>(
+  pushCleanupAndDeferDeactivation<IrregularPartialArrayDestroy>(
       EHCleanup, arrayBegin, arrayEndPointer, elementType, elementAlign,
       destroyer);
 }
@@ -1228,11 +1393,10 @@ void CIRGenFunction::pushDestroyAndDeferDeactivation(
                                                  destroyer);
 }
 
-void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
-                                                 Address addr, QualType type,
-                                                 Destroyer *destroyer,
-                                                 bool useEHCleanupForArray) {
-  if (isInConditionalBranch()) {
+void CIRGenFunction::pushLifetimeExtendedDestroy(
+    CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
+    bool useEHCleanupForArray, const ValueDecl *extendingDecl) {
+  if (isInConditionalBranch() || hiddenOutermostConditional) {
     cgm.errorNYI("conditional lifetime-extended destroy");
     return;
   }
@@ -1245,10 +1409,22 @@ void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
   assert(!cir::MissingFeatures::useEHCleanupForArray());
 
   pushCleanupAfterFullExpr(cleanupKind, addr, type, destroyer);
+
+  // A temporary that a loop condition variable extends is destroyed with the
+  // variable at the end of each iteration, in the loop's cleanup region.
+  if (lifetimeExtensionCapture &&
+      extendingDecl == lifetimeExtensionCapture->extendingDecl) {
+    PendingCleanupEntry &entry = lifetimeExtendedCleanupStack.back();
+    entry.activeFlag = lifetimeExtensionCapture->activeFlag;
+    entry.capturedBy = lifetimeExtensionCapture->cleanups;
+  }
 }
 
 void CIRGenFunction::pushPendingCleanupToEHStack(
     const PendingCleanupEntry &entry) {
+  std::optional<CapturedCleanups::CaptureScope> capture;
+  if (entry.capturedBy)
+    capture.emplace(*entry.capturedBy);
   ehStack.pushCleanup<DestroyObject>(entry.kind, entry.addr, entry.type,
                                      entry.destroyer);
 
@@ -1276,7 +1452,9 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
   // Differently from LLVM traditional codegen, use a higher level
   // representation instead of lowering directly to a loop.
   mlir::Type cirElementType = convertTypeForMem(elementType);
-  cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+  cir::PointerType ptrToElmType = builder.getPointerTo(
+      cirElementType,
+      mlir::cast<cir::PointerType>(begin.getType()).getAddrSpace());
 
   auto regionBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
     mlir::BlockArgument arg =

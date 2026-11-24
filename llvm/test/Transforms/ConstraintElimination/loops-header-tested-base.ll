@@ -292,11 +292,10 @@ define void @loop_iv_cond_variable_bound(i32 %n) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[IV]], [[N:%.*]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[IV]], [[N]]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[IV]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
@@ -355,8 +354,7 @@ define void @loop_iv_cond_constant_bound() {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[IV]], 2

@@ -231,7 +231,7 @@ public:
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
   LLVM_ABI Rematerializer(MachineFunction &MF,
-                          SmallVectorImpl<RegionBoundaries> &Regions,
+                          MutableArrayRef<RegionBoundaries> Regions,
                           LiveIntervals &LIS);
 
   /// Goes through the whole MF and identifies all rematerializable registers.
@@ -468,7 +468,7 @@ private:
     void LRE_WillEraseInstruction(MachineInstr *MI) override;
   };
 
-  SmallVectorImpl<RegionBoundaries> &Regions;
+  MutableArrayRef<RegionBoundaries> Regions;
   MachineRegisterInfo &MRI;
   LiveIntervals &LIS;
   const TargetInstrInfo &TII;

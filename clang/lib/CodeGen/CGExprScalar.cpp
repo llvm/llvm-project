@@ -36,6 +36,7 @@
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -173,6 +174,15 @@ static bool MustVisitNullValue(const Expr *E) {
   // it's not necessarily a simple constant and it must be evaluated
   // for its potential side effects.
   return E->getType()->isNullPtrType();
+}
+
+/// Return true if conversion to \p T has the semantics of conversion to bool:
+/// \p T is bool or an enumeration with a fixed underlying type of bool
+/// (C23 6.7.3.3p16).
+static bool hasBoolConversionSemantics(QualType T) {
+  if (const auto *ED = T->getAsEnumDecl())
+    return ED->isFixed() && ED->getIntegerType()->isBooleanType();
+  return T->isBooleanType();
 }
 
 /// If \p E is a widened promoted integer, get its base (unpromoted) type.
@@ -370,8 +380,11 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   Value *EmitLoadOfLValue(const Expr *E) {
-    Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
-                                E->getExprLoc());
+    LValue LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+    if (CGF.CurLoadedLValueCapture && CGF.CurLoadedLValueCapture->E == E)
+      CGF.CurLoadedLValueCapture->LV = LV;
+
+    Value *V = EmitLoadOfLValue(LV, E->getExprLoc());
 
     EmitLValueAlignmentAssumption(E, V);
     return V;
@@ -870,7 +883,8 @@ public:
       auto *RHSMatTy = dyn_cast<ConstantMatrixType>(
           BO->getRHS()->getType().getCanonicalType());
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
-      if (LHSMatTy && RHSMatTy)
+      // In HLSL, matrix * matrix is element-wise, so skip this block.
+      if (LHSMatTy && RHSMatTy && !CGF.getLangOpts().HLSL)
         return MB.CreateMatrixMultiply(Ops.LHS, Ops.RHS, LHSMatTy->getNumRows(),
                                        LHSMatTy->getNumColumns(),
                                        RHSMatTy->getNumColumns());
@@ -1639,7 +1653,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   // TODO(leonardchan): When necessary, add another if statement checking for
   // conversions to fixed point types from other types.
   if (SrcType->isFixedPointType()) {
-    if (DstType->isBooleanType())
+    if (hasBoolConversionSemantics(DstType))
       // It is important that we check this before checking if the dest type is
       // an integer because booleans are technically integer types.
       // We do not need to check the padding bit on unsigned types if unsigned
@@ -1675,7 +1689,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   llvm::Type *SrcTy = Src->getType();
 
   // Handle conversions to bool first, they are special: comparisons against 0.
-  if (DstType->isBooleanType())
+  if (hasBoolConversionSemantics(DstType))
     return EmitConversionToBool(Src, SrcType);
 
   llvm::Type *DstTy = ConvertType(DstType);
@@ -1883,7 +1897,7 @@ Value *ScalarExprEmitter::EmitComplexToScalarConversion(
   SrcTy = SrcTy->castAs<ComplexType>()->getElementType();
 
   // Handle conversions to bool first, they are special: comparisons against 0.
-  if (DstTy->isBooleanType()) {
+  if (hasBoolConversionSemantics(DstTy)) {
     //  Complex != 0  -> (Real != 0) | (Imag != 0)
     Src.first = EmitScalarConversion(Src.first, SrcTy, DstTy, Loc);
     Src.second = EmitScalarConversion(Src.second, SrcTy, DstTy, Loc);
@@ -2245,19 +2259,21 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   TestAndClearIgnoreResultAssign();
 
-  // Handle the vector case.  The base must be a vector, the index must be an
-  // integer value.
+  // HLSL matrix loads are normalized to column-major register values, but
+  // non-HLSL matrix values retain the selected memory layout.
   Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
   Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   llvm::MatrixBuilder MB(Builder);
 
-  Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
-                       /*IsRowMajor=*/false);
+  bool IsMatrixRowMajor =
+      !CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+  Value *Idx =
+      MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
@@ -2507,7 +2523,7 @@ static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
 }
 
 bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
-  assert(E->getType()->isSignableType(getContext()));
+  assert(E->getType().getAtomicUnqualifiedType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
 
@@ -2589,8 +2605,6 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
-
     llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // V is an allocated temporary for constructing the matrix.
     for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
@@ -2604,7 +2618,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
         llvm::Value *Cast = CGF.EmitScalarConversion(
             RVal.getScalarVal(), LoadList[LoadIdx].getType(),
             MatTy->getElementType(), Loc);
-        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        unsigned MatrixIdx = MatTy->getColumnMajorFlattenedIndex(Row, Col);
         V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
       }
     }
@@ -3349,7 +3363,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
 
   if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
     type = atomicTy->getValueType();
-    if (isInc && type->isBooleanType()) {
+    if (isInc && hasBoolConversionSemantics(type)) {
       llvm::Value *True = CGF.EmitToMemory(Builder.getTrue(), type);
       if (isPre) {
         Builder.CreateStore(True, LV.getAddress(), LV.isVolatileQualified())
@@ -3365,7 +3379,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // Special case for atomic increment / decrement on integers, emit
     // atomicrmw instructions.  We skip this if we want to be doing overflow
     // checking, and fall into the slow path with the atomic cmpxchg loop.
-    if (!type->isBooleanType() && type->isIntegerType() &&
+    if (!hasBoolConversionSemantics(type) && type->isIntegerType() &&
         !(type->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
@@ -3421,7 +3435,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   //          -> bool = ((int)bool + 1 != 0)
   // An interesting aspect of this is that increment is always true.
   // Decrement does not have this property.
-  if (isInc && type->isBooleanType()) {
+  if (isInc && hasBoolConversionSemantics(type)) {
     value = Builder.getTrue();
 
   // Most common case by far: integer increment.
@@ -3557,12 +3571,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *amt;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      // Another special case: half FP increment should be done via float. If
-      // the input isn't already half, it may be i16.
-      Value *bitcast = Builder.CreateBitCast(input, CGF.CGM.HalfTy);
-      value = Builder.CreateFPExt(bitcast, CGF.CGM.FloatTy, "incdec.conv");
-    }
+    // Another special case: half FP increment should be done via float.
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
+      value = Builder.CreateFPExt(value, CGF.CGM.FloatTy, "incdec.conv");
 
     if (value->getType()->isFloatTy())
       amt = llvm::ConstantFP::get(VMContext,
@@ -3593,12 +3604,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     }
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
       value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
-      value = Builder.CreateBitCast(value, input->getType());
-    }
 
-  // Fixed-point types.
+    // Fixed-point types.
   } else if (type->isFixedPointType()) {
     // Fixed-point types are tricky. In some cases, it isn't possible to
     // represent a 1 or a -1 in the type at all. Piggyback off of
@@ -4343,7 +4352,8 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     }
   }
 
-  if (Ops.Ty->isConstantMatrixType()) {
+  // In HLSL, matrix / matrix is element-wise, so skip this block.
+  if (Ops.Ty->isConstantMatrixType() && !Ops.RHS->getType()->isVectorTy()) {
     llvm::MatrixBuilder MB(Builder);
     // We need to check the types of the operands of the operator to get the
     // correct matrix dimensions.
@@ -4485,12 +4495,11 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   Builder.SetInsertPoint(overflowBB);
 
   // Get the overflow handler.
-  llvm::Type *Int8Ty = CGF.Int8Ty;
-  llvm::Type *argTypes[] = { CGF.Int64Ty, CGF.Int64Ty, Int8Ty, Int8Ty };
-  llvm::FunctionType *handlerTy =
-      llvm::FunctionType::get(CGF.Int64Ty, argTypes, true);
+  ASTContext &Ctx = CGF.getContext();
+  QualType ArgTys[] = {Ctx.LongLongTy, Ctx.LongLongTy, Ctx.UnsignedCharTy,
+                       Ctx.UnsignedCharTy};
   llvm::FunctionCallee handler =
-      CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
+      CGF.CGM.CreateRuntimeFunction(Ctx.LongLongTy, ArgTys, *handlerName);
 
   // Sign extend the args to 64-bit, so that we can use the same handler for
   // all types of overflow.
@@ -6411,6 +6420,23 @@ EmitGEPOffsetInBytes(Value *BasePtr, llvm::Type *ElemTy,
   return {TotalOffset, OffsetOverflows};
 }
 
+// OpenMP section maps pass `section - host_offset`. A GEP of an array-of-arrays
+// from that pointer is not inbounds of the allocation.
+static llvm::GEPNoWrapFlags
+inBoundsGEPFlags(const CodeGenFunction &CGF, const llvm::Value *Ptr,
+                 llvm::Type *SrcTy, bool SignedIndices, bool IsSubtraction) {
+  llvm::GEPNoWrapFlags NW;
+  bool SectionGEP = CGF.getLangOpts().OpenMPIsTargetDevice &&
+                    SrcTy->isArrayTy() &&
+                    SrcTy->getArrayElementType()->isArrayTy() &&
+                    !isa<llvm::AllocaInst>(llvm::getUnderlyingObject(Ptr));
+  if (!SectionGEP)
+    NW = llvm::GEPNoWrapFlags::inBounds();
+  if (!SignedIndices && !IsSubtraction)
+    NW |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 Value *
 CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         ArrayRef<Value *> IdxList,
@@ -6418,9 +6444,8 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         SourceLocation Loc, const Twine &Name) {
   llvm::Type *PtrTy = Ptr->getType();
 
-  llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-  if (!SignedIndices && !IsSubtraction)
-    NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  llvm::GEPNoWrapFlags NWFlags =
+      inBoundsGEPFlags(*this, Ptr, ElemTy, SignedIndices, IsSubtraction);
 
   Value *GEPVal = Builder.CreateGEP(ElemTy, Ptr, IdxList, Name, NWFlags);
 
@@ -6531,10 +6556,9 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
     const Twine &Name) {
   if (!SanOpts.has(SanitizerKind::PointerOverflow)) {
-    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-    if (!SignedIndices && !IsSubtraction)
-      NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
-
+    llvm::GEPNoWrapFlags NWFlags =
+        inBoundsGEPFlags(*this, Addr.getBasePointer(), Addr.getElementType(),
+                         SignedIndices, IsSubtraction);
     return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
   }
 

@@ -26,12 +26,12 @@ function(add_orc_rt_unittest test_name)
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 endfunction()
 
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  set(ORC_RT_SUPPORT_TEST_SYS_SOURCES
-    support/sys/ErrnoTest.cpp
+if (ORC_RT_TARGET_POSIX)
+  set(ORC_RT_SUPPORT_TEST_HOST_SOURCES
+    support/host/ErrnoTest.cpp
   )
 else()
-  set(ORC_RT_SUPPORT_TEST_SYS_SOURCES)
+  set(ORC_RT_SUPPORT_TEST_HOST_SOURCES)
 endif()
 
 # SupportTests links the Support objects and nothing else, so a new
@@ -61,8 +61,11 @@ add_orc_rt_unittest(SupportTests
   support/ProxyTest.cpp
   support/RTTICrossDylibTest.cpp
   support/RTTITest.cpp
+  support/RemoteSymbolLookupSetTest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
+  support/SymbolLookupResultTest.cpp
+  support/SymbolLookupSetTest.cpp
   support/WrapperFunctionBufferTest.cpp
   support/bind-test.cpp
   support/bit-test.cpp
@@ -72,50 +75,50 @@ add_orc_rt_unittest(SupportTests
   support/span-test.cpp
 
   support/sps/SPSAllocActionTest.cpp
+  support/sps/SPSJITDylibLookupFlagsTest.cpp
   support/sps/SPSMemoryFlagsTest.cpp
+  support/sps/SPSSymbolLookupResultTest.cpp
+  support/sps/SPSSymbolLookupSetTest.cpp
   support/sps/SPSWrapperFunctionBufferTest.cpp
   support/sps/SPSWrapperFunctionTest.cpp
   support/sps/SimplePackedSerializationTest.cpp
 
-  ${ORC_RT_SUPPORT_TEST_SYS_SOURCES}
+  ${ORC_RT_SUPPORT_TEST_HOST_SOURCES}
 
   tools/OptionParserTest.cpp
 
   LINK_LIBS orc-rt-support-objects
   )
 
-# Per-system test helpers and tests, composed the way lib/ composes its
-# per-system implementations; see the note in lib/bedrock/CMakeLists.txt. Tests
-# of a per-system implementation live under sys/<system>/, mirroring lib/. Tests
-# of portable APIs live outside sys/ and reach the system through the helpers,
+# Per-host test helpers and tests, composed the way lib/ composes its per-host
+# implementations; see the note in lib/bedrock/CMakeLists.txt. Tests of a
+# per-host implementation live under host/<system>/, mirroring lib/. Tests of
+# portable APIs live outside host/ and reach the system through the helpers,
 # so they join a system's list only once it provides the helpers, and the
 # implementation under test.
-set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
-  bedrock/SocketHandleTest.cpp
-  bedrock/sps/SimpleRemoteCAOverSocketTest.cpp
-  bedrock/sys/posix/SocketConnectorTest.cpp
-  bedrock/sys/posix/SocketTestUtils.cpp
-  )
-
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  set(ORC_RT_BEDROCK_TEST_SYS_SOURCES ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES})
-else()
-  # No socket helpers or socket transport yet, so the socket tests are not
-  # built.
-  set(ORC_RT_BEDROCK_TEST_SYS_SOURCES)
-endif()
-
 if (APPLE)
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES
-    bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
+    bedrock/host/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
     )
 else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)
 endif()
 
+if (ORC_RT_TARGET_POSIX)
+  set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
+    bedrock/host/posix/DlfcnHostTest.cpp
+    )
+else()
+  set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES)
+endif()
+
+# Each library's tests link that library and the ones beneath it, and nothing
+# else. A dependency on a library above shows up as a link error rather than
+# going unnoticed.
 add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
-  bedrock/ConnectionSpecTest.cpp
+  bedrock/ControllerHandlerTagCTest.c
+  bedrock/ControllerHandlerTagTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
   bedrock/NativeDylibManagerTest.cpp
@@ -127,32 +130,68 @@ add_orc_rt_unittest(BedrockTests
   bedrock/ThreadPoolRunnerTest.cpp
 
   bedrock/sps/CallSPSCITest.cpp
+  bedrock/sps/LookupInJITDylibSPSTest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
+  bedrock/sps/SessionSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
-  bedrock/sps/SimpleRemoteCATest.cpp
 
-  bedrock/sys/CPUFeaturesTest.cpp
-  bedrock/sys/TargetTripleTest.cpp
+  bedrock/host/CPUFeaturesTest.cpp
+  bedrock/host/TargetTripleTest.cpp
 
-  ${ORC_RT_BEDROCK_TEST_SYS_SOURCES}
+  bedrock/sys/posix/DlfcnLoaderAdapterCTest.c
+  bedrock/sys/posix/DlfcnLoaderAdapterTest.cpp
+
+  ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES}
   ${ORC_RT_BEDROCK_TEST_APPLE_SOURCES}
 
   LINK_LIBS orc-rt-bedrock-objects orc-rt-support-objects
   )
 
-# Build a shared library for NativeDylibManager tests.
-add_library(NativeDylibManagerTestLib SHARED
-  Inputs/NativeDylibManagerTestLib.cpp)
-set_target_properties(NativeDylibManagerTestLib PROPERTIES
-  PREFIX ""
-  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
-  FOLDER "orc-rt/Tests")
-target_compile_options(NativeDylibManagerTestLib PRIVATE
-  ${ORC_RT_COMPILE_FLAGS})
+add_orc_rt_unittest(ConnectTests
+  connect/ConnectionSpecTest.cpp
+  connect/VettedPeerTest.cpp
+
+  connect/sps/SimpleRemoteCATest.cpp
+
+  LINK_LIBS orc-rt-connect-objects orc-rt-bedrock-objects
+            orc-rt-support-objects
+  )
+
+# The socket helpers, the socket transport and TCP are POSIX-only for now, so
+# their tests are too.
+if (ORC_RT_TARGET_POSIX)
+  add_orc_rt_unittest(ConnectSocketTests
+    connect-socket/SocketHandleTest.cpp
+
+    connect-socket/sps/SimpleRemoteCAOverSocketTest.cpp
+
+    connect-socket/host/posix/SocketConnectorTest.cpp
+    connect-socket/host/posix/SocketTestUtils.cpp
+
+    LINK_LIBS orc-rt-connect-socket-objects orc-rt-connect-objects
+              orc-rt-bedrock-objects orc-rt-support-objects
+    )
+
+  add_orc_rt_unittest(ConnectTCPTests
+    connect-tcp/TCPConnectorTest.cpp
+    connect-tcp/TCPTest.cpp
+
+    connect-tcp/host/posix/TCPCloseOnExecTest.cpp
+    connect-tcp/host/posix/TCPTestUtils.cpp
+
+    connect-socket/host/posix/SocketTestUtils.cpp
+
+    LINK_LIBS orc-rt-connect-tcp-objects orc-rt-connect-socket-objects
+              orc-rt-connect-objects orc-rt-bedrock-objects
+              orc-rt-support-objects
+    )
+endif()
+
+# The shared test library, built in test/Inputs.
 target_compile_definitions(BedrockTests PRIVATE
-  "NDM_TEST_LIB_PATH=\"$<TARGET_FILE:NativeDylibManagerTestLib>\"")
-add_dependencies(BedrockTests NativeDylibManagerTestLib)
+  "ORC_RT_TEST_DYLIB_PATH=\"$<TARGET_FILE:orc-rt-test-dylib>\"")
+add_dependencies(BedrockTests orc-rt-test-dylib)
 
 # Build a shared library for RTTICrossDylibTest. It links its own copy of the
 # runtime objects, giving it a LibraryID distinct from SupportTests's, so the

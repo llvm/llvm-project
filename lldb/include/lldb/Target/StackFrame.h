@@ -231,6 +231,12 @@ public:
   ///   not be provided.
   virtual Block *GetFrameBlock();
 
+  /// Let F be this frame's function. Returns true if \p addr points to code
+  /// inside F.
+  /// Note: if some other function F2 has been inlined into F, and \p
+  /// addr points to code of the inlined copy of F2, this returns false.
+  bool IsAddressInFrameScope(const Address &addr);
+
   /// Get the RegisterContext for this frame, if possible.
   ///
   /// Returns a shared pointer to the RegisterContext for this stack frame.
@@ -309,12 +315,12 @@ public:
                          bool include_synthetic_vars = true,
                          bool must_have_valid_location = false);
 
-  /// Create a ValueObject for a variable name / pathname, possibly including
-  /// simple dereference/child selection syntax.
+  /// Evaluate the Data Inspection Language (DIL) expression \p var_expr in
+  /// this frame.
+  /// \see https://lldb.llvm.org/resources/dil.html
   ///
   /// \param[in] var_expr
-  ///     The string specifying a variable to base the VariableObject off
-  ///     of.
+  ///     The DIL expression to evaluate.
   ///
   /// \param[in] use_dynamic
   ///     Whether the correct dynamic type of an object pointer should be
@@ -511,6 +517,10 @@ public:
   /// guess if exact information is not available.
   virtual SourceLanguage GuessLanguage();
 
+  /// Returns an explanation of why this frame has no variable named \p name,
+  /// from the plugin of the frame's language, or an empty string.
+  std::string GetMissingVariableDiagnostic(llvm::StringRef name);
+
   /// Attempt to econstruct the ValueObject for a given raw address touched by
   /// the current instruction.  The ExpressionPath should indicate how to get
   /// to this value using "frame variable."
@@ -534,8 +544,8 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  virtual lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
-                                                             int64_t offset);
+  virtual lldb::ValueObjectSP
+  GuessValueForRegisterAndOffset(llvm::StringRef reg, int64_t offset);
 
   /// Attempt to reconstruct the ValueObject for a variable with a given \a name
   /// from within the current StackFrame, within the current block. The search
@@ -636,17 +646,6 @@ protected:
   std::recursive_mutex m_mutex;
 
 private:
-  /// Private methods, called from GetValueForVariableExpressionPath.
-  /// See that method for documentation of parameters and return value.
-  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
-
-  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error,
-      lldb::DILMode mode = lldb::eDILModeFull);
-
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;
 };

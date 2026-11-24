@@ -118,11 +118,141 @@ bool isTrivialFiller(const Expr *E) {
   return false;
 }
 
+bool castPreservesZero(const CastExpr *CE) {
+  switch (CE->getCastKind()) {
+    // No-ops.
+  case CK_NoOp:
+  case CK_UserDefinedConversion:
+  case CK_ConstructorConversion:
+  case CK_BitCast:
+  case CK_ToUnion:
+  case CK_ToVoid:
+    // Conversions between (possibly-complex) integral, (possibly-complex)
+    // floating-point, and bool.
+  case CK_BooleanToSignedIntegral:
+  case CK_FloatingCast:
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToBoolean:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_FloatingComplexToReal:
+  case CK_FloatingRealToComplex:
+  case CK_FloatingToBoolean:
+  case CK_FloatingToIntegral:
+  case CK_IntegralCast:
+  case CK_IntegralComplexCast:
+  case CK_IntegralComplexToBoolean:
+  case CK_IntegralComplexToFloatingComplex:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralRealToComplex:
+  case CK_IntegralToBoolean:
+  case CK_IntegralToFloating:
+    // Reinterpreting integers as pointers and vice versa.
+  case CK_IntegralToPointer:
+  case CK_PointerToIntegral:
+    // Language extensions.
+  case CK_VectorSplat:
+  case CK_MatrixCast:
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+  case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
+    return true;
+
+  case CK_BaseToDerivedMemberPointer:
+  case CK_DerivedToBaseMemberPointer:
+  case CK_MemberPointerToBoolean:
+  case CK_NullToMemberPointer:
+  case CK_ReinterpretMemberPointer:
+    // FIXME: ABI-dependent.
+    return false;
+
+  case CK_AnyPointerToBlockPointerCast:
+  case CK_BlockPointerToObjCPointerCast:
+  case CK_CPointerToObjCPointerCast:
+  case CK_ObjCObjectLValueCast:
+  case CK_IntToOCLSampler:
+  case CK_ZeroToOCLOpaqueType:
+    // FIXME: Check these.
+    return false;
+
+  case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
+  case CK_FixedPointToFloating:
+  case CK_FixedPointToIntegral:
+  case CK_FloatingToFixedPoint:
+  case CK_IntegralToFixedPoint:
+    // FIXME: Do all fixed-point types represent zero as all 0 bits?
+    return false;
+
+  case CK_AddressSpaceConversion:
+  case CK_BaseToDerived:
+  case CK_DerivedToBase:
+  case CK_Dynamic:
+  case CK_NullToPointer:
+  case CK_PointerToBoolean:
+    // FIXME: Preserves zeroes only if zero pointers and null pointers have the
+    // same representation in all involved address spaces.
+    return false;
+
+  case CK_ARCConsumeObject:
+  case CK_ARCExtendBlockObject:
+  case CK_ARCProduceObject:
+  case CK_ARCReclaimReturnedObject:
+  case CK_CopyAndAutoreleaseBlockObject:
+  case CK_ArrayToPointerDecay:
+  case CK_FunctionToPointerDecay:
+  case CK_BuiltinFnToFnPtr:
+  case CK_Dependent:
+  case CK_LValueBitCast:
+  case CK_LValueToRValue:
+  case CK_LValueToRValueBitCast:
+  case CK_UncheckedDerivedToBase:
+  case CK_HLSLArrayRValue:
+    return false;
+  }
+  llvm_unreachable("Unhandled clang::CastKind enum");
+}
+
 bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *FD) {
   for (const FunctionDecl *PD = FD; PD; PD = PD->getPreviousDecl())
     if (!PD->isInlineBuiltinDeclaration())
       return false;
   return true;
+}
+
+bool isConstantEmittableObjectType(QualType Type) {
+  assert(Type.isCanonical());
+  assert(!Type->isReferenceType());
+
+  // Must be const-qualified but non-volatile.
+  Qualifiers Qs = Type.getLocalQualifiers();
+  if (!Qs.hasConst() || Qs.hasVolatile())
+    return false;
+
+  // Otherwise, all object types satisfy this except C++ classes with
+  // mutable subobjects or non-trivial copy/destroy behavior.
+  if (const auto *RT = dyn_cast<RecordType>(Type))
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+      RD = RD->getDefinitionOrSelf();
+      if (RD->hasMutableFields() || !RD->isTrivial())
+        return false;
+    }
+
+  return true;
+}
+
+ConstantEmissionKind checkVarTypeForConstantEmission(QualType Type) {
+  Type = Type.getCanonicalType();
+  if (const auto *Ref = dyn_cast<ReferenceType>(Type)) {
+    if (isConstantEmittableObjectType(Ref->getPointeeType()))
+      return CEK_AsValueOrReference;
+    return CEK_AsReferenceOnly;
+  }
+  if (isConstantEmittableObjectType(Type))
+    return CEK_AsValueOnly;
+  return CEK_None;
 }
 
 } // namespace clang::CodeGenUtils

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PHIElimination.h"
+#include "CodeGenOptions.h"
 #include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -20,7 +21,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -42,7 +43,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -53,27 +53,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "phi-node-elimination"
 
-static cl::opt<bool>
-    DisableEdgeSplitting("disable-phi-elim-edge-splitting", cl::init(false),
-                         cl::Hidden,
-                         cl::desc("Disable critical edge splitting "
-                                  "during PHI elimination"));
-
-static cl::opt<bool>
-    SplitAllCriticalEdges("phi-elim-split-all-critical-edges", cl::init(false),
-                          cl::Hidden,
-                          cl::desc("Split all critical edges during "
-                                   "PHI elimination"));
-
-static cl::opt<bool> NoPhiElimLiveOutEarlyExit(
-    "no-phi-elim-live-out-early-exit", cl::init(false), cl::Hidden,
-    cl::desc("Do not use an early exit if isLiveOutPastPHIs returns true."));
-
 namespace {
 
 class PHIEliminationImpl {
+  const CodeGenOptions *Opts = nullptr;
   MachineRegisterInfo *MRI = nullptr; // Machine register information
-  LiveVariables *LV = nullptr;
   SlotIndexes *SI = nullptr;
   LiveIntervals *LIS = nullptr;
   MachineLoopInfo *MLI = nullptr;
@@ -99,13 +83,10 @@ class PHIEliminationImpl {
 
   /// Split critical edges where necessary for good coalescer performance.
   bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
-                     MachineLoopInfo *MLI,
-                     std::vector<SparseBitVector<>> *LiveInSets,
-                     MachineDomTreeUpdater &MDTU);
+                     MachineLoopInfo *MLI, MachineDomTreeUpdater &MDTU);
 
-  // These functions are temporary abstractions around LiveVariables and
-  // LiveIntervals, so they can go away when LiveVariables does.
-  bool isLiveIn(Register Reg, const MachineBasicBlock *MBB);
+  void computeLiveOutSets(const MachineFunction &MF);
+
   bool isLiveOutPastPHIs(Register Reg, const MachineBasicBlock *MBB);
 
   using BBVRegPair = std::pair<unsigned, Register>;
@@ -113,6 +94,33 @@ class PHIEliminationImpl {
 
   // Count the number of non-undef PHI uses of each register in each BB.
   VRegPHIUse VRegPHIUseCount;
+
+  struct PHISrcLaneKill {
+    LaneBitmask Lanes;
+    SlotIndex Index;
+  };
+
+  using PHISrcLaneKillMap =
+      DenseMap<BBVRegPair, SmallVector<PHISrcLaneKill, 2>>;
+
+  // Copies are not always inserted in index order, so keep the kills sorted
+  // to find the latest read of a lane by searching from the back.
+  static void addPHISrcLaneKill(SmallVectorImpl<PHISrcLaneKill> &Kills,
+                                LaneBitmask Lanes, SlotIndex Index) {
+    auto It = Kills.end();
+    if (!Kills.empty() && Index < Kills.back().Index) {
+      It = upper_bound(Kills, Index,
+                       [](SlotIndex Idx, const PHISrcLaneKill &Kill) {
+                         return Idx < Kill.Index;
+                       });
+    }
+
+    Kills.insert(It, {Lanes, Index});
+  }
+
+  // Index of each PHI source copy inserted in a BB, and the lanes of the
+  // source register it reads.
+  PHISrcLaneKillMap PHISrcLaneKills;
 
   // Defs of PHI sources which are implicit_def.
   SmallPtrSet<MachineInstr *, 4> ImpDefs;
@@ -122,12 +130,12 @@ class PHIEliminationImpl {
       DenseMap<MachineInstr *, Register, MachineInstrExpressionTrait>;
   LoweredPHIMap LoweredPHIs;
 
-  MachineFunctionPass *P = nullptr;
-  MachineFunctionAnalysisManager *MFAM = nullptr;
+  // A set of live-out regs for each MBB which is used to update LIS
+  // efficiently also with large functions.
+  std::vector<SparseBitVector<>> LiveOutSets;
 
 public:
-  PHIEliminationImpl(MachineFunctionPass *P) : P(P) {
-    auto *LVWrapper = P->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  PHIEliminationImpl(MachineFunctionPass *P) {
     auto *SIWrapper = P->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
@@ -140,7 +148,6 @@ public:
     auto *MBFIWrapper =
         P->getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
 
-    LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
     SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
     LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
@@ -151,15 +158,13 @@ public:
   }
 
   PHIEliminationImpl(MachineFunction &MF, MachineFunctionAnalysisManager &AM)
-      : LV(AM.getCachedResult<LiveVariablesAnalysis>(MF)),
-        SI(AM.getCachedResult<SlotIndexesAnalysis>(MF)),
+      : SI(AM.getCachedResult<SlotIndexesAnalysis>(MF)),
         LIS(AM.getCachedResult<LiveIntervalsAnalysis>(MF)),
         MLI(AM.getCachedResult<MachineLoopAnalysis>(MF)),
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
         PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
         MBPI(AM.getCachedResult<MachineBranchProbabilityAnalysis>(MF)),
-        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)), MFAM(&AM) {
-  }
+        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)) {}
 
   bool run(MachineFunction &MF);
 };
@@ -193,7 +198,6 @@ PHIEliminationPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachinePostDominatorTreeAnalysis>();
@@ -213,16 +217,17 @@ char &llvm::PHIEliminationID = PHIElimination::ID;
 INITIALIZE_PASS_BEGIN(PHIElimination, DEBUG_TYPE,
                       "Eliminate PHI nodes for register allocation", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
                     "Eliminate PHI nodes for register allocation", false, false)
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+  AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
+  AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
   AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -234,6 +239,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool PHIEliminationImpl::run(MachineFunction &MF) {
+  Opts = &getCodeGenOptions(MF);
   MRI = &MF.getRegInfo();
 
   MachineDomTreeUpdater MDTU(MDT, PDT,
@@ -242,46 +248,16 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   bool Changed = false;
 
   // Split critical edges to help the coalescer.
-  if (!DisableEdgeSplitting && (LV || LIS)) {
-    // A set of live-in regs for each MBB which is used to update LV
-    // efficiently also with large functions.
-    std::vector<SparseBitVector<>> LiveInSets;
-    if (LV) {
-      LiveInSets.resize(MF.size());
-      for (unsigned Index = 0, e = MRI->getNumVirtRegs(); Index != e; ++Index) {
-        // Set the bit for this register for each MBB where it is
-        // live-through or live-in (killed).
-        Register VirtReg = Register::index2VirtReg(Index);
-        MachineInstr *DefMI = MRI->getVRegDef(VirtReg);
-        if (!DefMI)
-          continue;
-        LiveVariables::VarInfo &VI = LV->getVarInfo(VirtReg);
-        SparseBitVector<>::iterator AliveBlockItr = VI.AliveBlocks.begin();
-        SparseBitVector<>::iterator EndItr = VI.AliveBlocks.end();
-        while (AliveBlockItr != EndItr) {
-          unsigned BlockNum = *(AliveBlockItr++);
-          LiveInSets[BlockNum].set(Index);
-        }
-        // The register is live into an MBB in which it is killed but not
-        // defined. See comment for VarInfo in LiveVariables.h.
-        MachineBasicBlock *DefMBB = DefMI->getParent();
-        if (VI.Kills.size() > 1 ||
-            (!VI.Kills.empty() && VI.Kills.front()->getParent() != DefMBB))
-          for (auto *MI : VI.Kills)
-            LiveInSets[MI->getParent()->getNumber()].set(Index);
-      }
-    }
-
+  if (Opts->phi_elim_edge_splitting && LIS) {
     for (auto &MBB : MF)
-      Changed |=
-          SplitPHIEdges(MF, MBB, MLI, (LV ? &LiveInSets : nullptr), MDTU);
+      Changed |= SplitPHIEdges(MF, MBB, MLI, MDTU);
   }
 
   // This pass takes the function out of SSA form.
   MRI->leaveSSA();
 
   // Populate VRegPHIUseCount
-  if (LV || LIS)
+  if (LIS)
     analyzePHINodes(MF);
 
   // Eliminate PHI instructions by inserting copies into predecessor blocks.
@@ -308,10 +284,28 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   LoweredPHIs.clear();
   ImpDefs.clear();
   VRegPHIUseCount.clear();
+  PHISrcLaneKills.clear();
 
   MF.getProperties().setNoPHIs();
 
   return Changed;
+}
+
+/// Move debug instructions preceding \p Position to immediately after it.
+static void moveDebugInstructionsAfter(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator Position) {
+  MachineBasicBlock::iterator InsertPt = std::next(Position);
+  for (auto I = MBB.begin(); I != Position;) {
+    if (!I->isDebugInstr()) {
+      ++I;
+      continue;
+    }
+
+    auto DebugBegin = I;
+    I = skipDebugInstructionsForward(I, Position,
+                                     /*SkipPseudoOp=*/false);
+    MBB.splice(InsertPt, &MBB, DebugBegin, I);
+  }
 }
 
 /// EliminatePHINodes - Eliminate phi nodes by inserting copy instructions in
@@ -321,9 +315,14 @@ bool PHIEliminationImpl::EliminatePHINodes(MachineFunction &MF,
   if (MBB.empty() || !MBB.front().isPHI())
     return false; // Quick exit for basic blocks without PHIs.
 
-  // Get an iterator to the last PHI node.
+  // Ignore debug instructions when choosing the destination-copy position.
+  // Move any skipped debug instructions after that position so they remain
+  // after the destination copies. Do not change pseudo-probe placement.
   MachineBasicBlock::iterator LastPHIIt =
-      std::prev(MBB.SkipPHIsAndLabels(MBB.begin()));
+      prev_nodbg(MBB.SkipPHIsLabelsAndDebug(MBB.begin(), /*Reg=*/Register(),
+                                            /*SkipPseudoOp=*/false),
+                 MBB.begin(), /*SkipPseudoOp=*/false);
+  moveDebugInstructionsAfter(MBB, LastPHIIt);
 
   // If all incoming edges are critical, we try to deduplicate identical PHIs so
   // that we generate fewer copies. If at any edge is non-critical, we either
@@ -377,7 +376,6 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
   unsigned NumSrcs = (MPhi->getNumOperands() - 1) / 2;
   Register DestReg = MPhi->getOperand(0).getReg();
   assert(MPhi->getOperand(0).getSubReg() == 0 && "Can't handle sub-reg PHIs");
-  bool isDead = MPhi->getOperand(0).isDead();
 
   // Create a new register for the incoming PHI arguments.
   MachineFunction &MF = *MBB.getParent();
@@ -390,6 +388,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
   // into the phi node destination.
   MachineInstr *PHICopy = nullptr;
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
   if (allPhiOperandsUndefined(*MPhi, *MRI))
     // If all sources of a PHI node are implicit_def or undef uses, just emit an
     // implicit_def instead of a copy.
@@ -432,62 +431,6 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     auto Res = MF->DebugPHIPositions.insert({ID, P});
     assert(Res.second);
     (void)Res;
-  }
-
-  // Update live variable information if there is any.
-  if (LV) {
-    if (IncomingReg) {
-      LiveVariables::VarInfo &VI = LV->getVarInfo(IncomingReg);
-
-      MachineInstr *OldKill = nullptr;
-      bool IsPHICopyAfterOldKill = false;
-
-      if (reusedIncoming && (OldKill = VI.findKill(&MBB))) {
-        // Calculate whether the PHICopy is after the OldKill.
-        // In general, the PHICopy is inserted as the first non-phi instruction
-        // by default, so it's before the OldKill. But some Target hooks for
-        // createPHIDestinationCopy() may modify the default insert position of
-        // PHICopy.
-        for (auto I = MBB.SkipPHIsAndLabels(MBB.begin()), E = MBB.end(); I != E;
-             ++I) {
-          if (I == PHICopy)
-            break;
-
-          if (I == OldKill) {
-            IsPHICopyAfterOldKill = true;
-            break;
-          }
-        }
-      }
-
-      // When we are reusing the incoming register and it has been marked killed
-      // by OldKill, if the PHICopy is after the OldKill, we should remove the
-      // killed flag from OldKill.
-      if (IsPHICopyAfterOldKill) {
-        LLVM_DEBUG(dbgs() << "Remove old kill from " << *OldKill);
-        LV->removeVirtualRegisterKilled(IncomingReg, *OldKill);
-        LLVM_DEBUG(MBB.dump());
-      }
-
-      // Add information to LiveVariables to know that the first used incoming
-      // value or the resued incoming value whose PHICopy is after the OldKIll
-      // is killed. Note that because the value is defined in several places
-      // (once each for each incoming block), the "def" block and instruction
-      // fields for the VarInfo is not filled in.
-      if (!OldKill || IsPHICopyAfterOldKill)
-        LV->addVirtualRegisterKilled(IncomingReg, *PHICopy);
-    }
-
-    // Since we are going to be deleting the PHI node, if it is the last use of
-    // any registers, or if the value itself is dead, we need to move this
-    // information over to the new copy we just inserted.
-    LV->removeVirtualRegistersKilled(*MPhi);
-
-    // If the result is dead, update LV.
-    if (isDead) {
-      LV->addVirtualRegisterDead(DestReg, *PHICopy);
-      LV->removeVirtualRegisterDead(DestReg, *MPhi);
-    }
   }
 
   // Update LiveIntervals for the new copy or implicit def.
@@ -559,10 +502,9 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       assert(DestVNI && "PHI destination should be live at its definition.");
       DestVNI->def = NewStart;
     }
-  }
 
-  // Adjust the VRegPHIUseCount map to account for the removal of this PHI node.
-  if (LV || LIS) {
+    // Adjust the VRegPHIUseCount map to account for the removal of this PHI
+    // node.
     for (unsigned i = 1; i != MPhi->getNumOperands(); i += 2) {
       if (!MPhi->getOperand(i).isUndef()) {
         --VRegPHIUseCount[BBVRegPair(
@@ -604,12 +546,15 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
              "Expected a single use from UnspillableTerminator");
       SrcRegDef->getOperand(0).setReg(IncomingReg);
 
-      // Update LiveVariables.
-      if (LV) {
-        LiveVariables::VarInfo &SrcVI = LV->getVarInfo(SrcReg);
-        LiveVariables::VarInfo &IncomingVI = LV->getVarInfo(IncomingReg);
-        IncomingVI.AliveBlocks = std::move(SrcVI.AliveBlocks);
-        SrcVI.AliveBlocks.clear();
+      if (LIS) {
+        LiveInterval &SrcLI = LIS->getInterval(SrcReg);
+        SlotIndex DefIdx = LIS->getInstructionIndex(*SrcRegDef).getRegSlot();
+        LiveInterval &IncomingLI = LIS->getOrCreateEmptyInterval(IncomingReg);
+        VNInfo *VNI =
+            IncomingLI.getNextValue(DefIdx, LIS->getVNInfoAllocator());
+        for (const LiveInterval::Segment &S : SrcLI)
+          IncomingLI.addSegment(LiveInterval::Segment(S.start, S.end, VNI));
+        LIS->removeInterval(SrcReg);
       }
 
       continue;
@@ -643,71 +588,8 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       }
     }
 
-    // We only need to update the LiveVariables kill of SrcReg if this was the
-    // last PHI use of SrcReg to be lowered on this CFG edge and it is not live
-    // out of the predecessor. We can also ignore undef sources.
-    if (LV && !SrcUndef &&
-        !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)] &&
-        !LV->isLiveOut(SrcReg, opBlock)) {
-      // We want to be able to insert a kill of the register if this PHI (aka,
-      // the copy we just inserted) is the last use of the source value. Live
-      // variable analysis conservatively handles this by saying that the value
-      // is live until the end of the block the PHI entry lives in. If the value
-      // really is dead at the PHI copy, there will be no successor blocks which
-      // have the value live-in.
-
-      // Okay, if we now know that the value is not live out of the block, we
-      // can add a kill marker in this block saying that it kills the incoming
-      // value!
-
-      // In our final twist, we have to decide which instruction kills the
-      // register.  In most cases this is the copy, however, terminator
-      // instructions at the end of the block may also use the value. In this
-      // case, we should mark the last such terminator as being the killing
-      // block, not the copy.
-      MachineBasicBlock::iterator KillInst = opBlock.end();
-      for (MachineBasicBlock::iterator Term = InsertPos; Term != opBlock.end();
-           ++Term) {
-        if (Term->readsRegister(SrcReg, /*TRI=*/nullptr))
-          KillInst = Term;
-      }
-
-      if (KillInst == opBlock.end()) {
-        // No terminator uses the register.
-
-        if (reusedIncoming || !IncomingReg) {
-          // We may have to rewind a bit if we didn't insert a copy this time.
-          KillInst = InsertPos;
-          while (KillInst != opBlock.begin()) {
-            --KillInst;
-            if (KillInst->isDebugInstr())
-              continue;
-            if (KillInst->readsRegister(SrcReg, /*TRI=*/nullptr))
-              break;
-          }
-        } else {
-          // We just inserted this copy.
-          KillInst = NewSrcInstr;
-        }
-      }
-      assert(KillInst->readsRegister(SrcReg, /*TRI=*/nullptr) &&
-             "Cannot find kill instruction");
-
-      // Finally, mark it killed.
-      LV->addVirtualRegisterKilled(SrcReg, *KillInst);
-
-      // This vreg no longer lives all of the way through opBlock.
-      unsigned opBlockNum = opBlock.getNumber();
-      LV->getVarInfo(SrcReg).AliveBlocks.reset(opBlockNum);
-    } else if (LV && SrcUndef &&
-               !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)] &&
-               !LV->isLiveOut(SrcReg, opBlock)) {
-      // For undef sources we don't need a kill marker, but the register may
-      // no longer be live through intermediate blocks after the PHI use is
-      // removed. Recompute its LiveVariables info to clear stale AliveBlocks.
-      if (MRI->getVRegDef(SrcReg))
-        LV->recomputeForSingleDefVirtReg(SrcReg);
-    }
+    BBVRegPair SrcKey(opBlock.getNumber(), SrcReg);
+    bool IsLastPHIUse = !VRegPHIUseCount.lookup(SrcKey);
 
     if (SI && NewSrcInstr)
       SI->insertMachineInstrInMaps(*NewSrcInstr);
@@ -718,10 +600,15 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
             SI &&
             "Expected SI to be available to insert new MI if LIS is available");
         LIS->addSegmentToEndOfBlock(IncomingReg, *NewSrcInstr);
+
+        if (!SrcUndef && LIS->getInterval(SrcReg).hasSubRanges()) {
+          addPHISrcLaneKill(
+              PHISrcLaneKills[SrcKey], TRI.getSubRegIndexLaneMask(SrcSubReg),
+              LIS->getInstructionIndex(*NewSrcInstr).getRegSlot());
+        }
       }
 
-      if (!SrcUndef &&
-          !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)]) {
+      if (!SrcUndef && IsLastPHIUse) {
         LiveInterval &SrcLI = LIS->getInterval(SrcReg);
 
         bool isLiveOut = false;
@@ -736,12 +623,42 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           }
         }
 
+        PHISrcLaneKillMap::iterator KillsIt = PHISrcLaneKills.end();
+        if (SrcLI.hasSubRanges())
+          KillsIt = PHISrcLaneKills.find(SrcKey);
+
         if (!isLiveOut) {
+          auto RecordLaneKill = [&](MachineInstr &MI) {
+            addPHISrcLaneKill(
+                KillsIt->second,
+                AnalyzeVirtRegLanesInBundle(MI, SrcReg, *MRI, TRI).first,
+                LIS->getInstructionIndex(MI).getRegSlot());
+          };
+
+          // Each lane dies at its own last read, which can be earlier than the
+          // last read of the whole register, so record a kill for every read
+          // after the first inserted copy, not just for the last one. A copy
+          // for a landing pad goes before the call, so this can include
+          // ordinary instructions and the copies themselves.
+          MachineBasicBlock::iterator ScanStart = InsertPos;
+          if (KillsIt != PHISrcLaneKills.end()) {
+            SlotIndex FirstCopyIndex = KillsIt->second.front().Index;
+            if (InsertPos == opBlock.end() ||
+                FirstCopyIndex <= SI->getIndexBefore(*InsertPos).getRegSlot()) {
+              ScanStart = std::next(MachineBasicBlock::iterator(
+                  LIS->getInstructionFromIndex(FirstCopyIndex)));
+            }
+          }
+
           MachineBasicBlock::iterator KillInst = opBlock.end();
-          for (MachineBasicBlock::iterator Term = InsertPos;
-               Term != opBlock.end(); ++Term) {
-            if (Term->readsRegister(SrcReg, /*TRI=*/nullptr))
-              KillInst = Term;
+          for (MachineBasicBlock::iterator MI = ScanStart; MI != opBlock.end();
+               ++MI) {
+            if (MI->isDebugInstr() ||
+                !MI->readsRegister(SrcReg, /*TRI=*/nullptr))
+              continue;
+            KillInst = MI;
+            if (KillsIt != PHISrcLaneKills.end())
+              RecordLaneKill(*MI);
           }
 
           if (KillInst == opBlock.end()) {
@@ -757,8 +674,10 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
                 if (KillInst->readsRegister(SrcReg, /*TRI=*/nullptr))
                   break;
               }
+              if (KillsIt != PHISrcLaneKills.end())
+                RecordLaneKill(*KillInst);
             } else {
-              // We just inserted this copy.
+              // We just inserted this copy, and its lanes are already recorded.
               KillInst = std::prev(InsertPos);
             }
           }
@@ -766,13 +685,30 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
                  "Cannot find kill instruction");
 
           SlotIndex LastUseIndex = LIS->getInstructionIndex(*KillInst);
-          SrcLI.removeSegment(LastUseIndex.getRegSlot(),
-                              LIS->getMBBEndIdx(&opBlock));
-          for (auto &SR : SrcLI.subranges()) {
-            SR.removeSegment(LastUseIndex.getRegSlot(),
-                             LIS->getMBBEndIdx(&opBlock));
+          SlotIndex BlockEndIndex = LIS->getMBBEndIdx(&opBlock);
+          SrcLI.removeSegment(LastUseIndex.getRegSlot(), BlockEndIndex);
+          if (KillsIt != PHISrcLaneKills.end()) {
+            for (LiveInterval::SubRange &SR : SrcLI.subranges()) {
+              LiveQueryResult LRQ = SR.Query(LastUseIndex);
+              if (!LRQ.valueOut())
+                continue;
+
+              // The segment can continue past this block when another
+              // predecessor reads the lane; only trim the part in opBlock.
+              SlotIndex EndIndex = std::min(LRQ.endPoint(), BlockEndIndex);
+              for (const PHISrcLaneKill &Kill : reverse(KillsIt->second)) {
+                if ((Kill.Lanes & SR.LaneMask).any()) {
+                  if (Kill.Index < EndIndex)
+                    SR.removeSegment(Kill.Index, EndIndex);
+                  break;
+                }
+              }
+            }
           }
         }
+
+        if (KillsIt != PHISrcLaneKills.end())
+          PHISrcLaneKills.erase(KillsIt);
       }
     }
   }
@@ -805,9 +741,10 @@ void PHIEliminationImpl::analyzePHINodes(const MachineFunction &MF) {
   }
 }
 
-bool PHIEliminationImpl::SplitPHIEdges(
-    MachineFunction &MF, MachineBasicBlock &MBB, MachineLoopInfo *MLI,
-    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater &MDTU) {
+bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
+                                       MachineBasicBlock &MBB,
+                                       MachineLoopInfo *MLI,
+                                       MachineDomTreeUpdater &MDTU) {
   if (MBB.empty() || !MBB.front().isPHI() || MBB.isEHPad())
     return false; // Quick exit for basic blocks without PHIs.
 
@@ -826,20 +763,21 @@ bool PHIEliminationImpl::SplitPHIEdges(
 
       // Avoid splitting backedges of loops. It would introduce small
       // out-of-line blocks into the loop which is very bad for code placement.
-      if (PreMBB == &MBB && !SplitAllCriticalEdges)
+      if (PreMBB == &MBB && !Opts->phi_elim_split_all_critical_edges)
         continue;
       const MachineLoop *PreLoop = MLI ? MLI->getLoopFor(PreMBB) : nullptr;
-      if (IsLoopHeader && PreLoop == CurLoop && !SplitAllCriticalEdges)
+      if (IsLoopHeader && PreLoop == CurLoop &&
+          !Opts->phi_elim_split_all_critical_edges)
         continue;
 
-      // LV doesn't consider a phi use live-out, so isLiveOut only returns true
-      // when the source register is live-out for some other reason than a phi
-      // use. That means the copy we will insert in PreMBB won't be a kill, and
-      // there is a risk it may not be coalesced away.
+      // isLiveOutPastPHIs only returns true when the source register is
+      // live-out for some other reason than a phi use. That means the copy we
+      // will insert in PreMBB won't be a kill, and there is a risk it may not
+      // be coalesced away.
       //
       // If the copy would be a kill, there is no need to split the edge.
       bool ShouldSplit = isLiveOutPastPHIs(Reg, PreMBB);
-      if (!ShouldSplit && !NoPhiElimLiveOutEarlyExit)
+      if (!ShouldSplit && Opts->phi_elim_live_out_early_exit)
         continue;
       if (ShouldSplit) {
         LLVM_DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge "
@@ -855,7 +793,8 @@ bool PHIEliminationImpl::SplitPHIEdges(
       // is likely to be left after coalescing. If we are looking at a loop
       // exiting edge, split it so we won't insert code in the loop, otherwise
       // don't bother.
-      ShouldSplit = ShouldSplit && !isLiveIn(Reg, &MBB);
+      ShouldSplit =
+          ShouldSplit && !LIS->isLiveInToMBB(LIS->getInterval(Reg), &MBB);
 
       // Check for a loop exiting edge.
       if (!ShouldSplit && CurLoop != PreLoop) {
@@ -872,13 +811,12 @@ bool PHIEliminationImpl::SplitPHIEdges(
         // Split unless this edge is entering CurLoop from an outer loop.
         ShouldSplit = PreLoop && !PreLoop->contains(CurLoop);
       }
-      if (!ShouldSplit && !SplitAllCriticalEdges)
+      if (!ShouldSplit && !Opts->phi_elim_split_all_critical_edges)
         continue;
-      MachineBasicBlock *NewBB;
-      if (P)
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *P, LiveInSets, &MDTU);
-      else
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *MFAM, LiveInSets, &MDTU);
+      if (LiveOutSets.empty())
+        computeLiveOutSets(MF);
+      MachineBasicBlock *NewBB =
+          PreMBB->SplitCriticalEdge(&MBB, {LIS, SI, MLI, &LiveOutSets}, &MDTU);
       if (!NewBB) {
         LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
@@ -897,31 +835,29 @@ bool PHIEliminationImpl::SplitPHIEdges(
   return Changed;
 }
 
-bool PHIEliminationImpl::isLiveIn(Register Reg, const MachineBasicBlock *MBB) {
-  assert((LV || LIS) &&
-         "isLiveIn() requires either LiveVariables or LiveIntervals");
-  if (LIS)
-    return LIS->isLiveInToMBB(LIS->getInterval(Reg), MBB);
-  else
-    return LV->isLiveIn(Reg, *MBB);
+void PHIEliminationImpl::computeLiveOutSets(const MachineFunction &MF) {
+  LiveOutSets.resize(MF.getNumBlockIDs());
+  for (unsigned Idx = 0, NumVRegs = MRI->getNumVirtRegs(); Idx != NumVRegs;
+       ++Idx) {
+    Register Reg = Register::index2VirtReg(Idx);
+    if (!LIS->hasInterval(Reg))
+      continue;
+    for (const LiveRange::Segment &S : LIS->getInterval(Reg)) {
+      for (const MachineBasicBlock *MBB = LIS->getMBBFromIndex(S.start);
+           MBB && LIS->getMBBEndIdx(MBB) <= S.end; MBB = MBB->getNextNode())
+        LiveOutSets[MBB->getNumber()].set(Idx);
+    }
+  }
 }
 
 bool PHIEliminationImpl::isLiveOutPastPHIs(Register Reg,
                                            const MachineBasicBlock *MBB) {
-  assert((LV || LIS) &&
-         "isLiveOutPastPHIs() requires either LiveVariables or LiveIntervals");
-  // LiveVariables considers uses in PHIs to be in the predecessor basic block,
-  // so that a register used only in a PHI is not live out of the block. In
-  // contrast, LiveIntervals considers uses in PHIs to be on the edge rather
-  // than in the predecessor basic block, so that a register used only in a PHI
-  // is live out of the block.
-  if (LIS) {
-    const LiveInterval &LI = LIS->getInterval(Reg);
-    for (const MachineBasicBlock *SI : MBB->successors())
-      if (LI.liveAt(LIS->getMBBStartIdx(SI)))
-        return true;
-    return false;
-  } else {
-    return LV->isLiveOut(Reg, *MBB);
-  }
+  // LiveIntervals considers uses in PHIs to be on the edge rather than in the
+  // predecessor basic block, so that a register used only in a PHI is live out
+  // of the block.
+  const LiveInterval &LI = LIS->getInterval(Reg);
+  for (const MachineBasicBlock *SI : MBB->successors())
+    if (LIS->isLiveInToMBB(LI, SI))
+      return true;
+  return false;
 }

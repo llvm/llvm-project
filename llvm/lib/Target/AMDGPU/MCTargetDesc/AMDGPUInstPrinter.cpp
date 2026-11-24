@@ -148,6 +148,17 @@ void AMDGPUInstPrinter::printSMEMOffset(const MCInst *MI, unsigned OpNo,
   O << formatHex(MI->getOperand(OpNo).getImm());
 }
 
+void AMDGPUInstPrinter::printSMEMOffsetPCRel(const MCInst *MI, unsigned OpNo,
+                                             const MCSubtargetInfo &STI,
+                                             raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    MAI.printExpr(O, *Op.getExpr());
+    return;
+  }
+  O << formatHex(Op.getImm());
+}
+
 void AMDGPUInstPrinter::printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                                                const MCSubtargetInfo &STI,
                                                raw_ostream &O) {
@@ -170,6 +181,11 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
 
     if (Imm & CPol::NV)
       O << " nv";
+
+    if (STI.hasFeature(AMDGPU::FeatureCacheFillSize)) {
+      const int64_t CFS = Imm & CPol::CFS;
+      printCFS(CFS, O);
+    }
 
     return;
   }
@@ -264,6 +280,27 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
     llvm_unreachable("unexpected scope policy value");
 }
 
+void AMDGPUInstPrinter::printCFS(int64_t CFS, raw_ostream &O) {
+  if (CFS == CPol::CFS_256B)
+    return;
+
+  O << " cfs:";
+
+  switch (CFS) {
+  case CPol::CFS_128B:
+    O << "CFS_128B";
+    break;
+  case CPol::CFS_64B:
+    O << "CFS_64B";
+    break;
+  case CPol::CFS_32B:
+    O << "CFS_32B";
+    break;
+  default:
+    llvm_unreachable("unexpected cache fill size value");
+  }
+}
+
 void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Dim = MI->getOperand(OpNo).getImm();
@@ -284,19 +321,10 @@ void AMDGPUInstPrinter::printR128A16(const MCInst *MI, unsigned OpNo,
     printNamedBit(MI, OpNo, O, "r128");
 }
 
-void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printFormat(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-}
-
-void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
-                                            const MCSubtargetInfo &STI,
-                                            raw_ostream &O) {
   using namespace llvm::AMDGPU::MTBUFFormat;
-
-  int OpNo =
-    AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::format);
-  assert(OpNo != -1);
 
   unsigned Val = MI->getOperand(OpNo).getImm();
   if (AMDGPU::isGFX10Plus(STI)) {
@@ -598,7 +626,7 @@ void AMDGPUInstPrinter::printImmediateBF16(uint32_t Imm,
   if (printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
     return;
 
-  O << formatHex(static_cast<uint64_t>(Imm));
+  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
 }
 
 void AMDGPUInstPrinter::printImmediateF16(uint32_t Imm,
@@ -989,14 +1017,6 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
                                                 AMDGPU::OpName::src1))
       printDefaultVccOperand(OpNo == 0, STI, O);
     break;
-  }
-
-  if (SIInstrFlags::isMTBUF(Desc)) {
-    int SOffsetIdx =
-      AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::soffset);
-    assert(SOffsetIdx != -1);
-    if ((int)OpNo == SOffsetIdx)
-      printSymbolicFormat(MI, STI, O);
   }
 }
 
@@ -1959,16 +1979,6 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatDec(Imm);
   else
     O << formatHex(static_cast<uint64_t>(Imm));
-}
-
-void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (!Imm)
-    return;
-
-  O << " scale_sel:" << formatDec(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

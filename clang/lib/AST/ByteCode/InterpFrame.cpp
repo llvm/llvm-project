@@ -24,13 +24,12 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Func(nullptr), RetPC(CodePtr()), Args(nullptr),
-      ArgSize(0), Depth(0) {}
+      ArgSize(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
-      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
-      Depth(Caller ? Caller->Depth + 1 : 0) {
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize) {
   assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
@@ -41,18 +40,18 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
 
   // Initialize argument blocks.
   for (unsigned I = 0, N = Func->getNumWrittenParams(); I != N; ++I)
-    new (argBlock(I)) Block(S.EvalID, Func->getParamDescriptor(I).Desc);
+    new (argBlock(I))
+        Block(S.EvalID, Func->getParamDescriptor(I).Desc, Block::None);
 
   if (Func->getFrameSize() == 0)
     return;
 
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      new (localBlock(Local.Offset))
-          Block(S.EvalID, Local.Desc, Block::InlineDescMD);
+      Block *B = localBlock(Local.Offset);
+      new (B) Block(S.EvalID, Local.Desc, Block::Local);
       // Note that we are NOT calling invokeCtor() here, since that is done
-      // via the InitScope op.
-      new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
+      // lazily when accessing the local.
     }
   }
 }
@@ -81,35 +80,23 @@ InterpFrame::~InterpFrame() {
   // This happens when the execution is interruped midway-through.
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      S.deallocate(localBlock(Local.Offset));
+      Block *B = localBlock(Local.Offset);
+      if (B->isInitialized())
+        S.deallocate(B);
     }
   }
 }
 
-void InterpFrame::initScope(unsigned Idx) {
-  if (!Func)
-    return;
-
-  for (auto &Local : Func->getScope(Idx).locals()) {
-    assert(!localBlock(Local.Offset)->isInitialized());
-    localBlock(Local.Offset)->invokeCtor();
-  }
-}
-
-void InterpFrame::enableLocal(unsigned Idx) {
+void InterpFrame::enableLocal(unsigned Offset) {
   assert(Func);
-
-  // FIXME: This is a little dirty, but to avoid adding a flag to
-  // InlineDescriptor that's only ever useful on the toplevel of local
-  // variables, we reuse the IsActive flag for the enabled state. We should
-  // probably use a different struct than InlineDescriptor for the block-level
-  // inline descriptor of local varaibles.
-  localInlineDesc(Idx)->IsActive = true;
+  getLocalBlock(Offset)->getBlockDesc<LocalInlineDescriptor>().IsEnabled = true;
 }
 
 void InterpFrame::destroy(unsigned Idx) {
   for (auto &Local : Func->getScope(Idx).locals_reverse()) {
-    S.deallocate(localBlock(Local.Offset));
+    Block *B = localBlock(Local.Offset);
+    if (B->isInitialized())
+      S.deallocate(B);
   }
 }
 
@@ -234,15 +221,6 @@ const FunctionDecl *InterpFrame::getCallee() const {
   return Func->getDecl();
 }
 
-Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
-  assert(Offset < Func->getFrameSize() && "Invalid local offset.");
-  return Pointer(localBlock(Offset));
-}
-
-Block *InterpFrame::getLocalBlock(unsigned Offset) const {
-  return localBlock(Offset);
-}
-
 Pointer InterpFrame::getParamPointer(unsigned Index) {
   assert(!isBottomFrame());
 
@@ -277,6 +255,11 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
   if (Func && !funcHasUsableBody(Func) && Caller)
+    return Caller->getSource(getRetOpPC());
+
+  // If we have a frame for an invalid function, check the caller.
+  // This happens for the fake function frame we create in TrivialCopy.
+  if (Func && !Func->isValid())
     return Caller->getSource(getRetOpPC());
 
   // Similarly, if the resulting source location is invalid anyway,

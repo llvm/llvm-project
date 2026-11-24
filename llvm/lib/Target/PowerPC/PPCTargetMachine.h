@@ -28,6 +28,7 @@ public:
   enum Endian { NOT_DETECTED, LITTLE, BIG };
 
 private:
+  const PPCOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   Endian Endianness = Endian::NOT_DETECTED;
   mutable bool HasGlibcHWCAPAccess = false;
@@ -43,6 +44,7 @@ public:
 
   ~PPCTargetMachine() override;
 
+  const PPCOptions &getCLOpts() const { return CLOpts; }
   const PPCSubtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
   // subtargets are per-function entities based on the target-specific
@@ -72,10 +74,7 @@ public:
 
   bool hasGlibcHWCAPAccess() const { return HasGlibcHWCAPAccess; }
   void setGlibcHWCAPAccess(bool Val = true) const { HasGlibcHWCAPAccess = Val; }
-  bool isPPC64() const {
-    const Triple &TT = getTargetTriple();
-    return (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);
-  };
+  bool isPPC64() const { return getTargetTriple().isPPC64(); }
 
   bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
                            unsigned DestAS) const override {

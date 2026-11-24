@@ -965,6 +965,8 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
     case ABIArgInfo::Extend:
       CheckSimple(Target.isSignExt(), Res.isSignExt(), "SignExt");
       CheckSimple(Target.isZeroExt(), Res.isZeroExt(), "ZeroExt");
+      CheckSimple(Target.isConservative(), Res.isConservative(),
+                  "Conservative");
       [[fallthrough]];
     case ABIArgInfo::Direct:
       CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
@@ -990,6 +992,16 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
                      << ", given: " << Res.getIndirectAlign().getQuantity()
                      << ")";
       });
+      break;
+    case ABIArgInfo::CoerceAndExpand:
+      Check(Target.getUnpaddedCoerceAndExpandType() ==
+                Res.getUnpaddedCoerceAndExpandType(),
+            [&]() {
+              llvm::dbgs() << "UnpaddedCoerceAndExpandType mismatch (expected: "
+                           << *Target.getUnpaddedCoerceAndExpandType()
+                           << ", given: "
+                           << *Res.getUnpaddedCoerceAndExpandType() << ")";
+            });
       break;
     default:
       break;
@@ -1041,11 +1053,15 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
     // useFirstFieldIfTransparentUnion.  Passing the union type to
     // ABIArgInfo::getSignExtend would trip its integral-type assert.
     QualType ExtendType = useFirstFieldIfTransparentUnion(Type);
+    ABIArgInfo Res;
     if (AbiInfo.isSignExt())
-      return ABIArgInfo::getSignExtend(ExtendType, CoercedType);
-    if (AbiInfo.isZeroExt())
-      return ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
-    return ABIArgInfo::getExtend(ExtendType, CoercedType);
+      Res = ABIArgInfo::getSignExtend(ExtendType, CoercedType);
+    else if (AbiInfo.isZeroExt())
+      Res = ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
+    else
+      Res = ABIArgInfo::getNoExtend(cast<llvm::IntegerType>(CoercedType));
+    Res.setConservative(AbiInfo.isConservative());
+    return Res;
   }
   case llvm::abi::ArgInfo::Indirect: {
     CharUnits Alignment =
@@ -1064,6 +1080,13 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
   }
   case llvm::abi::ArgInfo::Ignore:
     return ABIArgInfo::getIgnore();
+  case llvm::abi::ArgInfo::CoerceAndExpand: {
+    llvm::StructType *CoercedType = llvm::cast<llvm::StructType>(
+        AbiReverseMapper->convertType(AbiInfo.getCoerceToType()));
+    llvm::Type *UnpaddedType =
+        AbiReverseMapper->convertType(AbiInfo.getUnpaddedCoerceAndExpandType());
+    return ABIArgInfo::getCoerceAndExpand(CoercedType, UnpaddedType);
+  }
   }
   llvm_unreachable("Unexpected llvm::abi::ArgInfo kind");
 }
@@ -1080,7 +1103,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
 
   // Lookup or create unique function info.
-  llvm::FoldingSetNodeID ID;
   bool isInstanceMethod =
       (opts & FnInfoOpts::IsInstanceMethod) == FnInfoOpts::IsInstanceMethod;
   bool isChainCall =
@@ -1131,7 +1153,19 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
     //
     // For CPU targets, this currently only works for OpenCL.
     assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
-    computeSPIRKernelABIInfo(CGM, *FI);
+    // SPIR-V lowers OpenCL types to target extension types, which the ABI
+    // library cannot tell apart from the kernel pointers it coerces yet, so
+    // such kernels keep Clang's own lowering.
+    auto IsSPIRVOpenCLType = [&](const CGFunctionInfoArgInfo &Arg) {
+      return CGM.getTriple().isSPIRV() &&
+             Arg.type.getTypePtr()->isOpenCLSpecificType();
+    };
+    if (CC == llvm::CallingConv::SPIR_KERNEL &&
+        CGM.shouldUseLLVMABILowering(CC) &&
+        llvm::none_of(FI->arguments(), IsSPIRVOpenCLType))
+      CGM.computeABIInfoUsingLib(*FI);
+    else
+      computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else if (CGM.shouldUseLLVMABILowering(CC)) {
@@ -2318,6 +2352,38 @@ addMergableDefaultFunctionAttributes(const CodeGenOptions &CodeGenOpts,
                        FuncAttrs);
 }
 
+static void addZeroCallUsedRegsAttr(const CodeGenOptions &CodeGenOpts,
+                                    llvm::AttrBuilder &FuncAttrs) {
+  switch (CodeGenOpts.getZeroCallUsedRegs()) {
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all");
+    break;
+  }
+}
+
 static void getTrivialDefaultFunctionAttributes(
     StringRef Name, bool HasOptnone, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, bool AttrOnCallSite,
@@ -2359,9 +2425,6 @@ static void getTrivialDefaultFunctionAttributes(
                                  CodeGenOpts.getFramePointer()));
     }
 
-    if (CodeGenOpts.LessPreciseFPMAD)
-      FuncAttrs.addAttribute("less-precise-fpmad", "true");
-
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute(llvm::Attribute::NullPointerIsValid);
 
@@ -2396,37 +2459,6 @@ static void getTrivialDefaultFunctionAttributes(
 
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
-
-    // Add zero-call-used-regs attribute.
-    switch (CodeGenOpts.getZeroCallUsedRegs()) {
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
-      FuncAttrs.removeAttribute("zero-call-used-regs");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all");
-      break;
-    }
   }
 
   if (LangOpts.assumeFunctionsAreConvergent()) {
@@ -2454,8 +2486,10 @@ static void getTrivialDefaultFunctionAttributes(
     FuncAttrs.addAttribute(Var, Value);
   }
 
-  TargetInfo::BranchProtectionInfo BPI(LangOpts);
-  TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  if (!AttrOnCallSite) {
+    TargetInfo::BranchProtectionInfo BPI(LangOpts);
+    TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  }
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
@@ -2511,6 +2545,7 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
   ::getTrivialDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
                                         CodeGenOpts, LangOpts,
                                         /*AttrOnCallSite=*/false, FuncAttrs);
+  addZeroCallUsedRegsAttr(CodeGenOpts, FuncAttrs);
 
   if (!WillInternalize && F.isInterposable()) {
     // Do not promote "dynamic" denormal-fp-math to this translation unit's
@@ -2571,6 +2606,7 @@ void CodeGenModule::addDefaultFunctionDefinitionAttributes(
     llvm::AttrBuilder &attrs) {
   getDefaultFunctionAttributes(/*function name*/ "", /*optnone*/ false,
                                /*for call*/ false, attrs);
+  addZeroCallUsedRegsAttr(CodeGenOpts, attrs);
   GetCPUAndFeaturesAttributes(GlobalDecl(), attrs);
 }
 
@@ -2657,27 +2693,6 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
     return DetermineNoUndef(Array->getElementType(), Types, DL, AI, false);
 
   // TODO: Some structs may be `noundef`, in specific situations.
-  return false;
-}
-
-/// Check if the argument of a function has maybe_undef attribute.
-static bool IsArgumentMaybeUndef(const Decl *TargetDecl,
-                                 unsigned NumRequiredArgs, unsigned ArgNo) {
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-  if (!FD)
-    return false;
-
-  // Assume variadic arguments do not have maybe_undef attribute.
-  if (ArgNo >= NumRequiredArgs)
-    return false;
-
-  // Check if argument has maybe_undef attribute.
-  if (ArgNo < FD->getNumParams()) {
-    const ParmVarDecl *Param = FD->getParamDecl(ArgNo);
-    if (Param && Param->hasAttr<MaybeUndefAttr>())
-      return true;
-  }
-
   return false;
 }
 
@@ -2897,6 +2912,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Collect function IR attributes based on global settiings.
   getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, FuncAttrs);
 
+  // "main" doesn't need to zero out call-used registers.
+  const FunctionDecl *TargetFD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  bool IsMainFunction = TargetFD && TargetFD->isMain();
+  if (!AttrOnCallSite && !IsMainFunction)
+    addZeroCallUsedRegsAttr(CodeGenOpts, FuncAttrs);
+
   // Override some default IR attributes based on declaration-specific
   // information.
   if (TargetDecl) {
@@ -2906,7 +2927,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
     if (TargetDecl->hasAttr<NoSplitStackAttr>())
       FuncAttrs.removeAttribute("split-stack");
-    if (TargetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
+    if (!IsMainFunction && TargetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
       // A function "__attribute__((...))" overrides the command-line flag.
       auto Kind =
           TargetDecl->getAttr<ZeroCallUsedRegsAttr>()->getZeroCallUsedRegs();
@@ -3014,6 +3035,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   switch (RetAI.getKind()) {
   case ABIArgInfo::Extend:
+    assert(!RetAI.isConservative() && "Conservative return not supported");
     if (RetAI.isSignExt())
       RetAttrs.addAttribute(llvm::Attribute::SExt);
     else if (RetAI.isZeroExt())
@@ -3148,6 +3170,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
   }
 
+  if (const auto *Fn = dyn_cast_if_present<FunctionDecl>(TargetDecl)) {
+    if (Fn->isReplaceableGlobalAllocationFunction() &&
+        Fn->getDeclName().isAnyOperatorDelete()) {
+      auto IRArgs = IRFunctionArgs.getIRArgs(0);
+      assert(IRArgs.second == 1 && "Expected only a single pointer to delete.");
+      ArgAttrs[IRArgs.first].addAttribute(llvm::Attribute::AllocatedPointer);
+    }
+  }
+
   unsigned ArgNo = 0;
   for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(), E = FI.arg_end();
        I != E; ++I, ++ArgNo) {
@@ -3174,12 +3205,16 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // sense to do it here because parameters are so messed up.
     switch (AI.getKind()) {
     case ABIArgInfo::Extend:
-      if (AI.isSignExt())
-        Attrs.addAttribute(llvm::Attribute::SExt);
-      else if (AI.isZeroExt())
-        Attrs.addAttribute(llvm::Attribute::ZExt);
-      else
-        Attrs.addAttribute(llvm::Attribute::NoExt);
+      // Under conservative extension, add sext/zext only on the call site; the
+      // callee does not get to assume extension.
+      if (AttrOnCallSite || !AI.isConservative()) {
+        if (AI.isSignExt())
+          Attrs.addAttribute(llvm::Attribute::SExt);
+        else if (AI.isZeroExt())
+          Attrs.addAttribute(llvm::Attribute::ZExt);
+        else
+          Attrs.addAttribute(llvm::Attribute::NoExt);
+      }
       [[fallthrough]];
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Direct:
@@ -4591,6 +4626,29 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty())
     return;
 
+  if (SanOpts.has(SanitizerKind::Alignment)) {
+    if (const AllocAlignAttr *AA = CurCodeDecl->getAttr<AllocAlignAttr>()) {
+      if (isa<FunctionDecl>(CurCodeDecl)) {
+        unsigned PI = AA->getParamIndex().getLLVMIndex();
+        llvm::Value *Alignment = CurFn->getArg(PI);
+        emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                           Alignment);
+      }
+    }
+    if (const AssumeAlignedAttr *AA =
+            CurCodeDecl->getAttr<AssumeAlignedAttr>()) {
+      llvm::Value *Alignment = EmitScalarExpr(AA->getAlignment());
+      llvm::ConstantInt *OffsetCI = nullptr;
+      if (Expr *Offset = AA->getOffset()) {
+        OffsetCI = cast<llvm::ConstantInt>(EmitScalarExpr(Offset));
+        if (OffsetCI->isNullValue()) // Canonicalize zero offset to no offset.
+          OffsetCI = nullptr;
+      }
+      emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                         Alignment, OffsetCI);
+    }
+  }
+
   ReturnsNonNullAttr *RetNNAttr = nullptr;
   if (SanOpts.has(SanitizerKind::ReturnsNonnullAttribute))
     RetNNAttr = CurCodeDecl->getAttr<ReturnsNonNullAttr>();
@@ -4710,8 +4768,9 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
         CalleeDestructedParamCleanups.lookup(cast<ParmVarDecl>(param));
     assert(cleanup.isValid() &&
            "cleanup for callee-destructed param not recorded");
-    // This unreachable is a temporary marker which will be removed later.
-    llvm::Instruction *isActive = Builder.CreateUnreachable();
+    // This load is a temporary marker which will be removed later.
+    llvm::Instruction *isActive =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
     args.addArgCleanupDeactivation(cleanup, isActive);
   }
 }
@@ -5126,10 +5185,8 @@ void CodeGenFunction::EmitCallArgs(
   // case, there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
   // to trump the "destruction order is reverse construction order" guarantee.
-  bool LeftToRight =
-      CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()
-          ? Order == EvaluationOrder::ForceLeftToRight
-          : Order != EvaluationOrder::ForceRightToLeft;
+  bool LeftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
+      Order, CGM.getTarget().getCXXABI());
 
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {
@@ -5425,16 +5482,26 @@ CodeGenFunction::getBundlesForFunclet(llvm::Value *Callee) {
   return BundleList;
 }
 
+static bool isConvergentIntrinsic(const llvm::Function *F) {
+  assert(F->isIntrinsic() && "expected an intrinsic declaration");
+  return F->isConvergent();
+}
+
 /// Emits a simple call (never an invoke) to the given runtime function.
 llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  ArrayRef<llvm::Value *> args,
-                                                 const llvm::Twine &name) {
-  llvm::CallInst *call = Builder.CreateCall(
-      callee, args, getBundlesForFunclet(callee.getCallee()), name);
-  call->setCallingConv(getRuntimeCC());
+                                                 const llvm::Twine &name,
+                                                 bool IsConvergent) {
+  SmallVector<llvm::OperandBundleDef> BundleList =
+      getBundlesForFunclet(callee.getCallee());
+  if (IsConvergent)
+    addConvergenceControlBundle(BundleList);
 
-  if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(call));
+  llvm::CallInst *call = Builder.CreateCall(callee, args, BundleList, name);
+  call->setCallingConv(getRuntimeCC());
+  assert((IsConvergent == call->isConvergent() ||
+          (!IsConvergent && !CGM.shouldEmitConvergenceTokens())) &&
+         "runtime call convergence doesn't match its declaration");
   return call;
 }
 
@@ -5455,11 +5522,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    const llvm::Twine &Name) {
   llvm::Function *F =
       llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -5472,11 +5538,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
     ArgTys.push_back(Arg->getType());
   llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
       &CGM.getModule(), ID, RetTy, ArgTys);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 /// Emits a call or invoke to the given noreturn runtime function.
@@ -5646,6 +5711,28 @@ public:
                     .getRValue(CGF)
                     .getScalarVal();
   }
+
+  [[nodiscard]] llvm::AttributeList
+  TryEmitAsCallSiteAttribute(const llvm::AttributeList &Attrs,
+                             const ClangToLLVMArgMapping &IRFunctionArgs) {
+    llvm::AttributeList NewAttrs = Attrs;
+    if (AA) {
+      auto [FirstIRArg, NumIRArgs] =
+          IRFunctionArgs.getIRArgs(AA->getParamIndex().getLLVMIndex());
+      if (NumIRArgs == 1)
+        NewAttrs = NewAttrs.addParamAttribute(CGF.getLLVMContext(), FirstIRArg,
+                                              llvm::Attribute::AllocAlign);
+    }
+    // NOTE: we shouldn't _need_ to emit this `align` attribute here, but there
+    // are some interesting cases where LLVM can manage to delete the arguments
+    // to a function that has the `alloc_align` attribute on it, and then the
+    // alignment gets lost. An example of this is the failure you'll get in
+    // clang/test/Headers/mm_malloc.c if this `align` is omitted, because
+    // _mm_malloc ends up getting its arguments turned into constants that get
+    // passed to posix_memalign, which we don't have logic to handle in LLVM.
+    return AbstractAssumeAlignedAttrEmitter<
+        AllocAlignAttr>::TryEmitAsCallSiteAttribute(NewAttrs);
+  }
 };
 
 } // namespace
@@ -5784,7 +5871,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
-  SmallVector<CallLifetimeEnd, 2> CallLifetimeEndAfterCall;
+  SmallVector<llvm::Value *, 2> CallLifetimeEndAfterCall;
 
   // Translate all of the arguments as necessary to match the IR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -5803,8 +5890,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
 
-    bool ArgHasMaybeUndefAttr =
-        IsArgumentMaybeUndef(TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
+    bool ArgHasMaybeUndefAttr = CodeGenUtils::isArgumentMaybeUndef(
+        TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
 
     switch (ArgInfo.getKind()) {
     case ABIArgInfo::InAlloca: {
@@ -5939,7 +6026,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // Emit lifetime markers for the temporary alloca and add cleanup code to
       // emit the end lifetime marker after the call.
       if (EmitLifetimeStart(AI.getPointer()))
-        CallLifetimeEndAfterCall.emplace_back(AI);
+        CallLifetimeEndAfterCall.push_back(AI.getPointer());
 
       // Generate the copy.
       I->copyInto(*this, AI);
@@ -6292,11 +6379,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
-  // Remove call-site convergent attribute if requested.
-  if (InNoConvergentAttributedStmt)
-    Attrs =
-        Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
-
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
 
@@ -6322,7 +6404,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // SEH cares about asynchronous exceptions, so everything can "throw."
     CannotThrow = false;
   } else if (isCleanupPadScope() &&
-             EHPersonality::get(*this).isMSVCXXPersonality()) {
+             getEHPersonality(*this).isMSVCXXPersonality()) {
     // The MSVC++ personality will implicitly terminate the program if an
     // exception is thrown during a cleanup outside of a try/catch.
     // We don't need to model anything in IR to get this behavior.
@@ -6367,7 +6449,28 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   Attrs = AssumeAlignedAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
 
   AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
-  Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
+  Attrs =
+      AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs, IRFunctionArgs);
+
+  if (Attrs.hasFnAttr(llvm::Attribute::Convergent)) {
+    addConvergenceControlBundle(BundleList);
+
+    // Remove call-site convergent attribute if requested, unless the call must
+    // stay convergent to match its convergence token and the callee doesn't
+    // already make it convergent.
+    //
+    // FIXME: This means [[clang::noconvergent]] can't make an indirect call
+    // non-convergent when using convergence tokens. A call without a token can
+    // later be made direct to a convergent function, which mixes controlled
+    // and uncontrolled convergence and fails the verifier.
+    auto *CalleeFn = dyn_cast<llvm::Function>(CalleePtr);
+    if (InNoConvergentAttributedStmt &&
+        (!CGM.shouldEmitConvergenceTokens() ||
+         (CalleeFn && CalleeFn->isConvergent()))) {
+      Attrs = Attrs.removeFnAttribute(getLLVMContext(),
+                                      llvm::Attribute::Convergent);
+    }
+  }
 
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
@@ -6477,9 +6580,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   if (!CI->getType()->isVoidTy())
     CI->setName("call");
-
-  if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
-    CI = addConvergenceControlToken(CI);
 
   // Update largest vector width from the return type.
   LargestVectorWidth =
@@ -6806,13 +6906,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Emit the assume_aligned check on the return value.
   if (Ret.isScalar() && TargetDecl) {
     AssumeAlignedAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
-    AllocAlignAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
   }
 
-  // Explicitly call CallLifetimeEnd::Emit just to re-use the code even though
-  // we can't use the full cleanup mechanism.
-  for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
-    LifetimeEnd.Emit(*this, /*Flags=*/{});
+  // Emit the end lifetime markers for any temporary allocas created for the
+  // call arguments.
+  for (llvm::Value *LifetimeEndAddr : CallLifetimeEndAfterCall)
+    EmitLifetimeEnd(LifetimeEndAddr);
 
   if (!ReturnValue.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)

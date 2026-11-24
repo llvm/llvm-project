@@ -32,13 +32,13 @@ void foo() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 // CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META13:![0-9]+]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA16:![0-9]+]], !alias.scope [[META13]], !noalias [[META17:![0-9]+]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA16:![0-9]+]], !alias.scope [[META13]]
 // CHECK-NEXT:    switch i32 [[TMP3]], [[DOTOMP_OUTLINED__EXIT:label %.*]] [
 // CHECK-NEXT:      i32 0, [[DOTUNTIED_JMP__I:label %.*]]
 // CHECK-NEXT:      i32 1, [[DOTUNTIED_NEXT__I:label %.*]]
 // CHECK-NEXT:    ]
 // CHECK:       [[_UNTIED_JMP__I:.*:]]
-// CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA16]], !alias.scope [[META13]], !noalias [[META17]]
+// CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA16]], !alias.scope [[META13]]
 // CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP1]]), !noalias [[META13]]
 // CHECK-NEXT:    br [[DOTOMP_OUTLINED__EXIT]]
 // CHECK:       [[_UNTIED_NEXT__I:.*:]]

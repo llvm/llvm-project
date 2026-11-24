@@ -30,8 +30,7 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
-                                               BuildFnTy &MatchInfo) const {
+bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI) const {
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
 
   Register Dst = Extract->getReg(0);
@@ -79,11 +78,8 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   // Fold extractVectorElement(Vector, TOOLARGE) -> undef
   if (IndexC && VectorTy.isFixedVector() &&
       IndexC->uge(VectorTy.getNumElements()) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
-    // For fixed-length vectors, it's invalid to extract out-of-range elements.
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
     return true;
-  }
 
   return false;
 }
@@ -173,6 +169,12 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVector(
 
   APInt Index = getIConstantFromReg(Extract->getIndexReg(), MRI);
 
+  // An out-of-bounds constant index extracts undef; it is handled by
+  // extract_vec_elt_out_of_bounds. Bail out here so we never read past the
+  // G_BUILD_VECTOR's sources.
+  if (Index.uge(Build->getNumSources()))
+    return false;
+
   // We now know that there is a buildVector def'd on the Vector register and
   // the index is const. The combine will succeed.
 
@@ -232,6 +234,12 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
   std::optional<ValueAndVReg> MaybeIndex =
       getIConstantVRegValWithLookThrough(Index, MRI);
   if (!MaybeIndex)
+    return false;
+
+  // An out-of-bounds constant index extracts undef; it is handled by
+  // extract_vec_elt_out_of_bounds. Bail out so we never read past the
+  // G_BUILD_VECTOR_TRUNC's sources.
+  if (MaybeIndex->Value.uge(Build->getNumSources()))
     return false;
 
   // We now know that there is a buildVectorTrunc def'd on the Vector register
@@ -339,8 +347,7 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
   return true;
 }
 
-bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
-                                                 BuildFnTy &MatchInfo) const {
+bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI) const {
   GInsertVectorElement *Insert = cast<GInsertVectorElement>(&MI);
 
   Register Dst = Insert->getReg(0);
@@ -354,10 +361,8 @@ bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
       getIConstantVRegValWithLookThrough(Index, MRI);
 
   if (MaybeIndex && MaybeIndex->Value.uge(DstTy.getNumElements()) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
     return true;
-  }
 
   return false;
 }

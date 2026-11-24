@@ -840,7 +840,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       auto &JD =
           J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          J.getExecutionSession(), J.getDylibMgr());
+          J.getDylibMgr());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));
@@ -870,7 +870,7 @@ Expected<JITDylib &> LLJIT::createJITDylib(std::string Name) {
 }
 
 Expected<JITDylib &> LLJIT::loadPlatformDynamicLibrary(const char *Path) {
-  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, *DylibMgr, Path);
+  auto G = EPCDynamicLibrarySearchGenerator::Load(*DylibMgr, Path);
   if (!G)
     return G.takeError();
 

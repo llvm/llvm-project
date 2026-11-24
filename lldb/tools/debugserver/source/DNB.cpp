@@ -1873,7 +1873,8 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
                                               CPU_SUBTYPE_X86_64_H);
     else if (strstr(arch, "arm64_32") == arch ||
              strstr(arch, "aarch64_32") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32);
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32,
+                                              CPU_SUBTYPE_ARM64_32_V8);
     else if (strstr(arch, "arm64e") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
                                               CPU_SUBTYPE_ARM64E);

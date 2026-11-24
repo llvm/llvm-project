@@ -15,7 +15,7 @@ subroutine passing_allocatable(x)
   call takes_array(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpassing_allocatable(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<allocatable>
 ! CHECK:  fir.call @_QPtakes_allocatable(%[[VAL_1]]#0) {{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
@@ -34,7 +34,7 @@ subroutine passing_pointer(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpassing_pointer(
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<pointer>
 ! CHECK:  fir.call @_QPtakes_pointer(%[[VAL_2]]#0) {{.*}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> ()
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : index
@@ -53,7 +53,7 @@ subroutine passing_contiguous_pointer(x)
   call takes_array(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpassing_contiguous_pointer(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<contiguous, pointer>
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
@@ -66,7 +66,7 @@ subroutine character_allocatable_cst_len(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcharacter_allocatable_cst_len(
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 10 : index
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] typeparams %[[VAL_1:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] typeparams %[[VAL_1:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<allocatable>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>>>
 ! CHECK:  %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.heap<!fir.char<1,10>>>) -> !fir.heap<!fir.char<1,10>>
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 10 : index
@@ -75,7 +75,7 @@ end subroutine
 ! CHECK:  fir.call @_QPtakes_char(%[[VAL_7]]) {{.*}} : (!fir.boxchar<1>) -> ()
 ! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>>>
 ! CHECK:  %[[VAL_9:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<!fir.char<1,10>>>) -> !fir.heap<!fir.char<1,10>>
-! CHECK:  %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10:[a-z0-9]*]] typeparams %[[VAL_11:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<parameter>
+! CHECK:  %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10:[a-z0-9]*]] typeparams %[[VAL_11:[a-z0-9]*]] {{.*}}fortran_attrs<parameter>
 ! CHECK:  %[[VAL_13:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_11]] : index
 ! CHECK:  %[[VAL_15:.*]] = hlfir.concat %[[VAL_9]], %[[VAL_12]]#0 len %[[VAL_14]] : (!fir.heap<!fir.char<1,10>>, !fir.ref<!fir.char<1,5>>, index) -> !hlfir.expr<!fir.char<1,15>>
@@ -87,12 +87,12 @@ subroutine character_allocatable_dyn_len(x, l)
   call takes_char(x//"hello")
 end subroutine
 ! CHECK-LABEL: func.func @_QPcharacter_allocatable_dyn_len(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name =  {{.*}}El"}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}El")
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_5:.*]] = arith.cmpi sgt, %[[VAL_3]], %[[VAL_4]] : i64
 ! CHECK:  %[[VAL_6:.*]] = arith.select %[[VAL_5]], %[[VAL_3]], %[[VAL_4]] : i64
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] typeparams %[[VAL_6:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] typeparams %[[VAL_6:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<allocatable>
 ! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:  %[[VAL_9:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
 ! CHECK:  %[[VAL_10:.*]] = fir.emboxchar %[[VAL_9]], %[[VAL_6]] : (!fir.heap<!fir.char<1,?>>, i64) -> !fir.boxchar<1>
@@ -100,7 +100,7 @@ end subroutine
 ! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:  %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
 ! CHECK:  %[[VAL_13:.*]] = fir.emboxchar %[[VAL_12]], %[[VAL_6]] : (!fir.heap<!fir.char<1,?>>, i64) -> !fir.boxchar<1>
-! CHECK:  %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_14:[a-z0-9]*]] typeparams %[[VAL_15:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<parameter>
+! CHECK:  %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_14:[a-z0-9]*]] typeparams %[[VAL_15:[a-z0-9]*]] {{.*}}fortran_attrs<parameter>
 ! CHECK:  %[[VAL_17:.*]] = fir.convert %[[VAL_6]] : (i64) -> index
 ! CHECK:  %[[VAL_18:.*]] = arith.addi %[[VAL_17]], %[[VAL_15]] : index
 ! CHECK:  %[[VAL_19:.*]] = hlfir.concat %[[VAL_13]], %[[VAL_16]]#0 len %[[VAL_18]] : (!fir.boxchar<1>, !fir.ref<!fir.char<1,5>>, index) -> !hlfir.expr<!fir.char<1,?>>
@@ -110,7 +110,7 @@ subroutine print_allocatable(x)
   print *, x
 end subroutine
 ! CHECK-LABEL: func.func @_QPprint_allocatable(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<allocatable>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.box<none>
 ! CHECK:  %[[VAL_9:.*]] = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[VAL_8]])
@@ -120,7 +120,7 @@ subroutine print_pointer(x)
   print *, x
 end subroutine
 ! CHECK-LABEL: func.func @_QPprint_pointer(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<pointer>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
 ! CHECK:  %[[VAL_9:.*]] = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[VAL_8]])
@@ -130,7 +130,7 @@ subroutine elemental_expr(x)
   call takes_array_2(x+42)
 end subroutine
 ! CHECK-LABEL: func.func @_QPelemental_expr(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name =  {{.*}}Ex"}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<pointer>
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 42 : i32
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : index

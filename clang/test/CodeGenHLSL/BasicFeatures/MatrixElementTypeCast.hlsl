@@ -301,10 +301,10 @@ struct Derived : BFields {
 // ROW-CHECK-NEXT:    [[BF_SHL:%.*]] = shl i24 [[BF_LOAD]], 9
 // ROW-CHECK-NEXT:    [[BF_ASHR:%.*]] = ashr i24 [[BF_SHL]], 9
 // ROW-CHECK-NEXT:    [[BF_CAST:%.*]] = sext i24 [[BF_ASHR]] to i32
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[BF_CAST]], i64 1
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[BF_CAST]], i64 2
 // ROW-CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP2]], align 4
 // ROW-CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP4]] to i32
-// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[CONV4]], i64 2
+// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[CONV4]], i64 1
 // ROW-CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[GEP3]], align 4
 // ROW-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP6]], i64 3
 // ROW-CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32> [[TMP7]], i32 2, i32 2)
@@ -361,10 +361,10 @@ void call4(Derived D) {
 // ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[VECEXT]], i64 0
 // ROW-CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
 // ROW-CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
-// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP3]], float [[VECEXT1]], i64 1
+// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP3]], float [[VECEXT1]], i64 2
 // ROW-CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
 // ROW-CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x float> [[TMP6]], i32 2
-// ROW-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP5]], float [[VECEXT2]], i64 2
+// ROW-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP5]], float [[VECEXT2]], i64 1
 // ROW-CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
 // ROW-CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP8]], i32 3
 // ROW-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP7]], float [[VECEXT3]], i64 3

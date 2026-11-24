@@ -126,7 +126,7 @@ define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $80, %esp
+; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    movl 52(%ebp), %eax
 ; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    movl 48(%ebp), %ecx
@@ -147,7 +147,7 @@ define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X86AVX-NEXT:    pushl %ebp
 ; X86AVX-NEXT:    movl %esp, %ebp
 ; X86AVX-NEXT:    andl $-32, %esp
-; X86AVX-NEXT:    subl $96, %esp
+; X86AVX-NEXT:    subl $64, %esp
 ; X86AVX-NEXT:    movl 52(%ebp), %eax
 ; X86AVX-NEXT:    andl $7, %eax
 ; X86AVX-NEXT:    movl 48(%ebp), %ecx

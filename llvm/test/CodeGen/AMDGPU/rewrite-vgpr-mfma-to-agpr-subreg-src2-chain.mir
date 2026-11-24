@@ -184,11 +184,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead %other_use0:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub0
+    ; CHECK-NEXT: dead %other_use0:vgpr_32 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub0
     ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_1:%[0-9]+]].sub0_sub1:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: dead %other_use1:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_1]].sub0_sub1
     ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_2:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_1]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr_32 = COPY [[V_MFMA_F64_4X4X4F64_e64_2]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr_32 = COPY [[V_MFMA_F64_4X4X4F64_e64_2]].sub0
     ; CHECK-NEXT: INLINEASM &"; use $0", sideeffect attdialect, reguse:AGPR_32, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -197,11 +197,11 @@ body:             |
     %2:av_64_align2 = COPY $vgpr2_vgpr3
     %3:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     %4:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %3, 0, 0, 0, implicit $mode, implicit $exec
-    %other_use0:vreg_64_align2 = COPY %4.sub0
+    %other_use0:vgpr_32 = COPY %4.sub0
     undef %5.sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %4, 0, 0, 0, implicit $mode, implicit $exec
     %other_use1:vreg_64_align2 = COPY %5.sub0_sub1
     %6:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %5.sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    %8:agpr_32 = COPY %6
+    %8:agpr_32 = COPY %6.sub0
     INLINEASM &"; use $0", sideeffect attdialect, reguse:AGPR_32, %8:agpr_32
     GLOBAL_STORE_DWORD %0, %8, 0, 0, implicit $exec :: (store (s32), addrspace 1)
     SI_RETURN

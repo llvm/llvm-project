@@ -157,7 +157,7 @@ static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
       return false;
     if (isa<memref::DeallocOp>(useOp) ||
         (useOp->getNumResults() == 0 && useOp->getNumRegions() == 0 &&
-         !mlir::hasEffect<MemoryEffects::Read>(useOp)) ||
+         !mlir::mightHaveEffect<MemoryEffects::Read>(useOp)) ||
         (isa<ViewLikeOpInterface>(useOp) && resultIsNotRead(useOp, opUses))) {
       opUses.push_back(useOp);
       continue;

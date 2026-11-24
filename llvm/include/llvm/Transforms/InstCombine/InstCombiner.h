@@ -49,16 +49,14 @@ class TargetTransformInfo;
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
   /// IRBuilder inserter that adds new instructions to the worklist and new
   /// assumptions to the AssumptionCache.
-  class LLVM_ABI IRBuilderInstCombineInserter final
-      : public IRBuilderDefaultInserter {
+  class IRBuilderInstCombineInserter final : public IRBuilderDefaultInserter {
     InstCombiner &IC;
 
   public:
-    ~IRBuilderInstCombineInserter() override;
     IRBuilderInstCombineInserter(InstCombiner &IC) : IC(IC) {}
 
-    void InsertHelper(Instruction *I, const Twine &Name,
-                      BasicBlock::iterator InsertPt) const override;
+    LLVM_ABI void InsertHelper(Instruction *I, const Twine &Name,
+                               BasicBlock::iterator InsertPt) const;
   };
 
   /// Only used to call target specific intrinsic combining.
@@ -67,9 +65,6 @@ class LLVM_LIBRARY_VISIBILITY InstCombiner {
   TargetTransformInfo &TTIForTargetIntrinsicsOnly;
 
 public:
-  /// Maximum size of array considered when transforming.
-  uint64_t MaxArraySizeForCombine = 0;
-
   /// An IRBuilder that automatically inserts new instructions into the
   /// worklist.
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderInstCombineInserter>;
@@ -126,7 +121,7 @@ public:
                const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTIForTargetIntrinsicsOnly(TTI),
-        Builder(F.getContext(), TargetFolder(DL),
+        Builder(*F.getParent(), TargetFolder(DL),
                 IRBuilderInstCombineInserter(*this)),
         Worklist(Worklist), F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC),
         TLI(TLI), DT(DT), DL(DL),
@@ -168,8 +163,9 @@ public:
       return isa<UndefValue>(V) ? 0 : 1;
 
     using namespace llvm::PatternMatch;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
-        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
+        match(V, m_Not(m_Value())) || match(V, m_FNegOrFSubNegZero(m_Value())))
       return 2;
 
     return 3;
@@ -357,7 +353,8 @@ public:
   static Value *stripSignOnlyFPOps(Value *Val) {
     using namespace llvm::PatternMatch;
 
-    match(Val, m_FNeg(m_Value(Val)));
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    match(Val, m_FNegOrFSubNegZero(m_Value(Val)));
     match(Val, m_FAbs(m_Value(Val)));
     match(Val, m_CopySign(m_Value(Val), m_Value()));
     return Val;
@@ -365,6 +362,7 @@ public:
 
   void addToWorklist(Instruction *I) { Worklist.push(I); }
 
+  Module &getModule() const { return *F.getParent(); }
   AssumptionCache &getAssumptionCache() const { return AC; }
   TargetLibraryInfo &getTargetLibraryInfo() const { return TLI; }
   DominatorTree &getDominatorTree() const { return DT; }

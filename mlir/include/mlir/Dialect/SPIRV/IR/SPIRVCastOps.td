@@ -34,6 +34,36 @@ class SPIRV_CastOp<string mnemonic, Type resultType, Type operandType,
   }];
 }
 
+// Saturating conversions between signed and unsigned integers. Unlike the ops
+// derived from SPIRV_CastOp, they do not accept cooperative matrices, and the
+// component widths of the operand and the result may be equal or different.
+class SPIRV_SatConvertOp<string mnemonic, list<Trait> traits = []> :
+      SPIRV_Op<mnemonic,
+             !listconcat(traits,
+                         [Pure, SameOperandsAndResultShape])> {
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
+
+  // No additional verification needed in addition to the ODS-generated ones.
+  let hasVerifier = 0;
+}
+
 // -----
 
 def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
@@ -82,6 +112,37 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
     $operand attr-dict `:` type($operand) `to` type($result)
   }];
   let hasFolder = 1;
+}
+
+// -----
+
+def SPIRV_BitcastExtractEXTOp : SPIRV_Op<"BitcastExtractEXT", [Pure]> {
+  let summary = "Extract a bit field and reinterpret it as a numerical value";
+  let description = [{
+    Extract the bits starting at offset from each component of base and
+    reinterpret them as the result type. The result has the same number of
+    components as base and narrower components.
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_ocp_microscaling_types]>,
+    Extension<[SPV_EXT_float8]>,
+    Capability<[SPIRV_C_BitcastExtractEXT]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_ExtendedNumerical>:$base,
+    SPIRV_Integer:$offset
+  );
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_ExtendedNumerical>:$result
+  );
+  let assemblyFormat = [{
+    $base `,` $offset attr-dict `:` type($base) `,` type($offset) `to` type($result)
+  }];
+  let hasVerifier = 1;
 }
 
 // -----
@@ -271,6 +332,58 @@ def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
     ```mlir
     %1 = spirv.UConvert %0 : i32 to i64
     %3 = spirv.UConvert %2 : vector<3xi32> to vector<3xi64>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_SatConvertSToUOp : SPIRV_SatConvertOp<"SatConvertSToU", [SignedOp]> {
+  let summary = [{
+    Convert a signed integer to unsigned integer. Converted values outside
+    the representable range of Result Type are clamped to the nearest
+    representable value of Result Type.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Signed Value must be a scalar or vector of integer type.  It must have
+    the same number of components as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.SatConvertSToU %0 : i32 to i8
+    %3 = spirv.SatConvertSToU %2 : vector<3xi32> to vector<3xi32>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_SatConvertUToSOp : SPIRV_SatConvertOp<"SatConvertUToS", [UnsignedOp]> {
+  let summary = [{
+    Convert an unsigned integer to signed integer. Converted values outside
+    the representable range of Result Type are clamped to the nearest
+    representable value of Result Type.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Unsigned Value must be a scalar or vector of integer type.  It must have
+    the same number of components as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.SatConvertUToS %0 : i32 to i8
+    %3 = spirv.SatConvertUToS %2 : vector<3xi32> to vector<3xi32>
     ```
   }];
 }

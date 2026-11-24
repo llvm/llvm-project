@@ -233,4 +233,62 @@ define i32 @caller_passes_42() #0 {
   ret i32 %r
 }
 
+declare void @use_inreg(i32 inreg)
+
+; The entry function's own scratch resource descriptor is not in SGPR0-3, but
+; the callee still expects it there.
+define amdgpu_kernel void @kernel_passes_inreg(i32 %x) #0 {
+; SDAG-LABEL: kernel_passes_inreg:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; SDAG-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; SDAG-NEXT:    s_add_u32 s0, s0, s17
+; SDAG-NEXT:    s_addc_u32 s1, s1, 0
+; SDAG-NEXT:    s_mov_b32 s17, s16
+; SDAG-NEXT:    s_load_dword s16, s[8:9], 0x0
+; SDAG-NEXT:    s_add_u32 s8, s8, 8
+; SDAG-NEXT:    s_addc_u32 s9, s9, 0
+; SDAG-NEXT:    s_mov_b32 s13, s15
+; SDAG-NEXT:    s_mov_b32 s12, s14
+; SDAG-NEXT:    s_getpc_b64 s[14:15]
+; SDAG-NEXT:    s_add_u32 s14, s14, use_inreg@gotpcrel32@lo+4
+; SDAG-NEXT:    s_addc_u32 s15, s15, use_inreg@gotpcrel32@hi+12
+; SDAG-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; SDAG-NEXT:    v_or3_b32 v31, v0, v1, v2
+; SDAG-NEXT:    s_mov_b32 s14, s17
+; SDAG-NEXT:    s_mov_b32 s32, 0
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: kernel_passes_inreg:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GISEL-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GISEL-NEXT:    s_add_u32 s0, s0, s17
+; GISEL-NEXT:    s_addc_u32 s1, s1, 0
+; GISEL-NEXT:    s_mov_b32 s17, s16
+; GISEL-NEXT:    s_load_dword s16, s[8:9], 0x0
+; GISEL-NEXT:    s_add_u32 s8, s8, 8
+; GISEL-NEXT:    s_addc_u32 s9, s9, 0
+; GISEL-NEXT:    s_mov_b32 s13, s15
+; GISEL-NEXT:    s_mov_b32 s12, s14
+; GISEL-NEXT:    s_getpc_b64 s[14:15]
+; GISEL-NEXT:    s_add_u32 s14, s14, use_inreg@gotpcrel32@lo+4
+; GISEL-NEXT:    s_addc_u32 s15, s15, use_inreg@gotpcrel32@hi+12
+; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GISEL-NEXT:    s_mov_b32 s14, s17
+; GISEL-NEXT:    s_mov_b32 s32, 0
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; GISEL-NEXT:    s_endpgm
+  call void @use_inreg(i32 inreg %x)
+  ret void
+}
+
 attributes #0 = { nounwind }

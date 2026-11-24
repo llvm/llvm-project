@@ -10,6 +10,15 @@ func.func @test_i64_argmax_large_axis_dim(%arg0: tensor<1x513x513x2147483650xi8>
 
 // -----
 
+// CHECK-LABEL: test_i64_argmin_large_axis_dim
+func.func @test_i64_argmin_large_axis_dim(%arg0: tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64> {
+  // DEFAULT: tosa.argmin %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi32>
+  %0 = tosa.argmin %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64>
+  return %0 : tensor<1x513x513xi64>
+}
+
+// -----
+
 // CHECK-LABEL: test_convert_input_parameters
 // DEFAULT: %[[IN:.*]]: tensor<1x513x513x3xi64>
 // FUNCBOUND: %[[IN:.*]]: tensor<1x513x513x3xi32>

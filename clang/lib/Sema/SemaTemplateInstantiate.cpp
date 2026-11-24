@@ -257,8 +257,8 @@ HandleClassTemplateSpec(const ClassTemplateSpecializationDecl *ClassTemplSpec,
     // specialization, as the ClassTemplateSpecializationDecl's
     // DeclContext/LexicalDeclContext will be for the primary template.
     if (auto *InstFromPartialTempl =
-            ClassTemplSpec->getSpecializedTemplateOrPartial()
-                .dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(
+                ClassTemplSpec->getSpecializedTemplateOrPartial()))
       return Response::ChangeDecl(
           InstFromPartialTempl->getLexicalDeclContext());
   }
@@ -1168,6 +1168,13 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_comparison_synthesized_at)
                      << (int)DFK.asComparison() << RecordType);
+      } else if (DFK.isPostfixOperator()) {
+        // The declared return type of a defaulted postfix operator is the
+        // type for which it is defaulted.
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_postfix_operator_synthesized_at)
+                     << (int)DFK.asPostfixOperator()
+                     << FD->getReturnType().getUnqualifiedType());
       }
       break;
     }
@@ -1324,8 +1331,19 @@ namespace {
     bool BailOutOnIncomplete;
 
     std::optional<llvm::FoldingSetNodeID> TemplateArgsHashValue;
-    llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+    llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc>
         *CurrentCachedTemplateArgs = nullptr;
+
+    // While the parameters of a prototype are being substituted, the vector is
+    // populated with the late-parsed attributes, and the scope that maps them.
+    Sema::LateInstantiatedAttrVec *LateParmAttrs = nullptr;
+    LocalInstantiationScope *LateParmAttrScope = nullptr;
+    // If set, the function whose type is substituted, and the late-parsed
+    // attributes of its parameters, deferred until it is declared with scopes
+    // that extend the one the substitution started in.
+    const FunctionDecl *FunctionOfParmAttrs = nullptr;
+    Sema::LateInstantiatedAttrVec *FunctionParmAttrs = nullptr;
+    LocalInstantiationScope *FunctionParmAttrScope = nullptr;
 
     bool instantiateMissingDeclsToScopeForConcepts(Decl *D);
 
@@ -1344,6 +1362,13 @@ namespace {
              "instantiation stack");
     }
 
+    void deferFunctionParmAttrs(const FunctionDecl *Fn,
+                                Sema::LateInstantiatedAttrVec *Attrs) {
+      FunctionOfParmAttrs = Fn;
+      FunctionParmAttrs = Attrs;
+      FunctionParmAttrScope = SemaRef.CurrentInstantiationScope;
+    }
+
     void setEvaluateConstraints(bool B) {
       EvaluateConstraints = B;
     }
@@ -1360,7 +1385,7 @@ namespace {
     TemplateInstantiator(
         ForParameterMappingSubstitution_t, Sema &SemaRef, SourceLocation Loc,
         const MultiLevelTemplateArgumentList &TemplateArgs,
-        llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc> *Cache)
+        llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc> *Cache)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
           EvaluateLambdaConstraint(true), BailOutOnIncomplete(false),
           CurrentCachedTemplateArgs(Cache) {
@@ -1652,7 +1677,7 @@ namespace {
         }
         bool Ret = inherited::TransformTemplateArgument(Input, Output, Uneval);
         if (!Ret)
-          Cache->insert({ID, Output});
+          Cache->try_emplace(ID.Intern(SemaRef.BumpAlloc), Output);
         return Ret;
       }
       switch (Arg.getKind()) {
@@ -1730,6 +1755,15 @@ namespace {
                                             int indexAdjustment,
                                             UnsignedOrNone NumExpansions,
                                             bool ExpectParameterPack);
+
+    using inherited::TransformFunctionTypeParams;
+    bool TransformFunctionTypeParams(
+        SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
+        const QualType *ParamTypes,
+        const FunctionProtoType::ExtParameterInfo *ParamInfos,
+        SmallVectorImpl<QualType> &PTypes,
+        SmallVectorImpl<ParmVarDecl *> *PVars,
+        Sema::ExtParameterInfoBuilder &PInfos, unsigned *LastParamTransformed);
 
     using inherited::TransformTemplateTypeParmType;
     /// Transforms a template type parameter type by performing
@@ -2507,12 +2541,65 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
 ParmVarDecl *TemplateInstantiator::TransformFunctionTypeParam(
     ParmVarDecl *OldParm, int indexAdjustment, UnsignedOrNone NumExpansions,
     bool ExpectParameterPack) {
+  // Defer the late-parsed attributes of a parameter of the prototype being
+  // transformed, when in its scope. A parameter is otherwise transformed on its
+  // own only on demand, for a constraint that names it (see
+  // instantiateMissingDeclsToScopeForConcepts). Its attributes are then
+  // instantiated at once, and a later parameter they name is instantiated on
+  // demand as well.
+  Sema::LateInstantiatedAttrVec *LateAttrs = nullptr;
+  if (LateParmAttrs && SemaRef.CurrentInstantiationScope == LateParmAttrScope)
+    LateAttrs = LateParmAttrs;
+  else
+    assert((SemaRef.inConstraintSubstitution() ||
+            SemaRef.inParameterMappingSubstitution()) &&
+           "parameter transformed outside its prototype");
   auto NewParm = SemaRef.SubstParmVarDecl(
       OldParm, TemplateArgs, indexAdjustment, NumExpansions,
-      ExpectParameterPack, EvaluateConstraints);
+      ExpectParameterPack, EvaluateConstraints, LateAttrs);
   if (NewParm && SemaRef.getLangOpts().OpenCL)
     SemaRef.deduceOpenCLAddressSpace(NewParm);
   return NewParm;
+}
+
+bool TemplateInstantiator::TransformFunctionTypeParams(
+    SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
+    const QualType *ParamTypes,
+    const FunctionProtoType::ExtParameterInfo *ParamInfos,
+    SmallVectorImpl<QualType> &PTypes, SmallVectorImpl<ParmVarDecl *> *PVars,
+    Sema::ExtParameterInfoBuilder &PInfos, unsigned *LastParamTransformed) {
+  // A late-parsed attribute on a parameter may name a parameter declared after
+  // it, so transform all parameters then instantiate all late attributes.
+  Sema::LateInstantiatedAttrVec LateAttrs;
+  LocalInstantiationScope *Scope = SemaRef.CurrentInstantiationScope;
+  llvm::SaveAndRestore SaveLateAttrs(LateParmAttrs, &LateAttrs);
+  llvm::SaveAndRestore SaveLateScope(LateParmAttrScope, Scope);
+  bool Failed = inherited::TransformFunctionTypeParams(
+      Loc, Params, ParamTypes, ParamInfos, PTypes, PVars, PInfos,
+      LastParamTransformed);
+  // The attributes were deferred in this scope itself, so there is nothing to
+  // free on failure.
+  assert(
+      llvm::all_of(LateAttrs, [&](const Sema::LateInstantiatedAttribute &LA) {
+        return LA.Scope == Scope;
+      }));
+  if (Failed)
+    return true;
+  // The parser parses the late-parsed attributes of a function's parameters in
+  // the function's scope, once it is declared; see
+  // Parser::ParseFunctionDeclarator. Defer them likewise, if asked to.
+  const auto *It = llvm::find_if(Params, [](ParmVarDecl *P) { return P; });
+  if (FunctionParmAttrs && It != Params.end() &&
+      (*It)->getDeclContext() == FunctionOfParmAttrs) {
+    // The prototype's scope ends with its substitution, so keep a copy.
+    for (const Sema::LateInstantiatedAttribute &LA : LateAttrs)
+      FunctionParmAttrs->push_back(Sema::LateInstantiatedAttribute(
+          LA.TmplAttr, LA.Scope->cloneScopes(FunctionParmAttrScope),
+          LA.NewDecl));
+    return false;
+  }
+  SemaRef.InstantiateLateAttrs(TemplateArgs, LateAttrs, Scope);
+  return false;
 }
 
 QualType TemplateInstantiator::BuildSubstTemplateTypeParmType(
@@ -2819,7 +2906,7 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     }
   }
   assert(TransRetReq && "All code paths leading here must set TransRetReq");
-  if (Expr *E = TransExpr.dyn_cast<Expr *>())
+  if (Expr *E = dyn_cast<Expr *>(TransExpr))
     return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
                                   std::move(*TransRetReq));
   return RebuildExprRequirement(
@@ -2981,12 +3068,14 @@ static bool NeedsInstantiationAsFunctionType(TypeSourceInfo *T) {
 TypeSourceInfo *Sema::SubstFunctionDeclType(
     TypeSourceInfo *T, const MultiLevelTemplateArgumentList &Args,
     SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
-    Qualifiers ThisTypeQuals, bool EvaluateConstraints) {
+    Qualifiers ThisTypeQuals, bool EvaluateConstraints, const FunctionDecl *Fn,
+    LateInstantiatedAttrVec *ParamAttrs) {
   if (!NeedsInstantiationAsFunctionType(T))
     return T;
 
   TemplateInstantiator Instantiator(*this, Args, Loc, Entity);
   Instantiator.setEvaluateConstraints(EvaluateConstraints);
+  Instantiator.deferFunctionParmAttrs(Fn, ParamAttrs);
 
   TypeLocBuilder TLB;
 
@@ -3152,8 +3241,13 @@ bool Sema::SubstTypeConstraint(
   if (TemplArgInfo) {
     InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
     InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
-    if (SubstTemplateArguments(TemplArgInfo->arguments(), TemplateArgs,
-                               InstArgs))
+    // Constraints on lambda arguments can depend on the substituted parameters.
+    TemplateInstantiator Instantiator(
+        TemplateInstantiator::ForConstraintSubstitution, *this, TemplateArgs,
+        TC->getConceptNameLoc(), DeclarationName());
+    if (Instantiator.TransformTemplateArguments(
+            TemplArgInfo->arguments().begin(), TemplArgInfo->arguments().end(),
+            InstArgs))
       return true;
   }
   return AttachTypeConstraint(
@@ -3166,11 +3260,10 @@ bool Sema::SubstTypeConstraint(
           : SourceLocation());
 }
 
-ParmVarDecl *
-Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
-                       const MultiLevelTemplateArgumentList &TemplateArgs,
-                       int indexAdjustment, UnsignedOrNone NumExpansions,
-                       bool ExpectParameterPack, bool EvaluateConstraint) {
+ParmVarDecl *Sema::SubstParmVarDecl(
+    ParmVarDecl *OldParm, const MultiLevelTemplateArgumentList &TemplateArgs,
+    int indexAdjustment, UnsignedOrNone NumExpansions, bool ExpectParameterPack,
+    bool EvaluateConstraint, LateInstantiatedAttrVec *LateAttrs) {
   TypeSourceInfo *OldTSI = OldParm->getTypeSourceInfo();
   TypeSourceInfo *NewTSI = nullptr;
 
@@ -3274,14 +3367,19 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
     CurrentInstantiationScope->InstantiatedLocal(OldParm, NewParm);
   }
 
-  // FIXME: OldParm may come from a FunctionProtoType, in which case CurContext
-  // can be anything, is this right ?
-  NewParm->setDeclContext(CurContext);
+  // A parameter that is not a function's own, such as one of a function
+  // pointer's pointee, belongs to no function (see ActOnParamDeclarator); keep
+  // it in the translation unit, where CheckParameter created it.
+  // FIXME: For other parameters from a FunctionProtoType, CurContext can be
+  // anything; is this right?
+  if (!OldParm->getDeclContext()->isTranslationUnit())
+    NewParm->setDeclContext(CurContext);
 
   NewParm->setScopeInfo(OldParm->getFunctionScopeDepth(),
                         OldParm->getFunctionScopeIndex() + indexAdjustment);
 
-  InstantiateAttrs(TemplateArgs, OldParm, NewParm);
+  InstantiateAttrs(TemplateArgs, OldParm, NewParm, LateAttrs,
+                   CurrentInstantiationScope);
 
   NewParm->deduceParmAddressSpace(Context);
 
@@ -3294,11 +3392,20 @@ bool Sema::SubstParmTypes(
     const MultiLevelTemplateArgumentList &TemplateArgs,
     SmallVectorImpl<QualType> &ParamTypes,
     SmallVectorImpl<ParmVarDecl *> *OutParams,
-    ExtParameterInfoBuilder &ParamInfos) {
+    ExtParameterInfoBuilder &ParamInfos, const QualType *OldParamTypes,
+    bool EvaluateConstraints, const FunctionDecl *Fn,
+    LateInstantiatedAttrVec *ParamAttrs) {
+  // If there is a parameter with no ParmVarDecl to substitute, its type needs
+  // to come from OldParamTypes instead.
+  assert((OldParamTypes || !llvm::is_contained(Params, nullptr)) &&
+         "a parameter with no ParmVarDecl needs OldParamTypes to be passed");
   TemplateInstantiator Instantiator(*this, TemplateArgs, Loc,
                                     DeclarationName());
-  return Instantiator.TransformFunctionTypeParams(
-      Loc, Params, nullptr, ExtParamInfos, ParamTypes, OutParams, ParamInfos);
+  Instantiator.setEvaluateConstraints(EvaluateConstraints);
+  Instantiator.deferFunctionParmAttrs(Fn, ParamAttrs);
+  return Instantiator.TransformFunctionTypeParams(Loc, Params, OldParamTypes,
+                                                  ExtParamInfos, ParamTypes,
+                                                  OutParams, ParamInfos);
 }
 
 bool Sema::SubstDefaultArgument(
@@ -3742,27 +3849,9 @@ bool Sema::InstantiateClassImpl(
     ActOnFinishCXXNonNestedClass();
 
   // Instantiate late parsed attributes, and attach them to their decls.
-  // See Sema::InstantiateAttrs
-  for (LateInstantiatedAttrVec::iterator I = LateAttrs.begin(),
-       E = LateAttrs.end(); I != E; ++I) {
-    assert(CurrentInstantiationScope == Instantiator.getStartingScope());
-    CurrentInstantiationScope = I->Scope;
-
-    // Allow 'this' within late-parsed attributes.
-    auto *ND = cast<NamedDecl>(I->NewDecl);
-    auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(ND->getDeclContext());
-    CXXThisScopeRAII ThisScope(*this, ThisContext, Qualifiers(),
-                               ND->isCXXInstanceMember());
-
-    Attr *NewAttr =
-      instantiateTemplateAttribute(I->TmplAttr, Context, *this, TemplateArgs);
-    if (NewAttr && checkInstantiatedThreadSafetyAttrs(I->NewDecl, NewAttr))
-      I->NewDecl->addAttr(NewAttr);
-    LocalInstantiationScope::deleteScopes(I->Scope,
-                                          Instantiator.getStartingScope());
-  }
+  InstantiateLateAttrs(TemplateArgs, LateAttrs,
+                       Instantiator.getStartingScope());
   Instantiator.disableLateAttributeInstantiation();
-  LateAttrs.clear();
 
   ActOnFinishDelayedMemberInitializers(Instantiation);
 

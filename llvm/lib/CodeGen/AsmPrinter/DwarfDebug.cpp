@@ -258,6 +258,9 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
     } else if (Op.isTargetIndex()) {
       DbgValueLocEntries.push_back(
           DbgValueLocEntry(TargetIndexLocation(Op.getIndex(), Op.getOffset())));
+    } else if (Op.isGlobal()) {
+      DbgValueLocEntries.push_back(DbgValueLocEntry(
+          GlobalAddressLocation(Op.getGlobal(), Op.getOffset())));
     } else if (Op.isImm())
       DbgValueLocEntries.push_back(DbgValueLocEntry(Op.getImm()));
     else if (Op.isFPImm())
@@ -336,21 +339,13 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
       IsDarwin(A->TM.getTargetTriple().isOSDarwin()),
+      DebuggerTuning(MMI->getModule()->getDebuggerTuning()),
       InfoHolder(A, "info_string", DIEValueAllocator) {
   const Triple &TT = Asm->TM.getTargetTriple();
 
-  // Make sure we know our "debugger tuning".  The target option takes
-  // precedence; fall back to triple-based defaults.
-  if (Asm->TM.Options.DebuggerTuning != DebuggerKind::Default)
-    DebuggerTuning = Asm->TM.Options.DebuggerTuning;
-  else if (IsDarwin)
-    DebuggerTuning = DebuggerKind::LLDB;
-  else if (TT.isPS())
-    DebuggerTuning = DebuggerKind::SCE;
-  else if (TT.isOSAIX())
-    DebuggerTuning = DebuggerKind::DBX;
-  else
-    DebuggerTuning = DebuggerKind::GDB;
+  // Emit call-site-param debug info for GDB and LLDB, if the target supports
+  // the debug entry values feature. It can also be enabled explicitly.
+  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues(DebuggerTuning);
 
   if (DwarfInlinedStrings == Default)
     UseInlineStrings = tuneForDBX();
@@ -377,6 +372,28 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   if (!DwarfVersion)
     DwarfVersion = dwarf::DWARF_VERSION;
 
+  UseRangesSection = !NoDwarfRangesSection;
+
+  if (DwarfSectionsAsReferences != Default)
+    UseSectionsAsReferences = (DwarfSectionsAsReferences == Enable);
+
+  // Don't generate type units for unsupported object file formats.
+  GenerateTypeUnits = (A->TM.getTargetTriple().isOSBinFormatELF() ||
+                       A->TM.getTargetTriple().isOSBinFormatWasm()) &&
+                      GenerateDwarfTypeUnits;
+
+  if (DwarfOpConvert == Default)
+    EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) ||
+                        (tuneForLLDB() && !TT.isOSBinFormatMachO()));
+  else
+    EnableOpConvert = (DwarfOpConvert == Enable);
+
+  applyDwarfVersion(DwarfVersion);
+}
+
+void DwarfDebug::applyDwarfVersion(unsigned DwarfVersion) {
+  const Triple &TT = Asm->TM.getTargetTriple();
+
   bool Dwarf64 = DwarfVersion >= 3 && // DWARF64 was introduced in DWARFv3.
                  TT.isArch64Bit();    // DWARF64 requires 64-bit relocations.
 
@@ -393,18 +410,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   if (!Dwarf64 && TT.isArch64Bit() && TT.isOSBinFormatXCOFF())
     report_fatal_error("XCOFF requires DWARF64 for 64-bit mode!");
 
-  UseRangesSection = !NoDwarfRangesSection;
-
-  if (DwarfSectionsAsReferences != Default)
-    UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
-
-  // Don't generate type units for unsupported object file formats.
-  GenerateTypeUnits = (A->TM.getTargetTriple().isOSBinFormatELF() ||
-                       A->TM.getTargetTriple().isOSBinFormatWasm()) &&
-                      GenerateDwarfTypeUnits;
-
-  TheAccelTableKind = computeAccelTableKind(
-      DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
+  TheAccelTableKind = computeAccelTableKind(DwarfVersion, GenerateTypeUnits,
+                                            DebuggerTuning, TT);
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -421,23 +428,15 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // a monolithic string offsets table without any header.
   UseSegmentedStringOffsetsTable = DwarfVersion >= 5;
 
-  // Emit call-site-param debug info for GDB and LLDB, if the target supports
-  // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = Asm->TM.Options.ShouldEmitDebugEntryValues();
-
   // It is unclear if the GCC .debug_macro extension is well-specified
   // for split DWARF. For now, do not allow LLVM to emit it.
   UseDebugMacroSection =
       DwarfVersion >= 5 || (UseGNUDebugMacro && !useSplitDwarf());
-  if (DwarfOpConvert == Default)
-    EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) || (tuneForLLDB() && !TT.isOSBinFormatMachO()));
-  else
-    EnableOpConvert = (DwarfOpConvert == Enable);
 
   // Split DWARF would benefit object size significantly by trading reductions
   // in address pool usage for slightly increased range list encodings.
-  if (DwarfVersion >= 5)
-    MinimizeAddr = MinimizeAddrInV5Option;
+  MinimizeAddr =
+      DwarfVersion >= 5 ? MinimizeAddrInV5Option : MinimizeAddrInV5::Disabled;
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
@@ -1014,9 +1013,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (PhysRegCalleeOperand) {
         bool Scalable = false;
         const MachineOperand *BaseOp = nullptr;
-        const TargetRegisterInfo &TRI =
-            *Asm->MF->getSubtarget().getRegisterInfo();
-        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable, &TRI)) {
+        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable)) {
           if (BaseOp && BaseOp->isReg() && !Scalable)
             CallTarget = MachineLocation(BaseOp->getReg(), /*Indirect*/ true);
         }
@@ -1505,6 +1502,14 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
+  // All functions have been processed, so it is known now which subprograms
+  // have abstract DIEs. Move DIEs of function-local entities created while
+  // processing functions to their final parents.
+  AllFunctionsProcessed = true;
+  for (DwarfFile *Holder : {&InfoHolder, &SkeletonHolder})
+    for (const auto &CU : Holder->getUnits())
+      CU->resolvePendingLocalScopeDIEs();
+
   const Module *M = MMI->getModule();
 
   // Collect global variables info.
@@ -1785,9 +1790,12 @@ static bool validThroughout(LexicalScopes &LScopes,
   // throughout the function. This is a hack, presumably for DWARF v2 and not
   // necessarily correct. It would be much better to use a dbg.declare instead
   // if we know the constant is live throughout the scope.
+  // The address of a global is a link-time constant, so for those this is not
+  // a hack: the location genuinely does describe the variable throughout.
   if (MBB->pred_empty() &&
-      all_of(DbgValue->debug_operands(),
-             [](const MachineOperand &Op) { return Op.isImm(); }))
+      all_of(DbgValue->debug_operands(), [](const MachineOperand &Op) {
+        return Op.isImm() || Op.isGlobal();
+      }))
     return true;
 
   // Test if the location terminates before the end of the scope.
@@ -3266,6 +3274,26 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                    DwarfExpression &DwarfExpr) {
   auto *DIExpr = Value.getExpression();
   DIExpressionCursor ExprCursor(DIExpr);
+
+  // Determine if a global address can be expressed before emitting
+  // anything.
+  if (!DwarfExpr.canAddGlobalAddress() &&
+      any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
+        return Entry.isGlobalAddress();
+      }))
+    return;
+
+  // DW_OP_LLVM_implicit_pointer is only lowered for single-location variables
+  // (see DwarfCompileUnit::emitImplicitPointerLocation). In a location list,
+  // bail before anything is written, otherwise the register part of the
+  // location gets emitted without the implicit pointer and describes the
+  // wrong thing. The range is dropped instead, i.e. optimized out there.
+  if (DIExpr &&
+      any_of(DIExpr->expr_ops(), [](const DIExpression::ExprOperand &Op) {
+        return Op.getOp() == dwarf::DW_OP_LLVM_implicit_pointer;
+      }))
+    return;
+
   DwarfExpr.addFragmentOffset(DIExpr);
 
   // If the DIExpr is an Entry Value, we want to follow the same code path
@@ -3283,7 +3311,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Location.getReg()))
       return;
-    return DwarfExpr.addExpression(std::move(ExprCursor));
+    DwarfExpr.addExpression(std::move(ExprCursor));
+    return;
   }
 
   // Regular entry.
@@ -3342,6 +3371,10 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       // WebAssembly-specific encoding is supported.
       assert(AP.TM.getTargetTriple().isWasm());
       DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
+    } else if (Entry.isGlobalAddress()) {
+      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress(),
+                                      Entry.getGlobalOffset()))
+        return false;
     } else if (Entry.isConstantFP()) {
       if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE() &&
           !Cursor) {

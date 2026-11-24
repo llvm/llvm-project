@@ -26,6 +26,7 @@ LLVM_LIBC_FUNCTION(int, setgroups, (size_t size, const gid_t *list)) {
   if (size > 0)
     LIBC_CRASH_ON_NULLPTR(list);
 
+  // TODO: Implement setxid propagation across threads.
   const auto ret = linux_syscalls::setgroups(size, list);
   if (!ret) {
     libc_errno = ret.error();

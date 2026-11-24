@@ -54,8 +54,8 @@ subroutine test_reshape_shape_slice()
   integer, parameter :: i = 1
   real :: tmp(4) = [1,2,3,4]
   integer ::  dims(4) = [2,2,2,2]
-  ! CHECK:  %[[dimsDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_shape_sliceEdims"}
-  ! CHECK:  %[[tmpDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_shape_sliceEtmp"}
+  ! CHECK:  %[[dimsDecl:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_shape_sliceEdims")
+  ! CHECK:  %[[tmpDecl:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_shape_sliceEtmp")
   ! CHECK:  %[[sliceRef:.*]] = hlfir.designate %[[dimsDecl]]#0 ({{.*}}:{{.*}}:{{.*}})
   ! CHECK:  hlfir.reshape %[[tmpDecl]]#0 %[[sliceRef]]
   call some_proc(reshape(tmp, dims(i:2)))

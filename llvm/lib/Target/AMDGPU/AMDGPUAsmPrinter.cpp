@@ -118,6 +118,9 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
+  // AMDGPU describes a pointer's address space with its own attribute rather
+  // than DW_AT_address_class.
+  TypeAddressSpaceAttribute = dwarf::DW_AT_LLVM_address_space;
   GetResourceUsage = [this](MachineFunction &MF)
       -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
     if (auto *ResourceUsageW =
@@ -157,7 +160,7 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
-  getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+  getTargetStreamer()->emitDirectiveAMDGCNTargetOnce();
 
   if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
@@ -408,15 +411,20 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TT.getOS() == Triple::AMDHSA) {
+    const AMDGPUOptions &CLOpts =
+        static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts();
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV4>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV5:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV5>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV5>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV6:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV6>(CLOpts);
       break;
     default:
       reportFatalUsageError("unsupported code object version");
@@ -465,6 +473,36 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                                CreateExpr(SGPRGranule),
                                CreateExpr(SGPRTrapReserve), SGPRArg, NumVGPRs},
                               Ctx);
+}
+
+// Diagnoses an "amdgpu-waves-per-eu" request that the final occupancy does not
+// meet. Returns true if a diagnostic was emitted.
+static bool diagnoseUnmetWavesPerEU(const Function &F,
+                                    const SIMachineFunctionInfo &MFI,
+                                    uint64_t Occupancy) {
+  const auto [MinWEU, MaxWEU] =
+      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
+  std::string Desired;
+  if (Occupancy < MinWEU) {
+    Desired = std::to_string(MinWEU);
+  } else if (MaxWEU != 0 && Occupancy > MaxWEU &&
+             MFI.getMaxWavesPerEU() > MaxWEU) {
+    // The requested maximum was not applied: a request whose minimum is below
+    // what the workgroup size requires is ignored in favor of the default
+    // range. An applied maximum always caps the effective maximum, so this
+    // does not fire when the occupancy merely exceeds a requested maximum that
+    // register usage cannot enforce.
+    Desired = "at most " + std::to_string(MaxWEU);
+  } else {
+    return false;
+  }
+  DiagnosticInfoOptimizationFailure Diag(
+      F, F.getSubprogram(),
+      "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in '" +
+          F.getName() + "': desired occupancy was " + Desired +
+          ", final occupancy is " + Twine(Occupancy));
+  F.getContext().diagnose(Diag);
+  return true;
 }
 
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
@@ -557,7 +595,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
-          getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
+          getTotalNumVGPRs(STM.hasGFX90AInsts(), static_cast<uint32_t>(NumAgpr),
+                           static_cast<uint32_t>(NumVgpr));
       uint64_t NumVGPRsForWavesPerEU =
           std::max({TotalNumVgpr, (uint64_t)1,
                     (uint64_t)STM.getMinNumVGPRs(
@@ -570,20 +609,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
           MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext),
           MFI.getDynamicVGPRBlockSize(), STM, OutContext);
       uint64_t Occupancy;
-
-      const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
-          F, "amdgpu-waves-per-eu", {0, 0}, true);
-
-      if (TryGetMCExprValue(OccupancyExpr, Occupancy) && Occupancy < MinWEU) {
-        DiagnosticInfoOptimizationFailure Diag(
-            F, F.getSubprogram(),
-            "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-            "'" +
-                F.getName() + "': desired occupancy was " + Twine(MinWEU) +
-                ", final occupancy is " + Twine(Occupancy));
-        F.getContext().diagnose(Diag);
+      if (TryGetMCExprValue(OccupancyExpr, Occupancy) &&
+          diagnoseUnmetWavesPerEU(F, MFI, Occupancy))
         return;
-      }
     }
   }
 }
@@ -594,7 +622,7 @@ static void appendTypeEncoding(std::string &Enc, Type *Ty, const DataLayout &DL,
     Enc += 'v';
     return;
   }
-  unsigned Bits = DL.getTypeSizeInBits(Ty);
+  uint64_t Bits = DL.getTypeSizeInBits(Ty);
   // Zero-sized non-void types (e.g. `{}` or `[0 x i8]`) consume no ABI
   // registers. For returns, emit the same no-result marker as void so the
   // parameter encoding still has an explicit return-type prefix.
@@ -1221,16 +1249,17 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
   }
 
   // Apply xnack/sramecc settings from module flags.
+  const auto &GCNTM = static_cast<const GCNTargetMachine &>(TM);
   if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureXNACKOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
-        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
     if (Setting != AMDGPU::TargetIDSetting::Any)
       TSTargetID->setXnackSetting(Setting);
   }
 
-  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSupportsSRAMECC)) {
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSRAMECCOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
-        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
     if (Setting != AMDGPU::TargetIDSetting::Any)
       TSTargetID->setSramEccSetting(Setting);
   }
@@ -1545,22 +1574,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT, Ctx);
 
   ProgInfo.Occupancy = createOccupancy(
-      STM.computeOccupancy(F, ProgInfo.LDSSize).second,
+      STM.getOccupancyWithWorkGroupSizes(MF).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
       MFI->getDynamicVGPRBlockSize(), STM, Ctx);
 
-  const auto [MinWEU, MaxWEU] =
-      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
   uint64_t Occupancy;
-  if (TryGetMCExprValue(ProgInfo.Occupancy, Occupancy) && Occupancy < MinWEU) {
-    DiagnosticInfoOptimizationFailure Diag(
-        F, F.getSubprogram(),
-        "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-        "'" +
-            F.getName() + "': desired occupancy was " + Twine(MinWEU) +
-            ", final occupancy is " + Twine(Occupancy));
-    F.getContext().diagnose(Diag);
-  }
+  if (TryGetMCExprValue(ProgInfo.Occupancy, Occupancy))
+    diagnoseUnmetWavesPerEU(F, *MFI, Occupancy);
 }
 
 static unsigned getRsrcReg(CallingConv::ID CallConv) {
@@ -1763,6 +1783,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(
                                   MCConstantExpr::create(16, Ctx), Ctx),
       Ctx);
 
+  MD->setBackendStackSize(CC, CurrentProgramInfo.ScratchSize);
+
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
     unsigned ExtraLDSSize = STM.getGeneration() >= AMDGPUSubtarget::GFX11
                                 ? divideCeil(CurrentProgramInfo.LDSBlocks, 2)
@@ -1812,7 +1834,8 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   auto *MD = getTargetStreamer()->getPALMetadata();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   StringRef FnName = MF.getFunction().getName();
-  MD->setFunctionScratchSize(FnName, MFI.getStackSize());
+  MD->setFunctionStackFrameSize(FnName, MFI.getStackSize());
+  MD->setFunctionBackendStackSize(FnName, CurrentProgramInfo.ScratchSize);
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 
@@ -1909,7 +1932,8 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   // kernarg_segment_alignment is specified as log of the alignment.
   // The minimum alignment is 16.
   // FIXME: The metadata treats the minimum as 4?
-  Out.kernarg_segment_alignment = Log2(std::max(Align(16), MaxKernArgAlign));
+  Out.kernarg_segment_alignment =
+      static_cast<uint8_t>(Log2(std::max(Align(16), MaxKernArgAlign)));
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

@@ -81,6 +81,10 @@ using TargetRegisterClass = MCRegisterClass;
                             ISD::NodeType) const override;
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
+    unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             unsigned Depth) const override;
     bool isCheapToSpeculateCtlz(Type *Ty) const override;
     bool hasBitTest(SDValue X, SDValue Y) const override;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
@@ -135,6 +139,8 @@ using TargetRegisterClass = MCRegisterClass;
 
     void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                        SDNode *Node) const override;
+
+    void finalizeLowering(MachineFunction &MF) const override;
 
     void HandleByVal(CCState *, unsigned &, Align) const override;
 
@@ -310,7 +316,7 @@ using TargetRegisterClass = MCRegisterClass;
     virtual void
     getOpndList(SmallVectorImpl<SDValue> &Ops,
                 std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-                bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
+                bool IsPICCall, bool GlobalOrExternal, bool LocalLinkage,
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const;
 
@@ -370,6 +376,7 @@ using TargetRegisterClass = MCRegisterClass;
                         bool HasExtractInsert) const;
     SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
                         bool HasExtractInsert) const;
+    SDValue lowerFNEG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
@@ -491,11 +498,9 @@ using TargetRegisterClass = MCRegisterClass;
     EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
-    /// isFPImmLegal - Returns true if the target can instruction select the
-    /// specified FP immediate natively. If false, the legalizer will
-    /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    /// Returns how to materialize the specified FP immediate.
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     bool isLegalICmpImmediate(int64_t Imm) const override;
     bool isLegalAddImmediate(int64_t Imm) const override;

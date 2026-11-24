@@ -257,7 +257,7 @@ VAListChecker::getStartCallSite(const ExplodedNode *N,
 void VAListChecker::reportUninitializedAccess(const MemRegion *VAList,
                                               StringRef Msg,
                                               CheckerContext &C) const {
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     auto R = std::make_unique<PathSensitiveBugReport>(UninitAccessBug, Msg, N);
     R->markInteresting(VAList);
     R->addVisitor(std::make_unique<VAListBugVisitor>(VAList));

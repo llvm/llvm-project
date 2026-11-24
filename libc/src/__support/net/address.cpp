@@ -21,9 +21,12 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
-#include "src/__support/endian_internal.h"
+#include "src/__support/fixedvector.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/net/byte_order.h"
+#include "src/__support/net/hex.h"
 #include "src/__support/str_to_integer.h"
+#include "src/string/memory_utils/inline_bzero.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -67,6 +70,87 @@ namespace net {
   return true;
 }
 
+[[nodiscard]] bool str_to_ipv6(cpp::string_view src, struct in6_addr &dst) {
+  constexpr size_t NUM_COMPONENTS = 8;
+  // `parts[0]` collects 16-bit groups preceding "::", while `parts[1]` collects
+  // groups following "::". When "::" is encountered, `part_idx` switches to 1.
+  // After parsing, any omitted zero groups are filled between the two parts.
+  FixedVector<uint16_t, NUM_COMPONENTS> parts[2];
+  size_t part_idx = 0;
+
+  while (!src.empty()) {
+    size_t non_colon = src.find_first_not_of(':');
+    if (non_colon == cpp::string_view::npos) {
+      if (src.size() == 2 && part_idx == 0) {
+        part_idx = 1;
+        break;
+      }
+      return false;
+    }
+
+    switch (non_colon) {
+    case 0:
+      if (part_idx > 0 || !parts[0].empty())
+        return false;
+      break;
+    case 1:
+      if (part_idx == 0 && parts[0].empty())
+        return false;
+      src.remove_prefix(1);
+      break;
+    case 2:
+      if (part_idx > 0)
+        return false;
+      part_idx = 1;
+      src.remove_prefix(2);
+      break;
+    default:
+      return false;
+    }
+
+    size_t colon_pos = src.find_first_of(':');
+    if (colon_pos == cpp::string_view::npos && src.contains('.')) {
+      struct in_addr in4;
+      if (!str_to_ipv4(src, in4))
+        return false;
+
+      uint16_t v4_words[2];
+      inline_memcpy(v4_words, &in4.s_addr, sizeof(v4_words));
+      if (!parts[part_idx].push_back(v4_words[0]) ||
+          !parts[part_idx].push_back(v4_words[1]))
+        return false;
+
+      break;
+    }
+
+    cpp::optional<uint16_t> word = consume_hex<uint16_t>(src);
+    if (!word || !parts[part_idx].push_back(hton(*word)))
+      return false;
+  }
+
+  if (part_idx > 0) {
+    if (parts[0].size() + parts[1].size() >= NUM_COMPONENTS)
+      return false;
+
+    size_t num_zeroes = NUM_COMPONENTS - parts[0].size() - parts[1].size();
+    uint16_t *ptr = dst.s6_addr16;
+    if (!parts[0].empty()) {
+      inline_memcpy(ptr, parts[0].begin(), parts[0].size() * sizeof(uint16_t));
+      ptr += parts[0].size();
+    }
+    inline_bzero(ptr, num_zeroes * sizeof(uint16_t));
+    ptr += num_zeroes;
+    if (!parts[1].empty())
+      inline_memcpy(ptr, parts[1].begin(), parts[1].size() * sizeof(uint16_t));
+  } else {
+    if (parts[0].size() != NUM_COMPONENTS)
+      return false;
+    inline_memcpy(dst.s6_addr16, parts[0].begin(), sizeof(dst));
+  }
+
+  return true;
+}
+
 cpp::optional<in_addr_t> inet_addr(cpp::string_view src) {
   constexpr int IPV4_MAX_DOT_NUM = 3;
   in_addr_t parts[IPV4_MAX_DOT_NUM + 1] = {0};
@@ -107,7 +191,7 @@ cpp::optional<in_addr_t> inet_addr(cpp::string_view src) {
     result |= parts[i] << shift;
   }
 
-  return Endian::to_big_endian(result);
+  return hton(result);
 }
 
 namespace {
@@ -169,7 +253,7 @@ size_t ipv6_to_str_unchecked(const struct in6_addr &src, cpp::span<char> dst) {
 
   size_t pos = 0;
   auto append_word = [&](unsigned i) {
-    uint16_t word = Endian::from_big_endian(src.s6_addr16[i]);
+    uint16_t word = ntoh(src.s6_addr16[i]);
     // This isn't using int_to_b36_char because it's large intermediate
     // representation prevents append_word from being inlined.
     static constexpr char DIGITS[] = "0123456789abcdef";

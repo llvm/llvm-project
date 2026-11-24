@@ -98,11 +98,12 @@ TEST_F(MCJITTest, return_global) {
   int32_t initialNum = 7;
   GlobalVariable *GV = insertGlobalInt32(M.get(), "myglob", initialNum);
 
-  Function *ReturnGlobal =
-      startFunction(M.get(), FunctionType::get(Builder.getInt32Ty(), {}, false),
-                    "ReturnGlobal");
+  IRBuilder<> Builder(*M);
+  Function *ReturnGlobal = startFunction(
+      Builder, M.get(), FunctionType::get(Builder.getInt32Ty(), {}, false),
+      "ReturnGlobal");
   Value *ReadGlobal = Builder.CreateLoad(Builder.getInt32Ty(), GV);
-  endFunctionWithRet(ReturnGlobal, ReadGlobal);
+  endFunctionWithRet(Builder, ReturnGlobal, ReadGlobal);
 
   createJIT(std::move(M));
   uint64_t rgvPtr = TheJIT->getFunctionAddress(ReturnGlobal->getName().str());
@@ -126,8 +127,9 @@ TEST_F(MCJITTest, increment_global) {
   SKIP_UNSUPPORTED_PLATFORM;
 
   int32_t initialNum = 5;
+  IRBuilder<> Builder(*M);
   Function *IncrementGlobal = startFunction(
-      M.get(),
+      Builder, M.get(),
       FunctionType::get(Builder.getInt32Ty(), {}, false),
       "IncrementGlobal");
   GlobalVariable *GV = insertGlobalInt32(M.get(), "my_global", initialNum);
@@ -135,7 +137,7 @@ TEST_F(MCJITTest, increment_global) {
   Value *AddResult = Builder.CreateAdd(DerefGV,
                                        ConstantInt::get(Context, APInt(32, 1)));
   Builder.CreateStore(AddResult, GV);
-  endFunctionWithRet(IncrementGlobal, AddResult);
+  endFunctionWithRet(Builder, IncrementGlobal, AddResult);
 
   createJIT(M.take());
   void *gvPtr = TheJIT->getPointerToGlobal(GV);
@@ -164,19 +166,22 @@ TEST_F(MCJITTest, multiple_functions) {
   unsigned int numLevels = 23;
   int32_t innerRetVal= 5;
 
+  IRBuilder<> Builder(*M);
   Function *Inner = startFunction(
-      M.get(), FunctionType::get(Builder.getInt32Ty(), {}, false), "Inner");
-  endFunctionWithRet(Inner, ConstantInt::get(Context, APInt(32, innerRetVal)));
+      Builder, M.get(), FunctionType::get(Builder.getInt32Ty(), {}, false),
+      "Inner");
+  endFunctionWithRet(Builder, Inner,
+                     ConstantInt::get(Context, APInt(32, innerRetVal)));
 
   Function *Outer;
   for (unsigned int i = 0; i < numLevels; ++i) {
     std::stringstream funcName;
     funcName << "level_" << i;
-    Outer = startFunction(M.get(),
+    Outer = startFunction(Builder, M.get(),
                           FunctionType::get(Builder.getInt32Ty(), {}, false),
                           funcName.str());
     Value *innerResult = Builder.CreateCall(Inner, {});
-    endFunctionWithRet(Outer, innerResult);
+    endFunctionWithRet(Builder, Outer, innerResult);
 
     Inner = Outer;
   }
@@ -197,7 +202,7 @@ TEST_F(MCJITTest, multiple_decl_lookups) {
   SKIP_UNSUPPORTED_PLATFORM;
 
   Function *Foo = insertExternalReferenceToFunction(
-      M.get(), FunctionType::get(Builder.getVoidTy(), {}, false), "_exit");
+      M.get(), FunctionType::get(Type::getVoidTy(Context), {}, false), "_exit");
   createJIT(std::move(M));
   void *A = TheJIT->getPointerToFunction(Foo);
   void *B = TheJIT->getPointerToFunction(Foo);
@@ -211,11 +216,12 @@ typedef void * (*FunctionHandlerPtr)(const std::string &str);
 TEST_F(MCJITTest, lazy_function_creator_pointer) {
   SKIP_UNSUPPORTED_PLATFORM;
 
+  IRBuilder<> Builder(*M);
   Function *Foo = insertExternalReferenceToFunction(
       M.get(), FunctionType::get(Builder.getInt32Ty(), {}, false),
       "\1Foo");
-  startFunction(M.get(), FunctionType::get(Builder.getInt32Ty(), {}, false),
-                "Parent");
+  startFunction(Builder, M.get(),
+                FunctionType::get(Builder.getInt32Ty(), {}, false), "Parent");
   CallInst *Call = Builder.CreateCall(Foo, {});
   Builder.CreateRet(Call);
   
@@ -250,13 +256,14 @@ TEST_F(MCJITTest, lazy_function_creator_pointer) {
 TEST_F(MCJITTest, lazy_function_creator_lambda) {
   SKIP_UNSUPPORTED_PLATFORM;
 
+  IRBuilder<> Builder(*M);
   FunctionType *Int32VoidFnTy =
       FunctionType::get(Builder.getInt32Ty(), {}, false);
   Function *Foo1 =
       insertExternalReferenceToFunction(M.get(), Int32VoidFnTy, "\1Foo1");
   Function *Foo2 =
       insertExternalReferenceToFunction(M.get(), Int32VoidFnTy, "\1Foo2");
-  startFunction(M.get(), Int32VoidFnTy, "Parent");
+  startFunction(Builder, M.get(), Int32VoidFnTy, "Parent");
   CallInst *Call1 = Builder.CreateCall(Foo1, {});
   CallInst *Call2 = Builder.CreateCall(Foo2, {});
   Value *Result = Builder.CreateAdd(Call1, Call2);

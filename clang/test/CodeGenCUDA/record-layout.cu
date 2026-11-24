@@ -40,7 +40,8 @@ struct C : A, B {
 // AST-NEXT:             | [sizeof=24, align=8,
 // AST-NEXT:             |  nvsize=24, nvalign=8]
 
-// CHECK: %struct.I = type { ptr, i32 }
+// HOST: %struct.I = type { ptr, i32 }
+// DEV: %struct.I = type { ptr addrspace(1), i32 }
 // CHECK: %struct.J = type { %struct.I, i32 }
 
 // HOST: @0 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4J@@6B@", ptr @"?f@J@@UEAAXXZ", ptr null, ptr @"?h@J@@UEAAXXZ"] }, comdat($"??_7J@@6B@")
@@ -165,7 +166,7 @@ void test_J() {
 // HOST:  %this.addr = alloca ptr, align 8
 // HOST:  store ptr %this, ptr %this.addr, align 8
 // HOST:  %this1 = load ptr, ptr %this.addr, align 8
-// HOST:  %call = call noundef ptr @"??0I@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1) #5
+// HOST:  %call = call noundef ptr @"??0I@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1) #6
 // HOST:  store ptr @"??_7J@@6B@", ptr %this1, align 8
 // HOST:  ret ptr %this1
 

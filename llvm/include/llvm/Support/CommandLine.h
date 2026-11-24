@@ -44,13 +44,18 @@ namespace llvm {
 
 class StringSaver;
 class ElementCount;
+class Error;
 
 /// This namespace contains all of the command line option processing machinery.
 /// It is intentionally a short name to make qualified usage concise.
 namespace cl {
 
+class LibraryOptions;
+class LibraryOptionsContext;
+
 //===----------------------------------------------------------------------===//
-// Command line option processing entry point.
+// Command line option processing entry point. It does not recognize library
+// options; parseCommandLineOptions below does.
 //
 // Returns true on success. Otherwise, this will print the error message to
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
@@ -68,6 +73,29 @@ LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       raw_ostream *Errs = nullptr,
                                       vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr);
+
+// Like ParseCommandLineOptions, but also recognizes library options, the
+// options declared in TableGen, and sets them in Context.
+LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
+                                      ArrayRef<const char *> Args,
+                                      StringRef Overview = "",
+                                      raw_ostream *Errs = nullptr,
+                                      vfs::FileSystem *VFS = nullptr,
+                                      const char *EnvVar = nullptr);
+
+// Like the above, but also accepts the options of ToolOptions, libraries that a
+// tool opts in to rather than registering with addLibraryOptions. Context (for
+// assign) and the parser (until its next parse or ResetCommandLineParser) keep
+// pointers to them.
+LLVM_ABI bool parseCommandLineOptions(
+    LibraryOptionsContext &Context,
+    ArrayRef<const LibraryOptions *> ToolOptions, ArrayRef<const char *> Args,
+    StringRef Overview = "", raw_ostream *Errs = nullptr,
+    vfs::FileSystem *VFS = nullptr, const char *EnvVar = nullptr);
+
+// The library options that LLVMParseCommandLineOptions sets, which contexts
+// and target machines created through the C API use.
+LLVM_ABI LibraryOptionsContext &getCAPILibraryOptions();
 
 // Function pointer type for printing version information.
 using VersionPrinterTy = std::function<void(raw_ostream &)>;
@@ -2159,6 +2187,43 @@ LLVM_ABI void ResetCommandLineParser();
 
 /// Parses `Arg` into the option handler `Handler`.
 LLVM_ABI bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
+
+/// The options of a library that declares them in TableGen rather than as
+/// cl::opt (see llvm/Option/LibraryOptions.h). parseCommandLineOptions hands
+/// every argument naming one of them to parse(). This lets libraries move off
+/// cl::opt while tools still parse argv with cl::, and goes away once tools
+/// parse argv without cl::.
+class LLVM_ABI LibraryOptions {
+public:
+  /// Calls \p Fn with the spelling of each option without its prefix (e.g.
+  /// "x" or "x="), its metavariable, and its help text. Only -help-hidden
+  /// lists the options.
+  virtual void forEachOption(
+      function_ref<void(StringRef Spelling, StringRef MetaVar, StringRef Help)>
+          Fn) const = 0;
+
+  /// Parses the option spelled by Args[0], which may take Args[1] as its
+  /// value, into \p Opts and sets \p Consumed to the number of arguments it
+  /// spans. The strings in \p Args and the memory from \p Alloc remain valid as
+  /// long as \p Opts is used.
+  virtual Error parse(void *Opts, ArrayRef<const char *> Args,
+                      unsigned &Consumed, BumpPtrAllocator &Alloc) const = 0;
+
+  /// Returns the default values.
+  virtual const void *getDefault() const = 0;
+
+  /// Returns a copy of getDefault() allocated from \p Alloc.
+  virtual void *copyDefault(BumpPtrAllocator &Alloc) const = 0;
+
+protected:
+  constexpr LibraryOptions() = default;
+  // Registrations are static and never destroyed through this class.
+  ~LibraryOptions() = default;
+};
+
+/// Makes ParseCommandLineOptions recognize \p L's options. A name that is also
+/// a cl::opt or belongs to another library is a fatal error.
+LLVM_ABI void addLibraryOptions(const LibraryOptions &L);
 
 } // end namespace cl
 

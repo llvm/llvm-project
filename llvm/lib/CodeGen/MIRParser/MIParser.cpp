@@ -454,6 +454,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
+  bool parseInlineAsmOperandCount(InlineAsm::Flag &F);
   bool parseSymbolicInlineAsmOperand(unsigned OpIdx, MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
@@ -478,7 +479,7 @@ public:
   bool parseDIExpression(MDNode *&Expr);
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
-  bool parseCFIOffset(int &Offset);
+  bool parseCFIOffset(int64_t &Offset);
   bool parseCFIUnsigned(unsigned &Value);
   bool parseCFIRegister(unsigned &Reg);
   bool parseCFIAddressSpace(unsigned &AddressSpace);
@@ -508,6 +509,7 @@ public:
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<UniqueBBID> &BBID);
   bool parseCallFrameSize(unsigned &CallFrameSize);
+  bool parseMaxBytesForAlignment(unsigned &MaxBytesForAlignment);
   bool parsePrefetchTarget(CallsiteID &Target);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
@@ -702,6 +704,21 @@ bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
   return false;
 }
 
+// Parse the maximum number of bytes permitted for basic block alignment
+// padding.
+bool MIParser::parseMaxBytesForAlignment(unsigned &MaxBytesForAlignment) {
+  assert(Token.is(MIToken::kw_max_bytes_for_alignment));
+  lex();
+  if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
+    return error("expected an integer literal after 'max-bytes-for-alignment'");
+  unsigned Value = 0;
+  if (getUnsigned(Value))
+    return true;
+  MaxBytesForAlignment = Value;
+  lex();
+  return false;
+}
+
 bool MIParser::parsePrefetchTarget(CallsiteID &Target) {
   lex();
   std::optional<UniqueBBID> BBID;
@@ -723,13 +740,17 @@ bool MIParser::parseBasicBlockDefinition(
   auto Name = Token.stringValue();
   lex();
   bool MachineBlockAddressTaken = false;
+  bool LabelMustBeEmitted = false;
   BasicBlock *AddressTakenIRBlock = nullptr;
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
   bool IsEHScopeEntry = false;
+  bool IsCleanupFuncletEntry = false;
+  bool IsEHContTarget = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
+  unsigned MaxBytesForAlignment = 0;
   std::optional<UniqueBBID> BBID;
   unsigned CallFrameSize = 0;
   BasicBlock *BB = nullptr;
@@ -739,6 +760,10 @@ bool MIParser::parseBasicBlockDefinition(
       switch (Token.kind()) {
       case MIToken::kw_machine_block_address_taken:
         MachineBlockAddressTaken = true;
+        lex();
+        break;
+      case MIToken::kw_label_must_be_emitted:
+        LabelMustBeEmitted = true;
         lex();
         break;
       case MIToken::kw_ir_block_address_taken:
@@ -761,8 +786,20 @@ bool MIParser::parseBasicBlockDefinition(
         IsEHScopeEntry = true;
         lex();
         break;
+      case MIToken::kw_cleanup_funclet_entry:
+        IsCleanupFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehcont_target:
+        IsEHContTarget = true;
+        lex();
+        break;
       case MIToken::kw_align:
         if (parseAlignment(Alignment))
+          return true;
+        break;
+      case MIToken::kw_max_bytes_for_alignment:
+        if (parseMaxBytesForAlignment(MaxBytesForAlignment))
           return true;
         break;
       case MIToken::IRBlock:
@@ -810,14 +847,21 @@ bool MIParser::parseBasicBlockDefinition(
                           Twine(ID));
   if (Alignment)
     MBB->setAlignment(Align(Alignment));
+  else if (MaxBytesForAlignment)
+    return error(Loc, "'max-bytes-for-alignment' requires 'align'");
+  MBB->setMaxBytesForAlignment(MaxBytesForAlignment);
   if (MachineBlockAddressTaken)
     MBB->setMachineBlockAddressTaken();
+  if (LabelMustBeEmitted)
+    MBB->setLabelMustBeEmitted();
   if (AddressTakenIRBlock)
     MBB->setAddressTakenIRBlock(AddressTakenIRBlock);
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   MBB->setIsEHScopeEntry(IsEHScopeEntry);
+  MBB->setIsCleanupFuncletEntry(IsCleanupFuncletEntry);
+  MBB->setIsEHContTarget(IsEHContTarget);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -1762,6 +1806,32 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
+/// Parse the optional "ops:N" that ends an inline asm operand flag, giving the
+/// number of operands that follow it. It's omitted when there's one operand.
+bool MIParser::parseInlineAsmOperandCount(InlineAsm::Flag &F) {
+  if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "ops")
+    return false;
+
+  lex();
+  if (Token.isNot(MIToken::colon))
+    return error("expected ':' after 'ops'");
+
+  lex();
+  if (Token.isNot(MIToken::IntegerLiteral))
+    return error("expected an operand count after 'ops:'");
+
+  unsigned NumOps;
+  if (getUnsigned(NumOps))
+    return true;
+
+  if (NumOps > InlineAsm::Flag::getMaxNumOperandRegisters())
+    return error("invalid inline asm operand count");
+
+  F.setNumOperandRegisters(NumOps);
+  lex();
+  return false;
+}
+
 bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
                                              MachineOperand &Dest) {
   assert(OpIdx >= InlineAsm::MIOp_ExtraInfo);
@@ -1797,7 +1867,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     return false;
   }
 
-  // Parse symbolic form: kind[:constraint].
+  // Parse symbolic form: kind[:constraint] [foldable] [ops:N], or, for a
+  // tied use, kind tiedto:$N [ops:N].
   StringRef KindStr = Token.stringValue();
   constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
   InlineAsm::Kind K =
@@ -1808,6 +1879,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           .Case("clobber", InlineAsm::Kind::Clobber)
           .Case("imm", InlineAsm::Kind::Imm)
           .Case("mem", InlineAsm::Kind::Mem)
+          .Case("func", InlineAsm::Kind::Func)
           .Default(InvalidKind);
   if (K == InvalidKind)
     return error("unknown inline asm operand kind '" + KindStr + "'");
@@ -1831,68 +1903,82 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     lex();
 
     F.setMatchingOp(OperandNo);
+    if (parseInlineAsmOperandCount(F))
+      return true;
 
     Dest = MachineOperand::CreateImm(F);
     return false;
   }
 
-  // Parse optional constraint after ':'.
-  if (Token.isNot(MIToken::colon)) {
-    Dest = MachineOperand::CreateImm(F);
-    return false;
+  // Parse an optional constraint after ':'.
+  if (Token.is(MIToken::colon)) {
+    lex();
+
+    if (Token.isNot(MIToken::Identifier))
+      return error(
+          "expected register class or memory constraint name after ':'");
+
+    StringRef ConstraintStr = Token.stringValue();
+    if (F.isMemKind() || F.isFuncKind()) {
+      InlineAsm::ConstraintCode CC =
+          StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
+              .Case("es", InlineAsm::ConstraintCode::es)
+              .Case("i", InlineAsm::ConstraintCode::i)
+              .Case("k", InlineAsm::ConstraintCode::k)
+              .Case("m", InlineAsm::ConstraintCode::m)
+              .Case("o", InlineAsm::ConstraintCode::o)
+              .Case("v", InlineAsm::ConstraintCode::v)
+              .Case("A", InlineAsm::ConstraintCode::A)
+              .Case("Q", InlineAsm::ConstraintCode::Q)
+              .Case("R", InlineAsm::ConstraintCode::R)
+              .Case("S", InlineAsm::ConstraintCode::S)
+              .Case("T", InlineAsm::ConstraintCode::T)
+              .Case("Um", InlineAsm::ConstraintCode::Um)
+              .Case("Un", InlineAsm::ConstraintCode::Un)
+              .Case("Uq", InlineAsm::ConstraintCode::Uq)
+              .Case("Us", InlineAsm::ConstraintCode::Us)
+              .Case("Ut", InlineAsm::ConstraintCode::Ut)
+              .Case("Uv", InlineAsm::ConstraintCode::Uv)
+              .Case("Uy", InlineAsm::ConstraintCode::Uy)
+              .Case("X", InlineAsm::ConstraintCode::X)
+              .Case("Z", InlineAsm::ConstraintCode::Z)
+              .Case("ZB", InlineAsm::ConstraintCode::ZB)
+              .Case("ZC", InlineAsm::ConstraintCode::ZC)
+              .Case("Zy", InlineAsm::ConstraintCode::Zy)
+              .Case("p", InlineAsm::ConstraintCode::p)
+              .Case("ZQ", InlineAsm::ConstraintCode::ZQ)
+              .Case("ZR", InlineAsm::ConstraintCode::ZR)
+              .Case("ZS", InlineAsm::ConstraintCode::ZS)
+              .Case("ZT", InlineAsm::ConstraintCode::ZT)
+              .Default(InlineAsm::ConstraintCode::Unknown);
+      if (CC == InlineAsm::ConstraintCode::Unknown)
+        return error("unknown memory constraint '" + ConstraintStr + "'");
+      F.setMemConstraint(CC);
+    } else if (F.isRegDefKind() || F.isRegUseKind() ||
+               F.isRegDefEarlyClobberKind()) {
+      const TargetRegisterClass *RC =
+          PFS.Target.getRegClass(ConstraintStr.lower());
+      if (!RC)
+        return error("unknown register class '" + ConstraintStr + "'");
+      F.setRegClass(RC->getID());
+    }
+
+    lex();
   }
 
-  lex();
+  // Parse an optional 'foldable' marker: the register allocator may fold the
+  // operand's register to a stack slot (see
+  // InlineAsm::Flag::setRegMayBeFolded()).
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "foldable") {
+    if (!F.isRegDefKind() && !F.isRegUseKind() && !F.isRegDefEarlyClobberKind())
+      return error("only a register operand can be 'foldable'");
 
-  if (Token.isNot(MIToken::Identifier))
-    return error("expected register class or memory constraint name after ':'");
-
-  StringRef ConstraintStr = Token.stringValue();
-  if (K == InlineAsm::Kind::Mem) {
-    InlineAsm::ConstraintCode CC =
-        StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
-            .Case("es", InlineAsm::ConstraintCode::es)
-            .Case("i", InlineAsm::ConstraintCode::i)
-            .Case("k", InlineAsm::ConstraintCode::k)
-            .Case("m", InlineAsm::ConstraintCode::m)
-            .Case("o", InlineAsm::ConstraintCode::o)
-            .Case("v", InlineAsm::ConstraintCode::v)
-            .Case("A", InlineAsm::ConstraintCode::A)
-            .Case("Q", InlineAsm::ConstraintCode::Q)
-            .Case("R", InlineAsm::ConstraintCode::R)
-            .Case("S", InlineAsm::ConstraintCode::S)
-            .Case("T", InlineAsm::ConstraintCode::T)
-            .Case("Um", InlineAsm::ConstraintCode::Um)
-            .Case("Un", InlineAsm::ConstraintCode::Un)
-            .Case("Uq", InlineAsm::ConstraintCode::Uq)
-            .Case("Us", InlineAsm::ConstraintCode::Us)
-            .Case("Ut", InlineAsm::ConstraintCode::Ut)
-            .Case("Uv", InlineAsm::ConstraintCode::Uv)
-            .Case("Uy", InlineAsm::ConstraintCode::Uy)
-            .Case("X", InlineAsm::ConstraintCode::X)
-            .Case("Z", InlineAsm::ConstraintCode::Z)
-            .Case("ZB", InlineAsm::ConstraintCode::ZB)
-            .Case("ZC", InlineAsm::ConstraintCode::ZC)
-            .Case("Zy", InlineAsm::ConstraintCode::Zy)
-            .Case("p", InlineAsm::ConstraintCode::p)
-            .Case("ZQ", InlineAsm::ConstraintCode::ZQ)
-            .Case("ZR", InlineAsm::ConstraintCode::ZR)
-            .Case("ZS", InlineAsm::ConstraintCode::ZS)
-            .Case("ZT", InlineAsm::ConstraintCode::ZT)
-            .Default(InlineAsm::ConstraintCode::Unknown);
-    if (CC == InlineAsm::ConstraintCode::Unknown)
-      return error("unknown memory constraint '" + ConstraintStr + "'");
-    F.setMemConstraint(CC);
-  } else if (K == InlineAsm::Kind::RegDef || K == InlineAsm::Kind::RegUse ||
-             K == InlineAsm::Kind::RegDefEarlyClobber) {
-    const TargetRegisterClass *RC =
-        PFS.Target.getRegClass(ConstraintStr.lower());
-    if (!RC)
-      return error("unknown register class '" + ConstraintStr + "'");
-    F.setRegClass(RC->getID());
+    F.setRegMayBeFolded(true);
+    lex();
   }
 
-  lex();
+  if (parseInlineAsmOperandCount(F))
+    return true;
 
   Dest = MachineOperand::CreateImm(F);
   return false;
@@ -2429,6 +2515,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
   bool ImplicitCode = false;
   uint64_t AtomGroup = 0;
   uint64_t AtomRank = 0;
+  MDNode *IRLayers = nullptr;
 
   if (expectAndConsume(MIToken::lparen))
     return true;
@@ -2526,6 +2613,16 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           lex();
           continue;
         }
+        if (Token.stringValue() == "irlayers") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (parseMDNode(IRLayers))
+            return error("expected metadata node");
+          if (!isa<DILayerLocList>(IRLayers))
+            return error("expected DILayerLocList node");
+          continue;
+        }
       }
       return error(Twine("invalid DILocation argument '") +
                    Token.stringValue() + "'");
@@ -2541,7 +2638,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
     return error("DILocation requires a scope");
 
   Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
-                        InlinedAt, ImplicitCode, AtomGroup, AtomRank);
+                        InlinedAt, ImplicitCode, AtomGroup, AtomRank, IRLayers);
   return false;
 }
 
@@ -2558,12 +2655,12 @@ bool MIParser::parseMetadataOperand(MachineOperand &Dest) {
   return false;
 }
 
-bool MIParser::parseCFIOffset(int &Offset) {
+bool MIParser::parseCFIOffset(int64_t &Offset) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi offset");
-  if (Token.integerValue().getSignificantBits() > 32)
-    return error("expected a 32 bit integer (the cfi offset is too large)");
-  Offset = (int)Token.integerValue().getExtValue();
+  if (!Token.integerValue().isRepresentableByInt64())
+    return error("expected a 64 bit integer (the cfi offset is too large)");
+  Offset = Token.integerValue().getExtValue();
   lex();
   return false;
 }
@@ -2594,11 +2691,7 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
 bool MIParser::parseCFIAddressSpace(unsigned &AddressSpace) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi address space literal");
-  if (Token.integerValue().isSigned())
-    return error("expected an unsigned integer (cfi address space)");
-  AddressSpace = Token.integerValue().getZExtValue();
-  lex();
-  return false;
+  return parseCFIUnsigned(AddressSpace);
 }
 
 bool MIParser::parseCFIEscapeValues(std::string &Values) {
@@ -2619,7 +2712,7 @@ bool MIParser::parseCFIEscapeValues(std::string &Values) {
 bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
-  int Offset;
+  int64_t Offset;
   unsigned Reg;
   unsigned AddressSpace;
   unsigned CFIIndex;
@@ -2723,7 +2816,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
       CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createSetRAState(nullptr, State, PACSym));
     } else if (Token.is(MIToken::IntegerLiteral)) {
-      int Offset;
+      int64_t Offset;
       if (parseCFIOffset(Offset))
         return true;
       CFIIndex = MF.addFrameInst(
@@ -2769,7 +2862,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   case MIToken::kw_cfi_llvm_vector_offset: {
     unsigned Reg, MaskReg;
     unsigned RegSize, MaskRegSize;
-    int Offset = 0;
+    int64_t Offset = 0;
 
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIUnsigned(RegSize) || expectAndConsume(MIToken::comma) ||

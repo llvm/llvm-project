@@ -79,7 +79,6 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
-#include <cctype>
 #include <cstring>
 #include <optional>
 #include <set>
@@ -288,6 +287,7 @@ std::string objdump::MCPU;
 std::vector<std::string> objdump::MAttrs;
 bool objdump::ShowRawInsn;
 bool objdump::LeadingAddr;
+cl::LibraryOptionsContext objdump::LibraryOptions;
 static bool Offloading;
 static bool RawClangAST;
 bool objdump::Relocations;
@@ -1147,6 +1147,7 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
     reportError(Obj.getFileName(), "no register info for target " + TripleName);
 
   // Set up disassembler.
+  Options.LibraryOptions = &LibraryOptions;
   AsmInfo.reset(TheTarget->createMCAsmInfo(*RegisterInfo, TheTriple, Options));
   if (!AsmInfo)
     reportError(Obj.getFileName(), "no assembly info for target " + TripleName);
@@ -2021,6 +2022,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           });
       if (Sec != SectionAddresses.begin()) {
         --Sec;
+        // The export RVA has a mode indicator on the address.
+        if (COFFObj->getMachine() == COFF::IMAGE_FILE_MACHINE_ARMNT &&
+            Sec->second.isText())
+          VA &= ~1ULL;
         AllSymbols[Sec->second].emplace_back(VA, Name, ELF::STT_NOTYPE);
       } else
         AbsoluteSymbols.emplace_back(VA, Name, ELF::STT_NOTYPE);
@@ -3652,16 +3657,19 @@ static void dumpInput(StringRef file) {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(file), file);
   Binary &Binary = *OBinary.getBinary();
 
-  if (Archive *A = dyn_cast<Archive>(&Binary))
+  if (Archive *A = dyn_cast<Archive>(&Binary)) {
     dumpArchive(A);
-  else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary))
+  } else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary)) {
     dumpObject(O);
-  else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
+  } else if (MachOUniversalBinary *UB =
+                 dyn_cast<MachOUniversalBinary>(&Binary)) {
     parseInputMachO(UB);
-  else if (OffloadBinary *OB = dyn_cast<OffloadBinary>(&Binary))
+  } else if (isa<OffloadBinary>(&Binary)) {
+    std::unique_ptr<MemoryBuffer> OB = OBinary.takeBinary().second;
     dumpOffloadSections(*OB);
-  else
+  } else {
     reportError(errorCodeToError(object_error::invalid_file_type), file);
+  }
 }
 
 template <typename T>
@@ -3958,7 +3966,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   if (AsmSyntax)
     Args.push_back(AsmSyntax);
   if (Args.size() > 1)
-    llvm::cl::ParseCommandLineOptions(Args.size(), Args.data());
+    cl::parseCommandLineOptions(LibraryOptions, Args);
 
   // Look up any provided build IDs, then append them to the input filenames.
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {

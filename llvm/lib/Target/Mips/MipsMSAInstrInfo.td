@@ -1311,7 +1311,7 @@ class MSA_CBRANCH_DESC_BASE<string instr_asm, RegisterOperand ROWD> {
   bit isBranch = 1;
   bit isTerminator = 1;
   bit hasDelaySlot = 1;
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class MSA_INSERT_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -1891,15 +1891,11 @@ class FCUEQ_W_DESC : MSA_3RF_DESC_BASE<"fcueq.w", vfsetueq_v4f32, MSA128WOpnd>,
 class FCUEQ_D_DESC : MSA_3RF_DESC_BASE<"fcueq.d", vfsetueq_v2f64, MSA128DOpnd>,
                      IsCommutable;
 
-class FCULE_W_DESC : MSA_3RF_DESC_BASE<"fcule.w", vfsetule_v4f32, MSA128WOpnd>,
-                     IsCommutable;
-class FCULE_D_DESC : MSA_3RF_DESC_BASE<"fcule.d", vfsetule_v2f64, MSA128DOpnd>,
-                     IsCommutable;
+class FCULE_W_DESC : MSA_3RF_DESC_BASE<"fcule.w", vfsetule_v4f32, MSA128WOpnd>;
+class FCULE_D_DESC : MSA_3RF_DESC_BASE<"fcule.d", vfsetule_v2f64, MSA128DOpnd>;
 
-class FCULT_W_DESC : MSA_3RF_DESC_BASE<"fcult.w", vfsetult_v4f32, MSA128WOpnd>,
-                     IsCommutable;
-class FCULT_D_DESC : MSA_3RF_DESC_BASE<"fcult.d", vfsetult_v2f64, MSA128DOpnd>,
-                     IsCommutable;
+class FCULT_W_DESC : MSA_3RF_DESC_BASE<"fcult.w", vfsetult_v4f32, MSA128WOpnd>;
+class FCULT_D_DESC : MSA_3RF_DESC_BASE<"fcult.d", vfsetult_v2f64, MSA128DOpnd>;
 
 class FCUN_W_DESC : MSA_3RF_DESC_BASE<"fcun.w", vfsetun_v4f32, MSA128WOpnd>,
                     IsCommutable;
@@ -1974,8 +1970,12 @@ class FILL_FD_PSEUDO_DESC : MSA_2R_FILL_PSEUDO_BASE<vsplatf64, MSA128D, FGR64>;
 class FLOG2_W_DESC : MSA_2RF_DESC_BASE<"flog2.w", flog2, MSA128WOpnd>;
 class FLOG2_D_DESC : MSA_2RF_DESC_BASE<"flog2.d", flog2, MSA128DOpnd>;
 
-class FMADD_W_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.w", fma, MSA128WOpnd>;
-class FMADD_D_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.d", fma, MSA128DOpnd>;
+// fmadd computes `wd + ws*wt`, which is `fma(ws, wt, wd)`.
+def fmadd_frag : PatFrag<(ops node:$wd, node:$ws, node:$wt),
+                         (fma node:$ws, node:$wt, node:$wd)>;
+
+class FMADD_W_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.w", fmadd_frag, MSA128WOpnd>;
+class FMADD_D_DESC : MSA_3RF_4RF_DESC_BASE<"fmadd.d", fmadd_frag, MSA128DOpnd>;
 
 class FMAX_W_DESC : MSA_3RF_DESC_BASE<"fmax.w", int_mips_fmax_w, MSA128WOpnd>;
 class FMAX_D_DESC : MSA_3RF_DESC_BASE<"fmax.d", int_mips_fmax_d, MSA128DOpnd>;
@@ -2189,10 +2189,10 @@ class LD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
                    Operand MemOpnd, ComplexPattern Addr = addrimm10> {
   dag OutOperandList = (outs ROWD:$wd);
-  dag InOperandList = (ins MemOpnd:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$wd, $addr");
-  list<dag> Pattern = [(set ROWD:$wd, (TyNode (OpNode Addr:$addr)))];
-  string DecoderMethod = "DecodeMSA128Mem";
+  dag InOperandList = (ins MemBase:$base, MemOpnd:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$wd, ${offset}(${base})");
+  list<dag> Pattern =
+      [(set ROWD:$wd, (TyNode (OpNode (Addr MemBase:$base, iPTR:$offset))))];
 }
 
 class LD_B_DESC : LD_DESC_BASE<"ld.b", load, v16i8, MSA128BOpnd, mem_simm10>;
@@ -2531,10 +2531,10 @@ class ST_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
                    Operand MemOpnd, ComplexPattern Addr = addrimm10> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins ROWD:$wd, MemOpnd:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$wd, $addr");
-  list<dag> Pattern = [(OpNode (TyNode ROWD:$wd), Addr:$addr)];
-  string DecoderMethod = "DecodeMSA128Mem";
+  dag InOperandList = (ins ROWD:$wd, MemBase:$base, MemOpnd:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$wd, ${offset}(${base})");
+  list<dag> Pattern = [(OpNode (TyNode ROWD:$wd),
+                               (Addr MemBase:$base, iPTR:$offset))];
 }
 
 class ST_B_DESC : ST_DESC_BASE<"st.b", store, v16i8, MSA128BOpnd, mem_simm10>;
@@ -3447,16 +3447,25 @@ class MSAPat<dag pattern, dag result, list<Predicate> pred = [HasMSA]> :
 def : MSAPat<(extractelt (v4i32 MSA128W:$ws), immZExt4:$idx),
              (COPY_S_W MSA128W:$ws, immZExt4:$idx)>;
 
-def : MSAPat<(v8f16 (load addrimm10lsl1:$addr)), (LD_H addrimm10lsl1:$addr)>;
-def : MSAPat<(v4f32 (load addrimm10lsl2:$addr)), (LD_W addrimm10lsl2:$addr)>;
-def : MSAPat<(v2f64 (load addrimm10lsl3:$addr)), (LD_D addrimm10lsl3:$addr)>;
+def : MSAPat<(v8f16 (load (addrimm10lsl1 MemBase:$addr_base,
+                                         iPTR:$addr_offset))),
+             (LD_H $addr_base, $addr_offset)>;
+def : MSAPat<(v4f32 (load (addrimm10lsl2 MemBase:$addr_base,
+                                         iPTR:$addr_offset))),
+             (LD_W $addr_base, $addr_offset)>;
+def : MSAPat<(v2f64 (load (addrimm10lsl3 MemBase:$addr_base,
+                                         iPTR:$addr_offset))),
+             (LD_D $addr_base, $addr_offset)>;
 
-def ST_FH : MSAPat<(store (v8f16 MSA128H:$ws), addrimm10lsl1:$addr),
-                   (ST_H MSA128H:$ws, addrimm10lsl1:$addr)>;
-def ST_FW : MSAPat<(store (v4f32 MSA128W:$ws), addrimm10lsl2:$addr),
-                   (ST_W MSA128W:$ws, addrimm10lsl2:$addr)>;
-def ST_FD : MSAPat<(store (v2f64 MSA128D:$ws), addrimm10lsl3:$addr),
-                   (ST_D MSA128D:$ws, addrimm10lsl3:$addr)>;
+def ST_FH : MSAPat<(store (v8f16 MSA128H:$ws),
+                          (addrimm10lsl1 MemBase:$addr_base, iPTR:$addr_offset)),
+                   (ST_H MSA128H:$ws, $addr_base, $addr_offset)>;
+def ST_FW : MSAPat<(store (v4f32 MSA128W:$ws),
+                          (addrimm10lsl2 MemBase:$addr_base, iPTR:$addr_offset)),
+                   (ST_W MSA128W:$ws, $addr_base, $addr_offset)>;
+def ST_FD : MSAPat<(store (v2f64 MSA128D:$ws),
+                          (addrimm10lsl3 MemBase:$addr_base, iPTR:$addr_offset)),
+                   (ST_D MSA128D:$ws, $addr_base, $addr_offset)>;
 
 class MSA_FABS_PSEUDO_DESC_BASE<RegisterOperand ROWD,
                                 RegisterOperand ROWS = ROWD> :
@@ -3465,11 +3474,9 @@ class MSA_FABS_PSEUDO_DESC_BASE<RegisterOperand ROWD,
             [(set ROWD:$wd, (fabs ROWS:$ws))]>;
 
 def FABS_W : MSA_FABS_PSEUDO_DESC_BASE<MSA128WOpnd>,
-             PseudoInstExpansion<(FMAX_A_W MSA128WOpnd:$wd, MSA128WOpnd:$ws,
-                                           MSA128WOpnd:$ws)>;
+             PseudoInstExpansion<(BCLRI_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, 31)>;
 def FABS_D : MSA_FABS_PSEUDO_DESC_BASE<MSA128DOpnd>,
-             PseudoInstExpansion<(FMAX_A_D MSA128DOpnd:$wd, MSA128DOpnd:$ws,
-                                           MSA128DOpnd:$ws)>;
+             PseudoInstExpansion<(BCLRI_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, 63)>;
 
 class MSABitconvertPat<ValueType DstVT, ValueType SrcVT,
                        RegisterClass DstRC, list<Predicate> preds = [HasMSA]> :

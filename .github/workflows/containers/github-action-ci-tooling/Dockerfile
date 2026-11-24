@@ -1,4 +1,4 @@
-ARG LLVM_VERSION=23.1.0
+ARG LLVM_VERSION=23.1.3
 
 FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS llvm-downloader
 ARG LLVM_VERSION
@@ -132,7 +132,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg
 RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /etc/apt/keyrings/llvm.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/resolute/ llvm-toolchain-resolute-${LLVM_VERSION%%.*} main" | tee /etc/apt/sources.list.d/llvm.list && \
     apt-get update && \
-    apt-get install -y clang-${LLVM_VERSION%%.*} lld-${LLVM_VERSION%%.*} ninja-build libclang-${LLVM_VERSION%%.*}-dev
+    apt-get install -y clang-${LLVM_VERSION%%.*} lld-${LLVM_VERSION%%.*} ninja-build llvm-${LLVM_VERSION%%.*}-dev libclang-${LLVM_VERSION%%.*}-dev
 
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
 RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \

@@ -208,6 +208,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     config.EnableOpenMP = true;  // assume the input contains OpenMP
     config.AliasAnalysis = enableAliasAnalysis && !testGeneratorMode;
     config.LoopVersioning = OptLevel > 2;
+    config.LoopTripCountVersioning = OptLevel > 2;
     if (codeGenLLVM) {
       // Run only CodeGen passes.
       fir::createDefaultFIRCodeGenPassPipeline(pm, config);

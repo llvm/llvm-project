@@ -17,7 +17,7 @@ class MultipleBreakpointTestCase(TestBase):
         # Find the line number for our breakpoint.
         self.breakpoint = line_number("main.cpp", "// Set breakpoint here")
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
+    @skipIfWindowsAndNoLLDBServer  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
     def test(self):
         """Test simultaneous breakpoints in multiple threads."""
         self.build()

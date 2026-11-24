@@ -105,7 +105,13 @@ private:
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
   bool InElemental() const {
-    return innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    // IsElementalProcedure() characterizes the whole procedure, including
+    // all of its dummy arguments, so evaluate it at most once per scope.
+    if (!innermostIsElemental_) {
+      innermostIsElemental_ =
+          innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    }
+    return *innermostIsElemental_;
   }
   bool InFunction() const {
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
@@ -184,6 +190,8 @@ private:
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
+  // Cached result of InElemental() for innermostSymbol_
+  mutable std::optional<bool> innermostIsElemental_;
   // Cache of calls to Procedure::Characterize(Symbol)
   std::map<SymbolRef, std::optional<Procedure>, SymbolAddressCompare>
       characterizeCache_;
@@ -255,6 +263,16 @@ static bool IsBlockData(const Scope &scope) {
 
 static bool IsBlockData(const Symbol &symbol) {
   return symbol.scope() && IsBlockData(*symbol.scope());
+}
+
+// Was this entity declared with an explicit-shape-bounds-spec (F2023 R818),
+// i.e. a rank-1 integer array as its bounds?  Name resolution marks the
+// resulting shape (a constant bounds array is folded into ordinary
+// per-dimension bounds, so the bounds themselves need not show it); a
+// zero-size base yields a scalar whose bounds were stashed for checking.
+static bool HasRankOneBounds(const ObjectEntityDetails &details) {
+  return details.shape().isFromRankOneBounds() ||
+      !details.droppedBoundsToCheck().empty();
 }
 
 void CheckHelper::Check(const Symbol &symbol) {
@@ -331,6 +349,14 @@ void CheckHelper::Check(const Symbol &symbol) {
 
   if (isDone) {
     return; // following checks do not apply
+  }
+
+  if (IsDummy(symbol) && IsProcedure(symbol) && !IsPointer(symbol) &&
+      symbol.attrs().HasAny(
+          {Attr::INTENT_IN, Attr::INTENT_OUT, Attr::INTENT_INOUT})) {
+    // F2018 C843 applies to both procedure entities and interface bodies.
+    messages_.Say("A dummy procedure without the POINTER attribute"
+                  " may not have an INTENT attribute"_err_en_US);
   }
 
   if (symbol.attrs().test(Attr::PROTECTED)) {
@@ -774,6 +800,15 @@ void CheckHelper::CheckObjectEntity(
   for (const Bound &bound : details.droppedBoundsToCheck()) {
     Check(bound);
   }
+  // F2023 C816 allows only an explicit-shape-spec-list for a nonallocatable
+  // nonpointer function result; an explicit-shape-bounds-spec (a rank-1
+  // integer array as the bounds, R818) is accepted as an extension there.
+  if (details.isFuncResult() && !IsAllocatableOrPointer(symbol) &&
+      HasRankOneBounds(details)) {
+    Warn(common::LanguageFeature::RankOneBoundsOnFunctionResult,
+        "Function result '%s' should not be declared with a rank-1 integer array as its bounds (F2023 C816)"_port_en_US,
+        symbol.name());
+  }
   if (details.shape().Rank() > common::maxRank) {
     messages_.Say(
         "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
@@ -1179,14 +1214,17 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
             symbol.name());
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
+            symbol.name());
       } else if (IsAllocatableOrPointer(symbol) ||
           symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
@@ -1270,11 +1308,16 @@ void CheckHelper::CheckObjectEntity(
             parser::ToUpperCaseLetters(common::EnumToString(attr)));
       }
     }
-    if (subpDetails /* not a module variable */ && IsSaved(symbol) &&
-        !inDeviceSubprogram && !IsAllocatable(symbol) &&
-        attr == common::CUDADataAttr::Device) {
+    // Managed objects are only rejected for an explicit SAVE attribute; a
+    // blanket SAVE statement or -fno-automatic does not make them an error.
+    if (subpDetails /* not a module variable */ && !inDeviceSubprogram &&
+        !IsAllocatable(symbol) &&
+        ((attr == common::CUDADataAttr::Device &&
+             symbol.attrs().test(Attr::SAVE)) ||
+            (attr == common::CUDADataAttr::Managed &&
+                symbol.attrs().test(Attr::SAVE)))) {
       messages_.Say(
-          "Saved object '%s' in host code may not have ATTRIBUTES(DEVICE) unless allocatable"_err_en_US,
+          "Saved object '%s' in host code may not have ATTRIBUTES(%s) unless allocatable"_err_en_US,
           symbol.name(),
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }
@@ -1485,12 +1528,6 @@ void CheckHelper::CheckProcEntity(
   CheckConflicting(symbol, Attr::INTRINSIC, Attr::TARGET);
   const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
-    if (!symbol.attrs().test(Attr::POINTER) && // C843
-        symbol.attrs().HasAny(
-            {Attr::INTENT_IN, Attr::INTENT_OUT, Attr::INTENT_INOUT})) {
-      messages_.Say("A dummy procedure without the POINTER attribute"
-                    " may not have an INTENT attribute"_err_en_US);
-    }
     if (InElemental()) { // C15100
       messages_.Say(
           "An ELEMENTAL subprogram may not have a dummy procedure"_err_en_US);
@@ -2874,8 +2911,13 @@ void CheckHelper::CheckProcBinding(
 void CheckHelper::Check(const Scope &scope) {
   scope_ = &scope;
   common::Restorer<const Symbol *> restorer{innermostSymbol_, innermostSymbol_};
+  // InElemental() is cached per procedure: recompute it when entering a scope
+  // with its own symbol, and restore the enclosing procedure's value on exit.
+  common::Restorer<std::optional<bool>> elementalRestorer{
+      innermostIsElemental_, innermostIsElemental_};
   if (const Symbol *symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
+    innermostIsElemental_.reset();
   }
   if (scope.IsParameterizedDerivedTypeInstantiation()) {
     auto restorer{common::ScopedSet(scopeIsUninstantiatedPDT_, false)};
@@ -3707,7 +3749,9 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
-    if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+    // An enumeration type is not a derived type (F2023 R1221).
+    if (const DerivedTypeSpec *derivedType{type->AsDerived()};
+        derivedType && !IsEnumerationType(derivedType->typeSymbol())) {
       if (derivedType->IsVectorType()) {
         messages_.Say(arg.name(),
             "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,

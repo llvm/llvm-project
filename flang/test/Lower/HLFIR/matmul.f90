@@ -12,7 +12,7 @@ endsubroutine
 ! CHECK-DAG:     %[[LHS_VAR:.*]]:2 = hlfir.declare %[[LHS]]
 ! CHECK-DAG:     %[[RHS_VAR:.*]]:2 = hlfir.declare %[[RHS]]
 ! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_VAR]]#0 %[[RHS_VAR]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>) -> !hlfir.expr<?x?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_VAR]]#0 %[[RHS_VAR]]#0 fastmath(contract) : (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>) -> !hlfir.expr<?x?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 : !hlfir.expr<?x?xi32>, !fir.box<!fir.array<?x?xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -36,7 +36,7 @@ endsubroutine
 ! CHECK-LABEL: func.func @_QPmatmul2
 ! CHECK:           %[[C_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 ! CHECK:         %[[B_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> <{bindc_name = "b"
-! CHECK:         %[[B_BOX_DECL:.*]]:2 = hlfir.declare %[[B_BOX_ALLOC]] {{.*}} uniq_name = "_QFmatmul2Eb"
+! CHECK:         %[[B_BOX_DECL:.*]]:2 = hlfir.declare %[[B_BOX_ALLOC]] {{.*}}uniq_name("_QFmatmul2Eb")
 
 
 ! CHECK:         fir.call @_QPfill
@@ -66,7 +66,7 @@ endsubroutine
 ! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
 ! CHECK-NEXT:    %[[LHS_LD:.*]] = fir.load %[[LHS_VAR]]#0
 ! CHECK-NEXT:    %[[RHS_LD:.*]] = fir.load %[[RHS_VAR]]#0
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_LD]] %[[RHS_LD]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !hlfir.expr<?x?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_LD]] %[[RHS_LD]] fastmath(contract) : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !hlfir.expr<?x?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 realloc : !hlfir.expr<?x?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return

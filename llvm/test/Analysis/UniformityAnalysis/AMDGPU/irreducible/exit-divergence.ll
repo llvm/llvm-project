@@ -1,6 +1,6 @@
 ; RUN: opt %s -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
-; CHECK=LABEL: UniformityInfo for function 'basic':
+; CHECK-LABEL: UniformityInfo for function 'basic':
 ; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
 ; CHECK:   depth=1: entries(P T) Q

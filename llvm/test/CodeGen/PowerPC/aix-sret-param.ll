@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec \
-; RUN: -stop-after=machine-cp --verify-machineinstrs < %s | FileCheck \
+; RUN: -stop-after=machine-cp < %s | FileCheck \
 ; RUN: --check-prefixes=MIR,MIR32 %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec \
-; RUN: -stop-after=machine-cp --verify-machineinstrs < %s | FileCheck \
+; RUN: -stop-after=machine-cp < %s | FileCheck \
 ; RUN: --check-prefixes=MIR,MIR64 %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec \

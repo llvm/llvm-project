@@ -9,6 +9,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -263,9 +264,11 @@ TEST(ConstantsTest, AsInstructionsTest) {
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
   //      "getelementptr ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   CHECK(ConstantExpr::getExtractElement(P6, One),
         "extractelement <2 x i16> " P6STR ", i32 1");
@@ -292,8 +295,7 @@ TEST(ConstantsTest, ReplaceWithConstantTest) {
 
   Constant *Global =
       M->getOrInsertGlobal("dummy", PointerType::getUnqual(Context));
-  Constant *GEP = ConstantExpr::getGetElementPtr(
-      PointerType::getUnqual(Context), Global, One);
+  Constant *GEP = ConstantExpr::getPtrAdd(Global, One);
   EXPECT_DEATH(Global->replaceAllUsesWith(GEP),
                "this->replaceAllUsesWith\\(expr\\(this\\)\\) is NOT valid!");
 }
@@ -360,7 +362,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   auto *C1 = ConstantInt::get(IntTy, 1);
   auto *Placeholder = new GlobalVariable(
       *M, IntTy, false, GlobalValue::ExternalWeakLinkage, nullptr);
-  auto *GEP = ConstantExpr::getGetElementPtr(IntTy, Placeholder, C1);
+  auto *GEP = ConstantExpr::getPtrAdd(Placeholder, C1);
   ASSERT_EQ(GEP->getOperand(0), Placeholder);
 
   auto *Ref =
@@ -374,6 +376,51 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   Placeholder->replaceAllUsesWith(Alias);
   ASSERT_EQ(GEP, Ref->getInitializer());
   ASSERT_EQ(GEP->getOperand(0), Alias);
+}
+
+TEST(ConstantsTest, MayHaveConstantUsers) {
+  LLVMContext Context;
+  Module M("MyModule", Context);
+
+  Type *IntTy = Type::getInt64Ty(Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), false);
+  Function *F = Function::Create(FTy, GlobalValue::InternalLinkage, "f", M);
+  auto *G1 = new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage,
+                                nullptr);
+  auto *G2 = new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage,
+                                nullptr);
+  EXPECT_FALSE(F->mayHaveConstantUsers());
+  EXPECT_FALSE(G1->mayHaveConstantUsers());
+
+  // A global used only by another global's initializer has no constant users
+  // that removeDeadConstantUsers could remove.
+  auto *Ref = new GlobalVariable(M, F->getType(), false,
+                                 GlobalValue::ExternalLinkage, F);
+  EXPECT_FALSE(F->mayHaveConstantUsers());
+
+  // Creating a constant expression marks its global operand.
+  Constant *Int1 = ConstantExpr::getPtrToInt(G1, IntTy);
+  EXPECT_TRUE(G1->mayHaveConstantUsers());
+
+  // Updating a constant in place marks the new operand.
+  auto *Ref2 =
+      new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage, Int1);
+  G1->replaceAllUsesWith(G2);
+  EXPECT_TRUE(G2->mayHaveConstantUsers());
+
+  // A live constant user keeps the flag set.
+  G2->removeDeadConstantUsers();
+  EXPECT_TRUE(G2->mayHaveConstantUsers());
+
+  // Once the constant users are gone, the next walk clears the flag.
+  Ref2->setInitializer(nullptr);
+  G2->removeDeadConstantUsers();
+  EXPECT_TRUE(G2->use_empty());
+  EXPECT_FALSE(G2->mayHaveConstantUsers());
+
+  // DSOLocalEquivalent is not uniqued through ConstantUniqueMap.
+  Ref->setInitializer(DSOLocalEquivalent::get(F));
+  EXPECT_TRUE(F->mayHaveConstantUsers());
 }
 
 TEST(ConstantsTest, DSOLocalEquivalentReplaceWithAlias) {
@@ -891,12 +938,13 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
 
 TEST(ConstantsTest, Float128Test) {
   LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("", C);
   LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
   LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
   LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
   LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
   LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
   uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
   uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
   LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
@@ -917,6 +965,7 @@ TEST(ConstantsTest, Float128Test) {
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
   LLVMDisposeBuilder(Builder);
+  LLVMDisposeModule(M);
   LLVMContextDispose(C);
 }
 
@@ -940,6 +989,68 @@ TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
   ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
   ConstantRange CRPoison = CVWithPoison->toConstantRange();
   EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
+}
+
+TEST(ConstantsTest, ToConstantFPRangeScalar) {
+  LLVMContext Context;
+  Type *FloatTy = Type::getFloatTy(Context);
+  const fltSemantics &Sem = APFloat::IEEEsingle();
+
+  EXPECT_EQ(ConstantFP::get(FloatTy, 1.5)->toConstantFPRange(),
+            ConstantFPRange(APFloat(1.5f)));
+  EXPECT_EQ(UndefValue::get(FloatTy)->toConstantFPRange(),
+            ConstantFPRange::getFull(Sem));
+  EXPECT_EQ(PoisonValue::get(FloatTy)->toConstantFPRange(),
+            ConstantFPRange::getFull(Sem));
+}
+
+TEST(ConstantsTest, ToConstantFPRangeVector) {
+  LLVMContext Context;
+  Type *FloatTy = Type::getFloatTy(Context);
+  auto *VecTy = FixedVectorType::get(FloatTy, 3);
+  const fltSemantics &Sem = APFloat::IEEEsingle();
+  auto GetFP = [&](float V) { return ConstantFP::get(FloatTy, V); };
+
+  EXPECT_EQ(ConstantFP::get(VecTy, 2.0)->toConstantFPRange(),
+            ConstantFPRange(APFloat(2.0f)));
+  EXPECT_EQ(Constant::getNullValue(VecTy)->toConstantFPRange(),
+            ConstantFPRange(APFloat(0.0f)));
+
+  Constant *SplatWithPoison = ConstantVector::get(
+      {GetFP(2.0f), PoisonValue::get(FloatTy), GetFP(2.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(SplatWithPoison));
+  EXPECT_EQ(SplatWithPoison->toConstantFPRange(),
+            ConstantFPRange(APFloat(2.0f)));
+
+  Constant *CDV = ConstantVector::get({GetFP(1.0f), GetFP(-2.0f), GetFP(0.5f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(CDV));
+  EXPECT_EQ(CDV->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(-2.0f), APFloat(1.0f)));
+
+  Constant *Zeros =
+      ConstantVector::get({GetFP(-0.0f), GetFP(0.0f), GetFP(-0.0f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(Zeros));
+  EXPECT_EQ(Zeros->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(-0.0f), APFloat(0.0f)));
+
+  Constant *WithNaN = ConstantVector::get(
+      {GetFP(1.0f), ConstantFP::get(FloatTy, APFloat::getQNaN(Sem)),
+       GetFP(1.0f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(WithNaN));
+  EXPECT_EQ(WithNaN->toConstantFPRange(),
+            ConstantFPRange(APFloat(1.0f))
+                .unionWith(ConstantFPRange(APFloat::getQNaN(Sem))));
+
+  Constant *WithPoison = ConstantVector::get(
+      {GetFP(1.0f), PoisonValue::get(FloatTy), GetFP(3.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(WithPoison));
+  EXPECT_EQ(WithPoison->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(1.0f), APFloat(3.0f)));
+
+  Constant *WithUndef = ConstantVector::get(
+      {GetFP(1.0f), UndefValue::get(FloatTy), GetFP(3.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(WithUndef));
+  EXPECT_EQ(WithUndef->toConstantFPRange(), ConstantFPRange::getFull(Sem));
 }
 
 TEST(ConstantsTest, GetElementPtrDataLayout) {
@@ -995,6 +1106,85 @@ TEST(ConstantsTest, GetElementPtrDataLayout) {
   EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I32, Ptr, PtrToInt64));
   // Can't represent sext(constexpr).
   EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I8, Ptr, PtrToInt32));
+}
+
+TEST(ConstantsTest, PtrAddCAPI) {
+  LLVMContext Context;
+  DataLayout DL;
+  Module M("", Context);
+
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I32 = Type::getInt32Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Constant *Ptr = M.getOrInsertGlobal("dummy", I8);
+  Constant *PtrToInt = ConstantExpr::getPtrToInt(Ptr, I64);
+  Constant *I64_1 = ConstantInt::get(I64, 1);
+
+  EXPECT_EQ(
+      unwrap(LLVMConstPtrAdd(wrap(Ptr), wrap(I64_1), LLVMGEPFlagNUW)),
+      ConstantExpr::getPtrAdd(Ptr, I64_1, GEPNoWrapFlags::noUnsignedWrap()));
+
+  LLVMValueRef Indices[1] = {wrap(I64_1)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices, 1, LLVMGEPFlagInBounds)),
+            ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_1,
+                                           GEPNoWrapFlags::inBounds()));
+
+  LLVMValueRef Indices2[1] = {wrap(PtrToInt)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices2, 1, 0)),
+            nullptr);
+}
+
+TEST(ConstantsTest, RelocationInfo) {
+  LLVMContext Context;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  PointerType *PtrTy = PointerType::getUnqual(Context);
+
+  Module M("MyModule", Context);
+  auto *GV1 =
+      new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
+                         ConstantInt::get(Int32Ty, 1), "g1");
+  auto *GV2 =
+      new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
+                         ConstantInt::get(Int32Ty, 2), "g2");
+  GV1->setDSOLocal(true);
+  GV2->setDSOLocal(true);
+
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  EXPECT_FALSE(Zero->needsRelocation());
+  EXPECT_FALSE(Zero->needsDynamicRelocation());
+
+  // Relative pointer between two dso_local globals is a LocalRelocation.
+  Constant *LocalReloc =
+      ConstantExpr::getSub(ConstantExpr::getPtrToInt(GV1, Int64Ty),
+                           ConstantExpr::getPtrToInt(GV2, Int64Ty));
+  EXPECT_TRUE(LocalReloc->needsRelocation());
+  EXPECT_FALSE(LocalReloc->needsDynamicRelocation());
+
+  // Direct global reference is a GlobalRelocation.
+  EXPECT_TRUE(GV1->needsRelocation());
+  EXPECT_TRUE(GV1->needsDynamicRelocation());
+
+  Constant *StructLocalFirst =
+      ConstantStruct::getAnon(Context, {LocalReloc, GV1});
+  EXPECT_TRUE(StructLocalFirst->needsRelocation());
+  EXPECT_TRUE(StructLocalFirst->needsDynamicRelocation());
+
+  Constant *StructGlobalFirst =
+      ConstantStruct::getAnon(Context, {GV1, LocalReloc});
+  EXPECT_TRUE(StructGlobalFirst->needsRelocation());
+  EXPECT_TRUE(StructGlobalFirst->needsDynamicRelocation());
+
+  Constant *ArrayInt =
+      ConstantArray::get(ArrayType::get(Int32Ty, 2), {Zero, Zero});
+  EXPECT_FALSE(ArrayInt->needsRelocation());
+  EXPECT_FALSE(ArrayInt->needsDynamicRelocation());
+
+  Constant *ArrayGV = ConstantArray::get(ArrayType::get(PtrTy, 2), {GV1, GV2});
+  EXPECT_TRUE(ArrayGV->needsRelocation());
+  EXPECT_TRUE(ArrayGV->needsDynamicRelocation());
 }
 
 } // end anonymous namespace

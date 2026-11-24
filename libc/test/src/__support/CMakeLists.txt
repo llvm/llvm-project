@@ -1,4 +1,4 @@
-add_custom_target(libc-support-tests)
+add_libc_testsuite(libc-support-tests)
 
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
@@ -123,6 +123,21 @@ add_libc_test(
 )
 
 add_libc_test(
+  checked_ptr_test
+  SUITE
+    libc-support-tests
+  SRCS
+    checked_ptr_test.cpp
+  DEPENDS
+    libc.src.__support.alloc_checker
+    libc.src.__support.checked_ptr
+    libc.src.__support.CPP.nullptr_t
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
+)
+
+add_libc_test(
   endian_internal_test
   SUITE
     libc-support-tests
@@ -161,16 +176,21 @@ add_libc_test(
     libc-support-tests
   SRCS
     str_to_float_test.cpp
+    str_to_float128_test.cpp
     str_to_double_test.cpp
     str_to_long_double_test.cpp
   HDRS
     str_to_fp_test.h
   DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.integer_literals
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
     libc.src.__support.str_to_float
     libc.src.__support.uint128
 )
-
 
 add_libc_test(
   str_to_integer_test
@@ -206,6 +226,7 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_literals
     libc.src.__support.integer_to_string
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint128
 )
 
@@ -284,8 +305,6 @@ add_libc_test(
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_libc_test(
@@ -298,9 +317,30 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
+if(LIBC_TARGET_OS_IS_BAREMETAL AND
+    NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+  add_object_library(
+    minimal_external_crt1_for_test
+    SRCS
+      minimal_external_crt1_for_test.cpp
+  )
+
+  add_libc_test(
+    external_startup_link_test
+    FULL_BUILD_ONLY
+    BUILD_ONLY
+    STARTUP
+      .minimal_external_crt1_for_test
+    SUITE
+      libc-support-tests
+    SRCS
+      external_startup_link_test.cpp
+  )
+endif()
+
 add_libc_test(
   str_to_float_comparison_test
-  NO_RUN_POSTBUILD
+  BUILD_ONLY
   SUITE
     libc-support-tests
   SRCS
@@ -350,6 +390,7 @@ add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
 add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
+add_subdirectory(net)
 add_subdirectory(time)
 add_subdirectory(threads)
 add_subdirectory(wchar)

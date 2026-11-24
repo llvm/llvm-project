@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s -o /dev/null
+; RUN: llvm-as < %s -disable-output
 
 define i8 @f1(ptr %x) {
 entry:

@@ -66,7 +66,8 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
 ///   * inferred from the static dims in the input and output tensors.
 /// Bails out if:
 ///   * vector sizes are not user-provided, and
-///   * at least one dim is dynamic (in both the input and output tensors).
+///   * at least one dim is dynamic (in both the input and output tensors),
+/// or if the strides are not 1.
 ///
 /// Before:
 ///     !t_in_type = tensor<1x2x3xf32>
@@ -249,6 +250,14 @@ struct VectorizationState {
   maskOperation(RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
                 std::optional<AffineMap> maybeIndexingMap = std::nullopt);
 
+  /// Create or retrieve an existing mask value for the canonical vector
+  /// iteration space. If `maybeMaskingMap` the mask is permuted using that
+  /// permutation map. If a new mask is created, it will be cached for future
+  /// users. Returns a null value if no mask is needed.
+  Value
+  getOrCreateMaskFor(RewriterBase &rewriter, LinalgOp linalgOp,
+                     std::optional<AffineMap> maybeMaskingMap = std::nullopt);
+
 private:
   /// Initializes the iteration space static sizes using the Linalg op
   /// information. This may become more complicated in the future.
@@ -261,14 +270,6 @@ private:
   /// vectorized and store them in `iterSpaceValueSizes`.
   LogicalResult precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                               LinalgOp linalgOp);
-
-  /// Create or retrieve an existing mask value to mask `opToMask` in the
-  /// canonical vector iteration space. If `maybeMaskingMap` the mask is
-  /// permuted using that permutation map. If a new mask is created, it will be
-  /// cached for future users.
-  Value getOrCreateMaskFor(RewriterBase &rewriter, Operation *opToMask,
-                           LinalgOp linalgOp,
-                           std::optional<AffineMap> maybeMaskingMap);
 
   /// Check whether this permutation map can be used for masking. At the
   /// moment we only make sure that there are no broadcast dimensions, but this
@@ -406,24 +407,12 @@ LogicalResult VectorizationState::initState(RewriterBase &rewriter,
   return success();
 }
 
-/// Create or retrieve an existing mask value to mask `opToMask` in the
-/// canonical vector iteration space. If `maybeMaskingMap` the mask is permuted
-/// using that permutation map. If a new mask is created, it will be cached for
-/// future users.
 Value VectorizationState::getOrCreateMaskFor(
-    RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
+    RewriterBase &rewriter, LinalgOp linalgOp,
     std::optional<AffineMap> maybeMaskingMap) {
 
   assert((!maybeMaskingMap || isValidMaskingMap(*maybeMaskingMap)) &&
          "Ill-formed masking map.");
-
-  // No mask is needed if the operation is not maskable.
-  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
-  if (!maskableOp)
-    return Value();
-
-  assert(!maskableOp.isMasked() &&
-         "Masking an operation that is already masked");
 
   // If no masking map was provided, use an identity map with the loop dims.
   assert((!maybeMaskingMap || *maybeMaskingMap) &&
@@ -501,50 +490,37 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
                                   std::optional<AffineMap> maybeIndexingMap) {
   LDBG() << "Trying to mask: " << *opToMask;
 
+  // No mask is needed if the operation is not maskable.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
+  if (!maskableOp) {
+    LDBG() << "Operation is not maskable";
+    return opToMask;
+  }
+  assert(!maskableOp.isMasked() &&
+         "Masking an operation that is already masked");
+
   std::optional<AffineMap> maybeMaskingMap = std::nullopt;
   if (maybeIndexingMap)
     maybeMaskingMap = getMaskingMapFromIndexingMap(*maybeIndexingMap);
 
   // Create or retrieve mask for this operation.
-  Value mask =
-      getOrCreateMaskFor(rewriter, opToMask, linalgOp, maybeMaskingMap);
+  Value mask = getOrCreateMaskFor(rewriter, linalgOp, maybeMaskingMap);
 
   if (!mask) {
-    LDBG() << "No mask required";
-    if (assumeDynamicDimsMatchVecSizes) {
-      llvm::TypeSwitch<Operation *>(opToMask)
-          .Case<vector::TransferReadOp, vector::TransferWriteOp>(
-              [&](auto xferOp) {
-                // For vector.transfer_read and vector.transfer_write, there is
-                // also the `in-bounds` attribute that has to be set explicitly
-                // to true. Otherwise, "out-of-bounds" access will be assumed
-                // and masks will be generated while lowering these.
-                LDBG() << "Assuming dynamic dimensions match vector sizes and "
-                          "setting their in-bounds to true!";
-                SmallVector<bool> inBoundsMap = xferOp.getInBoundsValues();
-                ShapedType xferType = xferOp.getShapedType();
-                AffineMap permMap = xferOp.getPermutationMap();
-                // Only set the in-bounds values to true for dynamic dims.
-                // Different mechanisms will set these accordingly for the
-                // static dims.
-                for (unsigned i = 0; i < xferOp.getTransferRank(); i++) {
-                  auto dimExpr = dyn_cast<AffineDimExpr>(permMap.getResult(i));
-                  // Skip broadcast dimensions.
-                  if (!dimExpr)
-                    continue;
-                  unsigned pos = dimExpr.getPosition();
-                  if (xferType.isDynamicDim(pos))
-                    inBoundsMap[i] = true;
-                }
-                rewriter.modifyOpInPlace(xferOp, [&]() {
-                  xferOp.setInBoundsAttr(
-                      rewriter.getBoolArrayAttr(inBoundsMap));
-                });
-              })
-          .Default([](Operation *op) {
-            // No-op if the operation is not an xfer read or write.
-          });
-    }
+    LDBG() << "No mask required, make sure that Xfer Ops set in_bounds to true";
+    // TODO: To be removed: https://github.com/llvm/llvm-project/issues/227821
+    llvm::TypeSwitch<Operation *>(opToMask)
+        .Case<vector::TransferReadOp, vector::TransferWriteOp>(
+            [&](auto xferOp) {
+              SmallVector<bool> inBoundsMap =
+                  SmallVector<bool>(xferOp.getInBounds().size(), true);
+              rewriter.modifyOpInPlace(xferOp, [&]() {
+                xferOp.setInBoundsAttr(rewriter.getBoolArrayAttr(inBoundsMap));
+              });
+            })
+        .Default([](Operation *op) {
+          // No-op if the operation is not an xfer read or write.
+        });
     return opToMask;
   }
 
@@ -693,8 +669,13 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
                                       ArrayRef<bool> dimsToMask) {
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
-  return vector::MultiDimReductionOp::create(
-      b, reduceOp->getLoc(), valueToReduce, acc, dimsToMask, *maybeKind);
+  // Keep the combiner's fast-math flags on the reduction.
+  arith::FastMathFlags fastMathFlags = arith::FastMathFlags::none;
+  if (auto fmfOp = dyn_cast<arith::ArithFastMathInterface>(reduceOp))
+    fastMathFlags = fmfOp.getFastMathFlagsAttr().getValue();
+  return vector::MultiDimReductionOp::create(b, reduceOp->getLoc(),
+                                             valueToReduce, acc, dimsToMask,
+                                             *maybeKind, fastMathFlags);
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
@@ -1199,11 +1180,16 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
     Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
 
+    // vector.gather is not maskable, so the iteration space mask (if any) is
+    // passed as its mask operand.
+    Value mask = state.getOrCreateMaskFor(rewriter, linalgOp);
+    if (!mask)
+      mask = maskConstantOp;
+
     // Generate the gather load
     Operation *gatherOp = vector::GatherOp::create(
         rewriter, loc, resultType, extractOp.getTensor(), baseIndices, offset,
-        maskConstantOp, passThruConstantOp);
-    gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
+        mask, passThruConstantOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp, gatherOp};
@@ -1644,7 +1630,6 @@ static VectorType getCollapsedVecType(VectorType type,
 ///
 /// If the vector sizes are not provided:
 ///  * the vector sizes are determined from the destination tensor static shape.
-///  * the inBounds attribute is used instead of masking.
 ///
 /// EXAMPLE (no vector sizes):
 /// ```
@@ -1690,15 +1675,12 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   ArrayRef<int64_t> &writeVectorSizes = inputVectorSizes;
 
   // In the absence of input-vector-sizes, use the _static_ input tensor shape.
-  // In addition, use the inBounds attribute instead of masking.
-  bool useInBoundsInsteadOfMasking = false;
   if (writeVectorSizes.empty()) {
     if (ShapedType::isDynamicShape(destShape))
       return rewriter.notifyMatchFailure(packOp,
                                          "unable to infer vector sizes");
 
     writeVectorSizes = destShape;
-    useInBoundsInsteadOfMasking = true;
   }
 
   // Compute pre-transpose-write-vector-type, i.e. the write vector type
@@ -1725,8 +1707,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
 
   // Create masked TransferReadOp.
   auto maskedRead = vector::createReadOrMaskedRead(
-      rewriter, loc, packOp.getSource(), readVecType, padValue,
-      useInBoundsInsteadOfMasking);
+      rewriter, loc, packOp.getSource(), readVecType, padValue);
 
   // Create ShapeCastOp.
   auto shapeCastOp = vector::ShapeCastOp::create(
@@ -1753,7 +1734,6 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
 ///
 /// If the vector sizes are not provided:
 ///  * the vector sizes are determined from the input tensor static shape.
-///  * the inBounds attribute is used instead of masking.
 ///
 /// EXAMPLE (no vector sizes):
 /// ```
@@ -1792,7 +1772,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   ShapedType unpackTensorType = unpackOp.getSourceType();
 
   ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
-  bool useInBoundsInsteadOfMasking = false;
 
   Location loc = unpackOp->getLoc();
 
@@ -1807,7 +1786,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
                                          "Unable to infer vector sizes!");
 
     readVectorSizes.assign(sourceShape.begin(), sourceShape.end());
-    useInBoundsInsteadOfMasking = true;
   }
 
   // -- Generate the read operation --
@@ -1815,8 +1793,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
       VectorType::get(readVectorSizes, unpackTensorType.getElementType(),
                       readScalableVectorFlags);
   Value readResult = vector::createReadOrMaskedRead(
-      rewriter, loc, unpackOp.getSource(), readVecType, std::nullopt,
-      useInBoundsInsteadOfMasking);
+      rewriter, loc, unpackOp.getSource(), readVecType, std::nullopt);
 
   // -- Generate the transpose operation --
   PackingMetadata packMetadata;
@@ -1835,8 +1812,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
 
   // -- Generate the write operation --
   Operation *write = vector::createWriteOrMaskedWrite(
-      rewriter, loc, shapeCastOp.getResult(), unpackOp.getDest(),
-      /*writeIndices=*/{}, useInBoundsInsteadOfMasking);
+      rewriter, loc, shapeCastOp.getResult(), unpackOp.getDest());
 
   newResults.push_back(write->getResult(0));
   return success();
@@ -1953,7 +1929,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unpackOp.hasPureTensorSemantics())
     return failure();
 
@@ -1989,6 +1967,13 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
   auto sourceType = source.getType();
   if (!VectorType::isValidElementType(sourceType.getElementType()))
     return failure();
+
+  // The write is a vector.transfer_write at the slice offsets, which cannot
+  // express a stride.
+  if (!sliceOp.hasUnitStride()) {
+    LDBG() << "Only unit strides are supported";
+    return failure();
+  }
 
   // Get the pad value.
   // TransferReadOp (which is used to vectorize InsertSliceOp), requires a
@@ -2333,7 +2318,9 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -2753,7 +2740,7 @@ protected:
 /// sure that the original padding value %cst was never used.
 ///
 /// This rewrite is possible if:
-/// - `xferOp` has no out-of-bounds dims or mask.
+/// - `xferOp` has no out-of-bounds dims and is not masked.
 /// - Low padding is static 0.
 /// - Single, scalar padding value.
 struct PadOpVectorizationWithTransferReadPattern
@@ -2771,7 +2758,7 @@ struct PadOpVectorizationWithTransferReadPattern
     if (!padValue)
       return failure();
     // Padding value of existing `xferOp` is unused.
-    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
+    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask() || xferOp.isMasked())
       return failure();
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
@@ -3067,9 +3054,20 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   // Create write
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
-  Operation *write =
-      vector::createWriteOrMaskedWrite(rewriter, loc, read, sliceOp.getDest(),
-                                       writeIndices, inputVectorSizes.empty());
+  // For a rank-reducing slice the vector need not cover the trailing result
+  // dims, so state which result dim each vector dim writes to.
+  AffineMap writeMap;
+  if (sourceType.getRank() != resultType.getRank()) {
+    SmallVector<AffineExpr> exprs;
+    for (int64_t resultDim : resultDimsForSourceDims)
+      exprs.push_back(rewriter.getAffineDimExpr(resultDim));
+    writeMap = AffineMap::get(resultType.getRank(), /*symbolCount=*/0, exprs,
+                              rewriter.getContext());
+  }
+
+  Operation *write = vector::createWriteOrMaskedWrite(
+      rewriter, loc, read, sliceOp.getDest(), writeIndices,
+      inputVectorSizes.empty(), writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));
@@ -4226,7 +4224,7 @@ static FailureOr<Operation *> vectorizeConvolution(
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {

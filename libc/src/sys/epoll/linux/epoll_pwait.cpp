@@ -8,36 +8,29 @@
 
 #include "src/sys/epoll/epoll_pwait.h"
 
-#include "hdr/signal_macros.h" // for NSIG
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/struct_epoll_event.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/epoll_pwait.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
-
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, epoll_pwait,
                    (int epfd, struct epoll_event *events, int maxevents,
                     int timeout, const sigset_t *sigmask)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_epoll_pwait, epfd, reinterpret_cast<long>(events), maxevents, timeout,
-      reinterpret_cast<long>(sigmask), NSIG / 8);
-
-  // A negative return value indicates an error with the magnitude of the
-  // value being the error code.
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result =
+      linux_syscalls::epoll_pwait(epfd, events, maxevents, timeout, sigmask);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
 
-  LIBC_MSAN_UNPOISON(events, ret * sizeof(struct epoll_event));
+  LIBC_MSAN_UNPOISON(events, result.value() * sizeof(struct epoll_event));
 
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

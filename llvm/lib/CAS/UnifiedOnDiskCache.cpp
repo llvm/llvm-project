@@ -314,7 +314,12 @@ public:
   /// \p BootTime. Always false where the boot time is not known, i.e. 0,
   /// since it cannot be told whether that was during the current boot.
   bool isValidAtBoot(uint64_t BootTime) const {
-    return BootTime != 0 && State == BootTime;
+    // The boot time can be computed from the current time, so it moves when
+    // the clock is adjusted and the recorded one can be later than BootTime
+    // during the same boot. A reboot always makes it later. Pending is larger
+    // than any boot time, so it needs to be excluded.
+    return BootTime != 0 && !isValidationPending() && State &&
+           BootTime <= *State;
   }
 
   bool isValidationPending() const { return State == ValidationPending; }

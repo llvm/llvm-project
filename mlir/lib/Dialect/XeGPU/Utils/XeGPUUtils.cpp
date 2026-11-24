@@ -147,6 +147,10 @@ std::string xegpu::getTemporaryLayoutName(const OpResult result) {
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
+bool xegpu::isLayoutCarrierType(Type type) {
+  return isa<VectorType, xegpu::TensorDescType>(type);
+}
+
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
@@ -409,6 +413,13 @@ template void xegpu::setTemporaryLayout<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
+void xegpu::setTensorDescLayout(Value value, DistributeLayoutAttr layout) {
+  auto tdescTy = cast<xegpu::TensorDescType>(value.getType());
+  value.setType(xegpu::TensorDescType::get(
+      tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
+      tdescTy.getEncoding(), layout));
+}
+
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
                                         Value value, ArrayRef<int64_t> shape) {
@@ -490,6 +501,24 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   return std::nullopt;
 }
 
+FailureOr<int64_t> xegpu::getNumSubgroupsFromBlockSize(Operation *op,
+                                                       int64_t subgroupSize) {
+  auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>();
+  if (!gpuFunc)
+    return failure();
+  std::optional<ArrayRef<int32_t>> blockSize = gpuFunc.getKnownBlockSize();
+  if (!blockSize)
+    return failure();
+  if (!llvm::all_of(*blockSize, [](int32_t dim) {
+        return dim > 0 && llvm::isPowerOf2_32(dim);
+      }))
+    return failure();
+  int64_t numSubgroups = llvm::product_of(*blockSize) / subgroupSize;
+  if (numSubgroups < 1)
+    return failure();
+  return numSubgroups;
+}
+
 /// Generates element-wise addition ops of two arrays with same length.
 SmallVector<OpFoldResult> xegpu::addElementwise(OpBuilder &builder,
                                                 Location loc,
@@ -547,17 +576,25 @@ int xegpu::getLargestDivisor(T dim, ArrayRef<T> candidates,
   return largest;
 }
 
+/// Returns the flags held by `fastmath`, or none if it is null.
+static arith::FastMathFlags getFlags(arith::FastMathFlagsAttr fastmath) {
+  return fastmath ? fastmath.getValue() : arith::FastMathFlags::none;
+}
+
 Value xegpu::subgroupReduction(Location loc, OpBuilder &builder, Value input,
-                               vector::CombiningKind kind, uint32_t size) {
+                               vector::CombiningKind kind, uint32_t size,
+                               arith::FastMathFlagsAttr fastmath) {
   // First reduce on a single thread to get per lane reduction value.
-  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input);
+  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input,
+                                              getFlags(fastmath));
   // Parallel reduction using butterfly shuffles.
   for (uint64_t i = 1; i < size; i <<= 1) {
     Value shuffled =
         gpu::ShuffleOp::create(builder, loc, laneVal, i, /**  width = **/ size,
                                /**  mode = **/ gpu::ShuffleMode::XOR)
             .getShuffleResult();
-    laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
+    laneVal =
+        makeArithReduction(builder, loc, kind, laneVal, shuffled, fastmath);
   }
   return laneVal;
 }
@@ -566,7 +603,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
                                      TypedValue<VectorType> acc,
                                      vector::CombiningKind kind,
                                      int64_t reductionDim, Location loc,
-                                     PatternRewriter &rewriter) {
+                                     PatternRewriter &rewriter,
+                                     arith::FastMathFlagsAttr fastmath) {
   VectorType sourceType = src.getType();
   int64_t sourceRank = sourceType.getRank();
   // Expecting at least a 2D source vector. Leading dimensions (all except the
@@ -577,6 +615,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
            "expected leading dimensions to be unit");
   int64_t rowIdx = sourceRank - 2;
   int64_t columnIdx = sourceRank - 1;
+  assert((reductionDim == rowIdx || reductionDim == columnIdx) &&
+         "expected the reduction dim to be one of the last two dims");
   int64_t sourceH = sourceType.getShape()[rowIdx];
   int64_t sourceW = sourceType.getShape()[columnIdx];
   int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;
@@ -630,7 +670,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
     accIdx[accRank - 1] = i;
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
     Value reduction = vector::ReductionOp::create(
-        rewriter, loc, kind, slice.getResult(), accExtract);
+        rewriter, loc, kind, slice.getResult(), accExtract, getFlags(fastmath));
     reductionResult = vector::InsertOp::create(rewriter, loc, reduction,
                                                reductionResult, accIdx);
     // Insert op should have the same layout as the accumulator.
@@ -642,7 +682,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
 Value xegpu::lowerCrossLaneReductionToShuffles(
     TypedValue<VectorType> src, TypedValue<VectorType> acc,
     vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
-    Location loc, PatternRewriter &rewriter) {
+    Location loc, PatternRewriter &rewriter,
+    arith::FastMathFlagsAttr fastmath) {
   VectorType sourceType = src.getType();
   int64_t sourceRank = sourceType.getRank();
   // Expecting at least a 2D source vector. Leading dimensions (all except the
@@ -697,19 +738,55 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
     SmallVector<int64_t> accIdx(accRank, 0);
     accIdx[accRank - 1] = i;
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
-    Value fullReduce =
-        xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
-    fullReduce =
-        vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
+    Value fullReduce = xegpu::subgroupReduction(loc, rewriter, slice, kind,
+                                                reductionSize, fastmath);
+    fullReduce = vector::makeArithReduction(rewriter, loc, kind, fullReduce,
+                                            accExtract, fastmath);
     reductionResult = vector::InsertOp::create(rewriter, loc, fullReduce,
                                                reductionResult, accIdx);
   }
   return reductionResult;
 }
 
+/// Returns the neutral value of the float min or max reduction `kind` over
+/// elements of `semantics`. The reduction combines this value under its
+/// fast-math `flags`, so build only a value that the format can represent and
+/// the flags allow:
+/// - A kind that ignores NaN operands uses a quiet NaN, if the format has one
+///   and `nnan` is not set.
+/// - Otherwise it uses the infinity that never wins, if the format has one and
+///   `ninf` is not set.
+/// - Otherwise it uses the lowest (for max) or highest (for min) finite value.
+///   That value never wins either: no number that the format and the flags
+///   allow is below the lowest or above the highest finite value.
+static APFloat getMinMaxNeutral(const llvm::fltSemantics &semantics,
+                                vector::CombiningKind kind,
+                                arith::FastMathFlags flags) {
+  bool isMax = kind == vector::CombiningKind::MAXIMUMF ||
+               kind == vector::CombiningKind::MAXNUMF ||
+               kind == vector::CombiningKind::MAXIMUMNUMF;
+  bool ignoresNaN = kind != vector::CombiningKind::MINIMUMF &&
+                    kind != vector::CombiningKind::MAXIMUMF;
+  if (ignoresNaN && APFloat::semanticsHasNaN(semantics) &&
+      !arith::bitEnumContainsAny(flags, arith::FastMathFlags::nnan))
+    return APFloat::getQNaN(semantics);
+  bool useInf = APFloat::semanticsHasInf(semantics) &&
+                !arith::bitEnumContainsAny(flags, arith::FastMathFlags::ninf);
+  if (!isMax)
+    return useInf ? APFloat::getInf(semantics) : APFloat::getLargest(semantics);
+  // An unsigned format has no negative values. Its lowest value is zero, or
+  // its smallest positive value if it has no zero.
+  if (!APFloat::semanticsHasSignedRepr(semantics))
+    return APFloat::semanticsHasZero(semantics)
+               ? APFloat::getZero(semantics)
+               : APFloat::getSmallest(semantics);
+  return useInf ? APFloat::getInf(semantics, /*Negative=*/true)
+                : APFloat::getLargest(semantics, /*Negative=*/true);
+}
+
 Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
-                                         Type type,
-                                         vector::CombiningKind kind) {
+                                         Type type, vector::CombiningKind kind,
+                                         arith::FastMathFlagsAttr fastmath) {
   auto vecTy = dyn_cast<VectorType>(type);
   Type elemTy = vecTy ? vecTy.getElementType() : type;
 
@@ -729,8 +806,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
     return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::AND:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getAllOnes(intTy.getWidth())));
+    if (elemTy.isIndex())
+      return makeConst(builder.getIndexAttr(-1));
+    return nullptr;
 
   case vector::CombiningKind::MINSI:
     if (auto intTy = dyn_cast<IntegerType>(elemTy))
@@ -751,25 +835,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return nullptr;
 
   case vector::CombiningKind::MINIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
-    return nullptr;
-
   case vector::CombiningKind::MAXIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy,
-          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
-    return nullptr;
-
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMNUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
+          elemTy, getMinMaxNeutral(floatTy.getFloatSemantics(), kind,
+                                   getFlags(fastmath))));
     return nullptr;
   }
   return nullptr;
@@ -803,7 +877,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3p>(uArch))
     return false;
   if (!layout)
     return false;
@@ -820,6 +894,39 @@ bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
   int64_t offset;
   return succeeded(type.getStridesAndOffset(strides, offset)) &&
          llvm::none_of(strides, ShapedType::isDynamic);
+}
+
+Value xegpu::addElemOffsetInBytes(OpBuilder &builder, Location loc,
+                                  Value baseAddr, Value elemOffset,
+                                  MemRefType memrefTy) {
+  Type type = elemOffset.getType();
+  assert(baseAddr.getType() == type &&
+         "expected base address and offset of the same type");
+  auto makeConst = [&](int64_t value) -> Value {
+    return arith::ConstantOp::create(builder, loc, type,
+                                     builder.getIntegerAttr(type, value));
+  };
+
+  // finalAddr = baseAddr + elemOffset * bitWidth / 8
+  unsigned elemBits = memrefTy.getElementTypeBitWidth();
+  Value byteOffset;
+  if (elemBits % 8 == 0) {
+    // For byte-sized elements divide by 8 statically so that the division is
+    // folded into the constant:
+    //   finalAddr = baseAddr + elemOffset * (bitWidth / 8)
+    byteOffset = arith::MulIOp::create(builder, loc, elemOffset,
+                                       makeConst(elemBits / 8));
+  } else {
+    // For sub-byte elements multiply first and then divide by 8, otherwise the
+    // byte size would be zero (e.g. 4 / 8 == 0 for i4):
+    //   finalAddr = baseAddr + (elemOffset * bitWidth) / 8
+    Value bitSize = makeConst(elemBits);
+    Value eight = makeConst(8);
+    byteOffset = arith::DivUIOp::create(
+        builder, loc, arith::MulIOp::create(builder, loc, elemOffset, bitSize),
+        eight);
+  }
+  return arith::AddIOp::create(builder, loc, baseAddr, byteOffset);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
@@ -846,10 +953,15 @@ bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst whose product equals
 // the original dimension. Populates splitDimGroups with groups of dst indices
 // that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
-// true
+// true. Shapes that only insert unit dimensions are  rejected here.
 bool xegpu::matchSplitDimExpansion(
     ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
     SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  SmallVector<int64_t> expandedUnitDims;
+  if (matchUnitDimExpansion(src, dst, expandedUnitDims) &&
+      !expandedUnitDims.empty())
+    return false;
+
   // each dim in src can be mapped to one or more dims in dst whose product
   // equals to the src dim
   size_t srcIdx = 0;

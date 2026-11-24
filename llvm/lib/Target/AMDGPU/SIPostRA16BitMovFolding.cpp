@@ -14,11 +14,8 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
 using namespace llvm;
@@ -37,6 +34,8 @@ private:
                      MCRegister &SrcReg32, bool &SrcIsHi, bool &SrcIsImm,
                      int64_t &ImmVal) const;
 
+  void clearKillsBetween(MachineInstr &Begin, MachineInstr &End,
+                         MCRegister Reg) const;
   bool mergeSingleMovB16Pair(MachineInstr &Lo, MachineInstr &Hi,
                              bool IsHiFirst) const;
   bool mergeMovB16Pairs(MachineFunction &MF) const;
@@ -106,6 +105,28 @@ void SIPostRA16BitMovFolding::getMovB16Info(
   }
 }
 
+void SIPostRA16BitMovFolding::clearKillsBetween(MachineInstr &Begin,
+                                                MachineInstr &End,
+                                                MCRegister Reg) const {
+  assert(Reg && "Expected a register source");
+  for (MachineInstr &MI : make_range(std::next(End.getReverseIterator()),
+                                     Begin.getReverseIterator())) {
+    if (MI.isDebugInstr())
+      continue;
+
+    bool ReadsReg = false;
+    for (MachineOperand &MO : MI.uses()) {
+      if (!MO.isReg() || !MO.readsReg() || !TRI->regsOverlap(MO.getReg(), Reg))
+        continue;
+      ReadsReg = true;
+      MO.setIsKill(false);
+    }
+
+    if (ReadsReg)
+      return;
+  }
+}
+
 // clang-format off
 // Try to merge a pair of v_mov_b16 instructions targeting the lo16 and hi16
 // halves of the same VGPR into a single 32-bit instruction.
@@ -118,6 +139,10 @@ void SIPostRA16BitMovFolding::getMovB16Info(
 //   v_mov_b16 v0.l, 0        v_mov_b16 v0.h, v2.l/s2  => v_lshlrev_b32 v0,16,v2/s2
 //   v_mov_b16 v0.l, 0        v_mov_b16 v0.h, v2.h     => v_and_b32  v0,0xffff0000,v2
 //   v_mov_b16 v0.l, v.x/s    v_mov_b16 v0.h, v.y/s    => v_perm_b32_e64 v0, v.x/s, v.y/s, mask
+//   v_mov_b16 v0.l, imm0     v_mov_b16 v0.h, imm1     => v_mov_b32 v0, (imm1<<16)|imm0
+//
+// A second mov reading the half the first wrote is rewritten to read the first
+// mov's source before matching.
 // clang-format on
 bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
                                                     MachineInstr &Hi,
@@ -156,14 +181,29 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   MCRegister FirstDst16 = IsHiFirst ? HiDst : LoDst;
   MCRegister SecondSrc16 = IsHiFirst ? LoSrc16 : HiSrc16;
   MCRegister SecondDst16 = IsHiFirst ? LoDst : HiDst;
+
+  // The merged instruction reads both sources before writing Dst32, so the
+  // second mov cannot read the half the first wrote. Forward the first mov's
+  // source into it instead.
+  if (SecondSrc16 && TRI->regsOverlap(SecondSrc16, FirstDst16)) {
+    // Overlap is always exact here; only that is forwardable.
+    if (SecondSrc16 != FirstDst16)
+      return false;
+    if (IsHiFirst) {
+      getMovB16Info(FirstMI, TRI, LoSrc16, LoSrcIsVGPR, LoSrc32, LoSrcIsHi,
+                    LoSrcIsImm, LoImm);
+    } else {
+      getMovB16Info(FirstMI, TRI, HiSrc16, HiSrcIsVGPR, HiSrc32, HiSrcIsHi,
+                    HiSrcIsImm, HiImm);
+    }
+  }
+
   for (MachineInstr &Scan :
        drop_begin(make_range(FirstMI.getIterator(), SecondMI.getIterator()))) {
     if (Scan.isDebugInstr())
       continue;
     if (Scan.modifiesRegister(Dst32, TRI))
       return false;
-    assert(!Scan.modifiesRegister(AMDGPU::EXEC, TRI) &&
-           "Expect no write on EXEC!");
     LoopCnt++;
     if (LoopCnt < UpperBoundCnt &&
         ((FirstSrc16 && Scan.modifiesRegister(FirstSrc16, TRI)) ||
@@ -199,6 +239,7 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
       return false;
     unsigned MaskHiSrc = HiSrcIsHi ? 0x0706 : 0x0504;
     unsigned MaskLoSrc = LoSrcIsHi ? 0x0302 : 0x0100;
+    clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL, TII->get(AMDGPU::V_PERM_B32_e64), Dst32)
         .addReg(HiSrc32)
         .addReg(LoSrc32)
@@ -215,9 +256,23 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
       (HiSrcIsImm ||
        (HiSrcIsVGPR && AMDGPU::VGPR_32_Lo128RegClass.contains(HiSrc32)));
 
+  // Pattern: v_mov_b16 v0.l, imm0 + v_mov_b16 v0.h, imm1
+  //   => v_mov_b32 v0, (imm1 << 16) | imm0
+  if (LoSrcIsImm && HiSrcIsImm) {
+    BuildMI(MBB, Selected, DL,
+            TII->get(Usevop2 ? AMDGPU::V_MOV_B32_e32 : AMDGPU::V_MOV_B32_e64),
+            Dst32)
+        .addImm(((HiImm & 0xffff) << 16) | (LoImm & 0xffff));
+    Lo.eraseFromParent();
+    Hi.eraseFromParent();
+    return true;
+  }
+
   // Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, v2.l/s2
   //   => v_and_b32 v0, 0x0000ffff, v2/s2
   if (HiSrcIsImm && HiImm == 0 && !LoSrcIsImm && !LoSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_AND_B32_e32 : AMDGPU::V_AND_B32_e64),
             Dst32)
@@ -231,6 +286,8 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, v2.h
   //   => v_lshrrev_b32 v0, 16, v2
   if (HiSrcIsImm && HiImm == 0 && !LoSrcIsImm && LoSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_LSHRREV_B32_e32
                              : AMDGPU::V_LSHRREV_B32_e64),
@@ -245,6 +302,8 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Pattern: v_mov_b16 v0.l, 0  +  v_mov_b16 v0.h, v2.l/s2
   //   => v_lshlrev_b32 v0, 16, v2/s2
   if (LoSrcIsImm && LoImm == 0 && !HiSrcIsImm && !HiSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_LSHLREV_B32_e32
                              : AMDGPU::V_LSHLREV_B32_e64),
@@ -259,6 +318,8 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Pattern: v_mov_b16 v0.l, 0  +  v_mov_b16 v0.h, v2.h
   //   => v_and_b32 v0, 0xffff0000, v2
   if (LoSrcIsImm && LoImm == 0 && !HiSrcIsImm && HiSrcIsHi) {
+    if (FirstSrc16)
+      clearKillsBetween(FirstMI, Selected, FirstSrc16);
     BuildMI(MBB, Selected, DL,
             TII->get(Usevop2 ? AMDGPU::V_AND_B32_e32 : AMDGPU::V_AND_B32_e64),
             Dst32)

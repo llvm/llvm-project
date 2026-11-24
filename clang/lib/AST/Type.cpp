@@ -310,6 +310,8 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
                     ? TypeDependence::DependentInstantiation
                     : TypeDependence::None)),
       ElementType(et) {
+  assert(!(tq & ~Qualifiers::CVRMask) &&
+         "only CVR index qualifiers are stored");
   ArrayTypeBits.IndexTypeQuals = tq;
   ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
@@ -2243,6 +2245,8 @@ bool Type::hasAutoForTrailingReturnType() const {
 bool Type::hasIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isIntegerType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isIntegerType();
   if (CanonicalType->isSveVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() == BuiltinType::SveBool ||
@@ -2602,7 +2606,12 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
   } else if (isa<MemberPointerType>(T)) {
     return STK_MemberPointer;
   } else if (isa<EnumType>(T)) {
-    assert(T->castAsEnumDecl()->isComplete());
+    const EnumDecl *ED = T->castAsEnumDecl();
+    assert(ED->isComplete());
+    // C23 6.7.3.3p16: conversion to an enumerated type with a fixed underlying
+    // type has the same semantics as conversion to the underlying type.
+    if (ED->isFixed() && ED->getIntegerType()->isBooleanType())
+      return STK_Bool;
     return STK_Integral;
   } else if (const auto *CT = dyn_cast<ComplexType>(T)) {
     if (CT->getElementType()->isRealFloatingType())
@@ -2840,8 +2849,6 @@ bool Type::isSveVLSBuiltinType() const {
     case BuiltinType::SveFloat64:
     case BuiltinType::SveBFloat16:
     case BuiltinType::SveBool:
-    case BuiltinType::SveBoolx2:
-    case BuiltinType::SveBoolx4:
     case BuiltinType::SveMFloat8:
       return true;
     default:
@@ -3293,6 +3300,13 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
     return true;
   }
 
+  // C++26 [basic.types]p9:
+  // -- std::meta::info is a scalar type
+  // C++26 [basic.types]p10:
+  // -- a scalar type is a literal type
+  if (isMetaInfoType())
+    return true;
+
   // We treat _Atomic T as a literal type if T is a literal type.
   if (const auto *AT = BaseTy->getAs<AtomicType>())
     return AT->getValueType()->isLiteralType(Ctx);
@@ -3668,6 +3682,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "unsigned _Accum";
   case ULongAccum:
     return "unsigned long _Accum";
+  case BuiltinType::MetaInfo:
+    return "std::meta::info";
   case BuiltinType::ShortFract:
     return "short _Fract";
   case BuiltinType::Fract:
@@ -3793,6 +3809,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case Id:                                                                     \
+    return #Name;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case Id:                                                                     \
     return Name;
@@ -5414,10 +5434,13 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
+    case BuiltinType::MetaInfo:
     case BuiltinType::IncompleteMatrixIdx:
     case BuiltinType::ArraySection:
     case BuiltinType::OMPArrayShaping:

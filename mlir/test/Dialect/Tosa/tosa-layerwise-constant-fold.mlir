@@ -1,23 +1,6 @@
 // RUN: mlir-opt --split-input-file --tosa-layerwise-constant-fold %s | FileCheck %s
 // RUN: mlir-opt --split-input-file --tosa-layerwise-constant-fold="aggressive-reduce-constant=true" %s | FileCheck %s --check-prefix=AGGRESIVE
 
-// CHECK-LABEL: @armax_fold_dim_size_1
-func.func @armax_fold_dim_size_1(%arg0: tensor<2x1x3xf32>) -> tensor<2x3xi32> {
-  // CHECK: tosa.const values(dense<0> : tensor<2x3xi32>) : () -> tensor<2x3xi32>
-  %0 = tosa.argmax %arg0 axis(1): (tensor<2x1x3xf32>) -> tensor<2x3xi32>
-  return %0 : tensor<2x3xi32>
-}
-
-// -----
-
-// CHECK-LABEL: @argmax_dynamic_shape_no_fold_dim_size_1
-func.func @argmax_dynamic_shape_no_fold_dim_size_1(%arg0: tensor<?x1x3xf32>) -> tensor<?x3xi32> {
-  // CHECK: tosa.argmax
-  %0 = tosa.argmax %arg0 axis(1): (tensor<?x1x3xf32>) -> tensor<?x3xi32>
-  return %0 : tensor<?x3xi32>
-}
-
-// -----
 
 // CHECK-LABEL: @transpose_fold
 func.func @transpose_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {

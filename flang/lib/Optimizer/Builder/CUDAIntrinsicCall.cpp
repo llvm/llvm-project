@@ -19,6 +19,18 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMAsyncCopyOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMIndexSRegOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMBarrierOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMiscOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMiscSRegOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
@@ -456,6 +468,10 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genMatchAnySync),
      {{{"mask", asValue}, {"value", asValue}}},
      /*isElemental=*/false},
+    {"on_device",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
+     {},
+     /*isElemental=*/false},
     {"syncthreads",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genSyncThreads),
@@ -642,33 +658,17 @@ static constexpr IntrinsicHandler cudaHandlers[]{
 };
 static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
-// BIND(C) CUDA Fortran procedures. Kept separate because the other handlers
-// are not BIND(C) and must not match a user procedure with the same name.
-static constexpr IntrinsicHandler cudaBindcHandlers[]{
-    {"on_device",
-     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
-     {},
-     /*isElemental=*/false},
-};
-static_assert(fir::isSorted(cudaBindcHandlers) && "map must be sorted");
-
-static const IntrinsicHandler *
-lookupCUDAHandler(llvm::ArrayRef<IntrinsicHandler> handlers,
-                  llvm::StringRef name) {
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall) {
+  // cudadevice declares on_device() with bind(c).
+  if (isBindcCall && name != "on_device")
+    return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
   };
-  auto result = llvm::lower_bound(handlers, name, compare);
-  return result != handlers.end() && result->name == name ? &*result : nullptr;
-}
-
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
-                                                 bool isBindcCall) {
-  // The tables have different lengths, so they cannot share a ternary: that
-  // would decay both arrays to a pointer.
-  if (isBindcCall)
-    return lookupCUDAHandler(cudaBindcHandlers, name);
-  return lookupCUDAHandler(cudaHandlers, name);
+  auto result = llvm::lower_bound(cudaHandlers, name, compare);
+  return result != std::end(cudaHandlers) && result->name == name ? result
+                                                                  : nullptr;
 }
 
 mlir::Value
@@ -699,8 +699,11 @@ static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
                                 mlir::Value arg1) {
   auto llvmPointerType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   arg0 = builder.createConvert(loc, llvmPointerType, arg0);
-  return mlir::LLVM::AtomicRMWOp::create(builder, loc, binOp, arg0, arg1,
-                                         mlir::LLVM::AtomicOrdering::seq_cst);
+  bool ignoreDenormalMode = binOp == mlir::LLVM::AtomicBinOp::fadd;
+  return mlir::LLVM::AtomicRMWOp::create(
+      builder, loc, binOp, arg0, arg1, mlir::LLVM::AtomicOrdering::seq_cst,
+      /*syncscope=*/llvm::StringRef(), /*alignment=*/0, /*isVolatile=*/false,
+      /*ignoreDenormalMode=*/ignoreDenormalMode);
 }
 
 // ATOMICADD
@@ -1003,7 +1006,8 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier,
-                                              /*count=*/nullptr)
+                                              /*count=*/nullptr,
+                                              /*multicastMask=*/nullptr)
       .getResult(0);
 }
 
@@ -1283,11 +1287,18 @@ CUDAIntrinsicLibrary::genLDXXFunc(mlir::Type resultType,
   mlir::Type refResTy = fir::ReferenceType::get(resTy);
   mlir::FunctionType ftype =
       mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
-  auto funcOp = builder.createFunction(loc, fctName, ftype);
+  auto intrinsicAttr = fir::FortranProcedureFlagsEnumAttr::get(
+      builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic);
+  mlir::func::FuncOp funcOp = builder.getNamedFunction(fctName);
+  if (!funcOp) {
+    funcOp = builder.createFunction(loc, fctName, ftype);
+    funcOp->setAttr(fir::getFortranProcedureFlagsAttrName(), intrinsicAttr);
+  }
   llvm::SmallVector<mlir::Value> funcArgs;
   funcArgs.push_back(res);
   funcArgs.push_back(arg);
-  fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  auto call = fir::CallOp::create(builder, loc, funcOp, funcArgs);
+  call.setProcedureAttrsAttr(intrinsicAttr);
   mlir::Value ext =
       builder.createIntegerConstant(loc, builder.getIndexType(), extent);
   return fir::ArrayBoxValue(res, {ext});

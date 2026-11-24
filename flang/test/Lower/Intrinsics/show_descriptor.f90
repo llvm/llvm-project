@@ -19,9 +19,9 @@ subroutine test_int
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ZERO_BITS_0]](%[[SHAPE_0]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_intEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] uniq_name("_QMtest_show_descriptorFtest_intEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QMtest_show_descriptorFtest_intEn"}>
-! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_1]] {uniq_name = "_QMtest_show_descriptorFtest_intEn"} : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_1]] uniq_name("_QMtest_show_descriptorFtest_intEn") : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:           fir.store %[[C5]] to %[[DECLARE_1]] : !fir.ref<i32>
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
@@ -52,7 +52,7 @@ subroutine test_char
 ! CHECK:           %[[C9:.*]] = arith.constant 9 : index
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_charEc) : !fir.ref<!fir.char<1,9>>
-! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] typeparams %[[C9]] {uniq_name = "_QMtest_show_descriptorFtest_charEc"} : (!fir.ref<!fir.char<1,9>>, index) -> !fir.ref<!fir.char<1,9>>
+! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] typeparams %[[C9]] uniq_name("_QMtest_show_descriptorFtest_charEc") : (!fir.ref<!fir.char<1,9>>, index) -> !fir.ref<!fir.char<1,9>>
 ! CHECK:           %[[EMBOX_CHAR:.*]] = fir.embox %[[DECLARE_0]] : (!fir.ref<!fir.char<1,9>>) -> !fir.box<!fir.char<1,9>>
 ! CHECK:           %[[CONVERT_CHAR:.*]] = fir.convert %[[EMBOX_CHAR]] : (!fir.box<!fir.char<1,9>>) -> !fir.box<none>
 ! CHECK:           fir.store %[[CONVERT_CHAR]] to %[[ALLOCA_CHAR:.*]] : !fir.ref<!fir.box<none>>
@@ -77,12 +77,12 @@ subroutine test_logical
 ! CHECK:           %[[C2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_logicalEl1) : !fir.ref<!fir.logical<1>>
-! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMtest_show_descriptorFtest_logicalEl1"} : (!fir.ref<!fir.logical<1>>) -> !fir.ref<!fir.logical<1>>
+! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] uniq_name("_QMtest_show_descriptorFtest_logicalEl1") : (!fir.ref<!fir.logical<1>>) -> !fir.ref<!fir.logical<1>>
 ! CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_logicalEl2) : !fir.ref<!fir.logical<2>>
-! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ADDRESS_OF_1]] {uniq_name = "_QMtest_show_descriptorFtest_logicalEl2"} : (!fir.ref<!fir.logical<2>>) -> !fir.ref<!fir.logical<2>>
+! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ADDRESS_OF_1]] uniq_name("_QMtest_show_descriptorFtest_logicalEl2") : (!fir.ref<!fir.logical<2>>) -> !fir.ref<!fir.logical<2>>
 ! CHECK:           %[[ADDRESS_OF_2:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_logicalEla2) : !fir.ref<!fir.array<2x!fir.logical<2>>>
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ADDRESS_OF_2]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_logicalEla2"} : (!fir.ref<!fir.array<2x!fir.logical<2>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.logical<2>>>
+! CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ADDRESS_OF_2]](%[[SHAPE_0]]) uniq_name("_QMtest_show_descriptorFtest_logicalEla2") fortran_attrs<target> : (!fir.ref<!fir.array<2x!fir.logical<2>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.logical<2>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>> <{bindc_name = "pla2", uniq_name = "_QMtest_show_descriptorFtest_logicalEpla2"}>
 ! CHECK:           %[[ZERO_BITS_0:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.logical<2>>>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
@@ -92,7 +92,7 @@ subroutine test_logical
   call show_descriptor(l1)
   call show_descriptor(l2)
   pla2 => la2
-! CHECK:           %[[DECLARE_3:.*]] = fir.declare %[[ALLOCA_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_show_descriptorFtest_logicalEpla2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>
+! CHECK:           %[[DECLARE_3:.*]] = fir.declare %[[ALLOCA_0]] uniq_name("_QMtest_show_descriptorFtest_logicalEpla2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>
 ! CHECK:           %[[EMBOX_L1:.*]] = fir.embox %[[DECLARE_0]] : (!fir.ref<!fir.logical<1>>) -> !fir.box<!fir.logical<1>>
 ! CHECK:           %[[CONVERT_L1:.*]] = fir.convert %[[EMBOX_L1]] : (!fir.box<!fir.logical<1>>) -> !fir.box<none>
 ! CHECK:           fir.store %[[CONVERT_L1]] to %[[ALLOCA_L1:.*]] : !fir.ref<!fir.box<none>>
@@ -129,13 +129,13 @@ subroutine test_real
 ! CHECK:           %[[ALLOCA_BOX:.*]] = fir.alloca !fir.box<none>
 ! CHECK:           %[[DUMMY_SCOPE_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_4:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_realEhalf) : !fir.ref<f32>
-! CHECK:           %[[DECLARE_5:.*]] = fir.declare %[[ADDRESS_OF_4]] {uniq_name = "_QMtest_show_descriptorFtest_realEhalf"} : (!fir.ref<f32>) -> !fir.ref<f32>
+! CHECK:           %[[DECLARE_5:.*]] = fir.declare %[[ADDRESS_OF_4]] uniq_name("_QMtest_show_descriptorFtest_realEhalf") : (!fir.ref<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[ADDRESS_OF_5:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_realErow) : !fir.ref<!fir.array<3xf32>>
 ! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[C3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DECLARE_6:.*]] = fir.declare %[[ADDRESS_OF_5]](%[[SHAPE_2]]) {uniq_name = "_QMtest_show_descriptorFtest_realErow"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+! CHECK:           %[[DECLARE_6:.*]] = fir.declare %[[ADDRESS_OF_5]](%[[SHAPE_2]]) uniq_name("_QMtest_show_descriptorFtest_realErow") : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
 ! CHECK:           %[[ADDRESS_OF_6:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_realEw) : !fir.ref<!fir.array<4xf64>>
 ! CHECK:           %[[SHAPE_3:.*]] = fir.shape %[[C4]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DECLARE_7:.*]] = fir.declare %[[ADDRESS_OF_6]](%[[SHAPE_3]]) {uniq_name = "_QMtest_show_descriptorFtest_realEw"} : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf64>>
+! CHECK:           %[[DECLARE_7:.*]] = fir.declare %[[ADDRESS_OF_6]](%[[SHAPE_3]]) uniq_name("_QMtest_show_descriptorFtest_realEw") : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf64>>
 
   call show_descriptor(half)
   call show_descriptor(row)
@@ -175,15 +175,15 @@ subroutine test_complex
 ! CHECK:           %[[DUMMY_SCOPE_3:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_7:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_complexEa2) : !fir.ref<!fir.array<2xcomplex<f32>>>
 ! CHECK:           %[[SHAPE_5:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DECLARE_8:.*]] = fir.declare %[[ADDRESS_OF_7]](%[[SHAPE_5]]) {uniq_name = "_QMtest_show_descriptorFtest_complexEa2"} : (!fir.ref<!fir.array<2xcomplex<f32>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xcomplex<f32>>>
+! CHECK:           %[[DECLARE_8:.*]] = fir.declare %[[ADDRESS_OF_7]](%[[SHAPE_5]]) uniq_name("_QMtest_show_descriptorFtest_complexEa2") : (!fir.ref<!fir.array<2xcomplex<f32>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xcomplex<f32>>>
 ! CHECK:           %[[ADDRESS_OF_8:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_complexEc1) : !fir.ref<complex<f32>>
-! CHECK:           %[[DECLARE_9:.*]] = fir.declare %[[ADDRESS_OF_8]] {uniq_name = "_QMtest_show_descriptorFtest_complexEc1"} : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
+! CHECK:           %[[DECLARE_9:.*]] = fir.declare %[[ADDRESS_OF_8]] uniq_name("_QMtest_show_descriptorFtest_complexEc1") : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
 ! CHECK:           %[[ADDRESS_OF_9:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_complexEc2) : !fir.ref<complex<f32>>
-! CHECK:           %[[DECLARE_10:.*]] = fir.declare %[[ADDRESS_OF_9]] {uniq_name = "_QMtest_show_descriptorFtest_complexEc2"} : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
+! CHECK:           %[[DECLARE_10:.*]] = fir.declare %[[ADDRESS_OF_9]] uniq_name("_QMtest_show_descriptorFtest_complexEc2") : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
 ! CHECK:           %[[ADDRESS_OF_10:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_complexEChi) : !fir.ref<complex<f32>>
-! CHECK:           %[[DECLARE_11:.*]] = fir.declare %[[ADDRESS_OF_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMtest_show_descriptorFtest_complexEChi"} : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
+! CHECK:           %[[DECLARE_11:.*]] = fir.declare %[[ADDRESS_OF_10]] uniq_name("_QMtest_show_descriptorFtest_complexEChi") fortran_attrs<parameter> : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
 ! CHECK:           %[[ADDRESS_OF_11:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_complexEChr) : !fir.ref<complex<f32>>
-! CHECK:           %[[DECLARE_12:.*]] = fir.declare %[[ADDRESS_OF_11]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMtest_show_descriptorFtest_complexEChr"} : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
+! CHECK:           %[[DECLARE_12:.*]] = fir.declare %[[ADDRESS_OF_11]] uniq_name("_QMtest_show_descriptorFtest_complexEChr") fortran_attrs<parameter> : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
 
   call show_descriptor(hr)
 ! CHECK:           %[[VAL_HR_0:.*]] = fir.insert_value {{.*}}
@@ -233,27 +233,27 @@ subroutine test_derived
 ! CHECK:           %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:           %[[DUMMY_SCOPE_4:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_12:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.a) : !fir.ref<!fir.char<1>>
-! CHECK:           %[[DECLARE_13:.*]] = fir.declare %[[ADDRESS_OF_12]] typeparams %[[C1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.a"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
+! CHECK:           %[[DECLARE_13:.*]] = fir.declare %[[ADDRESS_OF_12]] typeparams %[[C1]] uniq_name("_QMtest_show_descriptorFtest_derivedE.n.a") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:           %[[ADDRESS_OF_13:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.b) : !fir.ref<!fir.char<1>>
-! CHECK:           %[[DECLARE_14:.*]] = fir.declare %[[ADDRESS_OF_13]] typeparams %[[C1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.b"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
+! CHECK:           %[[DECLARE_14:.*]] = fir.declare %[[ADDRESS_OF_13]] typeparams %[[C1]] uniq_name("_QMtest_show_descriptorFtest_derivedE.n.b") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:           %[[ADDRESS_OF_14:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.t1) : !fir.ref<!fir.char<1,2>>
-! CHECK:           %[[DECLARE_15:.*]] = fir.declare %[[ADDRESS_OF_14]] typeparams %[[C2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.t1"} : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
+! CHECK:           %[[DECLARE_15:.*]] = fir.declare %[[ADDRESS_OF_14]] typeparams %[[C2]] uniq_name("_QMtest_show_descriptorFtest_derivedE.n.t1") fortran_attrs<target> : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
 ! CHECK:           %[[ADDRESS_OF_15:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.c) : !fir.ref<!fir.char<1>>
-! CHECK:           %[[DECLARE_16:.*]] = fir.declare %[[ADDRESS_OF_15]] typeparams %[[C1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.c"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
+! CHECK:           %[[DECLARE_16:.*]] = fir.declare %[[ADDRESS_OF_15]] typeparams %[[C1]] uniq_name("_QMtest_show_descriptorFtest_derivedE.n.c") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:           %[[ADDRESS_OF_16:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.t2) : !fir.ref<!fir.char<1,2>>
-! CHECK:           %[[DECLARE_17:.*]] = fir.declare %[[ADDRESS_OF_16]] typeparams %[[C2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.t2"} : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
+! CHECK:           %[[DECLARE_17:.*]] = fir.declare %[[ADDRESS_OF_16]] typeparams %[[C2]] uniq_name("_QMtest_show_descriptorFtest_derivedE.n.t2") fortran_attrs<target> : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
 ! CHECK:           %[[ALLOCA_CT1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>> <{bindc_name = "c_t1", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"}>
 ! CHECK:           %[[ZERO_BITS_CT1:.*]] = fir.zero_bits !fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>
 ! CHECK:           %[[EMBOX_CT1:.*]] = fir.embox %[[ZERO_BITS_CT1]] : (!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>
 ! CHECK:           fir.store %[[EMBOX_CT1]] to %[[ALLOCA_CT1]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
-! CHECK:           %[[DECLARE_CT1:.*]] = fir.declare %[[ALLOCA_CT1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
+! CHECK:           %[[DECLARE_CT1:.*]] = fir.declare %[[ALLOCA_CT1]] uniq_name("_QMtest_show_descriptorFtest_derivedEc_t1") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
 ! CHECK:           %[[ALLOCA_CU:.*]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "c_unlimited", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"}>
 ! CHECK:           %[[ZERO_BITS_CU:.*]] = fir.zero_bits !fir.heap<none>
 ! CHECK:           %[[EMBOX_CU:.*]] = fir.embox %[[ZERO_BITS_CU]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
 ! CHECK:           fir.store %[[EMBOX_CU]] to %[[ALLOCA_CU]] : !fir.ref<!fir.class<!fir.heap<none>>>
-! CHECK:           %[[DECLARE_CU:.*]] = fir.declare %[[ALLOCA_CU]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK:           %[[DECLARE_CU:.*]] = fir.declare %[[ALLOCA_CU]] uniq_name("_QMtest_show_descriptorFtest_derivedEc_unlimited") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK:           %[[ADDRESS_OF_17:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedEvt2) : !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
-! CHECK:           %[[DECLARE_18:.*]] = fir.declare %[[ADDRESS_OF_17]] {uniq_name = "_QMtest_show_descriptorFtest_derivedEvt2"} : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
+! CHECK:           %[[DECLARE_18:.*]] = fir.declare %[[ADDRESS_OF_17]] uniq_name("_QMtest_show_descriptorFtest_derivedEvt2") : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
 ! CHECK:           %[[CONVERT_CT1:.*]] = fir.convert %[[DECLARE_CT1]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           fir.call @_FortranAAssignPolymorphic(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
@@ -280,7 +280,7 @@ subroutine test_derived_member
   end type t3
   type(t3) :: vt3
 ! CHECK:           %[[VT3:.*]] = fir.alloca !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
-! CHECK:           %[[VT3_DECL:.*]] = fir.declare %[[VT3]] {uniq_name = "_QMtest_show_descriptorFtest_derived_memberEvt3"} : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+! CHECK:           %[[VT3_DECL:.*]] = fir.declare %[[VT3]] uniq_name("_QMtest_show_descriptorFtest_derived_memberEvt3") : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
   allocate(vt3%a(5))
 ! CHECK:           %[[A_FIELD:.*]] = fir.field_index a, !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
 ! CHECK:           %[[A_COORD:.*]] = fir.coordinate_of %[[VT3_DECL]], a : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

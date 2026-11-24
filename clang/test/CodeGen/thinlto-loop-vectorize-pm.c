@@ -31,6 +31,12 @@
 // O2-NoInterLeave: = !{!"llvm.loop.isvectorized", i32 1}
 // O0-InterLeave-NOT: = !{!"llvm.loop.isvectorized", i32 1}
 
+// Test that -mllvm options of per-context libraries reach the ThinLTO backend's
+// TargetMachine.
+//
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -mllvm -x86-asm-syntax=intel -S -o - -x ir %t.o -fthinlto-index=%t.thinlto.bc 2>&1 | FileCheck %s --check-prefix=INTEL
+// INTEL: .intel_syntax
+
 void foo(double *a) {
   for (int i = 0; i < 1000; i++)
     a[i] = 10;

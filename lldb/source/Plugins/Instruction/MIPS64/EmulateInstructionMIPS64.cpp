@@ -36,7 +36,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Plugins/Process/Utility/RegisterContext_mips.h"
+#include "Register/Arch/RegisterContext_mips.h"
 
 using namespace lldb;
 using namespace lldb_private;

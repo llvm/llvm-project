@@ -29,6 +29,7 @@
 # CHECK: machineFunctionInfo:
 # CHECK:   isCFGStackified:   true
 name: function_property_test
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
 body: |
@@ -43,6 +44,7 @@ body: |
 # CHECK:      params:          [ i64 ]
 # CHECK-NEXT: results:         [ i32 ]
 name: i32__i64
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
 machineFunctionInfo:
@@ -59,6 +61,7 @@ body: |
 # CHECK:      params:          [ i32, i64, f32, f64 ]
 # CHECK-NEXT: results:         [  ]
 name: void__i32_i64_f32_f64
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
 machineFunctionInfo:
@@ -74,6 +77,7 @@ body: |
 # CHECK:      params:          [ v16i8, v8i16, v4i32, v2i64 ]
 # CHECK-NEXT: results:         [  ]
 name: void__v16i8_v8i16_v4i32_v2i64
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
 machineFunctionInfo:
@@ -89,6 +93,7 @@ body: |
 # CHECK:      params:          [ i32, i64 ]
 # CHECK-NEXT: results:         [ i32, i64 ]
 name: i32_i64__i32_i64
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
 machineFunctionInfo:

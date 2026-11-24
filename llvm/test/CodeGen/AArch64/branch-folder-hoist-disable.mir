@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -verify-machineinstrs | FileCheck %s --check-prefix=HOIST
-# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -branch-folder-hoist-common-code=false -verify-machineinstrs | FileCheck %s --check-prefix=NOHOIST
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder | FileCheck %s --check-prefix=HOIST
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -branch-folder-hoist-common-code=false | FileCheck %s --check-prefix=NOHOIST
 
 # Check that -branch-folder-hoist-common-code=false disables the common-code
 # hoisting sub-phase of BranchFolding. With hoisting enabled (default) the
@@ -7,7 +7,6 @@
 # hoisting disabled it must remain duplicated in bb.1 and bb.2.
 
 name: func
-tracksRegLiveness: true
 body: |
   bb.0:
     ; HOIST-LABEL: name: func

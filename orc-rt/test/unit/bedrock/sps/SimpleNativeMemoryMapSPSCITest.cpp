@@ -21,6 +21,7 @@
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 #include "DirectCaller.h"
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
@@ -119,7 +120,7 @@ protected:
   void SetUp() override {
     S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
                                   noErrors);
-    SNMM = cantFail(SimpleNativeMemoryMap::Create(*S, CI));
+    SNMM = std::make_unique<SimpleNativeMemoryMap>(*S);
   }
 
   void TearDown() override {
@@ -163,13 +164,16 @@ protected:
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), Bases);
   }
 
-  SimpleSymbolTable CI;
   std::unique_ptr<Session> S;
   std::unique_ptr<SimpleNativeMemoryMap> SNMM;
 };
 
-TEST_F(SimpleNativeMemoryMapSPSCITest, Registration) {
+TEST(SimpleNativeMemoryMapSPSCIRegistrationTest, Registration) {
+  SimpleSymbolTable CI;
+  ASSERT_THAT_ERROR(sps::ci::addSimpleNativeMemoryMap(CI), Succeeded());
 
+  EXPECT_TRUE(CI.count(
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_create")));
   EXPECT_TRUE(CI.count(
       SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve")));
   EXPECT_TRUE(CI.count(SymbolNameSpec::c(
@@ -183,17 +187,25 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, Registration) {
 TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveAndRelease) {
   std::future<Expected<Expected<void *>>> ReserveAddr;
   spsReserve(waitFor(ReserveAddr), 1024 * 1024 * 1024);
-  auto *Addr = cantFail(cantFail(ReserveAddr.get()));
+  auto AddrOrErr = ReserveAddr.get();
+  ASSERT_THAT_EXPECTED(AddrOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrOrErr, Succeeded());
+  void *Addr = **AddrOrErr;
 
   std::future<Expected<Error>> ReleaseResult;
   spsReleaseMultiple(waitFor(ReleaseResult), {&Addr, 1});
-  cantFail(cantFail(ReleaseResult.get()));
+  auto ReleaseErr = ReleaseResult.get();
+  ASSERT_THAT_EXPECTED(ReleaseErr, Succeeded());
+  ASSERT_THAT_ERROR(std::move(*ReleaseErr), Succeeded());
 }
 
 TEST_F(SimpleNativeMemoryMapSPSCITest, FullPipelineForOneRWSegment) {
   std::future<Expected<Expected<void *>>> ReserveAddr;
   spsReserve(waitFor(ReserveAddr), 1024 * 1024 * 1024);
-  void *Addr = cantFail(cantFail(ReserveAddr.get()));
+  auto AddrOrErr = ReserveAddr.get();
+  ASSERT_THAT_EXPECTED(AddrOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrOrErr, Succeeded());
+  void *Addr = **AddrOrErr;
 
   std::future<Expected<Expected<void *>>> InitializeKey;
   TestSNMMInitializeRequest IR;
@@ -232,7 +244,10 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, FullPipelineForOneRWSegment) {
        {}});
 
   spsInitialize(waitFor(InitializeKey), std::move(IR));
-  void *InitializeKeyAddr = cantFail(cantFail(InitializeKey.get()));
+  auto InitializeKeyAddrOrErr = InitializeKey.get();
+  ASSERT_THAT_EXPECTED(InitializeKeyAddrOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*InitializeKeyAddrOrErr, Succeeded());
+  void *InitializeKeyAddr = **InitializeKeyAddrOrErr;
 
   EXPECT_EQ(SentinelValue1, 42U);
   EXPECT_EQ(SentinelValue2, 0U);
@@ -240,7 +255,9 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, FullPipelineForOneRWSegment) {
 
   std::future<Expected<Error>> DeallocResult;
   spsDeinitializeMultiple(waitFor(DeallocResult), {&InitializeKeyAddr, 1});
-  cantFail(cantFail(DeallocResult.get()));
+  auto DeallocErr = DeallocResult.get();
+  ASSERT_THAT_EXPECTED(DeallocErr, Succeeded());
+  ASSERT_THAT_ERROR(std::move(*DeallocErr), Succeeded());
 
   EXPECT_EQ(SentinelValue1, 42U);
   EXPECT_EQ(SentinelValue2, 42U);
@@ -248,17 +265,21 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, FullPipelineForOneRWSegment) {
 
   std::future<Expected<Error>> ReleaseResult;
   spsReleaseMultiple(waitFor(ReleaseResult), {&Addr, 1});
-  cantFail(cantFail(ReleaseResult.get()));
+  auto ReleaseErr = ReleaseResult.get();
+  ASSERT_THAT_EXPECTED(ReleaseErr, Succeeded());
+  ASSERT_THAT_ERROR(std::move(*ReleaseErr), Succeeded());
 }
 
 TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeShutdown) {
   std::future<Expected<Expected<void *>>> ReserveAddr;
   spsReserve(waitFor(ReserveAddr), 1024 * 1024 * 1024);
-  void *Addr = cantFail(cantFail(ReserveAddr.get()));
+  auto Addr = ReserveAddr.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
+  ASSERT_THAT_EXPECTED(*Addr, Succeeded());
 
   std::future<Expected<Expected<void *>>> InitializeKey;
   TestSNMMInitializeRequest IR;
-  char *InitializeBase = reinterpret_cast<char *>(Addr) + 64 * 1024;
+  char *InitializeBase = reinterpret_cast<char *>(**Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
   IR.Segments.push_back(
@@ -272,7 +293,9 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeShutdown) {
            read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
            ExecutorAddr::fromPtr(InitializeBase))});
   spsInitialize(waitFor(InitializeKey), std::move(IR));
-  cantFail(cantFail(InitializeKey.get()));
+  auto InitializeKeyAddrOrErr = InitializeKey.get();
+  ASSERT_THAT_EXPECTED(InitializeKeyAddrOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*InitializeKeyAddrOrErr, Succeeded());
 
   EXPECT_EQ(SentinelValue, 0U);
 
@@ -287,11 +310,13 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeShutdown) {
 TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeDetachShutdown) {
   std::future<Expected<Expected<void *>>> ReserveAddr;
   spsReserve(waitFor(ReserveAddr), 1024 * 1024 * 1024);
-  void *Addr = cantFail(cantFail(ReserveAddr.get()));
+  auto Addr = ReserveAddr.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
+  ASSERT_THAT_EXPECTED(*Addr, Succeeded());
 
   std::future<Expected<Expected<void *>>> InitializeKey;
   TestSNMMInitializeRequest IR;
-  char *InitializeBase = reinterpret_cast<char *>(Addr) + 64 * 1024;
+  char *InitializeBase = reinterpret_cast<char *>(**Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
   IR.Segments.push_back(
@@ -305,7 +330,9 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeDetachShutdown) {
            read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
            ExecutorAddr::fromPtr(InitializeBase))});
   spsInitialize(waitFor(InitializeKey), std::move(IR));
-  cantFail(cantFail(InitializeKey.get()));
+  auto InitializeKeyAddrOrErr = InitializeKey.get();
+  ASSERT_THAT_EXPECTED(InitializeKeyAddrOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*InitializeKeyAddrOrErr, Succeeded());
 
   EXPECT_EQ(SentinelValue, 0U);
 
@@ -321,4 +348,59 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeDetachShutdown) {
   SNMM.reset();
 
   EXPECT_EQ(SentinelValue, 42);
+}
+
+TEST(SimpleNativeMemoryMapSPSCICreateTest, SessionOwnsCreatedInstance) {
+  // Check that the create entrypoint returns a usable instance, and that the
+  // instance is owned by the calling Session: destroying the Session should
+  // shut the instance down, running the deallocation actions for its
+  // initialized memory.
+  auto S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
+                                     noErrors);
+
+  std::future<Expected<Expected<void *>>> CreateResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>()>::call(
+      DirectCaller(wrap(S.get()), orc_rt_ci_sps_SimpleNativeMemoryMap_create),
+      waitFor(CreateResult));
+  auto Instance = CreateResult.get();
+  ASSERT_THAT_EXPECTED(Instance, Succeeded());
+  ASSERT_THAT_EXPECTED(*Instance, Succeeded());
+  ASSERT_NE(**Instance, nullptr);
+
+  std::future<Expected<Expected<void *>>> ReserveResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize)>::
+      call(caller(orc_rt_ci_sps_SimpleNativeMemoryMap_reserve),
+           waitFor(ReserveResult), **Instance, size_t(1024 * 1024 * 1024));
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
+  ASSERT_THAT_EXPECTED(*Addr, Succeeded());
+
+  TestSNMMInitializeRequest IR;
+  char *InitializeBase = reinterpret_cast<char *>(**Addr) + 64 * 1024;
+  uint64_t SentinelValue = 0;
+
+  IR.Segments.push_back(
+      {MemProt::Read | MemProt::Write, InitializeBase, 64 * 1024});
+  IR.AAPs.push_back(
+      {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
+           write_value_sps_allocaction, ExecutorAddr::fromPtr(InitializeBase),
+           uint64_t(42)),
+       *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
+           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
+           ExecutorAddr::fromPtr(InitializeBase))});
+
+  std::future<Expected<Expected<void *>>> InitializeResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(
+      SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest)>::
+      call(caller(orc_rt_ci_sps_SimpleNativeMemoryMap_initialize),
+           waitFor(InitializeResult), **Instance, std::move(IR));
+  auto InitializeKey = InitializeResult.get();
+  ASSERT_THAT_EXPECTED(InitializeKey, Succeeded());
+  ASSERT_THAT_EXPECTED(*InitializeKey, Succeeded());
+
+  EXPECT_EQ(SentinelValue, 0U);
+
+  S.reset();
+
+  EXPECT_EQ(SentinelValue, 42U);
 }

@@ -27,3 +27,16 @@ define void @r_constraint_v4i128(ptr %0) {
   store <4 x i128> %3, ptr %0, align 64
   ret void
 }
+
+; There is no integer type of the same size as these FP types to bitcast to.
+; CHECK: error: could not allocate output register for constraint '{cr0}'
+define x86_fp80 @cr0_fp80(x86_fp80 %0) {
+  %2 = tail call x86_fp80 asm "", "={cr0},0"(x86_fp80 %0)
+  ret x86_fp80 %2
+}
+
+; CHECK: error: could not allocate input reg for constraint '{cr0}'
+define void @cr0_v3f32(<3 x float> %0) {
+  tail call void asm sideeffect "", "{cr0}"(<3 x float> %0)
+  ret void
+}

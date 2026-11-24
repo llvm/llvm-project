@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes="print<cost-model>" 2>&1 -disable-output < %s | FileCheck %s
+; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes="print<cost-model>" -disable-output < %s 2>&1 | FileCheck %s
 
 ; Integer to float bitcasts
 
@@ -60,4 +60,20 @@ define <vscale x 2 x i32> @test_nxv2i32(<vscale x 2 x float> %a) {
 ; CHECK: Found an estimated cost of 0 for instruction:   %b = bitcast <vscale x 2 x float> %a to <vscale x 2 x i32>
   %b = bitcast <vscale x 2 x float> %a to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %b
+}
+
+define void @cast_unsupported_elements(<vscale x 1 x i128> %ints,
+                                       <vscale x 1 x fp128> %floats,
+                                       <vscale x 2 x i64> %words) {
+; CHECK-LABEL: 'cast_unsupported_elements'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %as_fp128 = bitcast <vscale x 1 x i128> %ints to <vscale x 1 x fp128>
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %as_i128 = bitcast <vscale x 1 x fp128> %floats to <vscale x 1 x i128>
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %as_words = bitcast <vscale x 1 x i128> %ints to <vscale x 2 x i64>
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %as_element = bitcast <vscale x 2 x i64> %words to <vscale x 1 x i128>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+  %as_fp128 = bitcast <vscale x 1 x i128> %ints to <vscale x 1 x fp128>
+  %as_i128 = bitcast <vscale x 1 x fp128> %floats to <vscale x 1 x i128>
+  %as_words = bitcast <vscale x 1 x i128> %ints to <vscale x 2 x i64>
+  %as_element = bitcast <vscale x 2 x i64> %words to <vscale x 1 x i128>
+  ret void
 }

@@ -276,6 +276,28 @@ func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc: !tR
 
 // -----
 
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xi32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<64x32xi16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<32x128xi16, 3>>
+func.func @warpgroup_mma_unsupported_i16_inputs(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 'i32' += 'i16' * 'i16', it is not supported.}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xi32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<64x32xi8, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<32x128xi8, 3>>
+func.func @warpgroup_mma_i8_inputs_not_enabled(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op hit a limitation: 'i32' += 'i8' * 'i8', it is not supported yet}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
 !desc = !nvgpu.tensormap.descriptor<tensor = memref<32x8xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
 !mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
 func.func @tma_load_1(%desc: !desc, %buffer1: memref<128xf32,3>, %buffer2: memref<32x8xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {

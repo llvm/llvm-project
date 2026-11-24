@@ -56,6 +56,7 @@ using Object = tomp::ObjectT<IdTy, ExprTy>;
 
 namespace clause {
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
+using IntrinsicOperator = tomp::type::IntrinsicOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
 
@@ -170,6 +171,11 @@ struct Helper {
     return std::nullopt;
   }
   std::optional<Object> getLoopIterVar() { return std::nullopt; }
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) {
+    return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+  }
 };
 
 using Clause = tomp::ClauseT<TypeTy, IdTy, ExprTy>;
@@ -318,8 +324,9 @@ std::string stringify(std::pair<const omp::Clause *, tomp::ErrorCode> &ER) {
 namespace red {
 // Make it easier to construct reduction operators from built-in intrinsics.
 omp::clause::ReductionOperator
-makeOp(omp::clause::DefinedOperator::IntrinsicOperator Op) {
-  return omp::clause::ReductionOperator{omp::clause::DefinedOperator{Op}};
+makeOp(omp::clause::IntrinsicOperator::Operator Op) {
+  return omp::clause::ReductionOperator{
+      omp::clause::DefinedOperator{omp::clause::IntrinsicOperator{Op}}};
 }
 } // namespace red
 
@@ -751,7 +758,7 @@ TEST_F(OpenMPDecompositionTest, Allocate1) {
 
 TEST_F(OpenMPDecompositionTest, Allocate2) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   // Allocate + in_reduction
   omp::List<omp::Clause> Clauses{
@@ -765,8 +772,8 @@ TEST_F(OpenMPDecompositionTest, Allocate2) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "target in_reduction((3), (x)) allocate(, , (x))"); // (33)
-  ASSERT_EQ(Dir1, "parallel");                                        // (33)
+  ASSERT_EQ(Dir0, "target in_reduction(((3)), (x)) allocate(, , (x))"); // (33)
+  ASSERT_EQ(Dir1, "parallel");                                          // (33)
 }
 
 TEST_F(OpenMPDecompositionTest, Allocate3) {
@@ -831,7 +838,7 @@ TEST_F(OpenMPDecompositionTest, Allocate5) {
 
 TEST_F(OpenMPDecompositionTest, Allocate6) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   // Allocate + reduction
   omp::List<omp::Clause> Clauses{
@@ -845,8 +852,8 @@ TEST_F(OpenMPDecompositionTest, Allocate6) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel shared(x)");                               // (33)
-  ASSERT_EQ(Dir1, "sections reduction(, (3), (x)) allocate(, , (x))"); // (33)
+  ASSERT_EQ(Dir0, "parallel shared(x)");                                 // (33)
+  ASSERT_EQ(Dir1, "sections reduction(, ((3)), (x)) allocate(, , (x))"); // (33)
 }
 
 // REDUCTION
@@ -877,7 +884,7 @@ TEST_F(OpenMPDecompositionTest, Allocate6) {
 // tofrom.
 TEST_F(OpenMPDecompositionTest, Reduction1) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -889,13 +896,13 @@ TEST_F(OpenMPDecompositionTest, Reduction1) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel shared(x)");             // (36), (1), (4)
-  ASSERT_EQ(Dir1, "sections reduction(, (3), (x))"); // (36)
+  ASSERT_EQ(Dir0, "parallel shared(x)");               // (36), (1), (4)
+  ASSERT_EQ(Dir1, "sections reduction(, ((3)), (x))"); // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction2) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -907,13 +914,13 @@ TEST_F(OpenMPDecompositionTest, Reduction2) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel reduction(, (3), (x))"); // (36), (1), (4)
-  ASSERT_EQ(Dir1, "masked");                         // (36)
+  ASSERT_EQ(Dir0, "parallel reduction(, ((3)), (x))"); // (36), (1), (4)
+  ASSERT_EQ(Dir1, "masked");                           // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction3) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -924,13 +931,13 @@ TEST_F(OpenMPDecompositionTest, Reduction3) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "teams shared(x)");            // (36), (3), (4)
-  ASSERT_EQ(Dir1, "loop reduction(, (3), (x))"); // (36)
+  ASSERT_EQ(Dir0, "teams shared(x)");              // (36), (3), (4)
+  ASSERT_EQ(Dir1, "loop reduction(, ((3)), (x))"); // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction4) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -944,15 +951,15 @@ TEST_F(OpenMPDecompositionTest, Reduction4) {
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
   std::string Dir3 = stringify(Dec.output[3]);
-  ASSERT_EQ(Dir0, "teams reduction(, (3), (x))"); // (36), (3)
-  ASSERT_EQ(Dir1, "distribute");                  // (36)
-  ASSERT_EQ(Dir2, "parallel shared(x)");          // (36), (1), (4)
-  ASSERT_EQ(Dir3, "for reduction(, (3), (x))");   // (36)
+  ASSERT_EQ(Dir0, "teams reduction(, ((3)), (x))"); // (36), (3)
+  ASSERT_EQ(Dir1, "distribute");                    // (36)
+  ASSERT_EQ(Dir2, "parallel shared(x)");            // (36), (1), (4)
+  ASSERT_EQ(Dir3, "for reduction(, ((3)), (x))");   // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction5) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
   auto TaskMod = omp::clause::Reduction::ReductionModifier::Task;
 
   omp::List<omp::Clause> Clauses{
@@ -967,15 +974,15 @@ TEST_F(OpenMPDecompositionTest, Reduction5) {
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
   std::string Dir3 = stringify(Dec.output[3]);
-  ASSERT_EQ(Dir0, "teams reduction(, (3), (x))"); // (36), (3), (6)
-  ASSERT_EQ(Dir1, "distribute");                  // (36)
-  ASSERT_EQ(Dir2, "parallel shared(x)");          // (36), (1), (4)
-  ASSERT_EQ(Dir3, "for reduction(2, (3), (x))");  // (36), (6)
+  ASSERT_EQ(Dir0, "teams reduction(, ((3)), (x))"); // (36), (3), (6)
+  ASSERT_EQ(Dir1, "distribute");                    // (36)
+  ASSERT_EQ(Dir2, "parallel shared(x)");            // (36), (1), (4)
+  ASSERT_EQ(Dir3, "for reduction(2, ((3)), (x))");  // (36), (6)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction6) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
   auto InscanMod = omp::clause::Reduction::ReductionModifier::Inscan;
 
   omp::List<omp::Clause> Clauses{
@@ -990,15 +997,15 @@ TEST_F(OpenMPDecompositionTest, Reduction6) {
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
   std::string Dir3 = stringify(Dec.output[3]);
-  ASSERT_EQ(Dir0, "teams reduction(, (3), (x))"); // (36), (3), (8)
-  ASSERT_EQ(Dir1, "distribute");                  // (36)
-  ASSERT_EQ(Dir2, "parallel shared(x)");          // (36), (1), (4)
-  ASSERT_EQ(Dir3, "for reduction(1, (3), (x))");  // (36), (8)
+  ASSERT_EQ(Dir0, "teams reduction(, ((3)), (x))"); // (36), (3), (8)
+  ASSERT_EQ(Dir1, "distribute");                    // (36)
+  ASSERT_EQ(Dir2, "parallel shared(x)");            // (36), (1), (4)
+  ASSERT_EQ(Dir3, "for reduction(1, ((3)), (x))");  // (36), (8)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction7) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -1013,7 +1020,7 @@ TEST_F(OpenMPDecompositionTest, Reduction7) {
   std::string Dir2 = stringify(Dec.output[2]);
   ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (36), (10)
   ASSERT_EQ(Dir1, "parallel shared(x)");           // (36), (1), (4)
-  ASSERT_EQ(Dir2, "do reduction(, (3), (x))");     // (36)
+  ASSERT_EQ(Dir2, "do reduction(, ((3)), (x))");   // (36)
 }
 
 // IF
@@ -1198,7 +1205,7 @@ TEST_F(OpenMPDecompositionTest, Error4) {
   // modifier can only be applied to "parallel" or a worksharing directive.
 
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
   auto TaskMod = omp::clause::Reduction::ReductionModifier::Task;
 
   omp::List<omp::Clause> Clauses{
@@ -1209,7 +1216,7 @@ TEST_F(OpenMPDecompositionTest, Error4) {
                                   Clauses);
   ASSERT_EQ(Dec.errors.size(), 1u);
   std::string Err0 = stringify(Dec.errors[0]);
-  ASSERT_EQ(Err0, "error while applying 'reduction(2, (3), (x))': the "
+  ASSERT_EQ(Err0, "error while applying 'reduction(2, ((3)), (x))': the "
                   "reduction modifier cannot be applied");
 }
 } // namespace

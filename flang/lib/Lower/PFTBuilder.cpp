@@ -1117,8 +1117,8 @@ private:
           },
           [&](const parser::AssignStmt &s) { // legacy label assignment
             auto &label = std::get<parser::Label>(s.t);
-            const auto *sym = std::get<parser::Name>(s.t).symbol;
-            assert(sym && "missing AssignStmt symbol");
+            assert(std::get<parser::Name>(s.t).symbol &&
+                   "missing AssignStmt symbol");
             auto labelIter{labelEvaluationMap->find(label)};
             assert(labelIter != labelEvaluationMap->end() &&
                    "assigned label has no evaluation");
@@ -1783,6 +1783,14 @@ bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
 }
 
 namespace {
+/// Byte alignment required by \p sym, or zero if it cannot be determined.
+static std::size_t getSymbolAlignment(const semantics::Symbol &sym) {
+  if (auto dynamicType = evaluate::DynamicType::From(sym))
+    return dynamicType->GetAlignment(
+        sym.owner().context().targetCharacteristics());
+  return 0;
+}
+
 /// This helper class sorts the symbols in a scope such that a symbol will
 /// be placed after those it depends upon. Otherwise the sort is stable and
 /// preserves the order of the symbol table, which is sorted by name. This
@@ -1868,6 +1876,7 @@ private:
         continue;
       std::size_t start = first.offset();
       std::size_t end = first.offset() + first.size();
+      std::size_t alignment = 0;
       const Fortran::semantics::Symbol *namingSym = nullptr;
       for (semantics::SymbolRef symRef : aggregate) {
         const semantics::Symbol &sym = *symRef;
@@ -1878,6 +1887,7 @@ private:
           isGlobal |= lower::symbolIsGlobal(sym);
           start = std::min(sym.offset(), start);
           end = std::max(sym.offset() + sym.size(), end);
+          alignment = std::max(alignment, getSymbolAlignment(sym));
           if (!namingSym || (sym.name() < namingSym->name()))
             namingSym = &sym;
         }
@@ -1890,6 +1900,7 @@ private:
       } else {
         stores.emplace_back(*aggregateSym, *namingSym, isGlobal);
       }
+      stores.back().alignment = alignment;
     }
   }
 
@@ -2299,8 +2310,8 @@ void Fortran::lower::pft::BlockDataUnit::dump() const {
 const lower::pft::VariableList &
 lower::pft::getScopeVariableList(const semantics::Scope &scope,
                                  ScopeVariableListMap &map) {
-  LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of [sub]module scope <"
-                          << &scope << "> " << scope.GetName() << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of scope <" << &scope
+                          << "> " << scope.GetName() << "\n");
   auto iter = map.find(&scope);
   if (iter == map.end()) {
     SymbolDependenceAnalysis sda(scope);
@@ -2343,12 +2354,22 @@ isGenericHidingProcedurePointer(const Fortran::semantics::Symbol &sym) {
 /// funit. A symbol is considered a host module variable if it is an
 /// ObjectEntityDetails, a ProcedurePointer, or a NamelistDetails symbol whose
 /// ultimate owning scope is a [sub]module scope containing \p funit's scope.
-/// Namelist groups are expanded to the set of their objects.
+/// Namelist groups are expanded to the set of their objects. A COMMON block
+/// name (e.g. in an OpenACC data clause) is expanded to the objects in the
+/// block's storage, including those EQUIVALENCEd with its members; their
+/// instantiation also gives the block an address in \p funit.
 static void collectHostAssociatedModuleVariables(
     const Fortran::lower::pft::FunctionLikeUnit &funit,
     llvm::SetVector<const Fortran::semantics::Symbol *> &moduleVariables) {
   auto addIfHostModuleVariable = [&](const Fortran::semantics::Symbol &sym) {
     const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+    if (ultimate.has<Fortran::semantics::CommonBlockDetails>()) {
+      if (ultimate.owner().kind() == Fortran::semantics::Scope::Kind::Module)
+        for (const Fortran::semantics::Symbol *member :
+             Fortran::lower::getCommonBlockStorageMembers(ultimate))
+          moduleVariables.insert(&member->GetUltimate());
+      return;
+    }
     const auto *namelistDetails =
         ultimate.detailsIf<Fortran::semantics::NamelistDetails>();
     if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
@@ -2650,7 +2671,7 @@ constantValueOrMax(const parser::ScalarIntConstantExpr &intExpr) {
     if (auto v = evaluate::ToInt64(*expr))
       if (*v > 0)
         return *v;
-  return std::numeric_limits<int64_t>::max();
+  return common::numeric_limits<int64_t>::max();
 }
 
 /// Fill \p chain with the DoConstruct at each depth above (and including)
@@ -2903,10 +2924,10 @@ static bool isStructurableWithUnstructuredInternals(
       loop.evaluationList->size() < 3)
     return false;
 
-  // Only an increment loop keeps all of its control outside the body. A DO
-  // WHILE or an infinite DO lowers through a header block and a back edge, and
-  // a do concurrent has no plain bounds triple either, so in each case the
-  // loop's own control flow runs through the body a wrap would cover.
+  // Only an increment loop or a do concurrent keeps all of its control outside
+  // the body. A DO WHILE or an infinite DO lowers through a header block and a
+  // back edge, so the loop's own control flow runs through the body a wrap
+  // would cover.
   const auto *doConstruct = loop.getIf<parser::DoConstruct>();
   if (!doConstruct)
     return false;
@@ -2915,22 +2936,28 @@ static bool isStructurableWithUnstructuredInternals(
   if (!loopControl)
     return false;
 
-  const auto *bounds =
-      std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
-  if (!bounds)
-    return false;
+  // A do concurrent header puts no control flow in the body: its indices are
+  // always integer, and its mask is a test inside the innermost loop. The body
+  // checks below still apply.
+  if (!std::holds_alternative<parser::LoopControl::Concurrent>(
+          loopControl->u)) {
+    const auto *bounds =
+        std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
+    if (!bounds)
+      return false;
 
-  // A REAL control variable does not lower to fir.do_loop, whose induction
-  // variable must be a signless integer or index, so such a loop is lowered as
-  // unstructured whatever its body looks like.
-  const semantics::Symbol *ctrlVar = bounds->Name().thing.symbol;
-  if (!ctrlVar)
-    return false;
+    // A REAL control variable does not lower to fir.do_loop, whose induction
+    // variable must be a signless integer or index, so such a loop is lowered
+    // as unstructured whatever its body looks like.
+    const semantics::Symbol *ctrlVar = bounds->Name().thing.symbol;
+    if (!ctrlVar)
+      return false;
 
-  const semantics::DeclTypeSpec *ctrlType = ctrlVar->GetType();
-  if (!ctrlType || ctrlType->category() != semantics::DeclTypeSpec::Numeric ||
-      ctrlType->numericTypeSpec().category() != common::TypeCategory::Integer)
-    return false;
+    const semantics::DeclTypeSpec *ctrlType = ctrlVar->GetType();
+    if (!ctrlType || ctrlType->category() != semantics::DeclTypeSpec::Numeric ||
+        ctrlType->numericTypeSpec().category() != common::TypeCategory::Integer)
+      return false;
+  }
 
   const Fortran::lower::pft::Evaluation *endDoStmt =
       &loop.evaluationList->back();
@@ -2987,6 +3014,31 @@ static bool isStructurableWithUnstructuredInternals(
     if (!check(e))
       return false;
 
+  // Condition 2 reaches the EndDoStmt too, with a wider notion of "outside". A
+  // branch from the body to it is CYCLE-like and lands on the wrap's boundary,
+  // which the structured form expresses. A branch from outside the loop is a
+  // different matter: the EndDoStmt is emitted as the structured loop's
+  // terminator, so no block is created for it and lowering has nothing to
+  // branch to.
+  if (auto it = unit.incomingBranches.find(&loop.evaluationList->back());
+      it != unit.incomingBranches.end())
+    for (const Fortran::lower::pft::Evaluation *src : it->second)
+      if (!isInLoopBody(src, loop))
+        return false;
+
+  return true;
+}
+
+/// Return true if \p construct owes its classification entirely to the
+/// evaluations it holds, none of which is Unstructured any more.
+static bool
+holdsNothingUnstructured(const Fortran::lower::pft::Evaluation &construct) {
+  if (!construct.evaluationList)
+    return false;
+  for (const Fortran::lower::pft::Evaluation &nested :
+       *construct.evaluationList)
+    if (nested.isUnstructured())
+      return false;
   return true;
 }
 
@@ -2996,9 +3048,17 @@ static bool isStructurableWithUnstructuredInternals(
 /// during analysis a branch later in the function would not yet be recorded
 /// and condition 2 would read a partial map.
 ///
-/// Ancestors are deliberately left alone. A loop reclassified here lowers to a
-/// structured op, and a structured op is legal inside an unstructured parent,
-/// so leaving the parent Unstructured is conservative but correct.
+/// Ordinary ancestors are deliberately left alone. A loop reclassified here
+/// lowers to a structured op, and a structured op is legal inside an
+/// unstructured parent, so leaving the parent Unstructured is conservative but
+/// correct.
+///
+/// A directive construct is the exception, because it does not merely contain
+/// the loop: the directive owns it, and its lowering reads the construct's own
+/// classification to decide whether the loop op carries its bounds. Left
+/// Unstructured, the construct yields a bounds-free loop that nothing can
+/// partition, and the reclassified loop inside it becomes a second, nested
+/// one. Weaken such a construct once the loops it holds no longer need it.
 static void detectStructuredWithUnstructuredInternals(
     Fortran::lower::pft::FunctionLikeUnit &unit) {
   // Such a loop is lowered with its body in an scf.execute_region: its
@@ -3015,9 +3075,16 @@ static void detectStructuredWithUnstructuredInternals(
             visit(*e.evaluationList);
 
           if (e.isA<parser::DoConstruct>() &&
-              isStructurableWithUnstructuredInternals(e, unit))
-            // The one place the classification weakens: detection has proven
-            // Unstructured unnecessary.
+              isStructurableWithUnstructuredInternals(e, unit)) {
+            // Detection has proven Unstructured unnecessary for this loop.
+            e.weakenControlFlow(Fortran::lower::pft::Evaluation::ControlFlow::
+                                    StructuredWithUnstructuredInternals);
+            continue;
+          }
+
+          // Children are visited first, so the loops this construct owns have
+          // already been reclassified by the time it is reached.
+          if (e.isExecutableDirective() && holdsNothingUnstructured(e))
             e.weakenControlFlow(Fortran::lower::pft::Evaluation::ControlFlow::
                                     StructuredWithUnstructuredInternals);
         }

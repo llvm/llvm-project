@@ -52,20 +52,21 @@ define bfloat @tanh_bf16(bfloat %in) local_unnamed_addr {
 ; CHECK-SM75-LABEL: tanh_bf16(
 ; CHECK-SM75:       {
 ; CHECK-SM75-NEXT:    .reg .pred %p<2>;
-; CHECK-SM75-NEXT:    .reg .b32 %r<10>;
+; CHECK-SM75-NEXT:    .reg .b32 %r<11>;
 ; CHECK-SM75-EMPTY:
 ; CHECK-SM75-NEXT:  // %bb.0:
 ; CHECK-SM75-NEXT:    ld.param.b16 %r1, [tanh_bf16_param_0];
 ; CHECK-SM75-NEXT:    shl.b32 %r2, %r1, 16;
 ; CHECK-SM75-NEXT:    tanh.approx.f32 %r3, %r2;
-; CHECK-SM75-NEXT:    bfe.u32 %r4, %r3, 16, 1;
-; CHECK-SM75-NEXT:    add.s32 %r5, %r4, %r3;
-; CHECK-SM75-NEXT:    add.s32 %r6, %r5, 32767;
+; CHECK-SM75-NEXT:    shr.u32 %r4, %r3, 16;
+; CHECK-SM75-NEXT:    and.b32 %r5, %r4, 1;
+; CHECK-SM75-NEXT:    add.s32 %r6, %r5, %r3;
+; CHECK-SM75-NEXT:    add.s32 %r7, %r6, 32767;
 ; CHECK-SM75-NEXT:    setp.nan.f32 %p1, %r3, %r3;
-; CHECK-SM75-NEXT:    or.b32 %r7, %r3, 4194304;
-; CHECK-SM75-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-SM75-NEXT:    shr.u32 %r9, %r8, 16;
-; CHECK-SM75-NEXT:    st.param.b16 [func_retval0], %r9;
+; CHECK-SM75-NEXT:    or.b32 %r8, %r3, 4194304;
+; CHECK-SM75-NEXT:    selp.b32 %r9, %r8, %r7, %p1;
+; CHECK-SM75-NEXT:    shr.u32 %r10, %r9, 16;
+; CHECK-SM75-NEXT:    st.param.b16 [func_retval0], %r10;
 ; CHECK-SM75-NEXT:    ret;
 ;
 ; CHECK-SM90-LABEL: tanh_bf16(
@@ -86,30 +87,32 @@ define <2 x bfloat> @tanh_bf16x2(<2 x bfloat> %in) local_unnamed_addr {
 ; CHECK-SM75:       {
 ; CHECK-SM75-NEXT:    .reg .pred %p<3>;
 ; CHECK-SM75-NEXT:    .reg .b16 %rs<3>;
-; CHECK-SM75-NEXT:    .reg .b32 %r<18>;
+; CHECK-SM75-NEXT:    .reg .b32 %r<20>;
 ; CHECK-SM75-EMPTY:
 ; CHECK-SM75-NEXT:  // %bb.0:
 ; CHECK-SM75-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [tanh_bf16x2_param_0];
 ; CHECK-SM75-NEXT:    cvt.u32.u16 %r1, %rs2;
 ; CHECK-SM75-NEXT:    shl.b32 %r2, %r1, 16;
 ; CHECK-SM75-NEXT:    tanh.approx.f32 %r3, %r2;
-; CHECK-SM75-NEXT:    bfe.u32 %r4, %r3, 16, 1;
-; CHECK-SM75-NEXT:    add.s32 %r5, %r4, %r3;
-; CHECK-SM75-NEXT:    add.s32 %r6, %r5, 32767;
+; CHECK-SM75-NEXT:    shr.u32 %r4, %r3, 16;
+; CHECK-SM75-NEXT:    and.b32 %r5, %r4, 1;
+; CHECK-SM75-NEXT:    add.s32 %r6, %r5, %r3;
+; CHECK-SM75-NEXT:    add.s32 %r7, %r6, 32767;
 ; CHECK-SM75-NEXT:    setp.nan.f32 %p1, %r3, %r3;
-; CHECK-SM75-NEXT:    or.b32 %r7, %r3, 4194304;
-; CHECK-SM75-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-SM75-NEXT:    cvt.u32.u16 %r9, %rs1;
-; CHECK-SM75-NEXT:    shl.b32 %r10, %r9, 16;
-; CHECK-SM75-NEXT:    tanh.approx.f32 %r11, %r10;
-; CHECK-SM75-NEXT:    bfe.u32 %r12, %r11, 16, 1;
-; CHECK-SM75-NEXT:    add.s32 %r13, %r12, %r11;
-; CHECK-SM75-NEXT:    add.s32 %r14, %r13, 32767;
-; CHECK-SM75-NEXT:    setp.nan.f32 %p2, %r11, %r11;
-; CHECK-SM75-NEXT:    or.b32 %r15, %r11, 4194304;
-; CHECK-SM75-NEXT:    selp.b32 %r16, %r15, %r14, %p2;
-; CHECK-SM75-NEXT:    prmt.b32 %r17, %r16, %r8, 0x7632U;
-; CHECK-SM75-NEXT:    st.param.b32 [func_retval0], %r17;
+; CHECK-SM75-NEXT:    or.b32 %r8, %r3, 4194304;
+; CHECK-SM75-NEXT:    selp.b32 %r9, %r8, %r7, %p1;
+; CHECK-SM75-NEXT:    cvt.u32.u16 %r10, %rs1;
+; CHECK-SM75-NEXT:    shl.b32 %r11, %r10, 16;
+; CHECK-SM75-NEXT:    tanh.approx.f32 %r12, %r11;
+; CHECK-SM75-NEXT:    shr.u32 %r13, %r12, 16;
+; CHECK-SM75-NEXT:    and.b32 %r14, %r13, 1;
+; CHECK-SM75-NEXT:    add.s32 %r15, %r14, %r12;
+; CHECK-SM75-NEXT:    add.s32 %r16, %r15, 32767;
+; CHECK-SM75-NEXT:    setp.nan.f32 %p2, %r12, %r12;
+; CHECK-SM75-NEXT:    or.b32 %r17, %r12, 4194304;
+; CHECK-SM75-NEXT:    selp.b32 %r18, %r17, %r16, %p2;
+; CHECK-SM75-NEXT:    prmt.b32 %r19, %r18, %r9, 0x7632U;
+; CHECK-SM75-NEXT:    st.param.b32 [func_retval0], %r19;
 ; CHECK-SM75-NEXT:    ret;
 ;
 ; CHECK-SM90-LABEL: tanh_bf16x2(

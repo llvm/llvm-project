@@ -80,19 +80,19 @@ void testLogicalVecScalar(v2u v2ua, v2s v2sa, v2f v2fa) {
   v2ua = v2ua && u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}} 
   v2ua = v2ua || u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}} 
 
-  v2sa = v2sa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2s' (vector of 2 'int' values) and 'unsigned int')}}
-  v2sa = v2sa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2s' (vector of 2 'int' values) and 'unsigned int')}}
+  v2sa = v2sa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}}
+  v2sa = v2sa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}}
 
-  v2ua = v2sa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2s' (vector of 2 'int' values) and 'unsigned int')}}
-  v2ua = v2sa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2s' (vector of 2 'int' values) and 'unsigned int')}}
+  v2ua = v2sa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}}
+  v2ua = v2sa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}}
   v2sa = v2ua && u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}}
   v2sa = v2ua || u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}}
 
-  v2ua = v2fa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'unsigned int')}}
-  v2ua = v2fa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'unsigned int')}}
+  v2ua = v2fa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
+  v2ua = v2fa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
 
-  v2sa = v2fa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'unsigned int')}}
-  v2sa = v2fa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'unsigned int')}}
+  v2sa = v2fa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
+  v2sa = v2fa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
 
   int s1;
   v2ua = v2ua && s1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'int' is only supported in C++}}
@@ -107,11 +107,11 @@ void testLogicalVecScalar(v2u v2ua, v2s v2sa, v2f v2fa) {
   v2sa = v2ua && s1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'int' is only supported in C++}}
   v2sa = v2ua || s1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'int' is only supported in C++}}
 
-  v2ua = v2fa && s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'int'}}
-  v2ua = v2fa || s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'int'}}
+  v2ua = v2fa && s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
+  v2ua = v2fa || s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
 
-  v2sa = v2fa && s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'int'}}
-  v2sa = v2fa || s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2f' (vector of 2 'float' values) and 'int'}}
+  v2sa = v2fa && s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
+  v2sa = v2fa || s1; // expected-error {{cannot convert between scalar type 'int' and vector type 'v2f' (vector of 2 'float' values) as implicit conversion would cause truncation}}
 
   float f1;
   v2ua = v2ua && f1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'float' is only supported in C++}}
@@ -132,4 +132,21 @@ void testLogicalVecScalar(v2u v2ua, v2s v2sa, v2f v2fa) {
   v2sa = v2fa && f1; // expected-error {{logical expression with vector type 'v2f' (vector of 2 'float' values) and non-vector type 'float' is only supported in C++}}
   v2sa = v2fa || f1; // expected-error {{logical expression with vector type 'v2f' (vector of 2 'float' values) and non-vector type 'float' is only supported in C++}}
 
+}
+
+void gh227588(void) {
+  typedef long v4l __attribute__((vector_size(32)));
+  v4l v;
+  register int a[4];
+  // This would previously crash because of checking for the invalid vector
+  // operation after reporting the error from lvalue conversion.
+  int x = a && v; // expected-error {{address of register variable requested}}
+
+  struct S {
+    int count;
+    union IncompleteUnionTy * __attribute__((counted_by_or_null(count))) buf; // expected-note {{consider providing a complete definition for 'union IncompleteUnionTy'}} expected-note {{consider using '__sized_by_or_null' instead of '__counted_by_or_null'}}
+  } *s;
+
+  // The same would happen here.
+  int y = s->buf && v; // expected-error {{annot use 's->buf' with '__counted_by_or_null' attributed type 'union IncompleteUnionTy * __counted_by_or_null(count)' (aka 'union IncompleteUnionTy *') because the pointee type 'union IncompleteUnionTy' is incomplete}}
 }

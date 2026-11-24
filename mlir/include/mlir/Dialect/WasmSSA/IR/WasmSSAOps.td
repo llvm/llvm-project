@@ -14,6 +14,7 @@ include "mlir/Dialect/WasmSSA/IR/WasmSSABase.td"
 include "mlir/Dialect/WasmSSA/IR/WasmSSATypes.td"
 include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.td"
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -678,13 +679,14 @@ def WasmSSA_TableImportOp
   let assemblyFormat = "$importName `from` $moduleName `as` $sym_name $type attr-dict";
 }
 
-def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
+def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator, ReturnLike]> {
   let summary = "Return from the current function frame";
   let arguments = (ins Variadic<WasmSSA_ValType>:  $operands);
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let builders = [
     OpBuilder<(ins)>
   ];
+  let hasVerifier = 1;
 }
 
 def WasmSSA_SelectOp : WasmSSA_Op<"select", [

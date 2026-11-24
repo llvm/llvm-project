@@ -10,12 +10,12 @@ subroutine loop_test
   j = 200
   k = 300
 
-  ! CHECK: %[[M:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEm"}
-  ! CHECK: %[[SUM:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEsum"}
+  ! CHECK: %[[M:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFloop_testEm")
+  ! CHECK: %[[SUM:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFloop_testEsum")
   ! CHECK: fir.do_concurrent.loop ({{.*}}) = ({{.*}}) to ({{.*}}) step ({{.*}}) local(@_QFloop_testEtmp_private_i32 %{{.*}} -> %{{.*}} : !fir.ref<i32>) reduce(@add_reduction_i32 #fir.reduce_attr<add> %[[SUM]]#0 -> %{{.*}}, @max_reduction_f32 #fir.reduce_attr<max> %[[M]]#0 -> %{{.*}} : !fir.ref<i32>, !fir.ref<f32>) {
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEtmp"}
-  ! CHECK: %[[SUM_INNER:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEsum"}
-  ! CHECK: %[[M_INNER:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_testEm"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFloop_testEtmp")
+  ! CHECK: %[[SUM_INNER:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFloop_testEsum")
+  ! CHECK: %[[M_INNER:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFloop_testEm")
   ! CHECK: hlfir.assign %{{.*}} to %[[TMP]]#0 : i32, !fir.ref<i32>
   ! CHECK: %[[TMPVAL:.*]] = fir.load %[[TMP]]#0 : !fir.ref<i32>
   ! CHECK: %[[SUMVAL:.*]] = fir.load %[[SUM_INNER]]#0 : !fir.ref<i32>

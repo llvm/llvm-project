@@ -6,7 +6,7 @@ Libc++ XX.YY.ZZ (In-Progress) Release Notes
    :local:
    :depth: 2
 
-Written by the `Libc++ Team <https://libcxx.llvm.org>`_
+Written by the :doc:`Libc++ Team </index>`
 
 .. warning::
 
@@ -24,8 +24,8 @@ release and new feature work. For the general LLVM release notes, see `the LLVM
 documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
 be downloaded from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
-For more information about libc++, please see the `Libc++ Web Site
-<https://libcxx.llvm.org>`_ or the `LLVM Web Site <https://llvm.org>`_.
+For more information about libc++, please see the :doc:`Libc++ Web Site
+</index>` or the `LLVM Web Site <https://llvm.org>`_.
 
 Note that if you are reading this file from a Git checkout or the
 main Libc++ web page, this document applies to the *next* release, not

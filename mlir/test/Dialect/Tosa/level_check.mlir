@@ -8,6 +8,14 @@ func.func @test_argmax_rank_invalid(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tenso
 
 // -----
 
+func.func @test_argmin_rank_invalid(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32> {
+  // expected-error@+1 {{'tosa.argmin' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = "tosa.argmin"(%arg0) <{axis = 4 : i32}> : (tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32>
+  return %0 : tensor<1x1x1x1x29x4xi32>
+}
+
+// -----
+
 func.func @test_clamp_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
   // expected-error@+1 {{'tosa.clamp' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.clamp %arg0 min_val(-3.40282347E+38 : f32) max_val(3.40282347E+38 : f32) : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
@@ -1020,7 +1028,7 @@ func.func @test_maxpool2d_adaptive_pad_first(%arg0: tensor<1x32x8194x8xf32>) -> 
   %a = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %b = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %kernel = tosa.add_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<2>
-  
+
   %stride = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %pad = tosa.const_shape values(dense<[8193, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
   // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
@@ -1269,6 +1277,24 @@ func.func @test_rfft2d_tensor_size_invalid(%arg0: tensor<536870912x8x16xf32>) ->
 
 // -----
 
+func.func @test_matmul_rank_invalid(%arg0: tensor<1x1x1x1x1x3x4xf32>, %arg1: tensor<1x1x1x1x1x4x5xf32>) -> tensor<1x1x1x1x1x3x5xf32> {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<1x1x1x1x1x3x4xf32>, tensor<1x1x1x1x1x4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x1x1x1x3x5xf32>
+  return %0 : tensor<1x1x1x1x1x3x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_rank_invalid(%arg0: tensor<1x1x1x1x1x3x4xf32>, %arg1: tensor<1x1x1x1x1x5x4xf32>) -> tensor<1x1x1x1x1x3x5xf32> {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<1x1x1x1x1x3x4xf32>, tensor<1x1x1x1x1x5x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x1x1x1x3x5xf32>
+  return %0 : tensor<1x1x1x1x1x3x5xf32>
+}
+
+// -----
+
 func.func @test_matmul_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, %arg1: tensor<23178x19x28xf32>) -> tensor<23178x20000x28xf32> {
   %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
@@ -1283,6 +1309,24 @@ func.func @test_matmul_t_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, 
   // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<23178x20000x19xf32>, tensor<23178x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<23178x20000x28xf32>
   return %0 : tensor<23178x20000x28xf32>
+}
+
+// -----
+
+func.func @test_matmul_broadcast_output_size_invalid(%arg0: tensor<32768x1x1x1xf32>, %arg1: tensor<1x32768x1x1xf32>) {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<32768x1x1x1xf32>, tensor<1x32768x1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<32768x32768x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_matmul_t_broadcast_output_size_invalid(%arg0: tensor<32768x1x1x1xf32>, %arg1: tensor<1x32768x1x1xf32>) {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<32768x1x1x1xf32>, tensor<1x32768x1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<32768x32768x1x1xf32>
+  return
 }
 
 // -----
@@ -1346,19 +1390,19 @@ module {
 func.func @test_while_loop_tensor_size_invalid(%arg0: tensor<536870912xi32>, %arg1: tensor<i32>) {
   %0 = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
   // expected-error@+1 {{'tosa.while_loop' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
-  %1:3 = tosa.while_loop (%arg2 = %0, %arg3 = %0, %arg4 = %arg0) : (tensor<i32>, tensor<i32>, tensor<536870912xi32>) -> (tensor<i32>, tensor<i32>, tensor<536870912xi32>) {
-    %2 = tosa.greater_equal %arg3, %arg1 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+  %1:4 = tosa.while_loop (%arg2 = %0, %arg3 = %0, %arg4 = %arg0, %arg5 = %arg1) : (tensor<i32>, tensor<i32>, tensor<536870912xi32>, tensor<i32>) -> (tensor<i32>, tensor<i32>, tensor<536870912xi32>, tensor<i32>) {
+    %2 = tosa.greater_equal %arg3, %arg5 : (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = tosa.logical_not %2 : (tensor<i1>) -> tensor<i1>
     tosa.yield %2 : tensor<i1>
   } do {
-  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<536870912xi32>):
+  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<536870912xi32>, %arg5: tensor<i32>):
     %2 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
     %3 = "tosa.const"() <{values = dense<4> : tensor<1xi32>}> : () -> tensor<1xi32>
     %4 = tosa.add %arg3, %2 : (tensor<i32>, tensor<i32>) -> tensor<i32>
     // expected-error@+1 {{'tosa.add' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
     %5 = tosa.add %arg4, %3 : (tensor<536870912xi32>, tensor<1xi32>) -> tensor<536870912xi32>
     %6 = tosa.add %arg2, %2 : (tensor<i32>, tensor<i32>) -> tensor<i32>
-    tosa.yield %6, %4, %5 : tensor<i32>, tensor<i32>, tensor<536870912xi32>
+    tosa.yield %6, %4, %5, %arg5 : tensor<i32>, tensor<i32>, tensor<536870912xi32>, tensor<i32>
   }
   return
 }
@@ -1417,17 +1461,17 @@ module {
 // CHECK-LABEL: @test_while_loop
 func.func @test_while_loop(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<i32>) {
   %0 = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
-  %1:2 = "tosa.while_loop"(%0, %arg0) ({
-  ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
-    %2 = "tosa.greater_equal"(%arg3, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i1>
+  %1:3 = "tosa.while_loop"(%0, %arg0, %arg1) ({
+  ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>, %arg5: tensor<i32>):
+    %2 = "tosa.greater_equal"(%arg3, %arg5) : (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = "tosa.logical_not"(%2) : (tensor<i1>) -> tensor<i1>
     "tosa.yield"(%3) : (tensor<i1>) -> ()
   },  {
-  ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
+  ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>, %arg5: tensor<i32>):
     %2 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
     %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
-    "tosa.yield"(%3, %arg4) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> ()
-  }) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>)
+    tosa.yield %3, %arg4, %arg5 : tensor<i32>, tensor<1x1x1x1x1x1x1xf32>, tensor<i32>
+  }) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>, tensor<i32>) -> (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>, tensor<i32>)
   return
 }
 
@@ -1676,7 +1720,7 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
   %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.while_loop' op failed level check: length(tensor_list_shape(inputs)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
   %1:65 = "tosa.while_loop"(%0, %arg0,
-                  %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
+                  %arg1, %0, %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1693,7 +1737,7 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
        %50: tensor<1xi32>, %51: tensor<1xi32>, %52: tensor<1xi32>, %53: tensor<1xi32>, %54: tensor<1xi32>, %55: tensor<1xi32>, %56: tensor<1xi32>, %57: tensor<1xi32>, %58: tensor<1xi32>, %59: tensor<1xi32>,
        %60: tensor<1xi32>, %61: tensor<1xi32>, %62: tensor<1xi32>
   ):
-    %2 = "tosa.greater_equal"(%arg3, %arg1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
+    %2 = "tosa.greater_equal"(%arg3, %00) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
     %3 = "tosa.logical_not"(%2) : (tensor<1xi1>) -> tensor<1xi1>
     "tosa.yield"(%3) : (tensor<1xi1>) -> ()
   },  {
@@ -1709,13 +1753,13 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
     %2 = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
     %3 = "tosa.add"(%arg3, %2) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
     "tosa.yield"(%3, %arg4,
-                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
-                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
-                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
-                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
-                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
-                 %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
-                 %0, %0, %0
+                 %00, %01, %01, %01, %01, %01, %01, %01, %01, %01,
+                 %01, %01, %01, %01, %01, %01, %01, %01, %01, %01,
+                 %01, %01, %01, %01, %01, %01, %01, %01, %01, %01,
+                 %01, %01, %01, %01, %01, %01, %01, %01, %01, %01,
+                 %01, %01, %01, %01, %01, %01, %01, %01, %01, %01,
+                 %01, %01, %01, %01, %01, %01, %01, %01, %01, %01,
+                 %01, %01, %01
                 ) : (
       tensor<1xi32>, tensor<1x1x1x1x1x1x1xf32>,
       tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>, tensor<1xi32>,
@@ -1751,38 +1795,48 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
 
 // -----
 
-func.func @test_cond_if_max_nested_depth(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>, %arg3: tensor<i1>) -> tensor<f32> {
+func.func @test_cond_if_max_nested_depth(%arg2: tensor<i1>) -> tensor<f32> {
   %0 = tosa.cond_if %arg2 : tensor<i1> -> tensor<f32> {
-    %1 = tosa.cond_if %arg3 : tensor<i1>-> tensor<f32> {
-      %2 = tosa.cond_if %arg2 : tensor<i1> -> tensor<f32> {
-        %3 = tosa.cond_if %arg3 : tensor<i1> -> tensor<f32> {
-          %4 = tosa.cond_if %arg2 : tensor<i1>  -> tensor<f32> {
+    %arg4 = tosa.const values(dense<true> : tensor<i1>) : () -> tensor<i1>
+    %1 = tosa.cond_if %arg4 : tensor<i1> -> tensor<f32> {
+      %arg5 = tosa.const values(dense<true> : tensor<i1>) : () -> tensor<i1>
+      %2 = tosa.cond_if %arg5 : tensor<i1> -> tensor<f32> {
+        %arg6 = tosa.const values(dense<true> : tensor<i1>) : () -> tensor<i1>
+        %3 = tosa.cond_if %arg6 : tensor<i1> -> tensor<f32> {
+          %arg7 = tosa.const values(dense<true> : tensor<i1>) : () -> tensor<i1>
+          %4 = tosa.cond_if %arg7 : tensor<i1> -> tensor<f32> {
+            %arg8 = tosa.const values(dense<true> : tensor<i1>) : () -> tensor<i1>
             // expected-error@+1 {{'tosa.cond_if' op failed level check: tosa_nesting_depth < MAX_NESTING (6), got 6}}
-            %5 = tosa.cond_if %arg3 : tensor<i1> -> tensor<f32> {
-              %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+            %5 = tosa.cond_if %arg8 : tensor<i1> -> tensor<f32> {
+              %res = tosa.const values(dense<0.0> : tensor<f32>) : () -> tensor<f32>
               tosa.yield %res : tensor<f32>
             } else {
-              tosa.yield %arg0 : tensor<f32>
+              %arg9 = tosa.const values(dense<0.0> : tensor<f32>) : () -> tensor<f32>
+              tosa.yield %arg9 : tensor<f32>
             }
             tosa.yield %5 : tensor<f32>
           } else {
-            tosa.yield %arg0 : tensor<f32>
+            %arg9 = tosa.const values(dense<0.0> : tensor<f32>) : () -> tensor<f32>
+            tosa.yield %arg9 : tensor<f32>
           }
           tosa.yield %4 : tensor<f32>
         } else {
-          tosa.yield %arg0 : tensor<f32>
+          %arg9 = tosa.const values(dense<0.0> : tensor<f32>) : () -> tensor<f32>
+          tosa.yield %arg9 : tensor<f32>
         }
         tosa.yield %3 : tensor<f32>
       } else {
-        tosa.yield %arg0 : tensor<f32>
+        %arg9 = tosa.const values(dense<0.0> : tensor<f32>) : () -> tensor<f32>
+        tosa.yield %arg9 : tensor<f32>
       }
       tosa.yield %2 : tensor<f32>
     } else {
-      tosa.yield %arg0 : tensor<f32>
+      %arg9 = tosa.const values(dense<0.0> : tensor<f32>) : () -> tensor<f32>
+      tosa.yield %arg9 : tensor<f32>
     }
     tosa.yield %1 : tensor<f32>
   } else {
-    %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+    %res = tosa.const values(dense<0.0> : tensor<f32>) : () -> tensor<f32>
     tosa.yield %res : tensor<f32>
   }
   return %0 : tensor<f32>
@@ -1792,54 +1846,59 @@ func.func @test_cond_if_max_nested_depth(%arg0: tensor<f32>, %arg1: tensor<f32>,
 
 func.func @test_while_loop_max_nested_depth(%arg0: tensor<i32>) {
   %init_0 = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
-  %cst_1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
 
   %1:2 = tosa.while_loop (%arg2 = %init_0, %arg3 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
     %2 = tosa.greater_equal %arg3, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
     tosa.yield %2 : tensor<i1>
   } do {
   ^bb0(%arg2: tensor<i32>, %arg2b: tensor<i32>):
-    %1:2 = tosa.while_loop (%arg4 = %init_0, %arg5 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+    %1:2 = tosa.while_loop (%arg4 = %arg2, %arg5 = %arg2b) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
       %2 = tosa.greater_equal %arg5, %arg4 : (tensor<i32>, tensor<i32>) -> tensor<i1>
       tosa.yield %2 : tensor<i1>
     } do {
     ^bb0(%arg4: tensor<i32>, %arg4b: tensor<i32>):
-      %1:2 = tosa.while_loop (%arg6 = %init_0, %arg7 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+      %1:2 = tosa.while_loop (%arg6 = %arg4, %arg7 = %arg4b) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
         %2 = tosa.greater_equal %arg7, %arg6 : (tensor<i32>, tensor<i32>) -> tensor<i1>
         tosa.yield %2 : tensor<i1>
       } do {
       ^bb0(%arg6: tensor<i32>, %arg6b: tensor<i32>):
-        %1:2 = tosa.while_loop (%arg8 = %init_0, %arg9 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+        %1:2 = tosa.while_loop (%arg8 = %arg6, %arg9 = %arg6b) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
           %2 = tosa.greater_equal %arg9, %arg8 : (tensor<i32>, tensor<i32>) -> tensor<i1>
           tosa.yield %2 : tensor<i1>
         } do {
         ^bb0(%arg8: tensor<i32>, %arg8b: tensor<i32>):
-          %1:2 = tosa.while_loop (%arg10 = %init_0, %arg11 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+          %1:2 = tosa.while_loop (%arg10 = %arg8, %arg11 = %arg8b) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
             %2 = tosa.greater_equal %arg11, %arg10 : (tensor<i32>, tensor<i32>) -> tensor<i1>
             tosa.yield %2 : tensor<i1>
           } do {
           ^bb0(%arg10: tensor<i32>, %arg10b: tensor<i32>):
             // expected-error@+1 {{'tosa.while_loop' op failed level check: tosa_nesting_depth < MAX_NESTING (6), got 6}}
-            %1:2 = tosa.while_loop (%arg12 = %init_0, %arg13 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
+            %1:2 = tosa.while_loop (%arg12 = %arg10, %arg13 = %arg10b) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
               %2 = tosa.greater_equal %arg13, %arg12 : (tensor<i32>, tensor<i32>) -> tensor<i1>
               tosa.yield %2 : tensor<i1>
             } do {
             ^bb0(%arg12: tensor<i32>, %arg12b: tensor<i32>):
-              %3 = tosa.add %arg12, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
-              tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+              %arg14 = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+              %3 = tosa.add %arg12, %arg14 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+              tosa.yield %arg12, %3: tensor<i32>, tensor<i32>
             }
-            %3 = tosa.add %arg10, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
-            tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+            %arg14 = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+            %3 = tosa.add %arg10, %arg14 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+            tosa.yield %arg10, %3: tensor<i32>, tensor<i32>
           }
-          %3 = tosa.add %arg8, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
-          tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+          %arg14 = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+          %3 = tosa.add %arg8, %arg14 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+          tosa.yield %arg8, %3: tensor<i32>, tensor<i32>
         }
-        %3 = tosa.add %arg6, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
-        tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+        %arg14 = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+        %3 = tosa.add %arg6, %arg14 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+        tosa.yield %arg6, %3: tensor<i32>, tensor<i32>
       }
-      %3 = tosa.add %arg4, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
-      tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
+      %arg14 = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+      %3 = tosa.add %arg4, %arg14 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+      tosa.yield %arg4, %3: tensor<i32>, tensor<i32>
     }
+    %cst_1 = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
     %3 = tosa.add %arg2, %cst_1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
     tosa.yield %arg2, %3: tensor<i32>, tensor<i32>
   }
