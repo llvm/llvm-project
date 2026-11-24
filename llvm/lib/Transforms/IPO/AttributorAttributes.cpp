@@ -7116,6 +7116,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.Status == AllocationInfo::INVALID)
       continue;
 
+    if (!isAllocSizeExact(AI.CB, TLI)) {
+      // An alloca of a lower bound for the size may be too small.
+      LLVM_DEBUG(dbgs() << "[H2S] Inexact allocation size: " << *AI.CB << "\n");
+      AI.Status = AllocationInfo::INVALID;
+      Changed = ChangeStatus::CHANGED;
+      continue;
+    }
+
     if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
       std::optional<APInt> APAlign = getAPInt(A, *this, *Align);
       if (!APAlign) {

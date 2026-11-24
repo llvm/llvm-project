@@ -625,7 +625,7 @@ bb:
   ret void
 }
 
-declare ptr @__kmpc_alloc_shared(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared"
+declare ptr @__kmpc_alloc_shared(i64) allockind("alloc,uninitialized") allocsize(0, exact) "alloc-family"="__kmpc_alloc_shared"
 declare void @__kmpc_free_shared(ptr allocptr nocapture, i64) allockind("free") "alloc-family"="__kmpc_alloc_shared"
 
 define void @test17() {
@@ -742,7 +742,7 @@ bb:
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nofree nounwind }
 ; CHECK: attributes #[[ATTR3]] = { noreturn }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0,exact) "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR7]] = { norecurse }
 ; CHECK: attributes #[[ATTR8]] = { nounwind }

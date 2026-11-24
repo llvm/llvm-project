@@ -5,7 +5,7 @@
 ; A musttail call cannot access allocas of the caller, and its marker cannot be
 ; removed. Do not move an allocation to the stack if it is passed to one.
 
-declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0, exact) "alloc-family"="malloc"
 declare void @use(ptr captures(none)) nofree nounwind willreturn nosync
 
 define void @musttail_uses_malloc(ptr %unused) {

@@ -52,6 +52,17 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* The `allocsize` attribute takes an optional `exact` flag. Without it, the
+  attribute is now taken to give a lower bound for the size of what the function
+  returns, as it has always been documented, and no longer the exact size of
+  an allocated object. Optimizations that need that size, such as the removal
+  of stores that a later store to the whole object overwrites, the lowering of
+  `llvm.objectsize` to a maximum, and the conversion of heap allocations to
+  stack allocations, now only apply to functions whose attribute is `exact`.
+  LLVM infers the `exact` attribute for the library functions that it
+  recognizes. Frontends that emit `allocsize` for functions that return
+  objects of exactly that size should add `exact` to keep these optimizations.
+
 * The `optnone` function attribute now implies `noinline`, and no longer
   requires `noinline` to be present on the same function. `optnone` may now
   be combined with `alwaysinline`, in which case `alwaysinline` takes

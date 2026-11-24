@@ -198,7 +198,7 @@ class AllocKindAttr<string kind>
 
 class AllocSizeAttr<int elemSizeArg, string numElemsArg = "std::nullopt">
     : ValueAttr<[FnAttr], "Attribute::getWithAllocSizeArgs(C, " # elemSizeArg #
-                          ", " # numElemsArg # ")">;
+                          ", " # numElemsArg # ", /*Exact=*/true)">;
 
 class AllocFamilyAttr<string family>
     : ValueAttr<[FnAttr],

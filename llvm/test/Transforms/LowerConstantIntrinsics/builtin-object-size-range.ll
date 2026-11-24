@@ -128,4 +128,4 @@ define i64 @select_gep_oob_overapproximated_offsets(i1 %cond) {
 }
 
 
-attributes #0 = { nounwind allocsize(0) }
+attributes #0 = { nounwind allocsize(0, exact) }

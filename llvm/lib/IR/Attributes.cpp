@@ -58,19 +58,27 @@ using namespace llvm;
 // allocsize argument to signify "not present."
 static const unsigned AllocSizeNumElemsNotPresent = -1;
 
+// The most significant bit of the packed value says whether the size is exact.
+// It is not set by default, which is also what attributes that predate the
+// flag decode to.
+static const uint64_t AllocSizeExactBit = uint64_t(1) << 63;
+
 static uint64_t packAllocSizeArgs(unsigned ElemSizeArg,
-                                  const std::optional<unsigned> &NumElemsArg) {
+                                  const std::optional<unsigned> &NumElemsArg,
+                                  bool Exact) {
   assert((!NumElemsArg || *NumElemsArg != AllocSizeNumElemsNotPresent) &&
          "Attempting to pack a reserved value");
+  assert(!(uint64_t(ElemSizeArg) << 32 & AllocSizeExactBit) &&
+         "Element size argument index is too large to pack");
 
-  return uint64_t(ElemSizeArg) << 32 |
+  return (Exact ? AllocSizeExactBit : 0) | uint64_t(ElemSizeArg) << 32 |
          NumElemsArg.value_or(AllocSizeNumElemsNotPresent);
 }
 
 static std::pair<unsigned, std::optional<unsigned>>
 unpackAllocSizeArgs(uint64_t Num) {
   unsigned NumElems = Num & std::numeric_limits<unsigned>::max();
-  unsigned ElemSizeArg = Num >> 32;
+  unsigned ElemSizeArg = (Num & ~AllocSizeExactBit) >> 32;
 
   std::optional<unsigned> NumElemsArg;
   if (NumElems != AllocSizeNumElemsNotPresent)
@@ -286,10 +294,12 @@ Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
 
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
-                                const std::optional<unsigned> &NumElemsArg) {
+                                const std::optional<unsigned> &NumElemsArg,
+                                bool Exact) {
   assert(!(ElemSizeArg == 0 && NumElemsArg == 0) &&
          "Invalid allocsize arguments -- given allocsize(0, 0)");
-  return get(Context, AllocSize, packAllocSizeArgs(ElemSizeArg, NumElemsArg));
+  return get(Context, AllocSize,
+             packAllocSizeArgs(ElemSizeArg, NumElemsArg, Exact));
 }
 
 Attribute Attribute::getWithAllocKind(LLVMContext &Context, AllocFnKind Kind) {
@@ -456,6 +466,12 @@ Attribute::getAllocSizeArgs() const {
   return unpackAllocSizeArgs(pImpl->getValueAsInt());
 }
 
+bool Attribute::isAllocSizeExact() const {
+  assert(hasAttribute(Attribute::AllocSize) &&
+         "Trying to get allocsize exactness from non-allocsize attribute");
+  return pImpl->getValueAsInt() & AllocSizeExactBit;
+}
+
 unsigned Attribute::getVScaleRangeMin() const {
   assert(hasAttribute(Attribute::VScaleRange) &&
          "Trying to get vscale args from non-vscale attribute");
@@ -580,9 +596,10 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     std::optional<unsigned> NumElems;
     std::tie(ElemSize, NumElems) = getAllocSizeArgs();
 
-    return (NumElems
-                ? "allocsize(" + Twine(ElemSize) + "," + Twine(*NumElems) + ")"
-                : "allocsize(" + Twine(ElemSize) + ")")
+    const char *Exact = isAllocSizeExact() ? ",exact)" : ")";
+    return (NumElems ? "allocsize(" + Twine(ElemSize) + "," + Twine(*NumElems) +
+                           Exact
+                     : "allocsize(" + Twine(ElemSize) + Exact)
         .str();
   }
 
@@ -2271,10 +2288,10 @@ AttrBuilder &AttrBuilder::addDereferenceableOrNullAttr(uint64_t Bytes) {
   return addRawIntAttr(Attribute::DereferenceableOrNull, Bytes);
 }
 
-AttrBuilder &
-AttrBuilder::addAllocSizeAttr(unsigned ElemSize,
-                              const std::optional<unsigned> &NumElems) {
-  return addAllocSizeAttrFromRawRepr(packAllocSizeArgs(ElemSize, NumElems));
+AttrBuilder &AttrBuilder::addAllocSizeAttr(
+    unsigned ElemSize, const std::optional<unsigned> &NumElems, bool Exact) {
+  return addAllocSizeAttrFromRawRepr(
+      packAllocSizeArgs(ElemSize, NumElems, Exact));
 }
 
 AttrBuilder &AttrBuilder::addAllocSizeAttrFromRawRepr(uint64_t RawArgs) {

@@ -201,7 +201,8 @@ public:
   getWithDereferenceableOrNullBytes(LLVMContext &Context, uint64_t Bytes);
   LLVM_ABI static Attribute
   getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
-                       const std::optional<unsigned> &NumElemsArg);
+                       const std::optional<unsigned> &NumElemsArg,
+                       bool Exact = false);
   LLVM_ABI static Attribute getWithAllocKind(LLVMContext &Context,
                                              AllocFnKind Kind);
   LLVM_ABI static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
@@ -328,6 +329,10 @@ public:
   /// Returns the argument numbers for the allocsize attribute.
   LLVM_ABI std::pair<unsigned, std::optional<unsigned>>
   getAllocSizeArgs() const;
+
+  /// Returns whether the allocsize attribute gives the exact size of the
+  /// allocated object, rather than a lower bound for it.
+  LLVM_ABI bool isAllocSizeExact() const;
 
   /// Returns the minimum value for the vscale_range attribute.
   LLVM_ABI unsigned getVScaleRangeMin() const;
@@ -1374,7 +1379,8 @@ public:
   /// This turns one (or two) ints into the form used internally in Attribute.
   LLVM_ABI AttrBuilder &
   addAllocSizeAttr(unsigned ElemSizeArg,
-                   const std::optional<unsigned> &NumElemsArg);
+                   const std::optional<unsigned> &NumElemsArg,
+                   bool Exact = false);
 
   /// This turns two ints into the form used internally in Attribute.
   LLVM_ABI AttrBuilder &addVScaleRangeAttr(unsigned MinValue,

@@ -975,7 +975,8 @@ in the file [Attributes.td](https://github.com/llvm/llvm-project/blob/main/llvm/
 The `allocsize` attribute has a special encoding for its arguments. Its two
 arguments, which are 32-bit integers, are packed into one 64-bit integer value
 (i.e., `(EltSizeParam << 32) | NumEltsParam`), with `NumEltsParam` taking on
-the sentinel value -1 if it is not specified.
+the sentinel value -1 if it is not specified. The most significant bit of that
+value is set if the attribute is `exact`.
 
 :::
 

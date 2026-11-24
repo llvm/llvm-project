@@ -50,7 +50,7 @@ def vmodff : RuntimeLibcallImpl<MODF_V4F32>;
 // CHECK-NEXT:       Attribute::get(C, "alloc-family", "malloc"),
 // CHECK-NEXT:       Attribute::get(C, Attribute::NoUnwind),
 // CHECK-NEXT:       Attribute::getWithAllocKind(C, AllocFnKind::Alloc),
-// CHECK-NEXT:       Attribute::getWithAllocSizeArgs(C, 0, std::nullopt),
+// CHECK-NEXT:       Attribute::getWithAllocSizeArgs(C, 0, std::nullopt, /*Exact=*/true),
 // CHECK-NEXT:     });
 // CHECK-NEXT:   case 2:
 // CHECK-NEXT:     return AttributeSet::get(C, {

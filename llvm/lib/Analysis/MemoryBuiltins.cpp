@@ -96,6 +96,9 @@ struct AllocFnsTy {
   int AlignParam;
   // Name of default allocator function to group malloc/free calls by family
   MallocFamily Family;
+  // Whether the parameters give the exact size of the allocated object. If
+  // not, they only give a number of bytes that it is at least as large as.
+  bool Exact = true;
 };
 
 // clang-format off
@@ -206,6 +209,7 @@ getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   // Because allocsize only tells us how many bytes are allocated, we're not
   // really allowed to assume anything, so we use MallocLike.
   Result.AllocTy = MallocLike;
+  Result.Exact = Attr.isAllocSizeExact();
   Result.NumParams = CB->arg_size();
   Result.FstParam = Args.first;
   Result.SndParam = Args.second.value_or(-1);
@@ -311,6 +315,11 @@ static bool checkedZextOrTrunc(APInt &I, unsigned IntTyBits) {
   if (I.getBitWidth() != IntTyBits)
     I = I.zextOrTrunc(IntTyBits);
   return true;
+}
+
+bool llvm::isAllocSizeExact(const CallBase *CB, const TargetLibraryInfo *TLI) {
+  std::optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
+  return FnData && FnData->Exact;
 }
 
 std::optional<APInt>
@@ -518,6 +527,9 @@ std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
   }
 
   if (auto *CB = dyn_cast<CallBase>(Ptr)) {
+    // A lower bound for the size is not the size of the object.
+    if (!isAllocSizeExact(CB, TLI))
+      return std::nullopt;
     if (std::optional<APInt> Size = getAllocSize(CB, TLI)) {
       if (std::optional<uint64_t> ZExtSize = Size->tryZExtValue())
         return TypeSize::getFixed(*ZExtSize);
@@ -889,6 +901,11 @@ OffsetSpan ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
   };
 
   if (std::optional<APInt> Size = getAllocSize(&CB, TLI, Mapper)) {
+    // A size that is only a lower bound can only answer the question of how
+    // small the object may be.
+    if (Options.EvalMode != ObjectSizeOpts::Mode::Min &&
+        !isAllocSizeExact(&CB, TLI))
+      return ObjectSizeOffsetVisitor::unknown();
     // Very large unsigned value cannot be represented as OffsetSpan.
     if (Size->isNegative())
       return ObjectSizeOffsetVisitor::unknown();
@@ -1246,6 +1263,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
     // TODO: implement evaluation of strdup/strndup
     return ObjectSizeOffsetEvaluator::unknown();
   }
+
+  // A size that is only a lower bound can only answer the question of how
+  // small the object may be.
+  if (!FnData->Exact && EvalOpts.EvalMode != ObjectSizeOpts::Mode::Min)
+    return ObjectSizeOffsetEvaluator::unknown();
 
   Value *FirstArg = CB.getArgOperand(FnData->FstParam);
   FirstArg = Builder.CreateZExtOrTrunc(FirstArg, IntTy);

@@ -4,8 +4,8 @@
 
 declare i64 @subfn(ptr) #0
 
-declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
-declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0, exact) "alloc-family"="malloc"
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1, exact) "alloc-family"="malloc"
 declare void @free(ptr) allockind("free") "alloc-family"="malloc"
 
 define i64 @f(i64 %len) {
@@ -44,8 +44,8 @@ entry:
 attributes #0 = { nounwind willreturn }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0,exact) "alloc-family"="malloc" }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1,exact) "alloc-family"="malloc" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #[[ATTR5]] = { nounwind }
