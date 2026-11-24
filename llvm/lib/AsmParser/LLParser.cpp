@@ -5911,14 +5911,13 @@ bool LLParser::parseFLMDEntry(LocTy Loc, FLScope &Result, uint32_t Index,
   REQUIRED(scope, MDNodeField, (/* AllowNull */ false));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
-  DILocalScope *ValidScope = dyn_cast_or_null<DILocalScope>(scope.Val);
   // If this is a forward reference, track it elsewhere, as FLScope does not use
   // a tracking metadata ref.
-  if (!ValidScope && scope.Val->isTemporary()) {
+  if (scope.Val) {
     FLForwardRefScopes.try_emplace(Context).first->second.emplace_back(
         Index, scope.Val);
   }
-  Result = FLScope(ValidScope);
+  Result = FLScope(nullptr);
   return false;
 }
 
@@ -5955,13 +5954,11 @@ bool LLParser::parseFLMDEntry(LocTy Loc, FLInlinedCall &Result, uint32_t Index,
   FLIndex<FLInlinedCall> ActualInlinedAt;
   if (inlinedAt.Seen)
     ActualInlinedAt = FLIndex<FLInlinedCall>(inlinedAt.Val);
-  MDFunctionLocalContext *ValidInlineeContext =
-      dyn_cast_or_null<MDFunctionLocalContext>(inlineeContext.Val);
-  if (!ValidInlineeContext && inlineeContext.Val->isTemporary()) {
+  if (inlineeContext.Val) {
     FLForwardRefFLMDs.try_emplace(Context).first->second.emplace_back(
         Index, inlineeContext.Val);
   }
-  Result = FLInlinedCall(ActualSrcLoc, ActualInlinedAt, ValidInlineeContext,
+  Result = FLInlinedCall(ActualSrcLoc, ActualInlinedAt, nullptr,
                          uniquable.Val);
   return false;
 }
