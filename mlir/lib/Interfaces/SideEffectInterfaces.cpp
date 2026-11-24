@@ -159,27 +159,35 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
   return wouldOpBeTriviallyDeadImpl(root, &cache);
 }
 
-void DeadnessCache::enqueue(Invalidation request) {
-  // A cancelled request stays in pending until compaction. If new IR reuses
-  // the same address, reactivate the matching request for the new IR.
-  if (!pending.insert(request))
-    cancelled.erase(request);
+void DeadnessCache::enqueue(Target target, Request request) {
+  auto [it, inserted] = pending.try_emplace(target, request);
+  if (inserted)
+    return;
+  if (it->second == Request::Cancelled) {
+    // New IR at a reused address starts with its own request.
+    --numCancelled;
+    it->second = request;
+  } else if (request == Request::Subtree) {
+    it->second = Request::Subtree;
+  }
 }
 
-void DeadnessCache::cancel(Invalidation request) {
-  if (!pending.contains(request))
+void DeadnessCache::cancel(Target target) {
+  auto it = pending.find(target);
+  if (it == pending.end() || it->second == Request::Cancelled)
     return;
-  cancelled.insert(request);
-  if (cancelled.size() >= pending.size() - cancelled.size())
+  it->second = Request::Cancelled;
+  ++numCancelled;
+  if (numCancelled >= pending.size() - numCancelled)
     removeCancelled();
 }
 
 void DeadnessCache::removeCancelled() {
-  if (cancelled.empty())
+  if (!numCancelled)
     return;
   pending.remove_if(
-      [&](Invalidation entry) { return cancelled.contains(entry); });
-  cancelled.clear();
+      [](const auto &entry) { return entry.second == Request::Cancelled; });
+  numCancelled = 0;
 }
 
 void DeadnessCache::scheduleInvalidation(Operation *op) {
@@ -190,20 +198,20 @@ void DeadnessCache::scheduleInvalidation(Operation *op) {
   // An uncached leaf can affect only its ancestors. Siblings can share the
   // same request even if they are all erased before the next query.
   if (op->getNumRegions() || cache.contains(op))
-    enqueue(OpRequest(op, /*subtree=*/true));
+    enqueue(op, Request::Subtree);
   else if (Operation *parent = op->getParentOp())
     scheduleAncestorInvalidation(parent);
 }
 
 void DeadnessCache::scheduleAncestorInvalidation(Operation *op) {
   if (!cache.empty())
-    enqueue(OpRequest(op, /*subtree=*/false));
+    enqueue(op, Request::Ancestors);
 }
 
 void DeadnessCache::scheduleBlockInvalidation(Block *block) {
   if (cache.empty())
     return;
-  enqueue(block);
+  enqueue(block, Request::Subtree);
   if (Operation *parent = block->getParentOp())
     scheduleAncestorInvalidation(parent);
 }
@@ -215,8 +223,7 @@ void DeadnessCache::notifyBlockErased(Block *block) {
 }
 
 void DeadnessCache::notifyOperationErased(Operation *op) {
-  cancel(OpRequest(op, /*subtree=*/true));
-  cancel(OpRequest(op, /*subtree=*/false));
+  cancel(op);
   cache.erase(op);
   if (Operation *parent = op->getParentOp())
     scheduleAncestorInvalidation(parent);
@@ -229,34 +236,28 @@ void DeadnessCache::flushInvalidations() {
   // its parent already walked. Erasing the same cache entries again is safe,
   // but requires another walk.
   for (size_t i = 0; i < pending.size(); ++i) {
-    Invalidation request = pending[i];
-    if (auto *block = dyn_cast<Block *>(request)) {
+    auto [target, request] = pending.getArrayRef()[i];
+    if (auto *block = dyn_cast<Block *>(target)) {
       for (Operation &op : *block)
-        enqueue(OpRequest(&op, /*subtree=*/true));
+        enqueue(&op, Request::Subtree);
       continue;
     }
-    OpRequest opRequest = cast<OpRequest>(request);
-    Operation *op = opRequest.getPointer();
-    // A clear subtree bit requests invalidation of this op and its ancestors.
+    Operation *op = cast<Operation *>(target);
     // Erase the entry here so we stop queuing ancestors if the cache is empty.
-    if (!opRequest.getInt())
+    if (request == Request::Ancestors)
       cache.erase(op);
     if (Operation *parent = op->getParentOp())
       scheduleAncestorInvalidation(parent);
   }
 
-  // Walk only operation requests with the subtree bit set. Skip nested roots
-  // with their own subtree request so each body is visited once.
-  for (Invalidation request : pending) {
-    if (isa<Block *>(request))
+  // Skip nested roots with their own subtree request so each body is visited
+  // once, including roots that were upgraded during the first loop.
+  for (auto [target, request] : pending) {
+    Operation *root = dyn_cast<Operation *>(target);
+    if (!root || request != Request::Subtree)
       continue;
-    OpRequest opRequest = cast<OpRequest>(request);
-    // The first loop handled requests with a clear subtree bit.
-    if (!opRequest.getInt())
-      continue;
-    Operation *root = opRequest.getPointer();
     root->walk<WalkOrder::PreOrder>([&](Operation *op) {
-      if (op != root && pending.contains(OpRequest(op, /*subtree=*/true)))
+      if (op != root && pending.lookup(op) == Request::Subtree)
         return WalkResult::skip();
       cache.erase(op);
       return WalkResult::advance();

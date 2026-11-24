@@ -16,10 +16,8 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Twine.h"
 #include <cstdint>
 
@@ -581,25 +579,22 @@ public:
   void notifyOperationErased(Operation *op);
 
 private:
-  // The bit distinguishes a full operation subtree from an owner whose
-  // children are unchanged. A block request covers its current contents.
-  using OpRequest = llvm::PointerIntPair<Operation *, 1, bool>;
-  using Invalidation = llvm::PointerUnion<OpRequest, Block *>;
-  void enqueue(Invalidation request);
-  void cancel(Invalidation request);
+  using Target = llvm::PointerUnion<Operation *, Block *>;
+  enum class Request { Ancestors, Subtree, Cancelled };
+  void enqueue(Target target, Request request);
+  void cancel(Target target);
   void removeCancelled();
   void flushInvalidations();
 
   DenseMap<Operation *, State> cache;
 
-  // Removing individual requests from the SetVector can make bulk IR erasure
-  // quadratic. Mark requests for erased IR in `cancelled` and remove them in
-  // one pass before the flush dereferences any queued pointers. Compact the
-  // queue earlier if at least half its entries are cancelled to bound its size
-  // between queries. If new IR reuses an address with a cancelled request,
-  // enqueue clears the mark so the flush processes the new request.
-  llvm::SetVector<Invalidation> pending;
-  DenseSet<Invalidation> cancelled;
+  // Each target has one slot. A subtree request upgrades an ancestor request
+  // in place. For a block, the subtree consists of its current contents.
+  // Mark erased targets and compact in bulk to avoid shifting the remaining
+  // slots on every erasure. Compact before dereferencing targets or once at
+  // least half the slots are cancelled.
+  llvm::MapVector<Target, Request> pending;
+  size_t numCancelled = 0;
 };
 
 /// Returns true if the given operation is free of memory effects.
