@@ -43,7 +43,9 @@ Register MipsSEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
       (Opc == Mips::LWC1) || (Opc == Mips::LDC1) || (Opc == Mips::LDC164)) {
     if ((MI.getOperand(1).isFI()) &&  // is a stack slot
         (MI.getOperand(2).isImm()) && // the imm is zero
-        (isZeroImm(MI.getOperand(2)))) {
+        (isZeroImm(MI.getOperand(2))) &&
+        // Not half of an AFGR64 register (MIPS I).
+        !MI.getOperand(0).getSubReg()) {
       FrameIndex = MI.getOperand(1).getIndex();
       return MI.getOperand(0).getReg();
     }
@@ -65,7 +67,9 @@ Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
       (Opc == Mips::SWC1) || (Opc == Mips::SDC1) || (Opc == Mips::SDC164)) {
     if ((MI.getOperand(1).isFI()) &&  // is a stack slot
         (MI.getOperand(2).isImm()) && // the imm is zero
-        (isZeroImm(MI.getOperand(2)))) {
+        (isZeroImm(MI.getOperand(2))) &&
+        // Not half of an AFGR64 register (MIPS I).
+        !MI.getOperand(0).getSubReg()) {
       FrameIndex = MI.getOperand(1).getIndex();
       return MI.getOperand(0).getReg();
     }
@@ -206,6 +210,52 @@ MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return std::nullopt;
 }
 
+/// Store or load an AFGR64 register as two words with swc1/lwc1. The words
+/// are laid out in memory the same way sdc1/ldc1 would lay them out.
+void MipsSEInstrInfo::storeLoadAFGR64Halves(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            Register Reg, bool IsKill, int FI,
+                                            int64_t Offset,
+                                            MachineMemOperand *MMO,
+                                            bool IsStore) const {
+  MachineFunction &MF = *MBB.getParent();
+  DebugLoc DL;
+  if (I != MBB.end())
+    DL = I->getDebugLoc();
+
+  // The low word is at the lower address on little endian targets and at the
+  // higher address on big endian targets.
+  unsigned SubIdx[2] = {Mips::sub_lo, Mips::sub_hi};
+  if (!Subtarget.isLittle())
+    std::swap(SubIdx[0], SubIdx[1]);
+
+  for (unsigned N = 0; N < 2; ++N) {
+    MachineMemOperand *WordMMO =
+        MF.getMachineMemOperand(MMO, 4 * N, LLT::scalar(32));
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, I, DL, get(IsStore ? Mips::SWC1 : Mips::LWC1));
+
+    if (IsStore) {
+      if (Reg.isVirtual())
+        MIB.addReg(Reg, getKillRegState(IsKill && N == 1), SubIdx[N]);
+      else
+        MIB.addReg(RI.getSubReg(Reg, SubIdx[N]), getKillRegState(IsKill));
+    } else {
+      if (Reg.isVirtual())
+        MIB.addReg(Reg, RegState::Define | getUndefRegState(N == 0), SubIdx[N]);
+      else
+        MIB.addReg(RI.getSubReg(Reg, SubIdx[N]), RegState::Define);
+    }
+
+    MIB.addFrameIndex(FI).addImm(Offset + 4 * N).addMemOperand(WordMMO);
+
+    // The last load defines the whole register. Spill folding expects the
+    // last instruction to fully define a physical register.
+    if (!IsStore && N == 1 && Reg.isPhysical())
+      MIB.addReg(Reg, RegState::ImplicitDefine);
+  }
+}
+
 void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       Register SrcReg, bool isKill, int FI,
@@ -231,9 +281,15 @@ void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
     Opc = Mips::STORE_CCOND_DSP;
   else if (Mips::FGR32RegClass.hasSubClassEq(RC))
     Opc = Mips::SWC1;
-  else if (Mips::AFGR64RegClass.hasSubClassEq(RC))
+  else if (Mips::AFGR64RegClass.hasSubClassEq(RC)) {
+    // MIPS I has no sdc1, so store the two halves with swc1.
+    if (!Subtarget.hasMips2()) {
+      storeLoadAFGR64Halves(MBB, I, SrcReg, isKill, FI, Offset, MMO,
+                            /*IsStore=*/true);
+      return;
+    }
     Opc = Mips::SDC1;
-  else if (Mips::FGR64RegClass.hasSubClassEq(RC))
+  } else if (Mips::FGR64RegClass.hasSubClassEq(RC))
     Opc = Mips::SDC164;
   else if (RI.isTypeLegalForClass(*RC, MVT::v16i8))
     Opc = Mips::ST_B;
@@ -311,9 +367,15 @@ void MipsSEInstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
     Opc = Mips::LOAD_CCOND_DSP;
   else if (Mips::FGR32RegClass.hasSubClassEq(RC))
     Opc = Mips::LWC1;
-  else if (Mips::AFGR64RegClass.hasSubClassEq(RC))
+  else if (Mips::AFGR64RegClass.hasSubClassEq(RC)) {
+    // MIPS I has no ldc1, so load the two halves with lwc1.
+    if (!Subtarget.hasMips2()) {
+      storeLoadAFGR64Halves(MBB, I, DestReg, false, FI, Offset, MMO,
+                            /*IsStore=*/false);
+      return;
+    }
     Opc = Mips::LDC1;
-  else if (Mips::FGR64RegClass.hasSubClassEq(RC))
+  } else if (Mips::FGR64RegClass.hasSubClassEq(RC))
     Opc = Mips::LDC164;
   else if (RI.isTypeLegalForClass(*RC, MVT::v16i8))
     Opc = Mips::LD_B;
@@ -432,9 +494,6 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Mips::BuildPairF64:
     expandBuildPairF64(MBB, MI, isMicroMips, false);
     break;
-  case Mips::BuildPairF64_FPR:
-    MI.eraseFromParent();
-    return true;
   case Mips::BuildPairF64_64:
     expandBuildPairF64(MBB, MI, isMicroMips, true);
     break;

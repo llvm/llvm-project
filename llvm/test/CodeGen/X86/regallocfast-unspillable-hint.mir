@@ -40,11 +40,9 @@ body: |
 # The same input without a hint, a load.
 name: test_use_without_hint
 tracksRegLiveness: true
-fixedStack:
-  - { id: 0, size: 8, alignment: 16, isImmutable: true }
 body: |
   bb.0:
-    %0:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    %0:gr64 = MOV64ri 0
     INLINEASM &"", sideeffect attdialect, reguse:GR64, %0, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15, !1
     RET 0
 ...

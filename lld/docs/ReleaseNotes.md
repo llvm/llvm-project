@@ -35,6 +35,10 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### Breaking changes
 
+* On x86-64, large sections are now placed after `.bss` in the order `.ltext`, `.lrodata`, `.ldata`, `.lbss`, so that they do not sit between small sections or between small sections and the ELF header.
+  `-z lrodata-after-bss` is the default and selects this order: compared with its previous behavior, `.ltext` moves after `.bss` and `.lbss` moves after `.ldata`.
+  `-z nolrodata-after-bss` restores the previous default layout.
+
 ### COFF Improvements
 
 ### MinGW Improvements

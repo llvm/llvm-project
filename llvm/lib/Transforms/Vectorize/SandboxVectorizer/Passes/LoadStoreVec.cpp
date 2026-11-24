@@ -422,6 +422,9 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
                      F.getContext(), IMaps, Dir);
   Legality = &L;
 
+  // Save state for the top-level roll-back if not Changed (below).
+  Ctx->save();
+
   bool Changed = false;
   switch (Opc) {
   case Instruction::Opcode::Load:
@@ -433,6 +436,13 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   default:
     llvm_unreachable("Expected Load or Store");
   }
+
+  // The IR may have changed even if Changed == false, because of scheduling.
+  // So to be save revert the state.
+  if (!Changed)
+    Ctx->revert();
+  else
+    Ctx->accept();
   return Changed;
 }
 
