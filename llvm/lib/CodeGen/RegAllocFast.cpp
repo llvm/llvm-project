@@ -2366,11 +2366,17 @@ Register RegAllocFastImpl::getFoldedInputCopySource(const MachineInstr &MI,
              [&](const MachineInstr &UseMI) { return &UseMI != &MI; }))
     return Register();
 
+  // MI must not refer to Src itself, not even through an undef use, which
+  // readsVirtualRegister() ignores: the folder folds every operand of the
+  // register or none, so an operand of Src that can't be folded would keep
+  // Src from being folded in Reg's place.
   Register Src = Copy->getOperand(1).getReg();
   if (!Src.isVirtual() || !shouldAllocateRegister(Src) ||
       TRI->getSpillSize(*MRI->getRegClass(Src)) !=
           TRI->getSpillSize(*MRI->getRegClass(Reg)) ||
-      MI.readsVirtualRegister(Src) || MI.modifiesRegister(Src, TRI))
+      any_of(MI.operands(), [&](const MachineOperand &MO) {
+        return MO.isReg() && MO.getReg() == Src;
+      }))
     return Register();
 
   // The copy must come before MI, with Src still holding the copied value at
