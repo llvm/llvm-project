@@ -5958,8 +5958,7 @@ bool LLParser::parseFLMDEntry(LocTy Loc, FLInlinedCall &Result, uint32_t Index,
     FLForwardRefFLMDs.try_emplace(Context).first->second.emplace_back(
         Index, inlineeContext.Val);
   }
-  Result = FLInlinedCall(ActualSrcLoc, ActualInlinedAt, nullptr,
-                         uniquable.Val);
+  Result = FLInlinedCall(ActualSrcLoc, ActualInlinedAt, nullptr, uniquable.Val);
   return false;
 }
 
