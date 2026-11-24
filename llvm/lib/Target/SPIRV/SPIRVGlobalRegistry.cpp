@@ -1578,8 +1578,8 @@ bool SPIRVGlobalRegistry::shouldUseUntypedPointer(
     return true;
   while (ElemType && (ElemType->getOpcode() == SPIRV::OpTypeArray ||
                       ElemType->getOpcode() == SPIRV::OpTypeRuntimeArray))
-    ElemType = SPIRVTypeInst(
-        CurMF->getRegInfo().getVRegDef(ElemType->getOperand(1).getReg()));
+    ElemType = SPIRVTypeInst(ElemType->getMF()->getRegInfo().getVRegDef(
+        ElemType->getOperand(1).getReg()));
   return !BlockDecoratedTypes.contains(ElemType);
 }
 

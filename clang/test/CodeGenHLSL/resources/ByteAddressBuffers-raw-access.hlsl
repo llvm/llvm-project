@@ -143,6 +143,15 @@ export void copy_arrays() {
   output.Store<Arrays>(0, input.Load<Arrays>(0));
 }
 
+// CHECK-LABEL: define {{.*}}void @{{.*}}copy_top_level_array
+// SPIRV-COUNT-2: call {{.*}}float @llvm.spv.resource.load.rawbuffer
+// SPIRV-COUNT-2: call void @llvm.spv.resource.store.rawbuffer
+// DXIL-COUNT-2: call { float, i1 } @llvm.dx.resource.load.rawbuffer
+// DXIL-COUNT-2: call void @llvm.dx.resource.store.rawbuffer
+export void copy_top_level_array(uint offset) {
+  output.Store<float[2]>(offset, input.Load<float[2]>(offset));
+}
+
 // Load/store a long vector. In DXIL path, clang should do the splitting,
 // in spirv, defer that decision and emit 1 9-element load/store
 

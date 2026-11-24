@@ -4928,11 +4928,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
     QualType ReturnTy = SemaRef.Context.VoidTy;
     if (BuiltinID == Builtin::BI__builtin_hlsl_resource_load_rawbuffer) {
-      ReturnTy = TheCall->getArg(2)->getType()->getPointeeType();
-      if (ReturnTy->isArrayType())
-        return SemaRef.Diag(
-            cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
-            diag::err_invalid_use_of_array_type);
+      QualType ArgTy = TheCall->getArg(2)->getType();
+      assert(ArgTy->isPointerType() &&
+             "expected pointer type for third argument");
+      ReturnTy = ArgTy->getPointeeType();
     }
     TheCall->setType(ReturnTy);
     break;
