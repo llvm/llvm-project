@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <cstddef>
@@ -335,7 +336,10 @@ private:
   void EndMetadirectiveVariantScope();
 
   // check-omp-variant.cpp
-  void FindUnreachableMetadirectiveVariants(const parser::OmpClauseList &);
+  llvm::SmallVector<llvm::omp::Directive, 4>
+  FindUnreachableMetadirectiveVariants(const parser::OmpClauseList &);
+  std::vector<llvm::SmallVector<llvm::omp::TraitProperty, 8>>
+  GetMetadirectiveConstructContexts() const;
   void CheckMetadirectiveVariantsWithoutLoop(std::size_t firstVariant = 0);
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
@@ -633,6 +637,13 @@ private:
   // Constructs associated with a standalone METADIRECTIVE. Their selected
   // replacement encloses them but is not part of dirContext_.
   std::vector<const parser::ExecutionPartConstruct *> selectedRegions_;
+  // The directives that each enclosing BEGIN METADIRECTIVE may select for its
+  // body, which follows the first `position` entries of dirContext_.
+  struct SelectedReplacements {
+    std::size_t position;
+    llvm::SmallVector<llvm::omp::Directive, 4> choices;
+  };
+  std::vector<SelectedReplacements> selectedReplacements_;
 
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>

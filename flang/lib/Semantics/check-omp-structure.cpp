@@ -1513,6 +1513,10 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
 void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
   parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
   if (dirName.v != llvm::omp::Directive::OMPD_section) {
+    if (!selectedReplacements_.empty() &&
+        selectedReplacements_.back().position == dirContext_.size()) {
+      selectedReplacements_.pop_back();
+    }
     dirStack_.pop_back();
     assert(dirName.v == GetContext().directive && "Context mismatch");
     dirContext_.pop_back();
@@ -1955,11 +1959,14 @@ void OmpStructureChecker::CheckCoindexedArguments(
 
 void OmpStructureChecker::Enter(const parser::OmpBeginDirective &x) {
   switch (x.DirId()) {
-  case llvm::omp::Directive::OMPD_metadirective:
-    // Delimited METADIRECTIVE
-    FindUnreachableMetadirectiveVariants(x.Clauses());
+  case llvm::omp::Directive::OMPD_metadirective: {
+    // Delimited METADIRECTIVE. The selected replacement encloses its body.
+    std::size_t position{dirContext_.size()};
+    selectedReplacements_.push_back(
+        {position, FindUnreachableMetadirectiveVariants(x.Clauses())});
     EnterDirectiveNest(MetadirectiveNest);
     break;
+  }
   default:
     break;
   }

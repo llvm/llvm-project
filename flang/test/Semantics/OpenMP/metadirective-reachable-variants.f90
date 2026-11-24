@@ -175,3 +175,59 @@ subroutine in_selected_region(n, a)
     !$omp end metadirective
   !$omp end target
 end subroutine
+
+! The TARGET selected for the region hides the enclosing PARALLEL.
+subroutine selected_target_boundary(n, a)
+  integer :: n, a(n), i
+  !$omp parallel
+    !$omp begin metadirective &
+    !$omp& when(implementation={vendor(llvm)}: target) otherwise(nothing)
+      !$omp metadirective &
+      !$omp& when(construct={parallel}: simd collapse(2)) otherwise(nothing)
+      do i = 1, n
+        a(i) = i
+      end do
+    !$omp end metadirective
+  !$omp end parallel
+end subroutine
+
+! A dynamic choice selects either TARGET or PARALLEL for the region, never
+! both, so the first inner SIMD can never be selected.
+subroutine exclusive_choices(flag, n, a)
+  logical :: flag
+  integer :: n, a(n), i
+  !$omp begin metadirective &
+  !$omp& when(user={condition(flag)}: target) otherwise(parallel)
+    !$omp metadirective &
+    !$omp& when(construct={target, parallel}: simd collapse(2)) &
+    !$omp& otherwise(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+    !$omp metadirective &
+    !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
+    !BECAUSE: COLLAPSE clause was specified with argument 2
+    !$omp& when(construct={target}: simd collapse(2)) &
+    !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
+    !BECAUSE: COLLAPSE clause was specified with argument 2
+    !$omp& when(construct={parallel}: do collapse(2)) otherwise(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+  !$omp end metadirective
+end subroutine
+
+! The region may also select no construct, and then the SIMD wins.
+subroutine region_without_construct(flag, n, a)
+  logical :: flag
+  integer :: n, a(n), i
+  !$omp begin metadirective when(user={condition(flag)}: parallel)
+    !$omp metadirective &
+    !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
+    !BECAUSE: COLLAPSE clause was specified with argument 2
+    !$omp& when(construct={parallel}: nothing) otherwise(simd collapse(2))
+    do i = 1, n
+      a(i) = i
+    end do
+  !$omp end metadirective
+end subroutine

@@ -778,40 +778,101 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
   }
 }
 
-// Find the replacements of a METADIRECTIVE that can never be selected in the
-// current construct context.
-void OmpStructureChecker::FindUnreachableMetadirectiveVariants(
-    const parser::OmpClauseList &clauses) {
-  unreachableVariants_.clear();
-  // The METADIRECTIVE itself is the innermost context. Inside the region of
-  // an enclosing METADIRECTIVE, the replacement selected there also belongs
-  // to the context. That is not modeled, so every replacement is kept.
-  if (!InExecutionPart() || !selectedRegions_.empty() ||
-      llvm::any_of(
-          llvm::drop_end(dirContext_), [](const DirectiveContext &context) {
-            return context.directive ==
-                llvm::omp::Directive::OMPD_metadirective;
-          })) {
-    return;
-  }
-  llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  for (const DirectiveContext &context : dirContext_) {
-    AppendDirectiveContextTraits(context.directive, constructTraits);
-  }
-  OmpVariantMatchContext matchContext{context_, constructTraits};
-  std::optional<MetadirectiveCandidateSet> candidateSet{
-      BuildMetadirectiveCandidateSet(clauses, context_, matchContext)};
-  if (!candidateSet) {
-    return;
-  }
-  llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4> reachable{
-      GetReachableMetadirectiveVariants(*candidateSet, matchContext, context_)};
-  for (const parser::OmpClause &clause : clauses.v) {
-    if (const auto *variant{GetDirectiveVariant(clause)};
-        variant && !llvm::is_contained(reachable, variant)) {
-      unreachableVariants_.insert(variant);
+// Return the construct trait sequences that can enclose the current point, one
+// for each combination of the replacements selected by enclosing BEGIN
+// METADIRECTIVEs. Return none if there are too many combinations.
+std::vector<llvm::SmallVector<llvm::omp::TraitProperty, 8>>
+OmpStructureChecker::GetMetadirectiveConstructContexts() const {
+  std::vector<llvm::SmallVector<llvm::omp::TraitProperty, 8>> contexts(1);
+  auto region{selectedReplacements_.begin()};
+  for (std::size_t i{0}; i <= dirContext_.size(); ++i) {
+    for (; region != selectedReplacements_.end() && region->position == i;
+        ++region) {
+      std::vector<llvm::SmallVector<llvm::omp::TraitProperty, 8>> next;
+      for (const auto &traits : contexts) {
+        for (llvm::omp::Directive choice : region->choices) {
+          next.push_back(traits);
+          AppendDirectiveContextTraits(choice, next.back());
+        }
+      }
+      llvm::sort(next);
+      next.erase(std::unique(next.begin(), next.end()), next.end());
+      if (next.size() > 64) {
+        return {};
+      }
+      contexts = std::move(next);
+    }
+    if (i < dirContext_.size()) {
+      for (auto &traits : contexts) {
+        AppendDirectiveContextTraits(dirContext_[i].directive, traits);
+      }
     }
   }
+  return contexts;
+}
+
+// Find the replacements of a METADIRECTIVE that can never be selected in the
+// current construct context, and return the directives that may be selected.
+// NOTHING stands for selecting no construct.
+llvm::SmallVector<llvm::omp::Directive, 4>
+OmpStructureChecker::FindUnreachableMetadirectiveVariants(
+    const parser::OmpClauseList &clauses) {
+  unreachableVariants_.clear();
+  llvm::SmallVector<llvm::omp::Directive, 4> choices{
+      llvm::omp::Directive::OMPD_nothing};
+  auto keepAll{[&]() {
+    for (const parser::OmpClause &clause : clauses.v) {
+      if (const auto *variant{GetDirectiveVariant(clause)}) {
+        choices.push_back(variant->DirId());
+      }
+    }
+    return choices;
+  }};
+  // The replacement selected by a standalone METADIRECTIVE also belongs to
+  // the context of the construct that follows it. That is not modeled, so
+  // every replacement is kept there.
+  if (!InExecutionPart() || !selectedRegions_.empty()) {
+    return keepAll();
+  }
+  std::vector<llvm::SmallVector<llvm::omp::TraitProperty, 8>> contexts{
+      GetMetadirectiveConstructContexts()};
+  if (contexts.empty()) {
+    return keepAll();
+  }
+  // A replacement is reachable if it can be selected in any of the contexts.
+  bool nothingReachable{false};
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 4> reachable;
+  for (const auto &constructTraits : contexts) {
+    OmpVariantMatchContext matchContext{context_, constructTraits};
+    std::optional<MetadirectiveCandidateSet> candidateSet{
+        BuildMetadirectiveCandidateSet(clauses, context_, matchContext)};
+    if (!candidateSet) {
+      return keepAll();
+    }
+    for (const parser::OmpDirectiveSpecification *spec :
+        GetReachableMetadirectiveVariants(
+            *candidateSet, matchContext, context_)) {
+      if (spec) {
+        reachable.insert(spec);
+      } else {
+        nothingReachable = true;
+      }
+    }
+  }
+  choices.clear();
+  if (nothingReachable) {
+    choices.push_back(llvm::omp::Directive::OMPD_nothing);
+  }
+  for (const parser::OmpClause &clause : clauses.v) {
+    if (const auto *variant{GetDirectiveVariant(clause)}) {
+      if (reachable.contains(variant)) {
+        choices.push_back(variant->DirId());
+      } else {
+        unreachableVariants_.insert(variant);
+      }
+    }
+  }
+  return choices;
 }
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
