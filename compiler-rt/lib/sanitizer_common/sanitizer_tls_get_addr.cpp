@@ -112,13 +112,8 @@ SANITIZER_WEAK_ATTRIBUTE
 const void *__sanitizer_get_allocated_begin(const void *p);
 }
 
-static atomic_uint8_t default_get_dtls_size_called;
-static atomic_uint8_t custom_get_dtls_size_used;
-
 SANITIZER_INTERFACE_WEAK_DEF(uptr, __sanitizer_get_dtls_size,
                              const void *tls_begin) {
-  if (!atomic_load_relaxed(&default_get_dtls_size_called))
-    atomic_store_relaxed(&default_get_dtls_size_called, 1);
   const void *start = __sanitizer_get_allocated_begin(tls_begin);
   if (!start)
     return 0;
@@ -176,9 +171,6 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   }
   if (uptr tls_size =
           __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg))) {
-    if (!atomic_load_relaxed(&default_get_dtls_size_called) &&
-        !atomic_load_relaxed(&custom_get_dtls_size_used))
-      atomic_store(&custom_get_dtls_size_used, 1, memory_order_release);
     DTLS_SetDTV(dtv, tls_beg, tls_size);
     return dtv;
   }
@@ -203,10 +195,6 @@ bool DTLSInDestruction(DTLS *dtls) {
          kDestroyedThread;
 }
 
-bool DTLSUsesCustomGetSize() {
-  return atomic_load(&custom_get_dtls_size_used, memory_order_acquire) != 0;
-}
-
 #else
 SANITIZER_INTERFACE_WEAK_DEF(uptr, __sanitizer_get_dtls_size, const void *) {
   return 0;
@@ -218,7 +206,6 @@ void DTLS_Destroy() {}
 bool DTLSInDestruction(DTLS *dtls) {
   UNREACHABLE("dtls is unsupported on this platform!");
 }
-bool DTLSUsesCustomGetSize() { return false; }
 
 #endif  // SANITIZER_INTERCEPT_TLS_GET_ADDR
 

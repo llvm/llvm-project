@@ -451,68 +451,25 @@ static void ProcessThreadRegistry(Frontier *frontier) {
 }
 
 #    if !SANITIZER_ANDROID
-static bool IsAllocatedRange(uptr beg, uptr end) {
-  uptr chunk = PointsIntoChunk(reinterpret_cast<void*>(beg));
-  if (!chunk)
-    return false;
-  LsanMetadata m(chunk);
-  return m.allocated() && beg >= chunk && end <= chunk + m.requested_size();
+static bool IsDTLSAccessible(uptr beg, uptr end) {
+  // A dlclose()-d module's DTLS block may be freed and unmapped lazily without
+  // updating dtv. A small block is checked whole with a single write; for a
+  // larger one only the ends are probed.
+  // FIXME: A freed but still mapped block is scanned too, which may hide leaks.
+  // Clearing dtv entries on free would fix this.
+  uptr size = end - beg;
+  if (size <= GetPageSizeCached())
+    return IsAccessibleMemoryRange(beg, size);
+  return IsAccessibleMemoryRange(beg, 1) && IsAccessibleMemoryRange(end - 1, 1);
 }
-
-// Lazily reads readable process mappings via MemoryMappingLayout and merges
-// adjacent/overlapping segments so range containment queries run in O(log N).
-class ReadableRegions {
- public:
-  bool Contains(uptr beg, uptr end) {
-    if (!initialized_)
-      Init();
-    if (regions_.empty())
-      return false;
-    uptr idx = InternalLowerBound(
-        regions_, beg,
-        [](const Region& r, uptr addr) { return r.end <= addr; });
-    return idx < regions_.size() && regions_[idx].begin <= beg &&
-           end <= regions_[idx].end;
-  }
-
- private:
-  void Init() {
-    initialized_ = true;
-    MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
-    MemoryMappedSegment segment;
-    while (proc_maps.Next(&segment)) {
-      if (segment.IsReadable() && segment.start < segment.end)
-        regions_.push_back({segment.start, segment.end});
-    }
-    if (regions_.empty())
-      return;
-    Sort(regions_.data(), regions_.size(),
-         [](const Region& a, const Region& b) { return a.begin < b.begin; });
-    uptr dst = 0;
-    for (uptr i = 1; i < regions_.size(); ++i) {
-      if (regions_[i].begin <= regions_[dst].end) {
-        regions_[dst].end = Max(regions_[dst].end, regions_[i].end);
-      } else {
-        regions_[++dst] = regions_[i];
-      }
-    }
-    regions_.resize(dst + 1);
-  }
-
-  bool initialized_ = false;
-  InternalMmapVector<Region> regions_;
-};
-#    else
-struct ReadableRegions {};
 #    endif
 
 // Scans thread data (stacks and TLS) for heap pointers.
 template <class Accessor>
 static void ProcessThread(ThreadID os_id, uptr sp,
-                          const InternalMmapVector<uptr>& registers,
-                          InternalMmapVector<Range>& extra_ranges,
-                          Frontier* frontier, Accessor& accessor,
-                          ReadableRegions& readable_regions) {
+                          const InternalMmapVector<uptr> &registers,
+                          InternalMmapVector<Range> &extra_ranges,
+                          Frontier *frontier, Accessor &accessor) {
   // `extra_ranges` is outside of the function and the loop to reused mapped
   // memory.
   CHECK(extra_ranges.empty());
@@ -586,7 +543,6 @@ static void ProcessThread(ThreadID os_id, uptr sp,
       }
     }
 #    if SANITIZER_ANDROID
-    (void)readable_regions;
     extra_ranges.clear();
     auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
                    void *arg) -> void {
@@ -605,10 +561,7 @@ static void ProcessThread(ThreadID os_id, uptr sp,
         uptr dtls_beg = dtv.beg;
         uptr dtls_end = dtls_beg + dtv.size;
         if (dtls_beg < dtls_end) {
-          bool accessible = IsAllocatedRange(dtls_beg, dtls_end);
-          if (!accessible && DTLSUsesCustomGetSize())
-            accessible = readable_regions.Contains(dtls_beg, dtls_end);
-          if (accessible) {
+          if (IsDTLSAccessible(dtls_beg, dtls_end)) {
             LOG_THREADS("DTLS %d at %p-%p.\n", id, (void*)dtls_beg,
                         (void*)dtls_end);
             ScanForPointers(dtls_beg, dtls_end, frontier, "DTLS", kReachable,
@@ -636,7 +589,6 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   InternalMmapVector<ThreadID> done_threads;
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
-  ReadableRegions readable_regions;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     registers.clear();
     extra_ranges.clear();
@@ -658,8 +610,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       sp = caller_sp;
 
     DirectMemoryAccessor accessor;
-    ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor,
-                  readable_regions);
+    ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
     if (flags()->use_detached)
       done_threads.push_back(os_id);
   }
@@ -676,8 +627,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       uptr i = InternalLowerBound(done_threads, os_id);
       if (i >= done_threads.size() || done_threads[i] != os_id) {
         uptr sp = (os_id == caller_tid) ? caller_sp : 0;
-        ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor,
-                      readable_regions);
+        ProcessThread(os_id, sp, registers, extra_ranges, frontier, accessor);
       }
     }
   }
