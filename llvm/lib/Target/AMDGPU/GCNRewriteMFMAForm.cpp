@@ -249,7 +249,8 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
 
   // The (block, register) pairs that already have a bridge copy for uses
   // outside the MFMA's own block, shared by every MFMA defining the register.
-  DenseSet<std::pair<MachineBasicBlock *, Register>> CrossBlockBridged;
+  DenseMap<std::pair<MachineBasicBlock *, Register>, unsigned>
+      CrossBlockBridges;
 
   for (MachineInstr *MI : Plan.MFMAs) {
     MFMARewriteEntry Entry;
@@ -318,13 +319,14 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
     Entry.DstNeedsRestore =
         !Entry.DstRecolorSafe && (DstUses.empty() || HasTiedUse);
     if (Entry.DstNeedsRestore) {
-      Plan.UseBridges.push_back({MI->getParent(), DstReg});
+      Plan.UseBridges.push_back({MI->getParent(), DstReg, {}});
+      Plan.RestoredRegs.insert(DstReg);
       Plan.Entries.push_back(std::move(Entry));
       RedefRegs.insert(DstReg);
       continue;
     }
 
-    bool HasSameBlockBridge = false;
+    unsigned SameBlockBridge = ~0u;
     for (MachineOperand *RUOp : RedirectableUses) {
       MachineInstr *UserMI = RUOp->getParent();
 
@@ -342,13 +344,21 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
         // Record the copy apply() makes: one per MFMA in the MFMA's own block,
         // one per register in any other block.
         MachineBasicBlock *UseMBB = UserMI->getParent();
+        unsigned Bridge;
         if (UseMBB == MI->getParent()) {
-          if (!HasSameBlockBridge)
-            Plan.UseBridges.push_back({UseMBB, DstReg});
-          HasSameBlockBridge = true;
-        } else if (CrossBlockBridged.insert({UseMBB, DstReg}).second) {
-          Plan.UseBridges.push_back({UseMBB, DstReg});
+          if (SameBlockBridge == ~0u) {
+            SameBlockBridge = Plan.UseBridges.size();
+            Plan.UseBridges.push_back({UseMBB, DstReg, {}});
+          }
+          Bridge = SameBlockBridge;
+        } else {
+          auto [It, New] = CrossBlockBridges.try_emplace(
+              {UseMBB, DstReg}, Plan.UseBridges.size());
+          if (New)
+            Plan.UseBridges.push_back({UseMBB, DstReg, {}});
+          Bridge = It->second;
         }
+        Plan.UseBridges[Bridge].Uses.push_back(RUOp);
       }
 
       // If the dst is wholly recolored to AGPR, its reaching defs are
@@ -387,18 +397,205 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
 
 SmallVector<GCNRegPressure, 8>
 RewriteMFMAFormStage::measure(const MFMARewritePlan &Plan) {
+  // Where a register's pressure differs from the plan's flipped class: between
+  // Begin and End, take Sub off and put Add on.
+  struct PressureRange {
+    SlotIndex Begin, End;
+    GCNRegPressure Sub, Add;
+  };
+  SmallVector<PressureRange, 16> Ranges;
+  auto VGPRPressureOf = [&](Register Reg) {
+    GCNRegPressure P;
+    P.inc(Reg, LaneBitmask::getNone(), DAG.MRI.getMaxLaneMaskForVReg(Reg),
+          DAG.MRI);
+    return P;
+  };
+
+  // A use that cannot read an AGPR reads a VGPR copy, live from the first such
+  // use in the block to the last, in the lanes the uses from here on read.
+  for (const BridgeCopy &Bridge : Plan.UseBridges) {
+    SmallVector<std::pair<SlotIndex, LaneBitmask>, 4> UseLanes;
+    for (const MachineOperand *MO : Bridge.Uses)
+      UseLanes.push_back({DAG.LIS->getInstructionIndex(*MO->getParent()),
+                          MO->getSubReg()
+                              ? SRI->getSubRegIndexLaneMask(MO->getSubReg())
+                              : DAG.MRI.getMaxLaneMaskForVReg(Bridge.Reg)});
+    sort(UseLanes,
+         [](const auto &A, const auto &B) { return A.first < B.first; });
+
+    LaneBitmask Later;
+    SmallVector<LaneBitmask, 4> LanesFrom(UseLanes.size());
+    for (unsigned I = UseLanes.size(); I-- > 0;) {
+      Later |= UseLanes[I].second;
+      LanesFrom[I] = Later;
+    }
+    SlotIndex Begin = UseLanes.empty() ? SlotIndex() : UseLanes[0].first;
+    for (unsigned I = 0; I != UseLanes.size(); ++I) {
+      GCNRegPressure Add;
+      // Still in its VGPR class here.
+      Add.inc(Bridge.Reg, LaneBitmask::getNone(), LanesFrom[I], DAG.MRI);
+      SlotIndex End = UseLanes[I].first.getNextSlot();
+      Ranges.push_back({Begin, End, {}, Add});
+      Begin = End;
+    }
+  }
+
+  // A restored register is an AGPR where the chain carries it and a VGPR where
+  // the copy after its MFMA is read. Walk its live range value by value:
+  //  - an MFMA's def is in both banks, to the end of its block;
+  //  - the value round the loop, or a bridged init, is an AGPR, and its VGPR
+  //    lives only to the last read outside the plan;
+  //  - any other value is a VGPR def.
+  for (Register Reg : Plan.RestoredRegs) {
+    const LiveInterval &LI = DAG.LIS->getInterval(Reg);
+    GCNRegPressure InVGPR = VGPRPressureOf(Reg);
+    GCNRegPressure InAGPR = agprPressureOf(Reg);
+
+    // The last read of each value outside the plan: its VGPR is needed up to
+    // there.
+    DenseMap<const VNInfo *, SlotIndex> LastOtherRead;
+    for (const MachineOperand &MO : DAG.MRI.use_nodbg_operands(Reg)) {
+      const MachineInstr *UseMI = MO.getParent();
+      if (Plan.MFMASet.contains(UseMI))
+        continue;
+      SlotIndex Idx = DAG.LIS->getInstructionIndex(*UseMI);
+      const VNInfo *V = LI.Query(Idx).valueIn();
+      if (!V)
+        continue;
+      SlotIndex &Last = LastOtherRead[V];
+      if (!Last.isValid() || Idx.getRegSlot() > Last)
+        Last = Idx.getRegSlot();
+    }
+
+    for (const LiveRange::Segment &S : LI.segments) {
+      const MachineInstr *Def = DAG.LIS->getInstructionFromIndex(S.valno->def);
+      if (Def && Plan.MFMASet.contains(Def)) {
+        SlotIndex BlockEnd = DAG.LIS->getMBBEndIdx(Def->getParent());
+        Ranges.push_back({S.start, std::min(S.end, BlockEnd), {}, InAGPR});
+      } else if (S.valno->isPHIDef() ||
+                 (Def && Plan.DefBridges.contains(
+                             {const_cast<MachineInstr *>(Def), Reg}))) {
+        Ranges.push_back({S.start, S.end, {}, InAGPR});
+        SlotIndex From = S.start;
+        auto It = LastOtherRead.find(S.valno);
+        if (It != LastOtherRead.end())
+          From = std::max(From, It->second.getNextSlot());
+        if (From < S.end)
+          Ranges.push_back({From, S.end, InVGPR, {}});
+      }
+    }
+  }
+
+  // A src2 that cannot be recolored is copied into an AGPR after each reaching
+  // def, and the MFMA reads the copy. The register stays a VGPR for its other
+  // readers: the AGPR is live from the def to the MFMA, the VGPR to its last
+  // other reader unless something reads it past the MFMA.
+  SmallVector<Register, 8> Bridged;
+  for (const MFMARewriteEntry &Entry : Plan.Entries) {
+    if (Entry.Src2Bridges.empty())
+      continue;
+    Register Reg =
+        TII->getNamedOperand(*Entry.MFMA, AMDGPU::OpName::src2)->getReg();
+    // Recolored with its chain, and measured as such.
+    if (Plan.RestoredRegs.contains(Reg) ||
+        any_of(Plan.MFMAs, [&](const MachineInstr *MI) {
+          return MI->getOperand(0).getReg() == Reg;
+        }))
+      continue;
+    if (!is_contained(Bridged, Reg))
+      Bridged.push_back(Reg);
+    const LiveInterval &LI = DAG.LIS->getInterval(Reg);
+    GCNRegPressure InVGPR = VGPRPressureOf(Reg);
+    GCNRegPressure InAGPR = agprPressureOf(Reg);
+    SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*Entry.MFMA);
+    bool ReadLater = LI.liveAt(UseIdx.getDeadSlot());
+    for (const MachineInstr *RD : Entry.Src2Bridges) {
+      SlotIndex From = DAG.LIS->getInstructionIndex(*RD).getRegSlot();
+      SlotIndex To = UseIdx.getRegSlot();
+      if (To <= From)
+        To = DAG.LIS->getMBBEndIdx(RD->getParent());
+      Ranges.push_back({From, To, {}, InAGPR});
+      if (ReadLater)
+        continue;
+      // The VGPR is needed up to the last reader that is not in the plan.
+      SlotIndex Last = From;
+      for (const MachineOperand &MO : DAG.MRI.use_nodbg_operands(Reg)) {
+        const MachineInstr *UseMI = MO.getParent();
+        if (Plan.MFMASet.contains(UseMI))
+          continue;
+        SlotIndex Idx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot();
+        if (Idx > Last && Idx < To)
+          Last = Idx;
+      }
+      Ranges.push_back({Last.getNextSlot(), To, InVGPR, {}});
+    }
+  }
+
+  // Restored registers and bridged src2s keep a VGPR, so they are not flipped.
+  SmallVector<Register, 16> Recolor;
+  for (Register Reg : Plan.RecolorRegs)
+    if (!Plan.RestoredRegs.contains(Reg) && !is_contained(Bridged, Reg))
+      Recolor.push_back(Reg);
+
   // Put the candidates in AGPR form just long enough to measure the pressure
   // they produce. The scope restores the VGPR form on every exit path: the real
   // rewrite has to happen after copy insertion, since some defs of a register
   // may still require a VGPR.
-  AMDGPU::MFMAToAGPR::FormScope Scope(*MFMAToAGPR, Plan.MFMAs,
-                                      Plan.RecolorRegs.getArrayRef());
+  AMDGPU::MFMAToAGPR::FormScope Scope(*MFMAToAGPR, Plan.MFMAs, Recolor);
 
   SmallVector<GCNRegPressure, 8> Pressures;
-  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++)
-    if (RegionsWithExcessArchVGPR[Region])
-      Pressures.push_back(DAG.getRealRegPressure(Region));
+  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
+    auto [Begin, End] = DAG.Regions[Region];
+    GCNRegPressure Pressure;
+
+    // Walk the region so that a range counts only where it is live.
+    SmallVector<const PressureRange *, 8> Active;
+    if (Begin != End) {
+      SlotIndex RegionFirst = DAG.LIS->getInstructionIndex(*Begin);
+      SlotIndex RegionLast = DAG.LIS->getInstructionIndex(
+          *skipDebugInstructionsBackward(std::prev(End), Begin));
+      for (const PressureRange &R : Ranges)
+        if (R.Begin <= RegionLast && R.End > RegionFirst)
+          Active.push_back(&R);
+    }
+
+    if (Active.empty()) {
+      Pressure = DAG.getRealRegPressure(Region);
+    } else {
+      GCNDownwardRPTracker RPTracker(*DAG.LIS);
+      if (RPTracker.reset(*Begin, End, &DAG.LiveIns[Region])) {
+        while (RPTracker.getNext() != End) {
+          SlotIndex Idx = DAG.LIS->getInstructionIndex(*RPTracker.getNext());
+          if (!RPTracker.advance())
+            break;
+          GCNRegPressure Step = RPTracker.moveMaxPressure();
+          for (const PressureRange *R : Active) {
+            if (Idx < R->Begin || Idx >= R->End)
+              continue;
+            if (Step.getArchVGPRNum() >= R->Sub.getArchVGPRNum())
+              Step -= R->Sub;
+            Step += R->Add;
+          }
+          Pressure = max(Pressure, Step);
+        }
+      }
+    }
+
+    Pressures.push_back(Pressure);
+  }
   return Pressures;
+}
+
+GCNRegPressure RewriteMFMAFormStage::agprPressureOf(Register Reg) {
+  // Measure Reg as an AGPR without creating a register, which would shift the
+  // numbers of the ones apply() creates.
+  const TargetRegisterClass *RC = DAG.MRI.getRegClass(Reg);
+  DAG.MRI.setRegClass(Reg, SRI->getEquivalentAGPRClass(RC));
+  GCNRegPressure P;
+  P.inc(Reg, LaneBitmask::getNone(), DAG.MRI.getMaxLaneMaskForVReg(Reg),
+        DAG.MRI);
+  DAG.MRI.setRegClass(Reg, RC);
+  return P;
 }
 
 RewriteMFMAFormStage::MFMARewriteCost
@@ -417,11 +614,7 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   unsigned AGPRThreshold = MaxVectorRegs.second;
   unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
 
-  unsigned MeasuredIdx = 0;
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
-    if (!RegionsWithExcessArchVGPR[Region])
-      continue;
-
     GCNRegPressure &PressureBefore = DAG.Pressure[Region];
     unsigned SpillCostBefore = PressureBefore.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
@@ -430,17 +623,31 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
     // addressable limit), rewriting alone should bring pressure to manageable
     // level. If we find any such region, then the rewrite is potentially
     // beneficial.
-    GCNRegPressure PressureAfter = PressuresAfter[MeasuredIdx++];
+    GCNRegPressure PressureAfter = PressuresAfter[Region];
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
     MaxAGPRAfter = std::max(MaxAGPRAfter, PressureAfter.getAGPRNum());
 
-    LLVM_DEBUG(dbgs() << "  region " << Region << ": ArchVGPR "
-                      << PressureBefore.getArchVGPRNum() << " -> "
-                      << PressureAfter.getArchVGPRNum() << ", AGPR "
-                      << PressureBefore.getAGPRNum() << " -> "
-                      << PressureAfter.getAGPRNum() << ", spills "
-                      << SpillCostBefore << " -> " << SpillCostAfter << '\n');
+    // Moving ArchVGPR overflow into the AGPRs only helps while both files hold
+    // what the region needs; getVGPRSpills() cannot show that.
+    auto Over = [&](const GCNRegPressure &P) {
+      unsigned Both = P.getArchVGPRNum() + P.getAGPRNum();
+      return Both > CombinedThreshold ? Both - CombinedThreshold : 0;
+    };
+    unsigned OverBefore = Over(PressureBefore), OverAfter = Over(PressureAfter);
+    if (OverAfter > OverBefore)
+      SpillCostAfter =
+          std::max(SpillCostAfter, SpillCostBefore + (OverAfter - OverBefore));
+
+    LLVM_DEBUG({
+      if (RegionsWithExcessArchVGPR[Region] || PressureBefore != PressureAfter)
+        dbgs() << "  region " << Region << ": ArchVGPR "
+               << PressureBefore.getArchVGPRNum() << " -> "
+               << PressureAfter.getArchVGPRNum() << ", AGPR "
+               << PressureBefore.getAGPRNum() << " -> "
+               << PressureAfter.getAGPRNum() << ", spills " << SpillCostBefore
+               << " -> " << SpillCostAfter << '\n';
+    });
 
     uint64_t BlockFreq =
         MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
@@ -509,8 +716,8 @@ RewriteMFMAFormStage::cost(const MFMARewritePlan &Plan,
   for (auto [DefMI, Reg] : Plan.DefBridges)
     ChargeCopy(DefMI->getParent(), Reg);
 
-  for (auto [UseBlock, Reg] : Plan.UseBridges)
-    ChargeCopy(UseBlock, Reg);
+  for (const BridgeCopy &Bridge : Plan.UseBridges)
+    ChargeCopy(Bridge.MBB, Bridge.Reg);
 
   // Report the AGPR utilization only while there is headroom left. Past this
   // soft limit, using more AGPRs is a risk rather than a bonus: they spill too.

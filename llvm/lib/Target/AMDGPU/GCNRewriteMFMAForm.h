@@ -55,6 +55,14 @@ private:
     bool DstRecolorSafe;
   };
 
+  /// An AGPR->VGPR copy or restore that apply() emits.
+  struct BridgeCopy {
+    MachineBasicBlock *MBB;
+    Register Reg;
+    /// The uses redirected to the copy. Empty for a restore.
+    SmallVector<MachineOperand *, 4> Uses;
+  };
+
   /// A complete, not-yet-applied rewrite of the function.
   struct MFMARewritePlan {
     /// The MFMAs whose opcode flips, in program order.
@@ -67,9 +75,11 @@ private:
     SmallSetVector<Register, 16> RecolorRegs;
     /// (reaching def, register) pairs that get one bridge copy each.
     SmallSetVector<std::pair<MachineInstr *, Register>, 16> DefBridges;
-    /// One (block, register) pair per AGPR->VGPR copy or restore that apply()
-    /// emits, so the same pair can appear more than once.
-    SmallVector<std::pair<MachineBasicBlock *, Register>, 16> UseBridges;
+    /// Registers whose MFMA result is copied back into the original VGPR after
+    /// the MFMA.
+    SmallSetVector<Register, 16> RestoredRegs;
+    /// One entry per copy or restore apply() emits.
+    SmallVector<BridgeCopy, 16> UseBridges;
   };
 
   /// Plan the rewrite of \p Cands, which must be in program order, into
@@ -87,9 +97,13 @@ private:
   /// or 0 if converting none of them is.
   unsigned findBestChainCount(ArrayRef<SmallVector<MachineInstr *, 8>> Chains);
 
-  /// \returns the pressure of every region over the ArchVGPR limit, as it would
-  /// be once \p Plan is applied. The AGPR form is reverted before returning.
+  /// \returns the pressure of every region once \p Plan is applied. The AGPR
+  /// form is reverted before returning. Restored registers and bridged src2s
+  /// stay VGPR, with their AGPR counted where it is live.
   SmallVector<GCNRegPressure, 8> measure(const MFMARewritePlan &Plan);
+
+  /// \returns the pressure \p Reg would have as an AGPR.
+  GCNRegPressure agprPressureOf(Register Reg);
 
   /// What cost() thinks of a plan. Compared by findBestChainCount(); see
   /// isBetterThan() for the ordering.

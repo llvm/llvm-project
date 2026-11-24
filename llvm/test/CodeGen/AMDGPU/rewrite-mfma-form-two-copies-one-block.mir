@@ -1,13 +1,14 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
-# Two MFMAs define %x in the same block. The first one's result is read by a
-# VALU, so it needs an AGPR->VGPR copy before the read. The second one's result
-# is read by a tied FMAC after the loop, so it is restored into %x. Both copies
-# land in the same block for the same register, and both have to be charged:
-# the cost model once keyed them as one. A copy of a 128-bit register in a loop
-# block costs 576.
+# Two MFMAs define %x in one block: the first's result is read by a VALU
+# (AGPR->VGPR copy), the second's by a tied FMAC after the loop (restore into
+# %x). Both copies are in one block for one register, and both are charged. A
+# 128-bit copy in a loop block costs 576.
+#
+# The second chain (%t0, %t1) gives the rewrite something to save.
 
+# CHECK: region 1: ArchVGPR 299 -> 296, AGPR 0 -> 8, spills 43 -> 40
 # CHECK: copy cost 1152
 
 --- |
@@ -41,9 +42,12 @@ body: |
   bb.1:
     successors: %bb.1(0x7e000000), %bb.2(0x02000000)
 
+    %t0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %t1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %t0, 0, 0, 0, implicit $mode, implicit $exec
     %x:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, 0, 0, 0, 0, implicit $mode, implicit $exec
     %v:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %x.sub0, implicit $mode, implicit $exec
     %x:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %x, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %t1
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc
     S_BRANCH %bb.1
 
