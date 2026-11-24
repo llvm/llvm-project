@@ -3943,11 +3943,12 @@ static bool CheckNoDoubleVectors(Sema *S, SourceLocation Loc, int ArgOrdinal,
   return false;
 }
 
-static bool CheckFloatingOrIntRepresentation(Sema *S, SourceLocation Loc,
-                                             int ArgOrdinal,
-                                             clang::QualType PassedType) {
-  if (!PassedType->hasIntegerRepresentation() &&
-      !PassedType->hasFloatingRepresentation())
+static bool CheckNumericRepresentation(Sema *S, SourceLocation Loc,
+                                       int ArgOrdinal,
+                                       clang::QualType PassedType) {
+  if (getScalarComponentType(PassedType)->isBooleanType() ||
+      (!PassedType->hasIntegerRepresentation() &&
+       !PassedType->hasFloatingRepresentation()))
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* integer */ 1
            << /* fp */ 1 << PassedType;
@@ -5297,7 +5298,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatingOrIntRepresentation))
+                                   CheckNumericRepresentation))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
     break;
@@ -5668,6 +5669,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     SetElementTypeAsReturnType(&SemaRef, TheCall,
                                getASTContext().UnsignedIntTy);
     break;
+  }
+  case Builtin::BI__builtin_hlsl_isdebuggingenabled: {
+    if (!getASTContext().getTargetInfo().getTriple().isDXIL()) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_builtin_target_unsupported);
+      return true;
+    }
+    return false;
   }
   }
   return false;

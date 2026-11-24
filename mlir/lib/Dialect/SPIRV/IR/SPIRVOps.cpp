@@ -31,6 +31,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1512,6 +1513,12 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
+  if (storageClass != spirv::StorageClass::Private &&
+      containsMicroscalingType(
+          cast<spirv::PointerType>(getType()).getPointeeType(),
+          /*subByteOnly=*/true))
+    return emitOpError("FP4 and FP6 types require Function or Private storage");
+
   // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
   // not be decorated with the Import Linkage Type."
   if (std::optional<spirv::LinkageAttributesAttr> linkage =
@@ -1547,6 +1554,47 @@ spirv::GlobalVariableOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                          "spirv.SpecConstant or "
                          "spirv.SpecConstantCompositeOp op");
     }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.FunctionPointerCall
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::INTELFunctionPointerCallOp::verify() {
+  auto functionType = cast<FunctionType>(
+      cast<spirv::PointerType>(getFunctionPointer().getType())
+          .getPointeeType());
+
+  OperandRange arguments = getArguments();
+  if (functionType.getNumInputs() != arguments.size()) {
+    return emitOpError("has incorrect number of operands for callee: expected ")
+           << functionType.getNumInputs() << ", but provided "
+           << arguments.size();
+  }
+
+  for (auto [i, expected, argument] :
+       llvm::enumerate(functionType.getInputs(), arguments)) {
+    if (argument.getType() != expected) {
+      return emitOpError("operand type mismatch: expected operand type ")
+             << expected << ", but provided " << argument.getType()
+             << " for operand number " << i;
+    }
+  }
+
+  if (functionType.getNumResults() != getNumResults()) {
+    return emitOpError("has incorrect number of results for callee: expected ")
+           << functionType.getNumResults() << ", but provided "
+           << getNumResults();
+  }
+
+  if (getReturnValue() &&
+      getReturnValue().getType() != functionType.getResult(0)) {
+    return emitOpError("result type mismatch: expected ")
+           << functionType.getResult(0) << ", but provided "
+           << getReturnValue().getType();
   }
 
   return success();

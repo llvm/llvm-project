@@ -252,7 +252,9 @@ peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
 Oliver Stannard (esp. assembly/dissassembly) \
 oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
 Ties Stuij (Arm GlobalISel and early arch support) \
-ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
+ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub) \
+Asher Dobrescu (esp. scheduling models) \
+ash.dobrescu@arm.com (email), [Asher8118](https://github.com/Asher8118) (GitHub)
 
 #### AMDGPU backend
 

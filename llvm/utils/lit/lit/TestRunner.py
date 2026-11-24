@@ -1712,10 +1712,10 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
             return False, ln
 
         def parseText(ln, isNested):
-            # parse everything until %if, or %} if we're parsing a
+            # parse everything until '%if ', or '%}' if we're parsing a
             # nested expression.
             match = _caching_re_compile(
-                "(.*?)(?:%if|%})" if isNested else "(.*?)(?:%if)"
+                "(.*?)(?:%if |%})" if isNested else "(.*?)(?:%if )"
             ).search(ln)
             if not match:
                 # there is no terminating pattern, so treat the whole

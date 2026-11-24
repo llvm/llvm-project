@@ -33,10 +33,6 @@ void complex::ComplexDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Complex/IR/ComplexOps.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc"
-      >();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ComplexDialect>();
   addInterfaces<ComplexInlinerInterface>();
 }

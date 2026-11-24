@@ -15,7 +15,7 @@ char4 f4(int x) {
 }
 
 // CIR: cir.func {{.*}} @f4
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s8i>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s8i>>
 // CIR:   %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %{{.*}}, %[[X_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP_X:.*]] = cir.load {{.*}} %[[X_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -33,7 +33,7 @@ int f6(char4 x) {
 }
 
 // CIR: cir.func {{.*}} @f6
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.vector<4 x !s8i>>
 // CIR:   cir.store %{{.*}}, %[[X_ADDR]] : !cir.vector<4 x !s8i>, !cir.ptr<!cir.vector<4 x !s8i>>
 // CIR:   %[[TMP_X:.*]] = cir.load {{.*}} %[[X_ADDR]] : !cir.ptr<!cir.vector<4 x !s8i>>, !cir.vector<4 x !s8i>
@@ -51,7 +51,7 @@ int* int_to_ptr(int x) {
 }
 
 // CIR: cir.func {{.*}} @int_to_ptr
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %{{.*}}, %[[X_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[TMP_X:.*]] = cir.load {{.*}} %[[X_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -69,7 +69,7 @@ char3 vec4_to_vec_3(char4 x) {
 }
 
 // CIR: cir.func {{.*}} @vec4_to_vec_3
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<3 x !s8i>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<3 x !s8i>>
 // CIR:   %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.vector<4 x !s8i>>
 // CIR:   cir.store %{{.*}}, %[[X_ADDR]] : !cir.vector<4 x !s8i>, !cir.ptr<!cir.vector<4 x !s8i>>
 // CIR:   %[[TMP_X:.*]] = cir.load {{.*}} %[[X_ADDR]] : !cir.ptr<!cir.vector<4 x !s8i>>, !cir.vector<4 x !s8i>

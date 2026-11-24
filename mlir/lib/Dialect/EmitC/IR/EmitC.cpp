@@ -33,14 +33,6 @@ void EmitCDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
       >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/EmitC/IR/EmitCTypes.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/EmitC/IR/EmitCAttributes.cpp.inc"
-      >();
 }
 
 /// Materialize a single constant operation from a given attribute value with

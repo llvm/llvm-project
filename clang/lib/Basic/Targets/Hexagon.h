@@ -36,6 +36,7 @@ class LLVM_LIBRARY_VISIBILITY HexagonTargetInfo : public TargetInfo {
   bool HasAudio = false;
   bool HasHLX = false;
   bool UseLongCalls = false;
+  bool HasHMX = false;
 
 public:
   HexagonTargetInfo(const llvm::Triple &Triple, const TargetOptions &)

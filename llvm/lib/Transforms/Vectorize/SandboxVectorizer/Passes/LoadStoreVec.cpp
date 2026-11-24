@@ -69,6 +69,12 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
+/// \returns \p ElemTy if \p N is 1, otherwise < \p N x \p ElemTy >.
+static Type *getWidenedType(Type *ElemTy, unsigned N) {
+  assert(!ElemTy->isVectorTy() && "Expected a scalar element type!");
+  return N == 1 ? ElemTy : FixedVectorType::get(ElemTy, N);
+}
+
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
@@ -80,12 +86,12 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   return VecL;
 }
 
-bool ScalarConstReinterpret::canReinterpret(Type *SrcTy, Type *DestTy,
-                                            const DataLayout &DL) {
+bool SameSizeReinterpret::canReinterpret(Type *SrcTy, Type *DestTy,
+                                         const DataLayout &DL) {
   return !isNonIntegralPtr(SrcTy, DL) && !isNonIntegralPtr(DestTy, DL);
 }
 
-Type *ScalarConstReinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
+Type *SameSizeReinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
   Context &Ctx = Ty->getContext();
   if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
     auto *ElmIntTy =
@@ -95,9 +101,9 @@ Type *ScalarConstReinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
   return IntegerType::get(Ctx, Utils::getNumBits(Ty, DL));
 }
 
-SmallVector<ScalarConstReinterpret::CastStep, 3>
-ScalarConstReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
-                                     const DataLayout &DL) {
+SmallVector<SameSizeReinterpret::CastStep, 3>
+SameSizeReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
+                                  const DataLayout &DL) {
   assert(canReinterpret(SrcTy, DestTy, DL) &&
          "Cannot reinterpret a non-integral pointer!");
   assert(Utils::getNumBits(SrcTy, DL) == Utils::getNumBits(DestTy, DL) &&
@@ -122,8 +128,20 @@ ScalarConstReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
   return Chain;
 }
 
-Constant *ScalarConstReinterpret::reinterpretConstant(Constant *C, Type *DestTy,
-                                                      const DataLayout &DL) {
+Value *SameSizeReinterpret::reinterpretValue(Value *V, Type *DestTy,
+                                             BasicBlock::iterator WhereIt,
+                                             Context &Ctx,
+                                             const DataLayout &DL) {
+  if (!canReinterpret(V->getType(), DestTy, DL))
+    return nullptr;
+  Value *NewV = V;
+  for (auto [Opc, Ty] : getCastChain(V->getType(), DestTy, DL))
+    NewV = CastInst::create(Ty, Opc, NewV, WhereIt, Ctx, "VCast");
+  return NewV;
+}
+
+Constant *SameSizeReinterpret::reinterpretConstant(Constant *C, Type *DestTy,
+                                                   const DataLayout &DL) {
   if (!canReinterpret(C->getType(), DestTy, DL))
     return nullptr;
   Constant *NewC = C;
@@ -215,8 +233,7 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
   for (Constant *C : ConstantElements) {
     unsigned Bits = Utils::getNumBits(C, *DL);
     if (Bits == LaneBits) {
-      Constant *Lane =
-          ScalarConstReinterpret::reinterpretConstant(C, LaneTy, *DL);
+      Constant *Lane = SameSizeReinterpret::reinterpretConstant(C, LaneTy, *DL);
       if (Lane == nullptr)
         return nullptr;
       LaneTyConstants.push_back(Lane);
@@ -243,7 +260,7 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
         Constant *SliceCInt = ConstantInt::get(
             *Ctx, Val.extractBits(LaneBits, EndianAwareSlice * LaneBits));
         Constant *SliceC =
-            ScalarConstReinterpret::reinterpretConstant(SliceCInt, LaneTy, *DL);
+            SameSizeReinterpret::reinterpretConstant(SliceCInt, LaneTy, *DL);
         if (SliceC == nullptr)
           return nullptr;
         LaneTyConstants.push_back(SliceC);
@@ -332,10 +349,14 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   if (!VecTy)
     return nullptr;
 
-  // TODO: Support mixed-type top-level load chains.
+  // Each load is unpacked from the lanes it occupies in the vector and, for a
+  // chain of mixed types, reinterpreted back as the type of the load.
   Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  if (!all_of(Loads, [VecElemTy](Instruction *I) {
-        return VecUtils::getElementType(I->getType()) == VecElemTy;
+  unsigned ElemBits = Utils::getNumBits(VecElemTy, *DL);
+  if (any_of(Loads, [this, VecElemTy, ElemBits](Instruction *I) {
+        unsigned NumElems = Utils::getNumBits(I) / ElemBits;
+        return !SameSizeReinterpret::canReinterpret(
+            getWidenedType(VecElemTy, NumElems), I->getType(), *DL);
       }))
     return nullptr;
 
@@ -344,14 +365,22 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   auto *VecLoad = createVectorLoad(Loads);
   assert(VecLoad != nullptr && "Expected vector load");
 
+  // Lanes are counted in units of VecElemTy, so a load wider than VecElemTy
+  // spans several lanes.
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
-  for (auto [Lane, OrigV] : VecUtils::enumerateLanes(Loads)) {
-    auto *OrigLoad = cast<LoadInst>(OrigV);
-    if (OrigLoad->hasNUses(0))
-      continue;
-    Value *Unpacked =
-        VecUtils::unpack(VecLoad, OrigLoad->getType(), Lane, WhereIt);
-    OrigLoad->replaceAllUsesWith(Unpacked);
+  unsigned Lane = 0;
+  for (Instruction *I : Loads) {
+    unsigned NumElems =
+        Utils::getNumBits(I) / Utils::getNumBits(VecElemTy, *DL);
+    Type *UnpackTy = getWidenedType(VecElemTy, NumElems);
+    unsigned NumLanes = VecUtils::getNumLanes(UnpackTy);
+    if (!I->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, UnpackTy, Lane, WhereIt);
+      Unpacked = SameSizeReinterpret::reinterpretValue(Unpacked, I->getType(),
+                                                       WhereIt, *Ctx, *DL);
+      I->replaceAllUsesWith(Unpacked);
+    }
+    Lane += NumLanes;
   }
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Loads);
@@ -388,9 +417,10 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
     llvm_unreachable("Expected Load or Store");
   }
 
-  Legality = std::make_unique<LegalityAnalysis>(
-      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
-      A->getTTI(), F.getContext(), IMaps, Dir);
+  LegalityAnalysis L(A->getAA(), A->getScalarEvolution(),
+                     F.getParent()->getDataLayout(), A->getTTI(),
+                     F.getContext(), IMaps, Dir);
+  Legality = &L;
 
   bool Changed = false;
   switch (Opc) {

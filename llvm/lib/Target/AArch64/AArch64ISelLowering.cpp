@@ -10736,8 +10736,31 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue ThunkVarArgSrc = OutVals[Outs.size() - 2];
     SDValue ThunkVarArgSize =
         DAG.getZExtOrTrunc(OutVals[Outs.size() - 1], DL, PtrVT);
-    SDValue RoundedThunkVarArgSize = DAG.getNode(
-        ISD::ADD, DL, PtrVT, ThunkVarArgSize, DAG.getConstant(15, DL, PtrVT));
+
+    // All arguments other than the first four will have to be copied with
+    // `memcpy` into the outgoing stack area (RSP+0x20 for x86-64). There is a
+    // special case when the x86-64 function returns a 16-byte structure: The
+    // x86-64 ABI requires that the value be returned in memory, so it has a
+    // hidden pointer, and the 4th argument has to spill to the stack; the
+    // ARM64EC function returns the value in {X0,X1} and it doesn't have a
+    // hidden pointer. In this case, the x86-64 function has one more argument
+    // than the ARM64EC one:
+    //
+    //   SP+00 => home for hidden pointer
+    //   SP+08 => home for 1st argument
+    //   SP+16 => home for 2nd argument
+    //   SP+24 => home for 3rd argument
+    //   SP+32 => 4th argument             ; !!
+    //   SP+40 => 5th argument             ; written by `memcpy`
+    //   SP+48 => ...
+    //
+    // `NumBytes` (32, or 40 in the hidden pointer case) is exactly the
+    // distance from the stack pointer to the 5th argument, so the whole
+    // outgoing argument area is reserved here, together with stack arguments
+    // from the 5th, in the same dynamically allocated block.
+    SDValue RoundedThunkVarArgSize =
+        DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgSize,
+                    DAG.getConstant(NumBytes + 15, DL, PtrVT));
     RoundedThunkVarArgSize =
         DAG.getNode(ISD::AND, DL, PtrVT, RoundedThunkVarArgSize,
                     DAG.getSignedConstant(-16, DL, PtrVT));
@@ -10747,12 +10770,24 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = ThunkVarArgDst.getValue(1);
     MFI.CreateVariableSizedObject(Align(16), nullptr);
 
-    // The x64 shadow store for the final thunk call is allocated by the normal
-    // CALLSEQ_START below. Copy the variadic stack arguments before that call
-    // sequence starts so lowering the memcpy libcall cannot create nested
+    // The copy goes right after the outgoing argument area, which is where the
+    // x64 callee expects its first stack argument.
+    ThunkVarArgDst = DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgDst,
+                                 DAG.getConstant(NumBytes, DL, PtrVT));
+
+    // The dynamically allocated block includes the outgoing stack area for the
+    // target function below, taking the place of its call frame. Varargs will
+    // have been copied by `memcpy` below, so the call must not adjust the
+    // stack pointer any further. The function call will look as if it didn't
+    // have a call frame, which isn't the case: Its call frame is now provided
+    // by the dynamically allocated block.
+    NumBytes = 0;
+
+    // Copy the variadic stack arguments before the call sequence starts so
+    // lowering the memcpy libcall cannot create nested
     // ADJCALLSTACKDOWN/ADJCALLSTACKUP pairs.
     Chain = DAG.getMemcpy(
-        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(16),
+        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(8),
         Align(1), /*isVol=*/false, /*AlwaysInline=*/false,
         /*CI=*/nullptr, std::nullopt, MachinePointerInfo::getUnknownStack(MF),
         MachinePointerInfo());
@@ -23044,22 +23079,27 @@ static SDValue performConcatVectorsCombine(SDNode *N,
           if (V.isUndef())
             return true;
           LoadSDNode *LD = dyn_cast<LoadSDNode>(V);
-          return LD && V.hasOneUse() && LD->isSimple() && !LD->isIndexed() &&
+          return LD && V.hasOneUser() && LD->isSimple() && !LD->isIndexed() &&
                  LD->getExtensionType() == ISD::NON_EXTLOAD;
         })) {
       EVT FVT = SrcVT == MVT::v2i8 ? MVT::f16 : MVT::f32;
       EVT NVT = EVT::getVectorVT(*DAG.getContext(), FVT, N->getNumOperands());
       SmallVector<SDValue> Ops;
+      SmallDenseMap<SDValue, SDValue> NewLoads;
 
       for (unsigned i = 0; i < N->getNumOperands(); i++) {
         SDValue V = N->getOperand(i);
         if (V.isUndef())
           Ops.push_back(DAG.getUNDEF(FVT));
         else {
-          LoadSDNode *LD = cast<LoadSDNode>(V);
-          SDValue NewLoad = DAG.getLoad(FVT, DL, LD->getChain(),
-                                        LD->getBasePtr(), LD->getMemOperand());
-          DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+          // The same load may feed several operands; only convert it once.
+          SDValue &NewLoad = NewLoads[V];
+          if (!NewLoad) {
+            LoadSDNode *LD = cast<LoadSDNode>(V);
+            NewLoad = DAG.getLoad(FVT, DL, LD->getChain(), LD->getBasePtr(),
+                                  LD->getMemOperand());
+            DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+          }
           Ops.push_back(NewLoad);
         }
       }
@@ -34622,6 +34662,11 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
     }
   }
+  // The stride of a GEP with a scalable source element type is
+  // vscale-dependent, which the IRTranslator can't handle.
+  if (const auto *GEP = dyn_cast<GetElementPtrInst>(&Inst))
+    if (GEP->getSourceElementType()->isScalableTy())
+      return true;
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {

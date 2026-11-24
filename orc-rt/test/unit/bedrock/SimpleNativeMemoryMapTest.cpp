@@ -21,6 +21,7 @@
 #include "gtest/gtest.h"
 
 #include <cstring>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -55,26 +56,22 @@ TEST(SimpleNativeMemoryMapTest, CreateAndDestroy) {
   // Test that we can create and destroy a SimpleNativeMemoryMap instance as
   // expected.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ThrowAway;
-  EXPECT_THAT_EXPECTED(SimpleNativeMemoryMap::Create(S, ThrowAway),
-                       Succeeded());
+  SimpleNativeMemoryMap SNMM(S);
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
   // Test that we can reserve and release a slab of address space as expected,
   // without finalizing any memory within it.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   std::future<Expected<void *>> ReserveResult;
-  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
   auto Addr = ReserveResult.get();
   ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   std::future<Error> ReleaseResult;
-  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  SNMM->releaseMultiple(waitFor(ReleaseResult), {*Addr});
   ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
@@ -88,12 +85,10 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
   // 4. release the address range.
 
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   std::future<Expected<void *>> ReserveResult;
-  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
   auto Addr = ReserveResult.get();
   ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
@@ -143,7 +138,7 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
   });
 
   std::future<Expected<void *>> InitializeResult;
-  (*SNMM)->initialize(waitFor(InitializeResult), std::move(IR));
+  SNMM->initialize(waitFor(InitializeResult), std::move(IR));
   auto InitializeKeyAddr = InitializeResult.get();
   ASSERT_THAT_EXPECTED(InitializeKeyAddr, Succeeded());
 
@@ -152,7 +147,7 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
   EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Error> DeallocResult;
-  (*SNMM)->deinitializeMultiple(waitFor(DeallocResult), {*InitializeKeyAddr});
+  SNMM->deinitializeMultiple(waitFor(DeallocResult), {*InitializeKeyAddr});
   ASSERT_THAT_ERROR(DeallocResult.get(), Succeeded());
 
   EXPECT_EQ(SentinelValue1, 42U);
@@ -160,36 +155,32 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
   EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Error> ReleaseResult;
-  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  SNMM->releaseMultiple(waitFor(ReleaseResult), {*Addr});
   ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveRejectsNonPageSizeMultiple) {
   // Verify that reserve rejects sizes that aren't page-size multiples.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   std::future<Expected<void *>> ReserveResult;
-  (*SNMM)->reserve(waitFor(ReserveResult), S.processInfo().pageSize() + 1);
+  SNMM->reserve(waitFor(ReserveResult), S.processInfo().pageSize() + 1);
   EXPECT_THAT_EXPECTED(ReserveResult.get(), Failed());
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveAcceptsPageSizeMultiple) {
   // Verify that reserve accepts a size that's an exact page-size multiple.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   std::future<Expected<void *>> ReserveResult;
-  (*SNMM)->reserve(waitFor(ReserveResult), S.processInfo().pageSize());
+  SNMM->reserve(waitFor(ReserveResult), S.processInfo().pageSize());
   auto Addr = ReserveResult.get();
   ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   std::future<Error> ReleaseResult;
-  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  SNMM->releaseMultiple(waitFor(ReleaseResult), {*Addr});
   ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
@@ -198,14 +189,12 @@ TEST(SimpleNativeMemoryMapTest, ReleaseMultipleReportsErrors) {
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
   Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(Errors));
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   // Try to release an address that was never reserved.
   int Dummy;
   std::future<Error> ReleaseResult;
-  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {&Dummy});
+  SNMM->releaseMultiple(waitFor(ReleaseResult), {&Dummy});
   EXPECT_THAT_ERROR(ReleaseResult.get(), Failed());
 
   // The error for the unrecognized address should have been reported
@@ -218,26 +207,24 @@ TEST(SimpleNativeMemoryMapTest, DeinitializeMultipleReportsErrors) {
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
   Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(Errors));
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   // Reserve and initialize a slab so we have a valid context.
   std::future<Expected<void *>> ReserveResult;
-  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
   auto Addr = ReserveResult.get();
   ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   // Try to deinitialize an address that was never initialized.
   // This should fail and report the error.
   std::future<Error> DeinitResult;
-  (*SNMM)->deinitializeMultiple(waitFor(DeinitResult), {*Addr});
+  SNMM->deinitializeMultiple(waitFor(DeinitResult), {*Addr});
   EXPECT_THAT_ERROR(DeinitResult.get(), Failed());
 
   EXPECT_EQ(Errors.size(), 1U);
 
   std::future<Error> ReleaseResult;
-  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  SNMM->releaseMultiple(waitFor(ReleaseResult), {*Addr});
   ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
@@ -246,12 +233,10 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeShutdown) {
   // initialize some memory, then just shut down the memory manager.
 
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   std::future<Expected<void *>> ReserveResult;
-  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
   auto Addr = ReserveResult.get();
   ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
@@ -272,13 +257,13 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeShutdown) {
            ExecutorAddr::fromPtr(InitializeBase))});
 
   std::future<Expected<void *>> InitializeResult;
-  (*SNMM)->initialize(waitFor(InitializeResult), std::move(IR));
+  SNMM->initialize(waitFor(InitializeResult), std::move(IR));
   ASSERT_THAT_EXPECTED(InitializeResult.get(), Succeeded());
 
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<void> ShutdownResult;
-  (*SNMM)->onShutdown(waitFor(ShutdownResult));
+  SNMM->onShutdown(waitFor(ShutdownResult));
   ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);
@@ -289,12 +274,10 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeDetachShutdown) {
   // initialize some memory, then just shut down the memory manager.
 
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ThrowAway;
-  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
-  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
+  auto SNMM = std::make_unique<SimpleNativeMemoryMap>(S);
 
   std::future<Expected<void *>> ReserveResult;
-  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
   auto Addr = ReserveResult.get();
   ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
@@ -315,19 +298,19 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeDetachShutdown) {
            ExecutorAddr::fromPtr(InitializeBase))});
 
   std::future<Expected<void *>> InitializeResult;
-  (*SNMM)->initialize(waitFor(InitializeResult), std::move(IR));
+  SNMM->initialize(waitFor(InitializeResult), std::move(IR));
   ASSERT_THAT_EXPECTED(InitializeResult.get(), Succeeded());
 
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<void> DetachResult;
-  (*SNMM)->onDetach(waitFor(DetachResult), /* ShutdownRequested */ false);
+  SNMM->onDetach(waitFor(DetachResult), /* ShutdownRequested */ false);
   DetachResult.get();
 
   EXPECT_EQ(SentinelValue, 0);
 
   std::future<void> ShutdownResult;
-  (*SNMM)->onShutdown(waitFor(ShutdownResult));
+  SNMM->onShutdown(waitFor(ShutdownResult));
   ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);
