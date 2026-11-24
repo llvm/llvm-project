@@ -12,6 +12,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -1672,6 +1673,89 @@ unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
     return Scale;
   }
   return LoopAwareTripCount;
+}
+
+/// Checks if the instructions in \p Blocks use the values of \p L, directly or
+/// through the other instructions.
+static bool usesLoopValues(const Loop &L,
+                           const SmallPtrSetImpl<BasicBlock *> &Blocks) {
+  SmallVector<const Instruction *> Worklist;
+  for (BasicBlock *BB : L.blocks())
+    for (const Instruction &I : *BB)
+      Worklist.push_back(&I);
+  SmallPtrSet<const Instruction *, 16> Visited;
+  while (!Worklist.empty()) {
+    for (const User *U : Worklist.pop_back_val()->users()) {
+      const auto *UI = cast<Instruction>(U);
+      if (L.contains(UI) || !Visited.insert(UI).second)
+        continue;
+      if (Blocks.contains(UI->getParent()))
+        return true;
+      Worklist.push_back(UI);
+    }
+  }
+  return false;
+}
+
+SmallVector<SiblingLoopRegions> collectSiblingLoopRegions(const LoopInfo &LI,
+                                                          ScalarEvolution &SE) {
+  SmallVector<SiblingLoopRegions> Regions;
+  auto CollectRegions = [&](ArrayRef<Loop *> Siblings, const Loop *Parent) {
+    if (Siblings.size() < 2)
+      return;
+    for (Loop *Producer : Siblings) {
+      const SCEV *BTC = SE.getBackedgeTakenCount(Producer);
+      // The blocks, reachable from Starts, not crossing the producer and the
+      // headers of the parent loops. With StopAt, only the blocks of the parent
+      // loop up to the sibling headers without the proven equal trip count,
+      // collected in StopAt.
+      auto CollectReachable = [&](ArrayRef<BasicBlock *> Starts,
+                                  SmallPtrSetImpl<BasicBlock *> &Reachable,
+                                  SmallSetVector<BasicBlock *, 4> *StopAt) {
+        SmallVector<BasicBlock *> Worklist(Starts);
+        while (!Worklist.empty()) {
+          BasicBlock *BB = Worklist.pop_back_val();
+          const Loop *L = LI.isLoopHeader(BB) ? LI.getLoopFor(BB) : nullptr;
+          if (Reachable.contains(BB) || L == Producer ||
+              (Parent && ((StopAt && !Parent->contains(BB)) ||
+                          (L && L->contains(Parent)))))
+            continue;
+          if (StopAt && L && L->getParentLoop() == Parent &&
+              (isa<SCEVCouldNotCompute>(BTC) ||
+               BTC != SE.getBackedgeTakenCount(L))) {
+            StopAt->insert(BB);
+            continue;
+          }
+          Reachable.insert(BB);
+          append_range(Worklist, successors(BB));
+        }
+      };
+      SmallVector<BasicBlock *> Exits;
+      Producer->getExitBlocks(Exits);
+      SmallPtrSet<BasicBlock *, 8> Between;
+      SmallSetVector<BasicBlock *, 4> ConsumerHeaders;
+      CollectReachable(Exits, Between, &ConsumerHeaders);
+      if (ConsumerHeaders.empty())
+        continue;
+      SiblingLoopRegions R;
+      CollectReachable(ConsumerHeaders.getArrayRef(), R.Consumer,
+                       /*StopAt=*/nullptr);
+      // Only the trees, which use the producer values, gather them. The early
+      // visited producer may gather the values of the later loops, carried by
+      // the parent loop, so it is not visited early without such trees.
+      if (!usesLoopValues(*Producer, R.Consumer))
+        continue;
+      R.Producer.insert_range(Producer->blocks());
+      for (BasicBlock *BB : Between)
+        if (!R.Consumer.contains(BB))
+          R.Producer.insert(BB);
+      Regions.push_back(std::move(R));
+    }
+  };
+  CollectRegions(LI.getTopLevelLoops(), /*Parent=*/nullptr);
+  for (Loop *L : LI.getLoopsInPreorder())
+    CollectRegions(L->getSubLoops(), L);
+  return Regions;
 }
 
 bool areTwoInsertFromSameBuildVector(
