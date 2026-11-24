@@ -164,7 +164,7 @@ int testUnionMembers(Foo f) {
 
 int garray[10];     // expected-warning{{'garray' is an unsafe buffer that does not perform bounds checks}}
 int * gp = garray;  // expected-warning{{'gp' is an unsafe pointer used for buffer access}}
-int gvar = gp[1];   // FIXME: file scope unsafe buffer access is not warned
+int gvar = gp[1];   // expected-warning{{unsafe buffer access}}
 
 void testLambdaCaptureAndGlobal(int * p) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
