@@ -1,10 +1,10 @@
 ; REQUIRES: asserts
-; RUN: opt -enable-skip-cost-computation=false -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
+; RUN: opt -force-vplan-cost-model=true -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
 ; RUN:   -force-vector-width=2 -debug-only=loop-vectorize \
-; RUN:   -disable-output < %s 2>&1 | FileCheck %s --allow-unused-prefixes --check-prefixes=COMMON,NO_SKIP
-; RUN: opt -enable-skip-cost-computation=true -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
+; RUN:   -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,NO_SKIP
+; RUN: opt -force-vplan-cost-model=false -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
 ; RUN:   -force-vector-width=2 -debug-only=loop-vectorize \
-; RUN:   -disable-output < %s 2>&1 | FileCheck %s --allow-unused-prefixes --check-prefixes=COMMON,SKIP
+; RUN:   -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,SKIP
 
 ; Check costs for branches inside a vectorized loop around predicated
 ; blocks. Each such branch will be guarded with an extractelement from the

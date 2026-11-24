@@ -106,10 +106,10 @@ defm : OptionalValueField<"force-target-num-scalar-regs", "unsigned",
   "A flag that overrides the target's number of scalar registers">;
 defm : OptionalValueField<"force-target-num-vector-regs", "unsigned",
   "A flag that overrides the target's number of vector registers">;
+defm : BoolField<"force-vplan-cost-model", "false",
+  "Force the VPlan cost model instead of using legacy costs">;
 defm : OptionalBoolField<"force-widen-divrem-via-masked-intrinsic",
   "Override cost based masked intrinsic widening for div/rem instructions">;
-defm : BoolField<"enable-skip-cost-computation", "true",
-  "Enables skipping vplan cost computation in favour of legacy costs">;
 defm : BoolField<"interleave-loops", "true",
   "Enable loop interleaving in Loop vectorization passes">;
 defm : BoolField<"loop-vectorize-with-block-frequency", "true",

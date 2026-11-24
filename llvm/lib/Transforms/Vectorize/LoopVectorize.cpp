@@ -5264,6 +5264,7 @@ VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
+  assert(!Opts.force_vplan_cost_model && "Unexpectedly calling getLegacyCost");
   InstructionCost Cost = CM.getInstructionCost(UI, VF);
   if (Cost.isValid() && Opts.force_target_instruction_cost)
     return InstructionCost(*Opts.force_target_instruction_cost);
@@ -5315,7 +5316,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
   // Don't apply special costs when instruction cost is forced to make sure the
   // forced cost is used for each recipe.
-  if (Opts.force_target_instruction_cost)
+  if (Opts.force_target_instruction_cost || Opts.force_vplan_cost_model)
     return Cost;
 
   // Only charge legacy scalarization costs for instructions VPlan replicates,
@@ -5349,7 +5350,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
   // Don't apply legacy scalarization costs if nothing remains scalar &
   // predicated.
-  if (!hasReplicatorRegion(Plan) || !Opts.enable_skip_cost_computation)
+  if (!hasReplicatorRegion(Plan))
     return Cost;
 
   auto UseVPlanCostModel = [](Instruction *I) -> bool {

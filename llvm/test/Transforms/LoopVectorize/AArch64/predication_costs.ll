@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -enable-skip-cost-computation=false < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NO_SKIP
-; RUN: opt -enable-skip-cost-computation=true < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,SKIP
+; RUN: opt -force-vplan-cost-model=true < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NO_SKIP
+; RUN: opt -force-vplan-cost-model=false < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,SKIP
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -104,7 +104,6 @@ for.end:
 ; CHECK:   Found scalar instruction:   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK:   Found scalar instruction:   %addr.next = getelementptr inbounds i32, ptr %addr, i64 1
 ; CHECK:   Scalarizing and predicating: store i32 %tmp2, ptr %addr, align 4
-; CHECK:   Cost of 0 for VF 2: forced scalar   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; SKIP:    Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
 ; SKIP:    Precomputed costs for VF 2: 4
 ; NO_SKIP: Precomputed costs for VF 2: 0

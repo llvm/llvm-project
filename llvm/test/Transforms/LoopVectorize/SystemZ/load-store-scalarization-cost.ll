@@ -1,12 +1,12 @@
 ; REQUIRES: asserts
-; RUN: opt -enable-skip-cost-computation=false -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
+; RUN: opt -force-vplan-cost-model=true -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
 ; RUN:   -debug-only=loop-vectorize \
 ; RUN:   -disable-output -enable-interleaved-mem-accesses=false < %s 2>&1 | \
-; RUN:   FileCheck %s --allow-unused-prefixes --check-prefixes=COMMON,NO_SKIP
-; RUN: opt -enable-skip-cost-computation=true -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
+; RUN:   FileCheck %s --check-prefixes=COMMON,NO_SKIP
+; RUN: opt -force-vplan-cost-model=false -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
 ; RUN:   -debug-only=loop-vectorize \
 ; RUN:   -disable-output -enable-interleaved-mem-accesses=false < %s 2>&1 | \
-; RUN:   FileCheck %s --allow-unused-prefixes --check-prefixes=COMMON,SKIP
+; RUN:   FileCheck %s --check-prefixes=COMMON,SKIP
 ;
 ; Check that a scalarized load/store does not get a cost for insterts/
 ; extracts, since z13 supports element load/store.
