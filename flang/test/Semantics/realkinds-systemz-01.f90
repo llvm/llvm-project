@@ -1,5 +1,5 @@
 ! REQUIRES: systemz-registered-target
-! REQUIRES: flang-frontend-supports-f128
+! REQUIRES: flang-supports-f128-math
 ! RUN: %python %S/test_modfile.py %s %flang_fc1 -triple s390x-unknown-linux-gnu
 
 module m1

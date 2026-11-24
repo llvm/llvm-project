@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-fir -O0 %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-frontend-supports-f128 %{,CHECK-KIND16%}
+! RUN: %flang_fc1 -emit-fir -O0 %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 ! DOT_PROD
 ! CHECK-LABEL: dot_prod_int_default

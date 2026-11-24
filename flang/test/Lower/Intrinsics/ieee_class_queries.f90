@@ -1,4 +1,4 @@
-! REQUIRES: flang-frontend-supports-f128
+! REQUIRES: flang-supports-f128-math
 ! REQUIRES: x86-registered-target
 ! RUN: bbc -target x86_64-unknown-linux-gnu -emit-fir -o - %s | FileCheck %s
 

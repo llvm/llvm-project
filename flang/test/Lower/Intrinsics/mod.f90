@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-frontend-supports-f128 %{,CHECK-KIND16%}
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 ! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero-divisor %s -o - | FileCheck %s --check-prefix=CHECK-MOD-ZERO
 
 ! CHECK-LABEL: func @_QPmod_testr4(

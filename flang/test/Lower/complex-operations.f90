@@ -1,4 +1,4 @@
-! REQUIRES: flang-frontend-supports-f128
+! REQUIRES: flang-supports-f128-math
 ! REQUIRES: x86-registered-target
 ! RUN: %flang_fc1 -emit-hlfir -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 

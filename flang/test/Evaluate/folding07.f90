@@ -1,4 +1,4 @@
-! REQUIRES: flang-frontend-supports-f128
+! REQUIRES: flang-supports-f128-math
 ! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Test numeric model inquiry intrinsics
 

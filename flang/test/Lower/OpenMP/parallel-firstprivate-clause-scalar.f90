@@ -2,7 +2,7 @@
 
 ! REQUIRES: x86-registered-target
 ! RUN: bbc -target x86_64-unknown-linux-gnu -fopenmp -emit-hlfir %s -o - \
-! RUN: | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-frontend-supports-f128 %{,CHECK-KIND16%}
+! RUN: | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 !CHECK:  omp.private {type = firstprivate} @[[ARG2_LOGICAL_PRIVATIZER:_QFfirstprivate_logicalEarg2_firstprivate_l8]] : !fir.logical<1>
 

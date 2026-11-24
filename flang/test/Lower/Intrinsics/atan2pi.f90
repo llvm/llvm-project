@@ -1,4 +1,4 @@
-! REQUIRES: flang-frontend-supports-f128
+! REQUIRES: flang-supports-f128-math
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 function test_real4(y, x)

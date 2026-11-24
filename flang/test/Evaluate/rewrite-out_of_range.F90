@@ -1,7 +1,7 @@
 ! Tests rewriting of OUT_OF_RANGE()
 ! REQUIRES: target=x86_64{{.*}}
 ! REQUIRES: system-linux
-! RUN: %flang_fc1 -fdebug-unparse -cpp %s 2>&1 | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{%if system-linux %{,CHECK-X86-64%}%}%if flang-frontend-supports-f128 %{,CHECK-KIND16%}
+! RUN: %flang_fc1 -fdebug-unparse -cpp %s 2>&1 | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{%if system-linux %{,CHECK-X86-64%}%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 logical round
 

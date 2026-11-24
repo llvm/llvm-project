@@ -1,6 +1,6 @@
 ! Test lowering complex division to llvm ir according to options
 
-! REQUIRES: flang-frontend-supports-f128
+! REQUIRES: flang-supports-f128-math
 ! RUN: export FILECHECK_OPTS="-DF128_ALIGN=%if target=s390x{{.*}} %{8%} %else %{16%}"
 ! RUN: %flang -fcomplex-arithmetic=improved -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
 ! RUN: %flang -fcomplex-arithmetic=basic -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC

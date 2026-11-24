@@ -1,4 +1,4 @@
-! REQUIRES: flang-frontend-supports-f128
+! REQUIRES: flang-supports-f128-math
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain

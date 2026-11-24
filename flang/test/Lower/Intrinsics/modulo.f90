@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s -check-prefixes=HONORINF,ALL
-! RUN: %flang_fc1 -menable-no-infs -emit-hlfir %s -o - | FileCheck %s -check-prefixes=CHECK,ALL,%if flang-frontend-supports-f128 %{F128%} %else %{F64%}
+! RUN: %flang_fc1 -menable-no-infs -emit-hlfir %s -o - | FileCheck %s -check-prefixes=CHECK,ALL,%if flang-supports-f128-math %{F128%} %else %{F64%}
 ! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero-divisor %s -o - | FileCheck %s -check-prefix=CHECK-MOD-ZERO
 
 ! ALL-LABEL: func @_QPmodulo_testr(

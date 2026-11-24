@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-frontend-supports-f128 %{,CHECK-KIND16%}
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 module ieee_next_tests
   use ieee_arithmetic, only: ieee_value, ieee_negative_inf, ieee_positive_inf
