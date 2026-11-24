@@ -643,7 +643,11 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         }
       }
     }
-    // DT edits are not cached since parsing them fills context.ioType/vList.
+    // Reusing this edit when control returns to `start` is correct only
+    // because parsing a non-DT data edit depends on nothing but the FORMAT
+    // text at that offset; edit.modes and edit.repeat are recomputed on reuse.
+    // An edit whose parsing reads or updates the context must not be cached,
+    // as DT edits are not, since parsing them fills context.ioType/vList.
     if (!context.InError()) {
       lastDataEdit_.start = start;
       lastDataEdit_.end = offset_;

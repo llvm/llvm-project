@@ -49,11 +49,12 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
 }
 
 // Single-pass B/O/Z input into a target of at most 8 bytes, accumulating
-// the value in a 64-bit integer.
+// the value in a 64-bit integer.  The field must be buffered: NextInField()
+// counts characters for SIZE= only through a buffered FastAsciiField.
 template <int LOG2_BASE>
-static RT_API_ATTRS bool EditSmallBOZInput(
-    IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
-  auto fastField{io.GetUpcomingFastAsciiField()};
+static RT_API_ATTRS bool EditSmallBOZInput(IoStatementState &io,
+    const DataEdit &edit, void *n, std::size_t bytes,
+    IoStatementState::FastAsciiField &fastField) {
   // Skip leading white space & zeroes
   common::optional<int> remaining{io.CueUpInput(edit, &fastField)};
   common::optional<char32_t> next{io.NextInField(remaining, edit, &fastField)};
@@ -87,6 +88,7 @@ static RT_API_ATTRS bool EditSmallBOZInput(
     } else if (ch == comma) {
       break; // end non-list-directed field early
     } else {
+      io.GotChar(fastField.got());
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in B/O/Z input field", ch);
       return false;
@@ -106,6 +108,7 @@ static RT_API_ATTRS bool EditSmallBOZInput(
     }
     value = (value << LOG2_BASE) | static_cast<std::uint64_t>(digit);
   }
+  io.GotChar(fastField.got());
   if (static_cast<std::size_t>(significantBits) > 8 * bytes) {
     io.GetIoErrorHandler().SignalError(IostatBOZInputOverflow,
         "B/O/Z input of %d digits overflows %zd-byte variable", digits, bytes);
@@ -117,7 +120,6 @@ static RT_API_ATTRS bool EditSmallBOZInput(
     runtime::memcpy(n,
         reinterpret_cast<const char *>(&value) + sizeof value - bytes, bytes);
   }
-  io.GotChar(fastField.got());
   return CheckCompleteListDirectedField(io, edit);
 }
 
@@ -125,7 +127,10 @@ template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
   if (bytes <= sizeof(std::uint64_t)) {
-    return EditSmallBOZInput<LOG2_BASE>(io, edit, n, bytes);
+    if (auto fastField{io.GetUpcomingFastAsciiField()};
+        !fastField.MustUseSlowPath()) {
+      return EditSmallBOZInput<LOG2_BASE>(io, edit, n, bytes, fastField);
+    }
   }
   // Skip leading white space & zeroes
   common::optional<int> remaining{io.CueUpInput(edit)};
