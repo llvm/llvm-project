@@ -34,7 +34,7 @@ NullabilityKind evaluateNullabilityAtCheck(llvm::StringRef Code) {
           [](ASTContext &Ctx, Environment &Env) {
             return PointerNullabilityAnalysis(Ctx, Env);
           })
-          .withASTBuildArgs({"-std=c++17"}),
+          .withASTBuildArgs({"-fno-delayed-template-parsing", "-std=c++17"}),
       [&Result](const llvm::StringMap<
                     DataflowAnalysisState<PointerNullabilityLattice>> &Results,
                 const dataflow::test::AnalysisOutputs &AO) {

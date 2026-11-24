@@ -48,13 +48,9 @@ TEST_F(IsNullableTest, NullPtr) {
   EXPECT_TRUE(isNullable(makeNullPointer(), Env));
 }
 
-TEST_F(IsNullableTest, Nullable) {
-  auto &Nullable = makePointer(NullabilityKind::Nullable);
-  EXPECT_TRUE(isNullable(Nullable, Env));
-}
-
 TEST_F(IsNullableTest, NullableButNotNull) {
   auto &NullableButNotNull = makePointer(NullabilityKind::Nullable);
+  EXPECT_TRUE(isNullable(NullableButNotNull, Env));
   auto *IsNull = getPointerNullState(NullableButNotNull).IsNull;
   ASSERT_NE(IsNull, nullptr);
   Env.assume(A.makeNot(*IsNull));

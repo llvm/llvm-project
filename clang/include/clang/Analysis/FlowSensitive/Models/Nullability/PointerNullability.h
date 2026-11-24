@@ -8,12 +8,11 @@
 //
 // This file extends the dataflow framework's Value model to track nullability.
 // We attach two boolean properties to each modeled pointer value:
-//  - is_null: whether the pointer is known to be null.
+//  - is_null: whether the pointer may actually be null
 //    If this is false, dereferencing is safe.
 //  - from_nullable: whether the originating expression was considered nullable
-//    (e.g. a reference to a Nullable-annotated variable, or a nullptr literal)
-//    If this is false, dereferencing may be safe: we don't know the contract
-//    (Unspecified).
+//    (e.g. a nullptr literal, or a reference to a Nullable-annotated variable)
+//    If this is false, dereferencing may be safe: we don't know the contract.
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,12 +49,15 @@ bool isSupportedRawPointerType(QualType T);
 PointerValue *getRawPointerValue(const Expr *PointerExpr,
                                  const Environment &Env);
 
-/// Returns the `PointerValue` for a raw or smart pointer expression, if
-/// available.
+/// Returns the `PointerValue` for a raw pointer expression, if available.
+/// Otherwise, returns nullptr.
+///
+/// This is intended to support both raw and smart pointer expressions.
+/// Smart pointers are not supported yet, so for now this is the same as
+/// `getRawPointerValue()`.
+///
 /// Use this function only if the expression can actually be either a raw or
 /// smart pointer; otherwise, use `getRawPointerValue()`.
-/// (Smart pointers are not supported yet, so for now this is the same as
-/// `getRawPointerValue()`.)
 PointerValue *getPointerValue(const Expr *PointerExpr, const Environment &Env);
 
 // Returns true if the pointer has all properties necessary for representing
@@ -93,7 +95,7 @@ PointerNullState getPointerNullState(const PointerValue &PointerVal);
 /// source of the PointerValue.
 ///
 /// For example:
-///    int _Null_unspecified* x = getNullable();
+///    int *_Null_unspecified x = getNullable();
 ///                               ~~~~~~~~~~~ <-- initPointerNullState(Nullable)
 ///    *x;
 ///     ~ <-- initPointerNullState(Unspecified) - no effect, already initialized

@@ -27,9 +27,7 @@ constexpr llvm::StringLiteral kNull = "is_null";
 
 bool isSupportedPointerType(QualType T) { return isSupportedRawPointerType(T); }
 
-bool isSupportedRawPointerType(QualType T) {
-  return T.getCanonicalType()->isPointerType();
-}
+bool isSupportedRawPointerType(QualType T) { return T->isPointerType(); }
 
 PointerValue *getRawPointerValue(const Expr *PointerExpr,
                                  const Environment &Env) {
@@ -37,7 +35,10 @@ PointerValue *getRawPointerValue(const Expr *PointerExpr,
 }
 
 PointerValue *getPointerValue(const Expr *PointerExpr, const Environment &Env) {
-  return getRawPointerValue(PointerExpr, Env);
+  QualType Ty = PointerExpr->getType();
+  if (Ty->isNullPtrType() || isSupportedRawPointerType(Ty))
+    return getRawPointerValue(PointerExpr, Env);
+  return nullptr;
 }
 
 bool hasPointerNullState(const PointerValue &PointerVal) {
