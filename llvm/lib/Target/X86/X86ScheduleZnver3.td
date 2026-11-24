@@ -1117,9 +1117,10 @@ defm : Zn3WriteResXMMPair<WritePack, [Zn3FPVShuf01], 1, [1], 1>;
 defm : Zn3WriteResXMMPair<WritePackX, [Zn3FPVShuf01], 1, [1], 1>;
 defm : Zn3WriteResYMMPair<WritePackY, [Zn3FPVShuf01], 1, [1], 1>;
 defm : X86WriteResPairUnsupported<WritePackZ>;
-defm : Zn3WriteResXMMPair<WriteBlend, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends.
-defm : Zn3WriteResYMMPair<WriteBlendY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
-defm : X86WriteResPairUnsupported<WriteBlendZ>; // Vector blends (ZMM).
+defm : Zn3WriteResXMMPair<WritePBLENDDX, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn3WriteResYMMPair<WritePBLENDDY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
+defm : Zn3WriteResXMMPair<WritePBLENDWX, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn3WriteResYMMPair<WritePBLENDWY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : Zn3WriteResXMMPair<WriteVarBlend, [Zn3FPVMul01], 1, [1], 1>; // Vector variable blends.
 defm : Zn3WriteResYMMPair<WriteVarBlendY, [Zn3FPVMul01], 1, [1], 1>; // Vector variable blends (YMM).
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>; // Vector variable blends (ZMM).

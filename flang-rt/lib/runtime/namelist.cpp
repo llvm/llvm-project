@@ -643,7 +643,7 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       // list-directed input.
       listInput->set_hitSlash(false);
     }
-  } else if (*next && (*next == '&' || *next == '$')) {
+  } else if (next && (*next == '&' || *next == '$')) {
     // stop at beginning of next group
   } else {
     handler.SignalError(

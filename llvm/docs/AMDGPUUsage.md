@@ -8748,6 +8748,13 @@ sections listed below.
 cache operations** (such as write-back or invalidate) that are usually part of
 these sequences.
 
+**Note:** The code sequence tables in the sections below do not show
+`!nontemporal` on `load atomic` and `store atomic`. With `!nontemporal`,
+the load or store instruction of the code sequence also sets the cache policy
+bits listed for a nontemporal non-atomic load or store to the same address
+space, in addition to the bits already listed. See
+{ref}`amdgpu-memmodel-temporal-hints`.
+
 - {ref}`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 - {ref}`amdgpu-amdhsa-memory-model-gfx90a`
 - {ref}`amdgpu-amdhsa-memory-model-gfx942`

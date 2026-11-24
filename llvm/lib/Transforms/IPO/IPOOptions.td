@@ -98,6 +98,10 @@ defm : EnumField<"expand-variadics-override", "ExpandVariadicsMode", "",
   "Override the behaviour of expand-variadics">;
 
 // ForceFunctionAttrs.cpp
+defm : ListField<"force-attribute", "StringRef",
+  "Add an attribute to a function. This can be a pair of 'function-name:attribute-name', to apply an attribute to a specific function. For example -force-attribute=foo:noinline. Specifying only an attribute will apply the attribute to every function in the module. This option can be specified multiple times">;
+defm : ListField<"force-remove-attribute", "StringRef",
+  "Remove an attribute from a function. This can be a pair of 'function-name:attribute-name' to remove an attribute from a specific function. For example -force-remove-attribute=foo:noinline. Specifying only an attribute will remove the attribute from all functions in the module. This option can be specified multiple times">;
 defm : ValueField<"forceattrs-csv-path", "StringRef", "",
   "Path to CSV file containing lines of function names and attributes to add to them in the form of `f1,attr1` or `f2,attr2=str`">;
 
@@ -203,12 +207,27 @@ defm : ValueField<"intra-scc-cost-multiplier", "int", "2",
 // A flag for test, so we can print the content of the advisor when running it
 // as part of the default (e.g. -O3) pipeline.
 defm : BoolField<"keep-inline-advisor-for-printing", "false", "">;
+// Allows printing the contents of the advisor after each SCC inliner pass.
+defm : BoolField<"scc-inline-advisor-printing", "false", "">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-scc-inline-advisor-printing", "scc-inline-advisor-printing">;
 
 // Instrumentor.cpp
+defm : ListField<"instrumentor-read-config-files", "StringRef",
+  "Read the instrumentor configuration from the specified JSON files (comma separated)">;
 defm : ValueField<"instrumentor-read-config-paths-file", "StringRef", "",
   "Read the instrumentor configuration file paths from the specified file (newline separated)">;
 defm : ValueField<"instrumentor-write-config-file", "StringRef", "",
   "Write the instrumentor configuration into the specified JSON file">;
+
+// Internalize.cpp
+// A file which contains a list of symbol glob patterns that should not be
+// marked external.
+defm : ValueField<"internalize-public-api-file", "StringRef", "",
+  "A file containing list of symbol names to preserve">;
+// A list of symbol glob patterns that should not be marked internal.
+defm : ListField<"internalize-public-api-list", "StringRef",
+  "A list of symbol names to preserve">;
 
 // LowerTypeTests.cpp
 defm : BoolField<"lowertypetests-avoid-reuse", "true",
@@ -379,12 +398,22 @@ defm : OptionalBoolField<"sample-loader-inlining",
 // mainly used for debugging.
 defm : ValueField<"sample-profile-file", "StringRef", "",
   "Profile file loaded by -sample-profile">;
+defm : OptionalValueField<"sample-profile-cold-inline-threshold", "int",
+  "Threshold for inlining cold callsites">;
+defm : OptionalValueField<"sample-profile-hot-inline-threshold", "int",
+  "Hot callsite threshold for priority-based sample profile loader inlining">;
 defm : ValueField<"sample-profile-icp-max-prom", "unsigned", "3",
   "Max number of promotions for a single indirect call callsite in sample profile loader">;
 defm : ValueField<"sample-profile-icp-relative-hotness", "unsigned", "25",
   "Relative hotness percentage threshold for indirect call promotion in priority-based sample profile loader inlining">;
 defm : ValueField<"sample-profile-icp-relative-hotness-skip", "unsigned", "1",
   "Skip relative hotness check for ICP up to given number of targets">;
+defm : OptionalValueField<"sample-profile-inline-growth-limit", "unsigned",
+  "The size growth ratio limit for priority-based sample profile loader inlining">;
+defm : OptionalValueField<"sample-profile-inline-limit-max", "unsigned",
+  "The upper bound of size growth limit for priority-based sample profile loader inlining">;
+defm : OptionalValueField<"sample-profile-inline-limit-min", "unsigned",
+  "The lower bound of size growth limit for priority-based sample profile loader inlining">;
 defm : ValueField<"sample-profile-inline-replay", "StringRef", "",
   "Optimization remarks file containing inline remarks to be replayed by inlining from sample profile loader">;
 defm : EnumField<"sample-profile-inline-replay-fallback", "ReplayInlinerSettings::Fallback", "",
@@ -403,6 +432,8 @@ defm : OptionalBoolField<"sample-profile-inline-size",
   "Inline cold call sites in profile loader if it's beneficial for code size">;
 defm : BoolField<"sample-profile-merge-inlinee", "true",
   "Merge past inlinee's profile to outline version if sample profile loader decided not to inline a call site. It will only be enabled when top-down order of profile loading is enabled">;
+defm : BoolField<"sample-profile-preserve-deferred-inlines", "true",
+  "In ThinLTO pre-link, add import hints for in-module targets of deferred indirect calls so they can be imported with the caller">;
 defm : OptionalBoolField<"sample-profile-prioritized-inline",
   "Use call site prioritized inlining for sample profile loader. Currently only CSSPGO is supported">;
 defm : OptionalBoolField<"sample-profile-recursive-inline",
@@ -418,6 +449,8 @@ defm : BoolField<"sample-profile-top-down-load", "true",
   "Do profile annotation and inlining for functions in top-down order of call graph during sample profile loading. It only works for new pass manager">;
 defm : OptionalBoolField<"sample-profile-use-preinliner",
   "Use the preinliner decisions stored in profile context">;
+defm : OptionalBoolField<"sort-profiled-scc-member",
+  "Sort profiled recursion by edge weights">;
 defm : BoolField<"use-profiled-call-graph", "true",
   "Process functions in a top-down order defined by the profiled call graph when -sample-profile-top-down-load is on">;
 // TODO: Remove the old spellings after 2027-05.

@@ -55,6 +55,7 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -118,7 +119,8 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
 const char *SBDebugger::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Debugger::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Debugger::GetStaticBroadcasterClass());
 }
 
 const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
@@ -136,8 +138,8 @@ const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
   completed = progress_data->GetCompleted();
   total = progress_data->GetTotal();
   is_debugger_specific = progress_data->IsDebuggerSpecific();
-  ConstString message(progress_data->GetMessage());
-  return message.AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      progress_data->GetMessage());
 }
 
 lldb::SBStructuredData
@@ -719,6 +721,7 @@ SBDebugger::GetScriptInterpreterInfo(lldb::ScriptLanguage language) {
 const char *SBDebugger::GetVersionString() {
   LLDB_INSTRUMENT();
 
+  // Callable before Initialize, so the system pool may not exist.
   return ConstString(Language::GetVersionWithLanguageInfo()).GetCString();
 }
 
@@ -1288,7 +1291,8 @@ const char *SBDebugger::GetInstanceName() {
   if (!m_opaque_sp)
     return nullptr;
 
-  return ConstString(m_opaque_sp->GetInstanceName()).AsCString(nullptr);
+  return m_opaque_sp->GetStringPool().InternNonEmpty(
+      m_opaque_sp->GetInstanceName());
 }
 
 SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
@@ -1392,8 +1396,9 @@ const char *SBDebugger::GetPrompt() const {
            static_cast<void *>(m_opaque_sp.get()),
            (m_opaque_sp ? m_opaque_sp->GetPrompt() : ""));
 
-  return (m_opaque_sp ? ConstString(m_opaque_sp->GetPrompt()).GetCString()
-                      : nullptr);
+  return (m_opaque_sp
+              ? m_opaque_sp->GetStringPool().Intern(m_opaque_sp->GetPrompt())
+              : nullptr);
 }
 
 void SBDebugger::SetPrompt(const char *prompt) {

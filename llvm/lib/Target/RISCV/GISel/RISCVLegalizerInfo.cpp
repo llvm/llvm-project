@@ -941,16 +941,19 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
     MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (Ty == iXLen)
-      return true;
-    if (!STI.is64Bit() || Ty != LLT::scalar(32))
+    if (Ty != iXLen && (!STI.is64Bit() || Ty != LLT::scalar(32)))
       return false;
 
-    // Each output byte depends only on the corresponding input byte.
-    auto Src = MIRBuilder.buildAnyExt(iXLen, MI.getOperand(2));
-    auto Result = MIRBuilder.buildIntrinsic(IntrinsicID, {DstOp(iXLen)})
-                      .addUse(Src.getReg(0));
-    MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    // Each output byte depends only on the corresponding input byte, so any
+    // extension is fine for narrow types.
+    Register Src = MI.getOperand(2).getReg();
+    if (Ty != iXLen)
+      Src = MIRBuilder.buildAnyExt(iXLen, Src).getReg(0);
+    auto Result = MIRBuilder.buildInstr(RISCV::G_ORC_B, {iXLen}, {Src});
+    if (Ty != iXLen)
+      MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    else
+      MIRBuilder.buildCopy(MI.getOperand(0), Result);
     MI.eraseFromParent();
     return true;
   }
