@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! CHECK-LABEL: fir.global @block_
-! CHECK: %[[VAL_4:.*]] = fir.zero_bits tuple<!fir.array<5x5xf32>>
+! CHECK: %[[VAL_4:.*]] = fir.zero_bits !fir.type<_QBTblock_<{m0:!fir.array<5x5xf32>}>>
 ! CHECK: %[[VAL_5:.*]] = fir.undefined !fir.array<5x5xf32>
 ! CHECK: %[[C1:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK: %[[VAL_6:.*]] = fir.insert_on_range %[[VAL_5]], %[[C1]] from (0, 0) to (1, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
@@ -27,8 +27,8 @@
 ! CHECK: %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[C24_3]], [3 : index, 3 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
 ! CHECK: %[[C0_6:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK: %[[VAL_17:.*]] = fir.insert_on_range %[[VAL_16]], %[[C0_6]] from (4, 3) to (4, 4) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_18:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_17]], [0 : index] : (tuple<!fir.array<5x5xf32>>, !fir.array<5x5xf32>) -> tuple<!fir.array<5x5xf32>>
-! CHECK: fir.has_value %[[VAL_18]] : tuple<!fir.array<5x5xf32>>
+! CHECK: %[[VAL_18:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_17]], ["m0", !fir.type<_QBTblock_<{m0:!fir.array<5x5xf32>}>>] : (!fir.type<_QBTblock_<{m0:!fir.array<5x5xf32>}>>, !fir.array<5x5xf32>) -> !fir.type<_QBTblock_<{m0:!fir.array<5x5xf32>}>>
+! CHECK: fir.has_value %[[VAL_18]] : !fir.type<_QBTblock_<{m0:!fir.array<5x5xf32>}>>
 
 subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   integer i, j, k, ii, jj, kk

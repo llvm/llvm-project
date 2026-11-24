@@ -5,15 +5,15 @@
 ! - A blank common that is initialized
 ! - A common block that is initialized outside of a BLOCK DATA.
 
-! CHECK-LABEL: fir.global @__BLNK__ <{alignment = 4 : i64}> : tuple<i32, !fir.array<8xi8>> {
-! CHECK:  %[[undef:.*]] = fir.zero_bits tuple<i32, !fir.array<8xi8>>
-! CHECK:  %[[init:.*]] = fir.insert_value %[[undef]], %c42{{.*}}, [0 : index] : (tuple<i32, !fir.array<8xi8>>, i32) -> tuple<i32, !fir.array<8xi8>>
-! CHECK:  fir.has_value %[[init]] : tuple<i32, !fir.array<8xi8>>
+! CHECK-LABEL: fir.global @__BLNK__ <{alignment = 4 : i64}> : !fir.type<_QBT__BLNK__<{m0:i32,m1:!fir.array<8xi8>}>> {
+! CHECK:  %[[undef:.*]] = fir.zero_bits !fir.type<_QBT__BLNK__<{m0:i32,m1:!fir.array<8xi8>}>>
+! CHECK:  %[[init:.*]] = fir.insert_value %[[undef]], %c42{{.*}}, ["m0", !fir.type<_QBT__BLNK__<{m0:i32,m1:!fir.array<8xi8>}>>] : (!fir.type<_QBT__BLNK__<{m0:i32,m1:!fir.array<8xi8>}>>, i32) -> !fir.type<_QBT__BLNK__<{m0:i32,m1:!fir.array<8xi8>}>>
+! CHECK:  fir.has_value %[[init]] : !fir.type<_QBT__BLNK__<{m0:i32,m1:!fir.array<8xi8>}>>
 
-! CHECK-LABEL: fir.global @a_ <{alignment = 4 : i64}> : tuple<i32, !fir.array<8xi8>> {
-! CHECK:  %[[undef:.*]] = fir.zero_bits tuple<i32, !fir.array<8xi8>>
-! CHECK:  %[[init:.*]] = fir.insert_value %[[undef]], %c42{{.*}}, [0 : index] : (tuple<i32, !fir.array<8xi8>>, i32) -> tuple<i32, !fir.array<8xi8>>
-! CHECK:  fir.has_value %[[init]] : tuple<i32, !fir.array<8xi8>>
+! CHECK-LABEL: fir.global @a_ <{alignment = 4 : i64}> : !fir.type<_QBTa_<{m0:i32,m1:!fir.array<8xi8>}>> {
+! CHECK:  %[[undef:.*]] = fir.zero_bits !fir.type<_QBTa_<{m0:i32,m1:!fir.array<8xi8>}>>
+! CHECK:  %[[init:.*]] = fir.insert_value %[[undef]], %c42{{.*}}, ["m0", !fir.type<_QBTa_<{m0:i32,m1:!fir.array<8xi8>}>>] : (!fir.type<_QBTa_<{m0:i32,m1:!fir.array<8xi8>}>>, i32) -> !fir.type<_QBTa_<{m0:i32,m1:!fir.array<8xi8>}>>
+! CHECK:  fir.has_value %[[init]] : !fir.type<_QBTa_<{m0:i32,m1:!fir.array<8xi8>}>>
 
 
 subroutine first_appearance

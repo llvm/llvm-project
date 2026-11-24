@@ -19,10 +19,10 @@ program p
 ! CHECK-DAG: }
 
 ! CHECK-DAG: acc.global_dtor @{{.*}}_acc_dtor {
-! CHECK-DAG: %[[ADDR1:.*]] = fir.address_of(@{{.*}}) {acc.declare = #acc.declare<dataClause = acc_copyin>} : !fir.ref<tuple<f32>>
-! CHECK-DAG: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[ADDR1]] : !fir.ref<tuple<f32>>) dataClause(acc_copyin) structured(false) name("com") -> !fir.ref<tuple<f32>>
-! CHECK-DAG: acc.declare_exit dataOperands(%[[GDP]] : !fir.ref<tuple<f32>>)
-! CHECK-DAG: acc.delete accPtr(%[[GDP]] : !fir.ref<tuple<f32>>) dataClause(acc_copyin) structured(false) name("com")
+! CHECK-DAG: %[[ADDR1:.*]] = fir.address_of(@{{.*}}) {acc.declare = #acc.declare<dataClause = acc_copyin>} : !fir.ref<!fir.type<_QBTcom_<{m0:f32}>>>
+! CHECK-DAG: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[ADDR1]] : !fir.ref<!fir.type<_QBTcom_<{m0:f32}>>>) dataClause(acc_copyin) structured(false) name("com") -> !fir.ref<!fir.type<_QBTcom_<{m0:f32}>>>
+! CHECK-DAG: acc.declare_exit dataOperands(%[[GDP]] : !fir.ref<!fir.type<_QBTcom_<{m0:f32}>>>)
+! CHECK-DAG: acc.delete accPtr(%[[GDP]] : !fir.ref<!fir.type<_QBTcom_<{m0:f32}>>>) dataClause(acc_copyin) structured(false) name("com")
 ! CHECK-DAG: acc.terminator
 ! CHECK-DAG: }
 

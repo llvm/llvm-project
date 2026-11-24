@@ -66,18 +66,18 @@ contains
   end subroutine inner
 end subroutine test3
 ! HLFIR-LABEL:   func.func private @_QFtest3Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
-! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
-! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
+! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>
+! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_2:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
 ! HLFIR:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] storage(%[[VAL_1]][0]) uniq_name("_QFtest3Ei1") fortran_attrs<internal_assoc> : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
-! HLFIR:           %[[VAL_6:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
+! HLFIR:           %[[VAL_6:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_7:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_6]], %[[VAL_7]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<i8>) -> !fir.ptr<i32>
 ! HLFIR:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] storage(%[[VAL_6]][0]) uniq_name("_QFtest3Ej1") fortran_attrs<internal_assoc> : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
-! HLFIR:           %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
+! HLFIR:           %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_12:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_11]], %[[VAL_12]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<i8>) -> !fir.ptr<i32>
@@ -100,18 +100,18 @@ contains
   end subroutine inner
 end subroutine test4
 ! HLFIR-LABEL:   func.func private @_QFtest4Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
-! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
-! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
+! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>
+! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_2:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
 ! HLFIR:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] storage(%[[VAL_1]][0]) uniq_name("_QFtest4Ei1") fortran_attrs<internal_assoc> : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
-! HLFIR:           %[[VAL_6:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
+! HLFIR:           %[[VAL_6:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_7:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_6]], %[[VAL_7]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<i8>) -> !fir.ptr<i32>
 ! HLFIR:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] storage(%[[VAL_6]][0]) uniq_name("_QFtest4Ej1") fortran_attrs<internal_assoc> : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
-! HLFIR:           %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
+! HLFIR:           %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.type<_QBTblk_<{m0:i32}>>>) -> !fir.ref<!fir.array<4xi8>>
 ! HLFIR:           %[[VAL_12:.*]] = arith.constant 0 : index
 ! HLFIR:           %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_11]], %[[VAL_12]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<i8>) -> !fir.ptr<i32>

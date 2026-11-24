@@ -22,14 +22,14 @@ block data bd
 end block data
 
 ! CHECK-LABEL: fir.global @blk_
-! CHECK-SAME:    tuple<i32, f32, !fir.type<_QTsq,sequence{n:i32}>>
-! CHECK:         %[[AGG0:.*]] = fir.zero_bits tuple<i32, f32, !fir.type<_QTsq,sequence{n:i32}>>
+! CHECK-SAME:    !fir.type<_QBTblk_<{m0:i32,m1:f32,m2:!fir.type<_QTsq,sequence{n:i32}>}>>
+! CHECK:         %[[AGG0:.*]] = fir.zero_bits !fir.type<_QBTblk_<{m0:i32,m1:f32,m2:!fir.type<_QTsq,sequence{n:i32}>}>>
 ! CHECK:         %[[C42:.*]] = arith.constant 42 : i32
-! CHECK:         %[[AGG1:.*]] = fir.insert_value %[[AGG0]], %[[C42]], [0 : index]
+! CHECK:         %[[AGG1:.*]] = fir.insert_value %[[AGG0]], %[[C42]], ["m0", !fir.type<_QBTblk_<{m0:i32,m1:f32,m2:!fir.type<_QTsq,sequence{n:i32}>}>>]
 ! CHECK:         %[[CR:.*]] = arith.constant 3.500000e+00 : f32
-! CHECK:         %[[AGG2:.*]] = fir.insert_value %[[AGG1]], %[[CR]], [1 : index]
+! CHECK:         %[[AGG2:.*]] = fir.insert_value %[[AGG1]], %[[CR]], ["m1", !fir.type<_QBTblk_<{m0:i32,m1:f32,m2:!fir.type<_QTsq,sequence{n:i32}>}>>]
 ! CHECK:         %[[SQ0:.*]] = fir.undefined !fir.type<_QTsq,sequence{n:i32}>
 ! CHECK:         %[[C9:.*]] = arith.constant 9 : i32
 ! CHECK:         %[[SQ1:.*]] = fir.insert_value %[[SQ0]], %[[C9]], ["n", !fir.type<_QTsq,sequence{n:i32}>]
-! CHECK:         %[[AGG3:.*]] = fir.insert_value %[[AGG2]], %[[SQ1]], [2 : index]
-! CHECK:         fir.has_value %[[AGG3]] : tuple<i32, f32, !fir.type<_QTsq,sequence{n:i32}>>
+! CHECK:         %[[AGG3:.*]] = fir.insert_value %[[AGG2]], %[[SQ1]], ["m2", !fir.type<_QBTblk_<{m0:i32,m1:f32,m2:!fir.type<_QTsq,sequence{n:i32}>}>>]
+! CHECK:         fir.has_value %[[AGG3]] : !fir.type<_QBTblk_<{m0:i32,m1:f32,m2:!fir.type<_QTsq,sequence{n:i32}>}>>

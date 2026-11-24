@@ -20,9 +20,9 @@ module modCommonInit1
   integer :: i_named2 = 42
   common /named2/ i_named2
 end module
-! CHECK-LABEL: fir.global @named2_ <{alignment = 4 : i64}> : tuple<i32> {
-  ! CHECK: %[[init:.*]] = fir.insert_value %{{.*}}, %c42{{.*}}, [0 : index] : (tuple<i32>, i32) -> tuple<i32>
-  ! CHECK: fir.has_value %[[init]] : tuple<i32>
+! CHECK-LABEL: fir.global @named2_ <{alignment = 4 : i64}> : !fir.type<_QBTnamed2_<{m0:i32}>> {
+  ! CHECK: %[[init:.*]] = fir.insert_value %{{.*}}, %c42{{.*}}, ["m0", !fir.type<_QBTnamed2_<{m0:i32}>>] : (!fir.type<_QBTnamed2_<{m0:i32}>>, i32) -> !fir.type<_QBTnamed2_<{m0:i32}>>
+  ! CHECK: fir.has_value %[[init]] : !fir.type<_QBTnamed2_<{m0:i32}>>
 
 ! Module m1 defines simple data
 module m1
