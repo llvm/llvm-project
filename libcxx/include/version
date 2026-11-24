@@ -316,8 +316,8 @@ __cpp_lib_start_lifetime                                202603L <memory>
 __cpp_lib_start_lifetime_as                             202207L <memory>
 __cpp_lib_starts_ends_with                              201711L <string> <string_view>
 __cpp_lib_stdatomic_h                                   202011L <stdatomic.h>
-__cpp_lib_stdbit_h                                      202603L <stdatomic.h>
-__cpp_lib_stdckdint_h                                   202603L <stdatomic.h>
+__cpp_lib_stdbit_h                                      202603L <stdbit.h>
+__cpp_lib_stdckdint_h                                   202603L <stdckdint.h>
 __cpp_lib_string_contains                               202011L <string> <string_view>
 __cpp_lib_string_resize_and_overwrite                   202110L <string>
 __cpp_lib_string_subview                                202506L <string> <string_view>

@@ -1778,13 +1778,13 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_stdbit_h",
             "values": {"c++23": 202603},
-            "headers": ["stdatomic.h"],
+            "headers": ["stdbit.h"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_stdckdint_h",
             "values": {"c++23": 202603},
-            "headers": ["stdatomic.h"],
+            "headers": ["stdckdint.h"],
             "unimplemented": True,
         },
         {
