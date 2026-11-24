@@ -149,13 +149,17 @@ def olMemAllocAlignedHost : Function {
 
 def olMemFree : Function {
   let desc = "Frees a memory allocation previously made by an olMemAlloc* function.";
+  let details = [
+    "Device, managed and host allocations are all freed with this function.",
+    "`Address` must be the address the allocation was returned at."
+  ];
   let params = [
     Param<"ol_context_handle_t", "Context", "handle of the context the allocation was made in", PARAM_IN>,
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
   let returns = [
-    Return<"OL_ERRC_INVALID_CONTEXT", [
-      "The allocation was not made in `Context`"
+    Return<"OL_ERRC_NOT_FOUND", [
+      "`Address` is not the address of a live allocation made in `Context`"
     ]>
   ];
 }

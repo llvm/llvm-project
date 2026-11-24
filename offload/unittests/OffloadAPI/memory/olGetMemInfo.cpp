@@ -49,10 +49,13 @@ struct olGetMemInfoTest : OffloadDeviceTest {
   void *Ptr;
 };
 
+using olGetMemInfoMultiDeviceTest = OffloadDeviceTest;
+
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
     olGetMemInfoAllocTypeTest, AllocTypes,
     defaultPrinterWithParam<ol_alloc_type_t>);
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetMemInfoTest);
+OFFLOAD_TESTS_INSTANTIATE_MULTI_DEVICE_FIXTURE(olGetMemInfoMultiDeviceTest);
 
 TEST_P(olGetMemInfoAllocTypeTest, SuccessDevice) {
   // Host-pool allocations have no per-device affinity, so querying
@@ -104,6 +107,42 @@ TEST_P(olGetMemInfoAllocTypeTest, SuccessInteriorPointer) {
   ASSERT_SUCCESS(olGetMemInfo(Context, Interior, OL_MEM_INFO_SIZE,
                               sizeof(RetrievedSize), &RetrievedSize));
   ASSERT_EQ(RetrievedSize, SIZE);
+}
+
+TEST_P(olGetMemInfoAllocTypeTest, InvalidPastTheEnd) {
+  void *RetrievedBase;
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
+               olGetMemInfo(Context, reinterpret_cast<char *>(Ptr) + SIZE,
+                            OL_MEM_INFO_BASE, sizeof(RetrievedBase),
+                            &RetrievedBase));
+}
+
+TEST_P(olGetMemInfoAllocTypeTest, InvalidOtherContext) {
+  // Allocations are isolated to the context they were made in, even from a
+  // context grouping the same devices.
+  ol_context_handle_t OtherContext = nullptr;
+  ASSERT_SUCCESS(
+      olCreateContext(Devices.size(), Devices.data(), &OtherContext));
+  void *RetrievedBase;
+  ol_result_t Result = olGetMemInfo(OtherContext, Ptr, OL_MEM_INFO_BASE,
+                                    sizeof(RetrievedBase), &RetrievedBase);
+  ASSERT_SUCCESS(olDestroyContext(OtherContext));
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND, Result);
+}
+
+TEST_P(olGetMemInfoMultiDeviceTest, SuccessDeviceOfEachDevice) {
+  for (ol_device_handle_t AllocDevice : Devices) {
+    void *Ptr = nullptr;
+    ASSERT_SUCCESS(
+        olMemAlloc(Context, AllocDevice, OL_ALLOC_TYPE_DEVICE, SIZE, &Ptr));
+    ol_device_handle_t RetrievedDevice = nullptr;
+    ol_result_t Result =
+        olGetMemInfo(Context, Ptr, OL_MEM_INFO_DEVICE, sizeof(RetrievedDevice),
+                     &RetrievedDevice);
+    ASSERT_SUCCESS(olMemFree(Context, Ptr));
+    ASSERT_SUCCESS(Result);
+    ASSERT_EQ(RetrievedDevice, AllocDevice);
+  }
 }
 
 TEST_P(olGetMemInfoTest, InvalidNotFound) {

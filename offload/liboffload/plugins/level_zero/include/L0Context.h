@@ -54,7 +54,6 @@ public:
   llvm::Error deallocateImpl(GenericDeviceTy &Device, void *Ptr,
                              ol_alloc_type_t Kind,
                              GenericProfilerTy *ProfilerPtr) override;
-  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
   Expected<void *> getNativeHandle() override { return ZeContext; }
 
