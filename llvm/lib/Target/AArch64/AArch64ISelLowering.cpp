@@ -20992,12 +20992,6 @@ static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
   if (N->getValueType(0) != MVT::i64 || !ST->isNeonAvailable())
     return SDValue();
 
-  // Skip the fold when the scalar reduction is immediately rebuilt into a
-  // vector.
-  for (auto *U : N->users())
-    if (U->getOpcode() == ISD::BUILD_VECTOR)
-      return SDValue();
-
   SDValue Ext = N->getOperand(0);
   unsigned ExtOpcode = Ext.getOpcode();
   if (ExtOpcode != ISD::ZERO_EXTEND && ExtOpcode != ISD::SIGN_EXTEND)
@@ -21006,7 +21000,7 @@ static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
   SDValue Input = Ext.getOperand(0);
   EVT InputVT = Input.getValueType();
   if (InputVT != MVT::v8i8 && InputVT != MVT::v16i8 && InputVT != MVT::v4i16 &&
-      InputVT != MVT::v8i16 && InputVT != MVT::v4i32)
+      InputVT != MVT::v8i16)
     return SDValue();
 
   // Use the same legal node/result types as the existing UADDLV/SADDLV
@@ -21020,7 +21014,8 @@ static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
   SDValue Sum = DAG.getNode(AddlvOpcode, DL, VectorVT, Input);
   SDValue Scalar;
   if (VectorElementType == MVT::i8) {
-    SDValue PackedHalfwords = DAG.getBitcast(MVT::v8i16, Sum);
+    SDValue PackedHalfwords =
+        DAG.getNode(AArch64ISD::NVCAST, SDLoc(Sum), MVT::v8i16, Sum);
     Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, PackedHalfwords,
                          DAG.getConstant(0, DL, MVT::i64));
   } else {
