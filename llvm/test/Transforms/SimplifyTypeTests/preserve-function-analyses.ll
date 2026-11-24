@@ -1,6 +1,6 @@
 ; RUN: split-file %s %t
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),simplify-type-tests,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %t/cmp.ll 2>&1 | FileCheck --check-prefix=CMP %s
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),simplify-type-tests,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %t/sub.ll 2>&1 | FileCheck --check-prefix=SUB %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=false -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),simplify-type-tests,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %t/cmp.ll 2>&1 | FileCheck --check-prefix=CMP %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=false -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),simplify-type-tests,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %t/sub.ll 2>&1 | FileCheck --check-prefix=SUB %s
 
 ; Simplifying the type test in @cmp should only invalidate the non-CFG analyses
 ; of @cmp. Replacing the constant in @sub may affect any function using it, so

@@ -4124,18 +4124,6 @@ private:
       const function_ref<Expected<Value *>(Value *XOld, IRBuilder<> &IRB)>;
 
 private:
-  enum AtomicKind { Read, Write, Update, Capture, Compare };
-
-  /// Determine whether to emit flush or not
-  ///
-  /// \param Loc    The insert and source location description.
-  /// \param AO     The required atomic ordering
-  /// \param AK     The OpenMP atomic operation kind used.
-  ///
-  /// \returns		wether a flush was emitted or not
-  bool checkAndEmitFlushAfterAtomic(const LocationDescription &Loc,
-                                    AtomicOrdering AO, AtomicKind AK);
-
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
   /// Only Scalar data types.
