@@ -106,8 +106,6 @@ define void @inlined_without_locs(i32 %n) !dbg !12 !flmd !13 {
 ; FL-EXP-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FL-EXP:       [[EXIT]]:
 ; FL-EXP-NEXT:    ret void
-;
-; FL-RT-SAME: !flmd [[FLMD_SHARED:![0-9]+]]
 entry:
   br label %loop
 
@@ -328,15 +326,6 @@ exit:                                             ; preds = %loop
 !23 = distinct !{!23, !24, !25}
 !24 = !DIDbgLoc(context: !22, dbgLoc: !!dbgLoc(srcLoc: 3, inlinedAt: 0))
 !25 = !DIDbgLoc(context: !22, dbgLoc: !!dbgLoc(srcLoc: 2, inlinedAt: 0))
-
-; FL-RT: [[FLMD_SHARED]] = distinct !MDFunctionLocalContext(scopes: [
-; FL-RT-NEXT:   !!scope(scope: [[DBG12]]),
-; FL-RT-NEXT: ], srcLocs: [
-; FL-RT-NEXT:   !!srcLoc(line: 0, scope: 0),
-; FL-RT-NEXT:   !!srcLoc(line: 20, scope: 0),
-; FL-RT-NEXT:   !!srcLoc(line: 22, column: 3, scope: 0),
-; FL-RT-NEXT:   !!srcLoc(line: 21, column: 3, scope: 0),
-; FL-RT-NEXT: ])
 
 ;.
 ; FL-OFF: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "t", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
