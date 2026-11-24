@@ -639,3 +639,22 @@ func.func @vector_bf16_times_scalar_bf16(%vector: vector<4xbf16>, %scalar: bf16)
   %0 = spirv.VectorTimesScalar %vector, %scalar : (vector<4xbf16>, bf16) -> vector<4xbf16>
   return %0 : vector<4xbf16>
 }
+
+// -----
+
+// CHECK-LABEL: func @fma_khr
+func.func @fma_khr(%a: f32, %b: f32, %c: f32, %va: vector<4xf32>, %vb: vector<4xf32>, %vc: vector<4xf32>) {
+  // CHECK: spirv.KHR.Fma %{{.*}}, %{{.*}}, %{{.*}} : f32
+  %0 = spirv.KHR.Fma %a, %b, %c : f32
+  // CHECK: spirv.KHR.Fma %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf32>
+  %1 = spirv.KHR.Fma %va, %vb, %vc : vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @fma_khr_invalid_type(%a: i32, %b: i32, %c: i32) {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %0 = spirv.KHR.Fma %a, %b, %c : i32
+  return
+}

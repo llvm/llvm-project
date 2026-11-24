@@ -774,4 +774,33 @@ def SPIRV_UModOp : SPIRV_ArithmeticBinaryOp<"UMod",
   let hasCanonicalizer = 1;
 }
 
+// -----
+
+def SPIRV_KHRFmaOp : SPIRV_KhrVendorOp<"Fma", [Pure, SameOperandsAndResultType]> {
+  let summary = "Computes (a * b) + c with a single rounding.";
+
+  let description = [{
+    Result Type, a, b, and c must be the same floating-point scalar or vector
+    type.
+
+    ```mlir
+    %0 = spirv.KHR.Fma %a, %b, %c : f32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>, MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_fma]>, Capability<[SPIRV_C_FMAKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$a,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$b,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$c
+  );
+  let results = (outs SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result);
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+  let hasVerifier = 0;
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_ARITHMETIC_OPS

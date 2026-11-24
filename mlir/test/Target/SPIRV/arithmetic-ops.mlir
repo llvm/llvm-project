@@ -5,7 +5,7 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, BFloat16DotProductKHR], [SPV_KHR_bfloat16]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, BFloat16DotProductKHR, FMAKHR], [SPV_KHR_bfloat16, SPV_KHR_fma]> {
   spirv.func @fmul(%arg0 : f32, %arg1 : f32) "None" {
     // CHECK: {{%.*}}= spirv.FMul {{%.*}}, {{%.*}} : f32
     %0 = spirv.FMul %arg0, %arg1 : f32
@@ -104,6 +104,11 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat1
   spirv.func @dot_bf16(%arg0: vector<4xbf16>, %arg1: vector<4xbf16>) "None" {
     // CHECK: spirv.Dot %{{.+}}, %{{.+}} : vector<4xbf16> -> bf16
     %0 = spirv.Dot %arg0, %arg1 : vector<4xbf16> -> bf16
+    spirv.Return
+  }
+  spirv.func @fma_khr(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %arg2: vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.KHR.Fma {{%.*}}, {{%.*}}, {{%.*}} : vector<4xf32>
+    %0 = spirv.KHR.Fma %arg0, %arg1, %arg2 : vector<4xf32>
     spirv.Return
   }
 }
