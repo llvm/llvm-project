@@ -38,7 +38,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w2
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !4, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE [[COPY]], $noreg, !4, !DIExpression(DW_OP_neg, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !5)
     ; CHECK-NEXT: [[ADDSWrr:%[0-9]+]]:gpr32 = ADDSWrr [[COPY1]], [[COPY]], implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -62,7 +62,7 @@ body: |
     ; CHECK-LABEL: name: neg_dead
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !4, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE $w0, $noreg, !4, !DIExpression(DW_OP_neg, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !5)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(i32) = COPY $w0
     %1:gpr(i32) = G_CONSTANT i32 0
@@ -80,7 +80,7 @@ body: |
     ; CHECK-LABEL: name: neg_dead_i64
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !4, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE $x0, $noreg, !4, !DIExpression(DW_OP_neg, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !5)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(i64) = COPY $x0
     %1:gpr(i64) = G_CONSTANT i64 0
@@ -98,7 +98,7 @@ body: |
     ; CHECK-LABEL: name: neg_complex_expr
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !4, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE $w0, $noreg, !4, !DIExpression(DW_OP_neg, DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !DILocation(line: 1, column: 1, scope: !5)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(i32) = COPY $w0
     %1:gpr(i32) = G_CONSTANT i32 0
@@ -116,7 +116,7 @@ body: |
     ; CHECK-LABEL: name: neg_list
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE_LIST !4, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $noreg, $noreg, debug-location !DILocation(line: 1, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE_LIST !4, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_neg, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $w0, $w1, debug-location !DILocation(line: 1, column: 1, scope: !5)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(i32) = COPY $w0
     %1:gpr(i32) = COPY $w1
