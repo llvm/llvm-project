@@ -34,6 +34,13 @@ using namespace mlir::irdl;
 
 #include "mlir/Dialect/IRDL/IR/IRDLDialect.cpp.inc"
 
+void IRDLDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/IRDL/IR/IRDLOps.cpp.inc"
+      >();
+}
+
 //===----------------------------------------------------------------------===//
 // Parsing/Printing/Verifying
 //===----------------------------------------------------------------------===//

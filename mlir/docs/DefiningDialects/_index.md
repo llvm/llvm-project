@@ -87,8 +87,8 @@ If the dialect sets `hasAttributes` (or `hasTypes`), the generated constructor
 registers the attributes (or types) of the dialect defined in ODS before calling
 `initialize` (see
 [Registering with the Dialect](AttributesAndTypes.md/#registering-with-the-dialect)).
-The generated constructor also registers the operations of the dialect defined
-in ODS, unless the dialect sets `useDefaultOperationRegistration` to `0` (see
+If the dialect sets `useDefaultOperationRegistration`, the generated constructor
+also registers the operations of the dialect defined in ODS (see
 [Registering with the Dialect](Operations.md/#registering-with-the-dialect)).
 These must therefore not be registered again in `initialize`.
 

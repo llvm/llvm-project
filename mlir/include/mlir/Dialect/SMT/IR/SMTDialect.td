@@ -20,7 +20,6 @@ def SMTDialect : Dialect {
   let hasTypes = 1;
 
   let hasConstantMaterializer = 1;
-  let hasInitializer = 0;
 }
 
 #endif // MLIR_DIALECT_SMT_IR_SMTDIALECT_TD

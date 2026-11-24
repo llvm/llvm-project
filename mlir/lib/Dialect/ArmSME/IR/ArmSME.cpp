@@ -62,3 +62,13 @@ LogicalResult TileStoreOp::verify() {
     return emitOpError("most minor dimension of memref must have unit stride");
   return success();
 }
+
+void ArmSMEDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc"
+      >();
+}

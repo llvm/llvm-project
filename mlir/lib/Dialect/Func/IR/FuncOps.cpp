@@ -59,6 +59,10 @@ struct FuncDialectBytecodeInterface : BytecodeDialectInterface {
 
 void FuncDialect::initialize() {
   addInterfaces<FuncDialectBytecodeInterface>();
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
+      >();
   declarePromisedInterface<ConvertToEmitCPatternInterface, FuncDialect>();
   declarePromisedInterface<DialectInlinerInterface, FuncDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, FuncDialect>();

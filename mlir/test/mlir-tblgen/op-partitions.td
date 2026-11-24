@@ -12,6 +12,7 @@ def Test_MemoryPartition : Partition<"memory">;
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "test";
+  let useDefaultOperationRegistration = 1;
 }
 
 class Test_Op<string mnemonic, list<Trait> traits = []>

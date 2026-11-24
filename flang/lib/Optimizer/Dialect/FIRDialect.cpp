@@ -65,6 +65,10 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
 void fir::FIROpsDialect::initialize() {
   registerTypes();
   registerAttributes();
+  addOperations<
+#define GET_OP_LIST
+#include "flang/Optimizer/Dialect/FIROps.cpp.inc"
+      >();
   registerOpExternalInterfaces();
 }
 

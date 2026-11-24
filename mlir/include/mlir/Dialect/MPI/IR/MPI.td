@@ -36,7 +36,6 @@ def MPI_Dialect : Dialect {
 
   let hasAttributes = 1;
   let hasTypes = 1;
-  let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//

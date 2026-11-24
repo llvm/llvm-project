@@ -7,6 +7,7 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "test";
+  let useDefaultOperationRegistration = 1;
 }
 
 class Test_Op<string mnemonic, list<Trait> traits = []> 
@@ -20,6 +21,7 @@ def OpC : Test_Op<"c">;
 def Other_Dialect : Dialect {
   let name = "other";
   let cppNamespace = "";
+  let useDefaultOperationRegistration = 1;
 }
 def Other_DOp : Op<Other_Dialect, "d">;
 

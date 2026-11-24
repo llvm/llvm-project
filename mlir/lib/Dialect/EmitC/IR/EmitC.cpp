@@ -28,6 +28,13 @@ using namespace mlir::emitc;
 // EmitCDialect
 //===----------------------------------------------------------------------===//
 
+void EmitCDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
+      >();
+}
+
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *EmitCDialect::materializeConstant(OpBuilder &builder,

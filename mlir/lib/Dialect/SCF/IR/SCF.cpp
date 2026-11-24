@@ -79,6 +79,10 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void SCFDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
+      >();
   addInterfaces<SCFInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, SCFDialect>();
   declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,

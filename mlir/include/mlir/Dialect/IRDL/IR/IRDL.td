@@ -71,7 +71,6 @@ def IRDL_Dialect : Dialect {
 
   let hasAttributes = 1;
   let hasTypes = 1;
-  let hasInitializer = 0;
 
   let name = "irdl";
   let cppNamespace = "::mlir::irdl";

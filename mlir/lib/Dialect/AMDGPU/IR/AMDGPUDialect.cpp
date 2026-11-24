@@ -35,6 +35,10 @@ struct AMDGPUInlinerInterface final : DialectInlinerInterface {
 } // namespace
 
 void AMDGPUDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
+      >();
   addInterfaces<AMDGPUInlinerInterface>();
   declarePromisedInterfaces<
       memref::IndexedAccessOpInterface, TransposeLoadOp, GlobalTransposeLoadOp,

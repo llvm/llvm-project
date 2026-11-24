@@ -65,7 +65,6 @@ def PDL_Dialect : Dialect {
   let name = "pdl";
   let cppNamespace = "::mlir::pdl";
   let hasTypes = 1;
-  let hasInitializer = 0;
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLDIALECT

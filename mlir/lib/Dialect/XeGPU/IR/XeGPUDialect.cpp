@@ -24,6 +24,12 @@ using std::optional;
 namespace mlir {
 namespace xegpu {
 
+void XeGPUDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include <mlir/Dialect/XeGPU/IR/XeGPU.cpp.inc>
+      >();
+}
 #define GET_OP_INTERFACE_CLASSES
 #include "mlir/Dialect/XeGPU/IR/XeGPUOpInterface.cpp.inc"
 

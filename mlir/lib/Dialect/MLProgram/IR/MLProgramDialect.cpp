@@ -41,5 +41,10 @@ struct MLProgramOpAsmDialectInterface : public OpAsmDialectInterface {
 } // namespace
 
 void ml_program::MLProgramDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/MLProgram/IR/MLProgramOps.cpp.inc"
+      >();
+
   addInterfaces<MLProgramInlinerInterface, MLProgramOpAsmDialectInterface>();
 }

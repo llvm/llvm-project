@@ -9,12 +9,6 @@ set(LLVM_TARGET_DEFINITIONS FIRDialect.td)
 mlir_tablegen(FIRDialect.h.inc -gen-dialect-decls -dialect=fir)
 mlir_tablegen(FIRDialect.cpp.inc -gen-dialect-defs -dialect=fir)
 
-# The FIR codegen dialect is declared alongside the FIR dialect, in
-# FIRDialect.h.
-set(LLVM_TARGET_DEFINITIONS FIRCG/CGOps.td)
-mlir_tablegen(FIRCodeGenDialect.h.inc -gen-dialect-decls -dialect=fircg)
-mlir_tablegen(FIRCodeGenDialect.cpp.inc -gen-dialect-defs -dialect=fircg)
-
 set(LLVM_TARGET_DEFINITIONS FIRAttr.td)
 mlir_tablegen(FIREnumAttr.h.inc -gen-enum-decls)
 mlir_tablegen(FIREnumAttr.cpp.inc -gen-enum-defs)

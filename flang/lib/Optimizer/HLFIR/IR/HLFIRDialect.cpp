@@ -30,6 +30,13 @@
 #define GET_ATTRDEF_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIRAttributes.cpp.inc"
 
+void hlfir::hlfirDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
+      >();
+}
+
 // `expr` `<` `*` | bounds (`x` bounds)* `:` type [`?`] `>`
 // bounds ::= `?` | int-lit
 mlir::Type hlfir::ExprType::parse(mlir::AsmParser &parser) {

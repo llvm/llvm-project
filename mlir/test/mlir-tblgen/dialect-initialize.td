@@ -19,12 +19,13 @@ include "mlir/IR/AttrTypeBase.td"
 // `hasAttributes` (or `hasTypes`) provides the default of
 // `useDefaultAttributeRegistration` and `useDefaultAttributePrinterParser` (or
 // their type counterparts). The constructor registers the attributes, types and,
-// by default, the ops independently of whether the dialect has a custom
-// destructor.
+// with `useDefaultOperationRegistration`, the ops independently of whether the
+// dialect has a custom destructor.
 
 def Both_Dialect : Dialect {
   let name = "both";
   let cppNamespace = "::both";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
   let hasTypes = 1;
   let hasNonDefaultDestructor = 1;
@@ -49,6 +50,7 @@ def Both_Dialect : Dialect {
 def Attrs_Dialect : Dialect {
   let name = "attrs";
   let cppNamespace = "::attrs";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
 }
 
@@ -72,6 +74,7 @@ def Attrs_Dialect : Dialect {
 def Custom_Dialect : Dialect {
   let name = "custom";
   let cppNamespace = "::custom";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
   let hasTypes = 1;
   let useDefaultAttributePrinterParser = 0;
@@ -99,7 +102,6 @@ def Custom_Type : TypeDef<Custom_Dialect, "Bar"> { let mnemonic = "bar"; }
 def None_Dialect : Dialect {
   let name = "none";
   let cppNamespace = "::none";
-  let useDefaultOperationRegistration = 0;
 }
 def None_Attr : AttrDef<None_Dialect, "Foo"> { let mnemonic = "foo"; }
 def None_Type : TypeDef<None_Dialect, "Bar"> { let mnemonic = "bar"; }
@@ -113,6 +115,7 @@ def None_Type : TypeDef<None_Dialect, "Bar"> { let mnemonic = "bar"; }
 def NoInit_Dialect : Dialect {
   let name = "noinit";
   let cppNamespace = "::noinit";
+  let useDefaultOperationRegistration = 1;
   let hasInitializer = 0;
 }
 

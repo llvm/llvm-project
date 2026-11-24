@@ -1233,20 +1233,20 @@ defining `GET_OP_LIST`.
 
 #### Registering with the Dialect
 
-The generated declarations declare `register<DialectClass>Operations`, which
-registers all operations of the generated file with the dialect.
+The generated declarations of a dialect that sets its
+`useDefaultOperationRegistration` field to `1` declare
+`register<DialectClass>Operations`, which registers all operations of the
+generated file with the dialect.
 The hook is defined alongside the operation classes and called by the
 generated dialect constructor before `initialize`.
 The operations must therefore not be added again in `initialize`.
 
-A dialect that registers its operations itself, or that defines no operations
-in ODS, must set its `useDefaultOperationRegistration` field to `0`. Then no
-hook is generated or called.
-The operations of every generated file can still be registered with the list
-enabled by `GET_OP_LIST`.
+Other dialects register their operations themselves, e.g. with the list enabled
+by `GET_OP_LIST`, which every generated file contains.
 
-Each generated file defines `register<DialectClass>Operations`. A dialect whose
-operations are spread over several `.td` files should therefore make them
+Each generated file of a dialect using the default op registration defines
+`register<DialectClass>Operations`. A dialect whose operations are spread over
+several `.td` files should therefore make them
 [partitions](#logical-sharding-with-op-partitions) of one `.td` file that
 includes the others, so that a single hook registers all of them.
 

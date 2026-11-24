@@ -215,9 +215,7 @@ def ArmSME_TypeSizeAttr : EnumAttr<ArmSME_Dialect, TypeSize,
 //===----------------------------------------------------------------------===//
 
 class ArmSME_Op<string mnemonic, list<Trait> traits = []> :
-  Op<ArmSME_Dialect, mnemonic, traits> {
-  let partition = ArmSME_CorePartition;
-}
+  Op<ArmSME_Dialect, mnemonic, traits> {}
 
 def GetTileOp : ArmSME_Op<"get_tile", [ArmSMETileOpInterface, Pure]> {
   let summary = "Creates an undefined value of SME virtual tile type";

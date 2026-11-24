@@ -129,6 +129,10 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
 //===----------------------------------------------------------------------===//
 
 void OpenACCDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/OpenACC/OpenACCOps.cpp.inc"
+      >();
   PrivateType::attachInterface<PrivateTypePointerLikeModel>(*getContext());
 }
 

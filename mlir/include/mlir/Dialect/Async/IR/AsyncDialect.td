@@ -29,7 +29,6 @@ def AsyncDialect : Dialect {
   }];
 
   let hasTypes = 1;
-  let hasInitializer = 0;
 
   let extraClassDeclaration = [{
     /// The name of a unit attribute on funcs that are allowed to have a

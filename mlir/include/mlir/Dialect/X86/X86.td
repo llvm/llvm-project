@@ -28,7 +28,6 @@ def X86_Dialect : Dialect {
   let cppNamespace = "::mlir::x86";
 
   let hasTypes = 1;
-  let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//

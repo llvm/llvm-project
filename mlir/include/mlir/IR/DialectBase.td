@@ -112,8 +112,8 @@ class Dialect {
   // defined in ODS by calling `register<DialectClass>Operations`.
   // The definition is provided by the op definitions generator
   // (`-gen-op-defs`), which only generates the registration hooks if this is
-  // set. Dialects without operations defined in ODS must set this to 0.
-  bit useDefaultOperationRegistration = 1;
+  // set. The operations must then not be registered again in `initialize`.
+  bit useDefaultOperationRegistration = 0;
 
   // If this dialect should use default generated attribute parser boilerplate.
   // When set, ODS will generate declarations for the attribute parsing and

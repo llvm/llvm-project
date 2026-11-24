@@ -19,6 +19,13 @@ using namespace mlir::mpi;
 
 #include "mlir/Dialect/MPI/IR/MPIDialect.cpp.inc"
 
+void MPIDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/MPI/IR/MPIOps.cpp.inc"
+      >();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//

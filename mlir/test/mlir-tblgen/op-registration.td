@@ -16,6 +16,7 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "test::nested";
+  let useDefaultOperationRegistration = 1;
 }
 
 def Other_Dialect : Dialect {

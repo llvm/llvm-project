@@ -224,6 +224,10 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void AffineDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
+      >();
   addInterfaces<AffineInlinerInterface>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
                             AffineMinOp>();

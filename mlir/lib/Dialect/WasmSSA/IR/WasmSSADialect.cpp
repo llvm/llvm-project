@@ -21,3 +21,10 @@ using namespace mlir::wasmssa;
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/WasmSSA/IR/WasmSSAOpsTypes.cpp.inc"
+
+void wasmssa::WasmSSADialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAOps.cpp.inc"
+      >();
+}

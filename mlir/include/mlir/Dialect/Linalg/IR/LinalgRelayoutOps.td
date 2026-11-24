@@ -39,7 +39,6 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []>
           "reifyResultShapes"]>,
                       OptionalTypesMatchWith<"result type matches type of dest",
                                              "dest", "result", "$_self">])> {
-  let partition = Linalg_RelayoutPartition;
 
   code commonExtraClassDeclaration = [{
     size_t getSourceRank() { return getSourceType().getRank(); };

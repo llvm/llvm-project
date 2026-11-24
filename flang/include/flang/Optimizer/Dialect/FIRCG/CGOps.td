@@ -20,21 +20,16 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "mlir/IR/BuiltinAttributes.td"
 
-def FIRCodeGen_Dialect : Dialect {
+def fircg_Dialect : Dialect {
   let name = "fircg";
-  let summary = "Transient operations used exclusively during code generation";
   let useStrictPropertiesInAssemblyFormat = 1;
-  let cppNamespace = "::fir";
-  let hasInitializer = 0;
+  let cppNamespace = "::fir::cg";
 }
 
 // Base class for FIR CG operations.
 // All operations automatically get a prefix of "fircg.".
 class fircg_Op<string mnemonic, list<Trait> traits>
-    : Op<FIRCodeGen_Dialect, mnemonic, traits> {
-  // The dialect class is in namespace `fir` but the ops are in `fir::cg`.
-  let cppNamespace = "::fir::cg";
-}
+    : Op<fircg_Dialect, mnemonic, traits>;
 
 // Extended embox operation.
 def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {

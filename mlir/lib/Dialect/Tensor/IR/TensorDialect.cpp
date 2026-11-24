@@ -43,6 +43,10 @@ struct TensorInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void TensorDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/Tensor/IR/TensorOps.cpp.inc"
+      >();
   addInterfaces<TensorInlinerInterface>();
   declarePromisedInterfaces<
       bufferization::BufferizableOpInterface, CastOp, CollapseShapeOp, ConcatOp,

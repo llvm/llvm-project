@@ -202,6 +202,10 @@ void QuantDialect::initialize() {
   addTypes<AnyQuantizedType, CalibratedQuantizedType, UniformQuantizedType,
            UniformQuantizedPerAxisType, UniformQuantizedSubChannelType,
            QuantileType>();
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/Quant/IR/QuantOps.cpp.inc"
+      >();
   detail::addBytecodeInterface(this);
   addInterfaces<QuantInlinerInterface>();
 }
