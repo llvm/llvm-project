@@ -18,9 +18,11 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
+#include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "AMDGPUGenInstrInfo.inc"
@@ -125,4 +127,37 @@ TEST_F(AMDGPUMFMACoExecRules, StartStages) {
     EXPECT_EQ(Actual, C.Expected)
         << C.CPU << ": " << TM->getMCInstrInfo()->getName(C.Opcode).str();
   }
+}
+
+TEST_F(AMDGPUMFMACoExecRules, CoExecMaskClasses) {
+  std::unique_ptr<GCNTargetMachine> TM =
+      createAMDGPUTargetMachine(Triple("amdgpu-amd-amdhsa"), "gfx950", "");
+  GCNSubtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
+                  TM->getTargetFeatureString(), *TM);
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  Mod.setDataLayout(TM->getTargetTriple().computeDataLayout());
+  Function *F = Function::Create(FunctionType::get(Type::getVoidTy(Ctx), false),
+                                 GlobalValue::ExternalLinkage, "Test", &Mod);
+  MachineModuleInfo MMI(TM.get());
+  MachineFunction MF(*F, *TM, ST, MMI.getContext(), 0);
+  const SIInstrInfo &TII = *ST.getInstrInfo();
+
+  auto Check = [&](ArrayRef<unsigned> Opcs, CoExecMaskT Expected) {
+    for (unsigned Opc : Opcs) {
+      const MCInstrDesc &Desc = TII.get(Opc);
+      MachineInstr *MI = MF.CreateMachineInstr(Desc, DebugLoc());
+      for (auto [Idx, Info] : enumerate(Desc.operands())) {
+        if (Info.RegClass == -1)
+          MI->addOperand(MF, MachineOperand::CreateImm(0));
+        else
+          MI->addOperand(MF, MachineOperand::CreateReg(Register(), Idx < 1));
+      }
+      EXPECT_EQ(GCNHazardRecognizer::getCoExecMaskForMI(*MI, TII), Expected)
+          << TII.getName(Opc);
+    }
+  };
+  Check({V_PK_ADD_F32, V_PK_FMA_F32, V_PK_MOV_B32, V_PK_MUL_F32},
+        CoExecMask::VALU);
+  Check({V_PK_ADD_F16}, CoExecMask::VALU);
 }
