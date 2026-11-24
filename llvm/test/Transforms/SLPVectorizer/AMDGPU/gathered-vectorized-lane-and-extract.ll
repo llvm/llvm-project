@@ -9,17 +9,21 @@ define void @extract_and_load_lane(ptr addrspace(1) noalias %a, float %x, ptr ad
 ; CHECK-LABEL: define void @extract_and_load_lane(
 ; CHECK-SAME: ptr addrspace(1) noalias [[A:%.*]], float [[X:%.*]], ptr addrspace(1) noalias [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr addrspace(1) [[A]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, ptr addrspace(1) [[A]], i64 3
+; CHECK-NEXT:    [[A2:%.*]] = load float, ptr addrspace(1) [[P2]], align 4
+; CHECK-NEXT:    [[A3:%.*]] = load float, ptr addrspace(1) [[P3]], align 4
+; CHECK-NEXT:    [[S3:%.*]] = fsub float [[A3]], [[A2]]
 ; CHECK-NEXT:    [[O2:%.*]] = getelementptr float, ptr addrspace(1) [[OUT]], i64 2
+; CHECK-NEXT:    [[O3:%.*]] = getelementptr float, ptr addrspace(1) [[OUT]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[X]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr addrspace(1) [[P2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> [[TMP3]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP2]], float [[A2]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP3]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x float> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
+; CHECK-NEXT:    [[S2:%.*]] = fsub float [[A2]], [[TMP6]]
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr addrspace(1) [[O2]], align 4
+; CHECK-NEXT:    store float [[S2]], ptr addrspace(1) [[O2]], align 4
+; CHECK-NEXT:    store float [[S3]], ptr addrspace(1) [[O3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr float, ptr addrspace(1) %a, i64 1

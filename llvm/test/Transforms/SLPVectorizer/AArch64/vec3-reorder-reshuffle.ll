@@ -507,15 +507,16 @@ define void @common_mask(ptr %m, double %conv, double %conv2) {
 ; CHECK-LABEL: define void @common_mask(
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB19:%.*]] = fsub double [[CONV]], [[CONV]]
-; CHECK-NEXT:    [[CONV20:%.*]] = fptrunc double [[SUB19]] to float
-; CHECK-NEXT:    store float [[CONV20]], ptr [[M]], align 4
-; CHECK-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[CONV2]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double -0.000000e+00, double poison>, double [[CONV]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[CONV]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> [[TMP4]], double [[CONV2]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[CONV]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fptrunc <2 x double> [[TMP2]] to <2 x float>
-; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[ARRAYIDX25]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[M]], align 4
+; CHECK-NEXT:    [[ADD26:%.*]] = fsub double 0.000000e+00, [[CONV]]
+; CHECK-NEXT:    [[CONV27:%.*]] = fptrunc double [[ADD26]] to float
+; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 2
+; CHECK-NEXT:    store float [[CONV27]], ptr [[ARRAYIDX29]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

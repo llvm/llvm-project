@@ -13,6 +13,7 @@ define void @test(ptr %src, ptr %dst, ptr %p0, ptr %p1, ptr %p2, ptr %p3, double
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[U]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double poison, double 1.000000e+00>, double [[V]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[U]], i64 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[DST]], align 8
@@ -51,7 +52,6 @@ define void @test(ptr %src, ptr %dst, ptr %p0, ptr %p1, ptr %p2, ptr %p3, double
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], splat (double 5.000000e-01)
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP8]], <double -1.950000e+00, double f0xBFB0ECF56BE69CA7>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> <double poison, double 0.000000e+00>, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP11]], i64 0
 ; CHECK-NEXT:    store double [[TMP12]], ptr [[SRC]], align 8

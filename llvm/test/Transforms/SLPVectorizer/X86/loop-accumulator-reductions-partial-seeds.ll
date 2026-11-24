@@ -59,8 +59,8 @@ define void @uncovered_accumulators(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %m, 
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <8 x i16> [[TMP25]], i64 3
 ; CHECK-NEXT:    [[TMP33:%.*]] = sext i16 [[TMP32]] to i32
 ; CHECK-NEXT:    [[ADD317:%.*]] = add i32 [[ADD313]], [[TMP33]]
-; CHECK-NEXT:    [[CONV318:%.*]] = trunc i32 [[ADD317]] to i16
-; CHECK-NEXT:    store i16 [[CONV318]], ptr [[O]], align 2
+; CHECK-NEXT:    [[TMP78:%.*]] = trunc i32 [[ADD317]] to i16
+; CHECK-NEXT:    store i16 [[TMP78]], ptr [[O]], align 2
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i16> [[TMP13]], i64 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i16> [[TMP13]], i64 1
 ; CHECK-NEXT:    [[ADD323:%.*]] = add i16 [[TMP35]], [[TMP34]]

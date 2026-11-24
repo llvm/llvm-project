@@ -40,11 +40,11 @@ define i32 @fadd_fsub_constant_lhs_mix(float %s) {
 ; THRESH-SAME: float [[S:%.*]]) {
 ; THRESH-NEXT:  [[ENTRY:.*:]]
 ; THRESH-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> <float 2.000000e+00, float poison>, float [[S]], i64 1
-; THRESH-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> <float poison, float -1.000000e+00>, <2 x i32> <i32 1, i32 3>
+; THRESH-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float -1.000000e+00>, float [[S]], i64 0
 ; THRESH-NEXT:    [[TMP2:%.*]] = fsub <2 x float> [[TMP0]], [[TMP1]]
 ; THRESH-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float 1.000000e+00, float poison>, float [[S]], i64 1
 ; THRESH-NEXT:    [[TMP4:%.*]] = fmul <2 x float> <float -0.000000e+00, float 1.125000e+00>, [[TMP3]]
-; THRESH-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> <float poison, float 1.000000e+00>, <2 x i32> <i32 1, i32 3>
+; THRESH-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> <float poison, float 1.000000e+00>, float [[S]], i64 0
 ; THRESH-NEXT:    [[TMP6:%.*]] = fmul <2 x float> [[TMP5]], <float 2.000000e+00, float 0.000000e+00>
 ; THRESH-NEXT:    [[TMP7:%.*]] = fsub <2 x float> [[TMP6]], [[TMP4]]
 ; THRESH-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

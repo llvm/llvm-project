@@ -42,8 +42,8 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x float> [[TMP13]], float [[I68]], i64 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x float> [[TMP14]], float [[I67]], i64 6
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x float> [[TMP15]], float [[I69]], i64 7
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <16 x i32> <i32 poison, i32 poison, i32 3, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <16 x float> [[TMP20]], <16 x float> [[TMP0]], <16 x i32> <i32 poison, i32 poison, i32 2, i32 3, i32 18, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 19, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <16 x i32> <i32 poison, i32 poison, i32 3, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <16 x float> [[TMP17]], <16 x float> [[TMP0]], <16 x i32> <i32 poison, i32 poison, i32 2, i32 3, i32 18, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 19, i32 poison, i32 poison>
 ; CHECK-NEXT:    br label %[[BB78:.*]]
 ; CHECK:       [[BB78]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = phi <8 x float> [ [[TMP16]], %[[BB77]] ], [ [[TMP31:%.*]], %[[BB78]] ]

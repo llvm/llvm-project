@@ -8,7 +8,7 @@
 ; YAML-NEXT:  Function:        partial_overlap_loads
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-13'
+; YAML-NEXT:    - Cost:            '-17'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '12'
 
@@ -18,7 +18,7 @@
 ; YAML-NEXT:  Function:        reshuffled_gather
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-8'
+; YAML-NEXT:    - Cost:            '-9'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '6'
 
@@ -34,10 +34,8 @@ define void @partial_overlap_loads(ptr %x, ptr %y, ptr %q, i32 %z) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[Y2P]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP1]], <4 x i32> <i32 2, i32 3, i32 6, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[Z]], i64 3
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 2, i32 3, i32 6, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[Z]], i64 3
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub <4 x i32> [[TMP9]], [[TMP8]]

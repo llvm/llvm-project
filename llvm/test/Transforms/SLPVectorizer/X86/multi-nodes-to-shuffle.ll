@@ -39,10 +39,11 @@ define void @test(i64 %p0, i64 %p1, i64 %p2, i64 %p3) {
 ; AVX2-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[TMP3]], [[TMP3]]
 ; AVX2-NEXT:    [[TMP7:%.*]] = sub <4 x i64> [[TMP5]], [[TMP6]]
 ; AVX2-NEXT:    [[TMP8:%.*]] = shl <4 x i64> [[TMP4]], [[TMP7]]
-; AVX2-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 poison, i32 4>
-; AVX2-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
-; AVX2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP5]], <4 x i32> <i32 1, i32 5, i32 poison, i32 5>
-; AVX2-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[TMP11]], <4 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 5, i32 3>
+; AVX2-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>
+; AVX2-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> [[TMP4]], <4 x i32> <i32 4, i32 1, i32 poison, i32 3>
+; AVX2-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i64> [[TMP17]], <4 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
+; AVX2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP6]], <4 x i32> <i32 poison, i32 1, i32 5, i32 1>
+; AVX2-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[TMP11]], <4 x i64> [[TMP4]], <4 x i32> <i32 5, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP13:%.*]] = or <4 x i64> [[TMP10]], [[TMP12]]
 ; AVX2-NEXT:    [[TMP14:%.*]] = trunc <4 x i64> [[TMP13]] to <4 x i32>
 ; AVX2-NEXT:    br label [[BB:%.*]]

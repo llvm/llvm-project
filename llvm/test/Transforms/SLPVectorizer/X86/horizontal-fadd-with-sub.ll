@@ -1175,14 +1175,18 @@ define double @fmul_and_fsub_leaves_swapped_operands(ptr %a, ptr %b, ptr %c, ptr
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[C]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[D]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <4 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP7:%.*]] = fsub reassoc nsz contract <4 x double> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[RDX_OP:%.*]] = fadd reassoc nsz contract <4 x double> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[RDX_OP]])
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <8 x i32> <i32 0, i32 5, i32 2, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP3]], <8 x i32> <i32 0, i32 5, i32 2, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x double> [[TMP7]], <8 x double> [[TMP14]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP10:%.*]] = fsub reassoc nsz contract <8 x double> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul reassoc nsz contract <8 x double> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x double> [[TMP10]], <8 x double> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP8:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP12]])
 ; CHECK-NEXT:    ret double [[TMP8]]
 ;
 entry:

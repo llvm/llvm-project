@@ -17,7 +17,8 @@ define i32 @test(ptr %r, i32 %0) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP14:%.*]] = add <2 x i32> [[TMP8]], [[TMP12]]
 ; CHECK-NEXT:    store i32 [[MUL47_NEG_I]], ptr [[R]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[XOR_I]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP15]], i32 [[XOR_I]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <2 x i32> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>

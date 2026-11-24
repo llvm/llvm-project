@@ -11,7 +11,7 @@ define fastcc void @test(i32 %arg) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[SELECT]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[TMP0]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[SELECT]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext <2 x i32> [[TMP24]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i64> [[TMP25]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>

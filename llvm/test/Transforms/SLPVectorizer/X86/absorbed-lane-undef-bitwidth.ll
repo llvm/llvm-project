@@ -12,7 +12,8 @@ define void @swap_bytes(ptr noalias writeonly %out, i32 %t) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @get_size(i32 noundef [[T]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[CALL]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> <i16 poison, i16 0>, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> <i16 -255, i16 poison>, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[CALL]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> <i16 -255, i16 poison>, i16 [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i16> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <8 x i16> [[TMP4]], <i16 -1, i16 1, i16 253, i16 3, i16 251, i16 5, i16 249, i16 7>

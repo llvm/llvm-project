@@ -396,11 +396,14 @@ define void @vectorized_src(ptr %p, ptr %a, i64 %x) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P]], align 8
 ; CHECK-NEXT:    [[LD1:%.*]] = load i64, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[LD1]] to <2 x i32>
+; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[LD1]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[LD1]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[S]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[X]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP9]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP5]] to <2 x double>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP2]], [[TMP6]]
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[A]], align 8

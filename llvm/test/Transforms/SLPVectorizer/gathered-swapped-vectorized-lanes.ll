@@ -6,14 +6,15 @@
 define void @swapped_operand_f32(ptr %a, ptr %out) {
 ; CHECK-LABEL: define void @swapped_operand_f32(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 2.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[P1]], align 4
+; CHECK-NEXT:    [[T0:%.*]] = fmul float [[A0]], 2.000000e+00
+; CHECK-NEXT:    [[T1:%.*]] = fmul float [[A1]], 3.000000e+00
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub float [[T0]], [[T1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub float [[T1]], [[T0]]
 ; CHECK-NEXT:    [[O1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i64 0
 ; CHECK-NEXT:    store float [[TMP5]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i64 1
 ; CHECK-NEXT:    store float [[TMP6]], ptr [[O1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -33,14 +34,15 @@ define void @swapped_operand_f32(ptr %a, ptr %out) {
 define void @swapped_operand_i32(ptr %a, ptr %out) {
 ; CHECK-LABEL: define void @swapped_operand_i32(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[OUT:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i32> [[TMP1]], <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[A1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[T0:%.*]] = mul i32 [[A0]], 2
+; CHECK-NEXT:    [[T1:%.*]] = mul i32 [[A1]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[T0]], [[T1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[O1:%.*]] = getelementptr i32, ptr [[OUT]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[O1]], align 4
 ; CHECK-NEXT:    ret void
 ;

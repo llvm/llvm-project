@@ -97,7 +97,7 @@ define void @mixed_insert_costs(ptr noalias %p, ptr noalias %out, double %x0, do
 ; COST-NEXT: Pass:            slp-vectorizer
 ; COST-NEXT: Name:            StoresVectorized
 ; COST-NEXT: Function:        four_lane_gather
-; COST:        - Cost:            '-3'
+; COST:        - Cost:            '-2'
 
 define void @four_lane_gather(ptr noalias %a, float %x, float %y, float %z, ptr noalias %out) {
 ; CHECK-LABEL: define void @four_lane_gather(

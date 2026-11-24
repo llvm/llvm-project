@@ -38,8 +38,8 @@ define void @test(ptr nocapture %t2) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 5, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[T39]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[TMP13]], <i32 6270, i32 -16069, i32 1, i32 9633>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 7, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP4]], <4 x i32> <i32 poison, i32 3, i32 4, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> <i32 4, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[T48]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 2, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
