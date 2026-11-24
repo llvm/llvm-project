@@ -250,15 +250,21 @@ define void @interleave2_hi_halves_v16f32_512(<16 x float> %a, <16 x float> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-NEXT:    // kill: def $q4 killed $q4 def $z4
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    splice z6.s, p0, z6.s, z7.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z5.s
 ; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z6.s
-; CHECK-NEXT:    splice z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    zip2 z0.s, z1.s, z0.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z6.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z2.s
+; CHECK-NEXT:    zip2 z0.s, z0.s, z4.s
 ; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    ret
   %al = call <8 x float> @llvm.vector.extract(<16 x float> %a, i64 8)

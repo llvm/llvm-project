@@ -17,81 +17,33 @@ define void @interleave(ptr %a, ptr %b, ptr %out) {
 ;
 ; VLA-LABEL: interleave:
 ; VLA:       // %bb.0:
-; VLA-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VLA-NEXT:    sub x9, sp, #48
-; VLA-NEXT:    mov x29, sp
-; VLA-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VLA-NEXT:    .cfi_def_cfa w29, 16
-; VLA-NEXT:    .cfi_offset w30, -8
-; VLA-NEXT:    .cfi_offset w29, -16
 ; VLA-NEXT:    ptrue p0.s, vl8
-; VLA-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; VLA-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VLA-NEXT:    mov z2.s, z0.s[7]
-; VLA-NEXT:    mov z3.s, z1.s[7]
-; VLA-NEXT:    mov z4.s, z0.s[6]
-; VLA-NEXT:    mov z5.s, z1.s[6]
-; VLA-NEXT:    mov z6.s, z0.s[5]
-; VLA-NEXT:    stp s3, s2, [sp, #24]
-; VLA-NEXT:    fmov w8, s4
-; VLA-NEXT:    mov z2.s, z1.s[5]
-; VLA-NEXT:    fmov w9, s5
-; VLA-NEXT:    mov z3.s, z0.s[4]
-; VLA-NEXT:    mov z4.s, z1.s[4]
-; VLA-NEXT:    zip1 z0.s, z1.s, z0.s
-; VLA-NEXT:    stp w9, w8, [sp, #16]
-; VLA-NEXT:    fmov w8, s6
-; VLA-NEXT:    fmov w9, s2
-; VLA-NEXT:    stp w9, w8, [sp, #8]
-; VLA-NEXT:    fmov w8, s3
-; VLA-NEXT:    fmov w9, s4
-; VLA-NEXT:    stp w9, w8, [sp]
-; VLA-NEXT:    mov x8, sp
-; VLA-NEXT:    ld1w { z2.s }, p0/z, [x8]
 ; VLA-NEXT:    mov x8, #8 // =0x8
+; VLA-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VLA-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VLA-NEXT:    movprfx z2, z1
+; VLA-NEXT:    ext z2.b, z2.b, z1.b, #16
+; VLA-NEXT:    movprfx z3, z0
+; VLA-NEXT:    ext z3.b, z3.b, z0.b, #16
+; VLA-NEXT:    zip1 z0.s, z0.s, z1.s
+; VLA-NEXT:    zip1 z2.s, z3.s, z2.s
 ; VLA-NEXT:    st1w { z2.s }, p0, [x2, x8, lsl #2]
 ; VLA-NEXT:    st1w { z0.s }, p0, [x2]
-; VLA-NEXT:    mov sp, x29
-; VLA-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VLA-NEXT:    ret
 ;
 ; WIDE-LABEL: interleave:
 ; WIDE:       // %bb.0:
-; WIDE-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; WIDE-NEXT:    sub x9, sp, #48
-; WIDE-NEXT:    mov x29, sp
-; WIDE-NEXT:    and sp, x9, #0xffffffffffffffe0
-; WIDE-NEXT:    .cfi_def_cfa w29, 16
-; WIDE-NEXT:    .cfi_offset w30, -8
-; WIDE-NEXT:    .cfi_offset w29, -16
 ; WIDE-NEXT:    ptrue p0.s, vl8
-; WIDE-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; WIDE-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; WIDE-NEXT:    mov z2.s, z0.s[7]
-; WIDE-NEXT:    mov z3.s, z1.s[7]
-; WIDE-NEXT:    mov z4.s, z0.s[6]
-; WIDE-NEXT:    mov z5.s, z1.s[6]
-; WIDE-NEXT:    mov z6.s, z0.s[5]
-; WIDE-NEXT:    stp s3, s2, [sp, #24]
-; WIDE-NEXT:    fmov w8, s4
-; WIDE-NEXT:    mov z2.s, z1.s[5]
-; WIDE-NEXT:    fmov w9, s5
-; WIDE-NEXT:    mov z3.s, z0.s[4]
-; WIDE-NEXT:    mov z4.s, z1.s[4]
-; WIDE-NEXT:    zip1 z0.s, z1.s, z0.s
-; WIDE-NEXT:    stp w9, w8, [sp, #16]
-; WIDE-NEXT:    fmov w8, s6
-; WIDE-NEXT:    fmov w9, s2
-; WIDE-NEXT:    stp w9, w8, [sp, #8]
-; WIDE-NEXT:    fmov w8, s3
-; WIDE-NEXT:    fmov w9, s4
-; WIDE-NEXT:    stp w9, w8, [sp]
-; WIDE-NEXT:    mov x8, sp
-; WIDE-NEXT:    ld1w { z1.s }, p0/z, [x8]
+; WIDE-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; WIDE-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; WIDE-NEXT:    movprfx z2, z1
+; WIDE-NEXT:    ext z2.b, z2.b, z1.b, #16
+; WIDE-NEXT:    movprfx z3, z0
+; WIDE-NEXT:    ext z3.b, z3.b, z0.b, #16
+; WIDE-NEXT:    zip1 z0.s, z0.s, z1.s
+; WIDE-NEXT:    zip1 z1.s, z3.s, z2.s
 ; WIDE-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; WIDE-NEXT:    str z0, [x2]
-; WIDE-NEXT:    mov sp, x29
-; WIDE-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; WIDE-NEXT:    ret
   %x = load <8 x i32>, ptr %a
   %y = load <8 x i32>, ptr %b
@@ -113,112 +65,36 @@ define void @deinterleave(ptr %a, ptr %b, ptr %out) {
 ;
 ; VLA-LABEL: deinterleave:
 ; VLA:       // %bb.0:
-; VLA-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VLA-NEXT:    sub x9, sp, #80
-; VLA-NEXT:    mov x29, sp
-; VLA-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VLA-NEXT:    .cfi_def_cfa w29, 16
-; VLA-NEXT:    .cfi_offset w30, -8
-; VLA-NEXT:    .cfi_offset w29, -16
 ; VLA-NEXT:    ptrue p0.s, vl8
-; VLA-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; VLA-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; VLA-NEXT:    mov z1.s, z0.s[7]
-; VLA-NEXT:    mov z3.s, z0.s[5]
-; VLA-NEXT:    mov w8, v0.s[3]
-; VLA-NEXT:    mov w9, v0.s[1]
-; VLA-NEXT:    fmov w10, s1
-; VLA-NEXT:    mov z1.s, z2.s[7]
-; VLA-NEXT:    fmov w11, s3
-; VLA-NEXT:    mov z3.s, z2.s[5]
-; VLA-NEXT:    stp w9, w8, [sp, #48]
-; VLA-NEXT:    mov w8, v2.s[1]
-; VLA-NEXT:    stp w11, w10, [sp, #56]
-; VLA-NEXT:    mov w10, v2.s[3]
-; VLA-NEXT:    fmov w11, s1
-; VLA-NEXT:    fmov w9, s3
-; VLA-NEXT:    mov z1.s, z0.s[4]
-; VLA-NEXT:    mov z3.s, z0.s[6]
-; VLA-NEXT:    stp w9, w11, [sp, #40]
-; VLA-NEXT:    mov w9, v0.s[2]
-; VLA-NEXT:    stp w8, w10, [sp, #32]
-; VLA-NEXT:    fmov w8, s1
-; VLA-NEXT:    mov z1.s, z2.s[4]
-; VLA-NEXT:    str s3, [sp, #28]
-; VLA-NEXT:    stp w9, w8, [sp, #20]
-; VLA-NEXT:    fmov w8, s0
-; VLA-NEXT:    mov w9, v2.s[2]
-; VLA-NEXT:    mov z0.s, z2.s[6]
-; VLA-NEXT:    str w8, [sp, #16]
-; VLA-NEXT:    fmov w8, s1
-; VLA-NEXT:    str s0, [sp, #12]
-; VLA-NEXT:    stp w9, w8, [sp, #4]
-; VLA-NEXT:    fmov w8, s2
-; VLA-NEXT:    add x9, sp, #32
-; VLA-NEXT:    str w8, [sp]
-; VLA-NEXT:    mov x8, sp
-; VLA-NEXT:    ld1w { z0.s }, p0/z, [x8]
-; VLA-NEXT:    ld1w { z1.s }, p0/z, [x9]
 ; VLA-NEXT:    mov x8, #8 // =0x8
-; VLA-NEXT:    st1w { z0.s }, p0, [x2]
-; VLA-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VLA-NEXT:    mov sp, x29
-; VLA-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VLA-NEXT:    ptrue p1.s, vl4
+; VLA-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VLA-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VLA-NEXT:    uzp1 z2.s, z1.s, z1.s
+; VLA-NEXT:    uzp1 z3.s, z0.s, z0.s
+; VLA-NEXT:    uzp2 z1.s, z1.s, z1.s
+; VLA-NEXT:    uzp2 z0.s, z0.s, z0.s
+; VLA-NEXT:    splice z3.s, p1, z3.s, z2.s
+; VLA-NEXT:    splice z0.s, p1, z0.s, z1.s
+; VLA-NEXT:    st1w { z3.s }, p0, [x2]
+; VLA-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
 ; VLA-NEXT:    ret
 ;
 ; WIDE-LABEL: deinterleave:
 ; WIDE:       // %bb.0:
-; WIDE-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; WIDE-NEXT:    sub x9, sp, #80
-; WIDE-NEXT:    mov x29, sp
-; WIDE-NEXT:    and sp, x9, #0xffffffffffffffe0
-; WIDE-NEXT:    .cfi_def_cfa w29, 16
-; WIDE-NEXT:    .cfi_offset w30, -8
-; WIDE-NEXT:    .cfi_offset w29, -16
 ; WIDE-NEXT:    ptrue p0.s, vl8
-; WIDE-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; WIDE-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; WIDE-NEXT:    mov z1.s, z0.s[7]
-; WIDE-NEXT:    mov z3.s, z0.s[5]
-; WIDE-NEXT:    mov w8, v0.s[3]
-; WIDE-NEXT:    mov w9, v0.s[1]
-; WIDE-NEXT:    fmov w10, s1
-; WIDE-NEXT:    mov z1.s, z2.s[7]
-; WIDE-NEXT:    fmov w11, s3
-; WIDE-NEXT:    mov z3.s, z2.s[5]
-; WIDE-NEXT:    stp w9, w8, [sp, #48]
-; WIDE-NEXT:    mov w8, v2.s[1]
-; WIDE-NEXT:    stp w11, w10, [sp, #56]
-; WIDE-NEXT:    mov w10, v2.s[3]
-; WIDE-NEXT:    fmov w11, s1
-; WIDE-NEXT:    fmov w9, s3
-; WIDE-NEXT:    mov z1.s, z0.s[4]
-; WIDE-NEXT:    mov z3.s, z0.s[6]
-; WIDE-NEXT:    stp w9, w11, [sp, #40]
-; WIDE-NEXT:    mov w9, v0.s[2]
-; WIDE-NEXT:    stp w8, w10, [sp, #32]
-; WIDE-NEXT:    fmov w8, s1
-; WIDE-NEXT:    mov z1.s, z2.s[4]
-; WIDE-NEXT:    str s3, [sp, #28]
-; WIDE-NEXT:    stp w9, w8, [sp, #20]
-; WIDE-NEXT:    fmov w8, s0
-; WIDE-NEXT:    mov w9, v2.s[2]
-; WIDE-NEXT:    mov z0.s, z2.s[6]
-; WIDE-NEXT:    str w8, [sp, #16]
-; WIDE-NEXT:    fmov w8, s1
-; WIDE-NEXT:    str s0, [sp, #12]
-; WIDE-NEXT:    stp w9, w8, [sp, #4]
-; WIDE-NEXT:    fmov w8, s2
-; WIDE-NEXT:    add x9, sp, #32
-; WIDE-NEXT:    str w8, [sp]
-; WIDE-NEXT:    mov x8, sp
-; WIDE-NEXT:    ld1w { z0.s }, p0/z, [x8]
-; WIDE-NEXT:    ld1w { z1.s }, p0/z, [x9]
 ; WIDE-NEXT:    mov x8, #8 // =0x8
-; WIDE-NEXT:    st1w { z0.s }, p0, [x2]
-; WIDE-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; WIDE-NEXT:    mov sp, x29
-; WIDE-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; WIDE-NEXT:    ptrue p1.s, vl4
+; WIDE-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; WIDE-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; WIDE-NEXT:    uzp1 z2.s, z1.s, z1.s
+; WIDE-NEXT:    uzp1 z3.s, z0.s, z0.s
+; WIDE-NEXT:    uzp2 z1.s, z1.s, z1.s
+; WIDE-NEXT:    uzp2 z0.s, z0.s, z0.s
+; WIDE-NEXT:    splice z3.s, p1, z3.s, z2.s
+; WIDE-NEXT:    splice z0.s, p1, z0.s, z1.s
+; WIDE-NEXT:    st1w { z3.s }, p0, [x2]
+; WIDE-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
 ; WIDE-NEXT:    ret
   %x = load <8 x i32>, ptr %a
   %y = load <8 x i32>, ptr %b
