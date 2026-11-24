@@ -193,30 +193,6 @@ static Value processCountOrOffset(Location loc, Value value, Type srcType,
   return optionallyTruncateOrExtend(loc, broadcasted, dstType, rewriter);
 }
 
-/// Converts SPIR-V struct with a regular (according to `VulkanLayoutUtils`)
-/// offset to LLVM struct. Otherwise, the conversion is not supported.
-static Type convertStructTypeWithOffset(spirv::StructType type,
-                                        const TypeConverter &converter) {
-  if (type != VulkanLayoutUtils::decorateType(type))
-    return nullptr;
-
-  SmallVector<Type> elementsVector;
-  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
-    return nullptr;
-  return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
-                                          /*isPacked=*/false);
-}
-
-/// Converts SPIR-V struct with no offset to packed LLVM struct.
-static Type convertStructTypePacked(spirv::StructType type,
-                                    const TypeConverter &converter) {
-  SmallVector<Type> elementsVector;
-  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
-    return nullptr;
-  return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
-                                          /*isPacked=*/true);
-}
-
 /// Creates LLVM dialect constant with the given value.
 static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
                                  unsigned value) {
@@ -290,16 +266,23 @@ static std::optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
 }
 
 /// Converts SPIR-V struct to LLVM struct. There is no support of structs with
-/// member decorations. Also, only natural offset is supported.
+/// member decorations. Also, only natural offset (according to
+/// `VulkanLayoutUtils`) is supported.
 static Type convertStructType(spirv::StructType type,
                               const TypeConverter &converter) {
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
   type.getMemberDecorations(memberDecorations);
   if (!memberDecorations.empty())
     return nullptr;
-  if (type.hasOffset())
-    return convertStructTypeWithOffset(type, converter);
-  return convertStructTypePacked(type, converter);
+  if (type.hasOffset() && type != VulkanLayoutUtils::decorateType(type))
+    return nullptr;
+
+  SmallVector<Type> elementsVector;
+  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
+    return nullptr;
+  return LLVM::LLVMStructType::getLiteral(
+      type.getContext(), elementsVector,
+      /*isPacked=*/type.hasDecoration(spirv::Decoration::CPacked));
 }
 
 //===----------------------------------------------------------------------===//
