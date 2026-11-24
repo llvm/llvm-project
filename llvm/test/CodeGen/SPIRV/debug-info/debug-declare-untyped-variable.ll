@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --implicit-check-not=DebugDeclare
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers --spirv-debug-declare-untyped-variable=true %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ON
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers --spirv-debug-declare-untyped-variable=true %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL-ON %}
 
 ; With untyped pointers a local's storage is an OpUntypedVariableKHR.
