@@ -106,24 +106,24 @@ void assign_int(){
 // CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<1 x !s32i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u64i
 // CIR: %[[INSERT:.*]] = cir.vec.insert %[[TMP_A]], %[[POISON]][%[[CONST_0]] : !u64i] : !cir.vector<1 x !s32i>
-// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
-// CIR: %[[RESULT:.*]] = cir.vec.extract %[[INSERT]][%[[CONST_0]] : !s64i] : !cir.vector<1 x !s32i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u32i
+// CIR: %[[RESULT:.*]] = cir.vec.extract %[[INSERT]][%[[CONST_0]] : !u32i] : !cir.vector<1 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<1 x !s32i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u64i
 // CIR: %[[INSERT:.*]] = cir.vec.insert %[[TMP_A]], %[[POISON]][%[[CONST_0]] : !u64i] : !cir.vector<1 x !s32i>
-// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
-// CIR: %[[RESULT:.*]] = cir.vec.extract %[[INSERT]][%[[CONST_0]] : !s64i] : !cir.vector<1 x !s32i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u32i
+// CIR: %[[RESULT:.*]] = cir.vec.extract %[[INSERT]][%[[CONST_0]] : !u32i] : !cir.vector<1 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM: %[[SPLAT_A:.*]] = insertelement <1 x i32> poison, i32 %[[TMP_A]], i64 0
-// LLVM: %[[RESULT:.*]] = extractelement <1 x i32> %[[SPLAT_A]], i64 0
+// LLVM: %[[RESULT:.*]] = extractelement <1 x i32> %[[SPLAT_A]], i32 0
 // LLVM: store i32 %[[RESULT]], ptr %[[B_ADDR]], align 4
 // LLVM: %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM: %[[SPLAT_A:.*]] = insertelement <1 x i32> poison, i32 %[[TMP_A]], i64 0
-// LLVM: %[[RESULT:.*]] = extractelement <1 x i32> %[[SPLAT_A]], i64 0
+// LLVM: %[[RESULT:.*]] = extractelement <1 x i32> %[[SPLAT_A]], i32 0
 // LLVM: store i32 %[[RESULT]], ptr %[[B_ADDR]], align 4
