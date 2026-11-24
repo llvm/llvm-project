@@ -75,9 +75,7 @@
   /* therefore, no trap reason is emitted for this case. */                    \
   SANITIZER_CHECK(BoundsSafety, bounds_safety, 0, "")                          \
   SANITIZER_CHECK(ReturnAlignmentAssumption, return_alignment_assumption, 0,   \
-                  "Alignment assumption violated")                             \
-  SANITIZER_CHECK(KCFICheckFail, cfi_check_fail, 0,                            \
-                  "Control flow integrity check failed")
+                  "Alignment assumption violated")
 
 enum SanitizerHandler {
 #define SANITIZER_CHECK(Enum, Name, Version, Msg) Enum,
@@ -85,9 +83,42 @@ enum SanitizerHandler {
 #undef SANITIZER_CHECK
 };
 
+// Reserved llvm.ubsantrap codes 0x70..0x7f for x86-64 KCFI traps:
+// `ud1l (0x70 | reg)(%eax), %eax` (5-byte disp8 encoding `67 0f b9 40 7x`),
+// where `reg` (0..15) is the x86-64 hardware register encoding of the indirect
+// call target. `0x74` (`rsp`, never a call target) is used for unknown or
+// merged traps.
+enum KCFISanitizerHandler {
+  KCFICheckFailRAX = 0x70,
+  KCFICheckFailRCX = 0x71,
+  KCFICheckFailRDX = 0x72,
+  KCFICheckFailRBX = 0x73,
+  KCFICheckFailUnknown = 0x74, // rsp (never a call target)
+  KCFICheckFailRBP = 0x75,
+  KCFICheckFailRSI = 0x76,
+  KCFICheckFailRDI = 0x77,
+  KCFICheckFailR8 = 0x78,
+  KCFICheckFailR9 = 0x79,
+  KCFICheckFailR10 = 0x7a,
+  KCFICheckFailR11 = 0x7b,
+  KCFICheckFailR12 = 0x7c,
+  KCFICheckFailR13 = 0x7d,
+  KCFICheckFailR14 = 0x7e,
+  KCFICheckFailR15 = 0x7f,
+};
+
 static_assert(BoundsSafety == 0x19,
               "BoundsSafety must stay 0x19: it is encoded in -fbounds-safety "
               "trap instructions (brk #0x5519, ud1l 0x19(%eax)) that debuggers "
               "decode; append new checks at the end of LIST_SANITIZER_CHECKS");
+
+inline constexpr unsigned NumSanitizerHandlers = 0
+#define SANITIZER_CHECK(Enum, Name, Version, Msg) +1
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+    ;
+static_assert(NumSanitizerHandlers <= KCFICheckFailRAX,
+              "LIST_SANITIZER_CHECKS must not overlap the reserved KCFI trap "
+              "range 0x70..0x7f (ud1l (0x70 | reg)(%eax), %eax)");
 
 #endif // LLVM_CLANG_LIB_CODEGEN_SANITIZER_HANDLER_H
