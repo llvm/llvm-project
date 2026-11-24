@@ -4000,7 +4000,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   auto ExtendAndReplaceConstantOp = [](VPWidenCastRecipe *ExtA,
                                        VPWidenCastRecipe *&ExtB, VPValue *&ValB,
                                        VPWidenRecipe *Mul) {
-    if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
+    if (!ExtA || ExtB || !isa<VPIRValue>(ValB) ||
+        !match(ExtA, m_ZExtOrSExt(m_VPValue())))
       return;
     Type *NarrowTy = ExtA->getOperand(0)->getScalarType();
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
