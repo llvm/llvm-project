@@ -1339,6 +1339,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed bugs where Clang could apply an incorrectly high alignment to a vptr
   load within a virtual function thunk. (#GH242501)
 
+- Fixed a bug where qualifiers (such as `volatile`) were dropped during
+  derived-to-base conversions for pointer (`->`) and qualified (`Base::`)
+  member accesses. (#GH245523)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

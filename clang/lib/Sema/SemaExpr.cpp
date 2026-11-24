@@ -3256,6 +3256,15 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
 
   ExprValueKind VK = From->getValueKind();
 
+  // Propagate qualifiers from the derived object (or pointee) to base
+  // subobjects as per C++ [basic.type.qualifier]p1.2:
+  //   A volatile object is [...] a subobject of a volatile object.
+  auto PropagateQualifiers = [&](QualType TargetRecordType) {
+    Qualifiers Quals = FromRecordType.getQualifiers();
+    Quals.setAddressSpace(DestRecordType.getAddressSpace());
+    return Context.getQualifiedType(TargetRecordType, Quals);
+  };
+
   // C++ [class.member.lookup]p8:
   //   [...] Ambiguities can often be resolved by qualifying a name with its
   //   class name.
@@ -3289,6 +3298,8 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
                                        FromLoc, FromRange, &BasePath))
         return ExprError();
 
+      QRecordType = PropagateQualifiers(QRecordType);
+      QType = PropagateQualifiers(QType.getUnqualifiedType());
       if (PointerConversions)
         QType = Context.getPointerType(QType);
       From = ImpCastExprToType(From, QType, CK_UncheckedDerivedToBase,
@@ -3310,12 +3321,13 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
                                    /*IgnoreAccess=*/true))
     return ExprError();
 
-  // Propagate qualifiers to base subobjects as per:
-  // C++ [basic.type.qualifier]p1.2:
-  //   A volatile object is [...] a subobject of a volatile object.
-  Qualifiers FromTypeQuals = FromType.getQualifiers();
-  FromTypeQuals.setAddressSpace(DestType.getAddressSpace());
-  DestType = Context.getQualifiedType(DestType, FromTypeQuals);
+  if (PointerConversions) {
+    QualType DestPointee = PropagateQualifiers(DestType->getPointeeType());
+    DestType = Context.getQualifiedType(Context.getPointerType(DestPointee),
+                                        DestType.getQualifiers());
+  } else {
+    DestType = PropagateQualifiers(DestType);
+  }
 
   return ImpCastExprToType(From, DestType, CK_UncheckedDerivedToBase, VK,
                            &BasePath);
