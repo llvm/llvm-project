@@ -8,19 +8,15 @@ define i1 @strcmp_dash_eq_zero(ptr %s) {
 ; CHECK-SAME: ptr [[S:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[C0:%.*]] = load i8, ptr [[S]], align 1
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[C0]] to i32
-; CHECK-NEXT:    [[R0:%.*]] = sub nsw i32 45, [[Z0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C0]], 45
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[NEXT:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[NEXT]]:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[C1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[C1]] to i32
-; CHECK-NEXT:    [[R1:%.*]] = sub nsw i32 0, [[Z1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[C1]], 0
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[R0]], %[[ENTRY]] ], [ [[R1]], %[[NEXT]] ]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[R]], 0
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[TMP0]], %[[NEXT]] ]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -49,19 +45,15 @@ define i1 @strcmp_dash_eq_zero_swapped_phi(ptr %s) {
 ; CHECK-SAME: ptr [[S:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[C0:%.*]] = load i8, ptr [[S]], align 1
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[C0]] to i32
-; CHECK-NEXT:    [[R0:%.*]] = sub nsw i32 45, [[Z0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C0]], 45
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[NEXT:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[NEXT]]:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[C1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[C1]] to i32
-; CHECK-NEXT:    [[R1:%.*]] = sub nsw i32 0, [[Z1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[C1]], 0
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[R1]], %[[NEXT]] ], [ [[R0]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[R]], 0
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[TMP0]], %[[NEXT]] ], [ false, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -89,18 +81,14 @@ define i1 @general_c3_nonzero(i8 %a, ptr %p) {
 ; CHECK-LABEL: define i1 @general_c3_nonzero(
 ; CHECK-SAME: i8 [[A:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[R0:%.*]] = sub nsw i32 97, [[ZA]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[A]], 97
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[NEXT:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[NEXT]]:
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[R1:%.*]] = sub nsw i32 7, [[ZB]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i8 [[B]], 7
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[R0]], %[[ENTRY]] ], [ [[R1]], %[[NEXT]] ]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[R]], 0
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[TMP0]], %[[NEXT]] ]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:

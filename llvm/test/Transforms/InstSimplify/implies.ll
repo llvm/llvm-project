@@ -602,11 +602,7 @@ define i1 @same_ops_with_constant_wrong_sign(i8 %x) {
 
 define i1 @implies_sub_c_x_eq_zero(i8 %x) {
 ; CHECK-LABEL: @implies_sub_c_x_eq_zero(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 45, [[X]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SUB]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp eq i8 %x, 45
   %sub = sub i8 45, %x
@@ -617,11 +613,7 @@ define i1 @implies_sub_c_x_eq_zero(i8 %x) {
 
 define i1 @implies_sub_c_x_ne_zero(i8 %x) {
 ; CHECK-LABEL: @implies_sub_c_x_ne_zero(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 45, [[X]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SUB]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp ne i8 %x, 45
   %sub = sub i8 45, %x
@@ -632,11 +624,7 @@ define i1 @implies_sub_c_x_ne_zero(i8 %x) {
 
 define i1 @implies_sub_x_c_eq_zero(i8 %x) {
 ; CHECK-LABEL: @implies_sub_x_c_eq_zero(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], 45
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SUB]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp eq i8 %x, 45
   %sub = sub i8 %x, 45
@@ -647,11 +635,7 @@ define i1 @implies_sub_x_c_eq_zero(i8 %x) {
 
 define i1 @implies_add_x_c_eq_zero(i8 %x) {
 ; CHECK-LABEL: @implies_add_x_c_eq_zero(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], -45
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[ADD]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp eq i8 %x, 45
   %add = add i8 %x, -45
@@ -662,11 +646,7 @@ define i1 @implies_add_x_c_eq_zero(i8 %x) {
 
 define i1 @implies_xor_x_c_ne_zero(i8 %x) {
 ; CHECK-LABEL: @implies_xor_x_c_ne_zero(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 45
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[XOR]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp ne i8 %x, 45
   %xor = xor i8 %x, 45
@@ -677,12 +657,7 @@ define i1 @implies_xor_x_c_ne_zero(i8 %x) {
 
 define i1 @implies_sub_c_zext_x_ne_zero(i8 %x) {
 ; CHECK-LABEL: @implies_sub_c_zext_x_ne_zero(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 45, [[Z]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[SUB]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp ne i8 %x, 45
   %z = zext i8 %x to i32
@@ -694,12 +669,7 @@ define i1 @implies_sub_c_zext_x_ne_zero(i8 %x) {
 
 define i1 @implies_add_sext_x_c_eq_zero(i8 %x) {
 ; CHECK-LABEL: @implies_add_sext_x_c_eq_zero(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], -3
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[S]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[ADD]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp eq i8 %x, -3
   %s = sext i8 %x to i32
@@ -711,11 +681,7 @@ define i1 @implies_add_sext_x_c_eq_zero(i8 %x) {
 
 define i1 @implies_lhs_sub_c_x_eq_zero(i8 %x) {
 ; CHECK-LABEL: @implies_lhs_sub_c_x_eq_zero(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 45, [[X:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[SUB]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[X]], 45
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub i8 45, %x
   %cmp1 = icmp eq i8 %sub, 0
@@ -726,11 +692,7 @@ define i1 @implies_lhs_sub_c_x_eq_zero(i8 %x) {
 
 define <2 x i1> @implies_sub_c_x_ne_zero_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @implies_sub_c_x_ne_zero_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], splat (i8 45)
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> splat (i8 45), [[X]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i8> [[SUB]], zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp1 = icmp ne <2 x i8> %x, splat (i8 45)
   %sub = sub <2 x i8> splat (i8 45), %x
@@ -742,12 +704,7 @@ define <2 x i1> @implies_sub_c_x_ne_zero_vec(<2 x i8> %x) {
 ; Both sides rewrite to the same X.
 define i1 @implies_both_sides_rewritten(i8 %x) {
 ; CHECK-LABEL: @implies_both_sides_rewritten(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[SUB]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 45
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[XOR]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub i8 %x, 45
   %cmp1 = icmp eq i8 %sub, 0
@@ -760,11 +717,7 @@ define i1 @implies_both_sides_rewritten(i8 %x) {
 ; The shared value is the RHS of the other (non-canonical) compare.
 define i1 @implies_const_on_left(i8 %x) {
 ; CHECK-LABEL: @implies_const_on_left(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 45, [[X:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 45, [[X]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SUB]], 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp eq i8 45, %x
   %sub = sub i8 45, %x
