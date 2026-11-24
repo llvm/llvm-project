@@ -2672,7 +2672,7 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
   }
 
   if (TypeIdx == 1) {
-    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(WideTy.isVector(), false);
+    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(WideTy.isVector());
 
     Observer.changingInstr(MI);
     if (CarryIn)
@@ -3177,7 +3177,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     } else {
       bool IsVec = MRI.getType(MI.getOperand(1).getReg()).isVector();
       // Explicit extension is required here since high bits affect the result.
-      widenScalarSrc(MI, WideTy, 1, MIRBuilder.getBoolExtOp(IsVec, false));
+      widenScalarSrc(MI, WideTy, 1, MIRBuilder.getBoolExtOp(IsVec));
     }
     Observer.changedInstr(MI);
     return Legalized;
@@ -3347,7 +3347,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_BRCOND:
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 0, MIRBuilder.getBoolExtOp(false, false));
+    widenScalarSrc(MI, WideTy, 0, MIRBuilder.getBoolExtOp(false));
     Observer.changedInstr(MI);
     return Legalized;
 
@@ -8037,7 +8037,7 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
   auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
 
-  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::integer(1), Hi, Sign);
 
   // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
   // leading zeros, then the MSB of Lo is different than the MSB of Hi.
@@ -9405,7 +9405,7 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
                                    Cmp->getRHSReg());
 
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
-  auto BC = TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false);
+  auto BC = TLI.getBooleanContents(DstTy.isVector());
   if (TLI.preferSelectsOverBooleanArithmetic(
           getApproximateEVTForLLT(SrcTy, Ctx)) ||
       BC == TargetLowering::UndefinedBooleanContent) {
@@ -9419,8 +9419,7 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
       std::swap(IsGT, IsLT);
     // Extend boolean results to DstTy, which is at least i2, before subtracting
     // them.
-    unsigned BoolExtOp =
-        MIRBuilder.getBoolExtOp(DstTy.isVector(), /*isFP=*/false);
+    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(DstTy.isVector());
     IsGT = MIRBuilder.buildInstr(BoolExtOp, {DstTy}, {IsGT});
     IsLT = MIRBuilder.buildInstr(BoolExtOp, {DstTy}, {IsLT});
     MIRBuilder.buildSub(Dst, IsGT, IsLT);
@@ -11002,7 +11001,7 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
   CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_ABDS)
                                 ? CmpInst::ICMP_SGT
                                 : CmpInst::ICMP_UGT;
-  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::scalar(1), LHS, RHS);
+  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::integer(1), LHS, RHS);
   MIRBuilder.buildSelect(DstReg, ICmp, LHSSub, RHSSub);
 
   MI.eraseFromParent();

@@ -3766,6 +3766,11 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
             return true;
         }
       }
+      if (match(RecQ.CtxI,
+                m_Br(m_Trunc(m_Specific(U.get())), m_BasicBlock(TrueSucc),
+                     m_BasicBlock(FalseSucc))) &&
+          TrueSucc == PN->getParent() && FalseSucc != TrueSucc)
+        return true;
       // Finally recurse on the edge and check it directly.
       return isKnownNonZero(U.get(), DemandedElts, RecQ, NewDepth);
     });
@@ -5359,7 +5364,7 @@ static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
   computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
 }
 
-static void computeKnownFPClassForFPTrunc(const Operator *Op,
+static void computeKnownFPClassForFPTrunc(const Operator *Op, RoundingMode RM,
                                           const APInt &DemandedElts,
                                           FPClassTest InterestedClasses,
                                           KnownFPClass &Known,
@@ -5384,7 +5389,7 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   DenormalMode SrcMode =
       F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, RM, DstMode, SrcMode);
 }
 
 static void
@@ -6059,8 +6064,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::fptrunc_round: {
-      computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known,
-                                    Q, Depth);
+      Metadata *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
+      RoundingMode RM =
+          *convertStrToRoundingMode(cast<MDString>(MD)->getString());
+      computeKnownFPClassForFPTrunc(Op, RM, DemandedElts, InterestedClasses,
+                                    Known, Q, Depth);
       break;
     }
     case Intrinsic::log:
@@ -6479,7 +6487,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FPTrunc: {
-    computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known, Q,
+    computeKnownFPClassForFPTrunc(Op, RoundingMode::NearestTiesToEven,
+                                  DemandedElts, InterestedClasses, Known, Q,
                                   Depth);
     break;
   }
@@ -11215,6 +11224,15 @@ void llvm::findValuesAffectedByCondition(
         AddAffected(A);
         if (IsAssume)
           AddAffected(B);
+
+        // If the remainder is zero, then the division is exact.
+        Value *RemLHS, *RemRHS;
+        if (match(B, m_Zero()) &&
+            match(A, m_IRem(m_Value(RemLHS), m_Value(RemRHS)))) {
+          AddAffected(RemLHS);
+          AddAffected(RemRHS);
+        }
+
         if (HasRHSC) {
           Value *Y;
           // (X << C) or (X >>_s C) or (X >>_u C).

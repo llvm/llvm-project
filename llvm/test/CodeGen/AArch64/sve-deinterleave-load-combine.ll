@@ -779,6 +779,127 @@ define void @negative_deinterleave4_test(ptr %src) {
   ret void
 }
 
+define void @deinterleave8(ptr %src) {
+; CHECK-LABEL: deinterleave8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0]
+; CHECK-NEXT:    uzp1 z20.d, z4.d, z0.d
+; CHECK-NEXT:    uzp2 z16.d, z7.d, z3.d
+; CHECK-NEXT:    uzp2 z17.d, z6.d, z2.d
+; CHECK-NEXT:    uzp2 z18.d, z5.d, z1.d
+; CHECK-NEXT:    uzp2 z19.d, z4.d, z0.d
+; CHECK-NEXT:    uzp1 z21.d, z7.d, z3.d
+; CHECK-NEXT:    uzp1 z22.d, z6.d, z2.d
+; CHECK-NEXT:    uzp1 z0.d, z5.d, z1.d
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z22
+; CHECK-NEXT:    // fake_use: $z21
+; CHECK-NEXT:    // fake_use: $z19
+; CHECK-NEXT:    // fake_use: $z18
+; CHECK-NEXT:    // fake_use: $z17
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    ret
+entry:
+  %load = load <vscale x 16 x double>, ptr %src, align 8
+  %deinterleave = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave8.nxv16f64(<vscale x 16 x double> %load)
+  %p0 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 0
+  %p1 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 1
+  %p2 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 2
+  %p3 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 3
+  %p4 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 4
+  %p5 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 5
+  %p6 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 6
+  %p7 = extractvalue {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %deinterleave, 7
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p0)
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p1)
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p2)
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p3)
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p4)
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p5)
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p6)
+  call void (...) @llvm.fake.use(<vscale x 2 x double> %p7)
+  ret void
+}
+
+define void @wide_deinterleave8(ptr %src) {
+; CHECK-LABEL: wide_deinterleave8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp d13, d12, [sp, #-48]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset b8, -8
+; CHECK-NEXT:    .cfi_offset b9, -16
+; CHECK-NEXT:    .cfi_offset b10, -24
+; CHECK-NEXT:    .cfi_offset b11, -32
+; CHECK-NEXT:    .cfi_offset b12, -40
+; CHECK-NEXT:    .cfi_offset b13, -48
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, #12, mul vl]
+; CHECK-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0, #8, mul vl]
+; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    uzp2 z20.d, z7.d, z3.d
+; CHECK-NEXT:    uzp2 z26.d, z6.d, z2.d
+; CHECK-NEXT:    uzp2 z28.d, z5.d, z1.d
+; CHECK-NEXT:    ld4d { z21.d - z24.d }, p0/z, [x0]
+; CHECK-NEXT:    uzp2 z30.d, z4.d, z0.d
+; CHECK-NEXT:    uzp1 z8.d, z7.d, z3.d
+; CHECK-NEXT:    uzp1 z10.d, z6.d, z2.d
+; CHECK-NEXT:    uzp1 z13.d, z5.d, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z4.d, z0.d
+; CHECK-NEXT:    uzp1 z12.d, z21.d, z16.d
+; CHECK-NEXT:    uzp2 z25.d, z24.d, z19.d
+; CHECK-NEXT:    uzp2 z27.d, z23.d, z18.d
+; CHECK-NEXT:    uzp2 z29.d, z22.d, z17.d
+; CHECK-NEXT:    uzp2 z31.d, z21.d, z16.d
+; CHECK-NEXT:    uzp1 z9.d, z24.d, z19.d
+; CHECK-NEXT:    uzp1 z11.d, z23.d, z18.d
+; CHECK-NEXT:    uzp1 z16.d, z22.d, z17.d
+; CHECK-NEXT:    // fake_use: $z12
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    // fake_use: $z13
+; CHECK-NEXT:    // fake_use: $z11
+; CHECK-NEXT:    // fake_use: $z10
+; CHECK-NEXT:    // fake_use: $z9
+; CHECK-NEXT:    // fake_use: $z8
+; CHECK-NEXT:    // fake_use: $z31
+; CHECK-NEXT:    // fake_use: $z30
+; CHECK-NEXT:    // fake_use: $z29
+; CHECK-NEXT:    // fake_use: $z28
+; CHECK-NEXT:    // fake_use: $z27
+; CHECK-NEXT:    // fake_use: $z26
+; CHECK-NEXT:    // fake_use: $z25
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp], #48 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %load = load <vscale x 32 x double>, ptr %src, align 8
+  %deinterleave = call {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} @llvm.vector.deinterleave8.nxv32f64(<vscale x 32 x double> %load)
+  %p0 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 0
+  %p1 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 1
+  %p2 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 2
+  %p3 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 3
+  %p4 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 4
+  %p5 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 5
+  %p6 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 6
+  %p7 = extractvalue {<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>} %deinterleave, 7
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p0)
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p1)
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p2)
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p3)
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p4)
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p5)
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p6)
+  call void (...) @llvm.fake.use(<vscale x 4 x double> %p7)
+  ret void
+}
+
 define void @deinterleave_nxi8_factor2(ptr %ptr) #2 {
 ; CHECK-LABEL: deinterleave_nxi8_factor2:
 ; CHECK:       // %bb.0:

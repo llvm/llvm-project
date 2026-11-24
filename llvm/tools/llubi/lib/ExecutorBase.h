@@ -69,6 +69,7 @@ struct Frame {
   // They belong to the caller.
   SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
+  bool HasInaccessibleStackObjects = false;
 
   Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
         ArrayRef<AnyValue> Args, AnyValue &RetVal,

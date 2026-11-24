@@ -72,6 +72,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
   initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
   initializeSPIRVRemoveUnusedResourcesLegacyPass(PR);
+  initializeSPIRVLowerResourceNamesLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -224,6 +225,16 @@ bool SPIRVTargetMachine::parseMachineFunctionInfo(
       return Diagnose(Entry.Type, "expected a SPIR-V type register");
     GR->assignSPIRVTypeToVReg(TypeMI, RegInfo->VReg, MF);
   }
+  if (!YamlMFI.LastInsertedType.Value.empty()) {
+    VRegInfo *RegInfo;
+    if (ParseVReg(YamlMFI.LastInsertedType, RegInfo))
+      return true;
+    MachineInstr *MI = MRI.getUniqueVRegDef(RegInfo->VReg);
+    if (!MI)
+      return Diagnose(YamlMFI.LastInsertedType,
+                      "virtual register is not defined");
+    GR->setLastInsertedType(MF, MI);
+  }
   GR->restoreFromMIR(MF);
   return false;
 }
@@ -232,6 +243,8 @@ void SPIRVPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
+
+  addPass(createSPIRVLowerResourceNamesLegacyPass());
 
   if (TM.getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None)
