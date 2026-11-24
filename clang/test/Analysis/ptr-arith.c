@@ -357,3 +357,30 @@ void struct_pointer_canon_const(const struct s *ps) {
   clang_analyzer_eval((*ps).v == ps->v);   // expected-warning{{TRUE}}
   clang_analyzer_eval(ps[0].v == ps->v);   // expected-warning{{TRUE}}
 }
+
+struct trie {
+  struct trie* next;
+};
+
+struct kwset {
+  struct trie *trie;
+  unsigned char y[10];
+  struct trie* next[10];
+  int d;
+};
+
+typedef struct trie trie_t;
+typedef struct kwset kwset_t;
+
+void f(kwset_t *kws, char const *p, char const *q) {
+  struct trie const *trie;
+  struct trie * const *next = kws->next;
+  unsigned char c;
+  char const *end = p;
+  char const *lim = q;
+  int d = 1;
+  unsigned char const *y = kws->y;
+
+  d = y[c = (end+=d)[-1]]; // no-warning
+  trie = next[c];
+}
