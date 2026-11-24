@@ -1695,8 +1695,8 @@ mlir::LogicalResult cir::VectorType::verify(
     if (size.isScalable())
       return emitError() << "a scalable vector must have a vector kind";
     // A generic mfp8 vector is an AArch64 NEON vector of 64 or 128 bits.
-    if (mlir::isa<cir::MFloat8Type>(elementType) &&
-        size.getFixedValue() != 8 && size.getFixedValue() != 16)
+    if (mlir::isa<cir::MFloat8Type>(elementType) && size.getFixedValue() != 8 &&
+        size.getFixedValue() != 16)
       return emitError() << "a NEON mfp8 vector must have 8 or 16 elements";
     return success();
   case cir::VectorAbiKind::SVEData: {
@@ -1709,9 +1709,9 @@ mlir::LogicalResult cir::VectorType::verify(
       // A scalable mfp8 vector holds one 128-bit granule per vscale. A
       // fixed-length one holds a power-of-two number of bits from 128 to 2048.
       uint64_t numElts = size.getKnownMinValue();
-      if (size.isScalable() ? numElts == 16
-                            : llvm::isPowerOf2_64(numElts) && numElts >= 16 &&
-                                  numElts <= 256)
+      if (size.isScalable()
+              ? numElts == 16
+              : llvm::isPowerOf2_64(numElts) && numElts >= 16 && numElts <= 256)
         return success();
       return emitError() << "an SVE mfp8 vector must have [16] elements, or a "
                             "power-of-two number of elements from 16 to 256";
