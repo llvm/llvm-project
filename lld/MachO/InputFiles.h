@@ -166,9 +166,13 @@ public:
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
-  // parseLazy() split in two: scanLazy() collects the names this file defines
-  // and references (touching only per-file state), and registerLazy() adds the
-  // defined names to the symbol table.
+  // parse() split in two. parsePrepare() is the per-file half: it touches no
+  // global state, so it can be run for many files at once. parseFinish() is
+  // the half that inserts into the symbol table, and has to run in file order.
+  template <class LP> void parsePrepare();
+  template <class LP> void parseFinish();
+  // parseLazy() split the same way: scanLazy() collects the names this file
+  // defines (and references), registerLazy() adds them to the symbol table.
   template <class LP> void scanLazy();
   void registerLazy();
   void clearLazyScan() {
@@ -202,23 +206,50 @@ public:
     llvm::CachedHashStringRef name;
     uint32_t symIndex;
   };
+  // An external section symbol, and the subsection it was found to be in.
+  struct PendingDefined {
+    llvm::CachedHashStringRef name;
+    uint32_t symIndex;
+    InputSection *isec;
+    uint64_t value;
+    uint64_t size;
+  };
   ArrayRef<PendingSymbol> getLazyDefineds() const { return lazyDefineds; }
   ArrayRef<llvm::CachedHashStringRef> getLazyUndefineds() const {
     return lazyUndefineds;
   }
+  ArrayRef<PendingDefined> getPendingDefineds() const {
+    return pendingDefineds;
+  }
+  ArrayRef<PendingSymbol> getNonSectionSymbols() const {
+    return nonSectionSymbols;
+  }
+  ArrayRef<PendingSymbol> getUndefineds() const { return undefineds; }
 
 private:
   llvm::once_flag initDwarf;
   template <class LP> void parseLazy();
-  std::vector<PendingSymbol> lazyDefineds;
-  std::vector<llvm::CachedHashStringRef> lazyUndefineds;
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
-  void parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
-                    ArrayRef<typename LP::nlist> nList, const char *strtab,
-                    bool subsectionsViaSymbols);
+  void parseSymbolsPrepare(ArrayRef<typename LP::section> sectionHeaders,
+                           ArrayRef<typename LP::nlist> nList,
+                           const char *strtab, bool subsectionsViaSymbols);
+  template <class LP> void parseSymbols(ArrayRef<typename LP::nlist> nList);
+
+  // Filled in by parsePrepare(), consumed by parseFinish(). The symbols that
+  // go through the symbol table are recorded with their name already hashed,
+  // so that the half of parsing that runs one file at a time has nothing left
+  // to do with the name but look it up.
+  llvm::SmallVector<StringRef, 4> lcLinkerOptions;
+  std::vector<std::vector<uint32_t>> symbolsBySection;
+  std::vector<PendingSymbol> undefineds;
+  std::vector<PendingSymbol> nonSectionSymbols;
+  std::vector<PendingSymbol> lazyDefineds;
+  std::vector<llvm::CachedHashStringRef> lazyUndefineds;
+  std::vector<PendingDefined> pendingDefineds;
   template <class NList>
-  Symbol *parseNonSectionSymbol(const NList &sym, const char *strtab);
+  Symbol *parseNonSectionSymbol(const NList &sym,
+                                llvm::CachedHashStringRef name);
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
@@ -385,8 +416,10 @@ void extract(InputFile &file, StringRef reason);
 
 // Parses the files extract() has pulled into the link. May pull in more.
 void parsePendingExtracts();
-// Queues an input file from the command line to be resolved and parsed by the
-// next parsePendingObjects() in command-line order.
+// Queues an object file from the command line to be parsed by the next
+// parsePendingObjects(), together with the other files queued since the last
+// one. The driver calls that before anything else that adds to the symbol
+// table, so files still resolve in command-line order.
 void parseLater(InputFile &file);
 void parsePendingObjects();
 

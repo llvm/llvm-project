@@ -359,7 +359,8 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
     StringRef segname =
         StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
-    sections.push_back(make<Section>(this, segname, name, sec.flags, sec.addr));
+    sections.push_back(
+        makeThreadLocal<Section>(this, segname, name, sec.flags, sec.addr));
     if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
@@ -377,7 +378,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       Subsections &subsections = section.subsections;
       subsections.reserve(data.size() / recordSize);
       for (uint64_t off = 0; off < data.size(); off += recordSize) {
-        auto *isec = make<ConcatInputSection>(
+        auto *isec = makeThreadLocal<ConcatInputSection>(
             section, data.slice(off, std::min(data.size(), recordSize)), align);
         subsections.push_back({off, isec});
       }
@@ -390,8 +391,8 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
               " contains relocations, which is unsupported");
       bool dedupLiterals =
           name == section_names::objcMethname || config->dedupStrings;
-      InputSection *isec =
-          make<CStringInputSection>(section, data, align, dedupLiterals);
+      InputSection *isec = makeThreadLocal<CStringInputSection>(
+          section, data, align, dedupLiterals);
       // FIXME: parallelize this?
       cast<CStringInputSection>(isec)->splitIntoPieces();
       section.subsections.push_back({0, isec});
@@ -399,7 +400,8 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       if (sec.nreloc)
         fatal(toString(this) + ": " + sec.segname + "," + sec.sectname +
               " contains relocations, which is unsupported");
-      InputSection *isec = make<WordLiteralInputSection>(section, data, align);
+      InputSection *isec =
+          makeThreadLocal<WordLiteralInputSection>(section, data, align);
       section.subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
@@ -422,7 +424,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       if (name == section_names::addrSig)
         addrSigSection = sections.back();
 
-      auto *isec = make<ConcatInputSection>(section, data, align);
+      auto *isec = makeThreadLocal<ConcatInputSection>(section, data, align);
       if (isDebugSection(isec->getFlags()) &&
           isec->getSegName() == segment_names::dwarf) {
         // Instead of emitting DWARF sections, we emit STABS symbols to the
@@ -455,9 +457,9 @@ void ObjFile::splitEhFrames(ArrayRef<uint8_t> data, Section &ehFrameSection) {
     // Note that we still want to preserve the alignment of the overall section,
     // just not of the individual EH frames.
     ehFrameSection.subsections.push_back(
-        {frameOff, make<ConcatInputSection>(ehFrameSection,
-                                            data.slice(frameOff, fullLength),
-                                            /*align=*/1)});
+        {frameOff, makeThreadLocal<ConcatInputSection>(
+                       ehFrameSection, data.slice(frameOff, fullLength),
+                       /*align=*/1)});
   }
   ehFrameSection.doneSplitting = true;
 }
@@ -726,10 +728,21 @@ static bool shouldIgnoreLabel(const InputSection *isec, StringRef name) {
   return false;
 }
 
+// Whether a section symbol goes in the symbol table. See createDefined().
+template <class NList>
+static bool isExternalDefined(const NList &sym, const InputSection *isec,
+                              StringRef name) {
+  return (sym.n_type & N_EXT) && !shouldIgnoreLabel(isec, name);
+}
+
+// Creates the symbol for a section symbol. External symbols (see
+// isExternalDefined()) go through the symbol table and need their name hashed;
+// the far more numerous local ones do not, so they take the plain name.
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
-                                    uint64_t size, bool forceHidden) {
+                                    uint64_t size, bool forceHidden,
+                                    const CachedHashStringRef *hashedName = nullptr) {
   // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
   // N_EXT: Global symbols. These go in the symbol table during the link,
   //        and also in the export table of the output so that the dynamic
@@ -751,7 +764,8 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 
   bool isCold = sym.n_desc & N_COLD_FUNC;
 
-  if ((sym.n_type & N_EXT) && !shouldIgnoreLabel(isec, name)) {
+  if (isExternalDefined(sym, isec, name)) {
+    assert(hashedName && "external symbols need their hashed name");
     // -load_hidden makes us treat global symbols as linkage unit scoped.
     // Duplicates are reported but the symbol does not go in the export trie.
     bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
@@ -791,13 +805,14 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
       isWeakDefCanBeHidden = false;
     else if (isWeakDefCanBeHidden)
       isPrivateExtern = true;
-    return symtab->addDefined(
-        name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
-        isPrivateExtern, sym.n_desc & REFERENCED_DYNAMICALLY,
-        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden, isCold);
+    return symtab->addDefined(*hashedName, isec->getFile(), isec, value, size,
+                              sym.n_desc & N_WEAK_DEF, isPrivateExtern,
+                              sym.n_desc & REFERENCED_DYNAMICALLY,
+                              sym.n_desc & N_NO_DEAD_STRIP,
+                              isWeakDefCanBeHidden, isCold);
   }
   bool includeInSymtab = !isPrivateLabel(name) && !isEhFrameSection(isec);
-  auto *defined = make<Defined>(
+  auto *defined = makeThreadLocal<Defined>(
       name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false, includeInSymtab,
       sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
@@ -809,52 +824,58 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 // InputSection. They cannot be weak.
 template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
-                                     StringRef name, bool forceHidden) {
+                                     CachedHashStringRef hashedName,
+                                     bool forceHidden) {
+  StringRef name = hashedName.val();
   bool isCold = sym.n_desc & N_COLD_FUNC;
   assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
 
   if (sym.n_type & N_EXT) {
     bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
-    return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
+    return symtab->addDefined(hashedName, file, nullptr, sym.n_value,
+                              /*size=*/0,
                               /*isWeakDef=*/false, isPrivateExtern,
                               /*isReferencedDynamically=*/false,
                               sym.n_desc & N_NO_DEAD_STRIP,
                               /*isWeakDefCanBeHidden=*/false, isCold);
   }
-  auto *defined = make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
-                                /*isWeakDef=*/false,
-                                /*isExternal=*/false, /*isPrivateExtern=*/false,
-                                /*includeInSymtab=*/true,
-                                /*isReferencedDynamically=*/false,
-                                sym.n_desc & N_NO_DEAD_STRIP);
+  auto *defined = makeThreadLocal<Defined>(
+      name, file, nullptr, sym.n_value, /*size=*/0,
+      /*isWeakDef=*/false,
+      /*isExternal=*/false, /*isPrivateExtern=*/false,
+      /*includeInSymtab=*/true,
+      /*isReferencedDynamically=*/false, sym.n_desc & N_NO_DEAD_STRIP);
   defined->cold = isCold;
   return defined;
 }
 
 template <class NList>
 macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
-                                              const char *strtab) {
-  StringRef name = StringRef(strtab + sym.n_strx);
+                                              CachedHashStringRef hashedName) {
+  StringRef name = hashedName.val();
   uint8_t type = sym.n_type & N_TYPE;
   bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
   switch (type) {
   case N_UNDF:
     return sym.n_value == 0
-               ? symtab->addUndefined(name, this, sym.n_desc & N_WEAK_REF)
-               : symtab->addCommon(name, this, sym.n_value,
+               ? symtab->addUndefined(hashedName, this, sym.n_desc & N_WEAK_REF)
+               : symtab->addCommon(hashedName, this, sym.n_value,
                                    1 << GET_COMM_ALIGN(sym.n_desc),
                                    isPrivateExtern);
   case N_ABS:
-    return createAbsolute(sym, this, name, forceHidden);
+    return createAbsolute(sym, this, hashedName, forceHidden);
   case N_INDR: {
     // Not much point in making local aliases -- relocs in the current file can
     // just refer to the actual symbol itself. ld64 ignores these symbols too.
     if (!(sym.n_type & N_EXT))
       return nullptr;
-    StringRef aliasedName = StringRef(strtab + sym.n_value);
+    // The aliased name is at the string table offset stored in n_value, so it
+    // is the one thing here that is not the symbol's own name.
+    StringRef aliasedName = name.data() + (sym.n_value - sym.n_strx);
     // isPrivateExtern is the only symbol flag that has an impact on the final
     // aliased symbol.
-    auto *alias = make<AliasSymbol>(this, name, aliasedName, isPrivateExtern);
+    auto *alias =
+        makeThreadLocal<AliasSymbol>(this, name, aliasedName, isPrivateExtern);
     aliases.push_back(alias);
     return alias;
   }
@@ -873,16 +894,21 @@ template <class NList> static bool isUndef(const NList &sym) {
   return (sym.n_type & N_TYPE) == N_UNDF && sym.n_value == 0;
 }
 
+template <class NList>
+static bool nonSectionSymbolNeedsSymtab(const NList &sym) {
+  uint8_t type = sym.n_type & N_TYPE;
+  return type != N_INDR && (type != N_ABS || (sym.n_type & N_EXT));
+}
+
 template <class LP>
-void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
-                           ArrayRef<typename LP::nlist> nList,
-                           const char *strtab, bool subsectionsViaSymbols) {
+void ObjFile::parseSymbolsPrepare(ArrayRef<typename LP::section> sectionHeaders,
+                                  ArrayRef<typename LP::nlist> nList,
+                                  const char *strtab,
+                                  bool subsectionsViaSymbols) {
   using NList = typename LP::nlist;
 
-  // Groups indices of the symbols by the sections that contain them.
-  std::vector<std::vector<uint32_t>> symbolsBySection(sections.size());
+  symbolsBySection.resize(sections.size());
   symbols.resize(nList.size());
-  SmallVector<unsigned, 32> undefineds;
   for (uint32_t i = 0; i < nList.size(); ++i) {
     const NList &sym = nList[i];
 
@@ -903,17 +929,44 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
               "] greater than the total number of sections [" +
               Twine(sections.size()) + "]");
       }
-      Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
-      if (subsections.empty())
+      if (sections[sym.n_sect - 1]->subsections.empty())
         continue;
       symbolsBySection[sym.n_sect - 1].push_back(i);
     } else if (isUndef(sym)) {
-      undefineds.push_back(i);
+      undefineds.push_back({CachedHashStringRef(strtab + sym.n_strx), i});
+    } else if (nonSectionSymbolNeedsSymtab(sym)) {
+      nonSectionSymbols.push_back(
+          {CachedHashStringRef(strtab + sym.n_strx), i});
     } else {
-      symbols[i] = parseNonSectionSymbol(sym, strtab);
+      symbols[i] =
+          parseNonSectionSymbol(sym, CachedHashStringRef(strtab + sym.n_strx));
     }
   }
+
+  for (size_t i = 0; i < sections.size(); ++i) {
+    if (sections[i]->subsections.empty() || sections[i]->doneSplitting)
+      continue;
+    llvm::stable_sort(symbolsBySection[i], [&](uint32_t lhs, uint32_t rhs) {
+      if (nList[lhs].n_value == nList[rhs].n_value &&
+          nList[lhs].n_type & N_EXT && nList[rhs].n_type & N_EXT)
+        return !(nList[lhs].n_desc & N_WEAK_DEF) &&
+               (nList[rhs].n_desc & N_WEAK_DEF);
+      return nList[lhs].n_value < nList[rhs].n_value;
+    });
+  }
+
+  auto addDefined = [&](uint32_t symIndex, InputSection *isec, uint64_t value,
+                        uint64_t size) {
+    const NList &sym = nList[symIndex];
+    StringRef name = strtab + sym.n_strx;
+    if (isExternalDefined(sym, isec, name))
+      pendingDefineds.push_back(
+          {CachedHashStringRef(name), symIndex, isec, value, size});
+    else
+      symbols[symIndex] = createDefined(sym, name, isec, value, size,
+                                        forceHidden, /*hashedName=*/nullptr);
+  };
 
   for (size_t i = 0; i < sections.size(); ++i) {
     Subsections &subsections = sections[i]->subsections;
@@ -939,30 +992,16 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                 " at misaligned offset");
           continue;
         }
-        symbols[symIndex] =
-            createDefined(sym, name, isec, 0, isec->getSize(), forceHidden);
+        addDefined(symIndex, isec, 0, isec->getSize());
       }
       continue;
     }
     sections[i]->doneSplitting = true;
 
-    auto getSymName = [strtab](const NList& sym) -> StringRef {
-      return StringRef(strtab + sym.n_strx);
-    };
-
-    // Calculate symbol sizes and create subsections by splitting the sections
-    // along symbol boundaries.
-    // We populate subsections by repeatedly splitting the last (highest
-    // address) subsection.
-    llvm::stable_sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
-      // Put extern weak symbols after other symbols at the same address so
-      // that weak symbol coalescing works correctly. See
-      // SymbolTable::addDefined() for details.
-      if (nList[lhs].n_value == nList[rhs].n_value &&
-          nList[lhs].n_type & N_EXT && nList[rhs].n_type & N_EXT)
-        return !(nList[lhs].n_desc & N_WEAK_DEF) && (nList[rhs].n_desc & N_WEAK_DEF);
-      return nList[lhs].n_value < nList[rhs].n_value;
-    });
+    // Create subsections by splitting the section along symbol boundaries.
+    // symbolIndices was sorted by address in parseSymbolsPrepare(). We
+    // populate subsections by repeatedly splitting the last (highest address)
+    // subsection.
     size_t sameAddrGroupIdx = 0;
     bool sameAddrHasRegularSymbol = false;
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
@@ -980,7 +1019,6 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
           ++sameAddrGroupIdx;
         }
       }
-      StringRef name = getSymName(sym);
       Subsection &subsec = subsections.back();
       InputSection *isec = subsec.isec;
 
@@ -1003,13 +1041,12 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       if (!subsectionsViaSymbols || symbolOffset == 0 || isInteriorAltEntry ||
           !isa<ConcatInputSection>(isec)) {
         isec->hasAltEntry = symbolOffset != 0;
-        symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
-                                          symbolSize, forceHidden);
+        addDefined(symIndex, isec, symbolOffset, symbolSize);
         continue;
       }
       auto *concatIsec = cast<ConcatInputSection>(isec);
 
-      auto *nextIsec = make<ConcatInputSection>(*concatIsec);
+      auto *nextIsec = makeThreadLocal<ConcatInputSection>(*concatIsec);
       nextIsec->wasCoalesced = false;
       if (isZeroFill(isec->getFlags())) {
         // Zero-fill sections have NULL data.data() non-zero data.size()
@@ -1022,8 +1059,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
       // By construction, the symbol will be at offset zero in the new
       // subsection.
-      symbols[symIndex] = createDefined(sym, name, nextIsec, /*value=*/0,
-                                        symbolSize, forceHidden);
+      addDefined(symIndex, nextIsec, /*value=*/0, symbolSize);
       // TODO: ld64 appears to preserve the original alignment as well as each
       // subsection's offset from the last aligned address. We should consider
       // emulating that behavior.
@@ -1031,6 +1067,23 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       subsections.push_back({sym.n_value - sectionAddr, nextIsec});
     }
   }
+}
+
+// The half that adds this file's symbols to the symbol table. Everything
+// parseSymbolsPrepare() left for here happens in the same order it always has:
+// non-section symbols, then section symbols, then undefined symbols.
+template <class LP>
+void ObjFile::parseSymbols(ArrayRef<typename LP::nlist> nList) {
+  for (const PendingSymbol &p : nonSectionSymbols)
+    symbols[p.symIndex] = parseNonSectionSymbol(nList[p.symIndex], p.name);
+  nonSectionSymbols = {};
+
+  for (const PendingDefined &p : pendingDefineds) {
+    symbols[p.symIndex] =
+        createDefined(nList[p.symIndex], p.name.val(), p.isec, p.value, p.size,
+                      forceHidden, &p.name);
+  }
+  pendingDefineds = {};
 
   // Undefined symbols can trigger recursive fetch from Archives due to
   // LazySymbols. Process defined symbols first so that the relative order
@@ -1038,8 +1091,9 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   // symbol resolution behavior. In addition, a set of interconnected symbols
   // will all be resolved to the same file, instead of being resolved to
   // different files.
-  for (unsigned i : undefineds)
-    symbols[i] = parseNonSectionSymbol(nList[i], strtab);
+  for (const PendingSymbol &p : undefineds)
+    symbols[p.symIndex] = parseNonSectionSymbol(nList[p.symIndex], p.name);
+  undefineds = {};
 }
 
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
@@ -1051,7 +1105,7 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
                                    sectName.take_front(16),
                                    /*flags=*/0, /*addr=*/0));
   Section &section = *sections.back();
-  ConcatInputSection *isec = make<ConcatInputSection>(section, data);
+  ConcatInputSection *isec = makeThreadLocal<ConcatInputSection>(section, data);
   isec->live = true;
   section.subsections.push_back({0, isec});
 }
@@ -1097,6 +1151,14 @@ static bool isUnwindSection(const Section &sec) {
 }
 
 template <class LP> void ObjFile::parse() {
+  parsePrepare<LP>();
+  parseFinish<LP>();
+}
+
+// The per-file half of parsing: header checks, sections, and grouping this
+// file's symbols by section. Touches no global state, so it can be run for many
+// files at once.
+template <class LP> void ObjFile::parsePrepare() {
   using Header = typename LP::mach_header;
   using SegmentCommand = typename LP::segment_command;
   using SectionHeader = typename LP::section;
@@ -1112,10 +1174,9 @@ template <class LP> void ObjFile::parse() {
     return;
 
   // We will resolve LC linker options once all native objects are loaded after
-  // LTO is finished.
-  SmallVector<StringRef, 4> LCLinkerOptions;
-  parseLinkerOptions<LP>(LCLinkerOptions);
-  unprocessedLCLinkerOptions.append(LCLinkerOptions);
+  // LTO is finished. parseFinish() hands them on, so that they end up in file
+  // order no matter how many files this runs for at once.
+  parseLinkerOptions<LP>(lcLinkerOptions);
 
   ArrayRef<SectionHeader> sectionHeaders;
   if (const load_command *cmd = findCommand(hdr, LP::segmentLCType)) {
@@ -1132,12 +1193,44 @@ template <class LP> void ObjFile::parse() {
                           c->nsyms);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
     bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
+    parseSymbolsPrepare<LP>(sectionHeaders, nList, strtab,
+                            subsectionsViaSymbols);
+  }
+}
+
+// The half that inserts into the symbol table, and so has to run in file order.
+template <class LP> void ObjFile::parseFinish() {
+  using Header = typename LP::mach_header;
+  using SegmentCommand = typename LP::segment_command;
+  using SectionHeader = typename LP::section;
+  using NList = typename LP::nlist;
+
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+
+  if (!compatArch)
+    return;
+
+  unprocessedLCLinkerOptions.append(lcLinkerOptions);
+  lcLinkerOptions.clear();
+
+  ArrayRef<SectionHeader> sectionHeaders;
+  if (const load_command *cmd = findCommand(hdr, LP::segmentLCType)) {
+    auto *c = reinterpret_cast<const SegmentCommand *>(cmd);
+    sectionHeaders = ArrayRef<SectionHeader>{
+        reinterpret_cast<const SectionHeader *>(c + 1), c->nsects};
+  }
+
+  if (const load_command *cmd = findCommand(hdr, LC_SYMTAB)) {
+    auto *c = reinterpret_cast<const symtab_command *>(cmd);
+    ArrayRef<NList> nList(reinterpret_cast<const NList *>(buf + c->symoff),
+                          c->nsyms);
+    bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
     if (config->warnMissingSubsectionsViaSymbols && !subsectionsViaSymbols &&
         !sectionHeaders.empty())
       warn(toString(this) + ": missing MH_SUBSECTIONS_VIA_SYMBOLS");
-    parseSymbols<LP>(sectionHeaders, nList, strtab, subsectionsViaSymbols);
+    parseSymbols<LP>(nList);
   }
-
   // The relocations may refer to the symbols, so we parse them after we have
   // parsed all the symbols.
   //
@@ -1171,8 +1264,8 @@ template <class LP> void ObjFile::parseLazy() {
   registerLazy();
 }
 
-// Collect the external symbols this file defines and references without
-// touching global state, so it can run for many files at once.
+// The per-file half of parseLazy(): collect the names this file defines, with
+// their hashes. Touches no global state, so it can run for many files at once.
 template <class LP> void ObjFile::scanLazy() {
   using Header = typename LP::mach_header;
   using NList = typename LP::nlist;
@@ -1180,15 +1273,11 @@ template <class LP> void ObjFile::scanLazy() {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
-  if (lazy) {
-    compatArch =
-        compatArch && (archiveName.empty() ? compatWithTargetArch(this, hdr)
-                                           : hasCompatArch(hdr));
-    if (!compatArch)
-      return;
-  } else if (!compatArch || !hasCompatArch(hdr)) {
+  compatArch =
+      compatArch && (archiveName.empty() ? compatWithTargetArch(this, hdr)
+                                         : hasCompatArch(hdr));
+  if (!compatArch)
     return;
-  }
 
   const load_command *cmd = findCommand(hdr, LC_SYMTAB);
   if (!cmd)
@@ -1213,9 +1302,10 @@ template <class LP> void ObjFile::scanLazy() {
   }
 }
 
+// The half of parseLazy() that adds to the symbol table.
 void ObjFile::registerLazy() {
   for (const PendingSymbol &p : lazyDefineds)
-    symbols[p.symIndex] = symtab->addLazyObject(p.name.val(), *this);
+    symbols[p.symIndex] = symtab->addLazyObject(p.name, *this);
   lazyDefineds = {};
   lazyUndefineds = {};
 }
@@ -2015,6 +2105,8 @@ void DylibFile::parseExportedSymbols(uint32_t offset, uint32_t size) {
 
 void DylibFile::recordExport(CachedHashStringRef name, DylibFile *file,
                              DylibFile *owner, bool isWeakDef, bool isTlv) {
+  // Reserve the slot in owner->symbols now, so that replayExport() can fill
+  // it in from any thread.
   uint32_t ownerIndex = owner->symbols.size();
   owner->symbols.push_back(nullptr);
   pendingExports.push_back({name, file, owner, ownerIndex, isWeakDef, isTlv});
@@ -2023,7 +2115,7 @@ void DylibFile::recordExport(CachedHashStringRef name, DylibFile *file,
 void DylibFile::replayExport(size_t i) {
   const PendingExport &e = pendingExports[i];
   e.owner->symbols[e.ownerIndex] =
-      symtab->addDylib(e.name.val(), e.file, e.isWeakDef, e.isTlv);
+      symtab->addDylib(e.name, e.file, e.isWeakDef, e.isTlv);
 }
 
 void DylibFile::registerExports() {
@@ -2655,14 +2747,35 @@ static std::vector<InputFile *> pendingObjects;
 static std::vector<ObjFile *> pendingExtracts;
 
 // Parses a batch of files using mold-style command-line-order resolution:
-// 1. If any archive members are lazy, scan ObjFile symtabs in parallel and
-//    build a 64-shard command-line-priority owner map to determine which
-//    archive members are reachable (markLiveObjects).
-// 2. Parse live files and register remaining lazy members in CLI order
-//    (initially-live, then newly-extracted, then still-lazy).
+// 1. Parse non-lazy ObjFiles and scan lazy ObjFiles' symtabs in parallel.
+// 2. Build a 64-shard command-line-priority owner map in parallel and walk
+//    reachable lazy ObjFiles/BitcodeFiles (markLiveObjects).
+// 3. Parse all newly-live ObjFiles in parallel.
+// 4. Insert all files' symbols into symtab in CLI order (initially-live,
+//    then newly-extracted, then still-lazy).
 static void parseBatch(ArrayRef<InputFile *> files) {
   if (files.empty())
     return;
+
+  {
+    TimeTraceScope timeScope("Prepare input files");
+    parallelForEach(files, [](InputFile *f) {
+      auto *obj = dyn_cast<ObjFile>(f);
+      if (!obj)
+        return;
+      if (obj->lazy) {
+        if (target->wordSize == 8)
+          obj->scanLazy<LP64>();
+        else
+          obj->scanLazy<ILP32>();
+      } else {
+        if (target->wordSize == 8)
+          obj->parsePrepare<LP64>();
+        else
+          obj->parsePrepare<ILP32>();
+      }
+    });
+  }
 
   bool hasLazy = llvm::any_of(files, [](InputFile *f) { return f->lazy; });
 
@@ -2676,19 +2789,6 @@ static void parseBatch(ArrayRef<InputFile *> files) {
 
   std::vector<InputFile *> extractedFromPriorBatch;
   if (hasLazy) {
-    {
-      TimeTraceScope timeScope("Scan input symtabs");
-      parallelForEach(files, [](InputFile *f) {
-        auto *obj = dyn_cast<ObjFile>(f);
-        if (!obj)
-          return;
-        if (target->wordSize == 8)
-          obj->scanLazy<LP64>();
-        else
-          obj->scanLazy<ILP32>();
-      });
-    }
-
     TimeTraceScope timeScope("Mark live archive members");
     // Precedence for deciding which file satisfies a reference during
     // markLiveObjects():
@@ -2724,9 +2824,17 @@ static void parseBatch(ArrayRef<InputFile *> files) {
       for (size_t fi = begin; fi < end; ++fi) {
         InputFile *f = files[fi];
         if (auto *obj = dyn_cast<ObjFile>(f)) {
-          Owner o = obj->lazy ? Owner{obj, 2, false} : Owner{nullptr, 3, false};
-          for (const auto &p : obj->getLazyDefineds())
-            emit(p.name, o);
+          if (obj->lazy) {
+            for (const auto &p : obj->getLazyDefineds())
+              emit(p.name, {obj, 2, false});
+          } else {
+            for (const auto &p : obj->getPendingDefineds())
+              emit(p.name, {nullptr, 3, false});
+            for (const auto &p : obj->getNonSectionSymbols())
+              emit(p.name, {nullptr, 3, false});
+            for (const AliasSymbol *alias : obj->aliases)
+              emit(CachedHashStringRef(alias->getName()), {nullptr, 3, false});
+          }
         } else if (auto *dylib = dyn_cast<DylibFile>(f)) {
           for (size_t i = 0, n = dylib->numExports(); i < n; ++i)
             emit(dylib->exportName(i),
@@ -2800,8 +2908,10 @@ static void parseBatch(ArrayRef<InputFile *> files) {
         InputFile *f = files[fi];
         if (auto *obj = dyn_cast<ObjFile>(f)) {
           if (!obj->lazy) {
-            for (CachedHashStringRef name : obj->getLazyUndefineds())
-              checkRef(name);
+            for (const auto &u : obj->getUndefineds())
+              checkRef(u.name);
+            for (const AliasSymbol *alias : obj->aliases)
+              checkRef(CachedHashStringRef(alias->getAliasedName()));
           }
         } else if (auto *bc = dyn_cast<BitcodeFile>(f)) {
           if (!bc->lazy && bc->obj) {
@@ -2814,6 +2924,7 @@ static void parseBatch(ArrayRef<InputFile *> files) {
     });
 
     std::vector<InputFile *> newlyLive;
+    std::vector<ObjFile *> newlyLiveObjs;
     auto activate = [&](InputFile *target, StringRef reason,
                         bool fromPriorBatch) {
       if (!target || !target->lazy)
@@ -2823,6 +2934,8 @@ static void parseBatch(ArrayRef<InputFile *> files) {
       newlyLive.push_back(target);
       if (fromPriorBatch)
         extractedFromPriorBatch.push_back(target);
+      if (auto *obj = dyn_cast<ObjFile>(target))
+        newlyLiveObjs.push_back(obj);
     };
     auto markRef = [&](CachedHashStringRef name) {
       const auto &map = owners[shardIndex(name)];
@@ -2850,6 +2963,17 @@ static void parseBatch(ArrayRef<InputFile *> files) {
               markRef(CachedHashStringRef(objSym.getName()));
       }
     }
+
+    if (!newlyLiveObjs.empty()) {
+      TimeTraceScope parseScope("Prepare newly-live archive members");
+      parallelForEach(newlyLiveObjs, [](ObjFile *obj) {
+        obj->clearLazyScan();
+        if (target->wordSize == 8)
+          obj->parsePrepare<LP64>();
+        else
+          obj->parsePrepare<ILP32>();
+      });
+    }
   }
 
   // Finalize into symtab in strict command-line order:
@@ -2859,15 +2983,12 @@ static void parseBatch(ArrayRef<InputFile *> files) {
   TimeTraceScope finalizeScope("Add symbols");
   auto finalizeFile = [](InputFile *f) {
     if (auto *obj = dyn_cast<ObjFile>(f)) {
-      if (obj->lazy) {
+      if (obj->lazy)
         obj->registerLazy();
-      } else {
-        obj->clearLazyScan();
-        if (target->wordSize == 8)
-          obj->parse<LP64>();
-        else
-          obj->parse<ILP32>();
-      }
+      else if (target->wordSize == 8)
+        obj->parseFinish<LP64>();
+      else
+        obj->parseFinish<ILP32>();
     } else if (auto *dylib = dyn_cast<DylibFile>(f)) {
       dylib->registerExports();
     } else {
