@@ -443,6 +443,13 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
   }
 }
 
+// An ambiguous name (USE-associated from several modules) that is written to
+// the module file, as opposed to one the compiler created.
+static bool IsWrittenUseError(const Symbol &symbol) {
+  return symbol.has<UseErrorDetails>() &&
+      !symbol.test(Symbol::Flag::CompilerCreated);
+}
+
 // Put out the visible symbols from scope.
 void ModFileWriter::PutSymbols(
     const Scope &scope, UnorderedSymbolSet *hermeticModules) {
@@ -482,12 +489,8 @@ void ModFileWriter::PutSymbols(
   // ambiguous names. An ambiguous name is written only if one of its modules is
   // re-exported this way, so collect all such modules before writing any of
   // them.
-  auto isWrittenUseError{[](const Symbol &symbol) {
-    return symbol.has<UseErrorDetails>() &&
-        !symbol.test(Symbol::Flag::CompilerCreated);
-  }};
   for (const Symbol &symbol : sorted) {
-    if (isWrittenUseError(symbol)) {
+    if (IsWrittenUseError(symbol)) {
       PutUseErrorPlainUses(symbol);
     }
   }
@@ -495,7 +498,7 @@ void ModFileWriter::PutSymbols(
     PutUse(symbol);
   }
   for (const Symbol &symbol : sorted) {
-    if (isWrittenUseError(symbol)) {
+    if (IsWrittenUseError(symbol)) {
       PutUseError(symbol);
     }
   }
@@ -1161,9 +1164,14 @@ void ModFileWriter::PutUseError(const Symbol &symbol) {
 }
 
 // An ambiguous name may have occurrences whose names cannot be written in an
-// only-list. Re-export their modules by a plain USE. This must happen before
-// any PutUseError, which relies on the complete set of plain-USE modules.
+// only-list. Re-export their modules by a plain USE, unless the ambiguous name
+// is PRIVATE (as for PutUse, a private name is not re-exported). This must
+// happen before any PutUseError, which relies on the complete set of plain-USE
+// modules.
 void ModFileWriter::PutUseErrorPlainUses(const Symbol &symbol) {
+  if (symbol.attrs().test(Attr::PRIVATE)) {
+    return;
+  }
   for (const auto &occurrence : symbol.get<UseErrorDetails>().occurrences()) {
     const Symbol &use{DEREF(occurrence.second)};
     if (ClassifyUseItem(use.GetUltimate()) == UseItem::PlainUse &&
@@ -1196,16 +1204,13 @@ static void CollectModules(const Scope &scope, const SymbolVector &symbols,
       plainUseModules.insert(DEREF(use.owner().symbol()));
     }
   }};
-  auto isWrittenUseError{[](const Symbol &symbol) {
-    return symbol.has<UseErrorDetails>() &&
-        !symbol.test(Symbol::Flag::CompilerCreated);
-  }};
   for (const Symbol &symbol : symbols) {
     if (const auto *use{symbol.detailsIf<UseDetails>()}) {
       if (!symbol.attrs().test(Attr::PRIVATE)) {
         addPlainUseModule(use->symbol());
       }
-    } else if (isWrittenUseError(symbol)) {
+    } else if (IsWrittenUseError(symbol) &&
+        !symbol.attrs().test(Attr::PRIVATE)) {
       for (const auto &occurrence :
           symbol.get<UseErrorDetails>().occurrences()) {
         addPlainUseModule(DEREF(occurrence.second));
@@ -1220,7 +1225,7 @@ static void CollectModules(const Scope &scope, const SymbolVector &symbols,
       }
     } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
       modules.insert(GetUsedModule(*use));
-    } else if (isWrittenUseError(symbol)) {
+    } else if (IsWrittenUseError(symbol)) {
       const auto &occurrences{symbol.get<UseErrorDetails>().occurrences()};
       if (llvm::any_of(occurrences, [&](const auto &occurrence) {
             return plainUseModules.count(
