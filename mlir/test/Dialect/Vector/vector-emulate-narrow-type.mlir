@@ -175,6 +175,47 @@ func.func @vector_transfer_read_f4(%arg1: index, %arg2: index) -> vector<8xf4E2M
 
 // -----
 
+func.func @vector_transfer_read_i8(%arg1: index, %arg2: index) -> vector<4xi8> {
+    %c0 = arith.constant 0 : i8
+    %0 = memref.alloc() : memref<3x4xi8>
+    %1 = vector.transfer_read %0[%arg1, %arg2], %c0 {in_bounds = [true]} :
+      memref<3x4xi8>, vector<4xi8>
+    return %1 : vector<4xi8>
+}
+// Expect no conversions, i8 is supported.
+//      CHECK: func @vector_transfer_read_i8
+//      CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<3x4xi8>
+//      CHECK:   vector.transfer_read %[[ALLOC]]{{.*}} : memref<3x4xi8>, vector<4xi8>
+
+//      CHECK32: func @vector_transfer_read_i8
+//      CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<3xi32>
+//      CHECK32:   %[[PAD:.+]] = arith.extui %{{.+}} : i8 to i32
+//      CHECK32:   %[[VEC:.+]] = vector.transfer_read %[[ALLOC]][%{{.+}}], %[[PAD]] : memref<3xi32>, vector<1xi32>
+//      CHECK32:   vector.bitcast %[[VEC]] : vector<1xi32> to vector<4xi8>
+
+// -----
+
+func.func @vector_transfer_read_f16(%arg1: index, %arg2: index) -> vector<8xf16> {
+    %c0 = arith.constant 0.0 : f16
+    %0 = memref.alloc() : memref<4x16xf16>
+    %1 = vector.transfer_read %0[%arg1, %arg2], %c0 {in_bounds = [true]} :
+      memref<4x16xf16>, vector<8xf16>
+    return %1 : vector<8xf16>
+}
+// Expect no conversions, f16 is wider than the container type.
+//      CHECK: func @vector_transfer_read_f16
+//      CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<4x16xf16>
+//      CHECK:   vector.transfer_read %[[ALLOC]]{{.*}} : memref<4x16xf16>, vector<8xf16>
+
+//      CHECK32: func @vector_transfer_read_f16
+//      CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<32xi32>
+//      CHECK32:   %[[BC:.+]] = arith.bitcast %{{.+}} : f16 to i16
+//      CHECK32:   %[[PAD:.+]] = arith.extui %[[BC]] : i16 to i32
+//      CHECK32:   %[[VEC:.+]] = vector.transfer_read %[[ALLOC]][%{{.+}}], %[[PAD]] : memref<32xi32>, vector<4xi32>
+//      CHECK32:   vector.bitcast %[[VEC]] : vector<4xi32> to vector<8xf16>
+
+// -----
+
 ///----------------------------------------------------------------------------------------
 /// vector.maskedload
 ///----------------------------------------------------------------------------------------

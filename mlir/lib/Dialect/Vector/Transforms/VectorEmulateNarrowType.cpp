@@ -1326,8 +1326,7 @@ struct ConvertVectorTransferRead final
     auto origElements = op.getVectorType().getNumElements();
 
     // Note, per-element-alignment was already verified above.
-    bool isDivisibleInSize =
-        fitsInMultiByteContainerTy(op.getVectorType(), containerElemTy);
+    bool isDivisibleInSize = origElements % emulatedPerContainerElem == 0;
 
     // Pad the padding value with 0s on the left. These bits are discarded and
     // thus their values don't matter.
