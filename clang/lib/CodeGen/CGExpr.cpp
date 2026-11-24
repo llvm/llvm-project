@@ -98,7 +98,7 @@ enum VariableTypeDescriptorKind : uint16_t {
 
 static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
   switch (ID) {
-#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
+#define SANITIZER_CHECK(Enum, Name, Version, Code, Msg)                        \
   case SanitizerHandler::Enum:                                                 \
     return Msg;
     LIST_SANITIZER_CHECKS
@@ -4249,11 +4249,16 @@ struct SanitizerHandlerInfo {
 };
 }
 
-const SanitizerHandlerInfo SanitizerHandlers[] = {
-#define SANITIZER_CHECK(Enum, Name, Version, Msg) {#Name, Version},
+static SanitizerHandlerInfo getSanitizerHandlerInfo(SanitizerHandler ID) {
+  switch (ID) {
+#define SANITIZER_CHECK(Enum, Name, Version, Code, Msg)                        \
+  case SanitizerHandler::Enum:                                                 \
+    return {#Name, Version};
     LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
-};
+  }
+  llvm_unreachable("unhandled switch case");
+}
 
 static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                  llvm::FunctionType *FnType,
@@ -4272,7 +4277,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;
   bool HandlerPreserveAllRegs =
       CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs;
-  const SanitizerHandlerInfo &CheckInfo = SanitizerHandlers[CheckHandler];
+  const SanitizerHandlerInfo CheckInfo = getSanitizerHandlerInfo(CheckHandler);
   const StringRef CheckName = CheckInfo.Name;
   std::string FnName = "__ubsan_handle_" + CheckName.str();
   if (CheckInfo.Version && !MinimalRuntime)
@@ -4321,9 +4326,7 @@ void CodeGenFunction::EmitCheck(
     ArrayRef<llvm::Value *> DynamicArgs, const TrapReason *TR) {
   assert(IsSanitizerScope);
   assert(Checked.size() > 0);
-  assert(CheckHandler >= 0 &&
-         size_t(CheckHandler) < std::size(SanitizerHandlers));
-  const StringRef CheckName = SanitizerHandlers[CheckHandler].Name;
+  const StringRef CheckName = getSanitizerHandlerInfo(CheckHandler).Name;
 
   llvm::Value *FatalCond = nullptr;
   llvm::Value *RecoverableCond = nullptr;
