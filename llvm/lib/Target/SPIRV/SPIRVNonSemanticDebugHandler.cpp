@@ -2027,8 +2027,8 @@ getDebugDeclareStorageReg(const MachineInstr &MI, bool AllowUntypedVariable) {
   if (!LocReg.isVirtual())
     return std::nullopt;
 
-  // DebugDeclare can only encode the address of an OpVariable.
-  // Other legitimate #dbg_declare cannot be encoded.
+  // DebugDeclare can only encode the address of an OpVariable (or
+  // OpUntypedVariableKHR). Other legitimate #dbg_declare cannot be encoded.
   // Examples: an access chain for a field, an OpFunctionParameter for a byval
   // argument, or a module-scope constant for a null or fixed address.
 
