@@ -7379,6 +7379,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_bind:
       case OMPC_filter:
       case OMPC_severity:
+      case OMPC_memscope:
       case OMPC_message:
         continue;
       case OMPC_allocator:
@@ -12555,7 +12556,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
   for (OMPClause *C : Clauses) {
     if (C->getClauseKind() == OMPC_flush)
       FC = cast<OMPFlushClause>(C);
-    else
+    else if (C->getClauseKind() != OMPC_memscope)
       OrderClause = C;
   }
   llvm::omp::Version OMPVersion = getLangOpts().getOpenMPVersion();
@@ -13931,6 +13932,7 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
     }
     // The following clauses are allowed, but we don't need to do anything here.
     case OMPC_hint:
+    case OMPC_memscope:
       break;
     default:
       llvm_unreachable("unknown clause is encountered");
@@ -18790,6 +18792,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_order:
   case OMPC_at:
   case OMPC_severity:
+  case OMPC_memscope:
   case OMPC_destroy:
   case OMPC_inclusive:
   case OMPC_exclusive:
@@ -19466,6 +19469,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
         static_cast<OpenMPSeverityClauseKind>(Argument), ArgumentLoc, StartLoc,
         LParenLoc, EndLoc);
     break;
+  case OMPC_memscope:
+    Res = ActOnOpenMPMemscopeClause(
+        static_cast<OpenMPMemscopeClauseKind>(Argument), ArgumentLoc, StartLoc,
+        LParenLoc, EndLoc);
+    break;
   case OMPC_threadset:
     Res = ActOnOpenMPThreadsetClause(static_cast<OpenMPThreadsetKind>(Argument),
                                      ArgumentLoc, StartLoc, LParenLoc, EndLoc);
@@ -19837,6 +19845,22 @@ OMPClause *SemaOpenMP::ActOnOpenMPSeverityClause(OpenMPSeverityClauseKind Kind,
   }
   return new (getASTContext())
       OMPSeverityClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPMemscopeClause(OpenMPMemscopeClauseKind Kind,
+                                                 SourceLocation KindKwLoc,
+                                                 SourceLocation StartLoc,
+                                                 SourceLocation LParenLoc,
+                                                 SourceLocation EndLoc) {
+  if (Kind == OMPC_MEMSCOPE_unknown) {
+    Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_memscope, /*First=*/0,
+                                   /*Last=*/OMPC_MEMSCOPE_unknown)
+        << getOpenMPClauseNameForDiag(OMPC_memscope);
+    return nullptr;
+  }
+  return new (getASTContext())
+      OMPMemscopeClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
@@ -20292,6 +20316,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_nontemporal:
   case OMPC_at:
   case OMPC_severity:
+  case OMPC_memscope:
   case OMPC_message:
   case OMPC_destroy:
   case OMPC_novariants:
@@ -20567,6 +20592,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_order:
   case OMPC_at:
   case OMPC_severity:
+  case OMPC_memscope:
   case OMPC_message:
   case OMPC_novariants:
   case OMPC_nocontext:
@@ -21239,6 +21265,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_order:
   case OMPC_at:
   case OMPC_severity:
+  case OMPC_memscope:
   case OMPC_message:
   case OMPC_destroy:
   case OMPC_novariants:
