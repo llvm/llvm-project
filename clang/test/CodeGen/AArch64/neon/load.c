@@ -1,10 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// FIXME: Remove -fno-clangir-call-conv-lowering from the RUN lines once
-// calling-convention lowering is implemented for the mfp8 types.
 // RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=sroa,instcombine | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -disable-O0-optnone | opt -S -passes=sroa,instcombine | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-cir  %s -disable-O0-optnone |                                   FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=sroa,instcombine | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir  %s -disable-O0-optnone |                                   FileCheck %s --check-prefixes=ALL,CIR %}
 
 #include <arm_neon.h>
 

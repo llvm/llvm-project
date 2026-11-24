@@ -118,13 +118,9 @@ static llvm::Align recordUnadjustedAlign(ModuleOp modOp, cir::RecordType recTy,
   return llvm::Align(layout.getUnadjustedAlign());
 }
 
-/// The CIR types the bridge handles.  Scalars: an integer up to 128
-/// bits (including `__int128`), a `_BitInt` of any width, pointer, vtable
-/// pointer, bool, void, or any floating-point type.  Aggregates: a complete
-/// struct or union whose members are all themselves supported, or an array
-/// of a supported element type.  Also a `_Complex`, or a fixed-width vector,
-/// of a supported element type.  Everything else is reported NYI at the
-/// reject() choke point in classifySignature.
+/// Whether the bridge implements classification of \p ty.  This tracks the
+/// types that are not yet implemented, which classifySignature reports as NYI,
+/// and goes away once every type is handled.
 static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
@@ -140,6 +136,8 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     return true;
   }
   if (isa<cir::VoidType, cir::BoolType>(ty))
+    return true;
+  if (isa<cir::MFloat8Type>(ty))
     return true;
   // Every CIR floating-point type carries the semantics the classifier
   // switches on, so all of them are handled.
@@ -171,7 +169,8 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
       if (elemInt.getWidth() % 8)
         return false;
-    } else if (!isa<cir::FPTypeInterface, cir::BoolType>(elemTy)) {
+    } else if (!isa<cir::FPTypeInterface, cir::BoolType, cir::MFloat8Type>(
+                   elemTy)) {
       return false;
     }
     return isSupportedType(elemTy, dl);
@@ -303,16 +302,21 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
 }
 
-/// Returns \p ty with a LongDoubleType vector element replaced by its
-/// underlying format, which is the element abiTypeToCIR builds for the same
-/// float.
-static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
-  if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
-    if (auto longDoubleTy =
-            dyn_cast<cir::LongDoubleType>(vecTy.getElementType()))
-      return cir::VectorType::get(longDoubleTy.getUnderlying(),
-                                  vecTy.getSize());
-  }
+/// Returns \p ty with its vector element replaced by the element abiTypeToCIR
+/// builds for the same vector.  A LongDoubleType element becomes its
+/// underlying format, and an mfp8 element becomes an unsigned 8-bit integer,
+/// which is how mapCIRType maps it.
+static mlir::Type getABIVectorElementForm(mlir::Type ty) {
+  auto vecTy = dyn_cast<cir::VectorType>(ty);
+  if (!vecTy)
+    return ty;
+  mlir::Type elemTy = vecTy.getElementType();
+  if (auto longDoubleTy = dyn_cast<cir::LongDoubleType>(elemTy))
+    return cir::VectorType::get(longDoubleTy.getUnderlying(), vecTy.getSize());
+  if (isa<cir::MFloat8Type>(elemTy))
+    return cir::VectorType::get(
+        cir::IntType::get(ty.getContext(), 8, /*isSigned=*/false),
+        vecTy.getSize());
   return ty;
 }
 
@@ -367,6 +371,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
             fpTy.getFloatSemantics(),
             llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
+      .Case([&](cir::MFloat8Type) {
+        return tb.getOpaqueFloat8Type(
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
+      })
       .Case([&](cir::ComplexType complexTy) {
         return tb.getComplexType(
             mapCIRType(complexTy.getElementType(), typeMapper, dl, cirDL,
@@ -375,10 +383,16 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
       })
       .Case([&](cir::VectorType vecTy) {
         // isSupportedType rejects a scalable vector, so the element count is
-        // always fixed here.
+        // always fixed here.  An mfp8 element is mapped as an unsigned 8-bit
+        // integer, since the classifier's opaque 8-bit float is a scalar only.
+        mlir::Type elemTy = vecTy.getElementType();
+        const llvm::abi::Type *elemAbi =
+            isa<cir::MFloat8Type>(elemTy)
+                ? tb.getIntegerType(8, llvm::Align(1), /*Signed=*/false)
+                : mapCIRType(elemTy, typeMapper, dl, cirDL, modOp);
         return tb.getVectorType(
-            mapCIRType(vecTy.getElementType(), typeMapper, dl, cirDL, modOp),
-            vecTy.getSize(), llvm::Align(cirDL.getTypeLanguageAlignment(type)));
+            elemAbi, vecTy.getSize(),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
@@ -530,8 +544,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 
 #ifndef NDEBUG
 /// Whether \p coercedAbiTy holds the same value as the scalar \p origTy: an
-/// integer of the same width, a float with the same semantics, or a pointer.
-/// Used only in an assert in convertDirectArgInfo.
+/// integer of the same width, a float with the same semantics, a pointer, or
+/// an opaque 8-bit float for an mfp8.  Used only in an assert in
+/// convertDirectArgInfo.
 static bool coerceKeepsScalarValue(mlir::Type origTy,
                                    const llvm::abi::Type *coercedAbiTy) {
   if (auto intTy = dyn_cast<cir::IntType>(origTy)) {
@@ -547,6 +562,8 @@ static bool coerceKeepsScalarValue(mlir::Type origTy,
   }
   if (isa<cir::PointerType, cir::VPtrType>(origTy))
     return isa<llvm::abi::PointerType>(coercedAbiTy);
+  if (isa<cir::MFloat8Type>(origTy))
+    return isa<llvm::abi::OpaqueFloat8Type>(coercedAbiTy);
   return false;
 }
 #endif
@@ -647,7 +664,7 @@ convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   mlir::Type coerced = abiTypeToCIR(coercedAbiTy, ctx);
   if (!coerced)
     return mlir::failure();
-  if (coerced == unwrapLongDoubleVectorElement(origTy)) {
+  if (coerced == getABIVectorElementForm(origTy)) {
     // ArgClassification has no way to represent a coercion to the value's own
     // type at an offset, since a coerced type equal to the value's own type
     // is treated as no coercion.  This is reported as NYI.

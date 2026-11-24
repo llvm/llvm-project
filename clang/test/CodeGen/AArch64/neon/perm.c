@@ -1,10 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// FIXME: Remove -fno-clangir-call-conv-lowering from the RUN lines once
-// calling-convention lowering is implemented for the mfp8 types.
 // RUN:                   %clang_cc1_cg_arm64_neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa,instcombine | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa,instcombine | FileCheck %s --check-prefixes=LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -fno-clangir-call-conv-lowering -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa,instcombine | FileCheck %s --check-prefixes=LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
 
 //=============================================================================
 // NOTES
