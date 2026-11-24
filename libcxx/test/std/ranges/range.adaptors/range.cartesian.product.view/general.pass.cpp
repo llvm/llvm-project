@@ -153,11 +153,42 @@ constexpr bool test() {
 
   // LWG3801: "cartesian_product_view::iterator::distance-from ignores the size of last underlying range".
   {
-    int x[] = {1, 2, 3};
-    auto v  = std::views::cartesian_product(x, x);
-    auto i  = v.begin() + 5; // *i == {2, 3}
-    assert((*i == std::tuple{2, 3}));
-    assert(i - v.begin() == 5);
+    {
+      int x[] = {1, 2, 3};
+      auto v  = std::views::cartesian_product(x, x);
+      auto i  = v.begin() + 5; // *i == {2, 3}
+      assert((*i == std::tuple{2, 3}));
+      assert(i - v.begin() == 5);
+    }
+    // With ranges of different sizes
+    {
+      int a[] = {1, 2, 3};
+      int b[] = {10, 20};
+      auto v  = std::views::cartesian_product(a, b); // 3 * 2 = 6 elements
+      auto it = v.begin() + 3;                       // (a[1], b[1])
+      assert((*it == std::tuple{2, 20}));
+      assert(it - v.begin() == 3);
+      assert(v.begin() - it == -3);
+      assert(std::default_sentinel - it == 3);
+      assert(it - std::default_sentinel == -3);
+    }
+    {
+      int a[] = {1, 2};
+      int b[] = {10, 20, 30};
+      int c[] = {100, 200, 300, 400};
+      auto v  = std::views::cartesian_product(a, b, c); // 2 * 3 * 4 = 24 elements
+      // The element (a[i], b[j], c[k]) is at index i * 12 + j * 4 + k.
+      auto it1 = v.begin() + 6;  // (a[0], b[1], c[2])
+      auto it2 = v.begin() + 21; // (a[1], b[2], c[1])
+      assert((*it1 == std::tuple{1, 20, 300}));
+      assert((*it2 == std::tuple{2, 30, 200}));
+      assert(it2 - it1 == 15);
+      assert(it1 - it2 == -15);
+      assert(std::default_sentinel - it1 == 18);
+      assert(it1 - std::default_sentinel == -18);
+      assert(std::default_sentinel - it2 == 3);
+      assert(it2 - std::default_sentinel == -3);
+    }
   }
 
   return true;
