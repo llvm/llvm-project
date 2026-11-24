@@ -31,7 +31,7 @@ define <2 x float> @f32x2_broadcast_lane1(<2 x float> %v) {
 
 define <2 x float> @f32x2_reverse(<2 x float> %v) {
 ; CHECK-LABEL: 'f32x2_reverse'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 4 for instruction: %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT: Cost Model: Found an estimated cost of 0 for instruction: %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> <i32 1, i32 0>
   %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x float> %s
 }

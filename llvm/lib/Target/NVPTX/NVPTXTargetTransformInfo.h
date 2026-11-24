@@ -95,7 +95,7 @@ public:
   // the vector register size.
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override {
-    return TypeSize::getFixed(64);
+    return TypeSize::getFixed(ST->hasF32x2Instructions() ? 64 : 32);
   }
   unsigned getMinVectorRegisterBitWidth() const override { return 32; }
 

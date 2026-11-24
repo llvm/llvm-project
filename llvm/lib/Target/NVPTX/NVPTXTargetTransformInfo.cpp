@@ -521,11 +521,12 @@ InstructionCost NVPTXTTIImpl::getShuffleCost(
     VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
     TTI::VectorInstrContext VIC) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
-  if (CostKind == TTI::TCK_RecipThroughput && isNativeV2F32(DstTy, *ST) &&
-      Kind == TTI::SK_Broadcast)
+  if (CostKind == TTI::TCK_RecipThroughput &&
+      (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Reverse) &&
+      isNativeV2F32(DstTy, *ST))
     return TTI::TCC_Free;
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
-                               Args, CxtI);
+                               Args, CxtI, VIC);
 }
 
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
