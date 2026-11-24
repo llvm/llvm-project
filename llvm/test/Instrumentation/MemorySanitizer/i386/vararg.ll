@@ -37,6 +37,7 @@ define void @VaStart(ptr %s, ...) {
 ; KERNEL-LABEL: define void @VaStart(
 ; KERNEL-SAME: ptr [[S:%.*]], ...) {
 ; KERNEL-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; KERNEL-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; KERNEL-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
 ; KERNEL-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
 ; KERNEL-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400

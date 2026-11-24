@@ -10,17 +10,17 @@
 #define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_X86_H
 
 #include "Register/Arch/RegisterContext_x86.h"
-#include "Register/RegisterInfoInterface.h"
 #include "Register/Arch/RegisterInfos_x86_64_with_base_shared.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
 class RegisterContextCore_x86 : public lldb_private::RegisterContext {
 public:
   RegisterContextCore_x86(lldb_private::Thread &thread,
-                           uint32_t concrete_frame_idx,
-                           lldb_private::RegisterInfoInterface *register_info);
+                          uint32_t concrete_frame_idx,
+                          lldb_private::RegisterInfoInterface *register_info);
 
   ~RegisterContextCore_x86() override;
 

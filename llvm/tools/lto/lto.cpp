@@ -33,8 +33,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 // extra command-line flags needed for LTOCodeGenerator
 static cl::opt<char>
     OptLevel("O",
@@ -181,7 +179,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LTOModule, lto_module_t)
 // Convert the subtarget features into a string to pass to LTOCodeGenerator.
 static void lto_add_attrs(lto_code_gen_t cg) {
   LTOCodeGenerator *CG = unwrap(cg);
-  CG->setAttrs(codegen::getMAttrs());
+  CG->setAttrs(codegen::getMAttrs(LTOContext->getLibraryOptions()));
 
   if (OptLevel < '0' || OptLevel > '3')
     report_fatal_error("Optimization level must be between 0 and 3");
@@ -474,6 +472,12 @@ static void maybeParseOptions(lto_code_gen_t cg) {
     if (CG->OwnedContext)
       LTOContext->getLibraryOptions().assign(
           CG->getContext().getLibraryOptions());
+    // The target options were read when the generator was created. Read them
+    // again to pick up the options that were just parsed, unless
+    // lto_set_debug_options already parsed them before that.
+    if (optionParsingState == OptParsingState::NotParsed)
+      CG->setTargetOptions(
+          codegen::getTargetOptions(LTOContext->getLibraryOptions(), Triple()));
     lto_add_attrs(cg);
     optionParsingState = OptParsingState::Done;
   }

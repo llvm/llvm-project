@@ -4,7 +4,10 @@
 #include <string.h>
 #include <uuid/uuid.h>
 
+void prepare_load_command_images(void);
+
 int main() {
+  prepare_load_command_images();
   int size_of_load_cmds =
       sizeof(struct segment_command_64) + sizeof(struct uuid_command);
   uint8_t *macho_buf =

@@ -104,9 +104,12 @@ LLVMBool LLVMCreateExecutionEngineForModule(LLVMExecutionEngineRef *OutEE,
                                             LLVMModuleRef M,
                                             char **OutError) {
   std::string Error;
+  TargetOptions TO;
+  TO.MCOptions.LibraryOptions = &unwrap(M)->getContext().getLibraryOptions();
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
   builder.setEngineKind(EngineKind::Either)
-         .setErrorStr(&Error);
+      .setErrorStr(&Error)
+      .setTargetOptions(TO);
   if (ExecutionEngine *EE = builder.create()){
     *OutEE = wrap(EE);
     return 0;
@@ -135,10 +138,13 @@ LLVMBool LLVMCreateJITCompilerForModule(LLVMExecutionEngineRef *OutJIT,
                                         unsigned OptLevel,
                                         char **OutError) {
   std::string Error;
+  TargetOptions TO;
+  TO.MCOptions.LibraryOptions = &unwrap(M)->getContext().getLibraryOptions();
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
   builder.setEngineKind(EngineKind::JIT)
       .setErrorStr(&Error)
-      .setOptLevel((CodeGenOptLevel)OptLevel);
+      .setOptLevel((CodeGenOptLevel)OptLevel)
+      .setTargetOptions(TO);
   if (ExecutionEngine *JIT = builder.create()) {
     *OutJIT = wrap(JIT);
     return 0;
@@ -180,6 +186,8 @@ LLVMBool LLVMCreateMCJITCompilerForModule(
 
   TargetOptions targetOptions;
   targetOptions.EnableFastISel = options.EnableFastISel;
+  targetOptions.MCOptions.LibraryOptions =
+      &unwrap(M)->getContext().getLibraryOptions();
   std::unique_ptr<Module> Mod(unwrap(M));
 
   if (Mod)

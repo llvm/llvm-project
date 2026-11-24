@@ -19,11 +19,6 @@
 ---
 name:            test_memset_inline
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:

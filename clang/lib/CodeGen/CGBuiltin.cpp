@@ -737,10 +737,7 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
-  llvm::Value *Call = CGF.Builder.CreateFAbs(V);
-  if (auto *CallI = dyn_cast<llvm::CallInst>(Call))
-    CallI->setDoesNotAccessMemory();
-  return Call;
+  return CGF.Builder.CreateFAbs(V);
 }
 
 /// Emit the computation of the sign bit for a floating point value. Returns
@@ -4272,7 +4269,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_isless:
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
-  case Builtin::BI__builtin_isunordered: {
+  case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig: {
     // Ordered comparisons: we know the arguments to these are matching scalar
     // floating point values.
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
@@ -4298,6 +4296,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       break;
     case Builtin::BI__builtin_isunordered:
       LHS = Builder.CreateFCmpUNO(LHS, RHS, "cmp");
+      break;
+    case Builtin::BI__builtin_iseqsig:
+      // Unlike the other comparisons above, iseqsig is signaling: it raises
+      // "invalid" if either operand is a NaN.
+      LHS = Builder.CreateFCmpS(CmpInst::FCMP_OEQ, LHS, RHS, "cmp");
       break;
     }
     // ZExt bool to int type.

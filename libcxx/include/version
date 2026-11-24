@@ -115,7 +115,6 @@ __cpp_lib_debugging                                     202403L <debugging>
 __cpp_lib_default_template_type_for_algorithm_values    202403L <algorithm> <deque> <forward_list>
                                                                 <list> <ranges> <string>
                                                                 <vector>
-__cpp_lib_define_static                                 202506L <meta>
 __cpp_lib_destroying_delete                             201806L <new>
 __cpp_lib_enable_shared_from_this                       201603L <memory>
 __cpp_lib_endian                                        201907L <bit>
@@ -276,7 +275,6 @@ __cpp_lib_raw_memory_algorithms                         202411L <memory>
 __cpp_lib_rcu                                           202306L <rcu>
 __cpp_lib_reference_from_temporary                      202202L <type_traits>
 __cpp_lib_reference_wrapper                             202403L <functional>
-__cpp_lib_reflection                                    202506L <meta>
 __cpp_lib_remove_cvref                                  201711L <type_traits>
 __cpp_lib_result_of_sfinae                              201210L <functional> <type_traits>
 __cpp_lib_robust_nonmodifying_seq_ops                   201304L <algorithm>
@@ -651,7 +649,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_debugging                          202403L
 # endif
 // # define __cpp_lib_default_template_type_for_algorithm_values 202403L
-// # define __cpp_lib_define_static                        202506L
 // # define __cpp_lib_exception_ptr_cast                   202506L
 // # define __cpp_lib_format_path                          202403L
 // # define __cpp_lib_freestanding_algorithm               202311L
@@ -725,7 +722,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_raw_memory_algorithms                202411L
 // # define __cpp_lib_rcu                                  202306L
 # define __cpp_lib_reference_wrapper                    202403L
-// # define __cpp_lib_reflection                           202506L
 # define __cpp_lib_saturation_arithmetic                202603L
 // # define __cpp_lib_senders                              202406L
 // # define __cpp_lib_simd                                 202411L

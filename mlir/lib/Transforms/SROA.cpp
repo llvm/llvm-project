@@ -97,6 +97,9 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
     }
   }
 
+  if (info.userToBlockingUses.empty())
+    return info;
+
   SetVector<Operation *> forwardSlice;
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *user : forwardSlice) {
@@ -157,7 +160,16 @@ static void destructureSlot(
   SetVector<Operation *> usersToRewire;
   usersToRewire.insert_range(llvm::make_first_range(info.userToBlockingUses));
   usersToRewire.insert_range(info.accessors);
-  usersToRewire = mlir::topologicalSort(usersToRewire);
+  // Topological sorting is only needed when promoting blocking uses (whose
+  // removal relies on erasing users before defs) or when an accessor owns
+  // regions that may nest other accessors.
+  bool needsTopologicalSort =
+      !info.userToBlockingUses.empty() ||
+      llvm::any_of(info.accessors, [](DestructurableAccessorOpInterface op) {
+        return op->getNumRegions() > 0;
+      });
+  if (needsTopologicalSort)
+    usersToRewire = mlir::topologicalSort(usersToRewire);
 
   llvm::SmallVector<Operation *> toErase;
   for (Operation *toRewire : llvm::reverse(usersToRewire)) {

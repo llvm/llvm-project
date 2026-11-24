@@ -44,15 +44,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gpr32all, preferred-register: '' }
-  - { id: 1, class: gpr32all, preferred-register: '' }
-  - { id: 2, class: gpr32, preferred-register: '' }
-  - { id: 3, class: gpr32, preferred-register: '' }
-  - { id: 4, class: gpr64common, preferred-register: '' }
-  - { id: 5, class: gpr32all, preferred-register: '' }
-  - { id: 6, class: gpr32all, preferred-register: '' }
-  - { id: 7, class: gpr32all, preferred-register: '' }
 liveins:
   - { reg: '$w0', virtual-reg: '%3' }
   - { reg: '$x1', virtual-reg: '%4' }
@@ -114,7 +105,7 @@ body:             |
   bb.3.next:
     successors: %bb.4(0x80000000)
 
-    ; CHECK: %2:gpr32 = PHI
+    ; CHECK: %6:gpr32 = PHI
     %2:gpr32 = PHI %1, %bb.2, %0, %bb.1
     STRWui %2, %4, 0 :: (store (s32) into %ir.ptr)
 

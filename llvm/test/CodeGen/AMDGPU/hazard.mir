@@ -17,7 +17,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$sgpr7', virtual-reg: '' }
   - { reg: '$vgpr4', virtual-reg: '' }
@@ -46,7 +45,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$sgpr7', virtual-reg: '' }
   - { reg: '$vgpr4', virtual-reg: '' }

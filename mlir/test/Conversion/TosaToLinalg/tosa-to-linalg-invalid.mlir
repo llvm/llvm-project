@@ -148,3 +148,30 @@ func.func @unranked_row_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<*xf32>
   return %0 : tensor<*xf32>
 }
+
+// -----
+
+func.func @tile_negative_multiple(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  %multiples = tosa.const_shape values(dense<-2> : tensor<1xindex>) : () -> !tosa.shape<1>
+  // expected-error@+1 {{failed to legalize operation 'tosa.tile'}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4xf32>, !tosa.shape<1>) -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
+func.func @tile_zero_multiple(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  %multiples = tosa.const_shape values(dense<0> : tensor<1xindex>) : () -> !tosa.shape<1>
+  // expected-error@+1 {{failed to legalize operation 'tosa.tile'}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4xf32>, !tosa.shape<1>) -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
+func.func @tile_minimum_multiple(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  %multiples = tosa.const_shape values(dense<-9223372036854775808> : tensor<1xindex>) : () -> !tosa.shape<1>
+  // expected-error@+1 {{failed to legalize operation 'tosa.tile'}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4xf32>, !tosa.shape<1>) -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}

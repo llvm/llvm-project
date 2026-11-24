@@ -1189,10 +1189,10 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   unsigned Flags =
       static_cast<const MCSectionELF *>(MBB.getParent()->getSection())
           ->getFlags();
-  std::string GroupName;
+  StringRef GroupName;
   if (F.hasComdat()) {
     Flags |= ELF::SHF_GROUP;
-    GroupName = F.getComdat()->getName().str();
+    GroupName = F.getComdat()->getName();
   }
   return getContext().getELFSection(Name, ELF::SHT_PROGBITS, Flags,
                                     0 /* Entry Size */, GroupName,
@@ -2317,7 +2317,7 @@ static unsigned getWasmSectionFlags(SectionKind K, bool Retain) {
   if (Retain)
     Flags |= wasm::WASM_SEG_FLAG_RETAIN;
 
-  // TODO(sbc): Add suport for K.isMergeableConst()
+  // TODO(sbc): Add support for K.isMergeableConst()
 
   return Flags;
 }

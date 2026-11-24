@@ -30,10 +30,6 @@ name:            test_trunc_and_zext_s1_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -45,11 +41,11 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i1) = G_TRUNC %0(i32)
+    %1:gprb(i1) = G_TRUNC %0(i32)
 
-    %2(i32) = G_ZEXT %1(i1)
+    %2:gprb(i32) = G_ZEXT %1(i1)
 
     $r0 = COPY %2(i32)
 
@@ -60,10 +56,6 @@ name:            test_trunc_and_sext_s1_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -76,11 +68,11 @@ body:             |
     ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2RSBri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i1) = G_TRUNC %0(i32)
+    %1:gprb(i1) = G_TRUNC %0(i32)
 
-    %2(i32) = G_SEXT %1(i1)
+    %2:gprb(i32) = G_SEXT %1(i1)
 
     $r0 = COPY %2(i32)
 
@@ -91,10 +83,6 @@ name:            test_trunc_and_anyext_s1_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -104,11 +92,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: $r0 = COPY [[COPY]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i1) = G_TRUNC %0(i32)
+    %1:gprb(i1) = G_TRUNC %0(i32)
 
-    %2(i32) = G_ANYEXT %1(i1)
+    %2:gprb(i32) = G_ANYEXT %1(i1)
 
     $r0 = COPY %2(i32)
 
@@ -119,10 +107,6 @@ name:            test_trunc_and_zext_s8_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -134,11 +118,11 @@ body:             |
     ; CHECK: [[t2UXTB:%[0-9]+]]:rgpr = t2UXTB [[COPY1]], 0, 14 /* CC::al */, $noreg
     ; CHECK: $r0 = COPY [[t2UXTB]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i8) = G_TRUNC %0(i32)
+    %1:gprb(i8) = G_TRUNC %0(i32)
 
-    %2(i32) = G_ZEXT %1(i8)
+    %2:gprb(i32) = G_ZEXT %1(i8)
 
     $r0 = COPY %2(i32)
 
@@ -149,10 +133,6 @@ name:            test_trunc_and_sext_s8_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -164,11 +144,11 @@ body:             |
     ; CHECK: [[t2SXTB:%[0-9]+]]:rgpr = t2SXTB [[COPY1]], 0, 14 /* CC::al */, $noreg
     ; CHECK: $r0 = COPY [[t2SXTB]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i8) = G_TRUNC %0(i32)
+    %1:gprb(i8) = G_TRUNC %0(i32)
 
-    %2(i32) = G_SEXT %1(i8)
+    %2:gprb(i32) = G_SEXT %1(i8)
 
     $r0 = COPY %2(i32)
 
@@ -179,10 +159,6 @@ name:            test_trunc_and_anyext_s8_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -192,11 +168,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: $r0 = COPY [[COPY]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i8) = G_TRUNC %0(i32)
+    %1:gprb(i8) = G_TRUNC %0(i32)
 
-    %2(i32) = G_ANYEXT %1(i8)
+    %2:gprb(i32) = G_ANYEXT %1(i8)
 
     $r0 = COPY %2(i32)
 
@@ -207,10 +183,6 @@ name:            test_trunc_and_zext_s16_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -222,11 +194,11 @@ body:             |
     ; CHECK: [[t2UXTH:%[0-9]+]]:rgpr = t2UXTH [[COPY1]], 0, 14 /* CC::al */, $noreg
     ; CHECK: $r0 = COPY [[t2UXTH]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i16) = G_TRUNC %0(i32)
+    %1:gprb(i16) = G_TRUNC %0(i32)
 
-    %2(i32) = G_ZEXT %1(i16)
+    %2:gprb(i32) = G_ZEXT %1(i16)
 
     $r0 = COPY %2(i32)
 
@@ -237,10 +209,6 @@ name:            test_trunc_and_sext_s16_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -252,11 +220,11 @@ body:             |
     ; CHECK: [[t2SXTH:%[0-9]+]]:rgpr = t2SXTH [[COPY1]], 0, 14 /* CC::al */, $noreg
     ; CHECK: $r0 = COPY [[t2SXTH]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i16) = G_TRUNC %0(i32)
+    %1:gprb(i16) = G_TRUNC %0(i32)
 
-    %2(i32) = G_SEXT %1(i16)
+    %2:gprb(i32) = G_SEXT %1(i16)
 
     $r0 = COPY %2(i32)
 
@@ -267,10 +235,6 @@ name:            test_trunc_and_anyext_s16_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0:
     liveins: $r0
@@ -280,11 +244,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: $r0 = COPY [[COPY]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
+    %0:gprb(i32) = COPY $r0
 
-    %1(i16) = G_TRUNC %0(i32)
+    %1:gprb(i16) = G_TRUNC %0(i32)
 
-    %2(i32) = G_ANYEXT %1(i16)
+    %2:gprb(i32) = G_ANYEXT %1(i16)
 
     $r0 = COPY %2(i32)
 
@@ -295,11 +259,6 @@ name:            test_trunc_and_zext_s1_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -312,13 +271,13 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: t2STRHi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i1) = G_TRUNC %1(i32)
+    %2:gprb(i1) = G_TRUNC %1(i32)
 
-    %3(i16) = G_ZEXT %2(i1)
+    %3:gprb(i16) = G_ZEXT %2(i1)
 
     G_STORE %3(i16), %0(p0) :: (store (i16))
 
@@ -329,11 +288,6 @@ name:            test_trunc_and_sext_s1_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -347,13 +301,13 @@ body:             |
     ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: t2STRHi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i1) = G_TRUNC %1(i32)
+    %2:gprb(i1) = G_TRUNC %1(i32)
 
-    %3(i16) = G_SEXT %2(i1)
+    %3:gprb(i16) = G_SEXT %2(i1)
 
     G_STORE %3(i16), %0(p0) :: (store (i16))
 
@@ -364,11 +318,6 @@ name:            test_trunc_and_anyext_s1_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -380,13 +329,13 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i1) = G_TRUNC %1(i32)
+    %2:gprb(i1) = G_TRUNC %1(i32)
 
-    %3(i16) = G_ANYEXT %2(i1)
+    %3:gprb(i16) = G_ANYEXT %2(i1)
 
     G_STORE %3(i16), %0(p0) :: (store (i16))
 
@@ -397,11 +346,6 @@ name:            test_trunc_and_zext_s8_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -414,13 +358,13 @@ body:             |
     ; CHECK: [[t2UXTB:%[0-9]+]]:rgpr = t2UXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
     ; CHECK: t2STRHi12 [[t2UXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i8) = G_TRUNC %1(i32)
+    %2:gprb(i8) = G_TRUNC %1(i32)
 
-    %3(i16) = G_ZEXT %2(i8)
+    %3:gprb(i16) = G_ZEXT %2(i8)
 
     G_STORE %3(i16), %0(p0) :: (store (i16))
 
@@ -431,11 +375,6 @@ name:            test_trunc_and_sext_s8_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -448,13 +387,13 @@ body:             |
     ; CHECK: [[t2SXTB:%[0-9]+]]:rgpr = t2SXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
     ; CHECK: t2STRHi12 [[t2SXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i8) = G_TRUNC %1(i32)
+    %2:gprb(i8) = G_TRUNC %1(i32)
 
-    %3(i16) = G_SEXT %2(i8)
+    %3:gprb(i16) = G_SEXT %2(i8)
 
     G_STORE %3(i16), %0(p0) :: (store (i16))
 
@@ -465,11 +404,6 @@ name:            test_trunc_and_anyext_s8_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -481,13 +415,13 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i8) = G_TRUNC %1(i32)
+    %2:gprb(i8) = G_TRUNC %1(i32)
 
-    %3(i16) = G_ANYEXT %2(i8)
+    %3:gprb(i16) = G_ANYEXT %2(i8)
 
     G_STORE %3(i16), %0(p0) :: (store (i16))
 
@@ -498,11 +432,6 @@ name:            test_trunc_and_zext_s1_to_s8
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -515,13 +444,13 @@ body:             |
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: t2STRBi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i1) = G_TRUNC %1(i32)
+    %2:gprb(i1) = G_TRUNC %1(i32)
 
-    %3(i8) = G_ZEXT %2(i1)
+    %3:gprb(i8) = G_ZEXT %2(i1)
 
     G_STORE %3(i8), %0(p0) :: (store (i8))
 
@@ -532,11 +461,6 @@ name:            test_trunc_and_sext_s1_to_s8
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -550,13 +474,13 @@ body:             |
     ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: t2STRBi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i1) = G_TRUNC %1(i32)
+    %2:gprb(i1) = G_TRUNC %1(i32)
 
-    %3(i8) = G_SEXT %2(i1)
+    %3:gprb(i8) = G_SEXT %2(i1)
 
     G_STORE %3(i8), %0(p0) :: (store (i8))
 
@@ -567,11 +491,6 @@ name:            test_trunc_and_anyext_s1_to_s8
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -583,13 +502,13 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: t2STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (i8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
-    %0(p0) = COPY $r0
+    %0:gprb(p0) = COPY $r0
 
-    %1(i32) = COPY $r1
+    %1:gprb(i32) = COPY $r1
 
-    %2(i1) = G_TRUNC %1(i32)
+    %2:gprb(i1) = G_TRUNC %1(i32)
 
-    %3(i8) = G_ANYEXT %2(i1)
+    %3:gprb(i8) = G_ANYEXT %2(i1)
 
     G_STORE %3(i8), %0(p0) :: (store (i8))
 
