@@ -1972,6 +1972,8 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
     // fptosi/ui yields poison if the resulting value does not fit in the
     // destination type.
     return true;
+  case TargetOpcode::G_ADDRSPACE_CAST:
+    return true;
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTLS:
