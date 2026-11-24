@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; Check that in ThinLTO pre-link the sample profile reader also loads the
+; Check that in ThinLTO the sample profile reader also loads the
 ; profiles of top-level functions that contain an inlined instance of a
 ; function defined in the module, using the inlinee-to-top-level map section.
 ; bar is inlined into main (via foo) and baz, and has no profile of its own.
@@ -11,9 +11,10 @@
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.afdo -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --check-prefix=PRELINK
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.md5.afdo -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --check-prefix=PRELINK-MD5
 
-; Not loaded when disabled, outside ThinLTO pre-link, or without the section.
+; Not loaded when disabled, outside ThinLTO, or without the section.
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.afdo -sample-profile-load-inlinee-top-level=0 -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=NOLOAD
-; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.afdo -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=NOLOAD
+; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.afdo -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --check-prefix=PRELINK
+; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.afdo -sample-profile-inline-from-top-level=0 -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=NOLOAD
 ; RUN: opt < %s -passes='default<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.afdo -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=NOLOAD
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%t.nomap.afdo -debug-only=samplepgo-reader -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=NOLOAD
 

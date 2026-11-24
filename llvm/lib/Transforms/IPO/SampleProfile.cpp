@@ -48,6 +48,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -151,6 +152,13 @@ static cl::opt<bool> PreserveDeferredInlines(
     cl::desc(
         "In ThinLTO pre-link, add import hints for in-module targets of "
         "deferred indirect calls so they can be imported with the caller."));
+
+static cl::opt<bool> InlineFromTopLevelProfiles(
+    "sample-profile-inline-from-top-level", cl::Hidden, cl::init(true),
+    cl::desc("In ThinLTO post-link, where the caller's profile has no inlined "
+             "profile for a call or for code inlined before this pass, graft "
+             "the callee's top-level profile into it once inlined, so that "
+             "sample profile inlining continues downward from it."));
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
@@ -332,6 +340,9 @@ protected:
   findFunctionSamples(const Instruction &I) const override;
   std::vector<const FunctionSamples *>
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
+  void graftTopLevelProfilesForInlinedCode(const Instruction &I);
+  const FunctionSamples *
+  findCalleeFunctionSamplesFromTopLevel(const CallBase &Inst);
   void findExternalInlineCandidate(CallBase *CB, const FunctionSamples *Samples,
                                    DenseSet<GlobalValue::GUID> &InlinedGUIDs,
                                    uint64_t Threshold);
@@ -408,6 +419,9 @@ protected:
   // GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   // all the function symbols defined or declared in current module.
   DenseMap<uint64_t, StringRef> GUIDToFuncNameMap;
+
+  /// See InlineFromTopLevelProfiles.
+  bool UseTopLevelForInlinedCode = false;
 
   // For symbol in profile symbol list, whether to regard their profiles
   // to be accurate. It is mainly decided by existance of profile symbol
@@ -539,6 +553,97 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
   return FS->findFunctionSamplesAt(FunctionSamples::getCallSiteIdentifier(DIL),
                                    CalleeName, Reader->getRemapper(),
                                    &FuncNameToProfNameMap);
+}
+
+/// Return the inline frames of \p DIL from the outermost call site inward, as
+/// pairs of the call site and the name of the function inlined there.
+static SmallVector<std::pair<LineLocation, StringRef>, 8>
+getInlineFrames(const DILocation *DIL) {
+  SmallVector<std::pair<LineLocation, StringRef>, 8> Frames;
+  for (const DILocation *Callee = DIL, *Callsite = DIL->getInlinedAt();
+       Callsite; Callee = Callsite, Callsite = Callsite->getInlinedAt())
+    Frames.emplace_back(FunctionSamples::getCallSiteIdentifier(
+                            Callsite, FunctionSamples::ProfileIsFS),
+                        FunctionSamples::getCanonicalFnName(
+                            Callee->getSubprogramLinkageName()));
+  std::reverse(Frames.begin(), Frames.end());
+  return Frames;
+}
+
+/// \p I can be in code inlined before sample profile inlining, e.g. by the
+/// ThinLTO pre-link inliner, from a function that the profiled binary did not
+/// inline there, so the caller's profile has no inlined profile for that code.
+/// Graft the top-level profile of the function of each such inline frame into
+/// the caller's profile at that call site, so that the inlined code finds it as
+/// its inlined profile, and sample profile inlining continues downward into the
+/// inlining recorded in it.
+void SampleProfileLoader::graftTopLevelProfilesForInlinedCode(
+    const Instruction &I) {
+  const DILocation *DIL = I.getDebugLoc();
+  if (!UseTopLevelForInlinedCode || !DIL || !DIL->getInlinedAt())
+    return;
+  FunctionSamples *Caller = Samples;
+  auto Frames = getInlineFrames(DIL);
+  for (const auto &[Idx, Frame] : llvm::enumerate(Frames)) {
+    const auto &[Loc, Name] = Frame;
+    // Profiles are owned by the reader or this loader.
+    if (auto *Inlinee =
+            const_cast<FunctionSamples *>(Caller->findFunctionSamplesAt(
+                Loc, Name, Reader->getRemapper(), &FuncNameToProfNameMap))) {
+      Caller = Inlinee;
+      continue;
+    }
+    // The reader loads the top-level profiles related to the functions in the
+    // module by the inlinee-to-top-level map, e.g. those containing an
+    // imported function. Without one for this frame, an inner frame can still
+    // have one, so continue through an empty profile, which annotates this
+    // frame's code like no profile does.
+    const FunctionSamples *TopLevel = Reader->getSamplesFor(Name);
+    if (!TopLevel && Idx + 1 == Frames.size())
+      return;
+    FunctionSamples Graft;
+    if (TopLevel)
+      Graft = *TopLevel;
+    else
+      Graft.setFunction(getRepInFormat(Name));
+    FunctionId Key = Graft.getFunction();
+    Caller = &Caller->functionSamplesAt(Loc)
+                  .try_emplace(Key, std::move(Graft))
+                  .first->second;
+  }
+}
+
+/// Like findCalleeFunctionSamples(), but first graft top-level profiles for the
+/// inlined code containing \p Inst, see graftTopLevelProfilesForInlinedCode(),
+/// and if the callee has no inlined profile but the caller's profile records
+/// the call, i.e. the profiled binary did not inline the callee there, return
+/// the callee's top-level profile, so that sample profile inlining can start
+/// from it. It is not grafted here, as an inlined profile at a call that is not
+/// inlined would mean the call was not executed. Once inlined, its code is
+/// grafted like other inlined code.
+const FunctionSamples *
+SampleProfileLoader::findCalleeFunctionSamplesFromTopLevel(
+    const CallBase &Inst) {
+  const DILocation *DIL = Inst.getDebugLoc();
+  if (!UseTopLevelForInlinedCode || !DIL)
+    return findCalleeFunctionSamples(Inst);
+  graftTopLevelProfilesForInlinedCode(Inst);
+
+  if (const FunctionSamples *CalleeSamples = findCalleeFunctionSamples(Inst))
+    return CalleeSamples;
+  const Function *Callee = Inst.getCalledFunction();
+  const FunctionSamples *CallerFS = findFunctionSamples(Inst);
+  if (!Callee || !CallerFS)
+    return nullptr;
+  StringRef Name = FunctionSamples::getCanonicalFnName(*Callee);
+  auto Targets = CallerFS->findCallTargetMapAt(
+      FunctionSamples::getCallSiteIdentifier(DIL));
+  if (!Targets)
+    return nullptr;
+  auto Target = Targets->find(getRepInFormat(Name));
+  if (Target == Targets->end() || !Target->second)
+    return nullptr;
+  return Reader->getSamplesFor(Name);
 }
 
 /// Returns a vector of FunctionSamples that are the indirect call targets
@@ -991,7 +1096,7 @@ bool SampleProfileLoader::inlineHotFunctions(
         const FunctionSamples *FS = nullptr;
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           if (!isa<IntrinsicInst>(I)) {
-            if ((FS = findCalleeFunctionSamples(*CB))) {
+            if ((FS = findCalleeFunctionSamplesFromTopLevel(*CB))) {
               assert((!FunctionSamples::UseMD5 || FS->GUIDToFuncNameMap) &&
                      "GUIDToFuncNameMap has to be populated");
               AllCandidates.push_back(CB);
@@ -1136,7 +1241,8 @@ bool SampleProfileLoader::getInlineCandidate(InlineCandidate *NewCandidate,
     return false;
 
   // Find the callee's profile. For indirect call, find hottest target profile.
-  const FunctionSamples *CalleeSamples = findCalleeFunctionSamples(*CB);
+  const FunctionSamples *CalleeSamples =
+      findCalleeFunctionSamplesFromTopLevel(*CB);
   // If ExternalInlineAdvisor wants to inline this site, do so even
   // if Samples are not present.
   if (!CalleeSamples && !getExternalInlineAdvisorShouldInline(*CB))
@@ -1393,6 +1499,12 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
     if (FS->getTotalSamples() == 0 && FS->getHeadSamplesEstimate() == 0) {
       continue;
     }
+
+    // The callee's own top-level profile, see
+    // findCalleeFunctionSamplesFromTopLevel(), must not be merged into itself
+    // or have its entries counted again.
+    if (FS == Reader->getSamplesFor(*Callee))
+      continue;
 
     // Do not merge a context that is already duplicated into the base profile.
     if (FS->getContext().hasAttribute(sampleprof::ContextDuplicatedIntoBase))
@@ -1654,6 +1766,11 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   else
     Changed |= inlineHotFunctions(F, InlinedGUIDs);
 
+  // Inlining only grafts top-level profiles for inlined code with calls, so
+  // graft them for the rest of the inlined code before annotating it.
+  for (const Instruction &I : instructions(F))
+    graftTopLevelProfilesForInlinedCode(I);
+
   Changed |= computeAndPropagateWeights(F, InlinedGUIDs);
 
   if (Changed)
@@ -1801,12 +1918,17 @@ bool SampleProfileLoader::doInitialization(Module &M,
   }
   Reader = std::move(ReaderOrErr.get());
   Reader->setSkipFlatProf(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink);
-  // In ThinLTO pre-link, make the profiles of the top-level functions that a
-  // function in this module was inlined into available as well, even when
-  // those top-level functions are defined in other modules.
+  // Make the profiles of the top-level functions that a function in this
+  // module was inlined into available as well, even when those top-level
+  // functions are defined in other modules. In ThinLTO post-link, they are
+  // grafted for code inlined from them, see
+  // findCalleeFunctionSamplesFromTopLevel().
+  UseTopLevelForInlinedCode = InlineFromTopLevelProfiles &&
+                              LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink;
   Reader->setLoadInlineeTopLevelFuncs(
-      LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink &&
-      Opts.sample_profile_load_inlinee_top_level);
+      UseTopLevelForInlinedCode ||
+      (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink &&
+       Opts.sample_profile_load_inlinee_top_level));
   // set module before reading the profile so reader may be able to only
   // read the function profiles which are used by the current module.
   Reader->setModule(&M);
@@ -1815,6 +1937,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
     return false;
   }
+
+  // Context-sensitive profiles are not nested.
+  if (Reader->profileIsCS())
+    UseTopLevelForInlinedCode = false;
 
   PSL = Reader->getProfileSymbolList();
 
@@ -2146,6 +2272,7 @@ bool SampleProfileLoader::runOnFunction(Function &F,
     return emitAnnotations(F);
   return false;
 }
+
 StringRef SampleProfileLoaderPass::getSampleProfileFile(const LLVMContext &C) {
   return getIPOOptions(C).sample_profile_file;
 }

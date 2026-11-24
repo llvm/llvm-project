@@ -167,9 +167,11 @@ sample-based profile in extbinary format.
 
 :::{option} --gen-inlinee-top-level-map=[true|false]
 Write a section that maps each inlinee to the top-level functions whose
-profiles contain an inlined instance of it. In the ThinLTO pre-link phase, the
-compiler uses it to also load those top-level profiles for functions defined in
-the module being compiled. This option can only be used with sample-based
+profiles contain an inlined instance of it. In ThinLTO, the compiler uses it to
+also load those top-level profiles for functions defined in the module being
+compiled. In the post-link phase, they are grafted into the profiles of callers
+where code inlined from them has no inlined profile, so that sample profile
+inlining continues into them. This option can only be used with sample-based
 profile in extbinary format, and is ignored for context-sensitive profiles.
 :::
 
