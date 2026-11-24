@@ -889,8 +889,6 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
     case GOFF::RLDReferenceType::RLD_RT_RLongDisplacement:
       Con = "LDCon";
       break;
-    default:
-      Con = "(unknown)";
     }
     dbgs() << "Reloc " << N << ": " << Con
            << " Rptr: " << Sym->getExternalName()

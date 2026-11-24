@@ -46,6 +46,7 @@
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
 
