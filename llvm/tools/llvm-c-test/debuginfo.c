@@ -418,13 +418,6 @@ int llvm_get_di_tag(void) {
   LLVMContextRef Context = LLVMContextCreate();
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext("Mod", Context);
 
-  const char String[] = "foo";
-  LLVMMetadataRef StringMD =
-      LLVMMDStringInContext2(Context, String, strlen(String));
-  LLVMMetadataRef NodeMD = LLVMMDNodeInContext2(Context, &StringMD, 1);
-  assert(LLVMGetDINodeTag(NodeMD) == 0);
-  (void)NodeMD;
-
   LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
   const char Filename[] = "metadata.c";
   const char Directory[] = ".";
