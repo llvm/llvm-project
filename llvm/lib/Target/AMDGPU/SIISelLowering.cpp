@@ -4021,30 +4021,7 @@ SDValue SITargetLowering::LowerCallResult(
     } else
       llvm_unreachable("unknown argument location type");
 
-    switch (VA.getLocInfo()) {
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::ZExt:
-      Val = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::SExt:
-      Val = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT().changeTypeToInteger(),
-                        Val);
-      Val = DAG.getBitcast(VA.getValVT(), Val);
-      break;
-    default:
-      llvm_unreachable("Unknown loc info!");
-    }
+    Val = convertABITypeToValueType(DAG, Val, VA, DL);
 
     InVals.push_back(Val);
   }
