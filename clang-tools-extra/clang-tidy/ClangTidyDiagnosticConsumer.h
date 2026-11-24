@@ -14,8 +14,10 @@
 #include "FileExtensionsSet.h"
 #include "NoLintDirectiveHandler.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceManagerInternals.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 #include <optional>
@@ -231,6 +233,18 @@ public:
                 DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
   }
 
+  struct FileLineTable {
+    std::vector<std::string> Filenames;
+    std::vector<LineEntry> Entries;
+
+    /// Index of each file name in \c Filenames.
+    llvm::StringMap<int> FilenameIDs;
+  };
+
+  void setUsePresumedLocations(bool Value) { UsePresumedLocations = Value; }
+  void recordLineTable(SourceManager &SM, SourceLocation Loc);
+  const FileLineTable *getLineTable(StringRef AbsolutePath) const;
+
   void setOptionsCollector(llvm::StringSet<> *Collector) {
     OptionsCollector = Collector;
   }
@@ -272,6 +286,9 @@ private:
 
   NoLintDirectiveHandler NoLintHandler;
   llvm::StringSet<> *OptionsCollector = nullptr;
+
+  bool UsePresumedLocations = true;
+  llvm::StringMap<FileLineTable> LineTables;
 };
 
 /// Gets the Fix attached to \p Diagnostic.

@@ -25,6 +25,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Basic/SourceManagerInternals.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -38,6 +39,7 @@
 #include "clang/Tooling/DiagnosticsYaml.h" // IWYU pragma: keep
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -123,6 +125,7 @@ public:
                              "https://clang.llvm.org/extra/clang-tidy/");
     }
 
+    DiagOpts.ShowPresumedLoc = true;
     DiagOpts.setShowColors(Context.getOptions().UseColor.value_or(
                                llvm::sys::Process::StandardOutHasColors())
                                ? ShowColorsKind::On
@@ -371,6 +374,7 @@ private:
       return {};
 
     const FileID ID = SourceMgr.getOrCreateFileID(*File, SrcMgr::C_User);
+    restoreLineTable(ID, FilePath);
     return SourceMgr.getLocForStartOfFile(ID).getLocWithOffset(Offset);
   }
 
@@ -390,6 +394,30 @@ private:
       return;
     }
     SarifOS << llvm::formatv("{0:2}", Document);
+  }
+
+  /// Restores the line table recorded for \p FilePath during the analysis.
+  void restoreLineTable(FileID ID, StringRef FilePath) {
+    if (!FilesWithLineTableApplied.insert(ID).second)
+      return;
+
+    SmallString<256> AbsolutePath(FilePath);
+    Files.makeAbsolutePath(AbsolutePath, true);
+    const ClangTidyContext::FileLineTable *Table =
+        Context.getLineTable(AbsolutePath);
+    if (!Table)
+      return;
+
+    SmallVector<int> FilenameIDs;
+    for (const std::string &Filename : Table->Filenames)
+      FilenameIDs.push_back(SourceMgr.getLineTableFilenameID(Filename));
+    std::vector<LineEntry> Entries = Table->Entries;
+    for (LineEntry &Entry : Entries)
+      if (Entry.FilenameID >= 0)
+        Entry.FilenameID = FilenameIDs[Entry.FilenameID];
+
+    SourceMgr.getLineTable().AddEntry(ID, Entries);
+    SourceMgr.getSLocEntry(ID).getFile().setHasLineDirectives();
   }
 
   void reportFix(const DiagnosticBuilder &Diag,
@@ -436,6 +464,8 @@ private:
     StringRef BuildDir;
     Replacements Replaces;
   };
+
+  llvm::DenseSet<FileID> FilesWithLineTableApplied;
 
   FileManager Files;
   LangOptions LangOpts; // FIXME: use langopts from each original file
@@ -549,6 +579,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
   Context.setSourceManager(SM);
   Context.setCurrentFile(File);
   Context.setASTContext(&Compiler.getASTContext());
+  Context.setUsePresumedLocations(Compiler.getDiagnosticOpts().ShowPresumedLoc);
 
   auto WorkingDir = Compiler.getSourceManager()
                         .getFileManager()
