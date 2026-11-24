@@ -262,23 +262,24 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
                                   scf::ForOp target,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
+  if (getPeelFront() && getPeelBack()) {
+    return emitDefiniteFailure()
+           << "peel_front and peel_back are mutually exclusive";
+  }
+
   scf::ForOp result;
-  if (getPeelFront()) {
-    LogicalResult status =
-        scf::peelForLoopFirstIteration(rewriter, target, result);
-    if (failed(status)) {
-      DiagnosedSilenceableFailure diag =
-          emitSilenceableError() << "failed to peel the first iteration";
-      return diag;
-    }
-  } else {
-    LogicalResult status =
-        scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
-    if (failed(status)) {
-      DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                         << "failed to peel the last iteration";
-      return diag;
-    }
+  LogicalResult status = success();
+  if (getPeelFront())
+    status = scf::peelForLoopFirstIteration(rewriter, target, result);
+  else if (getPeelBack())
+    status = scf::peelForLoopLastIteration(rewriter, target, result);
+  else
+    status = scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
+  if (failed(status)) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError();
+    diag << (getPeelFront() ? "failed to peel the first iteration"
+                            : "failed to peel the last iteration");
+    return diag;
   }
 
   results.push_back(target);

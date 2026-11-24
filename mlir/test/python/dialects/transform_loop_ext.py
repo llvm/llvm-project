@@ -69,6 +69,25 @@ def loopPeel_peel_front():
 
 
 @run
+def loopPeel_peel_back():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("scf.for"),
+    )
+    with InsertionPoint(sequence.body):
+        loop.LoopPeelOp(
+            transform.AnyOpType.get(),
+            transform.AnyOpType.get(),
+            sequence.bodyTarget,
+            peel_back=True,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: loopPeel_peel_back
+    # CHECK: = transform.loop.peel %[[ARG0:.*]] peel_back = true
+
+
+@run
 def loopPipeline():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,

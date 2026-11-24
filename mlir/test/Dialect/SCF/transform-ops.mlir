@@ -105,6 +105,38 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The range divides evenly. peel_back still peels one full step. The default
+// peel would fail here.
+// CHECK-LABEL: @loop_peel_back_op
+func.func @loop_peel_back_op() {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[C16:.+]] = arith.constant 16
+  // CHECK: %[[C4:.+]] = arith.constant 4
+  // CHECK: %[[C12:.+]] = arith.constant 12
+  // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C12]] step %[[C4]]
+  // CHECK:   arith.addi
+  // CHECK: scf.for %{{.+}} = %[[C12]] to %[[C16]] step %[[C4]]
+  // CHECK:   arith.addi
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 16 : index
+  %2 = arith.constant 4 : index
+  scf.for %i = %0 to %1 step %2 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.op<"scf.for">
+    %main_loop, %last = transform.loop.peel %1 peel_back = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @loop_peel_partial_as_if_op
 //  CHECK-SAME:   %[[UB:.+]]: index
 func.func @loop_peel_partial_as_if_op(%ub: index) {

@@ -99,7 +99,9 @@ func.func @peel_last_dynamic(%lb: index, %ub: index) {
 // CHECK:       %[[REM:.*]] = arith.remui %[[DIFF]], %[[STEP]]
 // CHECK:       %[[ZERO:.*]] = arith.constant 0 : index
 // CHECK:       %[[IS_ZERO:.*]] = arith.cmpi eq, %[[REM]], %[[ZERO]]
-// CHECK:       %[[SUB:.*]] = arith.select %[[IS_ZERO]], %[[STEP]], %[[REM]]
+// CHECK:       %[[NOT_EMPTY:.*]] = arith.cmpi ne, %[[DIFF]], %[[ZERO]]
+// CHECK:       %[[PEEL_FULL:.*]] = arith.andi %[[IS_ZERO]], %[[NOT_EMPTY]]
+// CHECK:       %[[SUB:.*]] = arith.select %[[PEEL_FULL]], %[[STEP]], %[[REM]]
 // CHECK:       %[[SPLIT:.*]] = arith.subi %[[UB]], %[[SUB]]
 // CHECK:       scf.for %{{.*}} = %[[LB]] to %[[SPLIT]] step %[[STEP]]
 // CHECK:       scf.for %{{.*}} = %[[SPLIT]] to %[[UB]] step %[[STEP]]
@@ -164,3 +166,21 @@ func.func @peel_last_unsigned(%lb: i32, %ub: i32) {
 // CHECK: arith.subi
 // CHECK: scf.for unsigned %{{.*}} = %arg0 to %{{.*}} step %c4_i32 : i32
 // CHECK: scf.for unsigned %{{.*}} = %{{.*}} to %arg1 step %c4_i32 : i32
+
+// -----
+
+// Constant empty range, dynamic step. Front peeling still rewrites this, so
+// last-iteration peeling does too. The split stays at the upper bound.
+// CHECK-LABEL: func @peel_last_const_empty_dynamic_step
+// CHECK: %[[C4:.*]] = arith.constant 4 : index
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: scf.for %{{.*}} = %[[C4]] to %[[C0]] step %{{.*}}
+// CHECK: scf.for %{{.*}} = %[[C0]] to %[[C0]] step %{{.*}}
+func.func @peel_last_const_empty_dynamic_step(%step: index) {
+  %lb = arith.constant 4 : index
+  %ub = arith.constant 0 : index
+  scf.for %iv = %lb to %ub step %step {
+    "test.use"(%iv) : (index) -> ()
+  }
+  return
+}

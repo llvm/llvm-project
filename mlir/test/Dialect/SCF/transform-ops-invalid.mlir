@@ -350,3 +350,22 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func @peel_front_and_last(%lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %root : (!transform.any_op) -> !transform.any_op
+    %l = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{peel_front and peel_back are mutually exclusive}}
+    %p, %r = transform.loop.peel %l peel_front = true peel_back = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
+}

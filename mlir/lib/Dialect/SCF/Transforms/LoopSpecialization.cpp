@@ -158,10 +158,14 @@ static LogicalResult peelForLoopAtLastBound(RewriterBase &b, ForOp forOp,
     APInt lb = lbAttr.getValue();
     APInt ub = ubAttr.getValue();
 
-    if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
+    // A provably empty loop is not peeled. Front peeling applies this only when
+    // the step is constant as well; the last-iteration peel matches that.
+    // The remainder peel keeps the check for a dynamic step.
+    bool empty = isUnsigned ? ub.ule(lb) : ub.sle(lb);
+    if (empty && (remainderOnly || isStepConst))
       return failure();
 
-    if (isStepConst) {
+    if (!empty && isStepConst) {
       APInt step = stepAttr.getValue();
       if (remainderOnly) {
         // lb < ub here, so ub - lb as an unsigned value is the exact distance,
@@ -206,13 +210,19 @@ static LogicalResult peelForLoopAtLastBound(RewriterBase &b, ForOp forOp,
   if (remainderOnly) {
     splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, rem);
   } else {
-    // When the range divides evenly (rem == 0), we peel a full last step.
-    // Otherwise, we peel the partial remainder.
+    // When the range divides evenly (rem == 0) and the loop is not empty,
+    // peel a full last step. An empty loop also has a zero remainder;
+    // subtracting the step there would move the split below the upper bound.
+    // Otherwise, peel the partial remainder.
     Value zero =
         b.createOrFold<arith::ConstantOp>(loc, b.getZeroAttr(rem.getType()));
     Value isZero =
         b.createOrFold<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, rem, zero);
-    Value sub = b.createOrFold<arith::SelectOp>(loc, isZero, stepVal, rem);
+    Value notEmpty = b.createOrFold<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne, diff, zero);
+    Value peelFullStep = b.createOrFold<arith::AndIOp>(loc, isZero, notEmpty);
+    Value sub =
+        b.createOrFold<arith::SelectOp>(loc, peelFullStep, stepVal, rem);
     splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, sub);
   }
 
@@ -392,9 +402,9 @@ static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
 
 namespace {
 struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
-  ForLoopPeelingPattern(MLIRContext *ctx, bool peelFront, bool skipPartial,
-                        bool partialAsIf)
-      : OpRewritePattern<ForOp>(ctx), peelFront(peelFront),
+  ForLoopPeelingPattern(MLIRContext *ctx, bool peelFront, bool peelBack,
+                        bool skipPartial, bool partialAsIf)
+      : OpRewritePattern<ForOp>(ctx), peelFront(peelFront), peelBack(peelBack),
         skipPartial(skipPartial), partialAsIf(partialAsIf) {}
 
   LogicalResult matchAndRewrite(ForOp forOp,
@@ -405,10 +415,15 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
       return failure();
 
     scf::ForOp partialIteration;
-    // The case for peeling the first iteration of the loop.
+    // Peel one end, matching transform.loop.peel. The default peels only a
+    // partial remainder and simplifies affine.min / affine.max.
     if (peelFront) {
       if (failed(
               peelForLoopFirstIteration(rewriter, forOp, partialIteration))) {
+        return failure();
+      }
+    } else if (peelBack) {
+      if (failed(peelForLoopLastIteration(rewriter, forOp, partialIteration))) {
         return failure();
       }
     } else {
@@ -444,9 +459,13 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     return success();
   }
 
-  // If set to true, the first iteration of the loop will be peeled. Otherwise,
-  // the unevenly divisible loop will be peeled at the end.
+  // If set to true, the first iteration of the loop will be peeled.
   bool peelFront;
+
+  // If set to true, the last iteration is peeled, including a full step when
+  // the range divides evenly. Mutually exclusive with peelFront. Otherwise,
+  // the unevenly divisible loop is peeled at the end.
+  bool peelBack;
 
   /// If set to true, loops inside partial iterations of another peeled loop
   /// are not peeled. This reduces the size of the generated code. Partial
@@ -482,10 +501,15 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
   using impl::SCFForLoopPeelingBase<ForLoopPeeling>::SCFForLoopPeelingBase;
 
   void runOnOperation() override {
+    if (peelFront && peelBack) {
+      getOperation()->emitError()
+          << "peel-front and peel-back are mutually exclusive";
+      return signalPassFailure();
+    }
     auto *parentOp = getOperation();
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
-    patterns.add<ForLoopPeelingPattern>(ctx, peelFront, skipPartial,
+    patterns.add<ForLoopPeelingPattern>(ctx, peelFront, peelBack, skipPartial,
                                         partialAsIf);
     (void)applyPatternsGreedily(parentOp, std::move(patterns));
 

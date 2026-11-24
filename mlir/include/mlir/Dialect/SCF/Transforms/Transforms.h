@@ -109,8 +109,9 @@ LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
 /// scf.for operation for the last iteration. It replaces all uses of the
 /// unpeeled loop with the results of the newly generated scf.for.
 ///
-/// If there is at most one iteration, return failure and leave the loop
-/// unchanged.
+/// If the bounds and step are constant and there is at most one iteration,
+/// return failure and leave the loop unchanged. A constant empty range with a
+/// dynamic step is still peeled, matching `peelForLoopFirstIteration`.
 LogicalResult peelForLoopLastIteration(RewriterBase &rewriter, ForOp forOp,
                                        ForOp &partialIteration);
 

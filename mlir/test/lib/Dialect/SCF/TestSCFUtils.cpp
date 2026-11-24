@@ -332,28 +332,6 @@ struct TestSplitForOpAtPointPass
   }
 };
 
-struct TestPeelForLoopLastIterationPass
-    : public PassWrapper<TestPeelForLoopLastIterationPass,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPeelForLoopLastIterationPass)
-
-  StringRef getArgument() const final {
-    return "test-peel-for-loop-last-iteration";
-  }
-  StringRef getDescription() const final {
-    return "test scf::peelForLoopLastIteration";
-  }
-
-  void runOnOperation() override {
-    SmallVector<scf::ForOp> loops;
-    getOperation().walk([&](scf::ForOp forOp) { loops.push_back(forOp); });
-    IRRewriter rewriter(&getContext());
-    for (scf::ForOp forOp : llvm::reverse(loops)) {
-      scf::ForOp partialIteration;
-      (void)scf::peelForLoopLastIteration(rewriter, forOp, partialIteration);
-    }
-  }
-};
 } // namespace
 
 namespace mlir {
@@ -363,7 +341,6 @@ void registerTestSCFUtilsPass() {
   PassRegistration<TestSCFIfUtilsPass>();
   PassRegistration<TestSCFPipeliningPass>();
   PassRegistration<TestSplitForOpAtPointPass>();
-  PassRegistration<TestPeelForLoopLastIterationPass>();
 }
 } // namespace test
 } // namespace mlir
