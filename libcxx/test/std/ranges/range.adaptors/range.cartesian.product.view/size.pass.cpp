@@ -26,9 +26,7 @@
 template <class T>
 concept HasSize = requires(T&& t) { t.size(); };
 
-// A sized view whose range_size_t is chosen by the caller, so the common_type_t fold in
-// cartesian_product_view::size() can be observed. Mirrors DiffTypeRange in
-// iterator/member_types.compile.pass.cpp, which does the same for difference_type.
+// A sized view whose range_size_t is SizeT.
 template <class SizeT>
 struct SizeTypeView : std::ranges::view_base {
   int* buffer_;
@@ -75,7 +73,7 @@ constexpr bool test() {
     assert(std::ranges::cartesian_product_view(a0, a1, a2).size() == N0 * N1 * N2);
   }
 
-  { // size() return type -- common_type of underlying range_size_t
+  { // size() returns an unsigned integral type
     std::array<int, 3> a;
     auto v = std::ranges::cartesian_product_view(a);
     static_assert(std::unsigned_integral<decltype(v.size())>);

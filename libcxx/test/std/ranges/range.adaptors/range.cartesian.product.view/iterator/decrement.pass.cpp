@@ -84,8 +84,7 @@ constexpr bool test() {
     static_assert(!CanDecrement<Iter>);
   }
 
-  { // non-simple bases -- -- must instantiate __iterator<false>; __prev calls
-    // __cartesian_common_arg_end on a *non-const* base
+  { // non-simple views
     std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
     static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
 
@@ -111,7 +110,7 @@ constexpr bool test() {
     assert(it == v.begin());
   }
 
-  { // non-simple bases, 3 ranges -- reaches the intermediate __prev<1> recursion
+  { // non-simple views, three ranges
     std::array c{100, 200};
     std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b}, NonSimpleCommon{c});
     static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);

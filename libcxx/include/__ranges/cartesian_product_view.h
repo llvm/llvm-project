@@ -203,8 +203,8 @@ public:
       tuple<range_value_t<__maybe_const<_IsConst, _First>>, range_value_t<__maybe_const<_IsConst, _Vs>>...>;
   using reference =
       tuple<range_reference_t<__maybe_const<_IsConst, _First>>, range_reference_t<__maybe_const<_IsConst, _Vs>>...>;
-  // The type is implementation-defined. `ptrdiff_t` is folded in because the whole product's distance is
-  // computed in this type, which overflows far sooner than any single base's difference type does.
+  // The type is implementation-defined. Include ptrdiff_t since the distance across the whole product can
+  // exceed what any single base's difference type can represent.
   using difference_type = common_type_t<ptrdiff_t, range_difference_t<_First>, range_difference_t<_Vs>...>;
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
@@ -390,8 +390,7 @@ private:
       const auto __sz    = static_cast<difference_type>(ranges::size(__v));
       const auto __first = ranges::begin(__v);
 
-      // An empty base makes the whole product empty, so a non-zero advance from a valid iterator is already
-      // undefined; `__sz` is therefore positive here.
+      // __sz is non-zero: if any base is empty, the product is empty and a non-zero advance is UB.
       const auto __idx = static_cast<difference_type>(__it - __first);
       __x += __idx;
 

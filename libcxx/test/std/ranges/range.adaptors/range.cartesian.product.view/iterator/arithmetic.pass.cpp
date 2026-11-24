@@ -149,9 +149,7 @@ constexpr bool test() {
   }
 
   { // LWG3820: "cartesian_product_view::iterator::prev is not quite right".
-    // The first range only has to model random_access_range: neither `prev` nor the
-    // `operator+=` machinery may ask it for a size or an end. This is the example from the
-    // issue -- an unbounded iota_view is neither sized nor common.
+    // The first range is random access but neither sized nor common.
     auto v  = std::views::cartesian_product(std::views::iota(0));
     auto it = v.begin();
 

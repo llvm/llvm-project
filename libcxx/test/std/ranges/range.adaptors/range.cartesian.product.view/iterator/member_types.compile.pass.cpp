@@ -112,9 +112,7 @@ void test() {
     static_assert(std::is_same_v<Iter::iterator_concept, std::bidirectional_iterator_tag>);
   }
 
-  { // random-access first, random-access but *unsized* second -> forward.
-    // This is the only shape where cartesian-product-all-random-access (which <=> uses) and
-    // cartesian-product-is-random-access (which the tag and the arithmetic use) disagree.
+  { // second range is random-access but not sized
     std::ranges::cartesian_product_view v(buffer, NonSizedRandomAccessView{buffer});
     using Iter = decltype(v.begin());
 

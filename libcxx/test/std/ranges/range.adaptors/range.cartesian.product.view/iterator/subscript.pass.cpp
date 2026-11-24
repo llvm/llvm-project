@@ -61,8 +61,7 @@ constexpr bool test() {
     static_assert(!can_subscript(it));
   }
 
-  { // non-simple bases -- it[n] on __iterator<false>; this is the expression that
-    // surfaced the hardcoded-const bug in __advance
+  { // non-simple view
     std::array b{10, 20};
     std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
     static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);

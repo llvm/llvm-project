@@ -12,7 +12,7 @@
 //   requires equality_comparable<iterator_t<maybe-const<Const, First>>>;
 // friend constexpr bool operator==(const iterator&, default_sentinel_t);
 // friend constexpr auto operator<=>(const iterator& x, const iterator& y)
-//   requires cartesian-product-all-random-access<...>;
+//   requires all-random-access<Const, First, Vs...>;
 
 #include <array>
 #include <cassert>
@@ -145,9 +145,8 @@ constexpr bool test() {
     assert(it == std::default_sentinel);
   }
 
-  { // random-access but *unsized* tail: cartesian-product-all-random-access holds, so <=> is
-    // available, while cartesian-product-is-random-access does not, so the arithmetic is gone.
-    // This is the only configuration in which the two concepts differ.
+  { // all-random-access is satisfied but cartesian-product-is-random-access is not,
+    // because the last range is not sized.
     std::array a{1, 2, 3};
     std::array b{10, 20};
     std::ranges::cartesian_product_view v(a, NonSizedRandomAccessView{b});
@@ -159,7 +158,7 @@ constexpr bool test() {
     static_assert(!CanPlusEqual<Iter, std::ptrdiff_t>);
     static_assert(!std::is_invocable_v<std::minus<>, Iter, std::ptrdiff_t>);
 
-    // Not bidirectional either: the unsized tail is not a cartesian-product-common-arg.
+    // Not bidirectional either, since the last range does not satisfy cartesian-product-common-arg.
     static_assert(std::same_as<typename Iter::iterator_concept, std::forward_iterator_tag>);
 
     auto it1 = v.begin();

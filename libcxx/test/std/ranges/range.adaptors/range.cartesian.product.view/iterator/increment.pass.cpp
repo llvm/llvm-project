@@ -113,8 +113,7 @@ constexpr bool test() {
     assert(std::get<1>(*it) == 10);
   }
 
-  { // non-simple bases -- ++ must instantiate __iterator<false>, whose underlying
-    // iterator types differ from __iterator<true>'s
+  { // non-simple view
     std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
     static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
 
@@ -140,7 +139,7 @@ constexpr bool test() {
     assert(it == v.end());
   }
 
-  { // non-simple bases, 3 ranges -- reaches the intermediate __next<1> recursion
+  { // non-simple view, three ranges
     std::array c{100, 200};
     std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b}, NonSimpleCommon{c});
     static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);

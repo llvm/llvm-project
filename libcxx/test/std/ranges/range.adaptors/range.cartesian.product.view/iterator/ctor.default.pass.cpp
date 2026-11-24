@@ -36,9 +36,7 @@ struct IterDefaultCtrView : std::ranges::view_base {
   PODIter end() const;
 };
 
-// `cartesian_product_view` requires all-but-first ranges to be `forward_range`, and
-// `forward_iterator` is required to be `default_initializable`. So the only place a
-// non-default-initializable underlying iterator may live is the first (input) range.
+// Only the first range may be an input range, so only its iterator can be non-default-initializable.
 struct InputNoDefaultCtrView : std::ranges::view_base {
   cpp20_input_iterator<int*> begin() const;
   sentinel_wrapper<cpp20_input_iterator<int*>> end() const;

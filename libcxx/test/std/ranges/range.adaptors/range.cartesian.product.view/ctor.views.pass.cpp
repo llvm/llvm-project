@@ -34,7 +34,6 @@ static_assert(!implicitly_constructible_from<std::ranges::cartesian_product_view
                                              SimpleCommon,
                                              SimpleCommon>);
 
-// 4-range constructor is also explicit.
 static_assert(std::constructible_from<
               std::ranges::cartesian_product_view<SimpleCommon, SimpleCommon, SimpleCommon, SimpleCommon>,
               SimpleCommon,

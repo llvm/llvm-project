@@ -57,10 +57,7 @@ constexpr bool test() {
     assert(total == 129);
   }
 
-  { // a std::views::transform base is non-simple: iterator_t<V> and iterator_t<const V> differ,
-    // so traversing the product instantiates __iterator<false>'s __next. Helpers that hardcoded
-    // the const base type failed to compile here. Both orders, since only one of them recursed
-    // into the wrapping path.
+  { // non-simple view, in either position
     std::array a{1, 2};
     auto t = a | std::views::transform([](const auto& value) { return 2 * value + 1; });
 
