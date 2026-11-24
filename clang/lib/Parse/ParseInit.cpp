@@ -395,8 +395,7 @@ ExprResult Parser::createEmbedExpr() {
     auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
       llvm::APSInt ArraySize =
           Context.MakeIntValue(Str.size(), Context.getSizeType());
-      QualType ArrayTy = Context.getConstantArrayType(
-          Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
+      QualType ArrayTy = Context.getConstantArrayType(Ty, ArraySize, nullptr);
       return StringLiteral::Create(Context, Str, StringLiteralKind::Binary,
                                    false, ArrayTy, StartLoc);
     };

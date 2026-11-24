@@ -1745,7 +1745,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
 
   // Records. Still allocate them as single-element arrays.
   QualType AllocType = S.getASTContext().getConstantArrayType(
-      ElemType, NumElems, nullptr, ArraySizeModifier::Normal, 0);
+      ElemType, NumElems, nullptr);
 
   const Descriptor *Desc =
       S.P.createDescriptor(NewCall, AllocType.getTypePtr());

@@ -159,8 +159,7 @@ static RecordDecl *buildRecordForGlobalizedVars(
     } else {
       if (BufSize > 1) {
         llvm::APInt ArraySize(32, BufSize);
-        Type = C.getConstantArrayType(Type, ArraySize, nullptr,
-                                      ArraySizeModifier::Normal, 0);
+        Type = C.getConstantArrayType(Type, ArraySize, nullptr);
       }
       Field = FieldDecl::Create(
           C, GlobalizedRD, Loc, Loc, VD->getIdentifier(), Type,

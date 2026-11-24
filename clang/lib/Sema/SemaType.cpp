@@ -9540,8 +9540,7 @@ void Sema::completeExprArrayBound(Expr *E) {
       QualType ResultType = Context.getConstantArrayType(
           IAT->getElementType(),
           llvm::APInt(Context.getTypeSize(Context.getSizeType()), 1),
-          /*SizeExpr=*/nullptr, ArraySizeModifier::Normal,
-          /*IndexTypeQuals=*/0);
+          /*SizeExpr=*/nullptr);
       E->setType(ResultType);
     }
   }

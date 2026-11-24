@@ -6861,7 +6861,7 @@ static QualType TryToFixInvalidVariablyModifiedType(QualType T,
   }
 
   QualType FoldedArrayType = Context.getConstantArrayType(
-      ElemTy, Res, VLATy->getSizeExpr(), ArraySizeModifier::Normal, 0);
+      ElemTy, Res, VLATy->getSizeExpr());
   return Qs.apply(Context, FoldedArrayType);
 }
 

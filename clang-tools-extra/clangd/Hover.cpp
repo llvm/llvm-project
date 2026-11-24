@@ -745,9 +745,7 @@ getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
     HI.Type = printType(Name->getType(), Ctx, PP);
   } else {
     // Inside templates, the approximate type `const char[]` is still useful.
-    QualType StringType = Ctx.getIncompleteArrayType(Ctx.CharTy.withConst(),
-                                                     ArraySizeModifier::Normal,
-                                                     /*IndexTypeQuals=*/0);
+    QualType StringType = Ctx.getIncompleteArrayType(Ctx.CharTy.withConst());
     HI.Type = printType(StringType, Ctx, PP);
   }
   return HI;

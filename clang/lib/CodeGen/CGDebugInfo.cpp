@@ -4796,8 +4796,7 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
     llvm::APInt ConstVal(32, 1);
     QualType ET = CGM.getContext().getAsArrayType(T)->getElementType();
 
-    T = CGM.getContext().getConstantArrayType(ET, ConstVal, nullptr,
-                                              ArraySizeModifier::Normal, 0);
+    T = CGM.getContext().getConstantArrayType(ET, ConstVal, nullptr);
   }
 
   Name = VD->getName();
@@ -5533,7 +5532,7 @@ CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
     if (NumPaddingBytes.isPositive()) {
       llvm::APInt pad(32, NumPaddingBytes.getQuantity());
       FType = CGM.getContext().getConstantArrayType(
-          CGM.getContext().CharTy, pad, nullptr, ArraySizeModifier::Normal, 0);
+          CGM.getContext().CharTy, pad, nullptr);
       EltTys.push_back(CreateMemberType(Unit, FType, "", &FieldOffset));
     }
   }

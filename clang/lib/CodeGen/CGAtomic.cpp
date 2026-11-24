@@ -100,9 +100,7 @@ namespace {
           llvm::APInt Size(
               /*numBits=*/32,
               C.toCharUnitsFromBits(AtomicSizeInBits).getQuantity());
-          AtomicTy = C.getConstantArrayType(C.CharTy, Size, nullptr,
-                                            ArraySizeModifier::Normal,
-                                            /*IndexTypeQuals=*/0);
+          AtomicTy = C.getConstantArrayType(C.CharTy, Size, nullptr);
         }
         AtomicAlign = ValueAlign = lvalue.getAlignment();
       } else if (lvalue.isVectorElt()) {

@@ -10064,8 +10064,7 @@ static TypedefDecl *CreateZOSVaListDecl(const ASTContext *Context) {
   // typedef char *__builtin_zos_va_list[2];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 2);
   QualType T = Context->getPointerType(Context->CharTy);
-  QualType ArrayType = Context->getConstantArrayType(
-      T, Size, nullptr, ArraySizeModifier::Normal, 0);
+  QualType ArrayType = Context->getConstantArrayType(T, Size, nullptr);
   return Context->buildImplicitTypedef(ArrayType, "__builtin_zos_va_list");
 }
 
@@ -10201,7 +10200,7 @@ static TypedefDecl *CreatePowerABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagTypedefType, Size, nullptr);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -10255,7 +10254,7 @@ CreateX86_64ABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef struct __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagType, Size, nullptr);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -10350,7 +10349,7 @@ CreateSystemZBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagType, Size, nullptr);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -10403,7 +10402,7 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
+      VaListTagTypedefType, Size, nullptr);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -13956,8 +13955,7 @@ QualType ASTContext::getStringLiteralArrayType(QualType EltTy,
 
   // Get an array type for the string, according to C99 6.4.5. This includes
   // the null terminator character.
-  return getConstantArrayType(EltTy, llvm::APInt(32, Length + 1), nullptr,
-                              ArraySizeModifier::Normal, /*IndexTypeQuals*/ 0);
+  return getConstantArrayType(EltTy, llvm::APInt(32, Length + 1), nullptr);
 }
 
 StringLiteral *

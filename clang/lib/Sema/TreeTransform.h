@@ -995,8 +995,8 @@ public:
   /// By default, performs semantic analysis when building the array type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildVariableArrayType(QualType ElementType,
-                                    ArraySizeModifier SizeMod, Expr *SizeExpr,
-                                    unsigned IndexTypeQuals,
+                                    ArraySizeModifier SizeMod,
+                                    Expr *SizeExpr, unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
 
   /// Build a new dependent-sized array type given the element type,

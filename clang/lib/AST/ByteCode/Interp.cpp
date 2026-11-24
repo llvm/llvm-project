@@ -2924,8 +2924,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   if (ArraySize) {
     AllocType = ASTCtx.getConstantArrayType(
         NewExpr->getAllocatedType(),
-        APInt(64, static_cast<uint64_t>(*ArraySize), false), nullptr,
-        ArraySizeModifier::Normal, 0);
+        APInt(64, static_cast<uint64_t>(*ArraySize), false), nullptr);
   } else {
     AllocType = NewExpr->getAllocatedType();
   }

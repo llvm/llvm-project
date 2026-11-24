@@ -7911,8 +7911,7 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
     return false;
   }
 
-  QualType AllocType = Info.Ctx.getConstantArrayType(
-      ElemType, Size, nullptr, ArraySizeModifier::Normal, 0);
+  QualType AllocType = Info.Ctx.getConstantArrayType(ElemType, Size, nullptr);
   APValue *Val = Info.createHeapAlloc(Caller.Call, AllocType, Result);
   *Val = APValue(APValue::UninitArray(), 0, Size.getZExtValue());
   Result.addArray(Info, E, cast<ConstantArrayType>(AllocType));
@@ -10365,8 +10364,7 @@ public:
     QualType CharTy = Info.Ctx.CharTy.withConst();
     APInt Size(Info.Ctx.getTypeSize(Info.Ctx.getSizeType()),
                ResultStr.size() + 1);
-    QualType ArrayTy = Info.Ctx.getConstantArrayType(
-        CharTy, Size, nullptr, ArraySizeModifier::Normal, 0);
+    QualType ArrayTy = Info.Ctx.getConstantArrayType(CharTy, Size, nullptr);
 
     StringLiteral *SL =
         StringLiteral::Create(Info.Ctx, ResultStr, StringLiteralKind::Ordinary,
@@ -11297,8 +11295,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         ResizedArrayILE = cast<InitListExpr>(Init);
     }
 
-    AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
-                                              ArraySizeModifier::Normal, 0);
+    AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr);
   } else if (E->isArray()) {
     // We have an array new-expression whose array size could not be
     // determined, e.g. 'new int[]()', where the bound is neither given nor
