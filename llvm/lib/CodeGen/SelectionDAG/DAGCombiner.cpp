@@ -15808,8 +15808,9 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       (Frozen && !Load->hasNUsesOfValue(1, 0)))
     return {};
 
-  // If this is zext nneg, see if it would make sense to treat it as a sext.
-  if (NonNegZExt) {
+  // If the loaded type is legal, keep signed compares narrow rather than
+  // widening them to share a sign-extending load with a zext nneg.
+  if (NonNegZExt && !TLI.isTypeLegal(Load->getValueType(0))) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
     for (SDNode *User : Load->users()) {
