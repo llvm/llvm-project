@@ -75,7 +75,7 @@ body:             |
     ; PEEPHOLE-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; PEEPHOLE-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; PEEPHOLE-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
-    ; PEEPHOLE-NEXT: DBG_VALUE %5:vgpr_32, $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !3)
+    ; PEEPHOLE-NEXT: DBG_VALUE [[V_AND_B32_e64_]], $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !3)
     ; PEEPHOLE-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]]
     ; PEEPHOLE-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; PEEPHOLE-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[COPY3]], [[V_MOV_B32_e32_]], implicit $exec
@@ -93,7 +93,7 @@ body:             |
     ; FOLD-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; FOLD-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; FOLD-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
-    ; FOLD-NEXT: DBG_VALUE %5:vgpr_32, $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !3)
+    ; FOLD-NEXT: DBG_VALUE [[V_AND_B32_e64_]], $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !3)
     ; FOLD-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_AND_B32_e64_]], 0, implicit $exec
     ; FOLD-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -42, implicit $exec
     ; FOLD-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_]], 0, 42, [[V_CMP_NE_U32_e64_]], implicit $exec
@@ -149,7 +149,7 @@ body:             |
     ; PEEPHOLE-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; PEEPHOLE-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; PEEPHOLE-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], implicit $exec
-    ; PEEPHOLE-NEXT: DBG_VALUE %6:sreg_64, $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !7)
+    ; PEEPHOLE-NEXT: DBG_VALUE [[V_CMP_NE_U32_e64_]], $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !7)
     ; PEEPHOLE-NEXT: [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[V_CMP_NE_U32_e64_]]
     ; PEEPHOLE-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
     ; PEEPHOLE-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -42, implicit $exec
@@ -165,7 +165,7 @@ body:             |
     ; FOLD-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; FOLD-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; FOLD-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[COPY]], 0, implicit $exec
-    ; FOLD-NEXT: DBG_VALUE %6:sreg_64, $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !7)
+    ; FOLD-NEXT: DBG_VALUE [[V_CMP_NE_U32_e64_]], $noreg, !12, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 1, scope: !7)
     ; FOLD-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -42, implicit $exec
     ; FOLD-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_]], 0, 42, [[V_CMP_NE_U32_e64_]], implicit $exec
     ; FOLD-NEXT: GLOBAL_STORE_DWORD [[REG_SEQUENCE]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, debug-location !DILocation(line: 1, scope: !7) :: (store (s32), addrspace 1)

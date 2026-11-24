@@ -232,6 +232,11 @@ LLVM_ABI void salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
                                           MachineInstr &MI,
                                           ArrayRef<MachineOperand *> DbgUsers);
 
+/// Assuming the full COPY \p MI between virtual registers is going to be
+/// deleted, rewrite its DBG_VALUE users to use the COPY source.
+LLVM_ABI void salvageDebugInfoForDeadCopy(const MachineRegisterInfo &MRI,
+                                          MachineInstr &MI);
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_CODEGENCOMMONISEL_H
