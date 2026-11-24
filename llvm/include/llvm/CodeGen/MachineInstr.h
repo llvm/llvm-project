@@ -2032,6 +2032,14 @@ public:
   /// not modify the MIFlags of this MachineInstr.
   LLVM_ABI uint32_t mergeFlagsWith(const MachineInstr &Other) const;
 
+  /// Clear the poison-generating and fast-math flags that \p Other does not
+  /// have. Use this when this instruction replaces an identical \p Other.
+  void intersectFlagsWith(const MachineInstr &Other) {
+    constexpr uint32_t ValueFlags = getPoisonGeneratingFlags() | FmNsz |
+                                    FmArcp | FmContract | FmAfn | FmReassoc;
+    clearFlags(getFlags() & ~Other.getFlags() & ValueFlags);
+  }
+
   LLVM_ABI static uint32_t copyFlagsFromInstruction(const Instruction &I);
 
   /// Copy all flags to MachineInst MIFlags
