@@ -1078,6 +1078,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   misparsed as function declarations in direct-initialization contexts under
   `-fms-extensions` or in HLSL mode.
 
+- Fixed a crash on partial variable template specializations when part of which are
+  imported from modules. (#GH244974)
+
 - Fixed the destruction timing of temporaries created by default member
   initializers during aggregate initialization. Such an initializer is part of
   the full-expression containing the aggregate initialization. (#GH85601)
