@@ -3997,7 +3997,7 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_cl_mad_enable,
       options::OPT_cl_no_signed_zeros,
       options::OPT_cl_fp32_correctly_rounded_divide_sqrt,
-      options::OPT_cl_uniform_work_group_size
+      options::OPT_cl_uniform_work_group_size,
   };
 
   if (Arg *A = Args.getLastArg(options::OPT_cl_std_EQ)) {
