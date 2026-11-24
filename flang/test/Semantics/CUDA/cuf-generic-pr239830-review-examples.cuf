@@ -5,7 +5,8 @@
 ! result that differs from flang 22.1.2 and is addressed or discussed elsewhere. Only the
 ! diagnostics are checked here; the selected specific is recorded in the comment of each module.
 ! The examples of the first review (2026-11-15) are covered by cuf-generic-pass-nopass.cuf (case 1)
-! and cuf-generic-pass-ranking.cuf (the last dummy, and the operator).
+! and cuf-generic-pass-ranking.cuf (the last dummy, and the operator); the omitted optional
+! argument before the passed object of the second review is in cuf-generic-pass-nopass-tie.cuf.
 
 ! Eugene on llvm#239830, 2026-11-20: keyword call g(p=null(), n=mn) and positional h(null(), mn); sa/sb list the dummies in different orders, sc/sd in the same order.
 ! Result: g resolves to sa, h is ambiguous (22.1.2: both ambiguous).
@@ -147,31 +148,6 @@ contains
     call v%g4(y)
   end subroutine
 end module review_2_4
-
-! Eugene on llvm#239830, 2026-11-20: an omitted optional dummy comes before the passed object.
-! Result: ambiguous.
-module review_2_5
-  type t
-  contains
-    procedure, pass(this) :: a
-    procedure, nopass :: b
-    generic :: g => a, b
-  end type
-contains
-  subroutine a(unused, p, this)
-    real, optional :: unused
-    integer, pointer :: p
-    class(t) :: this
-  end subroutine
-  subroutine b(p)
-    real, pointer :: p
-  end subroutine
-  subroutine test(v)
-    type(t) :: v
-    !ERROR: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
-    call v%g(p=null())
-  end subroutine
-end module review_2_5
 
 ! clementval on llvm#244662, 2026-11-20: an elemental PASS specific and a non-elemental NOPASS specific are both viable.
 ! Result: resolves to n; main resolves it too, and it must not abort.

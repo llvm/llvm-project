@@ -3027,8 +3027,9 @@ static int CompareCudaMatchingDistance(
   }
   if (x.passedObjectIndex.has_value() != y.passedObjectIndex.has_value()) {
     // A PASS and a NOPASS candidate: their distances have different lengths.
-    // Prefer the PASS one, as nvfortran does, unless their other arguments
-    // match equally well; then nothing can prefer either.
+    // Prefer the PASS one, as nvfortran does, unless the two lists of
+    // distances without the passed object (each in the dummy argument order of
+    // its own specific) are equal.
     if (EffectiveDistances(x) == EffectiveDistances(y)) {
       return 0;
     }

@@ -1,9 +1,9 @@
 ! RUN: not bbc -emit-hlfir -fcuda %s -o /dev/null 2>&1 | FileCheck %s
 ! RUN: not bbc -emit-hlfir -fcuda -gpu=unified %s -o /dev/null 2>&1 | FileCheck %s
 
-! A PASS and a NOPASS candidate that match their other arguments equally well
-! cannot be told apart, in every memory mode and whatever the other candidates
-! are.
+! A PASS and a NOPASS candidate whose lists of distances, without the passed
+! object and each in the dummy argument order of its own specific, are equal
+! cannot be told apart.
 
 ! Under -gpu=unified an unattributed host variable, such as the passed object
 ! here, has distance 3 from a host dummy instead of 0, so the tie must not be
@@ -62,5 +62,31 @@ contains
     call v%g(null(), mn)
     ! CHECK: error: The actual arguments to the generic procedure 'h' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
     call v%h(null(), mn)
+  end subroutine
+end module
+
+! An omitted optional argument comes before the passed object, which is then the
+! second present actual although it is the third dummy. The call is still a tie
+! with the NOPASS candidate, which has no passed object.
+module omitted_optional
+  type :: t
+  contains
+    procedure, pass(this) :: a
+    procedure, nopass :: b
+    generic :: g => a, b
+  end type
+contains
+  subroutine a(unused, p, this)
+    real, optional :: unused
+    integer, pointer :: p
+    class(t) :: this
+  end subroutine
+  subroutine b(p)
+    real, pointer :: p
+  end subroutine
+  subroutine test(v)
+    type(t) :: v
+    ! CHECK: error: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g(p=null())
   end subroutine
 end module

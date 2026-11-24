@@ -68,7 +68,6 @@ contains
     call obj%last(x)
     ! CHECK: fir.call @_QMpass_rankingPdevice_last(
     call obj%last_reversed(x=x)
-    ! Equal passed objects are broken by the other arguments.
     ! CHECK: fir.call @_QMpass_rankingPmanaged_last_unified(
     call obj%tied_objects(x)
     ! With NOPASS, only explicit arguments take part in the ranking.
