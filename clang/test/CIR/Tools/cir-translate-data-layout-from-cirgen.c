@@ -1,12 +1,15 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: cir-translate --cir-to-llvmir --disable-cc-lowering %t.cir -o %t.ll
-// RUN: FileCheck %s -input-file %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ogcg.ll
+// RUN: grep '^target datalayout' %t.ll > %t.cir.dl
+// RUN: grep '^target datalayout' %t.ogcg.ll > %t.ogcg.dl
+// RUN: diff %t.cir.dl %t.ogcg.dl
+// RUN: FileCheck %s -input-file %t.cir.dl
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-obj -x ir %t.ll -o /dev/null
 
 // The data layout CIRGen records in the module is the target's, so it comes
-// back out of cir-translate as the target's: no i1 entry, which
-// llvm::DataLayout does not have, and the target's spelling.
+// back out of cir-translate spelled exactly as classic codegen spells it.
 
 int foo(_Bool b) { return b; }
 

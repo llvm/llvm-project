@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Core
   Support
+  TargetParser
   TransformUtils
   )
 
@@ -35,6 +36,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIROpenMPToLLVMConversion
   MLIROpenMPToLLVMIRTranslation
   MLIROpenMPTransforms
+  MLIRTargetLLVMIRImport
   MLIRIR
   )
 

@@ -43,6 +43,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
@@ -53,9 +54,11 @@
 #include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
@@ -64,6 +67,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AtomicScope.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace cir;
 using namespace llvm;
@@ -5173,6 +5177,48 @@ void ConvertCIRToLLVMPass::resolveBlockAddressOp(
   blockInfoAddr.clearUnresolvedMap();
 }
 
+/// The MLIR to LLVM IR translation spells a DLTI data layout in its own entry
+/// order, so the string can differ from the target's even when the layouts are
+/// the same, and clang rejects IR whose layout string is not the target's.
+/// When the module's spec is the target's layout, pin the target's spelling.
+static void canonicalizeDataLayout(mlir::ModuleOp module) {
+  if (module->hasAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName()))
+    return;
+  auto tripleAttr = module->getAttrOfType<mlir::StringAttr>(
+      cir::CIRDialect::getTripleAttrName());
+  mlir::DataLayoutSpecInterface spec = module.getDataLayoutSpec();
+  if (!tripleAttr || !spec)
+    return;
+
+  // The layout depends on the target ABI as well as the triple, the same way
+  // TargetInfo computes it. Without a recorded ABI the default one is used.
+  llvm::StringRef abiName;
+  if (auto abiAttr = module->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getTargetABIAttrName()))
+    abiName = abiAttr.getValue();
+  std::string targetLayout =
+      llvm::Triple(tripleAttr.getValue()).computeDataLayout(abiName);
+  mlir::DataLayoutSpecInterface targetSpec = mlir::translateDataLayout(
+      llvm::DataLayout(targetLayout), module.getContext());
+
+  // Entries keyed on CIR types are CIR's own and do not reach LLVM IR.
+  llvm::SmallDenseSet<mlir::Attribute> entries;
+  for (mlir::DataLayoutEntryInterface entry : spec.getEntries()) {
+    auto type = llvm::dyn_cast_if_present<mlir::Type>(entry.getKey());
+    if (!type || !llvm::isa<cir::CIRDialect>(type.getDialect()))
+      entries.insert(entry);
+  }
+  mlir::DataLayoutEntryListRef targetEntries = targetSpec.getEntries();
+  if (entries.size() != targetEntries.size() ||
+      !llvm::all_of(targetEntries, [&](mlir::DataLayoutEntryInterface entry) {
+        return entries.contains(entry);
+      }))
+    return;
+
+  module->setAttr(mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
+                  mlir::StringAttr::get(module.getContext(), targetLayout));
+}
+
 void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
   // Lower the module attributes to LLVM equivalents.
   if (mlir::Attribute tripleAttr =
@@ -5197,6 +5243,8 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
     mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
                                       builder.getArrayAttr({flag}));
   }
+
+  canonicalizeDataLayout(module);
 
   lowerOpenCLModuleMetadataAttrs(module);
 }
