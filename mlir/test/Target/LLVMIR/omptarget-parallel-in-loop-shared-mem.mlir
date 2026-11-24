@@ -38,14 +38,21 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
 // the user_code.entry block.
 // CHECK-NOT: call align {{.*}} ptr @__kmpc_alloc_shared(i64 16)
 // CHECK: omp.region.after_alloca:
-// It is allocated at the parallel region's entry, inside the loop body...
+// It is allocated inside the loop body: the block containing it is the sole
+// predecessor of the fork block, and (checked below) the block the loop header
+// branches to on the loop condition.
 // CHECK: %[[STRUCTARG:.*]] = call align {{.*}} ptr @__kmpc_alloc_shared(i64 16)
+// CHECK-NOT: {{^[^ ]+:}}
+// CHECK: br label %[[FORK:.*]]
+// CHECK: [[FORK]]:{{.*}}preds = %[[LOOP_BODY:.*]]
 // CHECK: call void @__kmpc_parallel_60(
 // ...and freed on the region-exit path, also inside the loop body: the exit
-// branches back to the loop header (which performs the loop test), so the
-// alloc/free pair sits on the loop backedge and repeats every iteration.
+// branches back to the loop header, which tests the loop condition and
+// branches to the body block, so the alloc/free pair sits on the loop backedge
+// and repeats every iteration.
 // CHECK: omp.par.exit:
 // CHECK: call void @__kmpc_free_shared(ptr %[[STRUCTARG]], i64 16)
 // CHECK: br label %[[LOOP_HEADER:.*]]
 // CHECK: [[LOOP_HEADER]]:
 // CHECK: icmp slt i32 {{.*}}, 2
+// CHECK-NEXT: br i1 {{.*}}, label %[[LOOP_BODY]], label %
