@@ -19010,8 +19010,9 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       }
 
       if (NewCC != ISD::SETCC_INVALID) {
-        SDValue Shift = DAG.getNode(ISD::SRL, SL, MVT::i64, LHS,
-                                    DAG.getConstant(ShiftAmt, SL, MVT::i32));
+        SDValue Shift =
+            DAG.getNode(ISD::SRL, SL, MVT::i64, LHS,
+                        DAG.getShiftAmountConstant(ShiftAmt, MVT::i64, SL));
         SDValue Zero = DAG.getConstant(0, SL, MVT::i64);
         return DAG.getSetCC(SL, N->getValueType(0), Shift, Zero, NewCC);
       }
