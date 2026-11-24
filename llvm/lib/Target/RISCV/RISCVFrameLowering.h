@@ -23,6 +23,8 @@ class RISCVFrameLowering : public TargetFrameLowering {
 public:
   explicit RISCVFrameLowering(const RISCVSubtarget &STI);
 
+  void resetCFIToInitialState(MachineBasicBlock &MBB) const override;
+
   int getInitialCFAOffset(const MachineFunction &MF) const override;
   Register getInitialCFARegister(const MachineFunction &MF) const override;
 

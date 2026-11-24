@@ -361,6 +361,9 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
 ; RV32I-SW-SR-NEXT:    tail __riscv_restore_1
 ; RV32I-SW-SR-NEXT:    j .LBB3_4
 ; RV32I-SW-SR-NEXT:  .LBB3_4: # %exit
+; RV32I-SW-SR-NEXT:    .cfi_def_cfa sp, 0
+; RV32I-SW-SR-NEXT:    .cfi_same_value ra
+; RV32I-SW-SR-NEXT:    .cfi_same_value s0
 ; RV32I-SW-SR-NEXT:    ret
 ;
 ; RV64I-SW-LABEL: li_straightline_b:
@@ -468,6 +471,8 @@ define void @li_straightline_c(i32 zeroext %a) {
 ; RV32I-SW-SR-NEXT:    tail __riscv_restore_0
 ; RV32I-SW-SR-NEXT:    j .LBB4_4
 ; RV32I-SW-SR-NEXT:  .LBB4_4: # %exit
+; RV32I-SW-SR-NEXT:    .cfi_def_cfa sp, 0
+; RV32I-SW-SR-NEXT:    .cfi_same_value ra
 ; RV32I-SW-SR-NEXT:    ret
 ;
 ; RV64I-SW-LABEL: li_straightline_c:
