@@ -14,30 +14,30 @@ volatile int Sink;
 
 // The call is the last thing the inlined function does, so the return address
 // already belongs to the caller.
-__attribute__((always_inline)) static inline void InlinedViolation() {
+__attribute__((always_inline)) static inline void SuppressedCallLast() {
   usleep(1);
 }
 
-void process() [[clang::nonblocking]] { InlinedViolation(); }
+void process() [[clang::nonblocking]] { SuppressedCallLast(); }
 
 // The call is not the last thing the inlined function does, so the return
 // address still belongs to it.
-__attribute__((always_inline)) static inline void InlinedThenWork() {
+__attribute__((always_inline)) static inline void SuppressedCallThenWork() {
   usleep(1);
   Sink = Sink + 1;
 }
 
-void ProcessThenWork() [[clang::nonblocking]] { InlinedThenWork(); }
+void ProcessThenWork() [[clang::nonblocking]] { SuppressedCallThenWork(); }
 
 // The suppression names the caller and not the inlined function.
 __attribute__((always_inline)) static inline void InlinedHelper() { usleep(1); }
 
-void OuterIsSuppressed() [[clang::nonblocking]] { InlinedHelper(); }
+void SuppressedCaller() [[clang::nonblocking]] { InlinedHelper(); }
 
 int main() {
   process();
   ProcessThenWork();
-  OuterIsSuppressed();
+  SuppressedCaller();
   fprintf(stderr, "Done\n");
   return 0;
 }
@@ -47,10 +47,10 @@ int main() {
 // CHECK: Suppression count: 3
 
 // CHECK-NOSUPPRESSIONS: Intercepted call to real-time unsafe function
-// CHECK-NOSUPPRESSIONS: InlinedViolation
+// CHECK-NOSUPPRESSIONS: SuppressedCallLast
 // CHECK-NOSUPPRESSIONS: Intercepted call to real-time unsafe function
-// CHECK-NOSUPPRESSIONS: InlinedThenWork
+// CHECK-NOSUPPRESSIONS: SuppressedCallThenWork
 // CHECK-NOSUPPRESSIONS: Intercepted call to real-time unsafe function
 // CHECK-NOSUPPRESSIONS: InlinedHelper
-// CHECK-NOSUPPRESSIONS: OuterIsSuppressed
+// CHECK-NOSUPPRESSIONS: SuppressedCaller
 // CHECK-NOSUPPRESSIONS: Done
