@@ -89,7 +89,8 @@ class DocgenTest(unittest.TestCase):
     def test_implements_macro(self):
         self.assertTrue(Header("assert.h").implements_macro("assert"))
         self.assertTrue(Header("math.h").implements_macro("isnan"))
-        self.assertFalse(Header("math.h").implements_macro("isgreater"))
+        self.assertTrue(Header("math.h").implements_macro("isgreater"))
+        self.assertFalse(Header("math.h").implements_macro("__STDC_VERSION_MATH_H__"))
         self.assertFalse(Header("sys/syscall.h").macro_file_exists())
         self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
@@ -420,7 +421,7 @@ class DocgenTest(unittest.TestCase):
         self.assertEqual(Header("unistd.h").fn_status("setuid"), "experimental")
         self.assertEqual(Header("unistd.h").fn_status("getuid"), "implemented")
         self.assertEqual(Header("grp.h").fn_status("initgroups"), "experimental")
-        self.assertEqual(Header("net/if.h").fn_status("if_nameindex"), "experimental")
+        self.assertEqual(Header("net/if.h").fn_status("if_nameindex"), "implemented")
         self.assertEqual(Header("fnmatch.h").fn_status("fnmatch"), "missing")
         self.assertEqual(Header("time.h").fn_status("strptime"), "missing")
         self.assertEqual(Header("time.h").fn_status("tzset"), "missing")

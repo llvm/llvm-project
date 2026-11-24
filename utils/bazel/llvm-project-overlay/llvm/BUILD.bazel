@@ -566,7 +566,7 @@ cc_library(
         # provides the configuration define unless lzma is enabled, in which
         # case it also links the system liblzma.
         "//third-party:lzma",
-        "//libc:shared_math_headers_for_apfloat",
+        "//libc/shared:math_headers_for_apfloat",
     ],
 )
 
@@ -3677,13 +3677,17 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SPIRV/SPIRVGenMCCodeEmitter.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/SPIRV/SPIRVGenGlobalISel.inc",
             ),
             (
                 [
                     "-gen-global-isel-combiner",
                     "-combiners=SPIRVPreLegalizerCombiner",
+                    "-gisel-extended-llt",
                 ],
                 "lib/Target/SPIRV/SPIRVGenPreLegalizeGICombiner.inc",
             ),
@@ -3779,6 +3783,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":SystemZOptionsTableGen",
         ],
     },
     {
@@ -4319,6 +4326,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SystemZOptionsTableGen",
+    strip_include_prefix = "lib/Target/SystemZ",
+    tbl_outs = {"lib/Target/SystemZ/SystemZOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SystemZ/SystemZOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -5447,6 +5463,7 @@ cc_library(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -5948,6 +5965,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",

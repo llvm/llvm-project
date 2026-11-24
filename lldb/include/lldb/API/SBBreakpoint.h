@@ -189,6 +189,10 @@ class LLDB_API SBBreakpointList {
 public:
   SBBreakpointList(SBTarget &target);
 
+  SBBreakpointList(const lldb::SBBreakpointList &rhs);
+
+  lldb::SBBreakpointList &operator=(const lldb::SBBreakpointList &rhs);
+
   ~SBBreakpointList();
 
   size_t GetSize() const;

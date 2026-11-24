@@ -172,6 +172,11 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "enum Bar { FOOBAR, BARFOO };",
                Style);
 
+  verifyFormat("struct D {};\n"
+               "\n"
+               "enum class E : char { k };",
+               Style);
+
   FormatStyle BreakAfterReturnTypeStyle = Style;
   BreakAfterReturnTypeStyle.BreakAfterReturnType = FormatStyle::RTBS_All;
   // Test uppercased long typename

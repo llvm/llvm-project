@@ -17,7 +17,7 @@ libc_startup_library(
     name = "start",
     srcs = ["start.cpp"],
     deps = [
-        "//libc:config_app_h",
+        "//libc/config:app_h",
         "//libc/src/__support/macros:attributes",
         "//libc/startup/linux:do_start",
     ],

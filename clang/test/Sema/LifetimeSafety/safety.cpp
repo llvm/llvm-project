@@ -67,6 +67,54 @@ void simple_case_gsl() {
   v.use();      // expected-note {{later used here}}
 }
 
+void explicit_operator_assign_call() {
+  View v;
+  {
+    MyObj s;
+    v.operator=(s); // expected-warning {{local variable 's' does not live long enough}}
+  }                 // expected-note {{local variable 's' is destroyed here}}
+  v.use();          // expected-note {{later used here}}
+}
+
+void explicit_operator_assign_call_string_view() {
+  std::string_view v;
+  {
+    std::string s;
+    v.operator=(s); // expected-warning {{local variable 's' does not live long enough}}
+  }                 // expected-note {{local variable 's' is destroyed here}}
+  (void)v.size();   // expected-note {{later used here}}
+}
+
+void explicit_operator_assign_call_kills_old_loan() {
+  MyObj outer;
+  View v;
+  {
+    MyObj s;
+    v = s;
+  }
+  v.operator=(outer);
+  v.use(); // no-warning
+}
+
+View explicit_operator_assign_call_result_returned() {
+  MyObj s;
+  View v;
+  return v.operator=(s); // expected-warning {{stack memory associated with local variable 's' is returned}} \
+                         // expected-note {{result of call to 'operator=' aliases the storage of local variable 's'}} \
+                         // expected-note {{returned here}}
+}
+
+void explicit_operator_assign_call_through_arrow() {
+  View v;
+  View *pv = &v;
+  {
+    MyObj s;
+    // FIXME: Model the store through the pointer.
+    pv->operator=(s);
+  }
+  pv->use();
+}
+
 void no_use_no_error() {
   MyObj* p;
   {
@@ -3255,6 +3303,16 @@ void user_defined_assignment_should_not_assume_origin_propagation() {
   use(dst);
 }
 
+void user_defined_explicit_assignment_should_not_assume_origin_propagation() {
+  SWithUserDefinedCopyLikeOps dst;
+  {
+    std::string str{"abc"};
+    SWithUserDefinedCopyLikeOps src = getSWithUserDefinedCopyLikeOps(str);
+    dst.operator=(src);
+  }
+  use(dst);
+}
+
 const S &getRef(const std::string &s [[clang::lifetimebound]]);
 
 S from_ref() {
@@ -5490,6 +5548,54 @@ void DowncastReferenceWithinScopeIsOk() {
   Derived d;
   Base &b = d;
   use(static_cast<Derived &>(b)); // ok
+}
+
+struct PolyBase { virtual ~PolyBase(); };
+struct PolyDerived : PolyBase {};
+PolyDerived *DynamicDowncastReturnsStackAddress() {
+  PolyDerived d;
+  PolyBase *b = &d;                       // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return dynamic_cast<PolyDerived *>(b);  // expected-note {{returned here}}
+}
+
+PolyDerived *DynamicDowncastReferenceReturnsStackAddress() {
+  PolyDerived d;
+  PolyBase &b = d;                        // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return &dynamic_cast<PolyDerived &>(b); // expected-note {{returned here}}
+}
+
+void *DynamicCastToVoidReturnsStackAddress() {
+  PolyDerived d;
+  PolyBase *b = &d;                       // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return dynamic_cast<void *>(b);         // expected-note {{returned here}}
+}
+
+void use(PolyDerived *);
+void DynamicDowncastUseAfterFree() {
+  PolyBase *b = new PolyDerived;          // expected-warning {{allocated object does not live long enough}}
+  PolyDerived *d = dynamic_cast<PolyDerived *>(b); // expected-note {{local variable 'b' aliases the storage of allocated object}}
+  delete b;                               // expected-note {{allocated object is freed here}}
+  use(d);                                 // expected-note {{later used here}}
+}
+
+void DynamicDowncastWithinScopeIsOk() {
+  PolyDerived d;
+  PolyBase *b = &d;
+  use(dynamic_cast<PolyDerived *>(b)); // ok
+}
+
+struct PolyBase2 { virtual ~PolyBase2(); };
+struct PolyBoth : PolyBase, PolyBase2 {};
+PolyBase2 *DynamicCrossCastReturnsStackAddress() {
+  PolyBoth x;
+  PolyBase *b = &x;                      // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  return dynamic_cast<PolyBase2 *>(b);   // expected-note {{returned here}}
+}
+
+// The origin shapes differ, so the borrow is dropped.
+struct [[gsl::Pointer]] PolyView : PolyBase {};
+void DynamicCastShapeMismatch(PolyBase *b) {
+  (void)dynamic_cast<PolyView *>(b);
 }
 
 } // namespace DowncastTests

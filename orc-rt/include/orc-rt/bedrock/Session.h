@@ -20,8 +20,8 @@
 #include "orc-rt/bedrock/TaskGroup.h"
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/LockedAccess.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
 #include "orc-rt/support/SymbolLookupResult.h"
-#include "orc-rt/support/SymbolLookupSet.h"
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/move_only_function.h"
 
@@ -432,7 +432,7 @@ public:
   /// weakly referenced symbol yields a null address, and a missing required
   /// symbol yields an empty optional.
   SymbolLookupResult
-  lookupInstanceSymbols(const SymbolLookupSet &LS) const noexcept;
+  lookupInstanceSymbols(const RemoteSymbolLookupSet &LS) const noexcept;
 
   /// Add a Service to the session.
   template <typename ServiceT>

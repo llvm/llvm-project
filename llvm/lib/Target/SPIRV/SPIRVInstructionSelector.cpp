@@ -329,6 +329,9 @@ private:
   bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Direction) const;
 
+  bool selectQuadAll(Register ResVReg, SPIRVTypeInst ResType,
+                     MachineInstr &I) const;
+
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
@@ -600,12 +603,14 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     LLT RegType = MRI.getType(Reg);
+    LLT ScalarTy =
+        RegType.isFloatOrFloatVector() ? LLT::float64() : LLT::integer(64);
     if (RegType.isScalar())
-      MRI.setType(Reg, LLT::scalar(64));
+      MRI.setType(Reg, ScalarTy);
     else if (RegType.isPointer())
       MRI.setType(Reg, LLT::pointer(0, 64));
     else if (RegType.isVector())
-      MRI.setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
+      MRI.setType(Reg, LLT::fixed_vector(2, ScalarTy));
   }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {
@@ -738,8 +743,8 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_refract:
   case Intrinsic::spv_resource_getbasepointer:
   case Intrinsic::spv_resource_getpointer:
-  case Intrinsic::spv_resource_handlefrombinding:
-  case Intrinsic::spv_resource_handlefromimplicitbinding:
+  case Intrinsic::spv_resource_handlefrombinding_mdname:
+  case Intrinsic::spv_resource_handlefromimplicitbinding_mdname:
   case Intrinsic::spv_resource_nonuniformindex:
   case Intrinsic::spv_resource_sample:
   case Intrinsic::spv_rsqrt:
@@ -1707,17 +1712,6 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
                                            MachineInstr &I) const {
   Register XReg = I.getOperand(1).getReg();
   Register ExpReg = I.getOperand(2).getReg();
-
-  // Both OpenCL.std ldexp and GLSL.std.450 Ldexp require the exponent to have
-  // the same number of components as the result, but G_FLDEXP's exponent is
-  // scalar even for vector operands. Splat it when the result is a vector.
-  SPIRVTypeInst ExpType = GR.getSPIRVTypeForVReg(ExpReg);
-  if (ResType->getOpcode() == SPIRV::OpTypeVector &&
-      ExpType->getOpcode() != SPIRV::OpTypeVector) {
-    unsigned NumElts = ResType->getOperand(2).getImm();
-    ExpReg = buildVectorSplat(ExpReg, NumElts, I);
-  }
-
   return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
                        /*setMIFlags=*/true, /*useMISrc=*/false, {XReg, ExpReg});
 }
@@ -4139,6 +4133,28 @@ bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectQuadAll(Register ResVReg,
+                                             SPIRVTypeInst ResType,
+                                             MachineInstr &I) const {
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(2).getReg()},
+                            SPIRV::OpGroupNonUniformQuadAllKHR);
+
+  Register Result = I.getOperand(2).getReg();
+  for (unsigned Direction = 0; Direction != 3; ++Direction) {
+    Register QuadValue = createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    Register Next =
+        Direction == 2 ? ResVReg
+                       : createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    if (!selectQuadSwap(QuadValue, ResType, I, Direction) ||
+        !selectOpWithSrcs(Next, ResType, I, {Result, QuadValue},
+                          SPIRV::OpLogicalAnd))
+      return false;
+    Result = Next;
+  }
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
                                                       SPIRVTypeInst ResType,
                                                       MachineInstr &I,
@@ -5923,12 +5939,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_all:
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformQuadAllKHR))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg())
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
+    return selectQuadAll(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_across_x: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 0);
   }
@@ -5950,7 +5961,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
-  case Intrinsic::spv_resource_handlefrombinding: {
+  case Intrinsic::spv_resource_handlefrombinding_mdname: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
   case Intrinsic::spv_resource_counterhandlefrombinding:
@@ -6077,14 +6088,16 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   Register MainHandleReg = Intr.getOperand(2).getReg();
   auto *MainHandleDef = cast<GIntrinsic>(getVRegDef(*MRI, MainHandleReg));
   assert(MainHandleDef->getIntrinsicID() ==
-         Intrinsic::spv_resource_handlefrombinding);
+         Intrinsic::spv_resource_handlefrombinding_mdname);
 
   uint32_t Set = getIConstVal(Intr.getOperand(3).getReg(), MRI);
   uint32_t Binding = getIConstVal(Intr.getOperand(4).getReg(), MRI);
   uint32_t ArraySize = getIConstVal(MainHandleDef->getOperand(4).getReg(), MRI);
   Register IndexReg = MainHandleDef->getOperand(5).getReg();
   std::string CounterName =
-      getStringValueFromReg(MainHandleDef->getOperand(6).getReg(), *MRI) +
+      cast<MDString>(MainHandleDef->getOperand(6).getMetadata()->getOperand(0))
+          ->getString()
+          .str() +
       ".counter";
 
   // Create the counter variable.
@@ -7900,13 +7913,15 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     MachineInstr &Pos) const {
 
   assert(HandleDef.getIntrinsicID() ==
-         Intrinsic::spv_resource_handlefrombinding);
+         Intrinsic::spv_resource_handlefrombinding_mdname);
   uint32_t Set = foldImm(HandleDef.getOperand(2), MRI);
   uint32_t Binding = foldImm(HandleDef.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(HandleDef.getOperand(4), MRI);
   Register IndexReg = HandleDef.getOperand(5).getReg();
   std::string Name =
-      getStringValueFromReg(HandleDef.getOperand(6).getReg(), *MRI);
+      cast<MDString>(HandleDef.getOperand(6).getMetadata()->getOperand(0))
+          ->getString()
+          .str();
 
   bool IsStructuredBuffer = ResType->getOpcode() == SPIRV::OpTypePointer;
   MachineIRBuilder MIRBuilder(HandleDef);

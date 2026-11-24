@@ -30,14 +30,14 @@ _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral") // GCC doesn't support [[g
 #endif
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
-    char* __s, size_t __n, __locale_t, const char* __format, _Args&&... __args) {
+_LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 4, 5)
+int __snprintf(char* __s, size_t __n, __locale_t, const char* __format, _Args&&... __args) {
   return std::snprintf(__s, __n, __format, std::forward<_Args>(__args)...);
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
-    char** __s, __locale_t, const char* __format, _Args&&... __args) {
+_LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4)
+int __asprintf(char** __s, __locale_t, const char* __format, _Args&&... __args) {
   return ::asprintf(__s, __format, std::forward<_Args>(__args)...); // non-standard
 }
 

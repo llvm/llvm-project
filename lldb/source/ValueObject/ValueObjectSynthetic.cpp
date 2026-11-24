@@ -8,10 +8,12 @@
 
 #include "lldb/ValueObject/ValueObjectSynthetic.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -21,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
+#include <mutex>
 #include <optional>
 
 namespace lldb_private {
@@ -245,6 +248,35 @@ bool ValueObjectSynthetic::UpdateValue() {
   return true;
 }
 
+/// Whether \p valobj, apart from any dynamic or synthetic wrappers, has no
+/// parent.
+static bool IsRootValue(ValueObject &valobj) {
+  ValueObject *base = valobj.FollowParentChain([](ValueObject *vo) {
+    return vo->GetParent() && (vo->IsSynthetic() || vo->IsDynamic());
+  });
+  return base && !base->GetParent();
+}
+
+void ValueObjectSynthetic::WarnAboutForeignChild(ValueObject &child,
+                                                 bool is_root) {
+  static std::once_flag g_foreign_root_warning;
+  static std::once_flag g_foreign_non_root_warning;
+  std::optional<lldb::user_id_t> debugger_id;
+  if (lldb::TargetSP target_sp = GetTargetSP())
+    debugger_id = target_sp->GetDebugger().GetID();
+  std::string message = llvm::formatv(
+      "the synthetic child provider for '{0}' returned '{1}', which {2}. "
+      "Create synthetic children with the CreateValueFrom* methods of the "
+      "SBValue being formatted instead",
+      GetTypeName(), child.GetName(),
+      is_root ? "is not owned by its parent"
+              : "is a child of another value. LLDB does not keep it alive, "
+                "so it may be freed while it is still in use");
+  Debugger::ReportWarning(std::move(message), debugger_id,
+                          is_root ? &g_foreign_root_warning
+                                  : &g_foreign_non_root_warning);
+}
+
 lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
                                                           bool can_create) {
   Log *log = GetLog(LLDBLog::DataFormatters);
@@ -291,12 +323,20 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
       if (synth_guy->IsSyntheticChildrenGenerated())
         synth_guy->SetLogicalParent(this);
 
+      // m_children_byindex holds raw pointers, so a child that our
+      // ClusterManager does not own has to be kept alive here. Only do that
+      // for a root value, which the provider made for this child. A child of
+      // another value could hold a reference back to us.
+      const bool is_foreign = synth_guy->GetManager() != GetManager();
+      const bool is_foreign_root = is_foreign && IsRootValue(*synth_guy);
       {
         std::lock_guard<std::mutex> guard(m_child_mutex);
-        if (synth_guy->IsSyntheticChildrenGenerated())
+        if (synth_guy->IsSyntheticChildrenGenerated() || is_foreign_root)
           m_synthetic_children_cache.push_back(synth_guy);
         m_children_byindex[idx] = synth_guy.get();
       }
+      if (is_foreign)
+        WarnAboutForeignChild(*synth_guy, is_foreign_root);
       synth_guy->SetPreferredDisplayLanguageIfNeeded(
           GetPreferredDisplayLanguage());
 

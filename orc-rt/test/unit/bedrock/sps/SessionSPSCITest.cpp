@@ -48,7 +48,7 @@ protected:
     ASSERT_THAT_ERROR(S->addInstanceSymbols(Entries), Succeeded());
   }
 
-  Expected<SymbolLookupResult> spsLookup(SymbolLookupSet Symbols) {
+  Expected<SymbolLookupResult> spsLookup(RemoteSymbolLookupSet Symbols) {
     using SPSSig = SPSSymbolLookupResult(SPSSymbolLookupSet);
     std::future<Expected<SymbolLookupResult>> Result;
     SPSWrapperFunction<SPSSig>::call(

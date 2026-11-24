@@ -362,10 +362,8 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   Register Rt = TailAdd.getOperand(2).getReg();
   Register Reg = Rs == GAReg ? Rt : Rs;
   SmallVector<MachineInstr *, 4> Instrs;
-  int64_t Offset = 0;
-  int64_t Mask = -1;
-  int Shift = 0;
 
+  // Walk backwards through the single-use chain that materializes the offset.
   // This can point to one of [ORI, LU12I.W, LU32I.D, LU52I.D, SLLI.D]:
   for (int I = 0; I < 4; I++) {
     // Handle Reg is R0.
@@ -384,70 +382,75 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
     default:
       // Can't fold if the instruction opcode is unexpected.
       return false;
-    case LoongArch::ORI: {
-      MachineOperand ImmOp = Curr->getOperand(2);
-      if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
+    case LoongArch::ORI:
+      if (Curr->getOperand(2).getTargetFlags() != LoongArchII::MO_None)
         return false;
-      const int64_t Imm = ImmOp.getImm();
-      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
-      Mask &= ~(0x0000000000000FFFULL << Shift);
       Reg = Curr->getOperand(1).getReg();
-      Instrs.push_back(Curr);
       break;
-    }
-    case LoongArch::LU12I_W: {
-      MachineOperand ImmOp = Curr->getOperand(1);
-      if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
+    case LoongArch::LU12I_W:
+      if (Curr->getOperand(1).getTargetFlags() != LoongArchII::MO_None)
         return false;
-      const int64_t Imm =
-          SignExtend64<32>(static_cast<uint64_t>(ImmOp.getImm()) << 12);
-      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
       Reg = LoongArch::R0;
-      Instrs.push_back(Curr);
       break;
-    }
-    case LoongArch::LU32I_D: {
-      MachineOperand ImmOp = Curr->getOperand(2);
-      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Lo20)
-        return false;
-      const int64_t Imm =
-          SignExtend64<52>(static_cast<uint64_t>(ImmOp.getImm()) << 32);
-      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
-      Mask &= ~(0xFFFFFFFF00000000ULL << Shift);
-      Reg = Curr->getOperand(1).getReg();
-      Instrs.push_back(Curr);
-      break;
-    }
-    case LoongArch::LU52I_D: {
-      MachineOperand ImmOp = Curr->getOperand(2);
-      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Hi12)
-        return false;
-      const int64_t Imm = static_cast<uint64_t>(ImmOp.getImm()) << 52;
-      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
-      Mask &= ~(0xFFF0000000000000ULL << Shift);
-      Reg = Curr->getOperand(1).getReg();
-      Instrs.push_back(Curr);
-      break;
-    }
-    case LoongArch::SLLI_D: {
-      MachineOperand ImmOp = Curr->getOperand(2);
-      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !(Lo20 && Hi12))
-        return false;
-      Shift += ImmOp.getImm();
-      if (Shift >= 64)
+    case LoongArch::LU32I_D:
+      if (Curr->getOperand(2).getTargetFlags() != LoongArchII::MO_None || !Lo20)
         return false;
       Reg = Curr->getOperand(1).getReg();
-      Instrs.push_back(Curr);
+      break;
+    case LoongArch::LU52I_D:
+      if (Curr->getOperand(2).getTargetFlags() != LoongArchII::MO_None || !Hi12)
+        return false;
+      Reg = Curr->getOperand(1).getReg();
+      break;
+    case LoongArch::SLLI_D:
+      if (Curr->getOperand(2).getTargetFlags() != LoongArchII::MO_None ||
+          !(Lo20 && Hi12))
+        return false;
+      Reg = Curr->getOperand(1).getReg();
       break;
     }
+    Instrs.push_back(Curr);
+  }
+
+  // Can't fold if the current register does not reach R0.
+  if (Reg != LoongArch::R0)
+    return false;
+
+  // Compute the offset by evaluating the chain in program order with the exact
+  // semantics of each instruction. The chain is not necessarily in the
+  // canonical form produced by LoongArchMatInt (e.g. when part of the constant
+  // is materialized in another basic block), so the instructions may write
+  // overlapping bits.
+  uint64_t Val = 0;
+  for (MachineInstr *MI : reverse(Instrs)) {
+    switch (MI->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case LoongArch::ORI:
+      Val |= static_cast<uint64_t>(MI->getOperand(2).getImm()) & 0xFFF;
+      break;
+    case LoongArch::LU12I_W:
+      Val = SignExtend64<32>(static_cast<uint64_t>(MI->getOperand(1).getImm())
+                             << 12);
+      break;
+    case LoongArch::LU32I_D:
+      Val = (Val & 0xFFFFFFFF) |
+            SignExtend64<52>(static_cast<uint64_t>(MI->getOperand(2).getImm())
+                             << 32);
+      break;
+    case LoongArch::LU52I_D:
+      Val = (Val & 0x000FFFFFFFFFFFFF) |
+            (static_cast<uint64_t>(MI->getOperand(2).getImm()) << 52);
+      break;
+    case LoongArch::SLLI_D:
+      Val <<= MI->getOperand(2).getImm() & 0x3F;
+      break;
     }
   }
+  int64_t Offset = Val;
 
   // Can't fold if the offset is not extracted.
   if (!Offset)
-    return false;
-  // Can't fold if the current register does not reach R0.
-  if (Reg != LoongArch::R0)
     return false;
 
   foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
