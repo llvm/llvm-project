@@ -466,7 +466,6 @@ class SPIRVLegalizePointerCastImpl {
         return II;
 
     return dyn_cast<ExtractElementInst>(V);
-
   }
 
   // Loads the scalar pointed to by |Source| and places it in element 0 of a
