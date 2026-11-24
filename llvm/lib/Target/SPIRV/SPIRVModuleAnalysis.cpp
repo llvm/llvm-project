@@ -2706,6 +2706,16 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
     break;
   }
+  case SPIRV::OpFSigmoidINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_sigmoid)) {
+      reportUnsupported(MI, "OpFSigmoidINTEL instruction requires the "
+                            "following SPIR-V extension: SPV_INTEL_sigmoid");
+      break;
+    }
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_sigmoid);
+    Reqs.addCapability(SPIRV::Capability::SigmoidINTEL);
+    break;
+  }
   case SPIRV::OpCopyMemorySized: {
     Reqs.addCapability(SPIRV::Capability::Addresses);
     // TODO: Add UntypedPointersKHR when implemented.

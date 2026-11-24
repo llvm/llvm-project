@@ -721,6 +721,9 @@ defm : DemangledNativeBuiltin<"__spirv_SMulExtended", GLSL_std_450, MulExtended,
 defm : DemangledNativeBuiltin<"__spirv_FMod", OpenCL_std, Arithmetic, 2, 2, OpFMod>;
 defm : DemangledNativeBuiltin<"__spirv_SMod", OpenCL_std, Arithmetic, 2, 2, OpSMod>;
 
+// SPV_INTEL_sigmoid builtin records:
+defm : DemangledNativeBuiltin<"__spirv_FSigmoidINTEL", OpenCL_std, Arithmetic, 1, 1, OpFSigmoidINTEL>;
+
 // cl_intel_split_work_group_barrier
 defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrierArriveINTEL", OpenCL_std, Barrier, 3, 3, OpControlBarrierArriveINTEL>;

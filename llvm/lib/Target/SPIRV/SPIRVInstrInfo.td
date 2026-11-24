@@ -1024,6 +1024,9 @@ def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
 def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
                   "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;
 
+// SPV_INTEL_sigmoid
+def OpFSigmoidINTEL: UnOp<"OpFSigmoidINTEL", 6168>;
+
 // SPV_ALTERA_arbitrary_precision_floating_point
 def OpArbitraryFloatGTALTERA: Op<5850, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
                   "$res = OpArbitraryFloatGTALTERA $type $A $Ma $B $Mb">;

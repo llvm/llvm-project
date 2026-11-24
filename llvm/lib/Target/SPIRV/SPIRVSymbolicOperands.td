@@ -416,6 +416,7 @@ defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<145, [EnvVulkan]>;
 // Legacy name for SPV_EXT_bfloat16_arithmetic. It is kept for consumers
 // that recognize only the INTEL name, until they transition to the EXT name.
 defm SPV_INTEL_bfloat16_arithmetic : ExtensionOperand<146, [EnvOpenCL]>;
+defm SPV_INTEL_sigmoid : ExtensionOperand<147, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -671,6 +672,7 @@ defm PoisonFreezeKHR : CapabilityOperand<5156, 0, 0, [SPV_KHR_poison_freeze], []
 defm UntypedPointersKHR : CapabilityOperand<4473, 0, 0, [SPV_KHR_untyped_pointers], []>;
 defm UntypedVariableLengthArrayINTEL : CapabilityOperand<6243, 0, 0, [SPV_INTEL_variable_length_array], [VariableLengthArrayINTEL, UntypedPointersKHR]>;
 defm LongVectorEXT : CapabilityOperand<5425, 0, 0, [SPV_EXT_long_vector], []>;
+defm SigmoidINTEL : CapabilityOperand<6167, 0, 0, [SPV_INTEL_sigmoid], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
