@@ -1322,6 +1322,13 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     // previous one.
     remapInstructionsInBlocks(NewBlocks, VMap);
 
+    // Register the cloned assumptions, as UnrollLoop does for its copies.
+    if (AC)
+      for (BasicBlock *BB : NewBlocks)
+        for (Instruction &I : *BB)
+          if (auto *II = dyn_cast<AssumeInst>(&I))
+            AC->registerAssumption(II);
+
     if (Iter == 0) {
       if (PeelLast) {
         // Adjust the exit condition so the loop exits one iteration early.
