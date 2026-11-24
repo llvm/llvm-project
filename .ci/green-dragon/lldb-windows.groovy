@@ -75,7 +75,6 @@ cmake -G Ninja ^
     -DLLDB_ENABLE_SWIG=ON ^
     -DLLDB_ENABLE_PYTHON=ON ^
     -DLLDB_ENABLE_LUA=OFF ^
-    -DLLDB_ENABLE_LIBXML2=ON ^
     -DLLVM_TARGETS_TO_BUILD=Native ^
     -DLLDB_TEST_USE_LLDB_SERVER=1 ^
     -DLLVM_LIT_ARGS="-v --time-tests --xunit-xml-output=C:\\workspace\\llvm-build\\test\\results-lldb-server.xml" ^

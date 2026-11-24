@@ -121,8 +121,6 @@ public:
 
   llvm::StringRef GetErrors() const;
 
-  static bool XMLEnabled();
-
 protected:
   std::unique_ptr<XMLNodeImpl> m_document;
   StreamString m_errors;

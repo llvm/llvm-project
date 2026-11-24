@@ -39,8 +39,6 @@
 
 #cmakedefine01 LLDB_ENABLE_LIBEDIT
 
-#cmakedefine01 LLDB_ENABLE_LIBXML2
-
 #cmakedefine01 LLDB_ENABLE_LUA
 
 #cmakedefine01 LLDB_ENABLE_PYTHON

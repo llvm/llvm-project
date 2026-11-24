@@ -97,9 +97,9 @@ for any source file and line breakpoints that the IDE set using:
 
 ## How Do I Find Out Which Features My Copy Of LLDB Has?
 
-Some features such as XML parsing are optional and must be enabled when LLDB is
-built. To check which features your copy of LLDB has enabled, use the `version`
-command from within LLDB:
+Some features such as Python scripting are optional and must be enabled when
+LLDB is built. To check which features your copy of LLDB has enabled, use the
+`version` command from within LLDB:
 
 ```
 (lldb) version -v
@@ -125,13 +125,12 @@ For example on Linux you can use the following command:
 ```
 $ readelf -d <path-to-lldb> | grep NEEDED
 0x0000000000000001 (NEEDED)             Shared library: [liblldb.so.22.0git]
-0x0000000000000001 (NEEDED)             Shared library: [libxml2.so.2]
 0x0000000000000001 (NEEDED)             Shared library: [libedit.so.2]
 <...>
 ```
 
-The output above shows us that this particular copy of LLDB has XML parsing
-(`libxml2`) and editline (`libedit`) enabled.
+The output above shows us that this particular copy of LLDB has editline
+(`libedit`) enabled.
 
 :::{note}
 `readelf -d` as used above only shows direct dependencies of the binary.
@@ -186,19 +185,8 @@ The most commonly used method is the debug server sending LLDB an XML
 document in the
 [Target Description Format](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Target-Description-Format.html).
 
-LLDB can only process this if XML parsing was enabled when it was built. A
-previous section of this document explains how to check this. If XML is not
-enabled and the debug server has offered an XML document, we highly recommend
-switching to a build of LLDB with XML parsing enabled.
-
-:::{note}
-If LLDB was offered an XML document but could not use it, you will see a
-warning in your debug session to alert you to this situation.
-:::
-
-If your LLDB has XML support, next check whether the debug server offered this
-XML document. Enable the GDB remote packet log, then connect to the debug server
-as you normally would.
+First check whether the debug server offered this XML document. Enable the GDB
+remote packet log, then connect to the debug server as you normally would.
 
 ```
 (lldb) log enable gdb-remote packets

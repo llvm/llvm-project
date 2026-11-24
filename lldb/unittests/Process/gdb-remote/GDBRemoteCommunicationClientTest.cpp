@@ -9,7 +9,6 @@
 #include "GDBRemoteTestUtils.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/DataBuffer.h"
@@ -493,12 +492,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server,
       "qMemoryRegionInfo:a000",
       "start:a000;size:2000;permissions:rx;name:2f666f6f2f6261722e736f;");
-  if (XMLDocument::XMLEnabled()) {
-    // In case we have XML support, this will also do a "qXfer:memory-map".
-    // Preceeded by a query for supported extensions. Pretend we don't support
-    // that.
-    HandlePacket(server, testing::StartsWith("qSupported:"), "");
-  }
+  // This will also do a "qXfer:memory-map", preceeded by a query for supported
+  // extensions. Pretend we don't support that.
+  HandlePacket(server, testing::StartsWith("qSupported:"), "");
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(addr, region_info.GetRange().GetRangeBase());
   EXPECT_EQ(0x2000u, region_info.GetRange().GetByteSize());
@@ -570,12 +566,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
   });
 
   HandlePacket(server, "qMemoryRegionInfo:4000", "start:4000;size:0000;");
-  if (XMLDocument::XMLEnabled()) {
-    // In case we have XML support, this will also do a "qXfer:memory-map".
-    // Preceeded by a query for supported extensions. Pretend we don't support
-    // that.
-    HandlePacket(server, testing::StartsWith("qSupported:"), "");
-  }
+  // This will also do a "qXfer:memory-map", preceeded by a query for supported
+  // extensions. Pretend we don't support that.
+  HandlePacket(server, testing::StartsWith("qSupported:"), "");
   EXPECT_FALSE(result.get().Success());
 }
 
