@@ -759,8 +759,8 @@ func.func @returnTypeAndLocation(%arg0 : i32) -> i1 {
 
 // CHECK-LABEL: @testConstantStrAttr
 func.func @testConstantStrAttr() -> () {
-  // CHECK: test.has_str_value {value = "foo"}
-  test.no_str_value {value = "bar"}
+  // CHECK: test.has_str_value <value = "foo">
+  test.no_str_value <value = "bar">
   return
 }
 

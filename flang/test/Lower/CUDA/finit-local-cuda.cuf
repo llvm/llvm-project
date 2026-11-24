@@ -1,0 +1,97 @@
+! Tests that -finit-local= respects CUDA data attributes in shouldInitLocal.
+! Variables in device-only memory (device, constant, shared) must NOT be
+! initialized via a plain host store. Host-accessible storage (managed, pinned,
+! unified) and per-thread locals in device procedures MAY be initialized
+! normally.
+!
+! RUN: bbc -emit-hlfir -fcuda -finit-local=zero -o - %s | FileCheck %s
+
+module finit_cuda_mod
+contains
+
+  ! device: storage lives in device memory -- must NOT be initialized.
+  subroutine test_device(res)
+    real, device :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_device
+  ! CHECK-NOT: fir.zero_bits f32
+
+  ! unified: host-accessible -- MUST be initialized.
+  subroutine test_unified(res)
+    real, unified :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_unified
+  ! CHECK: fir.zero_bits f32
+  ! CHECK: fir.store
+
+  ! pinned (non-allocatable): host-accessible -- MUST be initialized.
+  subroutine test_pinned(res)
+    real, pinned :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_pinned
+  ! CHECK: fir.zero_bits f32
+  ! CHECK: fir.store
+
+
+  ! managed (non-allocatable): host-accessible unified memory -- MUST be
+  ! initialized. An explicit host assignment to a managed scalar lowers to
+  ! hlfir.assign, so a plain fir.store initialization is valid here.
+  subroutine test_managed(res)
+    real, managed :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_managed
+  ! CHECK: fir.zero_bits f32
+  ! CHECK: fir.store
+
+end module
+
+! Per-thread locals in an attributes(global) kernel are stack-allocated via
+! fir.alloca and run on the device; a plain fir.store in device code IS the
+! correct initialization. Verify that shouldInitLocal includes them.
+attributes(global) subroutine test_global_local()
+  integer :: n
+  n = 42
+end subroutine
+! CHECK-LABEL: func.func @{{.*}}test_global_local
+! CHECK:       %[[N:.*]]:2 = hlfir.declare {{.*}}"_QFtest_global_localEn"
+! CHECK-NEXT:  %[[NZ:.*]] = fir.zero_bits i32
+! CHECK-NEXT:  fir.store %[[NZ]] to %[[N]]#0 : !fir.ref<i32>
+
+! An explicit 'device' local in an attributes(host,device) routine is
+! allocated via cuf.alloc (not fir.alloca) because cuf::isCUDADeviceContext
+! returns false for HostDevice.  A plain fir.store cannot reach cuf.alloc
+! storage, so shouldInitLocal must return false for this case.
+attributes(host,device) subroutine test_host_device_local()
+  real, device :: x
+  x = 1.0
+end subroutine
+! CHECK-LABEL: func.func @{{.*}}test_host_device_local
+! CHECK-NOT: fir.zero_bits f32
+
+! A BLOCK-construct local inside an attributes(global) kernel lives in
+! device-side fir.alloca storage and MUST be initialized.  The old code
+! used IsCUDADeviceContext on the BlockConstruct scope (which has no
+! subprogram symbol) and returned false, so the variable was skipped.
+! The fix uses cuf::isCUDADeviceContext(builder.getRegion()) in genInitLocal,
+! which walks up through nested regions to the enclosing func and returns
+! true for global kernels regardless of whether the variable is in a BLOCK.
+attributes(global) subroutine test_global_block_local()
+  integer :: m
+  block
+    integer :: n
+    n = 99
+    m = n
+  end block
+end subroutine
+! CHECK-LABEL: func.func @{{.*}}test_global_block_local
+! CHECK: %[[N:.*]]:2 = hlfir.declare {{.*}}"_QFtest_global_block_local{{.*}}En"
+! CHECK: fir.zero_bits i32
+! CHECK: fir.store %{{.*}} to %[[N]]#0 : !fir.ref<i32>

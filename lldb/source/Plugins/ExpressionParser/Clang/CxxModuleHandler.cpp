@@ -262,9 +262,9 @@ std::optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
 
   // Find the class template specialization declaration that
   // corresponds to these arguments.
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
   ClassTemplateSpecializationDecl *result =
-      new_class_template->findSpecialization(imported_args, InsertPos);
+      new_class_template->findSpecialization(imported_args, InsertToken);
 
   if (result) {
     // We found an existing specialization in the module that fits our arguments
@@ -283,7 +283,7 @@ std::optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
       td->hasStrictPackMatch(),
       /*PrevDecl=*/nullptr);
 
-  new_class_template->AddSpecialization(result, InsertPos);
+  new_class_template->AddSpecialization(result, InsertToken);
   if (new_class_template->isOutOfLine())
     result->setLexicalDeclContext(
         new_class_template->getLexicalDeclContext());

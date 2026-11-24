@@ -234,11 +234,24 @@ $ gh attestation verify --repo llvm/llvm-project <package file name> --bundle <p
 
     prerelease = True if "rc" in release else False
 
-    repo.create_git_release(tag=tag, name=name, message=message, prerelease=prerelease)
+    repo.create_git_release(
+        draft=True, tag=tag, name=name, message=message, prerelease=prerelease
+    )
 
 
-def upload_files(repo, release, files):
-    release = repo.get_release("llvmorg-{}".format(release))
+# The repo.get_release function does not work for draft releases, so we need to
+# fetch all the releases and manually search for the one that we want.
+def get_release(repo, release):
+    return next(
+        (r for r in repo.get_releases() if r.tag_name == f"llvmorg-{release}"), False
+    )
+
+
+def upload_files(repo, release_version, files):
+    release = get_release(repo, release_version)
+    if not release:
+        print(f"Error: could not find release {release_version}")
+        sys.exit(1)
     for f in files:
         print("Uploading {}".format(f))
         release.upload_asset(f)
@@ -246,7 +259,10 @@ def upload_files(repo, release, files):
 
 
 def uncomment_download_links(repo, release_version):
-    release = repo.get_release(f"llvmorg-{release_version}")
+    release = get_release(repo, release_version)
+    if not release:
+        print(f"Error: could not find release {release_version}")
+        sys.exit(1)
 
     # At this point any automatic builds have finished and if
     # they succeeded, uploaded files to the release assets.

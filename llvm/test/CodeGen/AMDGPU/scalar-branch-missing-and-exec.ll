@@ -27,22 +27,16 @@ define amdgpu_cs void @main(i32 inreg %arg) {
   %tmp22 = load volatile float, ptr addrspace(1) poison
   %tmp25 = load volatile float, ptr addrspace(1) poison
   %tmp31 = fcmp olt float %tmp16, 0x3FA99999A0000000
-  br i1 %tmp31, label %bb, label %.exit.thread
-
-bb:                                               ; preds = %.entry
   %tmp42 = fcmp olt float %tmp25, 0x3FA99999A0000000
-  br i1 %tmp42, label %bb43, label %.exit.thread
-
-bb43:
+  %tmp43 = and i1 %tmp31, %tmp42
   %tmp46 = fcmp olt <2 x float> %tmp44, <float 0x3FA99999A0000000, float 0x3FA99999A0000000>
   %tmp47 = extractelement <2 x i1> %tmp46, i32 0
   %tmp48 = extractelement <2 x i1> %tmp46, i32 1
   %tmp49 = and i1 %tmp47, %tmp48
-  br i1 %tmp49, label %bb50, label %.exit.thread
-
-bb50:
+  %tmp50 = and i1 %tmp43, %tmp49
   %tmp53 = fcmp olt float %tmp22, 0x3FA99999A0000000
-  br i1 %tmp53, label %.exit3.i, label %.exit.thread
+  %tmp54 = and i1 %tmp50, %tmp53
+  br i1 %tmp54, label %.exit3.i, label %.exit.thread
 
 .exit3.i:
   store volatile i32 0, ptr addrspace(1) poison

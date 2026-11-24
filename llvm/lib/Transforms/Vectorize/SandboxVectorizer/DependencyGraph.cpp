@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
@@ -153,6 +152,33 @@ DGNode::~DGNode() {
 }
 
 #ifndef NDEBUG
+void DGNode::verify(DependencyGraph &DAG) const {
+  if (!Scheduled) {
+    assert(UnscheduledDeps.has_value() && "Expected actual value");
+    // Check UnscheduledDeps.
+    switch (DAG.Dir) {
+    case SchedDirection::BottomUp: {
+      // UnscheduledDeps counts the number of nodes this node depends on.
+      unsigned CntUnschedDeps = 0;
+      for (DGNode *SuccN : succs(DAG))
+        if (!SuccN->scheduled())
+          ++CntUnschedDeps;
+      assert(*UnscheduledDeps == CntUnschedDeps && "Inconsistent UnschedDeps");
+      break;
+    }
+    case SchedDirection::TopDown: {
+      unsigned CntUnschedDeps = 0;
+      for (DGNode *PredN : preds(DAG))
+        if (!PredN->scheduled())
+          ++CntUnschedDeps;
+      assert(*UnscheduledDeps == CntUnschedDeps && "Inconsistent UnschedDeps");
+      break;
+    }
+    }
+  } else {
+    assert(!UnscheduledDeps.has_value() && "Expected nullopt");
+  }
+}
 void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
   OS << *I << " Unsched:";
   if (UnscheduledDeps)
@@ -169,6 +195,8 @@ void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
     static constexpr unsigned Indent = 4;
     for (auto *Pred : MemPreds)
       OS.indent(Indent) << "<-" << *Pred->getInstruction() << "\n";
+    for (auto *Succ : MemSuccs)
+      OS.indent(Indent) << "->" << *Succ->getInstruction() << "\n";
   }
 }
 #endif // NDEBUG
@@ -474,6 +502,9 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
   auto *N = getOrCreateNode(I);
   auto *MemN = dyn_cast<MemDGNode>(N);
 
+  if (Sched)
+    Sched->notifyCreateInstrBeforeDAGUpdates(N);
+
   // Update the MemDGNode chain if this is a memory node.
   if (MemN != nullptr) {
     if (auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false)) {
@@ -500,11 +531,75 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
         scanAndAddDeps(BelowN, Interval<MemDGNode>(MemN, MemN));
     }
   }
+  // scanAndAddDeps() updates UnscheduledDeps only for mem dependencies.
+  // During regular DAG creation the UnscheduledDeps for def-used dependencies
+  // are handled by setDefUseUnscheduledSuccs(NewInterval).
+  // Since we are not following that path we need to update UnscheduledDeps for
+  // def-use deps here.
+  if (!N->scheduled()) {
+    switch (Dir) {
+    case SchedDirection::BottomUp:
+      for (Value *Op : I->operands()) {
+        Instruction *OpI = dyn_cast<Instruction>(Op);
+        if (OpI == nullptr)
+          continue;
+        DGNode *OpN = getNode(OpI);
+        if (OpN == nullptr)
+          continue;
+        if (!OpN->scheduled())
+          OpN->incrUnscheduledDeps();
+      }
+      for (User *U : I->users()) {
+        Instruction *UI = dyn_cast<Instruction>(U);
+        if (UI == nullptr)
+          continue;
+        DGNode *UN = getNode(UI);
+        if (UN == nullptr)
+          continue;
+        if (!UN->scheduled())
+          N->incrUnscheduledDeps();
+      }
+      break;
+    case SchedDirection::TopDown:
+      for (Value *Op : I->operands()) {
+        Instruction *OpI = dyn_cast<Instruction>(Op);
+        if (OpI == nullptr)
+          continue;
+        DGNode *OpN = getNode(OpI);
+        if (OpN == nullptr)
+          continue;
+        if (!OpN->scheduled())
+          N->incrUnscheduledDeps();
+      }
+      for (User *U : I->users()) {
+        Instruction *UI = dyn_cast<Instruction>(U);
+        if (UI == nullptr)
+          continue;
+        DGNode *UN = getNode(UI);
+        if (UN == nullptr)
+          continue;
+        if (!UN->scheduled())
+          N->incrUnscheduledDeps();
+      }
+      break;
+    }
+  }
+
+  if (Sched != nullptr) {
+    Sched->notifyCreateInstrAfterDAGUpdates(N);
+  }
+#ifndef NDEBUG
+  // TODO: Remove some of the verifiers eventually to save compilation time.
+  verify();
+#endif
 }
 
 void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
   if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
     // We don't maintain the DAG while reverting.
+    return;
+  if (empty())
+    // Nothing to do if already empty.
     return;
   // NOTE: This function runs before `I` moves to its new destination.
   BasicBlock *BB = To.getNodeParent();
@@ -570,6 +665,10 @@ void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
     MemN->setNextNode(
         getMemDGNodeAfter(BeforeToN, /*IncludingN=*/true, /*SkipN=*/MemN));
   }
+#ifndef NDEBUG
+  // TODO: Remove some of the verifiers eventually to save compilation time.
+  verify();
+#endif
 }
 
 void DependencyGraph::notifyEraseInstr(Instruction *I) {
@@ -580,6 +679,12 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
   if (N == nullptr)
     // Early return if there is no DAG node for `I`.
     return;
+
+#ifndef NDEBUG
+  // TODO: Remove some of the verifiers eventually to save compilation time.
+  verify();
+#endif
+
   if (auto *MemN = dyn_cast<MemDGNode>(getNode(I))) {
     // Update the MemDGNode chain if this is a memory node.
     auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
@@ -599,22 +704,40 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
       SuccN->removeMemPred(MemN, Dir);
     }
     // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
-  } else {
-    // If this is a non-mem node we only need to update UnscheduledSuccs.
-    if (!N->scheduled()) {
-      for (auto *PredN : N->preds(*this))
-        if (!PredN->scheduled())
+  }
+
+  if (!N->scheduled()) {
+    // Update UnscheduledDeps for def-use edges. The UnscheduledDeps has already
+    // been updated for the memory dependency edges.
+    if (Dir == SchedDirection::BottomUp) {
+      for (Value *Op : I->operands()) {
+        if (!isa<Instruction>(Op))
+          continue;
+        DGNode *PredN = getNode(cast<Instruction>(Op));
+        if (PredN && !PredN->scheduled())
           PredN->decrUnscheduledDeps();
-      for (auto *SuccN : N->succs(*this))
-        /// TODO: Does the successor also need to be guarded?
-        SuccN->decrUnscheduledDeps();
+      }
+    } else if (Dir == SchedDirection::TopDown) {
+      for (User *U : I->users()) {
+        if (!isa<Instruction>(U))
+          continue;
+        DGNode *SuccN = getNode(cast<Instruction>(U));
+        if (SuccN && !SuccN->scheduled())
+          SuccN->decrUnscheduledDeps();
+      }
     }
   }
+
+  if (Sched != nullptr)
+    Sched->notifyEraseInstr(I);
+
   // Finally erase the Node.
   InstrToNodeMap.erase(I);
 }
 
 void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
+  // TODO: We should eventually move the UnschedDep logic to the scheduler.
+
   // If U.User is not in the DAG, then we should not attempt to decrement
   // CurrSrcN's unscheduled successors.
   //  -------   -------   -
@@ -658,7 +781,7 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   }
 }
 
-Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
+Interval<Instruction> DependencyGraph::extend(BndlRef<Instruction *> Instrs) {
   if (Instrs.empty())
     return {};
 
@@ -763,6 +886,28 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
 }
 
 #ifndef NDEBUG
+void DependencyGraph::verify() {
+  auto Dependency = [this](DGNode *FromN, DGNode *ToN) {
+    for (DGNode *FromSuccN : FromN->succs(*this)) {
+      if (FromSuccN == ToN)
+        return true;
+    }
+    for (DGNode *ToPredN : ToN->preds(*this)) {
+      if (ToPredN == FromN)
+        return true;
+    }
+    return false;
+  };
+  for (const auto &[I1, NPtr1] : InstrToNodeMap) {
+    NPtr1->verify(*this);
+    for (const auto &[I2, NPtr2] : InstrToNodeMap) {
+      if (Dependency(NPtr1.get(), NPtr2.get())) {
+        assert(I1->comesBefore(I2) &&
+               "Instruction ordering violates dependency!");
+      }
+    }
+  }
+}
 void DependencyGraph::print(raw_ostream &OS) const {
   // InstrToNodeMap is unordered so we need to create an ordered vector.
   SmallVector<DGNode *> Nodes;

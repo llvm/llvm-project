@@ -406,3 +406,41 @@ define void @f() {
   EXPECT_DEATH(FPM2.setPassPipeline("foo(args)bar", CreatePass),
                ".*Expected delimiter.*");
 }
+
+TEST_F(PassTest, AuxPassArgs) {
+  AuxPassArgsRegistry Registry;
+  AuxPassArg Arg1 = Registry.createArg("Arg1");
+  AuxPassArg Arg2 = Registry.createArg("Arg2");
+#ifndef NDEBUG
+  // Check that parsing crashes if there is no such argument created.
+  EXPECT_DEATH(Registry.parse("Foo"), "Unsupported.*");
+  EXPECT_DEATH(Registry.parse("Arg1,Foo"), "Unsupported.*");
+#endif
+  Registry.parse("Arg1");
+  // Check the contents.
+  EXPECT_TRUE(Arg1.get());
+  EXPECT_TRUE((bool)Arg1);
+  EXPECT_FALSE(Arg2.get());
+  EXPECT_FALSE((bool)Arg2);
+  // Check the flag string.
+  EXPECT_EQ(Arg1.getFlagStr(), "Arg1");
+  EXPECT_EQ(Arg2.getFlagStr(), "Arg2");
+  // Check assigning a bool.
+  Arg1 = false;
+  EXPECT_FALSE(Arg1.get());
+  Arg2 = true;
+  EXPECT_TRUE(Arg2.get());
+  // Check copy.
+  Arg2 = Arg1;
+  EXPECT_FALSE(Arg2.get());
+  EXPECT_FALSE(Arg1.get());
+  // Check parsing an empty argument string.
+  Registry.parse("");
+  // Check ignoring delimiters.
+  Registry.parse("Arg1,,,,Arg2,,,");
+  EXPECT_TRUE(Arg1.get());
+  EXPECT_TRUE(Arg2.get());
+  Registry.parse(",,Arg1,,,Arg2");
+  EXPECT_TRUE(Arg1.get());
+  EXPECT_TRUE(Arg2.get());
+}

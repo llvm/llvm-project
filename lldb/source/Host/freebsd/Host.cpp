@@ -97,16 +97,13 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
     proc_args.AppendArgument(llvm::StringRef(cstr));
   }
 
-  auto buffer_sp = FileSystem::Instance().CreateDataBuffer(pathname, 0x20, 0);
-  if (!buffer_sp) {
-    process_info.Clear();
-    return true;
-  }
-  uint8_t exe_class =
-      llvm::object::getElfArchType(
-          {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
-           size_t(buffer_sp->GetByteSize())})
-          .first;
+  uint8_t exe_class = llvm::ELF::ELFCLASSNONE;
+  if (auto buffer_sp = FileSystem::Instance().CreateDataBuffer(
+          process_info.GetExecutableFile(), 0x20, 0))
+    exe_class = llvm::object::getElfArchType(
+                    {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
+                     size_t(buffer_sp->GetByteSize())})
+                    .first;
 
   switch (exe_class) {
   case llvm::ELF::ELFCLASS32:
@@ -257,6 +254,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   return Status::FromErrorString("unimplemented");
 }

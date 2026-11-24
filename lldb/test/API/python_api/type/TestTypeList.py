@@ -74,31 +74,14 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertFalse(static_mutable_field.GetConstantValue(self.target()))
 
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Exercise SBType and SBTypeList API."""
         d = {"EXE": self.exe_name}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact(self.exe_name)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Create the breakpoint inside function 'main'.
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Get Frame #0.
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
+        target, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, exe_name=self.exe_name
         )
         frame0 = thread.GetFrameAtIndex(0)
 
@@ -293,6 +276,7 @@ class TypeAndTypeListTestCase(TestBase):
             self.DebugSBType(int_enum_uchar)
             self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_nested_typedef(self):
         """Exercise FindDirectNestedType for typedefs."""
         self.build()
@@ -309,7 +293,6 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(the_typedef)
         self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
 
-    @expectedFailureWindows  # Dynamic type resolution not implemented
     def test_dynamic_values(self):
         """Test FindDirectNestedType on dynamic values"""
 
@@ -350,6 +333,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(get_function_type.is_function)
         self.assertFalse(get_function_type.is_reference)
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""
         self.build()
@@ -370,3 +354,23 @@ class TypeAndTypeListTestCase(TestBase):
 
         # And an over-aligned type.
         self.assertEqual(module.FindFirstType("OverAlignedStruct").GetByteAlign(), 128)
+
+    def test_GetByteStride(self):
+        """Exercise SBType::GetByteStride"""
+        self.build()
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact()))
+        module = lldb.SBModule(spec)
+        self.assertTrue(module)
+
+        # Invalid types should not crash.
+        self.assertEqual(lldb.SBType().GetByteStride(), 0)
+
+        # For naturally aligned types, the stride is the size.
+        int_type = module.GetBasicType(lldb.eBasicTypeInt)
+        self.assertEqual(int_type.GetByteStride(), int_type.GetByteSize())
+
+        # Struct sizes already include tail padding.
+        over_aligned_struct = module.FindFirstType("OverAlignedStruct")
+        self.assertEqual(over_aligned_struct.GetByteSize(), 128)
+        self.assertEqual(over_aligned_struct.GetByteStride(), 128)

@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
@@ -554,6 +555,21 @@ make_filter_range(RangeT &&Range, PredicateT Pred) {
   auto B = adl_begin(Range);
   auto E = adl_end(Range);
   return make_range(FilterIteratorT(B, E, Pred), FilterIteratorT(E, E, Pred));
+}
+
+/// Return a range over \p Range containing only elements for which isa<T>
+/// holds, casting each of them to T.
+///
+/// Note: as for make_filter_range, the returned range only borrows the
+/// iterators of \p Range. Passing a temporary container is not supported, as
+/// its lifetime is not extended by the returned range; passing a temporary
+/// view, e.g. the result of drop_begin, is fine.
+template <typename T, typename RangeT> auto make_isa_range(RangeT &&Range) {
+  static_assert(
+      std::is_reference_v<decltype(*adl_begin(Range))> ||
+          !std::is_reference_v<decltype(CastTo<T>(*adl_begin(Range)))>,
+      "make_isa_range would return references into temporary elements");
+  return map_range(make_filter_range(Range, IsaPred<T>), CastTo<T>);
 }
 
 /// A pseudo-iterator adaptor that is designed to implement "early increment"
@@ -2184,21 +2200,26 @@ template <typename T> constexpr auto not_equal_to(T &&Arg) {
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
 /// `erase_if` which is equivalent to:
 ///
-///   C.erase(remove_if(C, pred), C.end());
+///   auto I = remove_if(C, pred);
+///   C.erase(I, C.end());
 ///
 /// This version works for any container with an erase method call accepting
-/// two iterators.
+/// two iterators. Compute end() after removal, since removing elements can
+/// change it for containers such as TinyPtrVector.
 template <typename Container, typename UnaryPredicate>
 void erase_if(Container &C, UnaryPredicate P) {
-  C.erase(remove_if(C, P), C.end());
+  auto I = remove_if(C, P);
+  C.erase(I, C.end());
 }
 
 /// Wrapper function to remove a value from a container:
 ///
-/// C.erase(remove(C.begin(), C.end(), V), C.end());
+/// auto I = std::remove(C.begin(), C.end(), V);
+/// C.erase(I, C.end());
 template <typename Container, typename ValueType>
 void erase(Container &C, ValueType V) {
-  C.erase(std::remove(C.begin(), C.end(), V), C.end());
+  auto I = std::remove(C.begin(), C.end(), V);
+  C.erase(I, C.end());
 }
 
 /// Wrapper function to append range `R` to container `C`.

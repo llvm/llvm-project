@@ -31,7 +31,6 @@
 #include "R600Defines.h"
 #include "R600Subtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 
 using namespace llvm;
 

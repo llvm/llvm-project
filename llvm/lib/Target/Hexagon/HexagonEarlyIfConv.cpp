@@ -399,9 +399,7 @@ bool HexagonEarlyIfConversion::usesUndefVReg(const MachineInstr *MI) const {
     if (!R.isVirtual())
       continue;
     const MachineInstr *DefI = MRI->getVRegDef(R);
-    // "Undefined" virtual registers are actually defined via IMPLICIT_DEF.
-    assert(DefI && "Expecting a reaching def in MRI");
-    if (DefI->isImplicitDef())
+    if (!DefI || DefI->isImplicitDef())
       return true;
   }
   return false;

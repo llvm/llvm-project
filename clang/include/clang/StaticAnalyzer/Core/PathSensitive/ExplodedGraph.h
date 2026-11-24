@@ -173,18 +173,16 @@ public:
     return getState()->getSVal(E, getStackFrame());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const ProgramPoint &Loc,
-                      const ProgramStateRef &state,
-                      bool IsSink) {
+  static void Profile(llvm::FoldingSetNodeID &ID, const ProgramPoint &Loc,
+                      const ProgramState *state, bool IsSink) {
     ID.Add(Loc);
-    ID.AddPointer(state.get());
+    ID.AddPointer(state);
     ID.AddBoolean(IsSink);
   }
 
   void Profile(llvm::FoldingSetNodeID& ID) const {
     // We avoid copy constructors by not using accessors.
-    Profile(ID, Location, State, isSink());
+    Profile(ID, Location, State.get(), isSink());
   }
 
   /// addPredeccessor - Adds a predecessor to the current node, and
@@ -346,9 +344,8 @@ public:
   /// Retrieve the node associated with a (Location, State) pair, where the
   /// 'Location' is a ProgramPoint in the CFG. If no node for this pair exists,
   /// it is created. IsNew is set to true if the node was freshly created.
-  ExplodedNode *getNode(const ProgramPoint &L, ProgramStateRef State,
-                        bool IsSink = false,
-                        bool* IsNew = nullptr);
+  ExplodedNode *getNode(const ProgramPoint &L, const ProgramState *State,
+                        bool IsSink = false, bool *IsNew = nullptr);
 
   /// Create a node for a (Location, State) pair, but don't store it for
   /// deduplication later. This is useful when copying some nodes from an

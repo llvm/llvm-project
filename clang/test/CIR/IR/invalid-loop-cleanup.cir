@@ -16,8 +16,7 @@ cir.func @while_cleanup_missing_kind() {
     cir.condition(%cond)
   } do {
     cir.yield
-  // expected-error @below {{expected valid keyword or string}}
-  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  // expected-error @below {{expected string or keyword containing one of the following enum values for attribute 'cleanupKind' [normal, eh, all]}}
   } cleanup {
     cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
     cir.yield
@@ -45,8 +44,7 @@ cir.func @for_cleanup_missing_kind() {
     cir.yield
   } step {
     cir.yield
-  // expected-error @below {{expected valid keyword or string}}
-  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  // expected-error @below {{expected string or keyword containing one of the following enum values for attribute 'cleanupKind' [normal, eh, all]}}
   } cleanup {
     cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
     cir.yield

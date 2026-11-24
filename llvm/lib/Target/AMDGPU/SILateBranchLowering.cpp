@@ -14,7 +14,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -31,7 +30,6 @@ class SILateBranchLowering {
 private:
   const GCNSubtarget &ST;
   const SIInstrInfo *TII;
-  const SIRegisterInfo *TRI;
   MachineDominatorTree *MDT;
   MachineLoopInfo *MLI;
   const AMDGPU::LaneMaskConstants &LMC;
@@ -43,8 +41,8 @@ private:
 public:
   SILateBranchLowering(const GCNSubtarget &ST, MachineDominatorTree *MDT,
                        MachineLoopInfo *MLI)
-      : ST(ST), TII(ST.getInstrInfo()), TRI(&TII->getRegisterInfo()), MDT(MDT),
-        MLI(MLI), LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
+      : ST(ST), TII(ST.getInstrInfo()), MDT(MDT), MLI(MLI),
+        LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
 
   bool run(MachineFunction &MF);
 };
@@ -208,10 +206,17 @@ void SILateBranchLowering::earlyTerm(MachineInstr &MI,
 
   auto BranchMI = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0))
                       .addMBB(EarlyExitBlock);
-  auto Next = std::next(MI.getIterator());
+  auto Next = std::next(MachineBasicBlock::iterator(MI));
+  auto FirstNonDebug =
+      skipDebugInstructionsForward(Next, MBB.end(), /*SkipPseudoOp=*/false);
 
-  if (Next != MBB.end() && !Next->isTerminator())
+  if (FirstNonDebug != MBB.end() && !FirstNonDebug->isTerminator()) {
     splitBlock(MBB, *BranchMI, MDT, MLI);
+  } else {
+    // Keep debug instructions out of the terminator sequence by moving them
+    // before the generated branch when the block is not split.
+    MBB.splice(BranchMI->getIterator(), &MBB, Next, FirstNonDebug);
+  }
 
   MBB.addSuccessor(EarlyExitBlock);
   MDT->insertEdge(&MBB, EarlyExitBlock);

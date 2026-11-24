@@ -49,13 +49,6 @@ ThumbRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   return ARMBaseRegisterInfo::getLargestLegalSuperClass(RC, MF);
 }
 
-const TargetRegisterClass *
-ThumbRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  if (!IsThumb1Only)
-    return ARMBaseRegisterInfo::getPointerRegClass(Kind);
-  return &ARM::tGPRRegClass;
-}
-
 static void emitThumb1LoadConstPool(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator &MBBI,
                                     const DebugLoc &dl, unsigned DestReg,
@@ -465,7 +458,8 @@ bool ThumbRegisterInfo::rewriteFrameIndex(MachineBasicBlock::iterator II,
 
       // In case FrameReg is a high register, move it to a low reg to ensure it
       // can be used as an operand.
-      if (ARM::hGPRRegClass.contains(FrameReg) && FrameReg != ARM::SP) {
+      if (FrameReg.isPhysical() && ARM::hGPRRegClass.contains(FrameReg) &&
+          FrameReg != ARM::SP) {
         DestReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
         BuildMI(MBB, II, dl, TII.get(ARM::tMOVr), DestReg)
             .addReg(FrameReg)

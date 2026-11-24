@@ -12,25 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
-#include "DXILCBufferAccess.h"
-#include "DXILDataScalarization.h"
-#include "DXILFinalizeLinkage.h"
-#include "DXILFlattenArrays.h"
-#include "DXILForwardHandleAccesses.h"
-#include "DXILIntrinsicExpansion.h"
-#include "DXILLegalizePass.h"
-#include "DXILMemIntrinsics.h"
-#include "DXILOpLowering.h"
-#include "DXILPostOptimizationValidation.h"
-#include "DXILPrettyPrinter.h"
-#include "DXILRemoveUnusedResources.h"
-#include "DXILResourceAccess.h"
-#include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
-#include "DXILTranslateMetadata.h"
+#include "DXILSignatureAnalysis.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "DirectXAsmPrinter.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
@@ -62,17 +49,18 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
+  initializeDXILDebugInfoLegacyPass(*PR);
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
   initializeDXILMemIntrinsicsLegacyPass(*PR);
   initializeDXILDataScalarizationLegacyPass(*PR);
   initializeDXILFlattenArraysLegacyPass(*PR);
   initializeScalarizerLegacyPassPass(*PR);
   initializeDXILLegalizeLegacyPass(*PR);
-  initializeDXILPrepareModulePass(*PR);
-  initializeEmbedDXILPassPass(*PR);
-  initializeWriteDXILPassPass(*PR);
-  initializeDXContainerGlobalsPass(*PR);
-  initializeDXContainerPDBPass(*PR);
+  initializeDXILPrepareModuleLegacyPass(*PR);
+  initializeDXILEmbedderLegacyPass(*PR);
+  initializeDXILWriterLegacyPass(*PR);
+  initializeDXILContainerGlobalsLegacyPass(*PR);
+  initializeDXILContainerPDBLegacyPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILRemoveUnusedResourcesLegacyPass(*PR);
@@ -82,6 +70,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILPostOptimizationValidationLegacyPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
   initializeRootSignatureAnalysisWrapperPass(*PR);
+  initializeSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
   initializeDXILPrettyPrinterLegacyPass(*PR);
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
@@ -146,7 +135,8 @@ public:
     addPass(createDXILTranslateMetadataLegacyPass());
     addPass(createDXILPostOptimizationValidationLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
-    addPass(createDXILPrepareModulePass());
+    addPass(createDXILPrepareModuleLegacyPass());
+    addPass(createDXILDebugInfoLegacyPass());
   }
 };
 
@@ -156,8 +146,8 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
-                               Reloc::Static, CodeModel::Small, OL),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options, Reloc::Static,
+                               CodeModel::Small, OL),
       TLOF(std::make_unique<DXILTargetObjectFile>()),
       Subtarget(std::make_unique<DirectXSubtarget>(TT, CPU, FS, *this)) {
   initAsmInfo();
@@ -175,6 +165,12 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
   TargetPassConfig *PassConfig = createPassConfig(PM);
+  PM.add(PassConfig);
+
+  if (!MMIWP)
+    MMIWP = new MachineModuleInfoWrapperPass(this);
+  PM.add(MMIWP);
+
   PM.add(createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
   PassConfig->addCodeGenPrepare();
 
@@ -183,21 +179,18 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     PM.add(createDXILPrettyPrinterLegacyPass(Out));
     break;
   case CodeGenFileType::ObjectFile:
-    if (TargetPassConfig::willCompleteCodeGenPipeline()) {
-      PM.add(createDXILEmbedderPass());
+    if (PassConfig->willCompleteCodeGenPipeline()) {
+      PM.add(createDXILEmbedderLegacyPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
-      PM.add(createDXContainerGlobalsPass());
-      PM.add(createDXContainerPDBPass());
+      PM.add(createDXILContainerGlobalsLegacyPass());
+      PM.add(createDXILContainerPDBLegacyPass());
 
-      if (!MMIWP)
-        MMIWP = new MachineModuleInfoWrapperPass(this);
-      PM.add(MMIWP);
       if (addAsmPrinter(PM, Out, DwoOut, FileType,
                         MMIWP->getMMI().getContext()))
         return true;
     } else
-      PM.add(createDXILWriterPass(Out));
+      PM.add(createDXILWriterLegacyPass(Out));
     break;
   case CodeGenFileType::Null:
     break;

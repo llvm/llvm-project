@@ -38,7 +38,7 @@ static cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
                           "moderate strategy"),
                clEnumValN(bolt::TailDuplication::TD_CACHE, "cache",
                           "cache-aware duplication strategy")),
-    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
     TailDuplicationMinimumOffset("tail-duplication-minimum-offset",
@@ -51,7 +51,7 @@ static cl::opt<unsigned> TailDuplicationMaximumDuplication(
     "tail-duplication-maximum-duplication",
     cl::desc("tail blocks whose size (in bytes) exceeds the value are never "
              "duplicated"),
-    cl::ZeroOrMore, cl::ReallyHidden, cl::init(24), cl::cat(BoltOptCategory));
+    cl::ReallyHidden, cl::init(24), cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> TailDuplicationMinimumDuplication(
     "tail-duplication-minimum-duplication",

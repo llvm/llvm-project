@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s -fexperimental-new-constant-interpreter
 
 template<typename T, T val> struct A {}; // expected-note 3{{template parameter is declared here}}
 
@@ -626,3 +627,37 @@ namespace GH118190 {
   template <auto> int x;
   template <int i> int x<i>;
 }
+
+namespace GH38721 {
+  template <bool, decltype(auto)> struct A { static constexpr int k = 0; };
+  template <decltype(auto) v> struct A<true, v> { static constexpr int k = 1; };
+
+  const double d = 10.0;
+  static_assert(A<true, 1>::k == 1, "");
+  static_assert(A<true, (d)>::k == 1, "");
+} // namespace GH38721
+
+namespace GH58682 {
+  template <decltype(auto) v> struct A {};
+  template <decltype(auto) v> constexpr decltype(v) get(A<v>) { return v; }
+
+  int g;
+  static_assert(&get(A<(g)>{}) == &g, "");
+
+  template <typename> struct B;
+  template <decltype(auto) v> struct B<A<v>> { static constexpr int k = 1; };
+  static_assert(B<A<(g)>>::k == 1, "");
+} // namespace GH58682
+
+// C++26 [temp.deduct.type]p13, Example 8.
+namespace temp_deduct_type_p13 {
+  template<long n> struct A { };
+
+  template<typename T> struct C;
+  template<typename T, T n> struct C<A<n>> {
+    using Q = T;
+  };
+
+  using R = long;
+  using R = C<A<2>>::Q;
+} // namespace temp_deduct_type_p13

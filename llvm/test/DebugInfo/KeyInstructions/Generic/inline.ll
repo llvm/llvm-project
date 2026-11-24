@@ -9,8 +9,8 @@
 ; CHECK-NEXT: store i32 %add.i, ptr %x.i, align 4, !dbg [[G1R1:!.*]]
 
 ; CHECK: distinct !DISubprogram(name: "g", {{.*}}keyInstructions: true)
-; CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
-; CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
+; CHECK: [[G1R2]] = distinct !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
+; CHECK: [[G1R1]] = distinct !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 
 define hidden void @_Z1fi(i32 noundef %a) !dbg !11 {
 entry:

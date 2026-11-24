@@ -1,0 +1,16 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+
+# Test cleanup-funclet-entry machine basic block attribute
+
+---
+name:            test
+body: |
+  ; CHECK: bb.0 (cleanup-funclet-entry):
+  bb.0 (cleanup-funclet-entry):
+...
+---
+name:            withalign
+body: |
+  ; CHECK: bb.0 (cleanup-funclet-entry, align 8):
+  bb.0 (align 8, cleanup-funclet-entry):
+...

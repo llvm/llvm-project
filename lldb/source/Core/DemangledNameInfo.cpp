@@ -7,10 +7,86 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DemangledNameInfo.h"
+#include "lldb/Core/Mangled.h"
 
 using namespace llvm::itanium_demangle;
 
 namespace lldb_private {
+
+std::optional<DemangledNameInfo>
+DemangledNameInfoCache::Get(const Mangled &mangled) {
+  ConstString mangled_name = mangled.GetMangledName();
+  if (!mangled_name)
+    return std::nullopt;
+
+  bool cache_enabled = false;
+  {
+    auto state = m_state.LockShared();
+    cache_enabled = state->max_entries != 0;
+    auto it = state->infos.find(mangled_name);
+    if (it != state->infos.end())
+      return it->second;
+  }
+
+  // Demangle outside of the lock. Two threads asking for the same name at the
+  // same time just compute the same info twice, which is cheaper than making
+  // every other thread wait for one demangle to finish.
+  std::optional<DemangledNameInfo> info = mangled.ComputeDemangledInfo();
+
+  // Caching is disabled.
+  if (!cache_enabled)
+    return info;
+
+  auto state = m_state.Lock();
+  // Another thread might have cached this name while we were demangling.
+  if (state->infos.contains(mangled_name))
+    return info;
+
+  // Make room for the new entry by dropping a random one.
+  if (state->infos.size() >= state->max_entries)
+    state->EvictRandomEntry();
+
+  state->infos.insert({mangled_name, info});
+  state->mangled_names.push_back(mangled_name);
+  return info;
+}
+
+void DemangledNameInfoCache::State::EvictRandomEntry() {
+  assert(!mangled_names.empty() && "evicting from an empty cache");
+  std::uniform_int_distribution<size_t> dist(0, mangled_names.size() - 1);
+  size_t index = dist(rng);
+  infos.erase(mangled_names[index]);
+  mangled_names[index] = mangled_names.back();
+  mangled_names.pop_back();
+}
+
+void DemangledNameInfoCache::Clear() {
+  auto state = m_state.Lock();
+  state->infos.clear();
+  state->mangled_names.clear();
+}
+
+size_t DemangledNameInfoCache::GetMaxEntries() const {
+  return m_state.LockShared()->max_entries;
+}
+
+size_t DemangledNameInfoCache::GetNumEntries() const {
+  return m_state.LockShared()->infos.size();
+}
+
+void DemangledNameInfoCache::SetMaxEntries(size_t max_entries) {
+  // This is called before every lookup, so avoid taking the exclusive lock
+  // when the limit didn't change.
+  if (GetMaxEntries() == max_entries)
+    return;
+
+  auto state = m_state.Lock();
+  state->max_entries = max_entries;
+  if (state->infos.size() > state->max_entries) {
+    state->infos.clear();
+    state->mangled_names.clear();
+  }
+}
 
 bool TrackingOutputBuffer::shouldTrack() const {
   if (!isPrintingTopLevelFunctionType())

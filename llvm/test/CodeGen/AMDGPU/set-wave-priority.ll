@@ -126,7 +126,7 @@ exit:
 ; CHECK:       [[LOOP:.*]]:  ; %loop
 ; CHECK-NOT:       s_setprio
 ; CHECK:           s_cbranch_scc1 [[LOOP]]
-; CHECK        {{.*}}:  ; %exit
+; CHECK:      {{.*}}:  ; %exit
 ; CHECK-NOT:       s_setprio
 ; CHECK:           s_branch [[RET:.*]]
 ; CHECK:       [[ANOTHER_LOAD]]:  ; %another_load

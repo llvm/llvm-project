@@ -407,6 +407,13 @@ public:
   LLVM_ABI ConstantRange binaryOp(Instruction::BinaryOps BinOp,
                                   const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting from an
+  /// application of the specified binary operation \p BO (including
+  /// poison-generating flags) to a left hand side of this range and a right
+  /// hand side of \p Other.
+  LLVM_ABI ConstantRange binaryOp(const BinaryOperator &BO,
+                                  const ConstantRange &Other) const;
+
   /// Return a new range representing the possible values resulting
   /// from an application of the specified overflowing binary operator to a
   /// left hand side of this range and a right hand side of \p Other given
@@ -502,7 +509,8 @@ public:
 
   /// Return a new range representing the possible values resulting
   /// from a binary-or of a value in this range by a value in \p Other.
-  LLVM_ABI ConstantRange binaryOr(const ConstantRange &Other) const;
+  LLVM_ABI ConstantRange binaryOr(const ConstantRange &Other,
+                                  bool IsDisjoint = false) const;
 
   /// Return a new range representing the possible values resulting
   /// from a binary-xor of a value in this range by a value in \p Other.
@@ -549,11 +557,13 @@ public:
   LLVM_ABI ConstantRange smul_sat(const ConstantRange &Other) const;
 
   /// Perform an unsigned saturating left shift of this constant range by a
-  /// value in \p Other.
+  /// value in \p Other. Shift amounts greater than or equal to the bit width
+  /// are poison, in line with IR, and do not contribute towards the result.
   LLVM_ABI ConstantRange ushl_sat(const ConstantRange &Other) const;
 
   /// Perform a signed saturating left shift of this constant range by a
-  /// value in \p Other.
+  /// value in \p Other. Shift amounts greater than or equal to the bit width
+  /// are poison, in line with IR, and do not contribute towards the result.
   LLVM_ABI ConstantRange sshl_sat(const ConstantRange &Other) const;
 
   /// Return a new range that is the logical not of the current set.

@@ -407,48 +407,25 @@ bool LoongArchAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
 void LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target, uint64_t &FixedValue,
                                    bool IsResolved) {
-  auto Fallback = [&]() {
-    MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
-    return;
-  };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
-    // It's possible for Target to have (SymB != nullptr && SymA == nullptr).
-    // Go to the fallback path when we encounter this. See also #196927.
-    if (!Target.getAddSym())
-      return Fallback();
-
     assert(Target.getSpecifier() == 0 &&
            "relocatable SymA-SymB cannot have relocation specifier");
+    // For generate R_LARCH_{32/64}_PCREL relocation.
+    auto Fallback = [&]() {
+      MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
+      return;
+    };
+    // Check if SubSym (SubSym) is in the same section as the current fragment
+    // and the PC-relative offset can be resolved. In that case, we can
+    // generate a PCRel relocation (A - PC + PC - B) instead of ADD/SUB pairs.
+    auto CanResolveSubSymAsPCRel = [&]() {
+      const MCSymbol *SubSym = Target.getSubSym();
+      return SubSym->isInSection() && &SubSym->getSection() == F.getParent() &&
+             isPCRelFixupResolved(SubSym, F);
+    };
+
     std::pair<MCFixupKind, MCFixupKind> FK;
-    const MCSymbol &SA = *Target.getAddSym();
-    const MCSymbol &SB = *Target.getSubSym();
-
-    bool force = !SA.isInSection() || !SB.isInSection();
-    if (!force) {
-      const MCSection &SecA = SA.getSection();
-      const MCSection &SecB = SB.getSection();
-      const MCSection &SecCur = *F.getParent();
-
-      // To handle the case of A - B which B is same section with the current,
-      // generate PCRel relocations is better than ADD/SUB relocation pair.
-      // We can resolve it as A - PC + PC - B. The A - PC will be resolved
-      // as a PCRel relocation, while PC - B will serve as the addend.
-      // If the linker relaxation is disabled, it can be done directly since
-      // PC - B is constant. Otherwise, we should evaluate whether PC - B
-      // is constant. If it can be resolved as PCRel, use Fallback which
-      // generates R_LARCH_{32,64}_PCREL relocation later.
-      if (&SecA != &SecB && &SecB == &SecCur &&
-          isPCRelFixupResolved(Target.getSubSym(), F))
-        return Fallback();
-
-      // In SecA == SecB case. If the section is not linker-relaxable, the
-      // FixedValue has already been calculated out in evaluateFixup,
-      // return true and avoid record relocations.
-      if (&SecA == &SecB && !SecA.isLinkerRelaxable())
-        return;
-    }
-
     switch (Fixup.getKind()) {
     case FK_Data_1:
       FK = getRelocPairForSize(8);
@@ -457,9 +434,13 @@ void LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
       FK = getRelocPairForSize(16);
       break;
     case FK_Data_4:
+      if (CanResolveSubSymAsPCRel())
+        return Fallback();
       FK = getRelocPairForSize(32);
       break;
     case FK_Data_8:
+      if (CanResolveSubSymAsPCRel())
+        return Fallback();
       FK = getRelocPairForSize(64);
       break;
     case FK_Data_leb128:

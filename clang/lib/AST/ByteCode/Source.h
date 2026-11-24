@@ -76,7 +76,7 @@ private:
 /// Describes the statement/declaration an opcode was generated from.
 class SourceInfo final {
 public:
-  SourceInfo() {}
+  SourceInfo() : Source(nullptr) {}
   SourceInfo(const Stmt *E) : Source(E) {}
   SourceInfo(const Decl *D) : Source(D) {}
 
@@ -91,7 +91,9 @@ public:
   }
   const Expr *asExpr() const { return dyn_cast_if_present<Expr>(asStmt()); }
 
-  operator bool() const { return !Source.isNull(); }
+  explicit operator bool() const { return !Source.isNull(); }
+
+  bool operator!=(SourceInfo O) { return Source != O.Source; }
 
 private:
   llvm::PointerUnion<const Decl *, const Stmt *> Source;
@@ -112,13 +114,22 @@ public:
     Infos.push_back(Info);
   }
 
+  bool empty() const { return Offsets.empty(); }
+  SourceInfo back() const { return Infos.back(); }
+
   SourceInfo findSourceForOffset(uint32_t Offset) const {
     assert(!Offsets.empty());
     assert(Offsets.size() == Infos.size());
 #ifndef NDEBUG
     assert(llvm::is_sorted(Offsets));
 #endif
-    const auto *It = llvm::lower_bound(Offsets, Offset);
+
+    // Find the last offset <= Offset.
+    auto *It = llvm::upper_bound(Offsets, Offset);
+    if (It == Offsets.begin())
+      return Infos[0];
+
+    --It;
     return Infos[It - Offsets.begin()];
   }
 };
@@ -127,7 +138,6 @@ public:
 class SourceMapper {
 public:
   virtual ~SourceMapper() {}
-
   /// Returns source information for a given PC in a function.
   virtual SourceInfo getSource(CodePtr PC) const = 0;
 };

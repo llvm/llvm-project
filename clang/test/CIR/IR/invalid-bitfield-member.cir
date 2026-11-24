@@ -1,0 +1,89 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// A bit-field member is an access unit, and an access unit exists to hold
+// bit-fields.
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+// expected-error @below {{bit-field member must hold at least one bit-field}}
+!rec_S = !cir.struct<"S" {bitfield !cir.bitfield<!u32i, []>}>
+
+module {}
+
+// -----
+
+// Storage is an access unit, never another bit-field.
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+// expected-error @below {{bit-field access unit storage cannot itself be a bit-field type}}
+!rec_S = !cir.struct<"S" {bitfield !cir.bitfield<!cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>]>, [#cir.bitfield_decl<!s32i, 4>]>}>
+
+module {}
+
+// -----
+
+// A unit is loaded and stored whole, so its storage has to have a size.
+!s32i = !cir.int<s, 32>
+// expected-error @below {{bit-field access unit storage must be sized, got '!cir.void'}}
+!rec_S = !cir.struct<"S" {bitfield !cir.bitfield<!cir.void, [#cir.bitfield_decl<!s32i, 4>]>}>
+
+module {}
+
+// -----
+
+// A bit-field is declared with an integer or boolean type.
+!u32i = !cir.int<u, 32>
+// expected-error @below {{failed to verify 'declared_type': integer or boolean type}}
+// expected-error @below {{failed to parse CIR_BitFieldType parameter 'fields'}}
+!rec_S = !cir.struct<"S" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!cir.float, 4>]>}>
+
+module {}
+
+// -----
+
+// Only the source can leave a bit-field unnamed, and a zero-width one has no
+// bits for a name to reach.
+!s32i = !cir.int<s, 32>
+// expected-error @below {{zero-width bit-field cannot be named}}
+// expected-error @below {{failed to parse CIR_BitFieldType parameter 'fields'}}
+!rec_S = !cir.struct<"S" {empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0>]>}>
+
+module {}
+
+// -----
+
+// A zero-width bit-field ends the run before it rather than joining a unit.
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+// expected-error @below {{a zero-width bit-field cannot occupy an access unit}}
+!rec_S = !cir.struct<"S" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 0, unnamed>]>}>
+
+module {}
+
+// -----
+
+// A member with no storage is the zero-width bit-field, and nothing else: a
+// field holding bits is held by a unit.
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a bit-field member without storage must hold a single zero-width bit-field}}
+!rec_S = !cir.struct<"S" {empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 3, unnamed>]>}>
+
+module {}
+
+// -----
+
+// Two of them are two members, since each ends a run of its own.
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a bit-field member without storage must hold a single zero-width bit-field}}
+!rec_S = !cir.struct<"S" {empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>, #cir.bitfield_decl<!s32i, 0, unnamed>]>}>
+
+module {}
+
+// -----
+
+// Every variant of a union starts at offset zero, so a bit-field variant is an
+// access unit of its own and there is no run for a zero-width one to end.
+!s32i = !cir.int<s, 32>
+// expected-error @below {{union bit-field member at index 1 must own its access unit storage}}
+!rec_U = !cir.union<"U" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>}>
+
+module {}

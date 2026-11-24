@@ -5,8 +5,8 @@
 
 # RUN: ld.lld %t.la32.o --section-start=.text=0x20000 --section-start=.data=0x20008 -o %t.la32.1
 # RUN: ld.lld %t.la64.o --section-start=.text=0x20000 --section-start=.data=0x20008 -o %t.la64.1
-# RUN: llvm-objdump --no-show-raw-insn -d %t.la32.1 | FileCheck --match-full-lines %s
-# RUN: llvm-objdump --no-show-raw-insn -d %t.la64.1 | FileCheck --match-full-lines %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t.la32.1 | FileCheck --match-full-lines %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t.la64.1 | FileCheck --match-full-lines %s
 # CHECK: 20000: pcaddi $t0, 2
 
 # RUN: not ld.lld %t.la32.o --section-start=.text=0x20000 --section-start=.data=0x220000 -o /dev/null 2>&1 | \

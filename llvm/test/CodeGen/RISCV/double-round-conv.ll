@@ -124,22 +124,22 @@ define i64 @test_floor_si64(double %x) {
 define zeroext i8 @test_floor_ui8(double %x) {
 ; RV32IFD-LABEL: test_floor_ui8:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rdn
+; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: test_floor_ui8:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.lu.d a0, fa0, rdn
+; RV64IFD-NEXT:    fcvt.lu.d a0, fa0, rtz
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: test_floor_ui8:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rdn
+; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: test_floor_ui8:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a0, a0, rdn
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a0, a0, rtz
 ; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = fptoui double %a to i8
@@ -149,22 +149,22 @@ define zeroext i8 @test_floor_ui8(double %x) {
 define zeroext i16 @test_floor_ui16(double %x) {
 ; RV32IFD-LABEL: test_floor_ui16:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rdn
+; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: test_floor_ui16:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.lu.d a0, fa0, rdn
+; RV64IFD-NEXT:    fcvt.lu.d a0, fa0, rtz
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: test_floor_ui16:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rdn
+; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: test_floor_ui16:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a0, a0, rdn
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a0, a0, rtz
 ; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = fptoui double %a to i16
@@ -174,17 +174,17 @@ define zeroext i16 @test_floor_ui16(double %x) {
 define signext i32 @test_floor_ui32(double %x) {
 ; CHECKIFD-LABEL: test_floor_ui32:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fcvt.wu.d a0, fa0, rdn
+; CHECKIFD-NEXT:    fcvt.wu.d a0, fa0, rtz
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: test_floor_ui32:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rdn
+; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: test_floor_ui32:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rdn
+; RV64IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
 ; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = fptoui double %a to i32
@@ -198,7 +198,6 @@ define i64 @test_floor_ui64(double %x) {
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call floor
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
@@ -208,7 +207,7 @@ define i64 @test_floor_ui64(double %x) {
 ;
 ; RV64IFD-LABEL: test_floor_ui64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.lu.d a0, fa0, rdn
+; RV64IFD-NEXT:    fcvt.lu.d a0, fa0, rtz
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: test_floor_ui64:
@@ -217,7 +216,6 @@ define i64 @test_floor_ui64(double %x) {
 ; RV32IZFINXZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    .cfi_offset ra, -4
-; RV32IZFINXZDINX-NEXT:    call floor
 ; RV32IZFINXZDINX-NEXT:    call __fixunsdfdi
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    .cfi_restore ra
@@ -227,7 +225,7 @@ define i64 @test_floor_ui64(double %x) {
 ;
 ; RV64IZFINXZDINX-LABEL: test_floor_ui64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a0, a0, rdn
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a0, a0, rtz
 ; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = fptoui double %a to i64
@@ -537,7 +535,6 @@ define i64 @test_trunc_si64(double %x) {
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call trunc
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
@@ -556,7 +553,6 @@ define i64 @test_trunc_si64(double %x) {
 ; RV32IZFINXZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    .cfi_offset ra, -4
-; RV32IZFINXZDINX-NEXT:    call trunc
 ; RV32IZFINXZDINX-NEXT:    call __fixdfdi
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    .cfi_restore ra
@@ -650,7 +646,6 @@ define i64 @test_trunc_ui64(double %x) {
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call trunc
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
@@ -669,7 +664,6 @@ define i64 @test_trunc_ui64(double %x) {
 ; RV32IZFINXZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    .cfi_offset ra, -4
-; RV32IZFINXZDINX-NEXT:    call trunc
 ; RV32IZFINXZDINX-NEXT:    call __fixunsdfdi
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    .cfi_restore ra

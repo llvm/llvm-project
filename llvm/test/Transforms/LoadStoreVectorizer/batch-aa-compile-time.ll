@@ -5,7 +5,7 @@
 ; and caching the result leads to 2 calls to that mechanism instead of ~300,000 (run with -stats to see the difference)
 
 ; This test only demonstrates the compile time issue if capture-tracking-max-uses-to-explore is set to at least 1024,
-; because with the default value of 100, the CaptureTracking analysis is not run, NoAlias is not proven, and the vectorizer gives up early.
+; because with the default value of 150, the CaptureTracking analysis is not run, NoAlias is not proven, and the vectorizer gives up early.
 
 @global_mem = external global i8, align 4
 

@@ -14,7 +14,7 @@ define i64 @test(i64 %d, ptr %a) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP3]], <i64 0, i64 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i64> [[TMP5]], splat (i64 1)
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> <i64 undef, i64 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> <i64 poison, i64 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i64> <i64 0, i64 1, i64 1, i64 1>, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i64>, ptr [[ARRAYIDX_2]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i64> [[TMP9]], [[TMP8]]

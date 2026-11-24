@@ -481,3 +481,106 @@ TEST(SmallPtrSetTest, Reserve) {
   Set.reserve(192);
   EXPECT_EQ(Set.capacity(), 512u);
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(SmallPtrSetTest, SwapInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other;
+  Set.swap(Other);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveConstructInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  [[maybe_unused]] SmallPtrSet<int *, 2> Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveAssignInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  [[maybe_unused]] SmallPtrSet<int *, 2> Other;
+  Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, IteratorComparability) {
+  SmallPtrSet<int *, 4>::iterator I1, I2;
+  EXPECT_EQ(I1, I2);
+
+  int Vals[2];
+  SmallPtrSet<int *, 4> Set1, Set2;
+  Set1.insert(&Vals[0]);
+  Set2.insert(&Vals[1]);
+  EXPECT_DEATH((void)(Set1.begin() == Set2.begin()), "incomparable iterators");
+}
+
+TEST(SmallPtrSetTest, InsertInvalidatesIteratorComparison) {
+  int Vals[2];
+  SmallPtrSet<int *, 4> Set;
+  Set.insert(&Vals[0]);
+  auto It = Set.begin();
+  Set.insert(&Vals[1]);
+  EXPECT_DEATH((void)(It == Set.end()), "incomparable iterators");
+}
+#endif
+
+namespace {
+struct PolymorphicBase {
+  int Value = 0;
+  explicit PolymorphicBase(int V = 0) : Value(V) {}
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+} // namespace
+
+TEST(SmallPtrSetTest, PolymorphicPointers) {
+  PolymorphicBase Bases[4] = {PolymorphicBase(1), PolymorphicBase(2),
+                              PolymorphicBase(3), PolymorphicBase(4)};
+  PolymorphicDerived Deriveds[4] = {
+      PolymorphicDerived(5), PolymorphicDerived(6), PolymorphicDerived(7),
+      PolymorphicDerived(8)};
+
+  SmallPtrSet<PolymorphicBase *, 4> Set;
+  // Test small regime (including remove_if and iteration).
+  Set.insert(&Bases[0]);
+  Set.insert(&Deriveds[0]);
+  EXPECT_TRUE(Set.contains(&Bases[0]));
+  const PolymorphicBase *ConstDerived0 = &Deriveds[0];
+  EXPECT_TRUE(Set.contains(ConstDerived0));
+  EXPECT_EQ(10, (*Set.find(ConstDerived0))->get());
+  EXPECT_TRUE(
+      Set.remove_if([](const PolymorphicBase *P) { return P->get() == 1; }));
+  EXPECT_EQ(1u, Set.size());
+
+  // Grow into large regime and exercise iteration, erase, and remove_if.
+  for (auto &B : Bases)
+    Set.insert(&B);
+  for (auto &D : Deriveds)
+    Set.insert(&D);
+  EXPECT_EQ(8u, Set.size());
+
+  int Sum = 0;
+  for (const PolymorphicBase *P : Set)
+    Sum += P->get();
+  // Bases: 1 + 2 + 3 + 4 = 10; Deriveds: 10 + 12 + 14 + 16 = 52.
+  EXPECT_EQ(62, Sum);
+
+  EXPECT_TRUE(Set.erase(&Bases[1]));
+  EXPECT_TRUE(
+      Set.remove_if([](const PolymorphicBase *P) { return P->get() > 12; }));
+  EXPECT_EQ(5u, Set.size());
+}

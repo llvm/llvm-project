@@ -32,7 +32,7 @@ end subroutine
 ! CHECK:         %[[MADDR:.*]] = fir.box_addr %[[MBOX]]
 ! CHECK:         %[[ORIG:.*]] = fir.load %[[MADDR]] : !fir.heap<f32>
 ! CHECK:         fir.store %[[ORIG]] to %[[OTMP:.*]] : !fir.ref<f32>
-! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name = "omp_orig"
+! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name("omp_orig")
 ! CHECK:         %[[PVAL:.*]] = fir.load %[[ODECL]]#0 : !fir.ref<f32>
 ! CHECK:         %[[PRIV:.*]] = fir.allocmem f32
 ! CHECK:         fir.store %[[PVAL]] to %[[PRIV]] : !fir.heap<f32>

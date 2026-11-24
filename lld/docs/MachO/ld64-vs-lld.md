@@ -52,3 +52,37 @@ environment variable. LLD flips this default to prefer hermetic builds, but
 allows disabling this behavior by setting `ZERO_AR_DATE=0`. Any other value
 of `ZERO_AR_DATE` will be ignored.
 
+## Subsections via Symbols and `--warn-missing-subsections-via-symbols`
+
+In Mach-O object files, the `MH_SUBSECTIONS_VIA_SYMBOLS` header flag (emitted via
+the `.subsections_via_symbols` assembly directive) indicates that sections can be
+divided into independent subsections along symbol boundaries.
+
+When an object file is missing `MH_SUBSECTIONS_VIA_SYMBOLS`:
+- LLD treats each section in that object file as a single monolithic block rather
+  than splitting it into individual symbol-level subsections.
+- **Dead code stripping (`-dead_strip`)**: Unreferenced functions or data in that
+  file cannot be stripped individually. If any symbol in the section is live, the
+  entire section is retained in the output binary.
+- **Identical Code Folding (ICF) and Section Ordering**: Functions cannot be
+  individually deduplicated or reordered via `-order_file`.
+- **Branch range extension thunks**: On architectures with limited direct branch
+  ranges (such as ARM64's $\pm 128\text{ MB}$ limit for `b` / `bl`), large
+  monolithic sections cannot have branch thunk islands inserted within them. In
+  large binaries, this can lead to thunk range overruns (e.g. `relocation
+  R_AARCH64_CALL26 out of range`).
+
+Handwritten assembly files frequently omit `.subsections_via_symbols`. To help
+identify object files causing dead-stripping or layout issues, LLD provides:
+- `--warn-missing-subsections-via-symbols`: Emits a warning when an input object
+  file with non-empty sections is missing `MH_SUBSECTIONS_VIA_SYMBOLS`.
+- `--no-warn-missing-subsections-via-symbols`: Disables the warning (default).
+
+To resolve the warning and allow subsection splitting, add `.subsections_via_symbols`
+to the assembly source:
+```asm
+#if defined(__APPLE__)
+.subsections_via_symbols
+#endif
+```
+

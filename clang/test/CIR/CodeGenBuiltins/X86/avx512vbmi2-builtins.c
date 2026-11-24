@@ -13,7 +13,7 @@ __m512i test_mm512_shldv_epi64(__m512i s, __m512i a, __m512i b) {
   // CIR: %{{.*}} = cir.call @_mm512_shldv_epi64
   // CIR-LABEL: cir.func{{.*}} @_mm512_shldv_epi64(
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s64i> -> !cir.vector<8 x !u64i>
-  // CIR: %{{.*}} = cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !u64i>{{.*}}, !cir.vector<8 x !u64i>{{.*}}, !cir.vector<8 x !u64i>{{.*}}) -> !cir.vector<8 x !u64i>
+  // CIR: %{{.*}} = cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !u64i>
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.vector<8 x !u64i> -> !cir.vector<8 x !s64i>
   // LLVM-LABEL: @test_mm512_shldv_epi64
   // LLVM: call <8 x i64> @llvm.fshl.v8i64(<8 x i64> {{.*}}, <8 x i64> {{.*}}, <8 x i64>
@@ -151,7 +151,7 @@ __m512i test_mm512_shldv_epi32(__m512i s, __m512i a, __m512i b) {
   // CIR-LABEL: test_mm512_shldv_epi32
   // CIR: cir.call @_mm512_shldv_epi32
   // CIR-LABEL: cir.func{{.*}} @_mm512_shldv_epi32(
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<16 x !u32i>, !cir.vector<16 x !u32i>, !cir.vector<16 x !u32i>) -> !cir.vector<16 x !u32i>
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<16 x !u32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<16 x !u32i> -> !cir.vector<8 x !s64i>
   // LLVM-LABEL: @test_mm512_shldv_epi32
   // LLVM: call <16 x i32> @llvm.fshl.v16i32(<16 x i32> {{.*}}, <16 x i32> {{.*}}, <16 x i32>
@@ -194,7 +194,7 @@ __m512i test_mm512_shldv_epi16(__m512i s, __m512i a, __m512i b) {
   // CIR-LABEL: @test_mm512_shldv_epi16
   // CIR: cir.call @_mm512_shldv_epi16
   // CIR-LABEL: cir.func{{.*}} @_mm512_shldv_epi16(
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}}{{.*}} : (!cir.vector<32 x !u16i>, !cir.vector<32 x !u16i>, !cir.vector<32 x !u16i>) -> !cir.vector<32 x !u16i>
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<32 x !u16i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<32 x !u16i> -> !cir.vector<8 x !s64i>
   // LLVM-LABEL: @test_mm512_shldv_epi16
   // LLVM: call <32 x i16> @llvm.fshl.v32i16(<32 x i16> {{.*}}, <32 x i16> {{.*}}, <32 x i16>

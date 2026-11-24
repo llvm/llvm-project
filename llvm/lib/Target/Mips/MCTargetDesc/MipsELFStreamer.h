@@ -57,6 +57,12 @@ public:
   /// directives are emitted.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
   void emitIntValue(uint64_t Value, unsigned Size) override;
+  void emitBytes(StringRef Data) override;
+  using MCELFStreamer::emitFill;
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                SMLoc Loc = SMLoc()) override;
+  void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
+                SMLoc Loc = SMLoc()) override;
 
   // Overriding these functions allows us to avoid recording of these labels
   // in EmitLabel and later marking them as microMIPS.

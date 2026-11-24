@@ -7,6 +7,7 @@ add_header_library(
     libc_errno.h
   DEPENDS
     libc.hdr.errno_macros
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -17,6 +18,7 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.optional
@@ -167,6 +169,28 @@ add_header_library(
   HDRS
     alloc-checker.h
   DEPENDS
+    libc.hdr.func.aligned_alloc
+    libc.hdr.func.malloc
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.new
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.os
+)
+
+add_header_library(
+  checked_ptr
+  HDRS
+    checked_ptr.h
+  DEPENDS
+    .alloc_checker
+    .libc_assert
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.nullptr_t
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -236,13 +260,16 @@ add_header_library(
     integer_to_string.h
   DEPENDS
     .big_int
+    .common
+    .ctype_utils
+    .wctype_utils
     libc.hdr.stdint_proxy
-    libc.src.__support.common
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -278,6 +305,7 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .high_precision_decimal
+    .math_extras
     .str_to_integer
     .str_to_num_result
     .uint128
@@ -288,11 +316,14 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -364,6 +395,21 @@ add_header_library(
 )
 
 add_header_library(
+  dynamic_buffer
+  HDRS
+    dynamic_buffer.h
+  DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.realloc
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   number_pair
   HDRS
     number_pair.h
@@ -392,6 +438,17 @@ add_header_library(
     frac128.h
   DEPENDS
     .big_int
+    .frac64
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  frac256
+  HDRS
+    frac256.h
+  DEPENDS
+    .big_int
+    .frac128
     libc.src.__support.macros.config
 )
 
@@ -401,6 +458,7 @@ add_header_library(
     frac64.h
   DEPENDS
     .big_int
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -493,6 +551,7 @@ add_subdirectory(net)
 add_subdirectory(threads)
 
 add_subdirectory(File)
+add_subdirectory(pwd)
 
 add_subdirectory(printf_core)
 

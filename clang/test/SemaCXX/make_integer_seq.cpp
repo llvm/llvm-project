@@ -50,3 +50,8 @@ __make_integer_seq<f, int, 0> x; // expected-error{{template template parameter 
 
 __make_integer_seq<__make_integer_seq, int, 10> PR28494; // expected-note{{different template parameters}}
 // expected-error@make_integer_seq.cpp:* {{template argument for template template parameter must be a class template or type alias template}}
+
+// The largest type pack whose pack indices fit in SubstTemplateTypeParmType.
+template <class... Ts> using Expand = void(Ts...);
+template <class T, T... I> struct ExpandSeq { using type = Expand<decltype(I)...>; };
+using LargePack = __make_integer_seq<ExpandSeq, int, 65535>::type;

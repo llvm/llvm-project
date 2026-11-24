@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpGenHelpers.h"
+#include "PartitionHelpers.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -35,6 +36,11 @@ static cl::opt<unsigned> opShardCount(
     "op-shard-count",
     cl::desc("The number of shards into which the op classes will be divided"),
     cl::cat(opDefGenCat), cl::init(1));
+static cl::opt<std::string> opPartition(
+    "op-partition",
+    cl::desc("Only consider the ops in this op partition (see `Op::partition`) "
+             "and emit the registration hooks of the partition"),
+    cl::cat(opDefGenCat));
 
 static std::string getOperationName(const Record &def) {
   auto prefix = def.getValueAsDef("opDialect")->getValueAsString("name");
@@ -44,28 +50,43 @@ static std::string getOperationName(const Record &def) {
   return std::string(formatv("{0}.{1}", prefix, opName));
 }
 
-std::vector<const Record *>
-mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &records) {
+std::string mlir::tblgen::getOpRegistrationHookName(const Dialect &dialect,
+                                                    StringRef partition) {
+  return "register" + dialect.getCppClassName() + "Operations" +
+         getPartitionFunctionSuffix(partition);
+}
+
+std::vector<const Record *> mlir::tblgen::getRequestedOpDefinitions(
+    const RecordKeeper &records,
+    std::vector<const Record *> *otherPartitionDefs) {
   const Record *classDef = records.getClass("Op");
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the 'Op' class!\n");
 
   Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
   std::vector<const Record *> defs;
-  for (const auto &def : records.getDefs()) {
-    if (!def.second->isSubClassOf(classDef))
+  for (const Record *def : records.getDefs()) {
+    if (!def->isSubClassOf(classDef))
       continue;
     // Include if no include filter or include filter matches.
-    if (!opIncFilter.empty() &&
-        !includeRegex.match(getOperationName(*def.second)))
+    if (!opIncFilter.empty() && !includeRegex.match(getOperationName(*def)))
       continue;
     // Unless there is an exclude filter and it matches.
-    if (!opExcFilter.empty() &&
-        excludeRegex.match(getOperationName(*def.second)))
+    if (!opExcFilter.empty() && excludeRegex.match(getOperationName(*def)))
       continue;
-    defs.push_back(def.second.get());
+    defs.push_back(def);
   }
 
+  if (opPartition.empty())
+    return defs;
+
+  // Index sharding does not emit the registration hooks of partitions.
+  if (opShardCount > 1)
+    PrintFatalError("-op-partition cannot be combined with -op-shard-count");
+
+  // Only include ops of the specified partition.
+  verifyPartitions(defs, opPartition, "op", "-op-partition");
+  selectPartition(opPartition, defs, otherPartitionDefs);
   return defs;
 }
 
@@ -103,3 +124,5 @@ void mlir::tblgen::shardOpDefinitions(
     start += size;
   }
 }
+
+StringRef mlir::tblgen::getSpecifiedOpPartition() { return opPartition; }

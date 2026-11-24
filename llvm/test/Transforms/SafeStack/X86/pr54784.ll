@@ -7,11 +7,11 @@ target triple = "x86_64-unknown-unknown"
 define void @min_of_pointers(ptr %p) safestack {
 ; CHECK-LABEL: @min_of_pointers(
 ; CHECK-NEXT:    [[UNSAFE_STACK_PTR:%.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr, align 8
-; CHECK-NEXT:    [[UNSAFE_STACK_STATIC_TOP:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i32 -16
+; CHECK-NEXT:    [[UNSAFE_STACK_STATIC_TOP:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i64 -16
 ; CHECK-NEXT:    store ptr [[UNSAFE_STACK_STATIC_TOP]], ptr @__safestack_unsafe_stack_ptr, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i32 -4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i64 -4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[TMP1]], [[P:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i32 -4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i64 -4
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], ptr [[TMP2]], ptr [[P]]
 ; CHECK-NEXT:    store i32 0, ptr [[S]], align 4
 ; CHECK-NEXT:    store ptr [[UNSAFE_STACK_PTR]], ptr @__safestack_unsafe_stack_ptr, align 8

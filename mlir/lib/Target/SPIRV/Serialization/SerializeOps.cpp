@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
@@ -268,6 +269,17 @@ LogicalResult Serializer::processFuncParameter(spirv::FuncOp op) {
     // Process decoration attributes of arguments.
     auto funcOp = cast<FunctionOpInterface>(*op);
     for (auto argAttr : funcOp.getArgAttrs(idx)) {
+      if (argAttr.getName() == spirv::getFuncParamAlignmentAttrName() ||
+          argAttr.getName() == spirv::getFuncParamAttrName()) {
+        auto decoration =
+            argAttr.getName() == spirv::getFuncParamAlignmentAttrName()
+                ? Decoration::Alignment
+                : Decoration::FuncParamAttr;
+        if (failed(processDecorationAttr(op.getLoc(), argValueID, decoration,
+                                         argAttr.getValue())))
+          return failure();
+        continue;
+      }
       if (argAttr.getName() != DecorationAttr::name)
         continue;
 
@@ -312,6 +324,13 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   operands.push_back(static_cast<uint32_t>(op.getFunctionControl()));
   operands.push_back(fnTypeID);
   encodeInstructionInto(functionHeader, spirv::Opcode::OpFunction, operands);
+
+  if (!resultTypes.empty()) {
+    if (Attribute attr = op.getResultAttr(0, spirv::getFuncParamAttrName()))
+      if (failed(processDecorationAttr(op.getLoc(), funcID,
+                                       Decoration::FuncParamAttr, attr)))
+        return failure();
+  }
 
   // Add function name.
   if (failed(processName(funcID, op.getName()))) {
@@ -413,6 +432,8 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   functions.append(functionBody.begin(), functionBody.end());
   functionHeader.clear();
   functionBody.clear();
+  valueIDMap.clear();
+  blockIDMap.clear();
 
   return success();
 }
@@ -935,15 +956,29 @@ LogicalResult Serializer::processBranchOp(spirv::BranchOp branchOp) {
 }
 
 LogicalResult Serializer::processSwitchOp(spirv::SwitchOp switchOp) {
-  uint32_t selectorID = getValueID(switchOp.getSelector());
+  Value selector = switchOp.getSelector();
+  uint32_t selectorID = getValueID(selector);
   uint32_t defaultLabelID = getOrCreateBlockID(switchOp.getDefaultTarget());
   SmallVector<uint32_t> arguments{selectorID, defaultLabelID};
 
   std::optional<mlir::DenseIntElementsAttr> literals = switchOp.getLiterals();
   BlockRange targets = switchOp.getTargets();
   if (literals) {
+    Type selectorType = selector.getType();
+    unsigned bitWidth = selectorType.getIntOrFloatBitWidth();
+    bool isSigned = selectorType.isSignedInteger();
     for (auto [literal, target] : llvm::zip_equal(*literals, targets)) {
-      arguments.push_back(literal.getLimitedValue());
+      if (bitWidth <= 32) {
+        // Sub-word literals occupy the low-order bits of the word and are
+        // sign-extended for signed selector types, zero-extended otherwise.
+        arguments.push_back(
+            isSigned ? static_cast<uint32_t>(literal.getSExtValue())
+                     : static_cast<uint32_t>(literal.getZExtValue()));
+      } else {
+        // Wider literals span multiple words, low-order word first.
+        for (unsigned offset = 0; offset < bitWidth; offset += 32)
+          arguments.push_back(literal.extractBitsAsZExtValue(32, offset));
+      }
       uint32_t targetLabelID = getOrCreateBlockID(target);
       arguments.push_back(targetLabelID);
     }
@@ -1095,6 +1130,38 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
     valueIDMap[op.getResult(0)] = funcCallID;
 
   encodeInstructionInto(functionBody, spirv::Opcode::OpFunctionCall, operands);
+  for (auto attr : op->getDiscardableAttrs())
+    if (failed(processDecoration(op.getLoc(), funcCallID, attr)))
+      return failure();
+  return success();
+}
+
+template <>
+LogicalResult Serializer::processOp<spirv::INTELFunctionPointerCallOp>(
+    spirv::INTELFunctionPointerCallOp op) {
+  uint32_t resTypeID = 0;
+  Value returnValue = op.getReturnValue();
+  Type resultTy = returnValue ? returnValue.getType() : getVoidType();
+  if (failed(processType(op.getLoc(), resultTy, resTypeID)))
+    return failure();
+
+  uint32_t callID = getNextID();
+  SmallVector<uint32_t, 8> operands{resTypeID, callID};
+  for (Value value : op->getOperands()) {
+    uint32_t valueID = getValueID(value);
+    assert(valueID &&
+           "cannot find a value for spirv.INTEL.FunctionPointerCall");
+    operands.push_back(valueID);
+  }
+
+  if (returnValue)
+    valueIDMap[returnValue] = callID;
+
+  encodeInstructionInto(functionBody, spirv::Opcode::OpFunctionPointerCallINTEL,
+                        operands);
+  for (NamedAttribute attr : op->getDiscardableAttrs())
+    if (failed(processDecoration(op.getLoc(), callID, attr)))
+      return failure();
   return success();
 }
 
@@ -1163,6 +1230,21 @@ LogicalResult Serializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   operands.push_back(static_cast<uint32_t>(resultStorage));
   encodeInstructionInto(functionBody, spirv::Opcode::OpGenericCastToPtrExplicit,
                         operands);
+  return success();
+}
+
+template <>
+LogicalResult Serializer::processOp<spirv::KHRAbortOp>(spirv::KHRAbortOp op) {
+  Value message = op.getMessage();
+  uint32_t messageTypeID = 0;
+  if (failed(processType(op.getLoc(), message.getType(), messageTypeID)))
+    return failure();
+  uint32_t messageID = getValueID(message);
+  assert(messageID && "use before def!");
+  if (failed(emitDebugLine(functionBody, op.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody, spirv::Opcode::OpAbortKHR,
+                        {messageTypeID, messageID});
   return success();
 }
 

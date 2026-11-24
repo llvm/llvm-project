@@ -21,7 +21,6 @@ def NVVM_Dialect : Dialect {
   let cppNamespace = "::mlir::NVVM";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let hasOperationAttrVerify = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate external kernel
@@ -89,7 +88,7 @@ def NVVM_Dialect : Dialect {
                                            NamedAttribute argAttr) override;
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 #endif // NVVMIR_DIALECT

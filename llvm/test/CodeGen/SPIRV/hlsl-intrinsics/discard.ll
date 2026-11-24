@@ -27,8 +27,8 @@ entry:
 ; CHECK:       OpBranchConditional %[[#cmplt]] %[[#truel:]] %[[#endl:]]
 ; CHECK:       %[[#truel]] = OpLabel
 ; SPIRV15:     OpKill
-; SPIRV16-NO:  OpKill
-; SPIRV15-NO:  OpBranch %[[#endl]]
+; SPIRV16-NOT:  OpKill
+; SPIRV15-NOT:  OpBranch %[[#endl]]
 ; SPIRV16:     OpDemoteToHelperInvocation
 ; SPIRV16:     OpBranch %[[#endl]]
 ; CHECK:       %[[#endl]] = OpLabel
@@ -82,8 +82,8 @@ entry:
 ; CHECK:       OpBranchConditional %[[#opany]]  %[[#truel:]] %[[#endl:]]
 ; CHECK:       %[[#truel]] = OpLabel
 ; SPIRV15:     OpKill
-; SPIRV16-NO:  OpKill
-; SPIRV15-NO:  OpBranch %[[#endl]]
+; SPIRV16-NOT:  OpKill
+; SPIRV15-NOT:  OpBranch %[[#endl]]
 ; SPIRV16:     OpDemoteToHelperInvocation
 ; SPIRV16:     OpBranch %[[#endl]]
 ; CHECK:       %[[#endl]] = OpLabel

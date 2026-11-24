@@ -17,6 +17,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MCA/Support.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,6 +28,8 @@ namespace llvm {
 namespace mca {
 
 char RecycledInstErr::ID = 0;
+
+template class LLVM_EXPORT_TEMPLATE InstructionError<MCInst>;
 
 InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
@@ -83,7 +86,8 @@ static void initializeUsedResources(InstrDesc &ID,
     }
 
     uint64_t Mask = ProcResourceMasks[PRE->ProcResourceIdx];
-    const int BufferSize = SM.getResourceBufferSize(PRE->ProcResourceIdx);
+    // Reservation station scaling preserves whether a size is -1, 0, or 1.
+    const int BufferSize = PR.BufferSize;
     if (BufferSize < 0) {
       AllInOrderResources = false;
     } else {
@@ -185,9 +189,9 @@ static void initializeUsedResources(InstrDesc &ID,
   }
 
   // Identify extra buffers that are consumed through super resources.
-  for (const std::pair<uint64_t, unsigned> &SR : SuperResources) {
+  for (const auto &SR : SuperResources) {
     for (unsigned I = 1, E = NumProcResources; I < E; ++I) {
-      if (SM.getResourceBufferSize(I) == -1)
+      if (SM.getProcResource(I)->BufferSize == -1)
         continue;
 
       uint64_t Mask = ProcResourceMasks[I];

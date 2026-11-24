@@ -64,3 +64,18 @@ tail foo@plt
 # INSTR: jr  t1
 # INSTR-ZICFILP: auipc t2, 0
 # INSTR-ZICFILP: jr  t2
+
+# "tail address, reg" uses the specified register regardless of Zicfilp.
+tail foo, t2
+# RELOC: R_RISCV_CALL_PLT foo 0x0
+# INSTR: auipc t2, 0
+# INSTR: jr  t2
+# INSTR-ZICFILP: auipc t2, 0
+# INSTR-ZICFILP: jr  t2
+
+tail bar, t1
+# RELOC: R_RISCV_CALL_PLT bar 0x0
+# INSTR: auipc t1, 0
+# INSTR: jr  t1
+# INSTR-ZICFILP: auipc t1, 0
+# INSTR-ZICFILP: jr  t1

@@ -10,6 +10,7 @@
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
@@ -833,13 +834,35 @@ void RTDEF(CopyInAssign)(Descriptor &temp, const Descriptor &var,
   ShallowCopy(temp, var);
 }
 
+void RTDEF(CopyOutAssignDirect)(const Descriptor &var, Descriptor &temp,
+    const char *sourceFile, int sourceLine) {
+  // Copyout from the temporary must not cause any finalizations
+  // for LHS. The variable must be properly initialized already.
+  // Scan for the first bitwise difference and copy from there to the end
+  // (fused, one pass): the temporary was created as a bitwise copy of the
+  // variable (see CopyInAssign above and the copy-in emitted inline by the
+  // compiler), so it can only differ where the callee modified it, and an
+  // unmodifying copy-out must not store at all. This keeps a
+  // compiler-generated copy-out from writing into read-only storage when the
+  // effective argument is not definable (e.g., a named constant) and the
+  // callee, conformingly, never modified it. From the first difference
+  // onward the copy is unconditional: the fused scan-then-copy traverses the
+  // data only once, and a modified temporary means the variable is legally
+  // writable anyway.
+  // Setting the system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
+  // restores the unconditional copy-out.
+  if (executionEnvironment.copyOutModifiedOnly) {
+    ShallowCopyModifiedSuffix(var, temp);
+  } else {
+    ShallowCopy(var, temp);
+  }
+}
+
 void RTDEF(CopyOutAssign)(
     Descriptor *var, Descriptor &temp, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  // Copyout from the temporary must not cause any finalizations
-  // for LHS. The variable must be properly initialized already.
   if (var) {
-    ShallowCopy(*var, temp);
+    RTNAME(CopyOutAssignDirect)(*var, temp, sourceFile, sourceLine);
   }
   temp.Deallocate();
 }

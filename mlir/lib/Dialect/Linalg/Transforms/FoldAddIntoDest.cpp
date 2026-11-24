@@ -35,9 +35,10 @@ static bool isDefinedAsZero(Value val) {
       .Default([&](auto) { return false; });
 }
 
-/// Replace a linalg.add with one operand the single user of a contraction,
-/// which has a zero-filled, "identity-mapped" destination and is dominated by
-/// the `other` operand, by the contraction with `other` as its dest.
+/// Replace a linalg.elementwise kind=add with one operand the single user of a
+/// contraction, which has a zero-filled, "identity-mapped" destination and is
+/// dominated by the `other` operand, by the contraction with `other` as its
+/// dest.
 ///
 /// As an example, the following pseudo-code will be rewritten
 ///   %cst = arith.constant 0.000000e+00
@@ -47,7 +48,7 @@ static bool isDefinedAsZero(Value val) {
 ///   %empty2 = tensor.empty()
 ///   %zeroed2 = linalg.fill ins(%cst : f32) outs(%empty2 : !type) -> !type
 ///   %F = linalg.matmul ins(%D, %E) outs(%zeroed2)
-///   %out = linalg.add ins(%C, %F) outs(%empty)
+///   %out = linalg.elementwise kind=add ins(%C, %F) outs(%empty)
 /// to:
 ///   %cst = arith.constant 0.000000e+00
 ///   %empty = tensor.empty()
@@ -55,11 +56,15 @@ static bool isDefinedAsZero(Value val) {
 ///   %C = linalg.matmul ins(%A, %B) outs(%zeroed)
 ///   %out = linalg.matmul ins(%D, %E) outs(%C)
 ///
-struct FoldAddIntoDest final : public OpRewritePattern<linalg::AddOp> {
-  using OpRewritePattern<linalg::AddOp>::OpRewritePattern;
+struct FoldAddIntoDest final : public OpRewritePattern<linalg::ElementwiseOp> {
+  using OpRewritePattern<linalg::ElementwiseOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(linalg::AddOp addOp,
+  LogicalResult matchAndRewrite(linalg::ElementwiseOp addOp,
                                 PatternRewriter &rewriter) const override {
+    // Pattern only applies on a binary elementwise add.
+    if (addOp.getKind() != linalg::ElementwiseKind::add)
+      return failure();
+
     // For now, pattern only applies on tensor types (memref support is TODO).
     if (!addOp.hasPureTensorSemantics())
       return failure();
@@ -90,8 +95,9 @@ struct FoldAddIntoDest final : public OpRewritePattern<linalg::AddOp> {
       }
       if (!dominatingOperand || !dominatedOp)
         return failure();
-      // NB: As linalg.add's generalisation ignores the out argument in its
-      //     region there is no need to perform checks on addOp's out argument.
+      // NB: As the elementwise add's generalisation ignores the out argument in
+      //     its region there is no need to perform checks on addOp's out
+      //     argument.
     }
 
     // When dominated op is a contraction we know it accumulates on its out arg.
@@ -111,7 +117,7 @@ struct FoldAddIntoDest final : public OpRewritePattern<linalg::AddOp> {
     if (!dominatedOp->getResult(0).hasOneUse())
       return rewriter.notifyMatchFailure(
           dominatedOp,
-          "expected linalg.add to be single user of contraction's result");
+          "expected elementwise add to be single user of contraction's result");
 
     // As `dominatedOp` was already accumulating on its out argument, it is only
     // safe to no longer use its current out arg when it is the additive ident.

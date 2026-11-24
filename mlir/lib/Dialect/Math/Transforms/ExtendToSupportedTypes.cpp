@@ -73,7 +73,9 @@ void mlir::math::populateExtendToSupportedTypesTypeConverter(
       });
   typeConverter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, TypeRange{target},
+                                            ValueRange{input.front()},
+                                            arith::ExtFOp::Properties{});
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });

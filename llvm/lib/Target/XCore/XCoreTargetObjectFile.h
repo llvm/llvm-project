@@ -22,7 +22,8 @@ static const unsigned CodeModelLargeSize = 256;
     MCSection *DataRelROSectionLarge;
 
   public:
-    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+    void initialize(MCContext &Ctx, const TargetMachine &TM,
+                    const Module &M) override;
 
     MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                         const TargetMachine &TM) const override;

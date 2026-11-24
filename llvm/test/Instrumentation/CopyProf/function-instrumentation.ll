@@ -161,5 +161,5 @@ entry:
 ;; Verifies that the module constructor calls the init function and is marked so
 ;; that it's never instrumented itself.
 ; CHECK: define internal void @copyprof.module_ctor()
-; CHECK:   call void @__copyprof_init()
+; CHECK:   call void @__copyprof_init_once()
 ; CHECK: disable_sanitizer_instrumentation

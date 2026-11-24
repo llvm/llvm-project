@@ -10,6 +10,7 @@
 #define _LIBCPP___UTILITY_DECLVAL_H
 
 #include <__config>
+#include <__type_traits/add_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,17 +22,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // from volatile-qualified types _Tp.
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
-_Tp&& __declval(int);
-template <class _Tp>
-_Tp __declval(long);
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI decltype(std::__declval<_Tp>(0)) declval() _NOEXCEPT {
-  static_assert(!__is_same(_Tp, _Tp),
+_LIBCPP_HIDE_FROM_ABI __add_rvalue_reference_t<_Tp> declval() _NOEXCEPT {
+  static_assert(false,
                 "std::declval can only be used in an unevaluated context. "
                 "It's likely that your current usage is trying to extract a value from the function.");
 }
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 _LIBCPP_END_NAMESPACE_STD
 

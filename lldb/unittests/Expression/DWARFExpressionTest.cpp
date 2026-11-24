@@ -20,12 +20,17 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -139,7 +144,7 @@ private:
   std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> m_memory;
 };
 
-/// A Process whose `ReadMemory` override queries MockMemory.
+/// A Process whose `DoReadMemory` override queries MockMemory.
 struct MockProcess : Process {
   using addr_t = lldb::addr_t;
 
@@ -160,10 +165,7 @@ struct MockProcess : Process {
     std::memcpy(buf, expected_memory->data(), expected_memory->size());
     return size;
   }
-  size_t ReadMemory(const ProcessAddress &process_addr, void *buf, size_t size,
-                    Status &status) override {
-    return DoReadMemory(process_addr, buf, size, status);
-  }
+  bool ShouldUseMemoryCache(const ProcessAddress &) override { return false; }
   bool CanDebug(lldb::TargetSP, bool) override { return true; }
   Status DoDestroy() override { return Status(); }
   llvm::StringRef GetPluginName() override { return ""; }
@@ -254,6 +256,81 @@ public:
 
 private:
   Scalar m_frame_base;
+};
+
+/// A C++ runtime that knows that register 22 held 0x1000 on entry, and that
+/// 0x1000 held 0x2000, although the process can't read that memory.
+class MockEntryValueLanguageRuntime : public LanguageRuntime {
+public:
+  MockEntryValueLanguageRuntime(Process *process) : LanguageRuntime(process) {}
+
+  std::optional<Value>
+  EvaluateEntryValue(StackFrame &frame, llvm::ArrayRef<uint8_t> entry_value,
+                     llvm::ArrayRef<uint8_t> &following) override {
+    if (entry_value.size() != 1)
+      return std::nullopt;
+    switch (entry_value[0]) {
+    case DW_OP_reg22:
+      // Reading the memory the entry value points to would fail, so evaluate
+      // a DW_OP_deref together with the entry value.
+      if (!following.empty() && following.front() == DW_OP_deref) {
+        following.consume_front();
+        return Value(Scalar(uint32_t{0x2000}));
+      }
+      return Value(Scalar(uint32_t{0x1000}));
+    case DW_OP_reg23:
+      // Consuming operations from the back is a bug in the runtime.
+      following = following.drop_back();
+      return Value(Scalar(uint32_t{0x1000}));
+    default:
+      return std::nullopt;
+    }
+  }
+
+  static void Initialize() {
+    PluginManager::RegisterPlugin("mock-entry-value", "", CreateInstance);
+  }
+  static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
+  static LanguageRuntime *CreateInstance(Process *process,
+                                         lldb::LanguageType language) {
+    if (language != lldb::eLanguageTypeC_plus_plus)
+      return nullptr;
+    return new MockEntryValueLanguageRuntime(process);
+  }
+
+  llvm::StringRef GetPluginName() override { return "mock-entry-value"; }
+  lldb::LanguageType GetLanguageType() const override {
+    return lldb::eLanguageTypeC_plus_plus;
+  }
+  llvm::Error GetObjectDescription(Stream &str, ValueObject &object) override {
+    return llvm::Error::success();
+  }
+  llvm::Error GetObjectDescription(Stream &str, Value &value,
+                                   ExecutionContextScope *exe_scope) override {
+    return llvm::Error::success();
+  }
+  bool
+  GetDynamicTypeAndAddress(ValueObject &in_value,
+                           lldb::DynamicValueType use_dynamic,
+                           TypeAndOrName &class_type_or_name, Address &address,
+                           Value::ValueType &value_type,
+                           llvm::ArrayRef<uint8_t> &local_buffer) override {
+    return false;
+  }
+  bool CouldHaveDynamicValue(ValueObject &in_value) override { return false; }
+  TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
+                                 ValueObject &static_value) override {
+    return type_and_or_name;
+  }
+  lldb::BreakpointResolverSP
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
+                          bool throw_bp) override {
+    return {};
+  }
+  lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
+                                                  bool stop_others) override {
+    return {};
+  }
 };
 } // namespace
 
@@ -972,10 +1049,77 @@ TEST(DWARFExpression, DW_OP_piece) {
 }
 
 TEST(DWARFExpression, DW_OP_bit_piece) {
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
   // Extract the high 16 bits of a 32-bit value.
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const4u, 0x44, 0x33, 0x22, 0x11,
-                                 DW_OP_bit_piece, 16, 16}),
-                       ExpectScalar(0x1122));
+                                 DW_OP_stack_value, DW_OP_bit_piece, 16, 16},
+                                {}, &dwarf5),
+                       ExpectHostAddress({0x22, 0x11}));
+
+  // Consecutive bit pieces are assembled at bit granularity.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0a, DW_OP_stack_value, DW_OP_bit_piece, 4, 0,
+                DW_OP_const1u, 0x0b, DW_OP_stack_value, DW_OP_bit_piece, 4, 0},
+               {}, &dwarf5),
+      ExpectHostAddress({0xba}));
+
+  // Big-endian composites place the first piece at the high end of each byte.
+  uint8_t big_endian_expr[] = {
+      DW_OP_const1u, 0x0a, DW_OP_stack_value, DW_OP_bit_piece, 4, 0,
+      DW_OP_const1u, 0x0b, DW_OP_stack_value, DW_OP_bit_piece, 4, 0};
+  DataExtractor big_endian_extractor(big_endian_expr, sizeof(big_endian_expr),
+                                     lldb::eByteOrderBig, /*addr_size=*/4);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(
+          /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{},
+          big_endian_extractor, /*dwarf_cu=*/&dwarf5, lldb::eRegisterKindLLDB,
+          /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr),
+      ExpectHostAddress({0xab}));
+
+  uint8_t big_endian_wide_expr[] = {
+      DW_OP_const2u, 0xab, 0xcd, DW_OP_stack_value, DW_OP_bit_piece, 12, 4};
+  DataExtractor big_endian_wide_extractor(big_endian_wide_expr,
+                                          sizeof(big_endian_wide_expr),
+                                          lldb::eByteOrderBig, /*addr_size=*/4);
+  EXPECT_THAT_EXPECTED(DWARFExpression::Evaluate(
+                           /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr,
+                           /*module_sp=*/{}, big_endian_wide_extractor,
+                           /*dwarf_cu=*/&dwarf5, lldb::eRegisterKindLLDB,
+                           /*initial_value_ptr=*/nullptr,
+                           /*object_address_ptr=*/nullptr),
+                       ExpectHostAddress({0xab, 0xc0}));
+
+  // A byte-sized piece can start at a non-byte-aligned composite offset.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x0a, DW_OP_stack_value, DW_OP_bit_piece, 4, 0,
+                DW_OP_const1u, 0xbc, DW_OP_stack_value, DW_OP_piece, 1,
+                DW_OP_const1u, 0x0d, DW_OP_stack_value, DW_OP_bit_piece, 4, 0},
+               {}, &dwarf5),
+      ExpectHostAddress({0xca, 0xdb}));
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_zero_size) {
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
+  // A zero-sized piece consumes its source without contributing any bits.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0x55, DW_OP_stack_value, DW_OP_bit_piece, 0, 0,
+                DW_OP_const1u, 0xab, DW_OP_stack_value, DW_OP_bit_piece, 8, 0},
+               {}, &dwarf5),
+      ExpectHostAddress({0xab}));
+}
+
+TEST(DWARFExpression, DW_OP_bit_piece_zero_size_clears_stack) {
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
+  // A trailing zero-sized piece discards all values from its expression.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const1u, 0xab, DW_OP_stack_value, DW_OP_bit_piece, 8, 0,
+                DW_OP_const1u, 0x55, DW_OP_dup, DW_OP_stack_value,
+                DW_OP_bit_piece, 0, 0},
+               {}, &dwarf5),
+      ExpectHostAddress({0xab}));
 }
 
 TEST(DWARFExpression, DW_OP_implicit_value) {
@@ -1427,6 +1571,50 @@ TEST(DWARFExpression, DW_OP_GNU_entry_value_no_context) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_entry_value, 0x00}), llvm::Failed());
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_entry_value_language_runtime) {
+  SubsystemRAII<MockEntryValueLanguageRuntime> subsystems;
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux"));
+
+  // A frame in a C++ function, whose entry values the mock runtime knows.
+  auto module_sp = std::make_shared<Module>(ModuleSpec());
+  CompileUnit comp_unit(module_sp, /*user_data=*/nullptr, "a.cpp", /*uid=*/0,
+                        lldb::eLanguageTypeC_plus_plus, eLazyBoolNo);
+  Function function(&comp_unit, /*func_uid=*/0, /*func_type_uid=*/0,
+                    Mangled("f"), /*func_type=*/nullptr, Address(),
+                    AddressRanges());
+  SymbolContext sc;
+  sc.comp_unit = &comp_unit;
+  sc.function = &function;
+  auto frame_sp = std::make_shared<StackFrame>(
+      ctx.thread_sp, /*frame_idx=*/0, /*concrete_frame_idx=*/0, /*cfa=*/0,
+      /*cfa_is_valid=*/false, /*pc=*/0, StackFrame::Kind::Regular,
+      /*artificial=*/false, /*behaves_like_zeroth_frame=*/true, &sc);
+  ExecutionContext exe_ctx(frame_sp);
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr) {
+    return Evaluate(expr, {}, nullptr, &exe_ctx);
+  };
+
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_entry_value, 1, DW_OP_reg22,
+                             DW_OP_plus_uconst, 8, DW_OP_stack_value}),
+                       ExpectScalar(32, 0x1008, false));
+
+  // The runtime evaluates the DW_OP_deref together with the entry value.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_entry_value, 1, DW_OP_reg22, DW_OP_deref,
+                             DW_OP_plus_uconst, 8, DW_OP_stack_value}),
+                       ExpectScalar(32, 0x2008, false));
+
+  // If the runtime doesn't know the entry value, it comes from the call site
+  // parameters of the caller, which this frame doesn't have.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_entry_value, 1, DW_OP_reg21, DW_OP_stack_value}),
+      llvm::Failed());
+  // The same if the runtime consumes operations other than from the front.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_entry_value, 1, DW_OP_reg23, DW_OP_nop, DW_OP_stack_value}),
+      llvm::Failed());
+}
+
 TEST(DWARFExpression, DW_OP_addrx_no_unit) {
   // addrx requires a compile unit delegate.
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_addrx, 0x00}), llvm::Failed());
@@ -1440,21 +1628,22 @@ TEST(DWARFExpression, DW_OP_GNU_const_index_no_unit) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_GNU_const_index, 0x00}), llvm::Failed());
 }
 
-TEST(DWARFExpression, DW_OP_bit_piece_overflow) {
-  // bit_piece extracting more bits than the underlying scalar holds: the
-  // implementation silently zero-extends-then-truncates back to the scalar's
-  // original width. This locks in the current behavior.
+TEST(DWARFExpression, DW_OP_bit_piece_extends_scalar) {
+  // A bit piece wider than its scalar source is zero extended in the composite.
   // ULEB128(99) = 0x63 (single byte; 99 < 128).
+  std::vector<uint8_t> expected(13, 0);
+  expected[0] = 5;
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit5, DW_OP_stack_value, DW_OP_bit_piece, 0x63, 0x00}),
-      ExpectScalar(5));
+      ExpectHostAddress(expected));
 }
 
 TEST(DWARFExpression, DW_OP_bit_piece_offset_overflow) {
   // A bit offset beyond the scalar width must not crash; shifting the whole
-  // value out leaves zero. ULEB128(1000) = {0xE8, 0x07}.
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_bit_piece, 32, 0xE8, 0x07}),
-                       ExpectScalar(0));
+  // value out leaves zero. ULEB128(2^32) = {0x80, 0x80, 0x80, 0x80, 0x10}.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit1, DW_OP_bit_piece, 32, 0x80, 0x80, 0x80, 0x80, 0x10}),
+      ExpectHostAddress({0x00, 0x00, 0x00, 0x00}));
 }
 
 TEST(DWARFExpression, DW_OP_bit_piece_empty_stack) {
@@ -1595,6 +1784,34 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_regx) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_regx, 0x40}, {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
       ExpectScalar(0xBEEF, Value::ContextType::RegisterInfo));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_LLVM_piece_end) {
+  TestContext ctx;
+  constexpr uint64_t reg_value = 0x8877665544332211;
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", RegisterValue(reg_value)));
+
+  ExecutionContext exe_ctx(ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+
+  // Match the expression emitted for a value split across two AMDGPU
+  // registers. A terminal DW_OP_LLVM_piece_end completes the composite.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_regx, 0x20, DW_OP_piece, 4, DW_OP_regx, 0x21, DW_OP_piece,
+                4, DW_OP_LLVM_user, DW_OP_LLVM_piece_end},
+               {}, &delegate, &exe_ctx, ctx.reg_ctx_sp.get()),
+      ExpectHostAddress({0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44}));
+}
+
+TEST(DWARFExpression, DW_OP_LLVM_piece_end_multiple) {
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_const1u, 0xaa, DW_OP_piece, 1, DW_OP_LLVM_user,
+                DW_OP_LLVM_piece_end, DW_OP_LLVM_user, DW_OP_LLVM_piece_end})
+          .takeError(),
+      llvm::FailedWithMessage(
+          "DW_OP_LLVM_piece_end is only supported at the end of an "
+          "expression"));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_size_zero) {
@@ -2274,6 +2491,22 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
                     DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
   EXPECT_THAT_EXPECTED(Evaluate(expr, {}, {}, &exe_ctx),
                        ExpectHostAddress({0x11, 0x22}));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_zero_size) {
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x44332211})));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+
+  // The zero-sized r3 piece contributes no bytes, but it must still consume
+  // its register location before the four-byte r0 piece is assembled.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_reg3, DW_OP_piece, 0, DW_OP_reg0, DW_OP_piece, 4}, {},
+               &delegate, &exe_ctx, test_ctx.reg_ctx_sp.get()),
+      ExpectHostAddress({0x11, 0x22, 0x33, 0x44}));
 }
 
 class DWARFExpressionMockProcessTestWithAArch

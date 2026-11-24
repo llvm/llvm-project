@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 class Triple;
@@ -122,6 +123,20 @@ LLVM_ABI bool isValidTraitPropertyForTraitSetAndSelector(TraitProperty Property,
 /// scored (via the ScoresMap). In addition, the required consturct nesting is
 /// decribed as well.
 struct VariantMatchInfo {
+  /// A device or target_device isa property and the ISA name it requires.
+  struct ISATrait {
+    TraitProperty Property;
+    StringRef Name;
+    bool operator==(const ISATrait &Other) const {
+      return Property == Other.Property && Name == Other.Name;
+    }
+  };
+
+  struct UnknownTrait {
+    TraitSelector Selector;
+    std::optional<APInt> Score;
+  };
+
   /// Add the trait \p Property to the required trait set. \p RawString is the
   /// string we parsed and derived \p Property from. If \p Score is not null, it
   /// recorded as well. If \p Property is in the `construct` set it is recorded
@@ -142,20 +157,28 @@ struct VariantMatchInfo {
 
     // Special handling for `device={isa(...)}` as we do not match the enum but
     // the raw string.
-    if (Property == TraitProperty::device_isa___ANY)
-      ISATraits.push_back(RawString);
-    if (Property == TraitProperty::target_device_isa___ANY)
-      ISATraits.push_back(RawString);
+    if (Property == TraitProperty::device_isa___ANY ||
+        Property == TraitProperty::target_device_isa___ANY)
+      ISATraits.push_back({Property, RawString});
 
     RequiredTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
       ConstructTraits.push_back(Property);
   }
 
+  /// Add an unknown property of \p Selector. It never matches, but its
+  /// selector is scored like a known property's.
+  void addUnknownTrait(TraitSelector Selector, APInt *Score = nullptr) {
+    UnknownTraits.push_back(
+        {Selector, Score ? std::optional<APInt>(*Score) : std::nullopt});
+    RequiredTraits.set(unsigned(TraitProperty::invalid));
+  }
+
   BitVector RequiredTraits = BitVector(unsigned(TraitProperty::Last) + 1);
-  SmallVector<StringRef, 8> ISATraits;
+  SmallVector<ISATrait, 8> ISATraits;
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
+  SmallVector<UnknownTrait, 2> UnknownTraits;
 };
 
 /// The context for a source location is made up of active property traits,
@@ -170,6 +193,12 @@ struct OMPContext {
     addTrait(getOpenMPContextTraitSetForProperty(Property), Property);
   }
   void addTrait(TraitSet Set, TraitProperty Property) {
+    // The construct context starts at the innermost enclosing target construct.
+    if (Property == TraitProperty::construct_target_target) {
+      for (TraitProperty Construct : ConstructTraits)
+        ActiveTraits.reset(unsigned(Construct));
+      ConstructTraits.clear();
+    }
     ActiveTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
       ConstructTraits.push_back(Property);
@@ -195,6 +224,9 @@ isVariantApplicableInContext(const VariantMatchInfo &VMI, const OMPContext &Ctx,
 
 /// Return the index (into \p VMIs) of the variant with the highest score
 /// from the ones applicable in \p Ctx. See llvm::isVariantApplicableInContext.
+/// If several variants tie for the highest score, one that is a strict subset
+/// of another tied variant is never selected; otherwise the first one is.
+/// Return -1 if no variant is applicable.
 LLVM_ABI int
 getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
                               const OMPContext &Ctx);

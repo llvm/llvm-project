@@ -25,7 +25,7 @@ define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-NEXT:    store i32 [[DEC]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    call void @print(i32 [[TMP3]])
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 20
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:

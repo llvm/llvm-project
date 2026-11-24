@@ -138,7 +138,7 @@ static RT_API_ATTRS common::optional<SubscriptValue> GetSubscriptValue(
   bool overflow{false};
   while (ch && *ch >= '0' && *ch <= '9') {
     SubscriptValue was{value.value_or(0)};
-    overflow |= was >= std::numeric_limits<SubscriptValue>::max() / 10;
+    overflow |= was >= common::numeric_limits<SubscriptValue>::max() / 10;
     value = 10 * was + *ch - '0';
     io.HandleRelativePosition(byteCount);
     ch = io.GetCurrentChar(byteCount);
@@ -643,7 +643,7 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       // list-directed input.
       listInput->set_hitSlash(false);
     }
-  } else if (*next && (*next == '&' || *next == '$')) {
+  } else if (next && (*next == '&' || *next == '$')) {
     // stop at beginning of next group
   } else {
     handler.SignalError(

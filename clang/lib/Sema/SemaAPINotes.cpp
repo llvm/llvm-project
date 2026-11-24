@@ -34,12 +34,16 @@ enum class IsSubstitution_t : bool { Original, Replacement };
 struct VersionedInfoMetadata {
   /// An empty version refers to unversioned metadata.
   VersionTuple Version;
+  /// Which lookup group this slice came from.
+  /// See the SwiftVersionedAddition comment in Attr.td.
+  unsigned SliceGroup;
   unsigned IsActive : 1;
   unsigned IsReplacement : 1;
 
-  VersionedInfoMetadata(VersionTuple Version, IsActive_t Active,
-                        IsSubstitution_t Replacement)
-      : Version(Version), IsActive(Active == IsActive_t::Active),
+  VersionedInfoMetadata(VersionTuple Version, unsigned SliceGroup,
+                        IsActive_t Active, IsSubstitution_t Replacement)
+      : Version(Version), SliceGroup(SliceGroup),
+        IsActive(Active == IsActive_t::Active),
         IsReplacement(Replacement == IsSubstitution_t::Replacement) {}
 };
 } // end anonymous namespace
@@ -65,7 +69,8 @@ static void applyAPINotesType(Sema &S, Decl *decl, StringRef typeString,
   if (S.captureSwiftVersionIndependentAPINotes()) {
     auto *typeAttr = SwiftTypeAttr::CreateImplicit(S.Context, typeString);
     auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-        S.Context, metadata.Version, typeAttr, metadata.IsReplacement);
+        S.Context, metadata.Version, typeAttr, metadata.IsReplacement,
+        metadata.SliceGroup);
     decl->addAttr(versioned);
   } else {
     if (!metadata.IsActive)
@@ -98,7 +103,8 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
     auto *nullabilityAttr =
         SwiftNullabilityAttr::CreateImplicit(S.Context, attrNullabilityKind);
     auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-        S.Context, metadata.Version, nullabilityAttr, metadata.IsReplacement);
+        S.Context, metadata.Version, nullabilityAttr, metadata.IsReplacement,
+        metadata.SliceGroup);
     decl->addAttr(versioned);
     return;
   } else {
@@ -149,7 +155,8 @@ void handleAPINotedAttribute(
       // Remove the existing attribute, and treat it as a superseded
       // non-versioned attribute.
       auto *Versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-          S.Context, Metadata.Version, *Existing, /*IsReplacedByActive*/ true);
+          S.Context, Metadata.Version, *Existing, /*IsReplacedByActive*/ true,
+          Metadata.SliceGroup);
 
       D->getAttrs().erase(Existing);
       D->addAttr(Versioned);
@@ -167,7 +174,7 @@ void handleAPINotedAttribute(
     if (auto Attr = CreateAttr()) {
       auto *Versioned = SwiftVersionedAdditionAttr::CreateImplicit(
           S.Context, Metadata.Version, Attr,
-          /*IsReplacedByActive*/ Metadata.IsReplacement);
+          /*IsReplacedByActive*/ Metadata.IsReplacement, Metadata.SliceGroup);
       D->addAttr(Versioned);
     }
   } else {
@@ -176,7 +183,7 @@ void handleAPINotedAttribute(
     // attribute.
     auto *Versioned = SwiftVersionedRemovalAttr::CreateImplicit(
         S.Context, Metadata.Version, AttrKindFor<A>::value,
-        /*IsReplacedByActive*/ Metadata.IsReplacement);
+        /*IsReplacedByActive*/ Metadata.IsReplacement, Metadata.SliceGroup);
     D->addAttr(Versioned);
   }
 }
@@ -245,6 +252,15 @@ static void handleAPINotedRetainCountConvention(
         S, D, /*shouldAddAttribute*/ true, Metadata);
     break;
   }
+}
+
+/// Add a 'swift_attr' unless \p D already carries that exact annotation.
+static void addSwiftAttrIfAbsent(Sema &S, Decl *D, StringRef Attribute) {
+  for (const auto *A : D->specific_attrs<SwiftAttrAttr>())
+    if (A->getAttribute() == Attribute)
+      return;
+
+  D->addAttr(SwiftAttrAttr::Create(S.Context, Attribute));
 }
 
 static void ProcessAPINotes(Sema &S, Decl *D,
@@ -362,8 +378,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   }
 
   if (auto ConformsTo = Info.getSwiftConformance())
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+    addSwiftAttrIfAbsent(S, D, "conforms_to:" + ConformsTo.value());
 
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info),
                   Metadata);
@@ -581,7 +596,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   // Add [[clang::unsafe_buffer_usage]]
   if (Info.UnsafeBufferUsage && !D->getAttr<UnsafeBufferUsageAttr>()) {
     handleAPINotedAttribute<UnsafeBufferUsageAttr>(S, D, true, Metadata, [&]() {
-      return UnsafeBufferUsageAttr::Create(S.getASTContext(),
+      return UnsafeBufferUsageAttr::Create(S.getASTContext(), "",
                                            getPlaceholderAttrInfo());
     });
   }
@@ -607,8 +622,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
 
   // returns_(un)retained
   if (!Info.SwiftReturnOwnership.empty())
-    D->addAttr(SwiftAttrAttr::Create(S.Context,
-                                     "returns_" + Info.SwiftReturnOwnership));
+    addSwiftAttrIfAbsent(S, D, "returns_" + Info.SwiftReturnOwnership);
 
   // Result type override.
   QualType OverriddenResultType;
@@ -725,32 +739,22 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
                   static_cast<const api_notes::FunctionInfo &>(Info), Metadata);
 }
 
-static void addSwiftAttrIfAbsent(Sema &S, Decl *D, StringRef Attribute) {
-  for (const auto *A : D->specific_attrs<SwiftAttrAttr>())
-    if (A->getAttribute() == Attribute)
-      return;
-
-  D->addAttr(SwiftAttrAttr::Create(S.Context, Attribute));
-}
-
 /// Process API notes for a tag.
 static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (auto ImportAs = Info.SwiftImportAs)
-    D->addAttr(SwiftAttrAttr::Create(S.Context, "import_" + ImportAs.value()));
+    addSwiftAttrIfAbsent(S, D, "import_" + ImportAs.value());
 
   if (auto RetainOp = Info.SwiftRetainOp)
-    D->addAttr(SwiftAttrAttr::Create(S.Context, "retain:" + RetainOp.value()));
+    addSwiftAttrIfAbsent(S, D, "retain:" + RetainOp.value());
 
   if (auto ReleaseOp = Info.SwiftReleaseOp)
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+    addSwiftAttrIfAbsent(S, D, "release:" + ReleaseOp.value());
   if (auto DestroyOp = Info.SwiftDestroyOp)
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "destroy:" + DestroyOp.value()));
+    addSwiftAttrIfAbsent(S, D, "destroy:" + DestroyOp.value());
   if (auto DefaultOwnership = Info.SwiftDefaultOwnership)
-    D->addAttr(SwiftAttrAttr::Create(
-        S.Context, "returned_as_" + DefaultOwnership.value() + "_by_default"));
+    addSwiftAttrIfAbsent(
+        S, D, "returned_as_" + DefaultOwnership.value() + "_by_default");
 
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
@@ -875,7 +879,8 @@ static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
 template <typename SpecificInfo>
 static void maybeAttachUnversionedSwiftName(
     Sema &S, Decl *D,
-    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info) {
+    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info,
+    unsigned SliceGroup) {
   if (D->hasAttr<SwiftNameAttr>())
     return;
   if (!Info.getSelected())
@@ -899,8 +904,9 @@ static void maybeAttachUnversionedSwiftName(
   }
 
   // Then explicitly call that out with a removal attribute.
-  VersionedInfoMetadata DummyFutureMetadata(
-      SelectedVersion, IsActive_t::Inactive, IsSubstitution_t::Replacement);
+  VersionedInfoMetadata DummyFutureMetadata(SelectedVersion, SliceGroup,
+                                            IsActive_t::Inactive,
+                                            IsSubstitution_t::Replacement);
   handleAPINotedAttribute<SwiftNameAttr>(
       S, D, /*add*/ false, DummyFutureMetadata, []() -> SwiftNameAttr * {
         llvm_unreachable("should not try to add an attribute here");
@@ -910,13 +916,17 @@ static void maybeAttachUnversionedSwiftName(
 /// Processes all versions of versioned API notes.
 ///
 /// Just dispatches to the various ProcessAPINotes functions in this file.
+///
+/// \param SliceGroup Which group the slices in \p Info form. Selection runs
+/// independently per group, so this has to travel with every slice.
 template <typename SpecificDecl, typename SpecificInfo>
 static void ProcessVersionedAPINotes(
     Sema &S, SpecificDecl *D,
-    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info) {
+    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info,
+    unsigned SliceGroup) {
 
   if (!S.captureSwiftVersionIndependentAPINotes())
-    maybeAttachUnversionedSwiftName(S, D, Info);
+    maybeAttachUnversionedSwiftName(S, D, Info, SliceGroup);
 
   unsigned Selected = Info.getSelected().value_or(Info.size());
 
@@ -932,14 +942,22 @@ static void ProcessVersionedAPINotes(
     // right one.
     if (S.captureSwiftVersionIndependentAPINotes()) {
       Active = IsActive_t::Inactive;
-      Replacement = IsSubstitution_t::Original;
+
+      // Record that this slice exists, independently of whether it goes on to
+      // set any key. A slice that sets nothing still wins selection for the
+      // versions it covers, and winning suppresses every other slice, so a
+      // client recomputing the selection cannot infer the slice set from the
+      // addition and removal wrappers alone.
+      D->addAttr(SwiftVersionedSliceAttr::CreateImplicit(S.Context, Version,
+                                                         SliceGroup));
     } else if (Active == IsActive_t::Inactive && Version.empty()) {
       Replacement = IsSubstitution_t::Replacement;
       Version = Info[Selected].first;
     }
 
-    ProcessAPINotes(S, D, InfoSlice,
-                    VersionedInfoMetadata(Version, Active, Replacement));
+    ProcessAPINotes(
+        S, D, InfoSlice,
+        VersionedInfoMetadata(Version, SliceGroup, Active, Replacement));
   }
 }
 
@@ -1112,22 +1130,27 @@ void APINotesSelectorDiagnosticReaderState::markCandidatesUsed(
   }
 }
 
-// Apply the first exact selector entry found. This preserves source-spelling
-// precedence over the desugared fallback and avoids applying multiple exact
-// entries for the same declaration.
+/// Apply the first exact selector entry found. This preserves source-spelling
+/// precedence over the desugared fallback and avoids applying multiple exact
+/// entries for the same declaration.
+///
+/// \param SliceGroup Which group the slices from \p LookupExact form. This
+/// lookup runs its own version selection, so it is a group distinct from the
+/// broad lookup beside it even though both read the same reader.
 template <typename SpecificInfo, typename SpecificDecl>
 static void processExactAPINotes(
     Sema &S, SpecificDecl *D,
     const APINotesParameterSelectorCandidates &ParameterSelectorCandidates,
     llvm::function_ref<api_notes::APINotesReader::VersionedInfo<SpecificInfo>(
         ArrayRef<std::string>)>
-        LookupExact) {
+        LookupExact,
+    unsigned SliceGroup) {
   auto ProcessSelector = [&](const APINotesParameterSelector &Selector) {
     auto Info = LookupExact(Selector.Parameters);
     if (Info.size() == 0)
       return false;
 
-    ProcessVersionedAPINotes(S, D, Info);
+    ProcessVersionedAPINotes(S, D, Info, SliceGroup);
     return true;
   };
 
@@ -1148,6 +1171,10 @@ void Sema::ProcessAPINotes(Decl *D) {
   auto Readers = APINotes.findAPINotes(D->getLocation());
   if (Readers.empty())
     return;
+  // Each lookup below is its own slice group, numbered in the order the
+  // lookups run, which is the order Sema applies them in. A consumer needs that
+  // order to resolve two groups whose winners set the same key.
+  unsigned NextSliceGroup = 0;
 
   auto *DC = D->getDeclContext();
   // Globals.
@@ -1160,7 +1187,7 @@ void Sema::ProcessAPINotes(Decl *D) {
       for (auto Reader : Readers) {
         auto Info =
             Reader->lookupGlobalVariable(VD->getName(), APINotesContext);
-        ProcessVersionedAPINotes(*this, VD, Info);
+        ProcessVersionedAPINotes(*this, VD, Info, NextSliceGroup++);
       }
 
       return;
@@ -1175,7 +1202,7 @@ void Sema::ProcessAPINotes(Decl *D) {
         for (auto Reader : Readers) {
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
-          ProcessVersionedAPINotes(*this, FD, Info);
+          ProcessVersionedAPINotes(*this, FD, Info, NextSliceGroup++);
 
           if (ParameterSelectorCandidates)
             processExactAPINotes<api_notes::GlobalFunctionInfo>(
@@ -1183,7 +1210,8 @@ void Sema::ProcessAPINotes(Decl *D) {
                 [&](ArrayRef<std::string> Parameters) {
                   return Reader->lookupGlobalFunction(FD->getName(), Parameters,
                                                       APINotesContext);
-                });
+                },
+                NextSliceGroup++);
 
           if (ParameterSelectorCandidates) {
             auto &DiagnosticState =
@@ -1209,7 +1237,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
       for (auto Reader : Readers) {
         auto Info = Reader->lookupObjCClassInfo(Class->getName());
-        ProcessVersionedAPINotes(*this, Class, Info);
+        ProcessVersionedAPINotes(*this, Class, Info, NextSliceGroup++);
       }
 
       return;
@@ -1219,7 +1247,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto Protocol = dyn_cast<ObjCProtocolDecl>(D)) {
       for (auto Reader : Readers) {
         auto Info = Reader->lookupObjCProtocolInfo(Protocol->getName());
-        ProcessVersionedAPINotes(*this, Protocol, Info);
+        ProcessVersionedAPINotes(*this, Protocol, Info, NextSliceGroup++);
       }
 
       return;
@@ -1263,7 +1291,7 @@ void Sema::ProcessAPINotes(Decl *D) {
         if (auto ParentTag = dyn_cast<TagDecl>(Tag->getDeclContext()))
           APINotesContext = UnwindTagContext(ParentTag, APINotes);
         auto Info = Reader->lookupTag(LookupName, APINotesContext);
-        ProcessVersionedAPINotes(*this, Tag, Info);
+        ProcessVersionedAPINotes(*this, Tag, Info, NextSliceGroup++);
       }
 
       return;
@@ -1273,7 +1301,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
       for (auto Reader : Readers) {
         auto Info = Reader->lookupTypedef(Typedef->getName(), APINotesContext);
-        ProcessVersionedAPINotes(*this, Typedef, Info);
+        ProcessVersionedAPINotes(*this, Typedef, Info, NextSliceGroup++);
       }
 
       return;
@@ -1286,7 +1314,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
       for (auto Reader : Readers) {
         auto Info = Reader->lookupEnumConstant(EnumConstant->getName());
-        ProcessVersionedAPINotes(*this, EnumConstant, Info);
+        ProcessVersionedAPINotes(*this, EnumConstant, Info, NextSliceGroup++);
       }
 
       return;
@@ -1355,7 +1383,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
           auto Info = Reader->lookupObjCMethod(*Context, SelectorRef,
                                                Method->isInstanceMethod());
-          ProcessVersionedAPINotes(*this, Method, Info);
+          ProcessVersionedAPINotes(*this, Method, Info, NextSliceGroup++);
         }
       }
     }
@@ -1369,7 +1397,7 @@ void Sema::ProcessAPINotes(Decl *D) {
                ObjCPropertyAttribute::kind_class) == 0;
           auto Info = Reader->lookupObjCProperty(*Context, Property->getName(),
                                                  isInstanceProperty);
-          ProcessVersionedAPINotes(*this, Property, Info);
+          ProcessVersionedAPINotes(*this, Property, Info, NextSliceGroup++);
         }
       }
 
@@ -1395,7 +1423,7 @@ void Sema::ProcessAPINotes(Decl *D) {
               MethodName = CXXMethod->getName();
 
             auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
-            ProcessVersionedAPINotes(*this, CXXMethod, Info);
+            ProcessVersionedAPINotes(*this, CXXMethod, Info, NextSliceGroup++);
 
             if (ParameterSelectorCandidates)
               processExactAPINotes<api_notes::CXXMethodInfo>(
@@ -1403,7 +1431,8 @@ void Sema::ProcessAPINotes(Decl *D) {
                   [&](ArrayRef<std::string> Parameters) {
                     return Reader->lookupCXXMethod(Context->id, MethodName,
                                                    Parameters);
-                  });
+                  },
+                  NextSliceGroup++);
 
             if (ParameterSelectorCandidates) {
               auto &DiagnosticState =
@@ -1429,7 +1458,7 @@ void Sema::ProcessAPINotes(Decl *D) {
         for (auto Reader : Readers) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             auto Info = Reader->lookupField(Context->id, Field->getName());
-            ProcessVersionedAPINotes(*this, Field, Info);
+            ProcessVersionedAPINotes(*this, Field, Info, NextSliceGroup++);
           }
         }
       }
@@ -1439,7 +1468,7 @@ void Sema::ProcessAPINotes(Decl *D) {
       for (auto Reader : Readers) {
         if (auto Context = UnwindTagContext(TagContext, APINotes)) {
           auto Info = Reader->lookupTag(Tag->getName(), Context);
-          ProcessVersionedAPINotes(*this, Tag, Info);
+          ProcessVersionedAPINotes(*this, Tag, Info, NextSliceGroup++);
         }
       }
     }

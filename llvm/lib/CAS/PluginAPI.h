@@ -53,6 +53,13 @@ struct llcas_functions_t {
 
   bool (*cas_validate)(llcas_cas_t, bool check_hash, char **error);
 
+  llcas_validation_result_t (*cas_validate_if_needed)(llcas_cas_options_t,
+                                                      bool check_hash,
+                                                      bool force, char **error);
+
+  llcas_validation_result_t (*cas_recover_ondisk_data)(llcas_cas_options_t,
+                                                       char **error);
+
   unsigned (*digest_parse)(llcas_cas_t, const char *printed_digest,
                            uint8_t *bytes, size_t bytes_size, char **error);
 

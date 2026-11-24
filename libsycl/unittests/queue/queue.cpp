@@ -9,6 +9,7 @@
 #include <mock/helpers.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/queue.hpp>
 
 #include <gmock/gmock.h>
@@ -26,5 +27,72 @@ TEST(Queue, CommonQueriesAndLifetime) {
     queue Q;
     EXPECT_EQ(Q.get_backend(), sycl::backend::level_zero);
     EXPECT_EQ(Q.is_in_order(), false);
+  }
+}
+
+TEST(Queue, ContextAndDeviceConstructor) {
+  mock::MockWrapper Mock;
+
+  const device Device;
+  const context Context = Device.get_platform().khr_get_default_context();
+  const auto Selector = [](const device &) { return 1; };
+  const async_handler AsyncHandler = [](exception_list) {};
+  EXPECT_CALL(Mock.get(), olCreateQueue(_, _, _)).Times(3);
+  EXPECT_CALL(Mock.get(), olDestroyQueue(_)).Times(3);
+
+  queue Queue(Context, Device);
+  EXPECT_EQ(Queue.get_context(), Context);
+  EXPECT_EQ(Queue.get_device(), Device);
+
+  queue SelectorQueue(Context, Selector);
+  EXPECT_EQ(SelectorQueue.get_context(), Context);
+  EXPECT_EQ(SelectorQueue.get_device(), Device);
+
+  queue AsyncSelectorQueue(Context, Selector, AsyncHandler);
+  EXPECT_EQ(AsyncSelectorQueue.get_context(), Context);
+  EXPECT_EQ(AsyncSelectorQueue.get_device(), Device);
+}
+
+// The device does belong to the context here: the runtime relies on liboffload
+// to report OL_ERRC_INVALID_DEVICE, so the error is forced through the mock.
+TEST(Queue, CreateQueueInvalidDeviceErrorThrows) {
+  mock::MockWrapper Mock;
+
+  const device Device;
+  const context Context = Device.get_platform().khr_get_default_context();
+
+  EXPECT_CALL(Mock.get(), olCreateQueue(_, _, _))
+      .Times(1)
+      .WillOnce(Return(
+          mock::getMockLiboffload().makeEmptyStrError(OL_ERRC_INVALID_DEVICE)));
+
+  try {
+    queue Queue(Context, Device);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Context);
+  }
+}
+
+// Failures reported by liboffload and translated by checkAndThrow must carry
+// the context too.
+TEST(Queue, WaitFailureThrowsWithContext) {
+  mock::MockWrapper Mock;
+  queue Q;
+
+  EXPECT_CALL(Mock.get(), olSyncQueue(_))
+      .Times(1)
+      .WillOnce(Return(mock::getMockLiboffload().makeEmptyStrError(
+          OL_ERRC_OUT_OF_RESOURCES)));
+
+  try {
+    Q.wait();
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::runtime));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
   }
 }

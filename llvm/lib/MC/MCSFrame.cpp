@@ -16,7 +16,6 @@
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;

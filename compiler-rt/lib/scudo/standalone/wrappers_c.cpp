@@ -346,6 +346,9 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
     case M_TSDS_COUNT_MAX:
       option = scudo::Option::MaxTSDsCount;
       break;
+    case M_CACHE_RESIDENT_BYTES_MAX:
+      option = scudo::Option::MaxCacheResidentBytes;
+      break;
     default:
       return 0;
     }
@@ -355,7 +358,7 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
 
 INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
                                                  size_t size) {
-  if (UNLIKELY(scudo::checkAlignedAllocAlignmentAndSize(alignment, size))) {
+  if (UNLIKELY(!scudo::isPowerOfTwo(alignment))) {
     if (Allocator.canReturnNull()) {
       errno = EINVAL;
       return nullptr;

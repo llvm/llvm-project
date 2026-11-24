@@ -30,7 +30,18 @@ llvm_jitlink = os.path.join(config.llvm_tools_dir, "llvm-jitlink")
 orc_rt_executor_stem = os.path.join(
     config.compiler_rt_obj_root, "lib/orc/tests/tools/orc-rt-executor"
 )
+
 lli = os.path.join(config.llvm_tools_dir, "lli")
+
+# Add host JIT triple feature & substitutions
+try:
+    host_jit_triple = subprocess.check_output(
+        [lli, "-host-jit-triple"], text=True
+    ).strip()
+    config.available_features.add("host-jit-triple=" + host_jit_triple)
+except (OSError, subprocess.CalledProcessError):
+    lit_config.warning("could not determine host JIT triple from lli")
+
 if config.target_os == "Darwin":
     orc_rt_path = "%s/liborc_rt_osx.a" % config.compiler_rt_libdir
 else:

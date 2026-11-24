@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Wautomatic-in-main-program -Wsaved-local-in-spec-expr
+! RUN: %python %S/test_errors.py %s %flang_fc1 -Wautomatic-in-main-program -Wsaved-local-in-spec-expr -Wrank-one-bounds-on-function-result
 ! ---- Module with rank-1 array-bounded declarations, USE'd elsewhere ----
 subroutine array_flatten(int)
   integer, intent(IN) :: int
@@ -146,6 +146,105 @@ module data
   !ERROR: Rank-1 integer array used as upper bounds in DECLARATION must have constant size
   integer :: gg3(nonconstsize : nonconstsize)
 end module 
+! A raw rank-1 bound element that survives folding in a's extents (merge() with
+! a LOGICAL mask is not reduced to a per-element scalar, and the lower bound 0
+! makes neither UBOUND nor LBOUND exact) must keep SIZE from folding, but must
+! not keep it from validating DIM=: an out-of-range or non-positive DIM is
+! still diagnosed.
+subroutine size_dim_checked(n, m, c)
+  integer, intent(in) :: n(2), m(2)
+  logical, intent(in) :: c(2)
+  real :: a(0:merge(n, m, c))
+  !ERROR: DIM=9 dimension is out of range for rank-2 array
+  print *, size(a, 9)
+  !ERROR: DIM=2147483648 dimension is out of range for rank-2 array
+  print *, size(a, 2147483648_8)
+  !ERROR: DIM=0 dimension must be positive
+  print *, size(a, 0)
+end subroutine
+! A constant bounds array is folded into per-dimension constant bounds at
+! declaration, so no raw element remains and size(a) is a constant expression:
+! 3*4 == 12 (a kind of -1 would be rejected).
+subroutine size_constant_base()
+  real :: a(0:[2, 3])
+  integer, parameter :: count = size(a)
+  integer(kind=merge(4, -1, count == 12)) :: ok
+  ok = 0
+end subroutine
+! A constant rank-1 lower bound is folded into per-dimension constants at
+! declaration, so a lower bound of 1 is recognized regardless of the (unknown)
+! extent and LBOUND is a constant expression exactly as for a(1:n).  (A lower
+! bound other than 1 is correctly not constant here: LBOUND is 1 for an empty
+! dimension, and n(2) is not known.)
+subroutine lbound_constant_base(n)
+  integer, intent(in) :: n(2)
+  integer, parameter :: ones(2) = 1
+  real :: a(ones:n), b([1, 1]:n)
+  integer, parameter :: la = lbound(a, 1), lb2 = lbound(b, 2)
+  integer(kind=merge(4, -1, la == 1 .and. lb2 == 1)) :: ok
+  ok = 0
+end subroutine
+! F2023 C816 permits only an explicit-shape-spec-list for a nonallocatable
+! nonpointer function result, so a rank-1 integer array as the result's bounds
+! is an extension and gets a portability warning.  The same bounds on a dummy
+! (R814) or on an ALLOCATABLE result (not covered by C816) are standard.
+module c816
+contains
+  function res_rank1(n, a) result(r)
+    integer, intent(in) :: n(2)
+    real, intent(in) :: a(n)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r(n)
+    r = a
+  end function
+  function res_rank1_lb(lo, hi) result(r)
+    integer, intent(in) :: lo(2), hi(2)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r(lo:hi)
+    r = 0.0
+  end function
+  function res_zero_size() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r([integer::])
+    r = 0.0
+  end function
+  ! A constant bounds array is folded into ordinary bounds at declaration,
+  ! but the shape still records that it was written as a rank-1 array.
+  function res_constant_base() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r([2, 3])
+    r = 0.0
+  end function
+  ! The rank-1 bounds may also come from a DIMENSION attribute or statement.
+  function res_dimension_attr() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real, dimension([2, 3]) :: r
+    r = 0.0
+  end function
+  function res_dimension_attr_dummy(n) result(r)
+    integer, intent(in) :: n(2)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real, dimension(n) :: r
+    r = 0.0
+  end function
+  function res_dimension_stmt() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r
+    dimension r([2, 3])
+    r = 0.0
+  end function
+  function res_alloc(n) result(r)
+    integer, intent(in) :: n(2)
+    real, allocatable :: r(:,:)
+    allocate(r(n(1), n(2)))
+    r = 0.0
+  end function
+  function res_explicit_list(n) result(r)
+    integer, intent(in) :: n(2)
+    real :: r(n(1), n(2))
+    r = 0.0
+  end function
+end module
 program declaration_array_bounds
   use getter
   implicit none
@@ -282,5 +381,17 @@ program declaration_array_bounds
   integer :: n(2147483648_8) !2^31
   !ERROR: DECLARATION rank-1 integer array bound(s) imply rank 2147483648, which is greater than the maximum supported rank 15
   integer :: too_big(n)
+
+  ! A rank-1 bound base gives the array its rank; an intrinsic inquiry on that
+  ! array (ubound/lbound/size) -- the form such a bound takes when serialized to
+  ! a module file -- is validated by the ordinary DIM-range check.  A DIM beyond
+  ! the rank, including one that overflows signed 32-bit (2^31), is rejected
+  ! without wrapping, so a consumer cannot be handed an out-of-range dimension.
+  integer, parameter :: twodims(2) = [3, 4]
+  integer :: a_dim(twodims) ! rank-2
+  !ERROR: DIM=9 dimension is out of range for rank-2 array
+  integer :: bad_dim(ubound(a_dim, 9))
+  !ERROR: DIM=2147483648 dimension is out of range for rank-2 array
+  integer :: bad_dim_ovf(ubound(a_dim, 2147483648_8))
 
 end program

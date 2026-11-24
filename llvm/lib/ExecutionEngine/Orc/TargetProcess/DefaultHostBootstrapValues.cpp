@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -21,14 +24,18 @@ namespace llvm::orc {
 void addDefaultBootstrapValuesForHostProcess(
     StringMap<std::vector<char>> &BootstrapMap,
     StringMap<ExecutorAddr> &BootstrapSymbols) {
+  Mangler Mangle{Triple(sys::getProcessTriple())};
 
   // FIXME: We probably shouldn't set these on Windows?
-  BootstrapSymbols[rt::RegisterEHFrameSectionAllocActionName] =
+  BootstrapSymbols[Mangle.mangledCopy(
+      rt::RegisterEHFrameSectionAllocActionName)] =
       ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionAllocAction);
-  BootstrapSymbols[rt::DeregisterEHFrameSectionAllocActionName] =
+  BootstrapSymbols[Mangle.mangledCopy(
+      rt::DeregisterEHFrameSectionAllocActionName)] =
       ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionAllocAction);
 
-  BootstrapSymbols[rt::RegisterJITLoaderGDBAllocActionName] =
+  BootstrapSymbols[Mangle.mangledCopy(
+      rt::RegisterJITLoaderGDBAllocActionName)] =
       ExecutorAddr::fromPtr(&llvm_orc_registerJITLoaderGDBAllocAction);
 
 #ifdef __APPLE__

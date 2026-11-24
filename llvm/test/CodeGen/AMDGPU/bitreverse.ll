@@ -91,13 +91,11 @@ define amdgpu_kernel void @s_brev_i16(ptr addrspace(1) noalias %out, i16 %val) #
 ; GFX11-GISEL-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX11-GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-FAKE16-NEXT:    s_brev_b32 s2, s2
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-FAKE16-NEXT:    s_lshr_b32 s2, s2, 16
-; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-GISEL-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-GISEL-FAKE16-NEXT:    global_store_d16_hi_b16 v0, v1, s[0:1]
 ; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
   store i16 %brev, ptr addrspace(1) %out
@@ -199,10 +197,9 @@ define amdgpu_kernel void @v_brev_i16(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_brev_b32 s2, s2
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-FAKE16-NEXT:    s_lshr_b32 s2, s2, 16
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-GISEL-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-GISEL-FAKE16-NEXT:    global_store_d16_hi_b16 v0, v1, s[0:1]
 ; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %valptr
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
@@ -905,9 +902,8 @@ define float @missing_truncate_promote_bitreverse(i32 %arg) {
 ; GFX11-FLAT-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-FLAT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLAT-TRUE16-NEXT:    v_bfrev_b32_e32 v0, v0
-; GFX11-FLAT-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-FLAT-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-FLAT-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX11-FLAT-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FLAT-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
 ; GFX11-FLAT-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FLAT-FAKE16-LABEL: missing_truncate_promote_bitreverse:
@@ -923,9 +919,8 @@ define float @missing_truncate_promote_bitreverse(i32 %arg) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_bfrev_b32_e32 v0, v0
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: missing_truncate_promote_bitreverse:

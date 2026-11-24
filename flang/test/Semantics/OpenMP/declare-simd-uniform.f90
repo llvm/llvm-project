@@ -3,6 +3,7 @@
 ! Test declare simd with uniform clause
 
 function add2(a,b,i,fact,alc) result(c)
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !$omp declare simd(add2) uniform(a,b,fact)
   integer :: i
   integer,pointer::alc
@@ -27,6 +28,7 @@ function bad_uniform(a,b,i) result(c)
   double precision :: a(*), b(*), c
   integer :: i
   double precision :: local
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !ERROR: Variable 'local' in UNIFORM clause must be a dummy argument of the enclosing procedure
   !$omp declare simd(bad_uniform) uniform(a,local)
   c = a(i) + b(i) + local

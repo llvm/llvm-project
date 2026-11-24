@@ -11,6 +11,7 @@ static_library("HLSL") {
     "HLSLRootSignature.cpp",
     "RootSignatureMetadata.cpp",
     "RootSignatureValidations.cpp",
+    "SemanticSignaturePacking.cpp",
     "SemanticSignatures.cpp",
   ]
 }

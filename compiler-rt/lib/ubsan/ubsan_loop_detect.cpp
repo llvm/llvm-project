@@ -81,8 +81,9 @@ static void SigprofHandler(int signo, siginfo_t *si, void *c) {
 }
 
 void __ubsan_install_trap_loop_detection(void) {
-  struct sigaction sa;
+  struct sigaction sa = {};
   sa.sa_sigaction = SigprofHandler;
+  sa.sa_flags = SA_SIGINFO | SA_RESTART;
   sigaction(SIGPROF, &sa, nullptr);
 
   struct itimerval timer;

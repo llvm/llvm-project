@@ -26,19 +26,19 @@ entry:
   %add.i = fadd float %mul6.i, %mul5.i
   %5 = bitcast float %add.i to i32
   %6 = tail call float @llvm.nvvm.fabs.f(float %sub.i) #2
-  %7 = fcmp ugt float %6, 0x7FF0000000000000
+  %7 = fcmp ugt float %6, +inf
   br i1 %7, label %land.lhs.true.i, label %_ZN12cuda_builtinmlIfEENS_7complexIT_EERKS3_S5_.exit
 
 land.lhs.true.i:                                  ; preds = %entry
   %8 = tail call float @llvm.nvvm.fabs.f(float %add.i) #2
-  %9 = fcmp ugt float %8, 0x7FF0000000000000
+  %9 = fcmp ugt float %8, +inf
   br i1 %9, label %if.then.i, label %_ZN12cuda_builtinmlIfEENS_7complexIT_EERKS3_S5_.exit
 
 if.then.i:                                        ; preds = %land.lhs.true.i
   %10 = tail call float @llvm.nvvm.fabs.f(float %0) #2
-  %11 = fcmp oeq float %10, 0x7FF0000000000000
+  %11 = fcmp oeq float %10, +inf
   %.pre.i = tail call float @llvm.nvvm.fabs.f(float %1) #2
-  %12 = fcmp oeq float %.pre.i, 0x7FF0000000000000
+  %12 = fcmp oeq float %.pre.i, +inf
   %or.cond.i = or i1 %11, %12
   br i1 %or.cond.i, label %if.then.14.i, label %if.end.31.i
 
@@ -54,7 +54,7 @@ if.then.14.i:                                     ; preds = %if.then.i
   %21 = or i32 %20, %19
   %22 = bitcast i32 %21 to float
   %23 = tail call float @llvm.nvvm.fabs.f(float %2) #2
-  %24 = fcmp ugt float %23, 0x7FF0000000000000
+  %24 = fcmp ugt float %23, +inf
   br i1 %24, label %if.then.24.i, label %if.end.i
 
 if.then.24.i:                                     ; preds = %if.then.14.i
@@ -66,7 +66,7 @@ if.then.24.i:                                     ; preds = %if.then.14.i
 if.end.i:                                         ; preds = %if.then.24.i, %if.then.14.i
   %__c.0.i = phi float [ %27, %if.then.24.i ], [ %2, %if.then.14.i ]
   %28 = tail call float @llvm.nvvm.fabs.f(float %3) #2
-  %29 = fcmp ugt float %28, 0x7FF0000000000000
+  %29 = fcmp ugt float %28, +inf
   br i1 %29, label %if.then.28.i, label %if.end.31.i
 
 if.then.28.i:                                     ; preds = %if.end.i
@@ -82,9 +82,9 @@ if.end.31.i:                                      ; preds = %if.then.28.i, %if.e
   %__a.0.i = phi float [ %17, %if.then.28.i ], [ %17, %if.end.i ], [ %0, %if.then.i ]
   %__recalc.0.off0.i = phi i1 [ true, %if.then.28.i ], [ true, %if.end.i ], [ false, %if.then.i ]
   %33 = tail call float @llvm.nvvm.fabs.f(float %__c.1.i) #2
-  %34 = fcmp oeq float %33, 0x7FF0000000000000
+  %34 = fcmp oeq float %33, +inf
   %.pre6.i = tail call float @llvm.nvvm.fabs.f(float %__d.1.i) #2
-  %35 = fcmp oeq float %.pre6.i, 0x7FF0000000000000
+  %35 = fcmp oeq float %.pre6.i, +inf
   %or.cond8.i = or i1 %34, %35
   br i1 %or.cond8.i, label %if.then.37.i, label %if.end.56.i
 
@@ -100,7 +100,7 @@ if.then.37.i:                                     ; preds = %if.end.31.i
   %44 = or i32 %43, %42
   %45 = bitcast i32 %44 to float
   %46 = tail call float @llvm.nvvm.fabs.f(float %__a.0.i) #2
-  %47 = fcmp ugt float %46, 0x7FF0000000000000
+  %47 = fcmp ugt float %46, +inf
   br i1 %47, label %if.then.48.i, label %if.end.50.i
 
 if.then.48.i:                                     ; preds = %if.then.37.i
@@ -112,7 +112,7 @@ if.then.48.i:                                     ; preds = %if.then.37.i
 if.end.50.i:                                      ; preds = %if.then.48.i, %if.then.37.i
   %__a.1.i = phi float [ %50, %if.then.48.i ], [ %__a.0.i, %if.then.37.i ]
   %51 = tail call float @llvm.nvvm.fabs.f(float %__b.0.i) #2
-  %52 = fcmp ugt float %51, 0x7FF0000000000000
+  %52 = fcmp ugt float %51, +inf
   br i1 %52, label %if.then.53.i, label %if.then.93.i
 
 if.then.53.i:                                     ; preds = %if.end.50.i
@@ -126,27 +126,27 @@ if.end.56.i:                                      ; preds = %if.end.31.i
 
 land.lhs.true.58.i:                               ; preds = %if.end.56.i
   %56 = tail call float @llvm.nvvm.fabs.f(float %mul.i) #2
-  %57 = fcmp oeq float %56, 0x7FF0000000000000
+  %57 = fcmp oeq float %56, +inf
   br i1 %57, label %if.then.70.i, label %lor.lhs.false.61.i
 
 lor.lhs.false.61.i:                               ; preds = %land.lhs.true.58.i
   %58 = tail call float @llvm.nvvm.fabs.f(float %mul4.i) #2
-  %59 = fcmp oeq float %58, 0x7FF0000000000000
+  %59 = fcmp oeq float %58, +inf
   br i1 %59, label %if.then.70.i, label %lor.lhs.false.64.i
 
 lor.lhs.false.64.i:                               ; preds = %lor.lhs.false.61.i
   %60 = tail call float @llvm.nvvm.fabs.f(float %mul5.i) #2
-  %61 = fcmp oeq float %60, 0x7FF0000000000000
+  %61 = fcmp oeq float %60, +inf
   br i1 %61, label %if.then.70.i, label %lor.lhs.false.67.i
 
 lor.lhs.false.67.i:                               ; preds = %lor.lhs.false.64.i
   %62 = tail call float @llvm.nvvm.fabs.f(float %mul6.i) #2
-  %63 = fcmp oeq float %62, 0x7FF0000000000000
+  %63 = fcmp oeq float %62, +inf
   br i1 %63, label %if.then.70.i, label %_ZN12cuda_builtinmlIfEENS_7complexIT_EERKS3_S5_.exit
 
 if.then.70.i:                                     ; preds = %lor.lhs.false.67.i, %lor.lhs.false.64.i, %lor.lhs.false.61.i, %land.lhs.true.58.i
   %64 = tail call float @llvm.nvvm.fabs.f(float %__a.0.i) #2
-  %65 = fcmp ugt float %64, 0x7FF0000000000000
+  %65 = fcmp ugt float %64, +inf
   br i1 %65, label %if.then.73.i, label %if.end.75.i
 
 if.then.73.i:                                     ; preds = %if.then.70.i
@@ -158,7 +158,7 @@ if.then.73.i:                                     ; preds = %if.then.70.i
 if.end.75.i:                                      ; preds = %if.then.73.i, %if.then.70.i
   %__a.3.i = phi float [ %68, %if.then.73.i ], [ %__a.0.i, %if.then.70.i ]
   %69 = tail call float @llvm.nvvm.fabs.f(float %__b.0.i) #2
-  %70 = fcmp ugt float %69, 0x7FF0000000000000
+  %70 = fcmp ugt float %69, +inf
   br i1 %70, label %if.then.78.i, label %if.end.80.i
 
 if.then.78.i:                                     ; preds = %if.end.75.i
@@ -169,7 +169,7 @@ if.then.78.i:                                     ; preds = %if.end.75.i
 
 if.end.80.i:                                      ; preds = %if.then.78.i, %if.end.75.i
   %__b.3.i = phi float [ %73, %if.then.78.i ], [ %__b.0.i, %if.end.75.i ]
-  %74 = fcmp ugt float %33, 0x7FF0000000000000
+  %74 = fcmp ugt float %33, +inf
   br i1 %74, label %if.then.83.i, label %if.end.85.i
 
 if.then.83.i:                                     ; preds = %if.end.80.i
@@ -180,7 +180,7 @@ if.then.83.i:                                     ; preds = %if.end.80.i
 
 if.end.85.i:                                      ; preds = %if.then.83.i, %if.end.80.i
   %__c.3.i = phi float [ %77, %if.then.83.i ], [ %__c.1.i, %if.end.80.i ]
-  %78 = fcmp ugt float %.pre6.i, 0x7FF0000000000000
+  %78 = fcmp ugt float %.pre6.i, +inf
   br i1 %78, label %if.then.88.i, label %if.then.93.i
 
 if.then.88.i:                                     ; preds = %if.end.85.i
@@ -197,12 +197,12 @@ if.then.93.i:                                     ; preds = %if.then.88.i, %if.e
   %mul95.i = fmul float %__c.4.ph.i, %__a.4.ph.i
   %mul96.i = fmul float %__d.4.ph.i, %__b.4.ph.i
   %sub97.i = fsub float %mul95.i, %mul96.i
-  %mul98.i = fmul float %sub97.i, 0x7FF0000000000000
+  %mul98.i = fmul float %sub97.i, +inf
   %82 = bitcast float %mul98.i to i32
   %mul100.i = fmul float %__d.4.ph.i, %__a.4.ph.i
   %mul101.i = fmul float %__c.4.ph.i, %__b.4.ph.i
   %add102.i = fadd float %mul101.i, %mul100.i
-  %mul103.i = fmul float %add102.i, 0x7FF0000000000000
+  %mul103.i = fmul float %add102.i, +inf
   %83 = bitcast float %mul103.i to i32
   br label %_ZN12cuda_builtinmlIfEENS_7complexIT_EERKS3_S5_.exit
 

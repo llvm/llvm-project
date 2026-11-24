@@ -35,7 +35,7 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
   return cir::ConstantOp::create(builder, getLoc(),
-                                 cir::UndefAttr::get(slot.elemType));
+                                 cir::UndefAttr::get(slot.valueType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -73,13 +73,12 @@ bool cir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
 
-  // Volatile load or atomic load should not be removed.
-  if (getIsVolatile() || getMemOrder().has_value())
+  if (isVolatileOrAtomic())
     return false;
 
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getType() == slot.elemType;
+         getType() == slot.valueType;
 }
 
 DeletionKind cir::LoadOp::removeBlockingUses(
@@ -112,13 +111,12 @@ bool cir::StoreOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
 
-  // Volatile store or atomic store should not be removed.
-  if (getIsVolatile() || getMemOrder().has_value())
+  if (isVolatileOrAtomic())
     return false;
 
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getValue() != slot.ptr && slot.elemType == getValue().getType();
+         getValue() != slot.ptr && slot.valueType == getValue().getType();
 }
 
 DeletionKind cir::StoreOp::removeBlockingUses(
@@ -142,7 +140,12 @@ bool cir::CopyOp::storesTo(const MemorySlot &slot) {
 
 Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
                              Value reachingDef, const DataLayout &dataLayout) {
-  return cir::LoadOp::create(builder, getLoc(), slot.elemType, getSrc());
+  return cir::LoadOp::create(builder, getLoc(), slot.valueType, getSrc(),
+                             /*isDeref=*/false, /*is_volatile=*/false,
+                             /*is_nontemporal=*/false, getSrcAlignmentAttr(),
+                             /*sync_scope=*/cir::SyncScopeKindAttr(),
+                             /*mem_order=*/cir::MemOrderAttr(),
+                             /*invariant=*/false);
 }
 
 DeletionKind cir::CopyOp::removeBlockingUses(
@@ -152,22 +155,128 @@ DeletionKind cir::CopyOp::removeBlockingUses(
   if (loadsFrom(slot))
     cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
                          /*is_volatile=*/false,
-                         /*is_nontemporal=*/false,
-                         /*alignment=*/mlir::IntegerAttr{},
+                         /*is_nontemporal=*/false, getDstAlignmentAttr(),
                          /*sync_scope=*/cir::SyncScopeKindAttr(),
                          /*mem-order=*/cir::MemOrderAttr());
   return DeletionKind::Delete;
+}
+
+// Whether the type holds a union by value; only structs and arrays can.
+static bool containsUnion(mlir::Type ty) {
+  if (mlir::isa<cir::UnionType>(ty))
+    return true;
+  if (auto structTy = mlir::dyn_cast<cir::StructType>(ty))
+    return llvm::any_of(structTy.getMembers(), containsUnion);
+  if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(ty))
+    return containsUnion(arrayTy.getElementType());
+  return false;
 }
 
 bool cir::CopyOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
-  if (getDst() == getSrc())
+  // loadsFrom/storesTo only recognize the slot pointer itself, so a copy
+  // through a cast would be erased without its effect.
+  if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr)
+    return false;
+
+  // Volatile copies must stay in memory, like volatile loads and stores.
+  if (getIsVolatile())
+    return false;
+
+  // A union lowers to one member plus padding: a typed load or store of the
+  // value would drop bytes another member keeps in that padding.
+  if (containsUnion(slot.valueType))
     return false;
 
   return getCopySizeInBytes(dataLayout) ==
-         dataLayout.getTypeSize(slot.elemType);
+         dataLayout.getTypeSize(slot.valueType);
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for MatrixColumnMajorLoadOp
+//===----------------------------------------------------------------------===//
+
+bool cir::MatrixColumnMajorLoadOp::loadsFrom(const MemorySlot &slot) {
+  return getValue() == slot.ptr;
+}
+
+bool cir::MatrixColumnMajorLoadOp::storesTo(const MemorySlot &slot) {
+  return false;
+}
+
+Value cir::MatrixColumnMajorLoadOp::getStored(const MemorySlot &slot,
+                                              OpBuilder &builder,
+                                              Value reachingDef,
+                                              const DataLayout &dataLayout) {
+  llvm_unreachable("getStored should not be called on MatrixColumnMajorLoadOp");
+}
+
+bool cir::MatrixColumnMajorLoadOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+
+  // Volatile load should not be removed.
+  if (getIsVolatile())
+    return false;
+
+  Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getValue() == slot.ptr &&
+         getType() == slot.valueType;
+}
+
+DeletionKind cir::MatrixColumnMajorLoadOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  getResult().replaceAllUsesWith(reachingDefinition);
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for MatrixColumnMajorStoreOp
+//===----------------------------------------------------------------------===//
+
+bool cir::MatrixColumnMajorStoreOp::loadsFrom(const MemorySlot &slot) {
+  return false;
+}
+
+bool cir::MatrixColumnMajorStoreOp::storesTo(const MemorySlot &slot) {
+  return getValue() == slot.ptr;
+}
+
+Value cir::MatrixColumnMajorStoreOp::getStored(const MemorySlot &slot,
+                                               OpBuilder &builder,
+                                               Value reachingDef,
+                                               const DataLayout &dataLayout) {
+  return getMatrix();
+}
+
+bool cir::MatrixColumnMajorStoreOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+
+  // Volatile store should not be removed.
+  if (getIsVolatile())
+    return false;
+
+  Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getValue() == slot.ptr &&
+         getValue() != slot.ptr && slot.valueType == getValue().getType();
+}
+
+DeletionKind cir::MatrixColumnMajorStoreOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
 }
 
 //===----------------------------------------------------------------------===//
@@ -184,6 +293,120 @@ bool cir::CastOp::canUsesBeRemoved(
 }
 
 DeletionKind cir::CastOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for IfOp
+//===----------------------------------------------------------------------===//
+
+bool cir::IfOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                   bool hasValueStores) {
+  // A definition produced inside a region has to leave through a result, and
+  // cir.if has none. Parameters and enclosing locals have their alloca
+  // outside and are only read here; those promote. A variable declared inside
+  // the region (`if (c) { int x = 42; use(x); }`) has its initializing store
+  // inside after cir-hoist-allocas, which is hasValueStores, so it is refused.
+  return !hasValueStores;
+}
+
+void cir::IfOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  // Exactly one region executes, exactly once, entered from before the op, so
+  // both see the same reaching definition.
+  regionsToProcess.insert({&getThenRegion(), reachingDef});
+  regionsToProcess.insert({&getElseRegion(), reachingDef});
+}
+
+Value cir::IfOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.if cannot yield a new definition");
+  return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for ScopeOp
+//===----------------------------------------------------------------------===//
+
+bool cir::ScopeOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                      bool hasValueStores) {
+  // cir.scope yields at most one value, which it may already be using for the
+  // scope's own result. Same load-only restriction as cir.if.
+  return !hasValueStores;
+}
+
+void cir::ScopeOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  regionsToProcess.insert({&getScopeRegion(), reachingDef});
+}
+
+Value cir::ScopeOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.scope cannot yield a new definition");
+  return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for TernaryOp
+//===----------------------------------------------------------------------===//
+
+bool cir::TernaryOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                        bool hasValueStores) {
+  // Same load-only restriction as cir.if. The existing result is the
+  // ternary's own yielded value; a store would need an extra result.
+  return !hasValueStores;
+}
+
+void cir::TernaryOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  // Exactly one region executes, exactly once, entered from before the op, so
+  // both see the same reaching definition.
+  regionsToProcess.insert({&getTrueRegion(), reachingDef});
+  regionsToProcess.insert({&getFalseRegion(), reachingDef});
+}
+
+Value cir::TernaryOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.ternary cannot yield a new definition");
+  return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for LifetimeStartOp and LifetimeEndOp
+//===----------------------------------------------------------------------===//
+
+// A promoted slot is no longer on the stack, so its lifetime markers go away
+// with it.
+bool cir::LifetimeStartOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return true;
+}
+
+DeletionKind cir::LifetimeStartOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+bool cir::LifetimeEndOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return true;
+}
+
+DeletionKind cir::LifetimeEndOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }

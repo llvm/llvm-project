@@ -20,7 +20,7 @@ define float @unop(float %f) {
 define i1 @binop(i1 %a, i1 %b) {
 ; CHECK-LABEL: define i1 @binop(
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
@@ -53,7 +53,7 @@ define i8 @castop(ptr %p) {
 define i1 @cmpop(i1 %a, i1 %b) {
 ; CHECK-LABEL: define i1 @cmpop(
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
@@ -72,9 +72,9 @@ define i1 @cmpop(i1 %a, i1 %b) {
 define ptr @gepop(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define ptr @gepop(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 12), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 6), align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
@@ -101,7 +101,7 @@ define ptr @gepop(ptr %p, i32 %a, i32 %b, i32 %c) {
 define i32 @eeop(<4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: define i32 @eeop(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
@@ -120,8 +120,8 @@ define i32 @eeop(<4 x i32> %a, i32 %b) {
 define <4 x i32> @ieop(<4 x i32> %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: define <4 x i32> @ieop(
 ; CHECK-SAME: <4 x i32> [[P:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
@@ -144,7 +144,7 @@ define <4 x i32> @ieop(<4 x i32> %p, i32 %a, i32 %b) {
 define <4 x i32> @svop(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define <4 x i32> @svop(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
@@ -180,7 +180,7 @@ define i32 @evop({i32, float} %a) {
 define {i32, {float, float}} @ivop({i32, {float, float}} %a, {float, float} %b) {
 ; CHECK-LABEL: define { i32, { float, float } } @ivop(
 ; CHECK-SAME: { i32, { float, float } } [[A:%.*]], { float, float } [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load { i8, { i8, i8 } }, ptr @__dfsan_arg_tls, align 2

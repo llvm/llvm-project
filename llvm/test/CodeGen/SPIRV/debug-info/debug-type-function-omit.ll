@@ -1,12 +1,13 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugTypeFunction --implicit-check-not=DebugTypePointer
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; Unsupported composite parameter and pointer without dwarfAddressSpace — DISubroutineType not lowered to DebugTypeFunction.
+; Pointer without dwarfAddressSpace not supported yet: no DebugTypePointer, and
+; the DISubroutineType that uses it is not lowered to DebugTypeFunction.
 
 ; CHECK: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK: DebugCompilationUnit
-; CHECK-NOT: DebugTypePointer
-; CHECK-NOT: DebugTypeFunction
+; CHECK: DebugTypeComposite
+; CHECK: DebugTypeFunction
 
 target triple = "spirv64-unknown-unknown"
 

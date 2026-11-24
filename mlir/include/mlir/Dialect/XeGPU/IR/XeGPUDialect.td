@@ -34,9 +34,8 @@ def XeGPU_Dialect : Dialect {
 
     let dependentDialects = ["arith::ArithDialect"];
 
-    let useDefaultTypePrinterParser = true;
-    let useDefaultAttributePrinterParser = true;
-    let useStrictPropertiesInAssemblyFormat = 1;
+    let hasTypes = 1;
+    let hasAttributes = 1;
 
     let extraClassDeclaration = [{
       /// Checks if the given memref type represents shared local memory (SLM).

@@ -54,7 +54,34 @@ template<template<typename ...> class Instantiated, class ...CtrArgs>
 constexpr bool SFINAEs_away =
     decltype(SFINAEs_away_impl<Instantiated, CtrArgs...>(0))::value;
 
+// `SFINAEs_away_initializer_list` checks whether a container can be deduced and constructed from a braced-init-list
+// `{std::declval<Elem>()}` as its first argument.
+// This is necessary for map containers where deduction guides take `initializer_list<pair<Key, Value>>` while
+// constructors take `initializer_list<pair<const Key, Value>>`, which are not mutually convertible (LWG3025).
+
+template <template <typename...> class Instantiated, class Elem, class... CtrArgs>
+auto SFINAEs_away_initializer_list_impl(int)
+    -> decltype(Instantiated({std::declval<Elem>()}, std::declval<CtrArgs>()...), std::false_type{});
+
+template <template <typename...> class Instantiated, class Elem, class... CtrArgs>
+std::true_type SFINAEs_away_initializer_list_impl(...);
+
+template <template <typename...> class Instantiated, class Elem, class... CtrArgs>
+constexpr bool SFINAEs_away_initializer_list =
+    decltype(SFINAEs_away_initializer_list_impl<Instantiated, Elem, CtrArgs...>(0))::value;
+
 struct Empty {};
+
+// `OnlyConvertibleTo` allows implicit conversion strictly to `TargetType` and prevents
+// subsequent standard conversions (e.g. integral promotion/conversion).
+// Useful for verifying that a deduction guide accepts the exact deduced `size_type`.
+template <class TargetType>
+struct OnlyConvertibleTo {
+  template <class T, std::enable_if_t<std::is_same_v<T, TargetType>, int> = 0>
+  constexpr operator T() const {
+    return T();
+  }
+};
 
 // For sequence containers the deduction guides should be SFINAE'd away when
 // given:

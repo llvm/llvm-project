@@ -50,24 +50,27 @@ define <16 x i8> @shuffle4_v4i8_16(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i
 }
 
 ; CHECK-SD: .LCPI1_0:
-; CHECK-SD: 	.byte	0                               // 0x0
-; CHECK-SD: 	.byte	16                              // 0x10
-; CHECK-SD: 	.byte	32                              // 0x20
-; CHECK-SD: 	.byte	48                              // 0x30
-; CHECK-SD: 	.byte	2                               // 0x2
-; CHECK-SD: 	.byte	18                              // 0x12
-; CHECK-SD: 	.byte	34                              // 0x22
-; CHECK-SD: 	.byte	50                              // 0x32
+; CHECK-SD: 	.byte   0                               // 0x0
+; CHECK-SD: 	.byte   4                               // 0x4
+; CHECK-SD: 	.byte   8                               // 0x8
+; CHECK-SD: 	.byte   12                              // 0xc
+; CHECK-SD: 	.byte   1                               // 0x1
+; CHECK-SD: 	.byte   5                               // 0x5
+; CHECK-SD: 	.byte   9                               // 0x9
+; CHECK-SD: 	.byte   13                              // 0xd
 define <8 x i8> @shuffle4_v4i8_8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; CHECK-SD-LABEL: shuffle4_v4i8_8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    adrp x8, .LCPI1_0
-; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    ldr d4, [x8, :lo12:.LCPI1_0]
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.8b
+; CHECK-SD-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
+; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shuffle4_v4i8_8:
@@ -897,46 +900,23 @@ define <16 x i8> @insert4_v16i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8
 }
 
 
-; CHECK-SD: .LCPI16_0:
-; CHECK-SD: 	.byte	0
-; CHECK-SD: 	.byte	1
-; CHECK-SD: 	.byte	4
-; CHECK-SD: 	.byte	5
-; CHECK-SD: 	.byte	16
-; CHECK-SD: 	.byte	17
-; CHECK-SD: 	.byte	20
-; CHECK-SD: 	.byte	21
-; CHECK-SD: 	.byte	32
-; CHECK-SD: 	.byte	33
-; CHECK-SD: 	.byte	36
-; CHECK-SD: 	.byte	37
-; CHECK-SD: 	.byte	48
-; CHECK-SD: 	.byte	49
-; CHECK-SD: 	.byte	52
-; CHECK-SD: 	.byte	53
 define <16 x i16> @test(<2 x double> %l213, <2 x double> %l231, <2 x double> %l249, <2 x double> %l267, <2 x double> %l285, <2 x double> %l303, <2 x double> %l321, <2 x double> %l339) {
 ; CHECK-SD-LABEL: test:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtms v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtms v4.2d, v4.2d
-; CHECK-SD-NEXT:    adrp x8, .LCPI16_0
-; CHECK-SD-NEXT:    fcvtms v1.2d, v1.2d
-; CHECK-SD-NEXT:    fcvtms v5.2d, v5.2d
 ; CHECK-SD-NEXT:    fcvtms v2.2d, v2.2d
-; CHECK-SD-NEXT:    fcvtms v6.2d, v6.2d
+; CHECK-SD-NEXT:    fcvtms v0.2d, v0.2d
+; CHECK-SD-NEXT:    fcvtms v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtms v3.2d, v3.2d
+; CHECK-SD-NEXT:    fcvtms v4.2d, v4.2d
+; CHECK-SD-NEXT:    fcvtms v5.2d, v5.2d
+; CHECK-SD-NEXT:    fcvtms v6.2d, v6.2d
 ; CHECK-SD-NEXT:    fcvtms v7.2d, v7.2d
-; CHECK-SD-NEXT:    xtn v16.2s, v0.2d
-; CHECK-SD-NEXT:    xtn v20.2s, v4.2d
-; CHECK-SD-NEXT:    ldr q0, [x8, :lo12:.LCPI16_0]
-; CHECK-SD-NEXT:    xtn v17.2s, v1.2d
-; CHECK-SD-NEXT:    xtn v21.2s, v5.2d
-; CHECK-SD-NEXT:    xtn v18.2s, v2.2d
-; CHECK-SD-NEXT:    xtn v22.2s, v6.2d
-; CHECK-SD-NEXT:    xtn v19.2s, v3.2d
-; CHECK-SD-NEXT:    xtn v23.2s, v7.2d
-; CHECK-SD-NEXT:    tbl v1.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v0.16b
-; CHECK-SD-NEXT:    tbl v2.16b, { v20.16b, v21.16b, v22.16b, v23.16b }, v0.16b
+; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
+; CHECK-SD-NEXT:    uzp1 v2.4s, v4.4s, v5.4s
+; CHECK-SD-NEXT:    uzp1 v3.4s, v6.4s, v7.4s
+; CHECK-SD-NEXT:    uzp1 v1.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
 ; CHECK-SD-NEXT:    uzp1 v0.8h, v1.8h, v2.8h
 ; CHECK-SD-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
 ; CHECK-SD-NEXT:    ret

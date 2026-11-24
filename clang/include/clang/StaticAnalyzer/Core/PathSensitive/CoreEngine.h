@@ -82,6 +82,11 @@ private:
   /// usually because it could not reason about something.
   BlocksAborted blocksAborted;
 
+  /// Whether the single-TU phase completed the exploration of all paths
+  /// within its budget limit.
+  /// The CTU phase replaces \c WList, so this has to be remembered separately.
+  bool ExploredAllSTUPaths = false;
+
   /// The information about functions shared by the whole translation unit.
   /// (This data is owned by AnalysisConsumer.)
   FunctionSummariesTy *FunctionSummaries;
@@ -146,9 +151,10 @@ public:
   // Functions for external checking of whether we have unfinished work.
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
-  bool hasWorkRemaining() const { return wasBlocksExhausted() ||
-                                         WList->hasWork() ||
-                                         wasBlockAborted(); }
+  bool hasExploredAllPaths() const {
+    return !wasBlocksExhausted() && !WList->hasWork() && ExploredAllSTUPaths &&
+           !wasBlockAborted();
+  }
 
   /// Inform the CoreEngine that a basic block was aborted because
   /// it could not be completely analyzed.
@@ -165,10 +171,10 @@ public:
 
   auto aborted_blocks() const { return llvm::iterator_range(blocksAborted); }
 
-  ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
+  ExplodedNode *makeNode(const ProgramPoint &Loc, const ProgramState *State,
                          ExplodedNode *Pred, bool MarkAsSink = false) const;
 
-  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+  ExplodedNode *makePostStmtNode(const Stmt *S, const ProgramState *State,
                                  ExplodedNode *Pred,
                                  bool MarkAsSink = false) const {
     PostStmt Loc(S, Pred->getStackFrame(), /*tag=*/nullptr);
@@ -182,7 +188,7 @@ public:
     const StackFrame *SF = Pred->getStackFrame();
     State = State->BindExpr(E, SF, V);
     const auto &L = ProgramPoint::getProgramPoint(E, K, SF, /*tag=*/nullptr);
-    return makeNode(L, State, Pred);
+    return makeNode(L, State.get(), Pred);
   }
 
   ExplodedNode *

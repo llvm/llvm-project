@@ -241,7 +241,7 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <2 x i16> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i16> [[TMP9]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i64 8
 ; CHECK-NEXT:    store <2 x i32> [[TMP10]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP11]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -323,9 +323,8 @@ define void @test_expand_secv_in_entry_before_gep(ptr %dst) {
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[OUTER_IV]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 112
 ; CHECK-NEXT:    [[GEP_M:%.*]] = getelementptr [36 x [36 x double]], ptr [[DST]], i64 0, i64 [[OUTER_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 112, [[OUTER_IV]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -337,7 +336,7 @@ define void @test_expand_secv_in_entry_before_gep(ptr %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[OUTER_IV]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[GEP_M]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -397,8 +396,8 @@ define void @test_expand_new_canonical_iv_non_zero_start(ptr %dst) {
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[O:%.*]] = phi i64 [ 10, %[[ENTRY]] ], [ [[O_NEXT:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDVAR]], 17
 ; CHECK-NEXT:    [[BOUND:%.*]] = add i64 [[O]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 17, [[INDVAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]

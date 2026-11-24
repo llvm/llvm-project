@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <memory>
 #include <optional>
 
@@ -26,8 +27,25 @@ class StringRef;
 class TargetTransformInfo;
 
 class X86TargetMachine final : public CodeGenTargetMachineImpl {
+  const X86Options &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<X86Subtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget. This must cover every function
+  /// attribute read by getSubtargetImpl.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS, PreferVecWidth, MinLegalVecWidth, SoftFloat;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             PreferVecWidth == RHS.PreferVecWidth &&
+             MinLegalVecWidth == RHS.MinLegalVecWidth &&
+             SoftFloat == RHS.SoftFloat;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<X86Subtarget, SubtargetAttrs> LastSubtarget;
   // True if this is used in JIT.
   bool IsJIT;
 
@@ -41,6 +59,8 @@ public:
                    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                    bool JIT);
   ~X86TargetMachine() override;
+
+  const X86Options &getCLOpts() const { return CLOpts; }
 
   const X86Subtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
@@ -79,7 +99,8 @@ public:
 
   bool isJIT() const { return IsJIT; }
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
   ScheduleDAGInstrs *

@@ -27,6 +27,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -35,6 +36,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -82,14 +84,6 @@ public:
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
 };
-
-static cl::list<std::string> SPVAllowUnknownIntrinsics(
-    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
-    cl::desc("Emit unknown intrinsics as calls to external functions. A "
-             "comma-separated input list of intrinsic prefixes must be "
-             "provided, and only intrinsics carrying a listed prefix get "
-             "emitted as described."),
-    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctionsLegacy::ID = 0;
@@ -408,7 +402,7 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   // Otherwise we should lower the intrinsic to the corresponding SPIR-V
   // instruction.
   // For @llvm.assume we have OpAssumeTrueKHR.
-  // For @llvm.expect we have OpExpectKHR.
+  // For @llvm.expect and @llvm.expect.with.probability we have OpExpectKHR.
   //
   // We need to lower this into a builtin and then the builtin into a SPIR-V
   // instruction.
@@ -421,6 +415,18 @@ static void lowerExpectAssume(IntrinsicInst *II) {
         II->getModule(), Intrinsic::SPVIntrinsics::spv_expect,
         {II->getOperand(0)->getType()});
     II->setCalledFunction(F);
+  } else if (II->getIntrinsicID() == Intrinsic::expect_with_probability) {
+    // OpExpectKHR has no probability operand. Keep the hint only if the
+    // expected value is likely, as LowerExpectIntrinsic does for PHIs.
+    Value *Res = II->getArgOperand(0);
+    double Prob =
+        cast<ConstantFP>(II->getArgOperand(2))->getValueAPF().convertToDouble();
+    if (Prob > 0.5)
+      Res = IRBuilder<>(II).CreateIntrinsic(
+          Intrinsic::SPVIntrinsics::spv_expect, {II->getType()},
+          {II->getArgOperand(0), II->getArgOperand(1)});
+    BasicBlock::iterator BI = II->getIterator();
+    ReplaceInstWithValue(BI, Res);
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
@@ -435,8 +441,13 @@ static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
     return true;
   }
 
+  auto *Alloca = dyn_cast<AllocaInst>(LifetimeArg0);
+  if (!Alloca || !Alloca->isStaticAlloca()) {
+    II->eraseFromParent();
+    return true;
+  }
+
   IRBuilder<> Builder(II);
-  auto *Alloca = cast<AllocaInst>(LifetimeArg0);
   std::optional<TypeSize> Size =
       Alloca->getAllocationSize(Alloca->getDataLayout());
   Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
@@ -460,6 +471,74 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
       Intrinsic::experimental_constrained_fadd, Product, Add, {},
       II->getName() + ".add", nullptr, Rounding);
   II->replaceAllUsesWith(Result);
+  EraseFromParent.push_back(II);
+}
+
+// llvm.minimum/llvm.maximum return NaN if either operand is NaN and order -0.0
+// before +0.0, whereas OpenCL.std fmin/fmax and GLSL.std.450 NMin/NMax return
+// the other operand for a NaN and may return either zero. Expand them like
+// SPIRV-LLVM-Translator does, so that both produce the same OpenCL SPIR-V. For
+// llvm.minimum (llvm.maximum is symmetrical):
+//   %m = call @llvm.minnum(%x, %y)
+//   ; unless nsz: for non-NaN operands, the result has the sign of %x if that
+//   ; is set (maximum: clear), and the sign of %y otherwise. This only changes
+//   ; %m if it is a zero of the wrong sign.
+//   %xsign = call @llvm.copysign(1.0, %x)
+//   %xneg = fcmp olt %xsign, 0.0
+//   %s = select %xneg, %x, %y
+//   %m.s = call @llvm.copysign(%m, %s)
+//   ; unless nnan
+//   %uno = fcmp uno %x, %y
+//   %res = select %uno, NaN, %m.s
+static Value *expandFMinimumMaximum(IRBuilderBase &Builder, bool IsMax,
+                                    Value *X, Value *Y, FastMathFlags FMF) {
+  Type *Ty = X->getType();
+  Value *Res = Builder.CreateIntrinsic(
+      IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y}, FMF);
+  if (!FMF.noSignedZeros()) {
+    Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
+    Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
+    Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
+                        : Builder.CreateSelect(XNeg, X, Y);
+    Res = Builder.CreateCopySign(Res, Sign);
+  }
+  if (!FMF.noNaNs()) {
+    Value *Uno = Builder.CreateFCmpUNO(X, Y);
+    Res = Builder.CreateSelect(Uno, ConstantFP::getQNaN(Ty), Res);
+  }
+  return Res;
+}
+
+static void lowerFMinimumMaximum(IntrinsicInst *II,
+                                 SmallVector<Instruction *> &EraseFromParent) {
+  IRBuilder<> Builder(II);
+  Value *Res = expandFMinimumMaximum(
+      Builder, II->getIntrinsicID() == Intrinsic::maximum, II->getArgOperand(0),
+      II->getArgOperand(1), II->getFastMathFlags());
+  Res->takeName(II);
+  II->replaceAllUsesWith(Res);
+  EraseFromParent.push_back(II);
+}
+
+// ExpandReductions only expands llvm.vector.reduce.fminimum/fmaximum on vectors
+// with a power-of-two number of elements. Expand the others into a chain of
+// llvm.minimum/llvm.maximum, expanded as above.
+static void
+lowerVectorReduceFMinimumMaximum(IntrinsicInst *II,
+                                 SmallVector<Instruction *> &EraseFromParent) {
+  bool IsMax = II->getIntrinsicID() == Intrinsic::vector_reduce_fmaximum;
+  Value *Vec = II->getArgOperand(0);
+  unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
+  IRBuilder<> Builder(II);
+  SmallVector<Value *> Elts;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts.push_back(Builder.CreateExtractElement(Vec, I));
+  Value *Res = Elts[0];
+  for (Value *Elt : drop_begin(Elts))
+    Res =
+        expandFMinimumMaximum(Builder, IsMax, Res, Elt, II->getFastMathFlags());
+  Res->takeName(II);
+  II->replaceAllUsesWith(Res);
   EraseFromParent.push_back(II);
 }
 
@@ -495,8 +574,19 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         lowerFunnelShifts(II);
         Changed = true;
         break;
+      case Intrinsic::minimum:
+      case Intrinsic::maximum:
+        lowerFMinimumMaximum(II, EraseFromParent);
+        Changed = true;
+        break;
+      case Intrinsic::vector_reduce_fminimum:
+      case Intrinsic::vector_reduce_fmaximum:
+        lowerVectorReduceFMinimumMaximum(II, EraseFromParent);
+        Changed = true;
+        break;
       case Intrinsic::assume:
       case Intrinsic::expect:
+      case Intrinsic::expect_with_probability:
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
@@ -542,12 +632,14 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           Changed = true;
           break;
         }
-        if (TM.getTargetTriple().getVendor() == Triple::AMD ||
-            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
-              if (Prefix.empty())
-                return false;
-              return II->getCalledFunction()->getName().starts_with(Prefix);
-            }))
+        if (STI.getTargetTriple().getVendor() == Triple::AMD ||
+            any_of(STI.getCLOpts().allow_unknown_intrinsics,
+                   [II](StringRef Prefix) {
+                     if (Prefix.empty())
+                       return false;
+                     return II->getCalledFunction()->getName().starts_with(
+                         Prefix);
+                   }))
           Changed |= lowerIntrinsicToFunction(II, TTI);
         break;
       }
@@ -578,6 +670,17 @@ addFunctionTypeMutation(NamedMDNode *NMD,
   NMD->addOperand(MDNode::get(Ctx, MDArgs));
 }
 
+// Drops attributes that are invalid on the i32 placeholders in the type of V.
+template <typename T> static void removeIncompatibleAttrs(T *V) {
+  FunctionType *FTy = V->getFunctionType();
+  AttributeList Attrs = V->getAttributes();
+  V->removeRetAttrs(AttributeFuncs::typeIncompatible(FTy->getReturnType(),
+                                                     Attrs.getRetAttrs()));
+  for (auto [I, Ty] : enumerate(FTy->params()))
+    V->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(Ty, Attrs.getParamAttrs(I)));
+}
+
 // Returns F if aggregate argument/return types are not present or cloned F
 // function with the types replaced by i32 types. The change in types is
 // noted in 'spv.cloned_funcs' metadata for later restoration.
@@ -590,7 +693,7 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   if (F->isIntrinsic())
     return F;
 
-  IRBuilder<> B(F->getContext());
+  IRBuilder<> B(*F->getParent());
 
   bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
     return Arg.getType()->isAggregateType();
@@ -630,14 +733,17 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
                     Returns);
   NewF->takeName(F);
   NewF->setComdat(F->getComdat());
+  removeIncompatibleAttrs(NewF);
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
   for (User *U : F->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F) {
       CB->mutateFunctionType(NewF->getFunctionType());
+      removeIncompatibleAttrs(CB);
+    }
   }
   // NewF keeps F's address space, so their pointer types match and
   // RAUW is safe despite the differing signatures.
@@ -785,7 +891,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
   if (Calls.empty())
     return false;
 
-  IRBuilder<> B(F->getContext());
+  IRBuilder<> B(*F->getParent());
 
   unsigned MutatedCallIdx = 0;
   for (auto &&[CB, NewFnTy] : Calls) {
@@ -837,6 +943,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
       TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
           CB, CB->getType());
     CB->mutateFunctionType(NewFTy);
+    removeIncompatibleAttrs(CB);
   }
 
   return true;

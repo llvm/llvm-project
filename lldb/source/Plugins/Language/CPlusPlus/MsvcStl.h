@@ -60,6 +60,10 @@ bool IsMsvcStlSmartPointer(ValueObject &valobj);
 bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
                                         const TypeSummaryOptions &options);
 
+bool DumpMsvcStlSmartPointerSummary(ValueObject &ptr, ValueObject &rep,
+                                    uint64_t ctrl_addr, Stream &stream,
+                                    const TypeSummaryOptions &options);
+
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
 
@@ -109,7 +113,7 @@ MsvcStlVariantSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP valobj_sp);
 
 // MSVC STL std::atomic<>
-bool IsMsvcStlAtomic(ValueObject &valobj);
+bool IsMsvcStlAtomic(ValueObject &valobj, bool *is_smart_ptr = nullptr);
 bool MsvcStlAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
                                   const TypeSummaryOptions &options);
 SyntheticChildrenFrontEnd *

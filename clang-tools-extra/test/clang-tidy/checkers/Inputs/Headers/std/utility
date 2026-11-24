@@ -55,6 +55,11 @@ pair<T1, T2> make_pair(T1 x, T2 y) {
   return pair<T1, T2>(x, y);
 }
 
+template <typename T>
+constexpr __underlying_type(T) to_underlying(T value) noexcept {
+  return static_cast<__underlying_type(T)>(value);
+}
+
 } // namespace std
 
 #endif // _UTILITY_

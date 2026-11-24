@@ -7,6 +7,10 @@ unittest("VectorizeTests") {
     "//llvm/lib/IR",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Vectorize",
+
+    # VPlanVerifierTest.cpp includes the internal header VectorizeOptions.h,
+    # which includes the generated file VectorizeOptions.inc.
+    "//llvm/lib/Transforms/Vectorize:VectorizeOptions",
   ]
   sources = [
     "VPDomTreeTest.cpp",

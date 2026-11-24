@@ -24,7 +24,7 @@ subroutine test_read_size(size, c1, c2, unit, stat)
   READ(unit, '(A)', ADVANCE='NO', SIZE=size, IOSTAT=stat) c1, c2
 end subroutine
 
-  ! CHECK: fir.alloca i32 {bindc_name = "unit", uniq_name = "_QFEunit"}
+  ! CHECK: fir.alloca i32 <{bindc_name = "unit", uniq_name = "_QFEunit"}>
   integer :: unit
   character(7) :: c1
   character(4) :: c2

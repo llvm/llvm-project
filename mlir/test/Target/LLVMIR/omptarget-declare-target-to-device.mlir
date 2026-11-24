@@ -7,7 +7,7 @@
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
   // CHECK-DAG: @_QMtest_0Ezii = global [11 x float] zeroinitializer
-  llvm.mlir.global external @_QMtest_0Ezii() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : !llvm.array<11 x f32> {
+  llvm.mlir.global external @_QMtest_0Ezii() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : !llvm.array<11 x f32> {
     %0 = llvm.mlir.zero : !llvm.array<11 x f32>
     llvm.return %0 : !llvm.array<11 x f32>
   }

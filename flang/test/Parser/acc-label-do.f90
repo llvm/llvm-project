@@ -99,6 +99,23 @@ end
 !PARSE-TREE: | | | | EndDoStmt ->
 !PARSE-TREE: | AccEndBlockDirective -> AccBlockDirective -> llvm::acc::Directive = kernels
 
+! A LOOP construct is associated with the outermost loop only; the loops in
+! between share its terminating label and are closed by the statement that
+! terminates the loop associated with the innermost LOOP construct.
+
+subroutine inner_loops_without_directive(a, c, n, k)
+  integer :: i, j, m, n, k
+  real :: a(n), c(n,k)
+!$acc kernels
+!$acc loop independent
+  do 350 m = 1, n
+    do 350 j = 1, k
+!$acc loop gang vector
+      do 350 i = 1, n
+350     a(i) = a(i) + c(i,j)
+!$acc end kernels
+end
+
 !UNPARSE: SUBROUTINE triple_shared_label (a, c, n, k)
 !UNPARSE: !$ACC KERNELS
 !UNPARSE: !$ACC LOOP INDEPENDENT
@@ -113,3 +130,43 @@ end
 !UNPARSE:  END DO
 !UNPARSE: !$ACC END KERNELS
 !UNPARSE: END SUBROUTINE
+
+!UNPARSE: SUBROUTINE inner_loops_without_directive (a, c, n, k)
+!UNPARSE: !$ACC KERNELS
+!UNPARSE: !$ACC LOOP INDEPENDENT
+!UNPARSE:  DO m=1_4,n
+!UNPARSE:   DO j=1_4,k
+!UNPARSE: !$ACC LOOP GANG VECTOR
+!UNPARSE:    DO i=1_4,n
+!UNPARSE:     350
+!UNPARSE:    END DO
+!UNPARSE:   END DO
+!UNPARSE:  END DO
+!UNPARSE: !$ACC END KERNELS
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: OpenACCBlockConstruct
+!PARSE-TREE: | AccBeginBlockDirective
+!PARSE-TREE: | | AccBlockDirective -> llvm::acc::Directive = kernels
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenACCConstruct -> OpenACCLoopConstruct
+!PARSE-TREE: | | | AccBeginLoopDirective
+!PARSE-TREE: | | | | AccLoopDirective -> llvm::acc::Directive = loop
+!PARSE-TREE: | | | | AccClauseList -> AccClause -> Independent
+!PARSE-TREE: | | | DoConstruct
+!PARSE-TREE: | | | | NonLabelDoStmt
+!PARSE-TREE: | | | | Block
+!PARSE-TREE: | | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+!PARSE-TREE: | | | | | | NonLabelDoStmt
+!PARSE-TREE: | | | | | | Block
+!PARSE-TREE: | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenACCConstruct -> OpenACCLoopConstruct
+!PARSE-TREE: | | | | | | | | AccBeginLoopDirective
+!PARSE-TREE: | | | | | | | | | AccLoopDirective -> llvm::acc::Directive = loop
+!PARSE-TREE: | | | | | | | | DoConstruct
+!PARSE-TREE: | | | | | | | | | NonLabelDoStmt
+!PARSE-TREE: | | | | | | | | | Block
+!PARSE-TREE: | | | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
+!PARSE-TREE: | | | | | | | | | EndDoStmt ->
+!PARSE-TREE: | | | | | | EndDoStmt ->
+!PARSE-TREE: | | | | EndDoStmt ->
+!PARSE-TREE: | AccEndBlockDirective -> AccBlockDirective -> llvm::acc::Directive = kernels

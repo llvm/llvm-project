@@ -11,6 +11,8 @@ class ConcurrentManySignals(ConcurrentEventsBase):
     # This test is flaky on Darwin.
     @skipIfDarwin
     @expectedFailureNetBSD
+    # Flakey in AArch64 Linux GitHub CI https://github.com/llvm/llvm-project/issues/171210.
+    @skipIf(oslist=["linux"], archs=["aarch64"])
     def test(self):
         """Test 100 signals from 100 threads."""
         self.build()

@@ -210,7 +210,7 @@ namespace InvalidEmptyNames {
 // These shouldn't crash, the diagnostics aren't important.
 struct ::, struct ::; // expected-error 2 {{expected identifier}} expected-error 2 {{declaration of anonymous struct must be a definition}} expected-warning {{declaration does not declare anything}}
 enum ::, enum ::; // expected-error 2 {{expected identifier}}
-struct ::__super, struct ::__super; // expected-error 2 {{expected identifier}} expected-error 2 {{expected '::' after '__super'}}
+struct ::__super, struct ::__super; // expected-error 2 {{expected identifier}} expected-error 2 {{declaration of anonymous struct must be a definition}} expected-warning {{declaration does not declare anything}}
 struct ::template foo, struct ::template bar; // expected-error 2 {{expected identifier}} expected-error 2 {{declaration of anonymous struct must be a definition}} expected-warning {{declaration does not declare anything}}
 struct ::foo struct::; // expected-error {{no struct named 'foo' in the global namespace}} expected-error {{expected identifier}}
 class :: : {} a;  // expected-error {{expected identifier}} expected-error {{expected class name}}

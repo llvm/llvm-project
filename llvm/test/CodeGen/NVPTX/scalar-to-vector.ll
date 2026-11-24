@@ -5,14 +5,13 @@
 define void @test_insertelement_int32x2() {
 ; CHECK-LABEL: test_insertelement_int32x2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
-; CHECK-NEXT:    mov.b64 {%r2, _}, %rd2;
-; CHECK-NEXT:    mov.b64 %rd1, {%r2, %r1};
+; CHECK-NEXT:    cvt.u64.u32 %rd2, 0;
+; CHECK-NEXT:    mov.b64 {%r1, _}, %rd2;
+; CHECK-NEXT:    mov.b64 %rd1, {%r1, 0};
 ; CHECK-NEXT:    bra.uni $L__BB0_1;
 ; CHECK-NEXT:  $L__BB0_1:
 ; CHECK-NEXT:    ret;
@@ -34,7 +33,7 @@ define void @test_insertelement_float32x2() {
 ; CHECK-NEXT:    mov.b32 %r1, 0f00000000;
 ; CHECK-NEXT:    mov.b64 %rd2, {%r1, 0};
 ; CHECK-NEXT:    mov.b64 {%r2, _}, %rd2;
-; CHECK-NEXT:    mov.b64 %rd1, {%r2, %r1};
+; CHECK-NEXT:    mov.b64 %rd1, {%r2, 0f00000000};
 ; CHECK-NEXT:    bra.uni $L__BB1_1;
 ; CHECK-NEXT:  $L__BB1_1:
 ; CHECK-NEXT:    ret;
@@ -49,16 +48,15 @@ define void @test_insertelement_float32x2() {
 define void @test_insertelement_float16x2() {
 ; CHECK-LABEL: test_insertelement_float16x2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    mov.b32 {_, %rs1}, %r2;
-; CHECK-NEXT:    mov.b16 %rs2, 0x0000;
-; CHECK-NEXT:    mov.b32 %r3, {%rs2, 0};
-; CHECK-NEXT:    mov.b32 {%rs3, _}, %r3;
-; CHECK-NEXT:    mov.b32 %r1, {%rs3, %rs1};
+; CHECK-NEXT:    mov.b32 %r3, {0x0000, 0};
+; CHECK-NEXT:    mov.b32 {%rs2, _}, %r3;
+; CHECK-NEXT:    mov.b32 %r1, {%rs2, %rs1};
 ; CHECK-NEXT:    bra.uni $L__BB2_1;
 ; CHECK-NEXT:  $L__BB2_1:
 ; CHECK-NEXT:    ret;

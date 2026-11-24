@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -19,7 +19,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(ptr @foo, i32 3)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void_i32(ptr @foo, i32 3)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq [[PTR]] %[[__THREW__VAL]], 1
@@ -77,7 +77,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(ptr @foo, i32 3)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void_i32(ptr @foo, i32 3)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq [[PTR]] %[[__THREW__VAL]], 1
@@ -125,7 +125,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: %0 = call cc{{.*}} noalias ptr @__invoke_ptr_i8_i8(ptr @bar, i8 signext 1, i8 zeroext 2)
+; CHECK-NEXT: %0 = call wasm_emscripten_invokecc noalias ptr @__invoke_ptr_i8_i8(ptr @bar, i8 signext 1, i8 zeroext 2)
 
 invoke.cont:                                      ; preds = %entry
   br label %try.cont
@@ -172,3 +172,6 @@ declare void @__cxa_call_unexpected(ptr)
 ; CHECK-DAG: declare void @__resumeException(ptr)
 ; CHECK-DAG: declare void @__invoke_void_i32(ptr, i32)
 ; CHECK-DAG: declare ptr @__cxa_find_matching_catch_4(ptr, ptr)
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"emscripten"}

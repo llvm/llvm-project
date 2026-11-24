@@ -305,6 +305,18 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
+/// Dialect constant materialization API
+//===----------------------------------------------------------------------===//
+
+MlirOperation mlirDialectMaterializeConstant(MlirDialect dialect,
+                                             MlirRewriterBase rewriter,
+                                             MlirAttribute value, MlirType type,
+                                             MlirLocation loc) {
+  return wrap(unwrap(dialect)->materializeConstant(
+      *unwrap(rewriter), unwrap(value), unwrap(type), unwrap(loc)));
+}
+
+//===----------------------------------------------------------------------===//
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
@@ -1047,19 +1059,19 @@ mlirRewritePatternSetFromPDLPatternModule(MlirPDLPatternModule op) {
 }
 
 MlirValue mlirPDLValueAsValue(MlirPDLValue value) {
-  return wrap(unwrap(value)->dyn_cast<mlir::Value>());
+  return wrap(llvm::dyn_cast_if_present<mlir::Value>(*unwrap(value)));
 }
 
 MlirType mlirPDLValueAsType(MlirPDLValue value) {
-  return wrap(unwrap(value)->dyn_cast<mlir::Type>());
+  return wrap(llvm::dyn_cast_if_present<mlir::Type>(*unwrap(value)));
 }
 
 MlirOperation mlirPDLValueAsOperation(MlirPDLValue value) {
-  return wrap(unwrap(value)->dyn_cast<mlir::Operation *>());
+  return wrap(llvm::dyn_cast_if_present<mlir::Operation *>(*unwrap(value)));
 }
 
 MlirAttribute mlirPDLValueAsAttribute(MlirPDLValue value) {
-  return wrap(unwrap(value)->dyn_cast<mlir::Attribute>());
+  return wrap(llvm::dyn_cast_if_present<mlir::Attribute>(*unwrap(value)));
 }
 
 void mlirPDLResultListPushBackValue(MlirPDLResultList results,

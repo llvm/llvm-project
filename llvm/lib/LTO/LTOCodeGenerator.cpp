@@ -52,6 +52,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
@@ -119,7 +120,6 @@ cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
 
-extern cl::opt<std::string> SampleProfileFile;
 } // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -128,6 +128,7 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
   Context.setDiscardValueNames(LTODiscardValueNames);
   Context.enableDebugTypeODRUniquing();
 
+  Config.LibraryOptions = &Context.getLibraryOptions();
   Config.CodeModel = std::nullopt;
   Config.StatsFile = LTOStatsFile;
   Config.RunCSIRInstr = LTORunCSIRInstr;
@@ -186,8 +187,6 @@ void LTOCodeGenerator::setDebugInfo(lto_debug_model Debug) {
 
 void LTOCodeGenerator::setOptLevel(unsigned Level) {
   Config.OptLevel = Level;
-  Config.PTO.LoopVectorization = Config.OptLevel > 1;
-  Config.PTO.SLPVectorization = Config.OptLevel > 1;
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(Config.OptLevel);
   assert(CGOptLevelOrNone && "Unknown optimization level!");
@@ -232,7 +231,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
 bool LTOCodeGenerator::useAIXSystemAssembler() {
   const auto &Triple = TargetMach->getTargetTriple();
-  return Triple.isOSAIX() && Config.Options.DisableIntegratedAS;
+  return Triple.isOSAIX() && Config.Options.MCOptions.DisableIntegratedAS;
 }
 
 bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
@@ -398,7 +397,7 @@ bool LTOCodeGenerator::determineTarget() {
 
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
-  if (!codegen::getExplicitDataSections())
+  if (!codegen::getExplicitDataSections(Context.getLibraryOptions()))
     Config.Options.DataSections = true;
 
   TargetMach = createTargetMachine();
@@ -409,8 +408,10 @@ bool LTOCodeGenerator::determineTarget() {
 
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
+  TargetOptions Options = Config.Options;
+  Options.MCOptions.LibraryOptions = Config.LibraryOptions;
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Config.Options,
+      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Options,
       Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
@@ -562,7 +563,9 @@ bool LTOCodeGenerator::optimize() {
   Config.StatsFile = LTOStatsFile;
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
-  Config.SampleProfile = SampleProfileFile;
+  Config.SampleProfile = SampleProfileLoaderPass::getSampleProfileFile(Context);
+  Config.PTO.LoopVectorization = Config.OptLevel > 1;
+  Config.PTO.SLPVectorization = Config.OptLevel > 1;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,
@@ -603,8 +606,14 @@ bool LTOCodeGenerator::optimize() {
   // Mark which symbols can not be internalized
   this->applyScopeRestrictions();
 
-  // Add an appropriate DataLayout instance for this module...
-  MergedModule->setDataLayout(TargetMach->createDataLayout());
+  // Seed a DataLayout only if the merged module does not already carry one, so
+  // an input module's own DataLayout is preserved. Compute it from the module's
+  // ABI so the target-abi module flag is respected.
+  if (MergedModule->getDataLayout().isDefault()) {
+    MergedModule->setDataLayout(
+        MergedModule->getTargetTriple().computeDataLayout(
+            TargetMach->getTargetABIName(*MergedModule)));
+  }
 
   if (!SaveIRBeforeOptPath.empty()) {
     std::error_code EC;
@@ -669,17 +678,13 @@ void LTOCodeGenerator::setCodeGenDebugOptions(ArrayRef<StringRef> Options) {
 }
 
 void LTOCodeGenerator::parseCodeGenDebugOptions() {
-  if (!CodegenOptions.empty())
-    llvm::parseCommandLineOptions(CodegenOptions);
-}
-
-void llvm::parseCommandLineOptions(std::vector<std::string> &Options) {
-  if (!Options.empty()) {
+  if (!CodegenOptions.empty()) {
     // ParseCommandLineOptions() expects argv[0] to be program name.
     std::vector<const char *> CodegenArgv(1, "libLLVMLTO");
-    for (std::string &Arg : Options)
+    for (std::string &Arg : CodegenOptions)
       CodegenArgv.push_back(Arg.c_str());
-    cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
+    cl::parseCommandLineOptions(Context.getLibraryOptions(),
+                                codegen::getToolOptions(), CodegenArgv);
   }
 }
 

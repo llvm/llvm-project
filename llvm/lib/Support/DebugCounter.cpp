@@ -64,7 +64,6 @@ struct DebugCounterOwner : DebugCounter {
   cl::opt<bool, true> PrintDebugCounter{
       "print-debug-counter",
       cl::Hidden,
-      cl::Optional,
       cl::location(this->ShouldPrintCounter),
       cl::init(false),
       cl::desc("Print out debug counter info after all counters accumulated"),
@@ -75,14 +74,12 @@ struct DebugCounterOwner : DebugCounter {
   cl::opt<bool, true> PrintDebugCounterQueries{
       "print-debug-counter-queries",
       cl::Hidden,
-      cl::Optional,
       cl::location(this->ShouldPrintCounterQueries),
       cl::init(false),
       cl::desc("Print out each query of an enabled debug counter")};
   cl::opt<bool, true> BreakOnLastCount{
       "debug-counter-break-on-last",
       cl::Hidden,
-      cl::Optional,
       cl::location(this->BreakOnLast),
       cl::init(false),
       cl::desc("Insert a break point on the last enabled count of a "

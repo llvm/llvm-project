@@ -27,7 +27,7 @@ end subroutine s4
 
 ! CHECK-LABEL:   func.func @_QPs4() {
 !                  Example of how the lowering for regular derived type variables:
-! CHECK:           %[[VAL_DERIVED_ALLOCA:.*]] = fir.alloca !fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}> {bindc_name = "v", uniq_name = "_QFs4Ev"}
+! CHECK:           %[[VAL_DERIVED_ALLOCA:.*]] = fir.alloca !fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}> <{bindc_name = "v", uniq_name = "_QFs4Ev"}>
 ! CHECK:           %[[VAL_DERIVED_DECLARE:.*]]:2 = hlfir.declare %[[VAL_DERIVED_ALLOCA]] {{.*}}
 ! CHECK:           %[[VAL_COORD:.*]] = fir.coordinate_of %[[VAL_DERIVED_DECLARE]]#0, x : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_ZERO:.*]] = fir.zero_bits !fir.heap<i32>

@@ -26,9 +26,7 @@ RValue CIRGenCUDARuntime::emitCUDAKernelCallExpr(CIRGenFunction &cgf,
                                                  const CUDAKernelCallExpr *expr,
                                                  ReturnValueSlot retValue) {
 
-  CIRGenBuilderTy &builder = cgm.getBuilder();
-  mlir::Location loc =
-      cgf.currSrcLoc ? cgf.currSrcLoc.value() : builder.getUnknownLoc();
+  mlir::Location loc = cgf.getLoc(SourceLocation{});
 
   cgf.emitIfOnBoolExpr(
       expr->getConfig(),

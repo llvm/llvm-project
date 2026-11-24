@@ -24,6 +24,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Alignment.h"
 #include <iterator>
 
 namespace mlir {
@@ -142,7 +143,12 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   return std::distance(scalarNumBits.begin(), minVal);
 }
 
-static bool areSameBitwidthScalarType(Type a, Type b) {
+static bool areSameBitwidthScalarOrVectorType(Type a, Type b) {
+  if (auto va = dyn_cast<VectorType>(a)) {
+    auto vb = dyn_cast<VectorType>(b);
+    return vb && va.getNumElements() * va.getElementTypeBitWidth() ==
+                     vb.getNumElements() * vb.getElementTypeBitWidth();
+  }
   return a.isIntOrFloat() && b.isIntOrFloat() &&
          a.getIntOrFloatBitWidth() == b.getIntOrFloatBitWidth();
 }
@@ -356,7 +362,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
     spirv::SPIRVType dstElemType = analysis.getElementType(dstVarOp);
 
     if (srcElemType == dstElemType ||
-        areSameBitwidthScalarType(srcElemType, dstElemType)) {
+        areSameBitwidthScalarOrVectorType(srcElemType, dstElemType)) {
       // We have the same bitwidth for source and destination element types.
       // Thie indices keep the same.
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
@@ -449,7 +455,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       return success();
     }
 
-    if (areSameBitwidthScalarType(srcElemType, dstElemType)) {
+    if (areSameBitwidthScalarOrVectorType(srcElemType, dstElemType)) {
       auto castOp = spirv::BitcastOp::create(rewriter, loc, srcElemType,
                                              newLoadOp.getValue());
       rewriter.replaceOp(loadOp, castOp->getResults());
@@ -550,15 +556,75 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
         cast<spirv::PointerType>(storeOp.getPtr().getType()).getPointeeType();
     auto dstElemType =
         cast<spirv::PointerType>(adaptor.getPtr().getType()).getPointeeType();
-    if (!srcElemType.isIntOrFloat() || !dstElemType.isIntOrFloat())
-      return rewriter.notifyMatchFailure(storeOp, "not scalar type");
-    if (!areSameBitwidthScalarType(srcElemType, dstElemType))
-      return rewriter.notifyMatchFailure(storeOp, "different bitwidth");
-
     Location loc = storeOp.getLoc();
     Value value = adaptor.getValue();
-    if (srcElemType != dstElemType)
+    auto srcVector = dyn_cast<VectorType>(srcElemType);
+    auto dstVector = dyn_cast<VectorType>(dstElemType);
+    if (srcVector && dstVector && srcVector != dstVector) {
+      if (srcVector.getElementTypeBitWidth() !=
+              dstVector.getElementTypeBitWidth() ||
+          srcVector.getNumElements() % dstVector.getNumElements() != 0)
+        return rewriter.notifyMatchFailure(storeOp,
+                                           "incompatible vector types");
+      auto acOp = adaptor.getPtr().getDefiningOp<spirv::AccessChainOp>();
+      if (!acOp)
+        return rewriter.notifyMatchFailure(storeOp,
+                                           "ptr not spirv.AccessChain");
+      if (srcVector.getElementType() != dstVector.getElementType())
+        value = spirv::BitcastOp::create(
+            rewriter, loc,
+            VectorType::get(srcVector.getShape(), dstVector.getElementType()),
+            value);
+      unsigned count = dstVector.getNumElements();
+      unsigned ratio = srcVector.getNumElements() / count;
+      unsigned bytes = count * dstVector.getElementTypeBitWidth() / 8;
+
+      // Split the value into vectors matching the canonical resource and store
+      // them at consecutive vector indices. Adjust each store's alignment for
+      // its byte offset from the original pointer.
+      auto getPart = [&](unsigned i) -> Value {
+        if (ratio == 1)
+          return value;
+        SmallVector<int32_t> components;
+        for (unsigned j = 0; j < count; ++j)
+          components.push_back(i * count + j);
+        return spirv::VectorShuffleOp::create(
+            rewriter, loc, dstVector, value, value,
+            rewriter.getI32ArrayAttr(components));
+      };
+      auto firstStore = spirv::StoreOp::create(
+          rewriter, loc, adaptor.getPtr(), getPart(0),
+          storeOp.getMemoryAccessAttr(), storeOp.getAlignmentAttr());
+      firstStore->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
+      for (unsigned i = 1; i < ratio; ++i) {
+        Value part = getPart(i);
+        SmallVector<Value> indices = llvm::to_vector(acOp.getIndices());
+        Type indexType = indices.back().getType();
+        auto offset = spirv::ConstantOp::create(
+            rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, i));
+        indices.back() = spirv::IAddOp::create(rewriter, loc, indexType,
+                                               indices.back(), offset);
+        Value ptr = spirv::AccessChainOp::create(rewriter, loc,
+                                                 acOp.getBasePtr(), indices);
+        IntegerAttr alignment = storeOp.getAlignmentAttr();
+        if (alignment)
+          alignment = rewriter.getI32IntegerAttr(
+              llvm::commonAlignment(llvm::Align(alignment.getInt()), i * bytes)
+                  .value());
+        auto store = spirv::StoreOp::create(
+            rewriter, loc, ptr, part, storeOp.getMemoryAccessAttr(), alignment);
+        store->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
+      }
+      rewriter.eraseOp(storeOp);
+      return success();
+    }
+    if (srcElemType != dstElemType) {
+      if (!srcElemType.isIntOrFloat() || !dstElemType.isIntOrFloat())
+        return rewriter.notifyMatchFailure(storeOp, "not scalar type");
+      if (!areSameBitwidthScalarOrVectorType(srcElemType, dstElemType))
+        return rewriter.notifyMatchFailure(storeOp, "different bitwidth");
       value = spirv::BitcastOp::create(rewriter, loc, dstElemType, value);
+    }
     auto newStore = rewriter.replaceOpWithNewOp<spirv::StoreOp>(
         storeOp, adaptor.getPtr(), value, storeOp.getMemoryAccessAttr(),
         storeOp.getAlignmentAttr());

@@ -25,10 +25,9 @@ LLVM_ABI bool lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI);
 
 /// Emit IR to implement the given cmpxchg operation on values in registers,
 /// returning the new value.
-LLVM_ABI std::pair<Value *, Value *> buildCmpXchgValue(IRBuilderBase &Builder,
-                                                       Value *Ptr, Value *Cmp,
-                                                       Value *Val,
-                                                       Align Alignment);
+LLVM_ABI std::pair<Value *, Value *>
+buildCmpXchgValue(IRBuilderBase &Builder, Value *Ptr, Value *Cmp, Value *Val,
+                  Align Alignment, bool IsVolatile = false);
 
 /// Convert the given RMWI into primitive load and stores,
 /// assuming that doing so is legal. Return true if the lowering

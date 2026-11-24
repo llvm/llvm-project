@@ -58,6 +58,7 @@ cc_library(
         "//mlir:ArithDialect",
         "//mlir:ComplexDialect",
         "//mlir:FuncDialect",
+        "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:IndexDialect",
         "//mlir:LLVMDialect",
@@ -68,6 +69,7 @@ cc_library(
         "//mlir:RegisterAllDialects",
         "//mlir:SCFDialect",
         "//mlir:Support",
+        "//mlir:TransformUtils",
         "//mlir:VectorDialect",
     ],
 )

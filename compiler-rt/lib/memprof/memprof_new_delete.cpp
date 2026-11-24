@@ -14,6 +14,7 @@
 #include "memprof_allocator.h"
 #include "memprof_internal.h"
 #include "memprof_stack.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 
 #include "interception/interception.h"
@@ -38,6 +39,8 @@ enum class align_val_t : size_t {};
   return res;
 #define OPERATOR_NEW_BODY_ALIGN(type, nothrow)                                 \
   GET_STACK_TRACE_MALLOC;                                                      \
+  if (UNLIKELY(!CheckAlignedNewAlignment((uptr)align)))                        \
+    ReportInvalidAllocationAlignment((uptr)align, &stack);                     \
   void *res = memprof_memalign((uptr)align, size, &stack, type);               \
   if (!nothrow && UNLIKELY(!res))                                              \
     ReportOutOfMemory(size, &stack);                                           \

@@ -69,6 +69,7 @@ namespace llvm {
 
     typedef SMLoc LocTy;
     LocTy getLoc() const { return SMLoc::getFromPointer(TokStart); }
+    LocTy getPrevTokEndLoc() const { return SMLoc::getFromPointer(PrevTokEnd); }
     lltok::Kind getKind() const { return CurKind; }
     const std::string &getStrVal() const { return StrVal; }
     Type *getTyVal() const { return TyVal; }

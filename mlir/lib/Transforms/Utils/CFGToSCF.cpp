@@ -306,9 +306,9 @@ public:
         continue;
       }
 
-      // Otherwise undef values for any unused block arguments used by other
+      // Otherwise poison values for any unused block arguments used by other
       // entry blocks.
-      newSuccOperands[index] = getUndefValue(argument.getType());
+      newSuccOperands[index] = getPoisonValue(argument.getType());
     }
 
     edge.setSuccessor(multiplexerBlock);
@@ -363,8 +363,8 @@ private:
   /// Callback used to create a constant suitable as flag for
   /// the interfaces `createCFGSwitchOp`.
   function_ref<Value(unsigned)> getSwitchValue;
-  /// Callback used to create undefined values of a given type.
-  function_ref<Value(Type)> getUndefValue;
+  /// Callback used to create poison values of a given type.
+  function_ref<Value(Type)> getPoisonValue;
 
   /// Mapping of the block arguments of an entry block to the corresponding
   /// block arguments in the multiplexer block. Block arguments of an entry
@@ -378,11 +378,11 @@ private:
 
   EdgeMultiplexer(Block *multiplexerBlock,
                   function_ref<Value(unsigned)> getSwitchValue,
-                  function_ref<Value(Type)> getUndefValue,
+                  function_ref<Value(Type)> getPoisonValue,
                   llvm::SmallMapVector<Block *, unsigned, 4> &&entries,
                   Value dispatchFlag)
       : multiplexerBlock(multiplexerBlock), getSwitchValue(getSwitchValue),
-        getUndefValue(getUndefValue), blockArgMapping(std::move(entries)),
+        getPoisonValue(getPoisonValue), blockArgMapping(std::move(entries)),
         discriminator(dispatchFlag) {}
 };
 
@@ -421,15 +421,35 @@ public:
   /// Transforms `returnLikeOp` to a branch to the only block in the
   /// region with an instance of `returnLikeOp`s kind.
   void combineExit(Operation *returnLikeOp,
-                   function_ref<Value(unsigned)> getSwitchValue) {
-    auto [iter, inserted] = returnLikeToCombinedExit.try_emplace(returnLikeOp);
-    if (!inserted && iter->first == returnLikeOp)
+                   function_ref<Value(unsigned)> getSwitchValue,
+                   function_ref<Value(Type)> getUndefValue) {
+    auto existing = returnLikeToCombinedExit.find(returnLikeOp);
+    if (existing != returnLikeToCombinedExit.end() &&
+        existing->first == returnLikeOp)
       return;
+
+    // If `returnLikeOp` is an unreachable terminator and an exit block of
+    // another return-like operation already exists, it is turned into a branch
+    // to that exit block with poison operands instead of getting an exit
+    // block of its own.
+    if (interface.isUnreachableTerminator(returnLikeOp) &&
+        !orderedExitBlocks.empty()) {
+      Block *exitBlock = orderedExitBlocks.front();
+      auto builder = OpBuilder::atBlockTerminator(returnLikeOp->getBlock());
+      interface.createSingleDestinationBranch(
+          returnLikeOp->getLoc(), builder, getSwitchValue(0), exitBlock,
+          llvm::map_to_vector(exitBlock->getArgumentTypes(), getUndefValue));
+      returnLikeOp->erase();
+      return;
+    }
+
+    auto [iter, inserted] = returnLikeToCombinedExit.try_emplace(returnLikeOp);
 
     Block *exitBlock = iter->second;
     if (inserted) {
       exitBlock = new Block;
       iter->second = exitBlock;
+      orderedExitBlocks.push_back(exitBlock);
       topLevelRegion.push_back(exitBlock);
       exitBlock->addArguments(
           returnLikeOp->getOperandTypes(),
@@ -457,6 +477,8 @@ private:
   /// as equivalent. First occurrence seen is kept in the map.
   llvm::SmallDenseMap<Operation *, Block *, 4, ReturnLikeOpEquivalence>
       returnLikeToCombinedExit;
+  /// All exit blocks in the order they were created.
+  SmallVector<Block *, 4> orderedExitBlocks;
   Region &topLevelRegion;
   CFGToSCFInterface &interface;
 };
@@ -623,7 +645,7 @@ static FailureOr<StructuredLoopProperties> createSingleExitingLatch(
         return failure();
       // Transform the just created transform operation in the case that an
       // occurrence of it existed in input IR.
-      exitCombiner.combineExit(*terminator, getSwitchValue);
+      exitCombiner.combineExit(*terminator, getSwitchValue, getUndefValue);
     }
   }
 
@@ -733,7 +755,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
           // but previously dominated an exit block with a use.
           // In this case, add a block argument to the latch and go through all
           // predecessors. If the value dominates the predecessor, pass the
-          // value as a successor operand, otherwise pass undef.
+          // value as a successor operand, otherwise pass poison.
           // The above is unnecessary if the value is a block argument of the
           // latch or if `value` dominates all predecessors.
           Value argument = value;
@@ -774,7 +796,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
   }
 
   // New block arguments may have been added to the loop header.
-  // Adjust the entry edges to pass undef values to these.
+  // Adjust the entry edges to pass poison values to these.
   for (auto iter = loopHeader->pred_begin(); iter != loopHeader->pred_end();
        ++iter) {
     // Latch successor arguments have already been handled.
@@ -1218,13 +1240,25 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
 /// operation, it creates a single-entry and single-exit region.
 static ReturnLikeExitCombiner createSingleExitBlocksForReturnLike(
     Region &region, function_ref<Value(unsigned)> getSwitchValue,
-    CFGToSCFInterface &interface) {
+    function_ref<Value(Type)> getUndefValue, CFGToSCFInterface &interface) {
   ReturnLikeExitCombiner exitCombiner(region, interface);
 
+  // Combine the exits of all non-unreachable return-like operations first so
+  // that unreachable terminators can be merged into their exit blocks,
+  // regardless of the order in which they appear in the region.
   for (Block &block : region.getBlocks()) {
-    if (block.getNumSuccessors() != 0)
+    if (block.getNumSuccessors() != 0 ||
+        interface.isUnreachableTerminator(block.getTerminator()))
       continue;
-    exitCombiner.combineExit(block.getTerminator(), getSwitchValue);
+    exitCombiner.combineExit(block.getTerminator(), getSwitchValue,
+                             getUndefValue);
+  }
+  for (Block &block : region.getBlocks()) {
+    if (block.getNumSuccessors() != 0 ||
+        !interface.isUnreachableTerminator(block.getTerminator()))
+      continue;
+    exitCombiner.combineExit(block.getTerminator(), getSwitchValue,
+                             getUndefValue);
   }
 
   return exitCombiner;
@@ -1339,8 +1373,8 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
     return switchValueCache[value];
   };
 
-  ReturnLikeExitCombiner exitCombiner =
-      createSingleExitBlocksForReturnLike(region, getSwitchValue, interface);
+  ReturnLikeExitCombiner exitCombiner = createSingleExitBlocksForReturnLike(
+      region, getSwitchValue, getUndefValue, interface);
 
   // Invalidate any dominance tree on the region as the exit combiner has
   // added new blocks and edges.

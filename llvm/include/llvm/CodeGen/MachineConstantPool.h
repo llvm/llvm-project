@@ -121,8 +121,6 @@ class MachineConstantPool {
   DenseSet<MachineConstantPoolValue*> MachineCPVsSharingEntries;
   const DataLayout &DL;
 
-  const DataLayout &getDataLayout() const { return DL; }
-
 public:
   /// The only constructor.
   explicit MachineConstantPool(const DataLayout &DL)

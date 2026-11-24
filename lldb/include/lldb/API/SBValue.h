@@ -165,6 +165,12 @@ public:
   LLDB_DEPRECATED("Use the expression evaluator to perform type casting")
   lldb::SBValue Cast(lldb::SBType type);
 
+  /// Create an SBValue with the given name by evaluating the expression, with
+  /// the execution context inherited from the current SBValue.
+  /// Data Inspection Language (DIL) attempts to evaluate the expression first
+  /// (can be disabled by target.experimental.use-DIL-for-creating-values)
+  /// If DIL is not called or fails, the evaluation falls back to
+  /// UserExpression.
   lldb::SBValue CreateValueFromExpression(const char *name,
                                           const char *expression);
 

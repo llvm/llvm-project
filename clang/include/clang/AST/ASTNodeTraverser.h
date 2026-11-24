@@ -525,7 +525,11 @@ public:
     Visit(TL.getSizeExpr());
   }
   void VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
-    Visit(cast<DependentSizedExtVectorType>(TL.getType())->getSizeExpr());
+    Visit(TL.getSizeExpr());
+  }
+  void VisitVectorTypeLoc(VectorTypeLoc TL) { Visit(TL.getSizeExpr()); }
+  void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
+    Visit(TL.getSizeExpr());
   }
   void VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
     Visit(TL.getUnderlyingExpr());
@@ -806,8 +810,8 @@ public:
       for (const ParmVarDecl *Parameter : D->parameters())
         Visit(Parameter);
 
-    if (D->hasBody())
-      Visit(D->getBody());
+    if (Stmt *Body = D->getBody())
+      Visit(Body);
   }
 
   void VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {

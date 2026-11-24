@@ -13,15 +13,15 @@ define i32 @foo(ptr %ctx) {
 ; CHECK-NEXT:    movw r12, :lower16:val2
 ; CHECK-NEXT:    movw r3, :lower16:val1
 ; CHECK-NEXT:    movw r2, :lower16:val0
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    movt r12, :upper16:val2
 ; CHECK-NEXT:    movt r3, :upper16:val1
 ; CHECK-NEXT:    movt r2, :upper16:val0
-; CHECK-NEXT:    str r2, [r1, #4]
-; CHECK-NEXT:    str r3, [r1, #8]
-; CHECK-NEXT:    str.w r12, [r1, #12]
-; CHECK-NEXT:    str r0, [r1, #16]
+; CHECK-NEXT:    str r3, [r0, #8]
+; CHECK-NEXT:    str r2, [r0, #4]
+; CHECK-NEXT:    str.w r12, [r0, #12]
+; CHECK-NEXT:    str r1, [r0, #16]
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_2: @ %if.then
 ; CHECK-NEXT:    .save {r7, lr}

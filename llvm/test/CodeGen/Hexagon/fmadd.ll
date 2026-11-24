@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -fp-contract=fast < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 @g0 = global float 0.000000e+00, align 4
 @g1 = global float 1.000000e+00, align 4
@@ -11,8 +11,8 @@ b0:
   %v1 = load float, ptr @g1, align 4
   %v2 = load float, ptr @g2, align 4
   %v3 = alloca float, align 4
-  %v4 = fmul float %v0, %v1
-  %v5 = fadd float %v2, %v4
+  %v4 = fmul contract float %v0, %v1
+  %v5 = fadd contract float %v2, %v4
   store float %v5, ptr %v3, align 4
   ret void
 }

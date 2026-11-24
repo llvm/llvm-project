@@ -13,40 +13,37 @@ define i15 @foo(i15 %x) nounwind {
 ; CHECK-NEXT:    srli a1, a1, 51
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    slli a1, a0, 49
-; CHECK-NEXT:    lui a2, 1
 ; CHECK-NEXT:    srli a1, a1, 53
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    slli a1, a0, 49
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    srli a1, a1, 57
 ; CHECK-NEXT:    lui a3, 209715
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    addi a1, a2, 1365
-; CHECK-NEXT:    slli a2, a0, 49
-; CHECK-NEXT:    addi a3, a3, 819
-; CHECK-NEXT:    srli a2, a2, 57
-; CHECK-NEXT:    or a0, a0, a2
-; CHECK-NEXT:    slli a2, a3, 32
-; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    addi a2, a3, 819
 ; CHECK-NEXT:    srli a3, a0, 1
 ; CHECK-NEXT:    slli a0, a0, 49
 ; CHECK-NEXT:    and a1, a3, a1
 ; CHECK-NEXT:    srli a0, a0, 49
-; CHECK-NEXT:    lui a3, 61681
+; CHECK-NEXT:    slli a3, a2, 32
 ; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    and a1, a0, a2
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    lui a2, 4112
-; CHECK-NEXT:    addi a3, a3, -241
+; CHECK-NEXT:    lui a2, 61681
 ; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    addi a1, a2, 257
+; CHECK-NEXT:    addi a1, a2, -241
 ; CHECK-NEXT:    srli a2, a0, 4
-; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    slli a2, a3, 32
-; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    slli a3, a1, 32
-; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    srli a0, a0, 56
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    srli a1, a0, 8
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    andi a0, a0, 31
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    li a0, 15

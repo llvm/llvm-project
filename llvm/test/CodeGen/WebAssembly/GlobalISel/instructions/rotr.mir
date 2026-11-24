@@ -4,7 +4,6 @@
 
 ---
 name: rotr_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -31,7 +30,6 @@ body: |
 ...
 ---
 name: rotrv_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -63,7 +61,6 @@ body: |
 ...
 ---
 name: rotr_i16
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -90,7 +87,6 @@ body: |
 ...
 ---
 name: rotrv_i16
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -122,7 +118,6 @@ body: |
 ...
 ---
 name: rotr_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -142,7 +137,6 @@ body: |
 ...
 ---
 name: rotrv_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -162,7 +156,6 @@ body: |
 ...
 ---
 name: rotr_i32_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -182,7 +175,6 @@ body: |
 ...
 ---
 name: rotrv_i32_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -205,7 +197,6 @@ body: |
 ...
 ---
 name: rotr_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -225,7 +216,6 @@ body: |
 ...
 ---
 name: rotrv_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -245,7 +235,6 @@ body: |
 ...
 ---
 name: rotr_i64_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -267,7 +256,6 @@ body: |
 ...
 ---
 name: rotrv_i64_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

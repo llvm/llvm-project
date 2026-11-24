@@ -17,12 +17,8 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::Assign;
   case Token::minus:
     return BinaryOpKind::Sub;
-  case Token::minusequal:
-    return BinaryOpKind::SubAssign;
   case Token::plus:
     return BinaryOpKind::Add;
-  case Token::plusequal:
-    return BinaryOpKind::AddAssign;
   case Token::star:
     return BinaryOpKind::Mul;
   case Token::slash:
@@ -39,6 +35,26 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::Shl;
   case Token::greatergreater:
     return BinaryOpKind::Shr;
+  case Token::minusequal:
+    return BinaryOpKind::SubAssign;
+  case Token::plusequal:
+    return BinaryOpKind::AddAssign;
+  case Token::starequal:
+    return BinaryOpKind::MulAssign;
+  case Token::slashequal:
+    return BinaryOpKind::DivAssign;
+  case Token::percentequal:
+    return BinaryOpKind::RemAssign;
+  case Token::ampequal:
+    return BinaryOpKind::AndAssign;
+  case Token::caretequal:
+    return BinaryOpKind::XorAssign;
+  case Token::pipeequal:
+    return BinaryOpKind::OrAssign;
+  case Token::lesslessequal:
+    return BinaryOpKind::ShlAssign;
+  case Token::greatergreaterequal:
+    return BinaryOpKind::ShrAssign;
   case Token::ampamp:
     return BinaryOpKind::LAnd;
   case Token::pipepipe:

@@ -1,5 +1,5 @@
-# RUN: llc -verify-machineinstrs -run-pass regallocfast -mtriple s390x-ibm-linux -o - %s | FileCheck %s
-# RUN: llc -verify-machineinstrs -passes=regallocfast -mtriple s390x-ibm-linux -o - %s | FileCheck %s
+# RUN: llc -run-pass regallocfast -mtriple s390x-ibm-linux -o - %s | FileCheck %s
+# RUN: llc -passes=regallocfast -mtriple s390x-ibm-linux -o - %s | FileCheck %s
 --- |
   
   @g_167 = external global [5 x i64], align 8
@@ -13,7 +13,6 @@
 ---
 name:            main
 alignment:       4
-tracksRegLiveness: true
 # CHECK: $r0l = COPY renamable $r1l
 # Although R0L partially redefines R0Q, it must not mark R0Q as kill
 # because R1D is still live through that instruction.

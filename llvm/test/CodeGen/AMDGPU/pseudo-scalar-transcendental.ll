@@ -450,17 +450,11 @@ define amdgpu_cs double @v_s_rcp_f64(double inreg %src) {
 ; GFX12-LABEL: v_s_rcp_f64:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_rcp_f64_e32 v[0:1], s[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_rcp_f64:
 ; GCN-GISEL:       ; %bb.0:
 ; GCN-GISEL-NEXT:    v_rcp_f64_e32 v[0:1], s[0:1]
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
   %result = call double @llvm.amdgcn.rcp.f64(double %src)
   ret double %result
@@ -524,16 +518,15 @@ define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_xor_b32 s6, s4, 0x80000000
 ; GFX12-SDAG-NEXT:    s_fmac_f32 s5, s6, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-SDAG-NEXT:    v_cmp_class_f32_e64 s2, s1, 0x260
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_4) | instid1(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    s_cmp_gt_f32 s5, 0
-; GFX12-SDAG-NEXT:    s_cselect_b32 s2, s4, s3
+; GFX12-SDAG-NEXT:    s_cselect_b32 s3, s4, s3
 ; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s0, 0xf800000
-; GFX12-SDAG-NEXT:    s_mul_f32 s0, s2, 0x37800000
-; GFX12-SDAG-NEXT:    v_cmp_class_f32_e64 s3, s1, 0x260
+; GFX12-SDAG-NEXT:    s_mul_f32 s0, s3, 0x37800000
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s0, s2
-; GFX12-SDAG-NEXT:    s_and_b32 s2, s3, exec_lo
+; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s0, s3
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s1, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)

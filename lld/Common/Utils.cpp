@@ -15,6 +15,9 @@ using namespace llvm;
 using namespace lld;
 
 StringRef lld::utils::getRootSymbol(StringRef name) {
+  if (!name.contains('.'))
+    return name;
+
   name.consume_back(".Tgm");
   auto [P0, S0] = name.rsplit(".llvm.");
   auto [P1, S1] = P0.rsplit(".__uniq.");

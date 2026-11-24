@@ -376,10 +376,6 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The source location of the \c module contextual keyword we just
-  /// lexed, if any.
-  SourceLocation ModuleDeclLoc;
-
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
@@ -1091,7 +1087,7 @@ private:
   llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// The set of known macros exported from modules.
-  llvm::FoldingSet<ModuleMacro> ModuleMacros;
+  llvm::UniquingSet<ModuleMacro> ModuleMacros;
 
   /// The names of potential module macros that we've not yet processed.
   llvm::SmallVector<IdentifierInfo *, 32> PendingModuleMacroNames;
@@ -2192,6 +2188,15 @@ public:
     return Diags->Report(Tok.getLocation(), DiagID);
   }
 
+  DiagnosticBuilder DiagCompat(SourceLocation Loc,
+                               unsigned CompatDiagID) const {
+    return Diag(Loc, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
+  }
+
+  DiagnosticBuilder DiagCompat(const Token &Tok, unsigned CompatDiagID) const {
+    return Diag(Tok, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
+  }
+
   /// Return the 'spelling' of the token at the given
   /// location; does not go up to the spelling location or down to the
   /// expansion location.
@@ -2735,17 +2740,19 @@ private:
   /// Evaluate an integer constant expression that may occur after a
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
-  /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
-  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+  /// If the expression is equivalent to "!defined(X)", return X and its
+  /// location in IfNDefMacro.
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                                   bool CheckForEoD = true);
 
   /// Evaluate an integer constant expression that may occur after a
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
-  /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
+  /// If the expression is equivalent to "!defined(X)", return X and its
+  /// location in IfNDefMacro.
   /// \p EvaluatedDefined will contain the result of whether "defined" appeared
   /// in the evaluated expression or not.
-  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                                   Token &Tok,
                                                   bool &EvaluatedDefined,
                                                   bool CheckForEoD = true);

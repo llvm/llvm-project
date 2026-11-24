@@ -12,7 +12,7 @@ contains
   subroutine test_pointer()
     do i_pointer=1,10
     enddo
-! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_loop_varEi_pointer"}
+! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtest_loop_varEi_pointer") fortran_attrs<pointer>
 ! CHECK: %[[BOX:.*]] = fir.load %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: fir.do_loop %[[IV:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
@@ -37,7 +37,7 @@ contains
   subroutine test_allocatable()
     do i_allocatable=1,10
     enddo
-! CHECK: %[[ALLOC:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_loop_varEi_allocatable"}
+! CHECK: %[[ALLOC:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtest_loop_varEi_allocatable") fortran_attrs<allocatable>
 ! CHECK: %[[BOX:.*]] = fir.load %[[ALLOC]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK: fir.do_loop %[[IV:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
@@ -63,7 +63,7 @@ contains
     do x_pointer=1,10
     enddo
 ! CHECK: %[[COUNT:.*]] = fir.alloca index
-! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_loop_varEx_pointer"}
+! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtest_loop_varEx_pointer") fortran_attrs<pointer>
 ! CHECK: %[[BOX:.*]] = fir.load %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 ! CHECK: fir.store %{{.*}} to %[[ADDR]] : !fir.ptr<f32>
@@ -81,7 +81,7 @@ contains
     do x_allocatable=1,10
     enddo
 ! CHECK: %[[COUNT:.*]] = fir.alloca index
-! CHECK: %[[ALLOC:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_loop_varEx_allocatable"}
+! CHECK: %[[ALLOC:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtest_loop_varEx_allocatable") fortran_attrs<allocatable>
 ! CHECK: %[[BOX:.*]] = fir.load %[[ALLOC]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 ! CHECK: fir.store %{{.*}} to %[[ADDR]] : !fir.heap<f32>
@@ -99,7 +99,7 @@ contains
     do i_pointer=1,10
       if (i_pointer .gt. 5) exit
     enddo
-! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_loop_varEi_pointer"}
+! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtest_loop_varEi_pointer") fortran_attrs<pointer>
 ! CHECK: %[[BOX:.*]] = fir.load %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: fir.store %{{.*}} to %[[ADDR]] : !fir.ptr<i32>

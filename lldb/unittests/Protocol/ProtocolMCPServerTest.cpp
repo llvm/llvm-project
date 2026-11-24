@@ -157,7 +157,7 @@ public:
   using Server::Server;
 };
 
-using Transport = TestTransport<lldb_protocol::mcp::ProtocolDescriptor>;
+using MCPTestTransport = TestTransport<lldb_protocol::mcp::ProtocolDescriptor>;
 
 class ProtocolServerMCPTest : public testing::Test {
 public:
@@ -166,11 +166,11 @@ public:
   MainLoop loop;
   lldb_private::MainLoop::ReadHandleUP handles[2];
 
-  std::unique_ptr<Transport> to_server;
+  std::unique_ptr<MCPTestTransport> to_server;
   MCPBinderUP binder;
   std::unique_ptr<TestServer> server_up;
 
-  std::unique_ptr<Transport> to_client;
+  std::unique_ptr<MCPTestTransport> to_client;
   MockMessageHandler<lldb_protocol::mcp::ProtocolDescriptor> client;
 
   std::vector<std::string> logged_messages;
@@ -184,7 +184,7 @@ public:
   }
 
   void SetUp() override {
-    std::tie(to_client, to_server) = Transport::createPair(loop);
+    std::tie(to_client, to_server) = MCPTestTransport::createPair(loop);
 
     server_up = std::make_unique<TestServer>(
         "lldb-mcp", "0.1.0",
@@ -211,41 +211,7 @@ public:
     Response resp = promised_result.get_future().get();
     return toJSON(resp);
   }
-
-  template <typename Result>
-  Expected<json::Value>
-  Capture(llvm::unique_function<void(Reply<Result>)> &fn) {
-    std::promise<llvm::Expected<Result>> promised_result;
-    fn([&promised_result](llvm::Expected<Result> result) {
-      promised_result.set_value(std::move(result));
-    });
-    Run();
-    llvm::Expected<Result> result = promised_result.get_future().get();
-    if (!result)
-      return result.takeError();
-    return toJSON(*result);
-  }
-
-  template <typename Result, typename Params>
-  Expected<json::Value>
-  Capture(llvm::unique_function<void(const Params &, Reply<Result>)> &fn,
-          const Params &params) {
-    std::promise<llvm::Expected<Result>> promised_result;
-    fn(params, [&promised_result](llvm::Expected<Result> result) {
-      promised_result.set_value(std::move(result));
-    });
-    Run();
-    llvm::Expected<Result> result = promised_result.get_future().get();
-    if (!result)
-      return result.takeError();
-    return toJSON(*result);
-  }
 };
-
-template <typename T>
-inline testing::internal::EqMatcher<llvm::json::Value> HasJSON(T x) {
-  return testing::internal::EqMatcher<llvm::json::Value>(toJSON(x));
-}
 
 } // namespace
 
@@ -460,14 +426,14 @@ TEST_F(ProtocolServerMCPTest, ResourcesReadError) {
 }
 
 TEST_F(ProtocolServerMCPTest, Accept) {
-  auto transports = TestTransport<ProtocolDescriptor>::createPair(loop);
+  auto transports = MCPTestTransport::createPair(loop);
   EXPECT_THAT_ERROR(server_up->Accept(std::move(transports.second)),
                     Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, AcceptErrorAndDisconnect) {
-  auto transports = TestTransport<ProtocolDescriptor>::createPair(loop);
-  TestTransport<ProtocolDescriptor> *server_transport = transports.second.get();
+  auto transports = MCPTestTransport::createPair(loop);
+  MCPTestTransport *server_transport = transports.second.get();
   EXPECT_THAT_ERROR(server_up->Accept(std::move(transports.second)),
                     Succeeded());
 
@@ -482,7 +448,7 @@ TEST_F(ProtocolServerMCPTest, AcceptErrorAndDisconnect) {
 }
 
 TEST_F(ProtocolServerMCPTest, AcceptRegisterFailure) {
-  auto transport = std::make_unique<TestTransport<ProtocolDescriptor>>(loop);
+  auto transport = std::make_unique<MCPTestTransport>(loop);
   transport->SetRegisterMessageHandlerShouldFail(true);
   EXPECT_THAT_ERROR(server_up->Accept(std::move(transport)), Failed());
 }

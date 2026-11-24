@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include <memory>
@@ -27,13 +28,26 @@
 namespace llvm {
 
 class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
-public:
-  ARM::ARMABI TargetABI;
-
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
   mutable StringMap<std::unique_ptr<ARMSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS, SoftFloat, MinSize, DenormalFPEnv;
+    FloatABI::ABIType FloatABI = FloatABI::Default;
+    ARM::ARMABI ABI = ARM::ARM_ABI_UNKNOWN;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS && SoftFloat == RHS.SoftFloat &&
+             MinSize == RHS.MinSize && DenormalFPEnv == RHS.DenormalFPEnv &&
+             FloatABI == RHS.FloatABI && ABI == RHS.ABI;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<ARMSubtarget, SubtargetAttrs> LastSubtarget;
 
   /// Reset internal state.
   void reset() override;
@@ -73,21 +87,6 @@ public:
     return TLOF.get();
   }
 
-  bool isAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_APCS;
-  }
-
-  bool isAAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
-  bool isAAPCS16_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *
@@ -95,7 +94,8 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
   }

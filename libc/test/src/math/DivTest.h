@@ -66,9 +66,11 @@ public:
   }
 };
 
-#define LIST_DIV_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcDivTest = DivTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcDivTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcDivTest, NormalRange) { test_normal_range(&func); }
+#define LIST_DIV_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = DivTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_DIVTEST_H
