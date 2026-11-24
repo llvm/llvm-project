@@ -6525,7 +6525,6 @@ llvm::Expected<ChildTypeInfo> TypeSystemClang::GetChildAtIndex(
                 getASTContext().getTypeInfo(ivar_qual_type.getTypePtr());
 
             child.byte_size = ivar_type_info.Width / 8;
-            child.byte_offset = 0;
             child.is_base_class = true;
 
             return with_type(GetType(ivar_qual_type));
@@ -6631,7 +6630,6 @@ llvm::Expected<ChildTypeInfo> TypeSystemClang::GetChildAtIndex(
         if (!size_or_err)
           return size_or_err.takeError();
         child.byte_size = *size_or_err;
-        child.byte_offset = 0;
         return with_type(pointee_clang_type);
       }
     }
@@ -6704,7 +6702,6 @@ llvm::Expected<ChildTypeInfo> TypeSystemClang::GetChildAtIndex(
       if (!size_or_err)
         return size_or_err.takeError();
       child.byte_size = *size_or_err;
-      child.byte_offset = 0;
       return with_type(pointee_clang_type);
     }
     break;
@@ -6733,7 +6730,6 @@ llvm::Expected<ChildTypeInfo> TypeSystemClang::GetChildAtIndex(
       if (!size_or_err)
         return size_or_err.takeError();
       child.byte_size = *size_or_err;
-      child.byte_offset = 0;
       return with_type(pointee_clang_type);
     }
   } break;
