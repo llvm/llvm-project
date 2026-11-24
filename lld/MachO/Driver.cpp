@@ -417,6 +417,9 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
   InputFile *newFile = nullptr;
 
   file_magic magic = identify_magic(mbref.getBuffer());
+  if (isLazy &&
+      (magic == file_magic::macho_object || magic == file_magic::bitcode))
+    parsePendingObjects();
   switch (magic) {
   case file_magic::archive: {
     bool isCommandLineLoad = loadType != LoadType::LCLinkerOption;
@@ -467,7 +470,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             reason = "-all_load";
             break;
           }
-          if (Error e = file->fetch(c, reason)) {
+          if (Error e = file->fetch(c, reason, /*deferParse=*/true)) {
             if (config->warnThinArchiveMissingMembers)
               warn(toString(file) + ": " + reason +
                    " failed to load archive member: " + toString(std::move(e)));
@@ -483,7 +486,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
       if (file->getArchive().hasSymbolTable()) {
         for (const object::Archive::Symbol &sym : file->getArchive().symbols())
           if (sym.getName().starts_with(objc::symbol_names::klass))
-            file->fetch(sym);
+            file->fetch(sym, /*deferParse=*/true);
       }
 
       // TODO: no need to look for ObjC sections for a given archive member if
@@ -507,7 +510,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             archiveContents->push_back({path, isLazy, *mb});
           if (!hasObjCSection(*mb))
             continue;
-          if (Error e = file->fetch(c, "-ObjC"))
+          if (Error e = file->fetch(c, "-ObjC", /*deferParse=*/true))
             error(toString(file) + ": -ObjC failed to load archive member: " +
                   toString(std::move(e)));
         }
@@ -522,9 +525,16 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
     newFile = file;
     break;
   }
-  case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref, getModTime(path), "", isLazy);
+  case file_magic::macho_object: {
+    auto *obj = make<ObjFile>(mbref, getModTime(path), "", isLazy,
+                              /*forceHidden=*/false, /*compatArch=*/true,
+                              /*builtFromBitcode=*/false,
+                              /*deferParse=*/!isLazy);
+    if (!isLazy)
+      parseLater(*obj);
+    newFile = obj;
     break;
+  }
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
@@ -532,9 +542,16 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             loadDylib(mbref, nullptr, /*isBundleLoader=*/false, isExplicit))
       newFile = dylibFile;
     break;
-  case file_magic::bitcode:
-    newFile = make<BitcodeFile>(mbref, "", 0, isLazy);
+  case file_magic::bitcode: {
+    // Same as for object files.
+    auto *bitcode =
+        make<BitcodeFile>(mbref, "", 0, isLazy, /*forceHidden=*/false,
+                          /*compatArch=*/true, /*deferParse=*/!isLazy);
+    if (!isLazy)
+      parseLater(*bitcode);
+    newFile = bitcode;
     break;
+  }
   case file_magic::macho_executable:
   case file_magic::macho_bundle:
     // We only allow executable and bundle type here if it is used
@@ -691,6 +708,7 @@ void macho::parseLCLinkerOption(
 }
 
 void macho::resolveLCLinkerOptions() {
+  parsePendingExtracts();
   while (!unprocessedLCLinkerOptions.empty()) {
     SmallVector<StringRef> LCLinkerOptions(unprocessedLCLinkerOptions);
     unprocessedLCLinkerOptions.clear();
@@ -744,6 +762,8 @@ void macho::resolveLCLinkerOptions() {
                          file.isReexport);
       checkAndCacheFramework(inputFile, file.path);
     }
+
+    parsePendingExtracts();
   }
 }
 
@@ -1446,7 +1466,6 @@ static void handleSymbolPatterns(InputArgList &args,
 }
 
 static void createFiles(const InputArgList &args) {
-  TimeTraceScope timeScope("Load input files");
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
@@ -1661,9 +1680,11 @@ static void prepareObjCStubs() {
     // here: live stubs reference them later in ObjCStubsSection::addEntry(),
     // and adding them here would mark real dylib symbols referenced before dead
     // stripping.
-    if (needsEarlyUndefinedClassRef)
+    if (needsEarlyUndefinedClassRef) {
       classSym = symtab->addUndefined(names->classSymbolName, /*file=*/nullptr,
                                       /*isWeakRef=*/false);
+      parsePendingExtracts();
+    }
     in.objcStubs->recordClassSymbol(sym, classSym);
   }
 
@@ -1701,6 +1722,7 @@ static void referenceStubBinder() {
   // StubHelperSection::setUp() adds a reference and errors out if
   // dyld_stub_binder doesn't exist in case it is actually needed.
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
+  parsePendingExtracts();
 }
 
 static void createAliases() {
@@ -2479,7 +2501,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     TimeTraceScope timeScope("ExecuteLinker");
 
     initLLVM(); // must be run before any call to addFile()
-    createFiles(args);
+    {
+      TimeTraceScope timeScope("Load input files");
+      createFiles(args);
+      parsePendingExtracts();
+    }
 
     // Now that all dylibs have been loaded, search for those that should be
     // re-exported.
@@ -2524,6 +2550,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     handleExplicitExports();
 
     bool didCompileBitcodeFiles = compileBitcodeFiles();
+    parsePendingExtracts();
 
     resolveLCLinkerOptions();
 

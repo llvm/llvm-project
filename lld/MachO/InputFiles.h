@@ -162,10 +162,20 @@ class ObjFile final : public InputFile {
 public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
           bool lazy = false, bool forceHidden = false, bool compatArch = true,
-          bool builtFromBitcode = false);
+          bool builtFromBitcode = false, bool deferParse = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
+  // parseLazy() split in two: scanLazy() collects the names this file defines
+  // and references (touching only per-file state), and registerLazy() adds the
+  // defined names to the symbol table.
+  template <class LP> void scanLazy();
+  void registerLazy();
+  void clearLazyScan() {
+    lazyDefineds = {};
+    lazyUndefineds = {};
+    symbols.clear();
+  }
   template <class LP>
   void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
   void parseDeferredRelocations();
@@ -188,9 +198,20 @@ public:
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
   std::vector<AliasSymbol *> aliases;
 
+  struct PendingSymbol {
+    llvm::CachedHashStringRef name;
+    uint32_t symIndex;
+  };
+  ArrayRef<PendingSymbol> getLazyDefineds() const { return lazyDefineds; }
+  ArrayRef<llvm::CachedHashStringRef> getLazyUndefineds() const {
+    return lazyUndefineds;
+  }
+
 private:
   llvm::once_flag initDwarf;
   template <class LP> void parseLazy();
+  std::vector<PendingSymbol> lazyDefineds;
+  std::vector<llvm::CachedHashStringRef> lazyUndefineds;
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
   void parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
@@ -234,6 +255,16 @@ public:
 
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
+  // The constructor only records the exported symbols; registerExports()
+  // adds them to the symbol table. It runs from the batch the file was put
+  // on with parseLater(), so in file order. replayExport() does one of them.
+  void registerExports();
+  size_t numExports() const { return pendingExports.size(); }
+  llvm::CachedHashStringRef exportName(size_t i) const {
+    return pendingExports[i].name;
+  }
+  bool exportIsWeakDef(size_t i) const { return pendingExports[i].isWeakDef; }
+  void replayExport(size_t i);
   bool isReferenced() const { return numReferencedSymbols > 0; }
   bool isExplicitlyLinked() const;
   void setExplicitlyLinked() { explicitlyLinked = true; }
@@ -282,6 +313,22 @@ private:
   void parseExportedSymbols(uint32_t offset, uint32_t size);
   void loadReexport(StringRef path, DylibFile *umbrella,
                     const llvm::MachO::InterfaceFile *currentTopLevelTapi);
+  void recordExport(llvm::CachedHashStringRef name, DylibFile *file,
+                    DylibFile *owner, bool isWeakDef, bool isTlv);
+
+  // An exported symbol, as the constructor found it: the dylib to attribute
+  // it to (usually exportingFile, or a synthetic dylib made for a $ld$previous
+  // symbol), and whose `symbols` list it goes on.
+  struct PendingExport {
+    llvm::CachedHashStringRef name;
+    DylibFile *file;
+    DylibFile *owner;
+    // Its slot in owner->symbols.
+    uint32_t ownerIndex;
+    bool isWeakDef;
+    bool isTlv;
+  };
+  std::vector<PendingExport> pendingExports;
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
@@ -292,16 +339,17 @@ public:
   explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file,
                        bool forceHidden);
   void addLazySymbols();
-  void fetch(const llvm::object::Archive::Symbol &);
+  void fetch(const llvm::object::Archive::Symbol &, bool deferParse = false);
   // LLD normally doesn't use Error for error-handling, but the underlying
   // Archive library does, so this is the cleanest way to wrap it.
-  Error fetch(const llvm::object::Archive::Child &, StringRef reason);
+  Error fetch(const llvm::object::Archive::Child &, StringRef reason,
+              bool deferParse = false);
   const llvm::object::Archive &getArchive() const { return *file; };
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
 
 private:
   Expected<InputFile *> childToObjectFile(const llvm::object::Archive::Child &c,
-                                          bool lazy);
+                                          bool lazy, bool deferParse = false);
   std::unique_ptr<llvm::object::Archive> file;
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
@@ -315,15 +363,14 @@ class BitcodeFile final : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                        uint64_t offsetInArchive, bool lazy = false,
-                       bool forceHidden = false, bool compatArch = true);
+                       bool forceHidden = false, bool compatArch = true,
+                       bool deferParse = false);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
+  void parseLazy();
 
   std::unique_ptr<llvm::lto::InputFile> obj;
   bool forceHidden;
-
-private:
-  void parseLazy();
 };
 
 extern llvm::SetVector<InputFile *> inputFiles;
@@ -335,6 +382,13 @@ std::optional<MemoryBufferRef> readFile(StringRef path);
 void parseDeferredRelocations();
 
 void extract(InputFile &file, StringRef reason);
+
+// Parses the files extract() has pulled into the link. May pull in more.
+void parsePendingExtracts();
+// Queues an input file from the command line to be resolved and parsed by the
+// next parsePendingObjects() in command-line order.
+void parseLater(InputFile &file);
+void parsePendingObjects();
 
 namespace detail {
 
