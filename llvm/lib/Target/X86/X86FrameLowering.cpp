@@ -675,11 +675,22 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     break;
   }
 
-  // For GPRs, we only care to clear out the 32-bit register.
+  // For GPRs, we only care to clear out the 32-bit register. Skip any 32-bit
+  // register that overlaps a live register on a terminator (for example, %ah
+  // widened to %eax when %al is returned).
+  auto OverlapsTerminatorReg = [&](MCRegister Reg32) {
+    for (const MachineInstr &Term : MBB.terminators())
+      for (const MachineOperand &MO : Term.operands())
+        if (MO.isReg() && MO.getReg() && TRI->regsOverlap(Reg32, MO.getReg()))
+          return true;
+    return false;
+  };
   BitVector GPRsToZero(TRI->getNumRegs());
   for (MCRegister Reg : RegsToZero.set_bits())
     if (TRI->isGeneralPurposeRegister(MF, Reg)) {
-      GPRsToZero.set(getX86SubSuperRegister(Reg, 32));
+      MCRegister Reg32 = getX86SubSuperRegister(Reg, 32);
+      if (!OverlapsTerminatorReg(Reg32))
+        GPRsToZero.set(Reg32);
       RegsToZero.reset(Reg);
     }
 

@@ -1306,13 +1306,8 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
         if (!Reg)
           continue;
 
-        // This picks up sibling registers (e.q. %al -> %ah).
-        // FIXME: Mixing physical registers and register units is likely a bug.
-        for (MCRegUnit Unit : TRI.regunits(Reg))
-          RegsToZero.reset(static_cast<unsigned>(Unit));
-
-        for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(Reg))
-          RegsToZero.reset(SReg);
+        for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
+          RegsToZero.reset(*AI);
       }
     }
 
@@ -1333,8 +1328,8 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
         if (!Reg)
           continue;
 
-        for (const MCPhysReg Reg : TRI.sub_and_superregs_inclusive(Reg))
-          RegsToZero.reset(Reg);
+        for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
+          RegsToZero.reset(*AI);
       }
     }
   }
@@ -1342,8 +1337,8 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
   // Don't clear registers that must be preserved.
   for (const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
        MCPhysReg CSReg = *CSRegs; ++CSRegs)
-    for (MCRegister Reg : TRI.sub_and_superregs_inclusive(CSReg))
-      RegsToZero.reset(Reg.id());
+    for (MCRegAliasIterator AI(CSReg, &TRI, true); AI.isValid(); ++AI)
+      RegsToZero.reset(*AI);
 
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)
