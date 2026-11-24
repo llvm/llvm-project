@@ -1384,3 +1384,26 @@ llvm.func @switch_result_number(%arg0: i32) -> i32 {
 ^bb2(%2: i32):
   llvm.return %2 : i32
 }
+
+// 255 is the unsigned spelling of the i8 value -1.
+// CHECK-LABEL: @switch_i8_boundaries
+// CHECK: 127: ^bb1
+// CHECK-NEXT: -128: ^bb1
+// CHECK-NEXT: -1: ^bb1
+llvm.func @switch_i8_boundaries(%arg0: i8) {
+  llvm.switch %arg0 : i8, ^bb1 [127: ^bb1, -128: ^bb1, 255: ^bb1]
+^bb1:
+  llvm.return
+}
+
+// CHECK-LABEL: @switch_i128_boundaries
+// CHECK: 170141183460469231731687303715884105727: ^bb1
+// CHECK-NEXT: -170141183460469231731687303715884105728: ^bb1
+llvm.func @switch_i128_boundaries(%arg0: i128) {
+  llvm.switch %arg0 : i128, ^bb1 [
+    170141183460469231731687303715884105727: ^bb1,
+    -170141183460469231731687303715884105728: ^bb1
+  ]
+^bb1:
+  llvm.return
+}
