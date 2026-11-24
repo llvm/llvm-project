@@ -1206,7 +1206,9 @@ def cl_fast_relaxed_math : Flag<["-"], "cl-fast-relaxed-math">, Group<opencl_Gro
   HelpText<"OpenCL only. Sets -cl-finite-math-only and -cl-unsafe-math-optimizations, and defines __FAST_RELAXED_MATH__.">,
   MarshallingInfoFlag<LangOpts<"FastRelaxedMath">>;
 def cl_mad_enable : Flag<["-"], "cl-mad-enable">, Group<opencl_Group>,
-  HelpText<"OpenCL only. Accepted for compatibility and ignored.">;
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"OpenCL only. Allow use of less precise MAD computations in the generated binary.">,
+  MarshallingInfoFlag<CodeGenOpts<"LessPreciseFPMAD">>;
 def cl_no_signed_zeros : Flag<["-"], "cl-no-signed-zeros">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">,
