@@ -1895,13 +1895,20 @@ void CheckHelper::CheckDerivedType(
           derivedType.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
   }
-  if (const Scope *parentScope{scope->GetDerivedTypeParent()}) {
-    for (const Symbol &param : details.paramNameOrder()) {
-      if (const Symbol *inherited{parentScope->FindComponent(param.name())};
-          inherited && inherited->has<TypeParamDetails>()) {
-        SayWithDeclaration(*inherited, param.name(),
-            "Type parameter '%s' is already declared in a parent of this derived type"_err_en_US,
+  // F2023 19.3.1 p3, 7.5.7.2 p1
+  for (const Symbol &param : details.paramNameOrder()) {
+    if (!param.get<TypeParamDetails>().attr()) {
+      continue; // A missing definition has already been diagnosed.
+    }
+    for (const Scope *parentScope{scope->GetDerivedTypeParent()}; parentScope;
+        parentScope = parentScope->GetDerivedTypeParent()) {
+      auto inherited{parentScope->find(param.name())};
+      if (inherited != parentScope->end() &&
+          IsAccessible(*inherited->second, *scope)) {
+        SayWithDeclaration(*inherited->second, param.name(),
+            "Type parameter '%s' conflicts with an accessible name inherited from a parent type"_err_en_US,
             param.name());
+        break;
       }
     }
   }
