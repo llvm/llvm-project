@@ -262,6 +262,43 @@ void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
   erase(MI);
 }
 
+static SmallVector<const MachineInstr *>
+getTypeDecls(const MachineFunction &MF) {
+  const SPIRVInstrInfo &TII = *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo();
+  SmallVector<const MachineInstr *> Res;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (MI.getNumDefs() && TII.isTypeDeclInstr(MI))
+        Res.push_back(&MI);
+  return Res;
+}
+
+void SPIRVGlobalRegistry::restoreFromMIR(const MachineFunction &MF) {
+  for (const MachineInstr *MI : getTypeDecls(MF))
+    assignSPIRVTypeToVReg(MI, getSPIRVTypeID(MI), MF);
+}
+
+SmallVector<std::pair<Register, Register>>
+SPIRVGlobalRegistry::getVRegTypeIDs(const MachineFunction &MF) const {
+  SmallVector<std::pair<Register, Register>> Res;
+  auto TypesIt = VRegToTypeMap.find(&MF);
+  if (TypesIt == VRegToTypeMap.end())
+    return Res;
+  // The map may hold erased instructions, so only compare pointers.
+  SmallPtrSet<const MachineInstr *, 16> TypeInstrs;
+  TypeInstrs.insert_range(getTypeDecls(MF));
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (auto [Reg, Ty] : TypesIt->second) {
+    if (!TypeInstrs.contains(Ty))
+      continue;
+    Register TypeReg = getSPIRVTypeID(Ty);
+    if (TypeReg != Reg && !MRI.reg_empty(Reg))
+      Res.emplace_back(Reg, TypeReg);
+  }
+  llvm::sort(Res);
+  return Res;
+}
+
 const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
@@ -387,8 +424,8 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
                                             const SPIRVInstrInfo &TII,
                                             bool ZeroAsNull) {
   unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
-  LLT LLTy = LLT::scalar(BitWidth);
-  Register Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
+  Register Res =
+      CurMF->getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
 
@@ -539,8 +576,7 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   if (Res.isValid())
     return Res;
 
-  LLT LLTy = LLT::scalar(getScalarOrVectorBitWidth(SpvType));
-  Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
+  Res = MF.getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   MF.getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, MF);
 
@@ -854,7 +890,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
   MachineIRBuilder GVBuilder(MIRBuilder.getState());
   if (&GVBuilder.getMBB() != &EntryBB)
-    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+    GVBuilder.setInsertPt(EntryBB, getOpVariableMBBIt(MIRBuilder.getMF()));
 
   // Pointers to opaque types stay typed even with the extension on, so emit the
   // untyped variant only when the result is actually an untyped pointer.

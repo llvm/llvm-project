@@ -1,10 +1,10 @@
 # RUN: not llc -mtriple=x86_64-unknown-linux-gnu -run-pass=regallocfast %s \
 # RUN:   -o - 2>&1 | FileCheck %s
 
-# The fast register allocator folds foldable ("rm") inline asm operands only
-# when that makes the asm's register operands fit, and folds nothing when it
-# can't, leaving allocation to report the error. The clobbers below leave six
-# GPRs.
+# The fast register allocator folds foldable ("rm") inline asm operands when
+# that makes the asm's register operands fit. When it can't, it folds only
+# the "rm" inputs, which choosing 'm' put in memory, and allocation reports
+# the error. The clobbers below leave six GPRs.
 
 # CHECK: error: inline assembly requires more registers than available
 # CHECK: error: inline assembly requires more registers than available
@@ -53,9 +53,10 @@ body: |
     RET 0, $rax
 ...
 ---
-# Seven "r" inputs don't fit even with the "rm" input folded, so it isn't.
+# Seven "r" inputs don't fit even with the "rm" input folded. It's folded
+# anyway, as choosing 'm' did.
 # CHECK-LABEL: name: cannot_fit
-# CHECK: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, killed renamable
+# CHECK: INLINEASM &"", sideeffect mayload attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64, killed renamable
 name: cannot_fit
 tracksRegLiveness: true
 fixedStack:

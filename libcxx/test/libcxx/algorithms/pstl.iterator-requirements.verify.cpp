@@ -316,6 +316,10 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::rotate(pol, non_fwd, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: rotate}}
+  }
+
+  {
     (void)std::rotate_copy(
         pol, non_fwd, non_fwd, non_fwd, out);            // expected-error@*:* {{static assertion failed: rotate_copy}}
     (void)std::rotate_copy(pol, it, it, it, non_fwd);    // expected-error@*:* {{static assertion failed: rotate_copy}}

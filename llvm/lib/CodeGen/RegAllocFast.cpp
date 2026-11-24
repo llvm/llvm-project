@@ -2234,7 +2234,8 @@ static bool foldUntilFit(MutableArrayRef<AsmOperandReg> Regs,
 /// toward folding more than necessary rather than running out of registers.
 /// If folding can't make them fit by that estimate, only what they need if
 /// each register takes the fewest registers it can is folded, and if that
-/// can't make them fit either, nothing.
+/// can't make them fit either, every foldable register that the asm only
+/// reads, as choosing 'm' for an "rm" input did.
 void RegAllocFastImpl::selectInlineAsmRegsToFold(
     const MachineInstr &MI, SmallVectorImpl<Register> &ToFold) const {
   // Most inline asm has no foldable operand, so skip the analysis below.
@@ -2338,16 +2339,25 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
   // than they need can then keep them from fitting: this allocator assigns
   // them in order, without looking ahead. So start over, and fold only what
   // they need if each takes the fewest registers it can and the defs can take
-  // the physreg uses' registers. If even that can't make them fit, fold
-  // nothing, and leave allocation to report the error as it would without
-  // folding.
+  // the physreg uses' registers.
   for (AsmOperandReg &R : Regs)
     R.Folded = false;
 
   ToFold.clear();
-  if (!foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, *RegClassInfo,
-                    *TRI, ToFold))
-    ToFold.clear();
+  if (foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, *RegClassInfo,
+                   *TRI, ToFold))
+    return;
+
+  // Even that can find no fit when the estimate is wrong, e.g. it counts DL
+  // and DH as two registers of GR32 although they share EDX. Fold every
+  // foldable register that the asm only reads then, as choosing 'm' for its
+  // "rm" inputs did, so that what compiled that way still does. Folding a
+  // register the asm writes could take a register from another operand (see
+  // above), and wasn't done before.
+  ToFold.clear();
+  for (const AsmOperandReg &R : Regs)
+    if (R.Foldable && !R.InDefs)
+      ToFold.push_back(R.Reg);
 }
 
 /// Return the virtual register that \p Reg copies, if \p Reg is an input of
@@ -2366,11 +2376,17 @@ Register RegAllocFastImpl::getFoldedInputCopySource(const MachineInstr &MI,
              [&](const MachineInstr &UseMI) { return &UseMI != &MI; }))
     return Register();
 
+  // MI must not refer to Src itself, not even through an undef use, which
+  // readsVirtualRegister() ignores: the folder folds every operand of the
+  // register or none, so an operand of Src that can't be folded would keep
+  // Src from being folded in Reg's place.
   Register Src = Copy->getOperand(1).getReg();
   if (!Src.isVirtual() || !shouldAllocateRegister(Src) ||
       TRI->getSpillSize(*MRI->getRegClass(Src)) !=
           TRI->getSpillSize(*MRI->getRegClass(Reg)) ||
-      MI.readsVirtualRegister(Src) || MI.modifiesRegister(Src, TRI))
+      any_of(MI.operands(), [&](const MachineOperand &MO) {
+        return MO.isReg() && MO.getReg() == Src;
+      }))
     return Register();
 
   // The copy must come before MI, with Src still holding the copied value at
@@ -2450,7 +2466,14 @@ void RegAllocFastImpl::foldInlineAsmReg(MachineInstr *&MI, Register Reg) {
         --StorePos;
     }
 
-    if (ReadReg != Reg || StorePos != MBB.begin()) {
+    if (ReadReg == Reg && StorePos == MBB.begin()) {
+      // Reg lives into the block, and the asm reads it from the slot. A block
+      // that defines Reg spills it there only if Reg may live out of that
+      // block, which a block allocated after this one can no longer tell from
+      // the asm, so record it now, as allocateInstruction() does for the uses
+      // it rewrites.
+      MayLiveAcrossBlocks.set(Reg.virtRegIndex());
+    } else {
       MachineInstrSpan MIS(StorePos, &MBB);
       TII->storeRegToStackSlot(MBB, StorePos, ReadReg, /*isKill=*/false, FI, RC,
                                ReadReg);

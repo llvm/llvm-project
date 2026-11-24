@@ -372,6 +372,7 @@ using TargetRegisterClass = MCRegisterClass;
                         bool HasExtractInsert) const;
     SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
                         bool HasExtractInsert) const;
+    SDValue lowerFNEG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
