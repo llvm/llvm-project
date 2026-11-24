@@ -700,6 +700,83 @@ define void @mix_interleave4_interleave2(ptr %dst1, ptr %dst2, <vscale x 4 x i32
   ret void
 }
 
+define void @interleave8(ptr %ptr, <vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x double> %d, <vscale x 2 x double> %e, <vscale x 2 x double> %f, <vscale x 2 x double> %g, <vscale x 2 x double> %h) {
+; CHECK-LABEL: interleave8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 z27.d, z3.d, z7.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    zip2 z26.d, z2.d, z6.d
+; CHECK-NEXT:    zip2 z25.d, z1.d, z5.d
+; CHECK-NEXT:    zip2 z24.d, z0.d, z4.d
+; CHECK-NEXT:    st4d { z24.d - z27.d }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    zip1 z27.d, z3.d, z7.d
+; CHECK-NEXT:    zip1 z26.d, z2.d, z6.d
+; CHECK-NEXT:    zip1 z25.d, z1.d, z5.d
+; CHECK-NEXT:    zip1 z24.d, z0.d, z4.d
+; CHECK-NEXT:    st4d { z24.d - z27.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <vscale x 16 x double> @llvm.vector.interleave8.nxv16f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x double> %d, <vscale x 2 x double> %e, <vscale x 2 x double> %f, <vscale x 2 x double> %g, <vscale x 2 x double> %h)
+  store <vscale x 16 x double> %interleaved.vec, ptr %ptr, align 8
+  ret void
+}
+
+define void @wide_interleave8(ptr %ptr, <vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d, <vscale x 4 x double> %e, <vscale x 4 x double> %f, <vscale x 4 x double> %g, <vscale x 4 x double> %h) {
+; CHECK-LABEL: wide_interleave8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-4
+; CHECK-NEXT:    str z11, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d9 @ cfa - 16 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x40, 0x1c // $d10 @ cfa - 24 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x40, 0x1c // $d11 @ cfa - 32 * VG - 16
+; CHECK-NEXT:    ldr z24, [x4, #1, mul vl]
+; CHECK-NEXT:    ldr z25, [x3, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z26, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z27, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z8, [x1]
+; CHECK-NEXT:    ldr z9, [x2]
+; CHECK-NEXT:    ldr z10, [x3]
+; CHECK-NEXT:    ldr z11, [x4]
+; CHECK-NEXT:    zip2 z31.d, z7.d, z24.d
+; CHECK-NEXT:    zip2 z30.d, z5.d, z25.d
+; CHECK-NEXT:    zip2 z29.d, z3.d, z26.d
+; CHECK-NEXT:    zip2 z28.d, z1.d, z27.d
+; CHECK-NEXT:    st4d { z28.d - z31.d }, p0, [x0, #12, mul vl]
+; CHECK-NEXT:    zip1 z31.d, z7.d, z24.d
+; CHECK-NEXT:    zip1 z30.d, z5.d, z25.d
+; CHECK-NEXT:    zip1 z29.d, z3.d, z26.d
+; CHECK-NEXT:    zip1 z28.d, z1.d, z27.d
+; CHECK-NEXT:    zip2 z27.d, z6.d, z11.d
+; CHECK-NEXT:    zip2 z26.d, z4.d, z10.d
+; CHECK-NEXT:    zip2 z25.d, z2.d, z9.d
+; CHECK-NEXT:    zip2 z24.d, z0.d, z8.d
+; CHECK-NEXT:    st4d { z24.d - z27.d }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    zip1 z27.d, z6.d, z11.d
+; CHECK-NEXT:    zip1 z26.d, z4.d, z10.d
+; CHECK-NEXT:    zip1 z25.d, z2.d, z9.d
+; CHECK-NEXT:    zip1 z24.d, z0.d, z8.d
+; CHECK-NEXT:    st4d { z28.d - z31.d }, p0, [x0, #8, mul vl]
+; CHECK-NEXT:    ldr z11, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    st4d { z24.d - z27.d }, p0, [x0]
+; CHECK-NEXT:    addvl sp, sp, #4
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <vscale x 32 x double> @llvm.vector.interleave8.nxv32f64(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d, <vscale x 4 x double> %e, <vscale x 4 x double> %f, <vscale x 4 x double> %g, <vscale x 4 x double> %h)
+  store <vscale x 32 x double> %interleaved.vec, ptr %ptr, align 8
+  ret void
+}
+
+
 ; Repeated input vectors lower to one structured store.
 define void @duplicate_by_interleave(<vscale x 4 x i32> %A, <vscale x 4 x i32> %B, ptr writeonly %AB_duplicate) {
 ; CHECK-LABEL: duplicate_by_interleave:

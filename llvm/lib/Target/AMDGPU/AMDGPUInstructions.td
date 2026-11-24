@@ -77,9 +77,6 @@ class RegListUnion<list<Register> lstA, list<Register> lstB> {
 class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,
       PredicateControl, GISelFlags;
 
-let GIIgnoreCopies = 1 in
-class AMDGPUPatIgnoreCopies<dag pattern, dag result> : AMDGPUPat<pattern, result>;
-
 let RecomputePerFunction = 1 in {
 def FP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals != DenormalMode::getPreserveSign()">;
 def FP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals != DenormalMode::getPreserveSign()">;

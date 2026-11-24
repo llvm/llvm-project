@@ -1,7 +1,8 @@
-# RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=peephole-opt %s -o - | FileCheck %s
 --- |
   define void @func() { ret void }
   define void @fold_imm_copy_kill_bug() { ret void }
+  define void @test_undef_uses() { ret void }
 ...
 ---
 # Check that instructions with MI.isBitcast() are only replaced by COPY if there
@@ -53,4 +54,23 @@ body: |
 
     RET 0
 
+...
+
+---
+# An undef use doesn't read the loaded value, so an asm whose only uses of it
+# are undef has nothing to fold. (There is no C source: instruction selection
+# doesn't emit undef inline asm operands.)
+name: test_undef_uses
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_undef_uses
+    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, undef [[MOV64rm]], reguse:GR64 foldable, undef [[MOV64rm]]
+    ; CHECK-NEXT: RET 0
+    %0:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+    INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, undef %0, reguse:GR64 foldable, undef %0
+    RET 0
 ...
