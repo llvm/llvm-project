@@ -56,3 +56,59 @@ fallthrough:
 indirect:
   ret void
 }
+
+; Nor does a label have a value to take the address of or to point to, so it
+; can't take an address constraint ("p") or be indirect.
+; CHECK: error: cannot handle address constraint 'p' for a label
+define void @test_label_address() {
+  callbr void asm "# $0", "!p"()
+    to label %fallthrough [label %indirect]
+fallthrough:
+  ret void
+indirect:
+  ret void
+}
+
+; CHECK: error: cannot handle address constraint 'p' for a label
+define void @test_label_indirect_address() {
+  callbr void asm "# $0", "!*p"()
+    to label %fallthrough [label %indirect]
+fallthrough:
+  ret void
+indirect:
+  ret void
+}
+
+; CHECK: error: cannot handle indirect labels for constraint 'i'
+define void @test_label_indirect_imm() {
+  callbr void asm "# $0", "!*i"()
+    to label %fallthrough [label %indirect]
+fallthrough:
+  ret void
+indirect:
+  ret void
+}
+
+; "X" picks "i" for a label, which the error names.
+; CHECK: error: cannot handle indirect labels for constraint 'i'
+define void @test_label_indirect_any() {
+  callbr void asm "# $0", "!*X"()
+    to label %fallthrough [label %indirect]
+fallthrough:
+  ret void
+indirect:
+  ret void
+}
+
+; An address constraint passes an address to the asm, which only an input has.
+; CHECK: error: cannot handle address constraint 'p' for an output
+define i64 @test_address_output() {
+  %r = call i64 asm "# $0", "=p"()
+  ret i64 %r
+}
+
+; CHECK: error: cannot handle address constraint 'p' for an output
+define void @test_indirect_address_output(ptr %p) {
+  call void asm "# $0", "=*p"(ptr elementtype(i64) %p)
+  ret void
+}

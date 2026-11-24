@@ -336,6 +336,16 @@ bool InlineAsmLowering::lowerInlineAsm(
 
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
+      // An address constraint (e.g. "p") passes an address to the asm, which
+      // only an input has.
+      if (OpInfo.ConstraintType == TargetLowering::C_Address) {
+        emitInlineAsmError(MIRBuilder, Call,
+                           "cannot handle address constraint '" +
+                               Twine(OpInfo.ConstraintCode) + "' for an output",
+                           GetOrCreateVRegs(Call));
+        return true;
+      }
+
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
         // A direct output is the call's result, with no address to write to.
         if (!OpInfo.isIndirect) {

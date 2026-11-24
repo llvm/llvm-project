@@ -19,3 +19,17 @@ define i64 @multi_alt() {
   %r = call i64 asm "# $0", "=m|r"()
   ret i64 %r
 }
+
+; An address constraint ("p") passes an address to the asm, which only an
+; input has.
+; CHECK: error: cannot handle address constraint 'p' for an output
+define i64 @test_address_output() {
+  %r = call i64 asm "# $0", "=p"()
+  ret i64 %r
+}
+
+; CHECK: error: cannot handle address constraint 'p' for an output
+define void @test_indirect_address_output(ptr %p) {
+  call void asm "# $0", "=*p"(ptr elementtype(i64) %p)
+  ret void
+}
