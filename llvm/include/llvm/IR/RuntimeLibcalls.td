@@ -591,11 +591,18 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm ROUND : VectorMathLibcall<S, VT, [VT]>;
 }
 
-def FEGETENV : RuntimeLibcall<Int, [Ptr]>;
-def FESETENV : RuntimeLibcall<Int, [Ptr]>;
+class FEnvLibcall<Attr PtrAccess> : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = InaccessibleOrArgMem;
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, PtrAccess]];
+}
 
-def FEGETMODE : RuntimeLibcall<Int, [Ptr]>;
-def FESETMODE : RuntimeLibcall<Int, [Ptr]>;
+def FEGETENV : FEnvLibcall<WriteOnly>;
+def FESETENV : FEnvLibcall<ReadOnly>;
+
+def FEGETMODE : FEnvLibcall<WriteOnly>;
+def FESETMODE : FEnvLibcall<ReadOnly>;
 
 def FPEXT_BF16_F32 : PureLibcall<Flt, [BFloat]>;
 def FPEXT_F32_PPCF128 : PureLibcall<PPCFP128, [Flt]>;

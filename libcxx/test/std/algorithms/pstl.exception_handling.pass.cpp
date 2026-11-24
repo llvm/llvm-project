@@ -494,6 +494,15 @@ int main(int, char**) {
       {
         auto mid1 = util::throw_on_move_iterator(std::begin(a) + 2, tokens[5].active() ? 1 : -1);
 
+        // rotate(first, mid, last)
+        assert_non_throwing([=, &policy] {
+          (void)std::rotate(policy, std::move(first1), std::move(mid1), std::move(last1));
+        });
+      }
+
+      {
+        auto mid1 = util::throw_on_move_iterator(std::begin(a) + 2, tokens[5].active() ? 1 : -1);
+
         // rotate_copy(first, mid, last, dest)
         assert_non_throwing([=, &policy] {
           (void)std::rotate_copy(policy, std::move(first1), std::move(mid1), std::move(last1), std::move(dest));

@@ -3598,6 +3598,19 @@ static SDValue extractBooleanFlip(SDValue V, SelectionDAG &DAG,
 
   if (DAG.isBoolConstant(V.getOperand(1)) == true)
     return V.getOperand(0);
+
+  // The true value of a SETCC result comes from the boolean contents of the
+  // compared operand type, which can differ from those of the result type.
+  SDValue Op0 = V.getOperand(0);
+  if (Op0.getOpcode() == ISD::SETCC)
+    if (ConstantSDNode *C = isConstOrConstSplat(V.getOperand(1), false)) {
+      EVT OpVT = Op0.getOperand(0).getValueType();
+      if (TLI.getBooleanContents(OpVT) ==
+              TargetLowering::ZeroOrNegativeOneBooleanContent &&
+          C->getAPIntValue().isAllOnes())
+        return Op0;
+    }
+
   if (Force && isConstOrConstSplat(V.getOperand(1), false))
     return DAG.getLogicalNOT(SDLoc(V), V, V.getValueType());
   return SDValue();

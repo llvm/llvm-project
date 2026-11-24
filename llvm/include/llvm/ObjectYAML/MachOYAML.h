@@ -262,6 +262,24 @@ template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
 
 #define ENUM_CASE(Enum) io.enumCase(value, #Enum, MachO::Enum);
 
+template <> struct ScalarEnumerationTraits<MachO::HeaderFileType> {
+  static void enumeration(IO &io, MachO::HeaderFileType &value) {
+    ENUM_CASE(MH_OBJECT)
+    ENUM_CASE(MH_EXECUTE)
+    ENUM_CASE(MH_FVMLIB)
+    ENUM_CASE(MH_CORE)
+    ENUM_CASE(MH_PRELOAD)
+    ENUM_CASE(MH_DYLIB)
+    ENUM_CASE(MH_DYLINKER)
+    ENUM_CASE(MH_BUNDLE)
+    ENUM_CASE(MH_DYLIB_STUB)
+    ENUM_CASE(MH_DSYM)
+    ENUM_CASE(MH_KEXT_BUNDLE)
+    ENUM_CASE(MH_FILESET)
+    io.enumFallback<Hex32>(value);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<MachO::RebaseOpcode> {
   static void enumeration(IO &io, MachO::RebaseOpcode &value) {
     ENUM_CASE(REBASE_OPCODE_DONE)

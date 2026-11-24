@@ -4324,6 +4324,27 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
   return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
 }
 
+mlir::LogicalResult CIRToLLVMFCmpOpLowering::matchAndRewrite(
+    cir::FCmpOp fCmpOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(mlir::isa<cir::FPTypeInterface>(fCmpOp.getLhs().getType()) &&
+         "unexpected fcmp type");
+
+  mlir::Type llvmResTy = getTypeConverter()->convertType(fCmpOp.getType());
+  if (cir::FenvAttr fenv = fCmpOp.getFenvAttr()) {
+    mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
+        rewriter, fCmpOp.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
+        fCmpOp.getKind(), fCmpOp.getSignaling(), fenv, llvmResTy);
+    rewriter.replaceOp(fCmpOp, call.getResult(0));
+    return mlir::success();
+  }
+  mlir::LLVM::FCmpPredicate kind =
+      convertCmpKindToFCmpPredicate(fCmpOp.getKind());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
+      fCmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
 /// Shared lowering logic for checked binary arithmetic overflow operations.
 /// The \p opStr parameter specifies the arithmetic operation name used in the
 /// LLVM intrinsic (e.g., "add", "sub", "mul").
