@@ -2275,6 +2275,11 @@ LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
   if (!isa<cir::YieldOp>(bodyBlock.getTerminator()))
     return failure();
 
+  // A cir.label must start its block, and inlining could put it behind other
+  // operations, so keep a body that starts with one.
+  if (isa<cir::LabelOp>(bodyBlock.front()))
+    return failure();
+
   Operation *yield = bodyBlock.getTerminator();
   rewriter.inlineBlockBefore(&bodyBlock, op);
   rewriter.eraseOp(yield);
