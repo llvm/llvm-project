@@ -2507,7 +2507,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
-    // Make pass plugin options available before -mllvm parsing.
+    // Load plugins upfront, so load errors are reported even without LTO
     for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
       Expected<PassPlugin> plugin = PassPlugin::load(path);
       if (!plugin)

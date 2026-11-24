@@ -1849,7 +1849,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  // Plugin options must exist before -mllvm is parsed
+  // Load plugins upfront, so load errors are reported even without LTO
   for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
     Expected<PassPlugin> plugin = PassPlugin::load(path);
     if (!plugin)
