@@ -141,7 +141,8 @@ The mask is wave-uniform and passed in the `M0` register:
 Completion is tracked using {ref}`asyncmarks<amdgpu-async-operations>`. Each
 participating thread receives a copy of the loaded data into its own workgroup's
 LDS at `%lds_base` plus `%offset`. In the memory model, this behaves in the same
-way as an equivalent non-multicast operation.
+way as an equivalent non-multicast operation (except as noted in
+{ref}`amdgpu-multicast-false-sharing`).
 
 Completion of a multicast load operation does not establish any synchronization
 with the participating workgroups. The application must separately synchronize
@@ -174,6 +175,8 @@ multicast load instructions.
 
 On the `gfx1250-strict` subtarget, the mask is always forced to zero and no
 multicast occurs, regardless of the value supplied.
+
+(amdgpu-multicast-false-sharing)=
 
 ##### False Sharing on GFX1250 and GFX1251
 
