@@ -152,7 +152,7 @@ body: |
 #   struct pair tied_rm_before_tied_r(long a, long b, long c, long d, long e,
 #                                     long f, long g) {
 #     asm volatile("" : "+rm"(a), "+r"(b) : "r"(c), "r"(d), "r"(e), "r"(f),
-#                                           "r"(g) : clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15BERS);
+#                                           "r"(g) : CLOBBERS);
 #     return (struct pair){a, b};
 #   }
 name: tied_rm_before_tied_r
@@ -270,7 +270,10 @@ body: |
 # A stack slot holds the whole register, so a subregister operand is folded
 # at the subregister's offset in the slot. Each of these tests spills a value
 # across an asm that clobbers every GPR, as above, and passes its low byte,
-# its second byte, or both to a "Qm" operand of a second asm.
+# its second byte, or both to a "Qm" operand of a second asm. The MIR is
+# written by hand, as a byte that the coalescer has joined with the value:
+# instruction selection never makes a "Qm" operand foldable, and gives an i8
+# "Q" operand GR8_ABCD_L.
 #
 # The low byte (sub_8bit) is at offset 0.
 #

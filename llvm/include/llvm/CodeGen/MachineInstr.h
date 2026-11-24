@@ -1451,10 +1451,12 @@ public:
   LLVM_ABI bool mayFoldInlineAsmRegOp(unsigned OpId) const;
 
   /// Returns true if \p Reg can be folded to its stack slot in this inline
-  /// asm: the asm reads or writes Reg, and every operand of Reg can be folded
-  /// (see mayFoldInlineAsmRegOp()). A use tied to a def is folded along with
-  /// the def, so it isn't checked on its own. The register allocator then
-  /// needs no register for Reg here.
+  /// asm: the asm reads or writes Reg, and every operand of Reg that isn't a
+  /// tied use can be folded (see mayFoldInlineAsmRegOp()). A tied use goes
+  /// with its def: it's folded along with the def, whichever register it
+  /// holds, and otherwise keeps its register. So Reg still needs a register
+  /// here for a use tied to another register's def, which happens only when
+  /// the allocator lowers ties itself.
   LLVM_ABI bool mayFoldInlineAsmReg(Register Reg) const;
 
   LLVM_ABI bool isStackAligningInlineAsm() const;
