@@ -40,8 +40,6 @@ void TCETargetCodeGenInfo::setTargetAttributes(
 
   if (M.getLangOpts().OpenCL) {
     if (FD->hasAttr<DeviceKernelAttr>()) {
-      // OpenCL C Kernel functions are not subject to inlining
-      F->addFnAttr(llvm::Attribute::NoInline);
       const ReqdWorkGroupSizeAttr *Attr = FD->getAttr<ReqdWorkGroupSizeAttr>();
       if (Attr) {
         // Convert the reqd_work_group_size() attributes to metadata.

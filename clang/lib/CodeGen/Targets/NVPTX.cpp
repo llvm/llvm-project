@@ -275,8 +275,6 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     // By default, all functions are device functions
     if (FD->hasAttr<DeviceKernelAttr>() || FD->hasAttr<CUDAGlobalAttr>()) {
       // OpenCL/CUDA kernel functions get kernel metadata
-      // And kernel functions are not subject to inlining
-      F->addFnAttr(llvm::Attribute::NoInline);
       if (FD->hasAttr<CUDAGlobalAttr>()) {
         for (auto IV : llvm::enumerate(FD->parameters()))
           if (IV.value()->hasAttr<CUDAGridConstantAttr>())
