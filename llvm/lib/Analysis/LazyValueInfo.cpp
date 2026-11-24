@@ -1886,7 +1886,7 @@ getValueOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
 }
 
 ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U,
-                                 bool AssumeFrozen) {
+                                                     bool AssumeFrozen) {
   Value *V = U.get();
   auto *CtxI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CtxI->getParent(), CtxI);
