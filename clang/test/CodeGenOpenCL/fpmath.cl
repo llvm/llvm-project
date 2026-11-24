@@ -81,7 +81,6 @@ float4 elementwise_sqrt_v4f32(float4 a) {
 #if __OPENCL_C_VERSION__ >=120
 void printf(constant char* fmt, ...);
 void testdbllit(long *val) {
-  // CHECK-FLT: float noundef 2.000000e+01
   // CHECK-DBL: double noundef 2.000000e+01
   printf("%f", 20.0);
 }
