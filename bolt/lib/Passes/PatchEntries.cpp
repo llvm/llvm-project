@@ -160,10 +160,14 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
              "max patch size exceeded");
     }
   }
-  // defer finalization of patch entries until after all functions have been
-  // processed
-  if (BC.usesBTI())
-    BC.finalizePatchEntries();
+  // Apply BTI fixups after all entry patches have been registered or removed.
+  if (BC.usesBTI()) {
+    for (const auto &Entries : BC.getPatchEntries())
+      for (const auto &Entry : Entries)
+        BC.MIB->applyBTIFixupToSymbol(
+            BC, Entry.Target,
+            *Entry.PatchBinaryFunction->begin()->getLastNonPseudoInstr());
+  }
   return Error::success();
 }
 

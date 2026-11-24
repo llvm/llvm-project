@@ -2973,14 +2973,6 @@ void BinaryContext::removePatchEntry(BinaryFunction &Function) {
   PatchEntries.erase(It);
 }
 
-void BinaryContext::finalizePatchEntries() {
-  for (const auto &Entries : PatchEntries.values())
-    for (const RegisteredPatchEntry &Entry : Entries)
-      MIB->applyBTIFixupToSymbol(
-          *this, Entry.Target,
-          *Entry.PatchBinaryFunction->begin()->getLastNonPseudoInstr());
-}
-
 BinaryFunction *
 BinaryContext::createThunkBinaryFunction(const std::string &Name) {
   static NameResolver NR;

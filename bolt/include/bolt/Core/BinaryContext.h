@@ -660,8 +660,8 @@ public:
   /// Function.
   void removePatchEntry(BinaryFunction &Function);
 
-  /// Apply BTI fixups for the surviving entry patches before layout.
-  void finalizePatchEntries();
+  /// Return the registered entry patches grouped by their original function.
+  auto getPatchEntries() const { return PatchEntries.values(); }
 
   /// Create a binary function with a base \p Name.
   BinaryFunction *createThunkBinaryFunction(const std::string &Name);
