@@ -29,9 +29,12 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
+#include <memory>
 #include <utility>
 
 namespace cir {
+
+class CIRBaseBuilderTy;
 
 /// CIR-specific implementation of mlir::abi::ABIRewriteContext.
 ///
@@ -45,8 +48,8 @@ class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
   CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
                        bool enableNoundefAttrs)
-      : module(module), dl(dl), enableNoundefAttrs(enableNoundefAttrs),
-        cirDataLayout(module), aliasAnalysis(module) {
+      : module(module), dl(dl), cirDataLayout(module),
+        enableNoundefAttrs(enableNoundefAttrs), aliasAnalysis(module) {
     cir::registerCIRAliasAnalyses(aliasAnalysis, module);
   }
 
@@ -65,11 +68,11 @@ public:
                   const mlir::abi::FunctionClassification &fc,
                   mlir::OpBuilder &builder) override;
 
-  /// Expand a `cir.va_arg` into the x86-64 SysV register-save-area /
-  /// overflow-area sequence.
+  /// Replace a `cir.va_arg` of an ignored type with poison, leaving the
+  /// va_list unchanged.  Every other `cir.va_arg` is passed to expandVAArg.
   mlir::LogicalResult rewriteVAArg(mlir::Operation *vaArgOp,
                                    const mlir::abi::ArgClassification &ac,
-                                   mlir::OpBuilder &builder) override;
+                                   mlir::OpBuilder &builder) final;
 
   /// Retype \p addrOp, which holds the address of \p funcOp, to the signature
   /// funcOp was rewritten to, and cast it back so existing uses keep the type
@@ -115,18 +118,25 @@ public:
 
   mlir::StringRef getDialectNamespace() const override { return "cir"; }
 
-private:
+protected:
+  /// Expand \p op, whose type is not ignored, into a read through the
+  /// target's va_list that also advances the va_list past the value.
+  virtual mlir::LogicalResult
+  expandVAArg(cir::VAArgOp op, const mlir::abi::ArgClassification &ac,
+              CIRBaseBuilderTy &builder);
+
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
-
-  /// Whether extended and indirect arguments are marked llvm.noundef.  Set
-  /// from the enable_noundef_attrs field of the module's
-  /// #cir.lowering_options.
-  bool enableNoundefAttrs;
 
   /// The CIR view of the module's data layout, which provides the store and
   /// alloc sizes that \c dl does not.
   cir::CIRDataLayout cirDataLayout;
+
+private:
+  /// Whether extended and indirect arguments are marked llvm.noundef.  Set
+  /// from the enable_noundef_attrs field of the module's
+  /// #cir.lowering_options.
+  bool enableNoundefAttrs;
 
   /// Alias analysis over the module with the CIR implementations registered.
   /// rewriteCallSite asks it whether a byval operand's storage is written
@@ -145,6 +155,18 @@ private:
 
 /// The signature the indirect call \p call reaches its callee through.
 cir::FuncType getIndirectCalleeType(cir::CIRCallOpInterface call);
+
+/// A rewrite context that expands `cir.va_arg` through the x86-64 SysV
+/// va_list.
+std::unique_ptr<CIRABIRewriteContext>
+createX86_64ABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
+                              bool enableNoundefAttrs);
+
+/// A rewrite context that expands `cir.va_arg` through the AMDGPU pointer
+/// va_list.
+std::unique_ptr<CIRABIRewriteContext>
+createAMDGPUABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
+                              bool enableNoundefAttrs);
 
 } // namespace cir
 

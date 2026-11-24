@@ -2473,6 +2473,11 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
                     m_Zero())))
     return nullptr;
 
+  // The new instructions have the type of the usub.sat operands, so they can
+  // only replace a select of the same type.
+  if (SI.getType() != A->getType())
+    return nullptr;
+
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
   if (!((Pred == ICmpInst::ICMP_EQ && match(TrueVal, m_Zero()) &&

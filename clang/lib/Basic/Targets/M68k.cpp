@@ -64,6 +64,12 @@ bool M68kTargetInfo::setCPU(StringRef Name) {
   return CPU != CK_Unknown;
 }
 
+void M68kTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  Values.append(
+      {"generic", "M68000", "M68010", "M68020", "M68030", "M68040", "M68060"});
+}
+
 void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
                                       MacroBuilder &Builder) const {
   using llvm::Twine;
