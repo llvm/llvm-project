@@ -211,6 +211,11 @@ TEST(LibraryOptionsTest, Values) {
   EXPECT_EQ(Parse(V, "--lib-list=1,2"), "");
   Path.assign(Path.size(), ' ');
   EXPECT_EQ(Parse(V, "-lib-count=x"), "invalid value 'x' in '-lib-count=x'");
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+  // Callers must filter positional arguments
+  EXPECT_DEATH(Parse(V, "lib-count"), "must be an option");
+  EXPECT_DEATH(Parse(V, "-"), "must be an option");
+#endif
 
   // assign() replays the arguments, which outlive the caller's, and discards
   // the earlier values.

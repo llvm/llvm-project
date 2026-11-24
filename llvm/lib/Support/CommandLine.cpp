@@ -2974,6 +2974,10 @@ void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
 Error LibraryOptionsContext::parse(const LibraryOptions &L,
                                    ArrayRef<const char *> Args,
                                    unsigned &Consumed) {
+  // The parser expects options, no InputClass arguments.
+  assert(!Args.empty() && StringRef(Args[0]).starts_with("-") &&
+         StringRef(Args[0]) != "-" &&
+         "Args[0] must be an option, not a positional argument");
   auto [It, Inserted] = Values.try_emplace(L.getDefault());
   if (Inserted)
     It->second = L.copyDefault(Alloc);

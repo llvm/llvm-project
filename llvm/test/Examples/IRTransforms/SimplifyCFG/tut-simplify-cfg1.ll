@@ -5,7 +5,7 @@
 ;; An empty argument reaches the plugin.
 ; RUN: not opt %loadexampleirtransforms -passes=tut-simplifycfg -plugin-arg=SimplifyCFG, -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: not opt %loadexampleirtransforms -passes=tut-simplifycfg -plugin-arg=SimplifyCFG,v1 -plugin-arg=SimplifyCFG,v2 -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: SimplifyCFG: expected one argument, v1, v2 or v3
+; ERR: pass plugin 'SimplifyCFG': expected one argument, v1, v2 or v3
 
 define i32 @simp1() {
 ; CHECK-LABEL: @simp1(

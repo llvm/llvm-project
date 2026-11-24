@@ -486,7 +486,8 @@ optMain(int argc, char **argv,
   }
 #define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
 #include "llvm/Support/Extension.def"
-  if (Error E = passPluginArguments(Extensions, PluginArgs))
+  if (Error E = passPluginArguments(Extensions, PluginArgs,
+                                    Context.getLibraryOptions()))
     reportFatalUsageError(std::move(E));
 
   const bool UseNPM = PassList.empty() || PassPipeline.getNumOccurrences() > 0;

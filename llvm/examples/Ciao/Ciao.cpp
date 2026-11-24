@@ -67,7 +67,7 @@ bool preCodeGenCallback(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
   return true;
 }
 
-Error parseArguments(ArrayRef<const char *> Args) {
+Error parseArguments(cl::LibraryOptionsContext &, ArrayRef<const char *> Args) {
   for (StringRef Arg : Args)
     if (Arg == "forward-codegen")
       ForwardCodeGen = true;

@@ -64,7 +64,8 @@ bool PassPlugin::invokePreCodeGenCallback(
 }
 
 Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
-                                ArrayRef<std::string> Args) {
+                                ArrayRef<std::string> Args,
+                                cl::LibraryOptionsContext &LibraryOptions) {
   DenseMap<StringRef, unsigned> Index;
   for (auto [I, Info] : enumerate(Infos))
     if (!Index.try_emplace(Info.PluginName, I).second)
@@ -90,8 +91,10 @@ Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
     if (!Info.ParseArguments)
       return createStringError("pass plugin '" + Twine(Info.PluginName) +
                                "' does not accept arguments");
-    if (Error E = Info.ParseArguments(PArgs))
-      return E;
+    // Plugin errors don't know which -plugin-arg they came from
+    if (Error E = Info.ParseArguments(LibraryOptions, PArgs))
+      return createStringError("pass plugin '" + Twine(Info.PluginName) +
+                               "': " + toString(std::move(E)));
   }
   return Error::success();
 }

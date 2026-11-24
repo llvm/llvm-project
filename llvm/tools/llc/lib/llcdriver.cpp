@@ -410,7 +410,7 @@ extern "C" int llcMain(int argc, char **argv) {
   if (Error E = passPluginArguments(
           map_to_vector(PluginList,
                         [](const PassPlugin &P) { return P.getInfo(); }),
-          PluginArgs))
+          PluginArgs, Context.getLibraryOptions()))
     reportFatalUsageError(std::move(E));
 
   if (!PassPipeline.empty() && !getRunPassNames().empty()) {
