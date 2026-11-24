@@ -138,8 +138,8 @@ const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
   completed = progress_data->GetCompleted();
   total = progress_data->GetTotal();
   is_debugger_specific = progress_data->IsDebuggerSpecific();
-  ConstString message(progress_data->GetMessage());
-  return message.AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      progress_data->GetMessage());
 }
 
 lldb::SBStructuredData
@@ -721,6 +721,7 @@ SBDebugger::GetScriptInterpreterInfo(lldb::ScriptLanguage language) {
 const char *SBDebugger::GetVersionString() {
   LLDB_INSTRUMENT();
 
+  // Callable before Initialize, so the system pool may not exist.
   return ConstString(Language::GetVersionWithLanguageInfo()).GetCString();
 }
 

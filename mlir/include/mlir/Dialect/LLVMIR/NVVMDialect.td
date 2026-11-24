@@ -86,13 +86,9 @@ def NVVM_Dialect : Dialect {
                                            unsigned regionIndex,
                                            unsigned argIndex,
                                            NamedAttribute argAttr) override;
-
-  private:
-    /// Register the attributes of this dialect.
-    void registerAttributes();
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 #endif // NVVMIR_DIALECT

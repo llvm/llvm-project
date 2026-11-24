@@ -23,7 +23,7 @@ int varargs(int count, ...) {
 
 // `int` is INTEGER class, one eightbyte, so the fetch gates on gp_offset.
 // CIR-LABEL: cir.func {{.*}} @varargs(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -81,7 +81,7 @@ int stdarg_start(int count, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @stdarg_start(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -150,7 +150,7 @@ int varargs_new(char *fmt, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @varargs_new(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>

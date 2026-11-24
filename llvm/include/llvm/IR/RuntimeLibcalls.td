@@ -591,11 +591,18 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm ROUND : VectorMathLibcall<S, VT, [VT]>;
 }
 
-def FEGETENV : RuntimeLibcall<Int, [Ptr]>;
-def FESETENV : RuntimeLibcall<Int, [Ptr]>;
+class FEnvLibcall<Attr PtrAccess> : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = InaccessibleOrArgMem;
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, PtrAccess]];
+}
 
-def FEGETMODE : RuntimeLibcall<Int, [Ptr]>;
-def FESETMODE : RuntimeLibcall<Int, [Ptr]>;
+def FEGETENV : FEnvLibcall<WriteOnly>;
+def FESETENV : FEnvLibcall<ReadOnly>;
+
+def FEGETMODE : FEnvLibcall<WriteOnly>;
+def FESETMODE : FEnvLibcall<ReadOnly>;
 
 def FPEXT_BF16_F32 : PureLibcall<Flt, [BFloat]>;
 def FPEXT_F32_PPCF128 : PureLibcall<PPCFP128, [Flt]>;
@@ -1055,8 +1062,14 @@ def PROFILE_INSTRUMENT_GPU : NoUnwindLibcall<Void, [Ptr, Ptr, UInt64]>;
 def PROFILE_SAMPLING_GPU : NoUnwindLibcall<Int, [UInt32]>;
 
 // Clear cache
-def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def RISCV_FLUSH_ICACHE : RuntimeLibcall<Int, [Ptr, Ptr, ULong]>;
+class CacheFlushLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def CLEAR_CACHE : CacheFlushLibcall<Void, [Ptr, Ptr]>;
+def RISCV_FLUSH_ICACHE : CacheFlushLibcall<Int, [Ptr, Ptr, ULong]>;
 
 // Mips16 calls
 def ComplexF32 : StructFuncArgType<[Flt, Flt]>;
@@ -1084,9 +1097,24 @@ multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
 }
 
 // AArch64 calls
-def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def SC_MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned, WriteOnly], [NoAlias, ReadOnly]];
+}
+
+def SC_MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
+}
+
+def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[Returned, WriteOnly]];
+}
+
 def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemReadOnly;

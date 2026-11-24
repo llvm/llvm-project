@@ -398,12 +398,22 @@ defm : OptionalBoolField<"sample-loader-inlining",
 // mainly used for debugging.
 defm : ValueField<"sample-profile-file", "StringRef", "",
   "Profile file loaded by -sample-profile">;
+defm : OptionalValueField<"sample-profile-cold-inline-threshold", "int",
+  "Threshold for inlining cold callsites">;
+defm : OptionalValueField<"sample-profile-hot-inline-threshold", "int",
+  "Hot callsite threshold for priority-based sample profile loader inlining">;
 defm : ValueField<"sample-profile-icp-max-prom", "unsigned", "3",
   "Max number of promotions for a single indirect call callsite in sample profile loader">;
 defm : ValueField<"sample-profile-icp-relative-hotness", "unsigned", "25",
   "Relative hotness percentage threshold for indirect call promotion in priority-based sample profile loader inlining">;
 defm : ValueField<"sample-profile-icp-relative-hotness-skip", "unsigned", "1",
   "Skip relative hotness check for ICP up to given number of targets">;
+defm : OptionalValueField<"sample-profile-inline-growth-limit", "unsigned",
+  "The size growth ratio limit for priority-based sample profile loader inlining">;
+defm : OptionalValueField<"sample-profile-inline-limit-max", "unsigned",
+  "The upper bound of size growth limit for priority-based sample profile loader inlining">;
+defm : OptionalValueField<"sample-profile-inline-limit-min", "unsigned",
+  "The lower bound of size growth limit for priority-based sample profile loader inlining">;
 defm : ValueField<"sample-profile-inline-replay", "StringRef", "",
   "Optimization remarks file containing inline remarks to be replayed by inlining from sample profile loader">;
 defm : EnumField<"sample-profile-inline-replay-fallback", "ReplayInlinerSettings::Fallback", "",
@@ -422,6 +432,8 @@ defm : OptionalBoolField<"sample-profile-inline-size",
   "Inline cold call sites in profile loader if it's beneficial for code size">;
 defm : BoolField<"sample-profile-merge-inlinee", "true",
   "Merge past inlinee's profile to outline version if sample profile loader decided not to inline a call site. It will only be enabled when top-down order of profile loading is enabled">;
+defm : BoolField<"sample-profile-preserve-deferred-inlines", "true",
+  "In ThinLTO pre-link, add import hints for in-module targets of deferred indirect calls so they can be imported with the caller">;
 defm : OptionalBoolField<"sample-profile-prioritized-inline",
   "Use call site prioritized inlining for sample profile loader. Currently only CSSPGO is supported">;
 defm : OptionalBoolField<"sample-profile-recursive-inline",
@@ -437,6 +449,8 @@ defm : BoolField<"sample-profile-top-down-load", "true",
   "Do profile annotation and inlining for functions in top-down order of call graph during sample profile loading. It only works for new pass manager">;
 defm : OptionalBoolField<"sample-profile-use-preinliner",
   "Use the preinliner decisions stored in profile context">;
+defm : OptionalBoolField<"sort-profiled-scc-member",
+  "Sort profiled recursion by edge weights">;
 defm : BoolField<"use-profiled-call-graph", "true",
   "Process functions in a top-down order defined by the profiled call graph when -sample-profile-top-down-load is on">;
 // TODO: Remove the old spellings after 2027-05.
