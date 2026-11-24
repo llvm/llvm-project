@@ -5359,7 +5359,7 @@ static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
   computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
 }
 
-static void computeKnownFPClassForFPTrunc(const Operator *Op,
+static void computeKnownFPClassForFPTrunc(const Operator *Op, RoundingMode RM,
                                           const APInt &DemandedElts,
                                           FPClassTest InterestedClasses,
                                           KnownFPClass &Known,
@@ -5384,7 +5384,7 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   DenormalMode SrcMode =
       F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, RM, DstMode, SrcMode);
 }
 
 static void
@@ -6059,8 +6059,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::fptrunc_round: {
-      computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known,
-                                    Q, Depth);
+      Metadata *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
+      RoundingMode RM =
+          *convertStrToRoundingMode(cast<MDString>(MD)->getString());
+      computeKnownFPClassForFPTrunc(Op, RM, DemandedElts, InterestedClasses,
+                                    Known, Q, Depth);
       break;
     }
     case Intrinsic::log:
@@ -6479,7 +6482,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FPTrunc: {
-    computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known, Q,
+    computeKnownFPClassForFPTrunc(Op, RoundingMode::NearestTiesToEven,
+                                  DemandedElts, InterestedClasses, Known, Q,
                                   Depth);
     break;
   }
