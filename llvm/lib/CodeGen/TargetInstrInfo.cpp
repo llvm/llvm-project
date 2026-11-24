@@ -674,6 +674,9 @@ static void foldInlineAsmMemOperands(MachineInstr &MI,
       Ties.emplace_back(DefIdx, I);
   }
 
+  assert(any_of(Offsets,
+                [](std::optional<unsigned> O) { return O.has_value(); }) &&
+         "no operand to fold");
   unsigned First = InlineAsm::MIOp_FirstOperand;
   while (!Offsets[First])
     ++First;
@@ -733,8 +736,8 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
   }
 
   // The asm can't refer to both Reg and its stack slot, so every operand of
-  // Reg is folded (e.g. one value passed to two "rm" operands), including any
-  // the caller left out, such as an undef use.
+  // Reg that isn't a tied use is folded (e.g. one value passed to two "rm"
+  // operands), including any the caller left out, such as an undef use.
   if (!MI.mayFoldInlineAsmReg(Reg))
     return nullptr;
 
