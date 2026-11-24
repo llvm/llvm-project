@@ -302,6 +302,11 @@ static LogicalResult getOpIndexSet(Operation *op,
                                    FlatAffineValueConstraints *indexSet) {
   SmallVector<Operation *, 4> ops;
   getEnclosingAffineOps(*op, &ops);
+  llvm::erase_if(ops, [&](Operation *affineOp) {
+    auto ifOp = dyn_cast<AffineIfOp>(affineOp);
+    return ifOp && ifOp.hasElse() &&
+           ifOp.getElseRegion().isAncestor(op->getParentRegion());
+  });
   return getIndexSet(ops, indexSet);
 }
 
