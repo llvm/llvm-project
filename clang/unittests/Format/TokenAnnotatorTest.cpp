@@ -2749,6 +2749,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::arrow, TT_TrailingReturnArrow);
 
+  Tokens = annotate("DO_DEBUG debug() << (auto (*)() -> bar)(x);");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::arrow, TT_TrailingReturnArrow);
+
   // Not trailing return arrows
   Tokens = annotate("auto a = b->c;");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
@@ -2808,10 +2812,9 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::arrow, TT_Unknown);
 
-  // A function type in such an expression can still have one.
-  Tokens = annotate("DO_DEBUG debug() << (auto (*)() -> bar)(x);");
-  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
-  EXPECT_TOKEN(Tokens[12], tok::arrow, TT_TrailingReturnArrow);
+  Tokens = annotate("DO_DEBUG debug() << (foo()->bar);");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::arrow, TT_Unknown);
 
   // Mixed
   Tokens = annotate("auto f() -> int { auto a = b()->c; }");
