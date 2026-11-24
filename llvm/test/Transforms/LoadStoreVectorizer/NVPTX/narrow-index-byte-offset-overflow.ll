@@ -79,8 +79,8 @@ define i32 @zext_byte_offset_fits(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 [[IDX]] to i64
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1]], align 8
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V0]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
@@ -112,8 +112,8 @@ define i32 @zext_byte_offset_cancellation(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 [[IDX]] to i64
 ; CHECK-NEXT:    [[P1_BASE:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1_BASE]], align 8
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V0]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
@@ -175,8 +175,8 @@ define i32 @sext_byte_offset_fits(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[EXT1:%.*]] = sext i8 [[NEXT]] to i64
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V0]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;

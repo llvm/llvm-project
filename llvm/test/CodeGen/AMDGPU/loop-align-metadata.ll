@@ -7,22 +7,21 @@
 define amdgpu_kernel void @uniform_loop(ptr addrspace(1) %p, i32 %n) {
 ; GFX942-LABEL: uniform_loop:
 ; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX942-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GFX942-NEXT:    s_mov_b32 s2, 0
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX942-NEXT:    s_mov_b32 s4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    .p2align 6
 ; GFX942-NEXT:  .LBB0_1: ; %loop
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX942-NEXT:    s_ashr_i32 s3, s2, 31
-; GFX942-NEXT:    s_lshl_b64 s[4:5], s[2:3], 2
+; GFX942-NEXT:    s_ashr_i32 s5, s4, 31
+; GFX942-NEXT:    s_lshl_b64 s[6:7], s[4:5], 2
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_add_u32 s4, s0, s4
-; GFX942-NEXT:    s_addc_u32 s5, s1, s5
-; GFX942-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-NEXT:    s_add_i32 s2, s2, 1
-; GFX942-NEXT:    s_cmp_lt_u32 s2, s6
-; GFX942-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX942-NEXT:    s_add_u32 s6, s0, s6
+; GFX942-NEXT:    s_addc_u32 s7, s1, s7
+; GFX942-NEXT:    v_mov_b32_e32 v1, s4
+; GFX942-NEXT:    s_add_i32 s4, s4, 1
+; GFX942-NEXT:    s_cmp_lt_u32 s4, s2
+; GFX942-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX942-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX942-NEXT:  ; %bb.2: ; %exit
 ; GFX942-NEXT:    s_endpgm

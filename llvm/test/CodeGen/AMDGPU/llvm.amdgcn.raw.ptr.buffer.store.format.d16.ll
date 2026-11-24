@@ -120,9 +120,7 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %voffset) {
 ; UNPACKED-LABEL: buffer_store_format_d16_xyz:
 ; UNPACKED:       ; %bb.0: ; %main_body
-; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; UNPACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
+; UNPACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNPACKED-NEXT:    s_and_b32 s5, s5, 0xffff
 ; UNPACKED-NEXT:    s_lshr_b32 s7, s4, 16
@@ -136,9 +134,7 @@ define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <
 ;
 ; PACKED-LABEL: buffer_store_format_d16_xyz:
 ; PACKED:       ; %bb.0: ; %main_body
-; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; PACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
-; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; PACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-NEXT:    s_and_b32 s5, s5, 0xffff
 ; PACKED-NEXT:    v_mov_b32_e32 v0, s4
@@ -149,15 +145,12 @@ define amdgpu_kernel void @buffer_store_format_d16_xyz(ptr addrspace(8) %rsrc, <
 ;
 ; GFX11-LABEL: buffer_store_format_d16_xyz:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
-; GFX11-NEXT:    s_load_b32 s8, s[4:5], 0x18
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_and_b32 s4, s7, 0xffff
+; GFX11-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s4
-; GFX11-NEXT:    v_mov_b32_e32 v2, s8
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
+; GFX11-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX11-NEXT:    buffer_store_d16_format_xyz v[0:1], v2, s[0:3], 0 offen
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -182,9 +175,7 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, <4 x half> %data, i32 %voffset) {
 ; UNPACKED-LABEL: buffer_store_format_d16_xyzw:
 ; UNPACKED:       ; %bb.0: ; %main_body
-; UNPACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; UNPACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; UNPACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
+; UNPACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; UNPACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNPACKED-NEXT:    s_lshr_b32 s7, s5, 16
 ; UNPACKED-NEXT:    s_and_b32 s5, s5, 0xffff
@@ -200,9 +191,7 @@ define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, 
 ;
 ; PACKED-LABEL: buffer_store_format_d16_xyzw:
 ; PACKED:       ; %bb.0: ; %main_body
-; PACKED-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; PACKED-NEXT:    s_load_dword s6, s[8:9], 0x18
-; PACKED-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; PACKED-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; PACKED-NEXT:    v_mov_b32_e32 v1, s5
@@ -212,13 +201,10 @@ define amdgpu_kernel void @buffer_store_format_d16_xyzw(ptr addrspace(8) %rsrc, 
 ;
 ; GFX11-LABEL: buffer_store_format_d16_xyzw:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
-; GFX11-NEXT:    s_load_b32 s8, s[4:5], 0x18
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
-; GFX11-NEXT:    v_mov_b32_e32 v2, s8
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
+; GFX11-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX11-NEXT:    buffer_store_d16_format_xyzw v[0:1], v2, s[0:3], 0 offen
 ; GFX11-NEXT:    s_endpgm
 ;

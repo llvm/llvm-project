@@ -5,32 +5,28 @@
 define amdgpu_kernel void @uniform_i32(ptr addrspace(1) %out, i32 %x) {
 ; GFX950-LABEL: uniform_i32:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s0, s[4:5], 0x8
+; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX950-NEXT:    s_bitcmp1_b32 s2, 0
 ; GFX950-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX950-NEXT:  ; %bb.1: ; %store
-; GFX950-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX950-NEXT:    v_mov_b32_e32 v1, s2
+; GFX950-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:  .LBB0_2: ; %exit
 ; GFX950-NEXT:    s_endpgm
 ;
 ; GFX1030-LABEL: uniform_i32:
 ; GFX1030:       ; %bb.0: ; %entry
-; GFX1030-NEXT:    s_load_dword s0, s[8:9], 0x8
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX1030-NEXT:    s_bitcmp1_b32 s2, 0
 ; GFX1030-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX1030-NEXT:  ; %bb.1: ; %store
-; GFX1030-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1030-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX1030-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1030-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1030-NEXT:  .LBB0_2: ; %exit
 ; GFX1030-NEXT:    s_endpgm
@@ -88,32 +84,28 @@ exit:
 define amdgpu_kernel void @uniform_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX950-LABEL: uniform_i16:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s0, s[4:5], 0x8
+; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX950-NEXT:    s_bitcmp1_b32 s2, 0
 ; GFX950-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX950-NEXT:  ; %bb.1: ; %store
-; GFX950-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    global_store_short v0, v1, s[2:3] sc0 sc1
+; GFX950-NEXT:    v_mov_b32_e32 v1, s2
+; GFX950-NEXT:    global_store_short v0, v1, s[0:1] sc0 sc1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:  .LBB2_2: ; %exit
 ; GFX950-NEXT:    s_endpgm
 ;
 ; GFX1030-LABEL: uniform_i16:
 ; GFX1030:       ; %bb.0: ; %entry
-; GFX1030-NEXT:    s_load_dword s0, s[8:9], 0x8
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX1030-NEXT:    s_bitcmp1_b32 s2, 0
 ; GFX1030-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX1030-NEXT:  ; %bb.1: ; %store
-; GFX1030-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1030-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX1030-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1030-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX1030-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1030-NEXT:  .LBB2_2: ; %exit
 ; GFX1030-NEXT:    s_endpgm
@@ -131,32 +123,28 @@ exit:
 define amdgpu_kernel void @uniform_srl_i32(ptr addrspace(1) %out, i32 %x) {
 ; GFX950-LABEL: uniform_srl_i32:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s0, s[4:5], 0x8
+; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_bitcmp1_b32 s0, 5
+; GFX950-NEXT:    s_bitcmp1_b32 s2, 5
 ; GFX950-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GFX950-NEXT:  ; %bb.1: ; %store
-; GFX950-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX950-NEXT:    v_mov_b32_e32 v1, s2
+; GFX950-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:  .LBB3_2: ; %exit
 ; GFX950-NEXT:    s_endpgm
 ;
 ; GFX1030-LABEL: uniform_srl_i32:
 ; GFX1030:       ; %bb.0: ; %entry
-; GFX1030-NEXT:    s_load_dword s0, s[8:9], 0x8
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    s_bitcmp1_b32 s0, 5
+; GFX1030-NEXT:    s_bitcmp1_b32 s2, 5
 ; GFX1030-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GFX1030-NEXT:  ; %bb.1: ; %store
-; GFX1030-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1030-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX1030-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1030-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1030-NEXT:  .LBB3_2: ; %exit
 ; GFX1030-NEXT:    s_endpgm
@@ -175,32 +163,28 @@ exit:
 define amdgpu_kernel void @uniform_trunc_i32(ptr addrspace(1) %out, i32 %x) {
 ; GFX950-LABEL: uniform_trunc_i32:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dword s0, s[4:5], 0x8
+; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX950-NEXT:    s_bitcmp1_b32 s2, 0
 ; GFX950-NEXT:    s_cbranch_scc1 .LBB4_2
 ; GFX950-NEXT:  ; %bb.1: ; %store
-; GFX950-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s0
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX950-NEXT:    v_mov_b32_e32 v1, s2
+; GFX950-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:  .LBB4_2: ; %exit
 ; GFX950-NEXT:    s_endpgm
 ;
 ; GFX1030-LABEL: uniform_trunc_i32:
 ; GFX1030:       ; %bb.0: ; %entry
-; GFX1030-NEXT:    s_load_dword s0, s[8:9], 0x8
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX1030-NEXT:    s_bitcmp1_b32 s2, 0
 ; GFX1030-NEXT:    s_cbranch_scc1 .LBB4_2
 ; GFX1030-NEXT:  ; %bb.1: ; %store
-; GFX1030-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1030-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX1030-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1030-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1030-NEXT:  .LBB4_2: ; %exit
 ; GFX1030-NEXT:    s_endpgm
@@ -265,8 +249,7 @@ define amdgpu_kernel void @uniform_in_divergent_i32(ptr addrspace(1) %out, i32 %
 ; GFX950-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-NEXT:    s_cbranch_execz .LBB6_3
 ; GFX950-NEXT:  ; %bb.1: ; %inner
-; GFX950-NEXT:    s_load_dword s2, s[4:5], 0x8
-; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_bitcmp1_b32 s2, 0
@@ -286,9 +269,7 @@ define amdgpu_kernel void @uniform_in_divergent_i32(ptr addrspace(1) %out, i32 %
 ; GFX1030-NEXT:    v_cmpx_gt_u32_e32 16, v0
 ; GFX1030-NEXT:    s_cbranch_execz .LBB6_3
 ; GFX1030-NEXT:  ; %bb.1: ; %inner
-; GFX1030-NEXT:    s_clause 0x1
-; GFX1030-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    s_bitcmp1_b32 s2, 0

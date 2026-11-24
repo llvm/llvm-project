@@ -9,11 +9,9 @@
 ; Verify that loads with different memory types are not subject to CSE
 ; once they are promoted to the same type.
 ;
-; CHECK: ld.global.v2.b8  {%[[B1:rs[0-9]+]], %[[B2:rs[0-9]+]]}, [a];
-; CHECK: st.global.v2.b8  [b], {%[[B1]], %[[B2]]};
-;
 ; CHECK: ld.global.b32 %[[C:r[0-9]+]], [a];
-; CHECK: st.global.b32 [c], %[[C]];
+; CHECK: st.global.v2.b8  [b],
+; CHECK: st.global.b32 [c],
 
 define void @test1() #0 {
   %1 = load <2 x i8>, ptr addrspace(1) @a, align 8

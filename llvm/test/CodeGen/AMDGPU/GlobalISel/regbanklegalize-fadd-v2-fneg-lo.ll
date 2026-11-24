@@ -8,31 +8,33 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo(ptr addrspace(1) %a, float %x) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:sgpr(p1) = G_LOAD [[COPY]](p4) :: (dereferenceable invariant load (p1) from %ir.a.kernarg.offset1, align 16, addrspace 4)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw nusw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:sgpr(f32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (f32) from %ir.x.kernarg.offset, align 8, addrspace 4)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1023
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:sgpr(<3 x i32>) = G_LOAD [[COPY]](p4) :: (dereferenceable invariant load (<3 x i32>) from %ir.a.kernarg.offset1, align 16, addrspace 4)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32), [[UV2:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](<3 x i32>)
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:sgpr(i64) = G_BITCAST [[BUILD_VECTOR]](<2 x i32>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:sgpr(f32) = G_BITCAST [[UV2]](i32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1023
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[COPY1]](i32)
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:vgpr(i32) = G_AND [[COPY2]], [[COPY3]]
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[C2]](i32)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
   ; CHECK-NEXT:   [[SHL:%[0-9]+]]:vgpr(i32) = nsw G_SHL [[AND]], [[COPY4]](i32)
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:vgpr(i64) = G_MERGE_VALUES [[SHL]](i32), [[C3]](i32)
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[LOAD]](p1)
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = nusw inbounds G_PTR_ADD [[COPY5]], [[MV]](i64)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:vgpr(<2 x f32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<2 x f32>) from %ir.gep, addrspace 1)
-  ; CHECK-NEXT:   [[FNEG:%[0-9]+]]:sgpr(f32) = G_FNEG [[LOAD1]]
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:vgpr(i64) = G_MERGE_VALUES [[SHL]](i32), [[C2]](i32)
+  ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:sgpr(p1) = G_INTTOPTR [[BITCAST]](i64)
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[INTTOPTR]](p1)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p1) = nusw inbounds G_PTR_ADD [[COPY5]], [[MV]](i64)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:vgpr(<2 x f32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x f32>) from %ir.gep, addrspace 1)
+  ; CHECK-NEXT:   [[FNEG:%[0-9]+]]:sgpr(f32) = G_FNEG [[BITCAST1]]
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr(f32) = COPY [[FNEG]](f32)
   ; CHECK-NEXT:   [[FCANONICALIZE:%[0-9]+]]:vgpr(f32) = G_FCANONICALIZE [[COPY6]]
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:vgpr(f32), [[UV1:%[0-9]+]]:vgpr(f32) = G_UNMERGE_VALUES [[LOAD2]](<2 x f32>)
-  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:vgpr(f32) = G_FADD [[UV]], [[FCANONICALIZE]]
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(f32) = COPY [[LOAD1]](f32)
-  ; CHECK-NEXT:   [[FADD1:%[0-9]+]]:vgpr(f32) = G_FADD [[UV1]], [[COPY7]]
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x f32>) = G_BUILD_VECTOR [[FADD]](f32), [[FADD1]](f32)
-  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x f32>), [[PTR_ADD1]](p1) :: (store (<2 x f32>) into %ir.gep, addrspace 1)
+  ; CHECK-NEXT:   [[UV3:%[0-9]+]]:vgpr(f32), [[UV4:%[0-9]+]]:vgpr(f32) = G_UNMERGE_VALUES [[LOAD1]](<2 x f32>)
+  ; CHECK-NEXT:   [[FADD:%[0-9]+]]:vgpr(f32) = G_FADD [[UV3]], [[FCANONICALIZE]]
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST1]](f32)
+  ; CHECK-NEXT:   [[FADD1:%[0-9]+]]:vgpr(f32) = G_FADD [[UV4]], [[COPY7]]
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:vgpr(<2 x f32>) = G_BUILD_VECTOR [[FADD]](f32), [[FADD1]](f32)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<2 x f32>), [[PTR_ADD]](p1) :: (store (<2 x f32>) into %ir.gep, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id

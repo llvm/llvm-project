@@ -32,6 +32,7 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi(ptr addrspace(1) %
 ; CHECK-NEXT:    global_load_dwordx4 a[4:7], v32, s[2:3] offset:16
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v32, s[2:3]
 ; CHECK-NEXT:  .LBB0_3: ; %endif
+; CHECK-NEXT:    ; kill: killed $vgpr32
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 2.0
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 4.0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

@@ -71,8 +71,8 @@ define void @load_fn_nounwind_readonly(ptr %p) #0 {
 ; CHECK-LABEL: define void @load_fn_nounwind_readonly(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 8
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    call void @fn_nounwind_readonly() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -122,8 +122,8 @@ define void @load_fn_readnone(ptr %p) #0 {
 ; CHECK-LABEL: define void @load_fn_readnone(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 8
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    call void @fn_readnone() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -332,8 +332,8 @@ define <2 x i32> @load_unordered(ptr %p, ptr %flag) {
 ; CHECK-LABEL: define <2 x i32> @load_unordered(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[FLAG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 8
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[F:%.*]] = load atomic i32, ptr [[FLAG]] unordered, align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[V01]], [[F]]
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x i32> poison, i32 [[ADD]], i32 0

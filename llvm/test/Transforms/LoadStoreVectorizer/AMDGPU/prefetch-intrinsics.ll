@@ -8,8 +8,8 @@ define i32 @global_prefetch(ptr addrspace(1) %p) {
 ; CHECK-LABEL: define i32 @global_prefetch(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 8
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) [[P]], i32 8)
 ; CHECK-NEXT:    [[S:%.*]] = add i32 [[A1]], [[B2]]
 ; CHECK-NEXT:    ret i32 [[S]]

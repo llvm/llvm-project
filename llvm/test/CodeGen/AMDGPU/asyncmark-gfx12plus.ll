@@ -95,7 +95,7 @@ entry:
   call void @llvm.amdgcn.wave.barrier()
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %bar_gep21, ptr addrspace(3) %lds_gep21, i32 4, i32 u0x21)
   call void @llvm.amdgcn.wave.barrier()
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Second batch: global load, async global-to-LDS, global load
   %foo_gep2 = getelementptr i32, ptr addrspace(1) %foo, i32 2
@@ -107,15 +107,15 @@ entry:
   call void @llvm.amdgcn.wave.barrier()
   %bar_gep12 = getelementptr i32, ptr addrspace(1) %bar, i32 12
   %bar_v12 = load i32, ptr addrspace(1) %bar_gep12
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Wait for first async mark and read from LDS
-  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %lds_val21 = load i32, ptr addrspace(3) %lds_gep21
 
   ; Wait for the next async mark.
   ; Notable that the asyncmark is sufficient to prevent the optimizer from coalescing the previous ds_load with the next one.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %lds_val22 = load i32, ptr addrspace(3) %lds_gep22
   %sum1 = add i32 %foo_v1, %bar_v11
   %sum2 = add i32 %sum1, %lds_val21
@@ -256,13 +256,13 @@ define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrsp
 prolog:
   ; Load first iteration
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 u0x20)
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Load second iteration
   %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
   %foo_gep1 = getelementptr i32, ptr addrspace(1) %foo, i32 1
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %foo_gep1, ptr addrspace(3) %lds_gep1, i32 4, i32 u0x20)
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   br label %loop_body
 
@@ -274,10 +274,10 @@ loop_body:
   %lds_gep_cur = getelementptr i32, ptr addrspace(3) %lds, i32 %i
   %foo_gep_cur = getelementptr i32, ptr addrspace(1) %foo, i32 %i
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %foo_gep_cur, ptr addrspace(3) %lds_gep_cur, i32 4, i32 u0x20)
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Wait for iteration i-2 and process
-  call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 2)
   %lds_idx = sub i32 %i, 2
   %lds_gep_read = getelementptr i32, ptr addrspace(3) %lds, i32 %lds_idx
   %lds_val = load i32, ptr addrspace(3) %lds_gep_read
@@ -290,14 +290,14 @@ loop_body:
 
 epilog:
   ; Process remaining iterations
-  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %lds_n_2 = sub i32 %n, 2
   %lds_gep_n_2 = getelementptr i32, ptr addrspace(3) %lds, i32 %lds_n_2
   %lds_val_n_2 = load i32, ptr addrspace(3) %lds_gep_n_2
   %sum_e2 = add i32 %sum_i, %lds_val_n_2
   %out_gep_e1 = getelementptr i32, ptr addrspace(1) %out, i32 %lds_n_2
 
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %lds_n_1 = sub i32 %n, 1
   %lds_gep_n_1 = getelementptr i32, ptr addrspace(3) %lds, i32 %lds_n_1
   %lds_val_n_1 = load i32, ptr addrspace(3) %lds_gep_n_1
@@ -509,7 +509,7 @@ prolog:
   %v0 = load i32, ptr addrspace(1) %foo
   %g0 = load i32, ptr addrspace(1) %bar
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 u0x20)
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Load second iteration
   %foo_gep1 = getelementptr i32, ptr addrspace(1) %foo, i32 1
@@ -519,7 +519,7 @@ prolog:
 
   %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %foo_gep1, ptr addrspace(3) %lds_gep1, i32 4, i32 u0x20)
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   br label %loop_body
 
@@ -537,10 +537,10 @@ loop_body:
   %cur_g = load i32, ptr addrspace(1) %bar_gep_cur
   %lds_gep_cur = getelementptr i32, ptr addrspace(3) %lds, i32 %i
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %foo_gep_cur, ptr addrspace(3) %lds_gep_cur, i32 4, i32 u0x20)
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
 
   ; Wait for iteration i-2 and process
-  call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 2)
   %lds_idx = sub i32 %i, 2
   %lds_gep_read = getelementptr i32, ptr addrspace(3) %lds, i32 %lds_idx
   %lds_val = load i32, ptr addrspace(3) %lds_gep_read
@@ -556,7 +556,7 @@ loop_body:
 
 epilog:
   ; Process remaining iterations
-  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %lds_n_2 = sub i32 %n, 2
   %lds_gep_n_2 = getelementptr i32, ptr addrspace(3) %lds, i32 %lds_n_2
   %lds_val_n_2 = load i32, ptr addrspace(3) %lds_gep_n_2
@@ -565,7 +565,7 @@ epilog:
   %out_gep_e1 = getelementptr i32, ptr addrspace(1) %out, i32 %lds_n_2
   store i32 %sum_e2, ptr addrspace(1) %out_gep_e1
 
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %lds_n_1 = sub i32 %n, 1
   %lds_gep_n_1 = getelementptr i32, ptr addrspace(3) %lds, i32 %lds_n_1
   %lds_val_n_1 = load i32, ptr addrspace(3) %lds_gep_n_1
@@ -612,9 +612,9 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 0)
-  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
   %val = load i32, ptr addrspace(3) %lds
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -665,11 +665,11 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 entry:
   %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark()
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %bar, ptr addrspace(3) %lds_gep1, i32 4, i32 0)
-  call void @llvm.amdgcn.asyncmark(i32 0)
-  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
   %val = load i32, ptr addrspace(3) %lds
   store i32 %val, ptr addrspace(1) %out
   ret void

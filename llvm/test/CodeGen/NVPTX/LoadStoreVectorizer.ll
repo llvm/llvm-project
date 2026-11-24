@@ -613,3 +613,51 @@ define void @combine_v4i32(ptr noundef align 16 %ptr1, ptr noundef align 16 %ptr
   store i32 %red, ptr %ptr2, align 4
   ret void
 }
+
+define void @combine_mixed_i32_i16_i16(ptr noundef align 8 %ptr1, ptr noundef align 4 %ptr2) {
+; ENABLED-LABEL: combine_mixed_i32_i16_i16(
+; ENABLED:       {
+; ENABLED-NEXT:    .reg .b16 %rs<3>;
+; ENABLED-NEXT:    .reg .b32 %r<7>;
+; ENABLED-NEXT:    .reg .b64 %rd<3>;
+; ENABLED-EMPTY:
+; ENABLED-NEXT:  // %bb.0:
+; ENABLED-NEXT:    ld.param.b64 %rd1, [combine_mixed_i32_i16_i16_param_0];
+; ENABLED-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; ENABLED-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; ENABLED-NEXT:    ld.param.b64 %rd2, [combine_mixed_i32_i16_i16_param_1];
+; ENABLED-NEXT:    cvt.u32.u16 %r3, %rs1;
+; ENABLED-NEXT:    cvt.u32.u16 %r4, %rs2;
+; ENABLED-NEXT:    add.s32 %r5, %r1, %r3;
+; ENABLED-NEXT:    add.s32 %r6, %r5, %r4;
+; ENABLED-NEXT:    st.b32 [%rd2], %r6;
+; ENABLED-NEXT:    ret;
+;
+; DISABLED-LABEL: combine_mixed_i32_i16_i16(
+; DISABLED:       {
+; DISABLED-NEXT:    .reg .b32 %r<6>;
+; DISABLED-NEXT:    .reg .b64 %rd<3>;
+; DISABLED-EMPTY:
+; DISABLED-NEXT:  // %bb.0:
+; DISABLED-NEXT:    ld.param.b64 %rd1, [combine_mixed_i32_i16_i16_param_0];
+; DISABLED-NEXT:    ld.b32 %r1, [%rd1];
+; DISABLED-NEXT:    ld.param.b64 %rd2, [combine_mixed_i32_i16_i16_param_1];
+; DISABLED-NEXT:    ld.b16 %r2, [%rd1+4];
+; DISABLED-NEXT:    ld.b16 %r3, [%rd1+6];
+; DISABLED-NEXT:    add.s32 %r4, %r1, %r2;
+; DISABLED-NEXT:    add.s32 %r5, %r4, %r3;
+; DISABLED-NEXT:    st.b32 [%rd2], %r5;
+; DISABLED-NEXT:    ret;
+  %val0 = load i32, ptr %ptr1, align 8
+  %ptr1.4 = getelementptr inbounds i8, ptr %ptr1, i64 4
+  %val1 = load i16, ptr %ptr1.4, align 4
+  %ptr1.6 = getelementptr inbounds i8, ptr %ptr1, i64 6
+  %val2 = load i16, ptr %ptr1.6, align 2
+  %lane1 = zext i16 %val1 to i32
+  %lane2 = zext i16 %val2 to i32
+  %red.1 = add i32 %val0, %lane1
+  %red = add i32 %red.1, %lane2
+  store i32 %red, ptr %ptr2, align 4
+  ret void
+}
+

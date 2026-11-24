@@ -7,21 +7,19 @@ define amdgpu_kernel void @test_fence(ptr addrspace(1) %arg, i1 %arg1) {
 ; CHECK-LABEL: test_fence:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x2c
+; CHECK-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; CHECK-NEXT:    ds_load_b32 v1, v1
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_bitcmp0_b32 s0, 0
+; CHECK-NEXT:    s_bitcmp0_b32 s2, 0
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    global_inv scope:SCOPE_SE
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb2
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; CHECK-NEXT:  .LBB0_2: ; %bb8
 ; CHECK-NEXT:    s_endpgm

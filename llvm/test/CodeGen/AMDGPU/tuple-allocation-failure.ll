@@ -32,8 +32,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-LABEL: kernel:
 ; GLOBALNESS1:       ; %bb.0: ; %bb
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[36:37], s[6:7]
+; GLOBALNESS1-NEXT:    s_mov_b64 s[38:39], s[4:5]
 ; GLOBALNESS1-NEXT:    s_load_dwordx4 s[64:67], s[8:9], 0x0
-; GLOBALNESS1-NEXT:    s_load_dword s6, s[8:9], 0x14
+; GLOBALNESS1-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x14
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v42, 0
 ; GLOBALNESS1-NEXT:    v_pk_mov_b32 v[44:45], 0, 0
 ; GLOBALNESS1-NEXT:    global_store_dword v[44:45], v42, off
@@ -41,31 +42,29 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    global_load_dword v2, v42, s[64:65]
 ; GLOBALNESS1-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; GLOBALNESS1-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; GLOBALNESS1-NEXT:    s_mov_b64 s[38:39], s[4:5]
-; GLOBALNESS1-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x18
-; GLOBALNESS1-NEXT:    s_load_dword s7, s[8:9], 0x20
 ; GLOBALNESS1-NEXT:    s_add_u32 s0, s0, s17
 ; GLOBALNESS1-NEXT:    s_addc_u32 s1, s1, 0
 ; GLOBALNESS1-NEXT:    s_bitcmp1_b32 s66, 0
-; GLOBALNESS1-NEXT:    v_mov_b32_e32 v40, v0
-; GLOBALNESS1-NEXT:    v_mov_b32_e32 v0, 0
-; GLOBALNESS1-NEXT:    v_mov_b32_e32 v1, 0x40994400
-; GLOBALNESS1-NEXT:    s_cselect_b64 s[84:85], -1, 0
-; GLOBALNESS1-NEXT:    s_bitcmp1_b32 s6, 0
-; GLOBALNESS1-NEXT:    s_waitcnt lgkmcnt(0)
-; GLOBALNESS1-NEXT:    v_cmp_gt_f64_e64 s[50:51], s[4:5], v[0:1]
-; GLOBALNESS1-NEXT:    v_cmp_gt_f64_e64 s[80:81], s[4:5], 0
+; GLOBALNESS1-NEXT:    s_cselect_b64 s[80:81], -1, 0
+; GLOBALNESS1-NEXT:    s_bitcmp1_b32 s4, 0
 ; GLOBALNESS1-NEXT:    s_cselect_b64 s[86:87], -1, 0
 ; GLOBALNESS1-NEXT:    s_bitcmp1_b32 s7, 0
 ; GLOBALNESS1-NEXT:    s_cselect_b64 s[96:97], -1, 0
-; GLOBALNESS1-NEXT:    ; implicit-def: $vgpr57 : SGPR spill to VGPR lane
-; GLOBALNESS1-NEXT:    s_mov_b32 s33, s16
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[48:49], s[8:9]
+; GLOBALNESS1-NEXT:    s_mov_b32 s9, s6
+; GLOBALNESS1-NEXT:    ; implicit-def: $vgpr57 : SGPR spill to VGPR lane
+; GLOBALNESS1-NEXT:    v_mov_b32_e32 v40, v0
+; GLOBALNESS1-NEXT:    v_mov_b32_e32 v0, 0
+; GLOBALNESS1-NEXT:    v_mov_b32_e32 v1, 0x40994400
+; GLOBALNESS1-NEXT:    s_mov_b32 s8, s5
+; GLOBALNESS1-NEXT:    s_mov_b32 s33, s16
 ; GLOBALNESS1-NEXT:    s_mov_b32 s70, s15
 ; GLOBALNESS1-NEXT:    s_mov_b32 s71, s14
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v46, 0x80
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v47, 0
+; GLOBALNESS1-NEXT:    v_cmp_gt_f64_e64 s[50:51], s[8:9], v[0:1]
+; GLOBALNESS1-NEXT:    v_cmp_gt_f64_e64 s[84:85], s[8:9], 0
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS1-NEXT:    s_mov_b32 s32, 0
 ; GLOBALNESS1-NEXT:    ; implicit-def: $vgpr58_vgpr59
@@ -115,13 +114,13 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v31, v40
 ; GLOBALNESS1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GLOBALNESS1-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GLOBALNESS1-NEXT:    s_and_b64 s[4:5], s[84:85], exec
+; GLOBALNESS1-NEXT:    s_and_b64 s[4:5], s[80:81], exec
 ; GLOBALNESS1-NEXT:    s_cbranch_scc0 .LBB1_7
 ; GLOBALNESS1-NEXT:  ; %bb.4: ; %NodeBlock
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS1-NEXT:    s_cmp_lt_i32 s67, 1
 ; GLOBALNESS1-NEXT:    s_cbranch_scc1 .LBB1_6
-; GLOBALNESS1-NEXT:  ; %bb.5: ; %LeafBlock12
+; GLOBALNESS1-NEXT:  ; %bb.5: ; %LeafBlock14
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS1-NEXT:    s_cmp_eq_u32 s67, 1
 ; GLOBALNESS1-NEXT:    s_cbranch_scc0 .LBB1_7
@@ -157,7 +156,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    v_cmp_lt_f64_e64 s[64:65], 0, v[0:1]
 ; GLOBALNESS1-NEXT:    v_cmp_eq_u32_e64 s[66:67], 0, v2
 ; GLOBALNESS1-NEXT:    s_branch .LBB1_13
-; GLOBALNESS1-NEXT:  .LBB1_11: ; %Flow14
+; GLOBALNESS1-NEXT:  .LBB1_11: ; %Flow16
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_13 Depth=2
 ; GLOBALNESS1-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GLOBALNESS1-NEXT:  .LBB1_12: ; %bb63.i
@@ -167,7 +166,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:  .LBB1_13: ; %bb44.i
 ; GLOBALNESS1-NEXT:    ; Parent Loop BB1_3 Depth=1
 ; GLOBALNESS1-NEXT:    ; => This Inner Loop Header: Depth=2
-; GLOBALNESS1-NEXT:    s_and_b64 vcc, exec, s[84:85]
+; GLOBALNESS1-NEXT:    s_and_b64 vcc, exec, s[80:81]
 ; GLOBALNESS1-NEXT:    s_cbranch_vccnz .LBB1_12
 ; GLOBALNESS1-NEXT:  ; %bb.14: ; %bb46.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_13 Depth=2
@@ -179,7 +178,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_cbranch_vccnz .LBB1_18
 ; GLOBALNESS1-NEXT:  ; %bb.16: ; %bb3.i.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_13 Depth=2
-; GLOBALNESS1-NEXT:    s_and_b64 vcc, exec, s[80:81]
+; GLOBALNESS1-NEXT:    s_and_b64 vcc, exec, s[84:85]
 ; GLOBALNESS1-NEXT:    s_cbranch_vccnz .LBB1_18
 ; GLOBALNESS1-NEXT:  ; %bb.17: ; %bb6.i.i
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_13 Depth=2
@@ -225,7 +224,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:  .LBB1_21: ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS1-NEXT:    s_load_dwordx4 s[64:67], s[48:49], 0x0
 ; GLOBALNESS1-NEXT:    v_pk_mov_b32 v[0:1], 0, 0
-; GLOBALNESS1-NEXT:  .LBB1_22: ; %Flow15
+; GLOBALNESS1-NEXT:  .LBB1_22: ; %Flow17
 ; GLOBALNESS1-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS1-NEXT:    s_or_b64 exec, exec, s[82:83]
 ; GLOBALNESS1-NEXT:    v_pk_mov_b32 v[58:59], v[0:1], v[0:1] op_sel:[0,1]
@@ -269,8 +268,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-LABEL: kernel:
 ; GLOBALNESS0:       ; %bb.0: ; %bb
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[36:37], s[6:7]
+; GLOBALNESS0-NEXT:    s_mov_b64 s[38:39], s[4:5]
 ; GLOBALNESS0-NEXT:    s_load_dwordx4 s[64:67], s[8:9], 0x0
-; GLOBALNESS0-NEXT:    s_load_dword s6, s[8:9], 0x14
+; GLOBALNESS0-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x14
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v42, 0
 ; GLOBALNESS0-NEXT:    v_pk_mov_b32 v[44:45], 0, 0
 ; GLOBALNESS0-NEXT:    global_store_dword v[44:45], v42, off
@@ -278,31 +278,29 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    global_load_dword v2, v42, s[64:65]
 ; GLOBALNESS0-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; GLOBALNESS0-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; GLOBALNESS0-NEXT:    s_mov_b64 s[38:39], s[4:5]
-; GLOBALNESS0-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x18
-; GLOBALNESS0-NEXT:    s_load_dword s7, s[8:9], 0x20
 ; GLOBALNESS0-NEXT:    s_add_u32 s0, s0, s17
 ; GLOBALNESS0-NEXT:    s_addc_u32 s1, s1, 0
 ; GLOBALNESS0-NEXT:    s_bitcmp1_b32 s66, 0
-; GLOBALNESS0-NEXT:    v_mov_b32_e32 v40, v0
-; GLOBALNESS0-NEXT:    v_mov_b32_e32 v0, 0
-; GLOBALNESS0-NEXT:    v_mov_b32_e32 v1, 0x40994400
-; GLOBALNESS0-NEXT:    s_cselect_b64 s[84:85], -1, 0
-; GLOBALNESS0-NEXT:    s_bitcmp1_b32 s6, 0
-; GLOBALNESS0-NEXT:    s_waitcnt lgkmcnt(0)
-; GLOBALNESS0-NEXT:    v_cmp_gt_f64_e64 s[50:51], s[4:5], v[0:1]
-; GLOBALNESS0-NEXT:    v_cmp_gt_f64_e64 s[80:81], s[4:5], 0
+; GLOBALNESS0-NEXT:    s_cselect_b64 s[80:81], -1, 0
+; GLOBALNESS0-NEXT:    s_bitcmp1_b32 s4, 0
 ; GLOBALNESS0-NEXT:    s_cselect_b64 s[86:87], -1, 0
 ; GLOBALNESS0-NEXT:    s_bitcmp1_b32 s7, 0
 ; GLOBALNESS0-NEXT:    s_cselect_b64 s[96:97], -1, 0
-; GLOBALNESS0-NEXT:    ; implicit-def: $vgpr57 : SGPR spill to VGPR lane
-; GLOBALNESS0-NEXT:    s_mov_b32 s33, s16
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[48:49], s[8:9]
+; GLOBALNESS0-NEXT:    s_mov_b32 s9, s6
+; GLOBALNESS0-NEXT:    ; implicit-def: $vgpr57 : SGPR spill to VGPR lane
+; GLOBALNESS0-NEXT:    v_mov_b32_e32 v40, v0
+; GLOBALNESS0-NEXT:    v_mov_b32_e32 v0, 0
+; GLOBALNESS0-NEXT:    v_mov_b32_e32 v1, 0x40994400
+; GLOBALNESS0-NEXT:    s_mov_b32 s8, s5
+; GLOBALNESS0-NEXT:    s_mov_b32 s33, s16
 ; GLOBALNESS0-NEXT:    s_mov_b32 s68, s15
 ; GLOBALNESS0-NEXT:    s_mov_b32 s69, s14
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v46, 0x80
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v47, 0
+; GLOBALNESS0-NEXT:    v_cmp_gt_f64_e64 s[50:51], s[8:9], v[0:1]
+; GLOBALNESS0-NEXT:    v_cmp_gt_f64_e64 s[84:85], s[8:9], 0
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v43, v42
 ; GLOBALNESS0-NEXT:    s_mov_b32 s32, 0
 ; GLOBALNESS0-NEXT:    ; implicit-def: $vgpr58_vgpr59
@@ -352,13 +350,13 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v31, v40
 ; GLOBALNESS0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GLOBALNESS0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GLOBALNESS0-NEXT:    s_and_b64 s[4:5], s[84:85], exec
+; GLOBALNESS0-NEXT:    s_and_b64 s[4:5], s[80:81], exec
 ; GLOBALNESS0-NEXT:    s_cbranch_scc0 .LBB1_7
 ; GLOBALNESS0-NEXT:  ; %bb.4: ; %NodeBlock
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS0-NEXT:    s_cmp_lt_i32 s67, 1
 ; GLOBALNESS0-NEXT:    s_cbranch_scc1 .LBB1_6
-; GLOBALNESS0-NEXT:  ; %bb.5: ; %LeafBlock12
+; GLOBALNESS0-NEXT:  ; %bb.5: ; %LeafBlock14
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS0-NEXT:    s_cmp_eq_u32 s67, 1
 ; GLOBALNESS0-NEXT:    s_cbranch_scc0 .LBB1_7
@@ -394,7 +392,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    v_cmp_lt_f64_e64 s[64:65], 0, v[0:1]
 ; GLOBALNESS0-NEXT:    v_cmp_eq_u32_e64 s[66:67], 0, v2
 ; GLOBALNESS0-NEXT:    s_branch .LBB1_13
-; GLOBALNESS0-NEXT:  .LBB1_11: ; %Flow14
+; GLOBALNESS0-NEXT:  .LBB1_11: ; %Flow16
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_13 Depth=2
 ; GLOBALNESS0-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GLOBALNESS0-NEXT:  .LBB1_12: ; %bb63.i
@@ -404,7 +402,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:  .LBB1_13: ; %bb44.i
 ; GLOBALNESS0-NEXT:    ; Parent Loop BB1_3 Depth=1
 ; GLOBALNESS0-NEXT:    ; => This Inner Loop Header: Depth=2
-; GLOBALNESS0-NEXT:    s_and_b64 vcc, exec, s[84:85]
+; GLOBALNESS0-NEXT:    s_and_b64 vcc, exec, s[80:81]
 ; GLOBALNESS0-NEXT:    s_cbranch_vccnz .LBB1_12
 ; GLOBALNESS0-NEXT:  ; %bb.14: ; %bb46.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_13 Depth=2
@@ -416,7 +414,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_cbranch_vccnz .LBB1_18
 ; GLOBALNESS0-NEXT:  ; %bb.16: ; %bb3.i.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_13 Depth=2
-; GLOBALNESS0-NEXT:    s_and_b64 vcc, exec, s[80:81]
+; GLOBALNESS0-NEXT:    s_and_b64 vcc, exec, s[84:85]
 ; GLOBALNESS0-NEXT:    s_cbranch_vccnz .LBB1_18
 ; GLOBALNESS0-NEXT:  ; %bb.17: ; %bb6.i.i
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_13 Depth=2
@@ -462,7 +460,7 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:  .LBB1_21: ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS0-NEXT:    s_load_dwordx4 s[64:67], s[48:49], 0x0
 ; GLOBALNESS0-NEXT:    v_pk_mov_b32 v[0:1], 0, 0
-; GLOBALNESS0-NEXT:  .LBB1_22: ; %Flow15
+; GLOBALNESS0-NEXT:  .LBB1_22: ; %Flow17
 ; GLOBALNESS0-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GLOBALNESS0-NEXT:    s_or_b64 exec, exec, s[82:83]
 ; GLOBALNESS0-NEXT:    v_pk_mov_b32 v[58:59], v[0:1], v[0:1] op_sel:[0,1]

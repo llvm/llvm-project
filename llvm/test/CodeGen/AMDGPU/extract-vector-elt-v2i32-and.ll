@@ -116,44 +116,42 @@ define <2 x i32> @select_bit_test_vector_result(<2 x i32> %g, <2 x i32> %v) {
 define amdgpu_kernel void @select_bit_test_uniform(ptr addrspace(1) %out, i32 %g, <2 x i32> %v) {
 ; GFX942-LABEL: select_bit_test_uniform:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x8
-; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
-; GFX942-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x10
-; GFX942-NEXT:    s_mov_b32 s2, 1
-; GFX942-NEXT:    s_mov_b32 s3, 2
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX942-NEXT:    s_mov_b32 s6, 1
+; GFX942-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x10
+; GFX942-NEXT:    s_mov_b32 s7, 2
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s1, s0
-; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GFX942-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX942-NEXT:    s_cselect_b32 s1, s9, 0
-; GFX942-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX942-NEXT:    s_cselect_b32 s0, s8, 0
-; GFX942-NEXT:    s_xor_b32 s0, s0, s1
-; GFX942-NEXT:    v_mov_b32_e32 v1, s0
-; GFX942-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX942-NEXT:    s_mov_b32 s3, s2
+; GFX942-NEXT:    s_and_b64 s[2:3], s[2:3], s[6:7]
+; GFX942-NEXT:    s_cmp_lg_u32 s3, 0
+; GFX942-NEXT:    s_cselect_b32 s3, s5, 0
+; GFX942-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX942-NEXT:    s_cselect_b32 s2, s4, 0
+; GFX942-NEXT:    s_xor_b32 s2, s2, s3
+; GFX942-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: select_bit_test_uniform:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x8
-; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x10
-; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
 ; GFX11-NEXT:    s_mov_b32 s6, 1
 ; GFX11-NEXT:    s_mov_b32 s7, 2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s1, s0
+; GFX11-NEXT:    s_mov_b32 s3, s2
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
-; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX11-NEXT:    s_cselect_b32 s1, s3, 0
-; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-NEXT:    s_cselect_b32 s0, s2, 0
+; GFX11-NEXT:    s_and_b64 s[2:3], s[2:3], s[6:7]
+; GFX11-NEXT:    s_cmp_lg_u32 s3, 0
+; GFX11-NEXT:    s_cselect_b32 s3, s5, 0
+; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX11-NEXT:    s_cselect_b32 s2, s4, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b32 s0, s0, s1
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_xor_b32 s2, s2, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %ins = insertelement <2 x i32> poison, i32 %g, i64 0
   %splat = shufflevector <2 x i32> %ins, <2 x i32> poison, <2 x i32> zeroinitializer

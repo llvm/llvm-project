@@ -50,8 +50,8 @@ define i32 @zext_difference_preserved(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[EXTA:%.*]] = zext i8 [[IDX]] to i64
 ; CHECK-NEXT:    [[PA:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTA]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PA]], align 8
-; CHECK-NEXT:    [[VA1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[VB2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[VA1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[VB2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA1]], [[VB2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -110,8 +110,8 @@ define i32 @sext_difference_preserved(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[EXTB:%.*]] = sext i8 [[NEXT]] to i64
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB]], align 8
-; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA2]], [[VB1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

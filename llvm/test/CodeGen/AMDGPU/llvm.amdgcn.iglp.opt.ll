@@ -831,20 +831,34 @@ entry:
 ; Check that the iglp_opt(1) analysis data of test_iglp_opt_rev_mfma_gemm,
 ; which is scheduled before this function, does not leak into this function.
 define amdgpu_kernel void @test_after_test_iglp_opt_rev_mfma_gemm(ptr %src, ptr addrspace(3) %dst) {
-; GCN-LABEL: test_after_test_iglp_opt_rev_mfma_gemm:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    ; iglp_opt mask(0x00000001)
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GCN-NEXT:    flat_load_ubyte v0, v[0:1]
-; GCN-NEXT:    s_load_dword s0, s[4:5], 0x2c
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    ds_write_b8 v1, v0
-; GCN-NEXT:    s_endpgm
+; SDAG-LABEL: test_after_test_iglp_opt_rev_mfma_gemm:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; SDAG-NEXT:    ; iglp_opt mask(0x00000001)
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; SDAG-NEXT:    flat_load_ubyte v0, v[0:1]
+; SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; SDAG-NEXT:    ds_write_b8 v1, v0
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_after_test_iglp_opt_rev_mfma_gemm:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GISEL-NEXT:    ; iglp_opt mask(0x00000001)
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
+; GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
+; GISEL-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    v_mov_b32_e32 v1, s0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-NEXT:    ds_write_b8 v1, v0
+; GISEL-NEXT:    s_endpgm
 entry:
   %a = load i1, ptr %src, align 1
   call void @llvm.amdgcn.iglp.opt(i32 1)
@@ -853,20 +867,34 @@ entry:
 }
 
 define amdgpu_kernel void @test_iglp_opt_exp_interleave(ptr %src, ptr addrspace(3) %dst) {
-; GCN-LABEL: test_iglp_opt_exp_interleave:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    ; iglp_opt mask(0x00000002)
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GCN-NEXT:    flat_load_ubyte v0, v[0:1]
-; GCN-NEXT:    s_load_dword s0, s[4:5], 0x2c
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    ds_write_b8 v1, v0
-; GCN-NEXT:    s_endpgm
+; SDAG-LABEL: test_iglp_opt_exp_interleave:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; SDAG-NEXT:    ; iglp_opt mask(0x00000002)
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; SDAG-NEXT:    flat_load_ubyte v0, v[0:1]
+; SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; SDAG-NEXT:    ds_write_b8 v1, v0
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_iglp_opt_exp_interleave:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GISEL-NEXT:    ; iglp_opt mask(0x00000002)
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
+; GISEL-NEXT:    flat_load_ubyte v0, v[0:1]
+; GISEL-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    v_mov_b32_e32 v1, s0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-NEXT:    ds_write_b8 v1, v0
+; GISEL-NEXT:    s_endpgm
 entry:
   %a = load i1, ptr %src, align 1
   call void @llvm.amdgcn.iglp.opt(i32 2)
