@@ -58,3 +58,22 @@ if(UNIX AND NOT APPLE)
                         VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}")
 endif()
 install(TARGETS omptarget LIBRARY COMPONENT offload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
+
+if(LIBOMPTARGET_OMPT_SUPPORT)
+  add_library(omptarget.ompt STATIC
+    src/OMPT/TraceBuffer.cpp
+  )
+  target_include_directories(omptarget.ompt
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${LIBOMPTARGET_INCLUDE_DIR}
+  )
+  target_compile_definitions(omptarget.ompt PRIVATE
+    TARGET_NAME=omptarget
+    DEBUG_PREFIX="omptarget"
+  )
+  target_compile_options(omptarget.ompt PRIVATE ${offload_compile_flags})
+  target_link_libraries(omptarget.ompt PRIVATE ${llvm_libs})
+  set_target_properties(omptarget.ompt PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+  target_link_libraries(omptarget PRIVATE omptarget.ompt)
+endif()
