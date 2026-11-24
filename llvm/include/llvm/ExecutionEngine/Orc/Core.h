@@ -699,8 +699,8 @@ public:
   /// code will *not* be cleared. Adding new code concurrently with a clear
   /// is usually a bug and should be avoided.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
+  /// If this JITDylib is defunct then this method will return a
+  /// JITDylibDefunct error.
   LLVM_ABI Error clear();
 
   /// Get the default resource tracker for this JITDylib.
@@ -808,8 +808,8 @@ public:
   /// This overload always takes ownership of the MaterializationUnit. If any
   /// errors occur, the MaterializationUnit consumed.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
+  /// If this JITDylib is defunct then this method will return a
+  /// JITDylibDefunct error.
   template <typename MaterializationUnitType>
   Error define(std::unique_ptr<MaterializationUnitType> &&MU,
                ResourceTrackerSP RT = nullptr);
@@ -822,8 +822,8 @@ public:
   /// may allow the caller to modify the MaterializationUnit to correct the
   /// issue, then re-call define.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
+  /// If this JITDylib is defunct then this method will return a
+  /// JITDylibDefunct error.
   template <typename MaterializationUnitType>
   Error define(std::unique_ptr<MaterializationUnitType> &MU,
                ResourceTrackerSP RT = nullptr);
@@ -839,8 +839,8 @@ public:
   /// On success, all symbols are removed. On failure, the JITDylib state is
   /// left unmodified (no symbols are removed).
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
+  /// If this JITDylib is defunct then this method will return a
+  /// JITDylibDefunct error.
   LLVM_ABI Error remove(const SymbolNameSet &Names);
 
   /// Returns the given JITDylibs and all of their transitive dependencies in
@@ -1677,7 +1677,8 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU,
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
-    assert(State == Open && "JD is defunct");
+    if (State != Open)
+      return make_error<JITDylibDefunct>(this);
 
     if (auto Err = defineImpl(*MU))
       return Err;
