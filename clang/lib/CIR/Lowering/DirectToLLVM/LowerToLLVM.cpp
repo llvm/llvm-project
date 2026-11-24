@@ -109,9 +109,7 @@ static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
                                            mlir::Type llvmMemType,
                                            const mlir::DataLayout &dataLayout) {
   auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
-  auto vecTy = mlir::dyn_cast<cir::VectorType>(cirType);
-  if ((intTy && intTy.isBitInt()) ||
-      (vecTy && vecTy.getKind() == cir::VectorAbiKind::SVECount))
+  if ((intTy && intTy.isBitInt()) || mlir::isa<cir::SveCountType>(cirType))
     return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
         .getTypeLanguageAlignment(cirType);
   return dataLayout.getTypeABIAlignment(llvmMemType);
@@ -4615,10 +4613,11 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       return {};
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
+  converter.addConversion([&](cir::SveCountType type) -> mlir::Type {
+    return mlir::LLVM::LLVMTargetExtType::get(type.getContext(),
+                                              "aarch64.svcount", {}, {});
+  });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
-    if (type.getKind() == cir::VectorAbiKind::SVECount)
-      return mlir::LLVM::LLVMTargetExtType::get(type.getContext(),
-                                                "aarch64.svcount", {}, {});
     // Vector-of-_BitInt memory layout is not modeled here (the element would
     // stay at its literal width); report a conversion failure rather than emit
     // an unvalidated vector.

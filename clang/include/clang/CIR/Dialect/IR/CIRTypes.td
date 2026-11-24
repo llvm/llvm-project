@@ -530,8 +530,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 def CIR_VectorAbiKind : CIR_I32Enum<"VectorAbiKind", "vector ABI kind", [
     I32EnumCase<"Generic", 0, "generic">,
     I32EnumCase<"SVEData", 1, "sve_data">,
-    I32EnumCase<"SVEPredicate", 2, "sve_predicate">,
-    I32EnumCase<"SVECount", 3, "sve_count">
+    I32EnumCase<"SVEPredicate", 2, "sve_predicate">
 ]>;
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
@@ -587,19 +586,15 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     - A scalable `sve_predicate` vector has `!cir.int<u, 1>` elements. A
       fixed-length `sve_predicate` vector holds the predicate one bit per lane
       in `!cir.int<u, 8>` elements.
-    - An `sve_count` vector is `__SVCount_t`, an opaque predicate-as-counter.
-      It has the shape of `svbool_t`, `[16]` `!cir.int<u, 1>` elements, and
-      lowers to the LLVM type `target("aarch64.svcount")`.
 
     A scalable vector must have a kind other than generic. The language
     alignment of an `sve_data` vector is 16 bytes and that of an
-    `sve_predicate` or `sve_count` vector is 2 bytes, whatever their size.
+    `sve_predicate` vector is 2 bytes, whatever their size.
 
     Examples:
     ```
     !cir.vector<[4] x !cir.int<s, 32>, sve_data>
     !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>
-    !cir.vector<[16] x !cir.int<u, 1>, sve_count>
     !cir.vector<16 x !cir.int<s, 32>, sve_data>
     !cir.vector<8 x !cir.int<u, 8>, sve_predicate>
     ```
@@ -628,12 +623,10 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     /// Return whether this vector is scalable.
     bool isScalable() const { return getSize().isScalable(); }
 
-    /// Return whether this vector is an AArch64 SVE data, predicate, or count
-    /// vector.
+    /// Return whether this vector is an AArch64 SVE data or predicate vector.
     bool isSVE() const {
       return getKind() == VectorAbiKind::SVEData ||
-             getKind() == VectorAbiKind::SVEPredicate ||
-             getKind() == VectorAbiKind::SVECount;
+             getKind() == VectorAbiKind::SVEPredicate;
     }
 
     /// Return a fixed-width vector with the given element type, size, and
@@ -677,6 +670,25 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SveCountType
+//===----------------------------------------------------------------------===//
+
+def CIR_SveCountType : CIR_Type<"SveCount", "sve_count", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let summary = "AArch64 SVE predicate-as-counter type";
+  let description = [{
+    `!cir.sve_count` represents the AArch64 `__SVCount_t` (`svcount_t`) type.
+    Such a value contains information about the number of active lanes, the
+    element width and a bit that indicates whether the generated mask should be
+    inverted. It lowers to the LLVM type `target("aarch64.svcount")`.
+
+    The size of the type is a scalable 16 bits, and its alignment is 2 bytes.
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1382,10 +1394,10 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
-  CIR_IntType, CIR_AnyFloatType, CIR_AnyOpaqueFloatType, CIR_PointerType,
-  CIR_FuncType, CIR_StructType, CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_SveCountType,
+  CIR_MatrixType, CIR_IntType, CIR_AnyFloatType, CIR_AnyOpaqueFloatType,
+  CIR_PointerType, CIR_FuncType, CIR_StructType, CIR_UnionType,
+  CIR_BitFieldType, CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
   CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType

@@ -1734,16 +1734,6 @@ mlir::LogicalResult cir::VectorType::verify(
                          << " elements";
     return success();
   }
-  case cir::VectorAbiKind::SVECount: {
-    auto intTy = mlir::dyn_cast<cir::IntType>(elementType);
-    if (!size.isScalable() || size.getKnownMinValue() != 16 || !intTy ||
-        intTy.isSigned() || intTy.isBitInt() || intTy.getWidth() != 1)
-      return emitError() << "an SVE count vector must have [16] "
-                         << cir::IntType::get(elementType.getContext(), 1,
-                                              /*isSigned=*/false)
-                         << " elements";
-    return success();
-  }
   }
   llvm_unreachable("unknown vector kind");
 }
@@ -1804,8 +1794,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
     std::optional<cir::VectorAbiKind> parsedKind =
         cir::symbolizeVectorAbiKind(kindName);
     if (!parsedKind || *parsedKind == cir::VectorAbiKind::Generic) {
-      odsParser.emitError(kindLoc, "expected 'sve_data', 'sve_predicate', or "
-                                   "'sve_count'");
+      odsParser.emitError(kindLoc, "expected 'sve_data' or 'sve_predicate'");
       return {};
     }
     kind = *parsedKind;
@@ -1834,6 +1823,22 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   if (getKind() != cir::VectorAbiKind::Generic)
     odsPrinter << ", " << cir::stringifyVectorAbiKind(getKind());
   odsPrinter << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// SveCountType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+SveCountType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                                mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getScalable(16);
+}
+
+uint64_t
+SveCountType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return 2;
 }
 
 //===----------------------------------------------------------------------===//

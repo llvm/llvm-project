@@ -166,8 +166,8 @@ TEST_F(VectorTypeABIAlignTest, MaxAlignLeavesABIAlignment) {
 }
 
 // The language alignment of an SVE vector is 16 bytes for data and 2 bytes for
-// a predicate or count, whether it is scalable or fixed-length. The ABI
-// alignment follows the vector's size, as for a generic vector.
+// a predicate, whether it is scalable or fixed-length. The ABI alignment
+// follows the vector's size, as for a generic vector.
 TEST_F(VectorTypeABIAlignTest, SVEVectorLanguageAlignment) {
   OpBuilder builder(&context);
   auto module = ModuleOp::create(builder.getUnknownLoc());
@@ -184,11 +184,6 @@ TEST_F(VectorTypeABIAlignTest, SVEVectorLanguageAlignment) {
   EXPECT_EQ(dl.layout.getTypeABIAlignment(svbool), 2u);
   EXPECT_EQ(dl.getTypeLanguageAlignment(svbool), 2u);
 
-  auto svcount =
-      cir::VectorType::getScalable(u1, 16, cir::VectorAbiKind::SVECount);
-  EXPECT_EQ(dl.layout.getTypeABIAlignment(svcount), 2u);
-  EXPECT_EQ(dl.getTypeLanguageAlignment(svcount), 2u);
-
   // A 512-bit fixed_float32_t.
   auto fixedFloat32 =
       cir::VectorType::getFixed(f32(), 16, cir::VectorAbiKind::SVEData);
@@ -200,6 +195,23 @@ TEST_F(VectorTypeABIAlignTest, SVEVectorLanguageAlignment) {
       cir::VectorType::getFixed(u8(), 8, cir::VectorAbiKind::SVEPredicate);
   EXPECT_EQ(dl.layout.getTypeABIAlignment(fixedBool), 8u);
   EXPECT_EQ(dl.getTypeLanguageAlignment(fixedBool), 2u);
+
+  module->erase();
+}
+
+// An SVE count has the size of an svbool_t, a scalable 16 bits, and is 2-byte
+// aligned.
+TEST_F(VectorTypeABIAlignTest, SveCountLayout) {
+  OpBuilder builder(&context);
+  auto module = ModuleOp::create(builder.getUnknownLoc());
+  cir::CIRDataLayout dl(module);
+
+  auto svcount = cir::SveCountType::get(&context);
+  EXPECT_TRUE(cir::isSized(svcount));
+  EXPECT_EQ(dl.layout.getTypeSizeInBits(svcount),
+            llvm::TypeSize::getScalable(16));
+  EXPECT_EQ(dl.layout.getTypeABIAlignment(svcount), 2u);
+  EXPECT_EQ(dl.getTypeLanguageAlignment(svcount), 2u);
 
   module->erase();
 }

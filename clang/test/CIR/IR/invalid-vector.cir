@@ -208,14 +208,14 @@ cir.func private @scalable_generic(!cir.vector<[4] x !s32i>)
 
 !s32i = !cir.int<s, 32>
 
-// expected-error @below {{expected 'sve_data', 'sve_predicate', or 'sve_count'}}
+// expected-error @below {{expected 'sve_data' or 'sve_predicate'}}
 cir.func private @kind_generic(!cir.vector<4 x !s32i, generic>)
 
 // -----
 
 !s32i = !cir.int<s, 32>
 
-// expected-error @below {{expected 'sve_data', 'sve_predicate', or 'sve_count'}}
+// expected-error @below {{expected 'sve_data' or 'sve_predicate'}}
 cir.func private @kind_unknown(!cir.vector<4 x !s32i, neon>)
 
 // -----
@@ -316,23 +316,3 @@ module {
     cir.return
   }
 }
-
-// -----
-
-// expected-error @below {{an SVE count vector must have [16] '!cir.int<u, 1>' elements}}
-cir.func private @sve_count_fixed(!cir.vector<16 x !cir.int<u, 1>, sve_count>)
-
-// -----
-
-// expected-error @below {{an SVE count vector must have [16] '!cir.int<u, 1>' elements}}
-cir.func private @sve_count_8(!cir.vector<[8] x !cir.int<u, 1>, sve_count>)
-
-// -----
-
-// expected-error @below {{an SVE count vector must have [16] '!cir.int<u, 1>' elements}}
-cir.func private @sve_count_s1(!cir.vector<[16] x !cir.int<s, 1>, sve_count>)
-
-// -----
-
-// expected-error @below {{an SVE count vector must have [16] '!cir.int<u, 1>' elements}}
-cir.func private @sve_count_u8(!cir.vector<[16] x !cir.int<u, 8>, sve_count>)

@@ -268,7 +268,6 @@ cir.func @vector_reduce_test(%svec: !cir.vector<4 x !s32i>,
 cir.func @vec_sve_kinds(
     %data: !cir.vector<[4] x !s32i, sve_data>,
     %pred: !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>,
-    %count: !cir.vector<[16] x !cir.int<u, 1>, sve_count>,
     %fixed_data: !cir.vector<16 x !s32i, sve_data>,
     %fixed_float: !cir.vector<8 x !cir.double, sve_data>,
     %fixed_pred: !cir.vector<8 x !cir.int<u, 8>, sve_predicate>,
@@ -284,7 +283,6 @@ cir.func @vec_sve_kinds(
 // CHECK: cir.func{{.*}} @vec_sve_kinds(
 // CHECK-SAME: %{{.*}}: !cir.vector<[4] x !s32i, sve_data>,
 // CHECK-SAME: %{{.*}}: !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>,
-// CHECK-SAME: %{{.*}}: !cir.vector<[16] x !cir.int<u, 1>, sve_count>,
 // CHECK-SAME: %{{.*}}: !cir.vector<16 x !s32i, sve_data>,
 // CHECK-SAME: %{{.*}}: !cir.vector<8 x !cir.double, sve_data>,
 // CHECK-SAME: %{{.*}}: !cir.vector<8 x !u8i, sve_predicate>,

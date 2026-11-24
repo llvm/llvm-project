@@ -10,19 +10,16 @@
 
 // REQUIRES: aarch64-registered-target
 
-// __SVCount_t is a scalable vector with the sve_count kind in CIR and lowers
-// to target("aarch64.svcount").
-
 void copy_count(void) {
   __SVCount_t c;
   __SVCount_t d = c;
 }
 
 // CIR-LABEL: cir.func {{.*}} @copy_count()
-// CIR:         %[[C:.*]] = cir.alloca "c" align(2) : !cir.ptr<!cir.vector<[16] x !cir.int<u, 1>, sve_count>>
-// CIR:         %[[D:.*]] = cir.alloca "d" align(2) init : !cir.ptr<!cir.vector<[16] x !cir.int<u, 1>, sve_count>>
-// CIR:         %[[VAL:.*]] = cir.load align(2) %[[C]] : !cir.ptr<!cir.vector<[16] x !cir.int<u, 1>, sve_count>>, !cir.vector<[16] x !cir.int<u, 1>, sve_count>
-// CIR:         cir.store align(2) %[[VAL]], %[[D]] : !cir.vector<[16] x !cir.int<u, 1>, sve_count>, !cir.ptr<!cir.vector<[16] x !cir.int<u, 1>, sve_count>>
+// CIR:         %[[C:.*]] = cir.alloca "c" align(2) : !cir.ptr<!cir.sve_count>
+// CIR:         %[[D:.*]] = cir.alloca "d" align(2) init : !cir.ptr<!cir.sve_count>
+// CIR:         %[[VAL:.*]] = cir.load align(2) %[[C]] : !cir.ptr<!cir.sve_count>, !cir.sve_count
+// CIR:         cir.store align(2) %[[VAL]], %[[D]] : !cir.sve_count, !cir.ptr<!cir.sve_count>
 
 // LLVM-LABEL: define dso_local void @copy_count()
 // LLVM:         %[[C:.*]] = alloca target("aarch64.svcount"), align 2

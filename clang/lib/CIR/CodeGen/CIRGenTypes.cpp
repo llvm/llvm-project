@@ -417,8 +417,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       }
 
     case BuiltinType::SveCount:
-      resultType = cir::VectorType::getScalable(builder.getUIntNTy(1), 16,
-                                                cir::VectorAbiKind::SVECount);
+      resultType = cir::SveCountType::get(&getMLIRContext());
       break;
 
     // Unsigned integral types.
