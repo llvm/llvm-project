@@ -259,7 +259,7 @@ declare void @llvm.coro.end(ptr, i1, token)
 define void @coro_end(ptr %p, i1 %c) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i1 %c
-  ; CHECK-NEXT: call void @llvm.coro.end(ptr %p, i1 %c, token none)
+  ; CHECK-NEXT: call void @llvm.coro.end.p0(ptr %p, i1 %c, token none)
   call void @llvm.coro.end(ptr %p, i1 %c, token none)
   ret void
 }

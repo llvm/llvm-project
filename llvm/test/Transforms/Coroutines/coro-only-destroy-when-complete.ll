@@ -129,7 +129,7 @@ attributes #12 = { noduplicate }
 
 ; CHECK: define{{.*}}@foo.destroy(
 ; CHECK-NEXT: entry.destroy:
-; CHECK-NEXT:   call ptr @llvm.coro.free(
+; CHECK-NEXT:   call ptr @llvm.coro.free.p0(
 ; CHECK-NEXT:   %.not = icmp eq ptr %1, null
 ; CHECK-NEXT:   br i1 %.not, label %CoroEnd, label %coro.free 
 

@@ -10,4 +10,4 @@ entry:
   ret void
 }
 ; CHECK-LABEL: define void @foo()
-; CHECK: call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr null)
+; CHECK: call token @llvm.coro.id.p0(i32 0, ptr null, ptr @foo, ptr null)

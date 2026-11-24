@@ -63,8 +63,10 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   Value *FramePtr = SubFn->getFrame();
   int Index = SubFn->getIndex();
 
-  auto *FrameTy = StructType::get(SubFn->getContext(),
-                                  {Builder.getPtrTy(), Builder.getPtrTy()});
+  unsigned ProgAS =
+      SubFn->getModule()->getDataLayout().getProgramAddressSpace();
+  auto *FnPtrTy = Builder.getPtrTy(ProgAS);
+  auto *FrameTy = StructType::get(SubFn->getContext(), {FnPtrTy, FnPtrTy});
 
   Builder.SetInsertPoint(SubFn);
   auto *Gep = Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, Index);
@@ -172,22 +174,23 @@ bool Lowerer::lower(Function &F) {
 }
 
 void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
-  if (!NoopCoro) {
+  auto *FramePtrTy = cast<PointerType>(II->getType());
+  if (!NoopCoro || NoopCoro->getType() != FramePtrTy) {
     LLVMContext &C = Builder.getContext();
     Module &M = *II->getModule();
+    unsigned ProgAS = M.getDataLayout().getProgramAddressSpace();
 
     // Create a noop.frame struct type.
-    auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
+    auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
                                    /*isVarArg=*/false);
-    auto *FnPtrTy = Builder.getPtrTy(0);
+    auto *FnPtrTy = Builder.getPtrTy(ProgAS);
     StructType *FrameTy =
         StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
 
     // Create a Noop function that does nothing.
     Function *NoopFn = Function::createWithDefaultAttr(
-        FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-        M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
-        &M);
+        FnTy, GlobalValue::LinkageTypes::InternalLinkage, ProgAS,
+        "__NoopCoro_ResumeDestroy", &M);
 
     // Mark this synthetic function's entry count as explicitly unknown.
     setExplicitlyUnknownFunctionEntryCount(*NoopFn, DEBUG_TYPE);
@@ -201,12 +204,14 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     Constant *NoopCoroConst = ConstantStruct::get(FrameTy, Values);
     NoopCoro = new GlobalVariable(
         M, NoopCoroConst->getType(), /*isConstant=*/true,
-        GlobalVariable::PrivateLinkage, NoopCoroConst, "NoopCoro.Frame.Const");
+        GlobalVariable::PrivateLinkage, NoopCoroConst, "NoopCoro.Frame.Const",
+        /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
+        FramePtrTy->getAddressSpace());
     cast<GlobalVariable>(NoopCoro)->setNoSanitizeMetadata();
   }
 
   Builder.SetInsertPoint(II);
-  auto *NoopCoroVoidPtr = Builder.CreateBitCast(NoopCoro, Int8Ptr);
+  auto *NoopCoroVoidPtr = Builder.CreateBitCast(NoopCoro, FramePtrTy);
   II->replaceAllUsesWith(NoopCoroVoidPtr);
 }
 

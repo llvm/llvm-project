@@ -6,9 +6,9 @@ define void @fn() presplitcoroutine personality i32 0 {
 ; CHECK-LABEL: define void @fn() personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXCEPTION_OBJ_RELOAD_ADDR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 16, ptr null, ptr @fn, ptr @fn.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 16, ptr null, ptr @fn, ptr @fn.resumers)
 ; CHECK-NEXT:    [[MEM:%.*]] = call noalias nonnull ptr @malloc(i64 24)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[MEM]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[MEM]])
 ; CHECK-NEXT:    store ptr @fn.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @fn.destroy, ptr [[DESTROY_ADDR]], align 8

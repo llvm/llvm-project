@@ -30,7 +30,8 @@ class Lowerer : public coro::LowererBase {
 public:
   Lowerer(Module &M)
       : LowererBase(M), Builder(M),
-        AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
+        AnyResumeFnPtrTy(PointerType::get(
+            Context, M.getDataLayout().getProgramAddressSpace())) {}
   void lowerEarlyIntrinsics(Function &F);
 };
 } // namespace
@@ -81,11 +82,11 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   Value *Operand = II->getArgOperand(0);
 
   // ResumeFnAddr is the first pointer sized element of the coroutine frame.
-  auto *FrameTy = Int8Ptr;
+  auto *FrameTy = AnyResumeFnPtrTy;
 
   Builder.SetInsertPoint(II);
   auto *Load = Builder.CreateLoad(FrameTy, Operand);
-  auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
+  auto *Cond = Builder.CreateICmpEQ(Load, ConstantPointerNull::get(FrameTy));
 
   II->replaceAllUsesWith(Cond);
   II->eraseFromParent();

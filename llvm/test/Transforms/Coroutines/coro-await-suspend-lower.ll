@@ -82,9 +82,9 @@ declare noalias ptr @malloc(i32)
 declare void @free(ptr)
 ; CHECK-LABEL: define void @f() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 24)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
@@ -128,11 +128,11 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[INDEX_ADDR15:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i2 -1, ptr [[INDEX_ADDR15]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @await_suspend_wrapper_handle(ptr [[AWAITER_RELOAD_ADDR]], ptr [[HDL]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.coro.subfn.addr(ptr [[TMP3]], i8 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.coro.subfn.addr.p0(ptr [[TMP3]], i8 0)
 ; CHECK-NEXT:    musttail call void [[TMP4]](ptr [[TMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[CLEANUP]]:
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    br label %[[COROEND]]
 ; CHECK:       [[COROEND]]:
@@ -145,7 +145,7 @@ declare void @free(ptr)
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0
-; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free.p0(token poison, ptr [[HDL]])
 ; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;

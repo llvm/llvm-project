@@ -42,7 +42,7 @@ entry:
 
 ; CHECK-LABEL: @f() addrspace(200) !func_sanitize !0 {
 ; CHECK: call ptr @malloc
-; CHECK: @llvm.coro.begin(token %id, ptr %phi)
+; CHECK: @llvm.coro.begin.p0(token %id, ptr %phi)
 ; CHECK: store ptr addrspace(200) @f.resume, ptr %hdl
 ; CHECK: %[[SEL:.+]] = select i1 %need.alloc, ptr addrspace(200) @f.destroy, ptr addrspace(200) @f.cleanup
 ; CHECK: store ptr addrspace(200) %[[SEL]], ptr %destroy.addr

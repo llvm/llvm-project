@@ -18,8 +18,8 @@ define ptr @foo(ptr %alloc, ptr %src, i8 %tag) presplitcoroutine {
 ; CHECK-SAME: ptr [[ALLOC:%.*]], ptr [[SRC:%.*]], i8 [[TAG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[BUF:%.*]] = alloca [264 x i8], align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 8, ptr null, ptr @foo, ptr @foo.resumers)
-; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 8, ptr null, ptr @foo, ptr @foo.resumers)
+; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[HDL]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @foo.destroy, ptr [[DESTROY_ADDR]], align 8

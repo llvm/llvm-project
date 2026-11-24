@@ -4,7 +4,7 @@ declare i1 @llvm.coro.end(ptr, i1 immarg, token)
 
 define i1 @used_result(ptr %frame) presplitcoroutine {
 ; CHECK-LABEL: @used_result(
-; CHECK: call void @llvm.coro.end(ptr %frame, i1 false, token none)
+; CHECK: call void @llvm.coro.end.p0(ptr %frame, i1 false, token none)
 ; CHECK-NEXT: [[IN_RAMP:%.*]] = call i1 @llvm.coro.is_in_ramp()
 ; CHECK-NEXT: [[IN_RESUME:%.*]] = xor i1 [[IN_RAMP]], true
 ; CHECK-NEXT: ret i1 [[IN_RESUME]]
@@ -15,7 +15,7 @@ entry:
 
 define void @unused_result(ptr %frame) presplitcoroutine {
 ; CHECK-LABEL: @unused_result(
-; CHECK: call void @llvm.coro.end(ptr %frame, i1 false, token none)
+; CHECK: call void @llvm.coro.end.p0(ptr %frame, i1 false, token none)
 ; CHECK-NEXT: ret void
 entry:
   %unused = call i1 @llvm.coro.end(ptr %frame, i1 false, token none)
@@ -28,7 +28,7 @@ declare i32 @__CxxFrameHandler3(...)
 define void @funclet_bundle(ptr %frame) presplitcoroutine personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @funclet_bundle(
 ; CHECK: [[CP:%.*]] = cleanuppad within none []
-; CHECK-NEXT: call void @llvm.coro.end(ptr %frame, i1 true, token none) [ "funclet"(token [[CP]]) ]
+; CHECK-NEXT: call void @llvm.coro.end.p0(ptr %frame, i1 true, token none) [ "funclet"(token [[CP]]) ]
 ; CHECK-NEXT: cleanupret from [[CP]] unwind to caller
 entry:
   invoke void @may_throw()
@@ -63,6 +63,6 @@ entry:
   ret void
 }
 
-; CHECK-DAG: declare void @llvm.coro.end(ptr, i1 immarg, token)
+; CHECK-DAG: declare void @llvm.coro.end.p0(ptr, i1 immarg, token)
 ; CHECK-DAG: declare void @llvm.coro.end.async(ptr, i1 immarg, ...)
 ; CHECK-DAG: declare i1 @llvm.coro.is_in_ramp()

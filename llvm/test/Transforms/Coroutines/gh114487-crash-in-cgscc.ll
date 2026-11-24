@@ -11,7 +11,7 @@ branch:
 ; Check that we don't call bar at all. 
 ; CHECK-NOT: call void @bar{{.*}}
   call void @bar() coro_elide_safe
-; CHECK: call token @llvm.coro.id(i32 0, ptr null, ptr @bar, ptr @bar.resumers)
+; CHECK: call token @llvm.coro.id.p0(i32 0, ptr null, ptr @bar, ptr @bar.resumers)
   ret void
 }
 

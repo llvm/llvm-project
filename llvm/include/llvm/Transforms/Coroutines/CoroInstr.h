@@ -158,8 +158,8 @@ public:
 
   void clearPromise() {
     Value *Arg = getArgOperand(PromiseArg);
-    setArgOperand(PromiseArg, ConstantPointerNull::get(
-                                  PointerType::getUnqual(getContext())));
+    setArgOperand(PromiseArg,
+                  ConstantPointerNull::get(cast<PointerType>(Arg->getType())));
     if (isa<AllocaInst>(Arg))
       return;
     assert((isa<BitCastInst>(Arg) || isa<GetElementPtrInst>(Arg)) &&

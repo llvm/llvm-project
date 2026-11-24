@@ -52,8 +52,9 @@ void f() {
 }
 
 // Verify that we synthesized the coroutine for a lambda inside SyncAwait
-// CHECK-LABEL: define linkonce_odr void @_ZZ9SyncAwaitIR14suspend_alwaysEDaOT_ENKUlvE_clEv(
+// CHECK-LABEL: define linkonce_odr void
+// @_ZZ9SyncAwaitIR14suspend_alwaysEDaOT_ENKUlvE_clEv(
 //   CHECK: alloca %"struct.Task::promise_type"
-//   CHECK: call token @llvm.coro.id(
+//   CHECK: call token @llvm.coro.id.p0(
 //   CHECK: call i8 @llvm.coro.suspend(
-//   CHECK: call void @llvm.coro.end(
+//   CHECK: call void @llvm.coro.end.p0(

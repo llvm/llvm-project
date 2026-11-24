@@ -9,11 +9,11 @@ define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-LABEL: define nonnull ptr @f(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 24)
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[CALL]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[CALL]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
@@ -64,9 +64,9 @@ define i32 @main() {
 ; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[HDL:%.*]] = call ptr @f(i32 4)
-; CHECK-NEXT:    call void @llvm.coro.resume(ptr [[HDL]])
-; CHECK-NEXT:    call void @llvm.coro.resume(ptr [[HDL]])
-; CHECK-NEXT:    call void @llvm.coro.destroy(ptr [[HDL]])
+; CHECK-NEXT:    call void @llvm.coro.resume.p0(ptr [[HDL]])
+; CHECK-NEXT:    call void @llvm.coro.resume.p0(ptr [[HDL]])
+; CHECK-NEXT:    call void @llvm.coro.destroy.p0(ptr [[HDL]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

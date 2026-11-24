@@ -51,14 +51,15 @@ struct std::coroutine_traits<void> {
 
 // CHECK-LABEL: f0(
 extern "C" void f0() {
-  // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
+  // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin.p0(
 
   // See if initial_suspend was issued:
   // ----------------------------------
-  // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type15initial_suspendEv(
-  // CHECK-NEXT: call zeroext i1 @_ZN9init_susp11await_readyEv(ptr
-  // CHECK: %[[INITSP_ID:.+]] = call token @llvm.coro.save(
-  // CHECK: call i8 @llvm.coro.suspend(token %[[INITSP_ID]], i1 false)
+  // CHECK: call void
+  // @_ZNSt16coroutine_traitsIJvEE12promise_type15initial_suspendEv( CHECK-NEXT:
+  // call zeroext i1 @_ZN9init_susp11await_readyEv(ptr CHECK: %[[INITSP_ID:.+]]
+  // = call token @llvm.coro.save.p0( CHECK: call i8 @llvm.coro.suspend(token
+  // %[[INITSP_ID]], i1 false)
 
   co_await suspend_always{};
   // See if we need to suspend:
@@ -69,19 +70,19 @@ extern "C" void f0() {
   // If we are suspending:
   // ---------------------
   // CHECK: [[SUSPEND_BB]]:
-  // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save(
+  // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save.p0(
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: call void @llvm.coro.await.suspend.void(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @f0.__await_suspend_wrapper__await)
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.void.p0.p0(ptr
+  // %[[AWAITABLE]], ptr %[[FRAME]], ptr @f0.__await_suspend_wrapper__await)
   // -------------------------
   // Generate a suspend point:
   // -------------------------
-  // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
-  // CHECK: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
-  // CHECK:   i8 0, label %[[READY_BB]]
-  // CHECK:   i8 1, label %[[CLEANUP_BB:.+]]
-  // CHECK: ]
+  // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token
+  // %[[SUSPEND_ID]], i1 false) CHECK: switch i8 %[[OUTCOME]], label
+  // %[[RET_BB:.+]] [ CHECK:   i8 0, label %[[READY_BB]] CHECK:   i8 1, label
+  // %[[CLEANUP_BB:.+]] CHECK: ]
 
   // Cleanup code goes here:
   // -----------------------
@@ -94,10 +95,11 @@ extern "C" void f0() {
 
   // See if final_suspend was issued:
   // ----------------------------------
-  // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type13final_suspendEv(
-  // CHECK-NEXT: call zeroext i1 @_ZN10final_susp11await_readyEv(ptr
-  // CHECK: %[[FINALSP_ID:.+]] = call token @llvm.coro.save(
-  // CHECK: call i8 @llvm.coro.suspend(token %[[FINALSP_ID]], i1 true)
+  // CHECK: call void
+  // @_ZNSt16coroutine_traitsIJvEE12promise_type13final_suspendEv( CHECK-NEXT:
+  // call zeroext i1 @_ZN10final_susp11await_readyEv(ptr CHECK:
+  // %[[FINALSP_ID:.+]] = call token @llvm.coro.save.p0( CHECK: call i8
+  // @llvm.coro.suspend(token %[[FINALSP_ID]], i1 true)
 
   // Await suspend wrapper
   // CHECK: define internal {{.*}} @f0.__await_suspend_wrapper__await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
@@ -132,8 +134,8 @@ struct std::coroutine_traits<void, int> {
 
 // CHECK-LABEL: f1(
 extern "C" void f1(int) {
-  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void, int>::promise_type"
-  // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
+  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void,
+  // int>::promise_type" CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin.p0(
   co_yield 42;
   // CHECK: call void @_ZNSt16coroutine_traitsIJviEE12promise_type11yield_valueEi(ptr dead_on_unwind writable sret(%struct.suspend_maybe) align 4 %[[AWAITER:.+]], ptr {{[^,]*}} %[[PROMISE]], i32 42)
 
@@ -145,11 +147,12 @@ extern "C" void f1(int) {
   // If we are suspending:
   // ---------------------
   // CHECK: [[SUSPEND_BB]]:
-  // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save(
+  // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save.p0(
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: %[[YES:.+]] = call i1 @llvm.coro.await.suspend.bool(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @f1.__await_suspend_wrapper__yield)
+  // CHECK-NEXT: %[[YES:.+]] = call i1 @llvm.coro.await.suspend.bool.p0.p0(ptr
+  // %[[AWAITABLE]], ptr %[[FRAME]], ptr @f1.__await_suspend_wrapper__yield)
   // -------------------------------------------
   // See if await_suspend decided not to suspend
   // -------------------------------------------
@@ -274,7 +277,7 @@ extern "C" void TestOpAwait() {
 
 // CHECK-LABEL: EndlessLoop(
 extern "C" void EndlessLoop() {
-  // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
+  // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin.p0(
 
   // See if initial_suspend was issued:
   // ----------------------------------
@@ -357,8 +360,9 @@ struct TailCallAwait {
 
 // CHECK-LABEL: @TestTailcall(
 extern "C" void TestTailcall() {
-  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void>::promise_type"
-  // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
+  // CHECK: %[[PROMISE:.+]] = alloca
+  // %"struct.std::coroutine_traits<void>::promise_type" CHECK: %[[FRAME:.+]] =
+  // call ptr @llvm.coro.begin.p0(
   co_await TailCallAwait{};
   // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN13TailCallAwait11await_readyEv(ptr {{[^,]*}} %[[AWAITABLE:.+]])
   // CHECK: br i1 %[[READY]], label %[[READY_BB:.+]], label %[[SUSPEND_BB:.+]]
@@ -366,14 +370,16 @@ extern "C" void TestTailcall() {
   // If we are suspending:
   // ---------------------
   // CHECK: [[SUSPEND_BB]]:
-  // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save(
+  // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save.p0(
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
   // Note: The call must not be nounwind since the resumed function could throw.
-  // CHECK-NEXT: call void @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @TestTailcall.__await_suspend_wrapper__await){{$}}
-  // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
-  // CHECK-NEXT: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.handle.p0.p0(ptr
+  // %[[AWAITABLE]], ptr %[[FRAME]], ptr
+  // @TestTailcall.__await_suspend_wrapper__await){{$}} CHECK-NEXT:
+  // %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1
+  // false) CHECK-NEXT: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
   // CHECK-NEXT:   i8 0, label %[[READY_BB]]
   // CHECK-NEXT:   i8 1, label %{{.+}}
   // CHECK-NEXT: ]

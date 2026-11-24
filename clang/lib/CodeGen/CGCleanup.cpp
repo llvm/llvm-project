@@ -1319,9 +1319,17 @@ void CodeGenFunction::DeactivateCleanupBlock(EHScopeStack::stable_iterator C,
 }
 
 RawAddress CodeGenFunction::getNormalCleanupDestSlot() {
-  if (!NormalCleanupDest.isValid())
-    NormalCleanupDest =
-      CreateDefaultAlignTempAlloca(Builder.getInt32Ty(), "cleanup.dest.slot");
+  if (!NormalCleanupDest.isValid()) {
+    if (isCoroutine()) {
+      CharUnits Align = CharUnits::fromQuantity(
+          CGM.getDataLayout().getPrefTypeAlign(Builder.getInt32Ty()));
+      NormalCleanupDest = CreateTempAllocaWithoutCast(
+          Builder.getInt32Ty(), Align, "cleanup.dest.slot");
+    } else {
+      NormalCleanupDest = CreateDefaultAlignTempAlloca(Builder.getInt32Ty(),
+                                                       "cleanup.dest.slot");
+    }
+  }
   return NormalCleanupDest;
 }
 

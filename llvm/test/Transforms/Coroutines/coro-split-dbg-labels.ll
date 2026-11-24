@@ -42,9 +42,9 @@ define ptr @f() #2 !dbg !16 {
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] !dbg [[DBG6:![0-9]+]]{{.*}} {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers), !dbg [[DBG17:![0-9]+]]
 ; CHECK-NEXT:    [[FRAME:%.*]] = tail call ptr @malloc(i64 24), !dbg [[DBG17]]
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin(token [[TMP0]], ptr [[FRAME]]), !dbg [[DBG17]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin.p0(token [[TMP0]], ptr [[FRAME]]), !dbg [[DBG17]]
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[TMP1]], align 8, !dbg [[DBG18:![0-9]+]]
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8, !dbg [[DBG18]]
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8, !dbg [[DBG18]]
@@ -86,7 +86,7 @@ define ptr @f() #2 !dbg !16 {
 ; CHECK-NEXT:      i8 1, label %[[CORO_CLEANUP]]
 ; CHECK-NEXT:    ], !dbg [[DBG23]]
 ; CHECK:       [[CORO_CLEANUP]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @llvm.coro.free(token [[TMP0]], ptr [[TMP1]]), !dbg [[DBG24:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @llvm.coro.free.p0(token [[TMP0]], ptr [[TMP1]]), !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    tail call void @free(ptr nonnull [[TMP2]]), !dbg [[DBG24]]
 ; CHECK-NEXT:    br label %[[CORO_SUSPEND]], !dbg [[DBG24]]
 ; CHECK:       [[CORO_SUSPEND]]:
@@ -99,9 +99,9 @@ define ptr @f() #2 !dbg !16 {
 ; LINE-TABLE-LABEL: define ptr @f(
 ; LINE-TABLE-SAME: ) #[[ATTR1:[0-9]+]] !dbg [[DBG6:![0-9]+]]{{.*}} {
 ; LINE-TABLE-NEXT:  [[ENTRY:.*:]]
-; LINE-TABLE-NEXT:    [[TMP0:%.*]] = tail call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers), !dbg [[DBG17:![0-9]+]]
+; LINE-TABLE-NEXT:    [[TMP0:%.*]] = tail call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr @f.resumers), !dbg [[DBG17:![0-9]+]]
 ; LINE-TABLE-NEXT:    [[FRAME:%.*]] = tail call ptr @malloc(i64 24), !dbg [[DBG17]]
-; LINE-TABLE-NEXT:    [[TMP1:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin(token [[TMP0]], ptr [[FRAME]]), !dbg [[DBG17]]
+; LINE-TABLE-NEXT:    [[TMP1:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin.p0(token [[TMP0]], ptr [[FRAME]]), !dbg [[DBG17]]
 ; LINE-TABLE-NEXT:    store ptr @f.resume, ptr [[TMP1]], align 8, !dbg [[DBG18:![0-9]+]]
 ; LINE-TABLE-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8, !dbg [[DBG18]]
 ; LINE-TABLE-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8, !dbg [[DBG18]]
@@ -143,7 +143,7 @@ define ptr @f() #2 !dbg !16 {
 ; LINE-TABLE-NEXT:      i8 1, label %[[CORO_CLEANUP]]
 ; LINE-TABLE-NEXT:    ], !dbg [[DBG23]]
 ; LINE-TABLE:       [[CORO_CLEANUP]]:
-; LINE-TABLE-NEXT:    [[TMP2:%.*]] = tail call ptr @llvm.coro.free(token [[TMP0]], ptr [[TMP1]]), !dbg [[DBG24:![0-9]+]]
+; LINE-TABLE-NEXT:    [[TMP2:%.*]] = tail call ptr @llvm.coro.free.p0(token [[TMP0]], ptr [[TMP1]]), !dbg [[DBG24:![0-9]+]]
 ; LINE-TABLE-NEXT:    tail call void @free(ptr nonnull [[TMP2]]), !dbg [[DBG24]]
 ; LINE-TABLE-NEXT:    br label %[[CORO_SUSPEND]], !dbg [[DBG24]]
 ; LINE-TABLE:       [[CORO_SUSPEND]]:
@@ -262,10 +262,11 @@ attributes #4 = { argmemonly nounwind readonly }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
 ; CHECK: attributes #[[ATTR1]] = { nounwind uwtable }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nounwind memory(none) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nomerge nounwind }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nounwind memory(argmem: read) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind memory(none) }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { nomerge nounwind }
+; CHECK: attributes #[[ATTR6:[0-9]+]] = { nounwind memory(argmem: read) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}} - manually edited", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]])
 ; CHECK: [[META1]] = !DIFile(filename: "{{.*}}coro.c", directory: {{.*}})

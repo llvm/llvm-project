@@ -66,8 +66,8 @@ entry:
   ; CHECK: %[[TASK:.+]] = alloca %struct.Task, align 8
   ; CHECK-NEXT: %[[FRAME:.+]] = alloca [32 x i8], align 8
   ; CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[TASK]])
-  ; CHECK-NEXT: %[[ID:.+]] = call token @llvm.coro.id(i32 0, ptr null, ptr @callee, ptr @callee.resumers)
-  ; CHECK-NEXT: %[[HDL:.+]] = call ptr @llvm.coro.begin(token %[[ID]], ptr null)
+  ; CHECK-NEXT: %[[ID:.+]] = call token @llvm.coro.id.p0(i32 0, ptr null, ptr @callee, ptr @callee.resumers)
+  ; CHECK-NEXT: %[[HDL:.+]] = call ptr @llvm.coro.begin.p0(token %[[ID]], ptr null)
   ; CHECK-NEXT: store ptr %[[HDL]], ptr %[[TASK]], align 8
   ; CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %[[TASK]])
   ; CHECK-NEXT: ret ptr %[[TASK]]
@@ -81,7 +81,7 @@ entry:
 
 call:
   ; CHECK-NOT: alloca
-  ; CHECK-NOT: @llvm.coro.id({{.*}}, ptr @callee, {{.*}})
+  ; CHECK-NOT: @llvm.coro.id.p0({{.*}}, ptr @callee, {{.*}})
   ; CHECK: %task = call ptr @callee(i8 0)
   ; CHECK-NEXT: br label %ret
   %task = call ptr @callee(i8 0) coro_elide_safe

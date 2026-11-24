@@ -3,7 +3,7 @@
 ; Check that coro-early can run twice without asserting/crashing.
 
 ; CHECK-LABEL: define ptr @f
-; CHECK: call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
+; CHECK: call token @llvm.coro.id.p0(i32 0, ptr null, ptr @f, ptr null)
 
 define ptr @f(i32 %n) presplitcoroutine {
 entry:

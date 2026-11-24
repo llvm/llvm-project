@@ -6,7 +6,7 @@ define void @fn(ptr %result) presplitcoroutine {
 ; CHECK-LABEL: define void @fn(
 ; CHECK-SAME: ptr [[RESULT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 16, ptr null, ptr @fn, ptr @fn.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.p0(i32 16, ptr null, ptr @fn, ptr @fn.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call i1 @llvm.coro.alloc(token [[ID]])
 ; CHECK-NEXT:    br i1 [[ALLOC]], label %[[CORO_ALLOC:.*]], label %[[CORO_INIT:.*]]
 ; CHECK:       [[CORO_ALLOC]]:
@@ -14,7 +14,7 @@ define void @fn(ptr %result) presplitcoroutine {
 ; CHECK-NEXT:    br label %[[CORO_INIT]]
 ; CHECK:       [[CORO_INIT]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ [[MEM]], %[[CORO_ALLOC]] ], [ null, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull ptr @llvm.coro.begin.p0(token [[ID]], ptr [[TMP0]])
 ; CHECK-NEXT:    store ptr @fn.resume, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[ALLOC]], ptr @fn.destroy, ptr @fn.cleanup
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8

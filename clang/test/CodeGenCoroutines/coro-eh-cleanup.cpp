@@ -60,8 +60,9 @@ coro_t f() {
 
 // CHECK: [[COROENDBB]]:
 // CHECK-NEXT: %[[CLPAD:.+]] = cleanuppad within none
-// CHECK-NEXT: call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %[[CLPAD]]) ]
-// CHECK-NEXT: cleanupret from %[[CLPAD]] unwind label
+// CHECK-NEXT: call void @llvm.coro.end.p0(ptr null, i1 true, token none) [
+// "funclet"(token %[[CLPAD]]) ] CHECK-NEXT: cleanupret from %[[CLPAD]] unwind
+// label
 
 // CHECK-LPAD: @_Z1fv(
 // CHECK-LPAD:   invoke void @_Z9may_throwv()

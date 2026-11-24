@@ -1884,7 +1884,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
 
     if (CoroEndID != Intrinsic::not_intrinsic) {
       rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID);
+      if (CoroEndID == Intrinsic::coro_end)
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID,
+                                                  {F->getArg(0)->getType()});
+      else
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID);
       return true;
     }
 

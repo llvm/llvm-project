@@ -244,7 +244,8 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   CGF.EmitBlock(SuspendBlock);
 
   auto &Builder = CGF.Builder;
-  llvm::Function *CoroSave = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_save);
+  llvm::Function *CoroSave =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_save, {CGF.CGM.Int8PtrTy});
   auto *NullPtr = llvm::ConstantPointerNull::get(CGF.CGM.Int8PtrTy);
   auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
 
@@ -278,7 +279,9 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     break;
   }
 
-  llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(AwaitSuspendIID);
+  llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(
+      AwaitSuspendIID, {SuspendIntrinsicCallArgs[0]->getType(),
+                        SuspendIntrinsicCallArgs[1]->getType()});
 
   // SuspendHandle might throw since it also resumes the returned handle.
   const bool AwaitSuspendCanThrow =
@@ -575,7 +578,8 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
   void Emit(CodeGenFunction &CGF, Flags flags) override {
     auto &CGM = CGF.CGM;
     auto *NullPtr = llvm::ConstantPointerNull::get(CGF.Int8PtrTy);
-    llvm::Function *CoroEndFn = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
+    llvm::Function *CoroEndFn =
+        CGM.getIntrinsic(llvm::Intrinsic::coro_end, {CGF.Int8PtrTy});
     // See if we have a funclet bundle to associate coro.end with. (WinEH)
     auto Bundles = getBundlesForCoroEnd(CGF);
     CGF.Builder.CreateCall(
@@ -644,7 +648,8 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     InsertPt->eraseFromParent();
     CGF.Builder.SetInsertPoint(AfterFreeBB);
 
-    auto *CoroDeadFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_dead);
+    auto *CoroDeadFn = CGF.CGM.getIntrinsic(
+        llvm::Intrinsic::coro_dead, {CGF.CurCoro.Data->CoroBegin->getType()});
     CGF.Builder.CreateCall(CoroDeadFn, {CGF.CurCoro.Data->CoroBegin});
   }
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
@@ -909,7 +914,9 @@ static void emitBodyAndFallthrough(CodeGenFunction &CGF,
 }
 
 void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
-  auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
+  auto *NullVoidPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
+  auto *NullAllocaPtr = llvm::ConstantPointerNull::get(AllocaInt8PtrTy);
+  auto *NullUnqualPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
   auto &TI = CGM.getContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
 
@@ -921,8 +928,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *RetBB = createBasicBlock("coro.ret");
 
   auto *CoroId = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::coro_id),
-      {Builder.getInt32(NewAlign), NullPtr, NullPtr, NullPtr});
+      CGM.getIntrinsic(llvm::Intrinsic::coro_id, {AllocaInt8PtrTy}),
+      {Builder.getInt32(NewAlign), NullAllocaPtr, NullUnqualPtr,
+       NullUnqualPtr});
   createCoroData(*this, CurCoro, CoroId);
 
   GetReturnObjectManager GroManager(*this, S);
@@ -965,10 +973,11 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   // Pass the result of the allocation to coro.begin.
   auto *Phi = Builder.CreatePHI(VoidPtrTy, 2);
-  Phi->addIncoming(NullPtr, EntryBB);
+  Phi->addIncoming(NullVoidPtr, EntryBB);
   Phi->addIncoming(AllocateCall, AllocOrInvokeContBB);
   auto *CoroBegin = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
+      CGM.getIntrinsic(llvm::Intrinsic::coro_begin, {VoidPtrTy}),
+      {CoroId, Phi});
   CurCoro.Data->CoroBegin = CoroBegin;
   {
     CGDebugInfo *DI = getDebugInfo();
@@ -1015,9 +1024,11 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitStmt(S.getPromiseDeclStmt());
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
-    // Update CoroId to refer to the promise. We could not do it earlier because
-    // promise local variable was not emitted yet.
-    CoroId->setArgOperand(1, PromiseAddr.emitRawPointer(*this));
+    // Update CoroId to refer to the promise alloca (stripping any
+    // addrspacecast to the default address space). We could not do it earlier
+    // because the promise local variable was not emitted yet.
+    CoroId->setArgOperand(
+        1, PromiseAddr.emitRawPointer(*this)->stripPointerCasts());
 
     // Now we have the promise, initialize the GRO
     GroManager.EmitGroAlloca();
@@ -1088,9 +1099,10 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   EmitBlock(RetBB);
   // Emit coro.end before ret instruction, since resume and destroy parts of the
   // coroutine should return void.
-  llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
+  llvm::Function *CoroEnd =
+      CGM.getIntrinsic(llvm::Intrinsic::coro_end, {VoidPtrTy});
   Builder.CreateCall(CoroEnd,
-                     {NullPtr, Builder.getFalse(),
+                     {NullVoidPtr, Builder.getFalse(),
                       llvm::ConstantTokenNone::get(CoroEnd->getContext())});
 
   if (auto *Ret = cast_or_null<ReturnStmt>(S.getReturnStmt())) {
@@ -1131,7 +1143,8 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
 
     CGM.Error(E->getBeginLoc(), "this builtin expect that __builtin_coro_begin "
                                 "has been used earlier in this function");
-    auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
+    auto *NullPtr = llvm::ConstantPointerNull::get(
+        cast<llvm::PointerType>(ConvertType(E->getType())));
     return RValue::get(NullPtr);
   }
   case llvm::Intrinsic::coro_size: {
@@ -1176,7 +1189,31 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
   if (IID == llvm::Intrinsic::coro_end)
     Args.push_back(llvm::ConstantTokenNone::get(getLLVMContext()));
 
-  llvm::Function *F = CGM.getIntrinsic(IID);
+  SmallVector<llvm::Type *, 2> OverloadTys;
+  switch (IID) {
+  default:
+    break;
+  case llvm::Intrinsic::coro_id:
+  case llvm::Intrinsic::coro_begin:
+  case llvm::Intrinsic::coro_begin_custom_abi:
+  case llvm::Intrinsic::coro_free:
+    OverloadTys.push_back(Args[1]->getType());
+    break;
+  case llvm::Intrinsic::coro_promise:
+  case llvm::Intrinsic::coro_resume:
+  case llvm::Intrinsic::coro_destroy:
+  case llvm::Intrinsic::coro_done:
+  case llvm::Intrinsic::coro_save:
+  case llvm::Intrinsic::coro_end:
+  case llvm::Intrinsic::coro_dead:
+    OverloadTys.push_back(Args[0]->getType());
+    break;
+  case llvm::Intrinsic::coro_noop:
+    OverloadTys.push_back(ConvertType(E->getType()));
+    break;
+  }
+
+  llvm::Function *F = CGM.getIntrinsic(IID, OverloadTys);
   llvm::CallInst *Call = Builder.CreateCall(F, Args);
 
   // Note: The following code is to enable to emit coro.id and coro.begin by
