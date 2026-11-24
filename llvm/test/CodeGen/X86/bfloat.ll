@@ -3984,6 +3984,73 @@ define <8 x bfloat> @select_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat> %b) n
   ret <8 x bfloat> %sel
 }
 
+define <3 x bfloat> @select_v3bf16(i1 %cond, <3 x bfloat> %a, <3 x bfloat> %b) nounwind {
+; X86-LABEL: select_v3bf16:
+; X86:       # %bb.0:
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    jne .LBB42_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    vmovaps %xmm1, %xmm0
+; X86-NEXT:  .LBB42_2:
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: select_v3bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm3
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm1[1,1]
+; SSE2-NEXT:    andl $1, %edi
+; SSE2-NEXT:    negl %edi
+; SSE2-NEXT:    movd %edi, %xmm4
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
+; SSE2-NEXT:    andps %xmm4, %xmm2
+; SSE2-NEXT:    movaps %xmm4, %xmm5
+; SSE2-NEXT:    movdqa %xmm4, %xmm6
+; SSE2-NEXT:    movaps %xmm0, %xmm7
+; SSE2-NEXT:    psrld $16, %xmm7
+; SSE2-NEXT:    pand %xmm4, %xmm7
+; SSE2-NEXT:    andps %xmm4, %xmm0
+; SSE2-NEXT:    andnps %xmm3, %xmm4
+; SSE2-NEXT:    orps %xmm4, %xmm2
+; SSE2-NEXT:    andnps %xmm1, %xmm5
+; SSE2-NEXT:    psrld $16, %xmm1
+; SSE2-NEXT:    pandn %xmm1, %xmm6
+; SSE2-NEXT:    por %xmm6, %xmm7
+; SSE2-NEXT:    orps %xmm5, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm7[0],xmm0[1],xmm7[1],xmm0[2],xmm7[2],xmm0[3],xmm7[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: select_v3bf16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    testb $1, %dil
+; AVX2-NEXT:    jne .LBB42_2
+; AVX2-NEXT:  # %bb.1:
+; AVX2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX2-NEXT:  .LBB42_2:
+; AVX2-NEXT:    retq
+;
+; AVX-LABEL: select_v3bf16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    testb $1, %dil
+; AVX-NEXT:    jne .LBB42_2
+; AVX-NEXT:  # %bb.1:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:  .LBB42_2:
+; AVX-NEXT:    retq
+;
+; AVX512BW-LABEL: select_v3bf16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    testb $1, %dil
+; AVX512BW-NEXT:    jne .LBB42_2
+; AVX512BW-NEXT:  # %bb.1:
+; AVX512BW-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512BW-NEXT:  .LBB42_2:
+; AVX512BW-NEXT:    retq
+  %sel = select i1 %cond, <3 x bfloat> %a, <3 x bfloat> %b
+  ret <3 x bfloat> %sel
+}
+
 define <8 x bfloat> @vselect_v8bf16(<8 x i1> %m, <8 x bfloat> %a, <8 x bfloat> %b) nounwind {
 ; X86-LABEL: vselect_v8bf16:
 ; X86:       # %bb.0:
