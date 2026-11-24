@@ -1832,7 +1832,7 @@ class PatGprPairShift<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
 // or result. The i64 type is not legal on RV32.
 //
 // Nodes that operate on packed 64-bit vectors on RV32 can use a single operand
-// or result for the full 64-bits. These types are legal on RV32.
+// or result for the full 64-bits. These types are legal on RV32 with P.
 //
 // If a node only operates on packed SIMD types, it should start with 'P'. If a
 // node can operate on scalar or packed SIMD types or only scalar types, it
