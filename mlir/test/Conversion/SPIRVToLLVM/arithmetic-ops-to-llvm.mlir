@@ -475,3 +475,19 @@ spirv.func @snegate_vector(%arg0: vector<4xi32>) "None" {
   %0 = spirv.SNegate %arg0 : vector<4xi32>
   spirv.Return
 }
+
+// CHECK-LABEL: @snegate_signed_scalar
+spirv.func @snegate_signed_scalar(%arg0: si32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : i32
+  %0 = spirv.SNegate %arg0 : si32
+  spirv.Return
+}
+
+// CHECK-LABEL: @snegate_unsigned_vector
+spirv.func @snegate_unsigned_vector(%arg0: vector<4xui32>) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : vector<4xi32>
+  %0 = spirv.SNegate %arg0 : vector<4xui32>
+  spirv.Return
+}
