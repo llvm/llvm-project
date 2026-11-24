@@ -79,4 +79,25 @@ void target_update(int flag, int *p) {
   *p = 1;
 }
 
+// 'cancel' and 'cancellation point' print their construct-type clause.
+// CHECK-LABEL: void cancel_region(int flag) {
+// CHECK: #pragma omp metadirective when(user={condition(flag)}: cancel parallel) otherwise(cancellation point parallel)
+void cancel_region(int flag) {
+#pragma omp parallel
+  {
+#pragma omp metadirective when(user={condition(flag)}: cancel parallel) otherwise(cancellation point parallel)
+  }
+}
+
+void bar();
+
+// A named 'critical' prints its name.
+// CHECK-LABEL: void named_critical(int flag) {
+// CHECK-NEXT: #pragma omp metadirective when(user={condition(flag)}: critical (lck) hint(0)) otherwise(single)
+// CHECK-NEXT: bar();
+void named_critical(int flag) {
+#pragma omp metadirective when(user={condition(flag)}: critical(lck) hint(0)) otherwise(single)
+  bar();
+}
+
 #endif
