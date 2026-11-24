@@ -1681,7 +1681,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
-      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", true);
   ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
@@ -1849,23 +1849,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  // Load plugins upfront, so load errors are reported even without LTO
-  for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
-    Expected<PassPlugin> plugin = PassPlugin::load(path);
-    if (!plugin)
-      ErrAlways(ctx) << plugin.takeError();
-    else
-      ctx.arg.passPlugins.push_back(std::move(*plugin));
-  }
-
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
   // -plugin-opt=- forwards LLVM options for compatibility with LTO linker
-  // plugins like LLVMgold.so. It reaches pass plugin options only incidentally,
-  // because pass plugins are loaded above.
+  // plugins like LLVMgold.so
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
     parseClangOption(ctx, std::string("-") + arg->getValue(),
                      arg->getSpelling());
@@ -1880,6 +1870,16 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << arg->getSpelling() << ": unknown plugin option '"
                      << arg->getValue() << "'";
   }
+
+  // Load plugins upfront, so load errors are reported even without LTO
+  for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
+    Expected<PassPlugin> plugin = PassPlugin::load(path);
+    if (!plugin)
+      ErrAlways(ctx) << plugin.takeError();
+    else
+      ctx.arg.passPlugins.push_back(std::move(*plugin));
+  }
+  ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
 
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {

@@ -6,8 +6,7 @@
 ; RUN: opt %s -o %t.o
 ; RUN: %lld -dylib -%loadnewpmbye %t.o -o %t.inactive 2>&1 | count 0
 
-;; Plugins are loaded before -mllvm options are parsed, so their options are available.
-; RUN: not %lld -dylib -%loadnewpmbye -mllvm -last-words %t.o -o %t.err 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not %lld -dylib -%loadnewpmbye --pass-plugin-arg=Bye,-last-words %t.o -o %t.err 2>&1 | FileCheck %s --check-prefix=ERR
 
 ;; Errors from loading plugins are reported by the linker.
 ; RUN: not %lld -dylib --load-pass-plugin=%t.dir/nonexistent.dylib %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOADERR

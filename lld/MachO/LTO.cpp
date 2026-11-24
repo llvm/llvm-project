@@ -47,6 +47,8 @@ static lto::Config createConfig() {
     c.MllvmArgs.emplace_back(C.str());
   for (PassPlugin &plugin : config->passPlugins)
     c.LoadedPassPlugins.push_back(&plugin);
+  for (StringRef arg : config->passPluginArgs)
+    c.PassPluginArgs.push_back(std::string(arg));
   c.OptPipeline = std::string(config->ltoNewPmPasses);
   c.CodeModel = getCodeModelFromCMModel(config->libraryOptions);
   c.CPU = getCPUStr(config->libraryOptions);

@@ -345,6 +345,12 @@ public:
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
+  bool needsAsyncBarrierArriveReplayWorkaround() const {
+    // Generic 12.5 code has no explicit XNACK setting; keep the workaround.
+    return hasAsyncBarrierArriveReplayBug() &&
+           TargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Off;
+  }
+
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 

@@ -2381,6 +2381,9 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                             {3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+  // NEON has no 64-bit multiply to form the byte indices.
+  if (VT.getScalarSizeInBits() < 64)
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
@@ -8080,7 +8083,8 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   return SDValue();
 }
 
-/// Lower atomic or volatile 128-bit stores to a single STP instruction.
+/// Lower atomic or volatile 128-bit stores to a single paired store
+/// instruction.
 SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                                              SelectionDAG &DAG) const {
   MemSDNode *StoreNode = cast<MemSDNode>(Op);
@@ -8088,11 +8092,13 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
   assert(StoreNode->isVolatile() || StoreNode->isAtomic());
 
   bool IsStoreRelease = isReleaseOrStronger(StoreNode->getMergedOrdering());
-  if (StoreNode->isAtomic())
-    assert((Subtarget->hasFeature(AArch64::FeatureLSE2) &&
-            Subtarget->hasFeature(AArch64::FeatureRCPC3) && IsStoreRelease) ||
-           StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
-           StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
+  if (StoreNode->isAtomic()) {
+    assert(Subtarget->hasLSE2());
+    assert(
+        ((Subtarget->hasRCPC3() || Subtarget->hasLSCP()) && IsStoreRelease) ||
+        StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
+        StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
+  }
 
   SDValue Value = (StoreNode->getOpcode() == ISD::STORE ||
                    StoreNode->getOpcode() == ISD::ATOMIC_STORE)
@@ -8100,7 +8106,7 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                       : StoreNode->getOperand(2);
   SDLoc DL(Op);
   auto StoreValue = DAG.SplitScalar(Value, DL, MVT::i64, MVT::i64);
-  unsigned Opcode = IsStoreRelease ? AArch64ISD::STILP : AArch64ISD::STP;
+  unsigned Opcode = IsStoreRelease ? AArch64ISD::STP_REL : AArch64ISD::STP;
   if (DAG.getDataLayout().isBigEndian())
     std::swap(StoreValue.first, StoreValue.second);
   SDValue Result = DAG.getMemIntrinsicNode(
@@ -8886,6 +8892,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::VECTOR_REVERSE:
     return LowerVECTOR_REVERSE(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return LowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -8958,7 +8966,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::ATOMIC_STORE:
     if (cast<MemSDNode>(Op)->getMemoryVT() == MVT::i128) {
-      assert(Subtarget->hasLSE2() || Subtarget->hasRCPC3());
+      assert(Subtarget->hasLSE2());
       return LowerStore128(Op, DAG);
     }
     return SDValue();
@@ -10728,8 +10736,31 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue ThunkVarArgSrc = OutVals[Outs.size() - 2];
     SDValue ThunkVarArgSize =
         DAG.getZExtOrTrunc(OutVals[Outs.size() - 1], DL, PtrVT);
-    SDValue RoundedThunkVarArgSize = DAG.getNode(
-        ISD::ADD, DL, PtrVT, ThunkVarArgSize, DAG.getConstant(15, DL, PtrVT));
+
+    // All arguments other than the first four will have to be copied with
+    // `memcpy` into the outgoing stack area (RSP+0x20 for x86-64). There is a
+    // special case when the x86-64 function returns a 16-byte structure: The
+    // x86-64 ABI requires that the value be returned in memory, so it has a
+    // hidden pointer, and the 4th argument has to spill to the stack; the
+    // ARM64EC function returns the value in {X0,X1} and it doesn't have a
+    // hidden pointer. In this case, the x86-64 function has one more argument
+    // than the ARM64EC one:
+    //
+    //   SP+00 => home for hidden pointer
+    //   SP+08 => home for 1st argument
+    //   SP+16 => home for 2nd argument
+    //   SP+24 => home for 3rd argument
+    //   SP+32 => 4th argument             ; !!
+    //   SP+40 => 5th argument             ; written by `memcpy`
+    //   SP+48 => ...
+    //
+    // `NumBytes` (32, or 40 in the hidden pointer case) is exactly the
+    // distance from the stack pointer to the 5th argument, so the whole
+    // outgoing argument area is reserved here, together with stack arguments
+    // from the 5th, in the same dynamically allocated block.
+    SDValue RoundedThunkVarArgSize =
+        DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgSize,
+                    DAG.getConstant(NumBytes + 15, DL, PtrVT));
     RoundedThunkVarArgSize =
         DAG.getNode(ISD::AND, DL, PtrVT, RoundedThunkVarArgSize,
                     DAG.getSignedConstant(-16, DL, PtrVT));
@@ -10739,12 +10770,24 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = ThunkVarArgDst.getValue(1);
     MFI.CreateVariableSizedObject(Align(16), nullptr);
 
-    // The x64 shadow store for the final thunk call is allocated by the normal
-    // CALLSEQ_START below. Copy the variadic stack arguments before that call
-    // sequence starts so lowering the memcpy libcall cannot create nested
+    // The copy goes right after the outgoing argument area, which is where the
+    // x64 callee expects its first stack argument.
+    ThunkVarArgDst = DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgDst,
+                                 DAG.getConstant(NumBytes, DL, PtrVT));
+
+    // The dynamically allocated block includes the outgoing stack area for the
+    // target function below, taking the place of its call frame. Varargs will
+    // have been copied by `memcpy` below, so the call must not adjust the
+    // stack pointer any further. The function call will look as if it didn't
+    // have a call frame, which isn't the case: Its call frame is now provided
+    // by the dynamically allocated block.
+    NumBytes = 0;
+
+    // Copy the variadic stack arguments before the call sequence starts so
+    // lowering the memcpy libcall cannot create nested
     // ADJCALLSTACKDOWN/ADJCALLSTACKUP pairs.
     Chain = DAG.getMemcpy(
-        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(16),
+        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(8),
         Align(1), /*isVol=*/false, /*AlwaysInline=*/false,
         /*CI=*/nullptr, std::nullopt, MachinePointerInfo::getUnknownStack(MF),
         MachinePointerInfo());
@@ -16331,6 +16374,47 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // Fall back to generating a TBL
   return GenerateTBL(Op, ShuffleMask, DAG);
+}
+
+SDValue
+AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDValue V = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  SDLoc DL(Op);
+
+  assert((VT.is64BitVector() || VT.is128BitVector()) &&
+         "Unexpected VECTOR_SHUFFLE_VAR");
+
+  EVT IdxVT = VT.changeVectorElementTypeToInteger();
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+
+  // TBL indexes bytes. Multiplying by EltBytes splatted into each byte puts
+  // Idx * EltBytes in every byte of the lane; adding <0, 1, ...> gives the
+  // byte indices. In-range indices never carry between bytes.
+  unsigned EltBits = VT.getScalarSizeInBits();
+  if (EltBits > 8) {
+    APInt RepEltBytes = APInt::getSplat(EltBits, APInt(8, EltBits / 8));
+    APInt ByteOffsets = APInt(32, 0x03020100).trunc(EltBits);
+    Idx = DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
+                      DAG.getConstant(RepEltBytes, DL, IdxVT));
+    Idx = DAG.getNode(ISD::ADD, DL, IdxVT, Idx,
+                      DAG.getConstant(ByteOffsets, DL, IdxVT));
+  }
+
+  // NVCAST keeps the byte indices valid for big-endian.
+  MVT ByteVT = VT.getSizeInBits() == 128 ? MVT::v16i8 : MVT::v8i8;
+  SDValue Table = DAG.getNode(AArch64ISD::NVCAST, DL, ByteVT, V);
+  // TBL tables are 128 bits; only out-of-range indices read the upper half.
+  if (ByteVT == MVT::v8i8)
+    Table = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Table,
+                        DAG.getPOISON(MVT::v8i8));
+  SDValue Tbl = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, ByteVT,
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl1, DL, MVT::i32), Table,
+      DAG.getNode(AArch64ISD::NVCAST, DL, ByteVT, Idx));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Tbl);
 }
 
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
@@ -22995,22 +23079,27 @@ static SDValue performConcatVectorsCombine(SDNode *N,
           if (V.isUndef())
             return true;
           LoadSDNode *LD = dyn_cast<LoadSDNode>(V);
-          return LD && V.hasOneUse() && LD->isSimple() && !LD->isIndexed() &&
+          return LD && V.hasOneUser() && LD->isSimple() && !LD->isIndexed() &&
                  LD->getExtensionType() == ISD::NON_EXTLOAD;
         })) {
       EVT FVT = SrcVT == MVT::v2i8 ? MVT::f16 : MVT::f32;
       EVT NVT = EVT::getVectorVT(*DAG.getContext(), FVT, N->getNumOperands());
       SmallVector<SDValue> Ops;
+      SmallDenseMap<SDValue, SDValue> NewLoads;
 
       for (unsigned i = 0; i < N->getNumOperands(); i++) {
         SDValue V = N->getOperand(i);
         if (V.isUndef())
           Ops.push_back(DAG.getUNDEF(FVT));
         else {
-          LoadSDNode *LD = cast<LoadSDNode>(V);
-          SDValue NewLoad = DAG.getLoad(FVT, DL, LD->getChain(),
-                                        LD->getBasePtr(), LD->getMemOperand());
-          DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+          // The same load may feed several operands; only convert it once.
+          SDValue &NewLoad = NewLoads[V];
+          if (!NewLoad) {
+            LoadSDNode *LD = cast<LoadSDNode>(V);
+            NewLoad = DAG.getLoad(FVT, DL, LD->getChain(), LD->getBasePtr(),
+                                  LD->getMemOperand());
+            DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+          }
           Ops.push_back(NewLoad);
         }
       }
@@ -33622,8 +33711,22 @@ bool AArch64TargetLowering::isOpSuitableForRCPC3(const Instruction *I) const {
   return false;
 }
 
+bool AArch64TargetLowering::isOpSuitableForLSCP(const Instruction *I) const {
+  if (!Subtarget->hasLSE2() || !Subtarget->hasLSCP())
+    return false;
+
+  if (auto SI = dyn_cast<StoreInst>(I))
+    return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
+           SI->getAlign() >= Align(16) &&
+           isReleaseOrStronger(SI->getOrdering());
+
+  return false;
+}
+
 bool AArch64TargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
+  if (isOpSuitableForLSCP(I))
+    return false;
   if (isOpSuitableForRCPC3(I))
     return false;
   if (isOpSuitableForLSE128(I))
@@ -33728,6 +33831,8 @@ TargetLoweringBase::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
   if (Size != 128)
+    return AtomicExpansionKind::None;
+  if (isOpSuitableForLSCP(SI))
     return AtomicExpansionKind::None;
   if (isOpSuitableForRCPC3(SI))
     return AtomicExpansionKind::None;
@@ -34557,6 +34662,11 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
     }
   }
+  // The stride of a GEP with a scalable source element type is
+  // vscale-dependent, which the IRTranslator can't handle.
+  if (const auto *GEP = dyn_cast<GetElementPtrInst>(&Inst))
+    if (GEP->getSourceElementType()->isScalableTy())
+      return true;
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {

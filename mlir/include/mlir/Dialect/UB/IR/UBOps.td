@@ -19,7 +19,7 @@ def UB_Dialect : Dialect {
   let cppNamespace = "::mlir::ub";
 
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 // Base class for UB dialect attributes.

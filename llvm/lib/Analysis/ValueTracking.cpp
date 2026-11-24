@@ -516,15 +516,10 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
 /// Infer non-negativity for R + (R < 0 ? A : 0), where R = srem X, Y.
 /// A must be a non-negative Y or abs(Y).
 static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
+                                             const APInt &DemandedElts,
                                              KnownBits &KnownOut,
                                              const SimplifyQuery &Q,
                                              unsigned Depth) {
-  Type *Ty = Op0->getType();
-
-  // Only handle scalars for now.
-  if (Ty->isVectorTy())
-    return;
-
   const Value *Divisor = nullptr, *Cond = nullptr, *Remainder = nullptr,
               *AdjustmentValue = nullptr;
   CmpPredicate Pred;
@@ -546,8 +541,10 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Accept Y itself if non-negative, or abs(Y).
+  // For vectors, only check the demanded elements.
   bool IsPositiveDivisorCase =
-      Divisor == AdjustmentValue && isKnownNonNegative(Divisor, Q, Depth + 1);
+      Divisor == AdjustmentValue &&
+      computeKnownBits(Divisor, DemandedElts, Q, Depth + 1).isNonNegative();
   bool IsAbsoluteValueCase =
       match(AdjustmentValue,
             m_Intrinsic<Intrinsic::abs>(m_Specific(Divisor), m_Value()));
@@ -556,6 +553,8 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Repeated uses must agree. An undef value could break this relationship.
+  // For vectors, this check is conservative (checks the entire vector, not just
+  // the demanded elements).
   if (!isGuaranteedNotToBeUndef(Remainder, Q.AC, Q.CtxI, Q.DT, Depth + 1) ||
       !isGuaranteedNotToBeUndef(Divisor, Q.AC, Q.CtxI, Q.DT, Depth + 1))
     return;
@@ -579,7 +578,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
       // Independent operand bits give no result, but the Euclidean remainder
       // pattern can establish non-negativity through the operands'
       // relationship.
-      computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+      computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                       Depth);
     }
     return;
   }
@@ -598,7 +598,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
     computeKnownBitsFromLerpPattern(Op0, Op1, DemandedElts, KnownOut, Q, Depth);
 
     // Use the relationship between the remainder and its adjustment.
-    computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+    computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                     Depth);
   }
 }
 
@@ -2278,13 +2279,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        // If we have a known 1, its position is our upper bound.
-        unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-        // If this call is poison for 0 input, the result will be less than 2^n.
-        if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
-          PossibleLZ = std::min(PossibleLZ, BitWidth - 1);
-        unsigned LowBits = llvm::bit_width(PossibleLZ);
-        Known.Zero.setBitsFrom(LowBits);
+        bool ZeroIsPoison = match(II->getArgOperand(1), m_One());
+        Known = Known.unionWith(Known2.ctlz(ZeroIsPoison));
         break;
       }
       case Intrinsic::cttz: {
@@ -4663,7 +4659,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (isa<FixedVectorType>(Ty)) {
         // Fast case - sign splat can be simply split across the small elements.
         // This works for both vector and scalar sources
-        Tmp = ComputeNumSignBits(Src, Q, Depth + 1);
+        unsigned Scale = SrcBits / TyBits;
+        APInt SrcDemandedElts = APIntOps::ScaleBitMask(
+            DemandedElts, DemandedElts.getBitWidth() / Scale);
+        Tmp = ComputeNumSignBits(Src, SrcDemandedElts, Q, Depth + 1);
         if (Tmp == SrcBits)
           return TyBits;
       }
@@ -4792,7 +4791,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::Add:
       // Add can have at most one carry bit.  Thus we know that the output
       // is, at worst, one more bit than the inputs.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       if (Tmp == 1) break;
 
       // Special case decrementing a value (ADD X, -1):
@@ -4889,7 +4888,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // If the input contained enough sign bits that some remain after the
       // truncation, then we can make use of that. Otherwise we don't know
       // anything.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       unsigned OperandTyBits = U->getOperand(0)->getType()->getScalarSizeInBits();
       if (Tmp > (OperandTyBits - TyBits))
         return Tmp - (OperandTyBits - TyBits);
@@ -4897,12 +4896,19 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       return 1;
     }
 
-    case Instruction::ExtractElement:
-      // Look through extract element. At the moment we keep this simple and
-      // skip tracking the specific element. But at least we might find
-      // information valid for all elements of the vector (for example if vector
-      // is sign extended, shifted, etc).
-      return ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+    case Instruction::ExtractElement: {
+      const Value *Vec = U->getOperand(0);
+      auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+      if (!VecTy)
+        return ComputeNumSignBits(Vec, Q, Depth + 1);
+
+      unsigned NumElts = VecTy->getNumElements();
+      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      if (auto *CIdx = dyn_cast<ConstantInt>(U->getOperand(1)))
+        if (CIdx->getValue().ult(NumElts))
+          DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+      return ComputeNumSignBits(Vec, DemandedVecElts, Q, Depth + 1);
+    }
 
     case Instruction::ShuffleVector: {
       // Collect the minimum number of sign bits that are shared by every vector
@@ -5353,14 +5359,14 @@ static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
   computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
 }
 
-static void computeKnownFPClassForFPTrunc(const Operator *Op,
+static void computeKnownFPClassForFPTrunc(const Operator *Op, RoundingMode RM,
                                           const APInt &DemandedElts,
                                           FPClassTest InterestedClasses,
                                           KnownFPClass &Known,
                                           const SimplifyQuery &Q,
                                           unsigned Depth) {
-  if ((InterestedClasses &
-       (KnownFPClass::OrderedLessThanZeroMask | fcNan)) == fcNone)
+  if ((InterestedClasses & (KnownFPClass::OrderedLessThanZeroMask | fcNan)) ==
+      fcNone)
     return;
 
   KnownFPClass KnownSrc;
@@ -5378,7 +5384,7 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   DenormalMode SrcMode =
       F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, RM, DstMode, SrcMode);
 }
 
 static void
@@ -5400,8 +5406,9 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
   bool WantNaN = (InterestedClasses & fcNan) != fcNone;
   bool WantNegZero = (InterestedClasses & fcNegZero) != fcNone;
+  bool WantSubnormal = (InterestedClasses & fcSubnormal) != fcNone;
 
-  if (!WantNaN && !WantNegative && !WantNegZero)
+  if (!WantNaN && !WantNegative && !WantNegZero && !WantSubnormal)
     return;
 
   FPClassTest InterestedSrcs = InterestedClasses;
@@ -5420,7 +5427,7 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
 
   if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
       (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) || WantNegZero ||
-      !IsAdd) {
+      WantSubnormal || !IsAdd) {
 
     // FIXME: Context function should always be passed in separately
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -5438,6 +5445,11 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       if (!Self) {
         computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownLHS, Q,
                             Depth + 1);
+      }
+
+      if (const APFloat *CRHS; IsAdd && match(RHS, m_APFloat(CRHS))) {
+        Known = KnownFPClass::fadd(KnownLHS, *CRHS, RM, Mode);
+        return;
       }
 
       Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode)
@@ -6047,8 +6059,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::fptrunc_round: {
-      computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known,
-                                    Q, Depth);
+      Metadata *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
+      RoundingMode RM =
+          *convertStrToRoundingMode(cast<MDString>(MD)->getString());
+      computeKnownFPClassForFPTrunc(Op, RM, DemandedElts, InterestedClasses,
+                                    Known, Q, Depth);
       break;
     }
     case Intrinsic::log:
@@ -6467,7 +6482,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FPTrunc: {
-    computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses, Known, Q,
+    computeKnownFPClassForFPTrunc(Op, RoundingMode::NearestTiesToEven,
+                                  DemandedElts, InterestedClasses, Known, Q,
                                   Depth);
     break;
   }
@@ -6594,7 +6610,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // the shuffle result.
     APInt DemandedLHS, DemandedRHS;
     auto *Shuf = dyn_cast<ShuffleVectorInst>(Op);
-    if (!Shuf || !getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
+    if (!Shuf ||
+        !getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
       return;
 
     if (!!DemandedLHS) {
@@ -11023,7 +11040,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         computeConstantRange(SI->getTrueValue(), ForSigned, SQ, Depth + 1);
     ConstantRange CRFalse =
         computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
-    CR = CRTrue.unionWith(CRFalse);
+    CR = CRTrue.unionWith(CRFalse, ForSigned ? ConstantRange::Signed
+                                             : ConstantRange::Unsigned);
     CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
   } else if (auto *TI = dyn_cast<TruncInst>(V)) {
     ConstantRange SrcCR =
@@ -11201,6 +11219,15 @@ void llvm::findValuesAffectedByCondition(
         AddAffected(A);
         if (IsAssume)
           AddAffected(B);
+
+        // If the remainder is zero, then the division is exact.
+        Value *RemLHS, *RemRHS;
+        if (match(B, m_Zero()) &&
+            match(A, m_IRem(m_Value(RemLHS), m_Value(RemRHS)))) {
+          AddAffected(RemLHS);
+          AddAffected(RemRHS);
+        }
+
         if (HasRHSC) {
           Value *Y;
           // (X << C) or (X >>_s C) or (X >>_u C).

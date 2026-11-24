@@ -1239,6 +1239,11 @@ alias(
 )
 
 alias(
+    name = "strtof128",
+    actual = "//libc/src/stdlib:strtof128",
+)
+
+alias(
     name = "strtod",
     actual = "//libc/src/stdlib:strtod",
 )
@@ -1438,6 +1443,21 @@ alias(
 alias(
     name = "strdup",
     actual = "//libc/src/string:strdup",
+)
+
+alias(
+    name = "strndup",
+    actual = "//libc/src/string:strndup",
+)
+
+alias(
+    name = "strerror",
+    actual = "//libc/src/string:strerror",
+)
+
+alias(
+    name = "strerror_r",
+    actual = "//libc/src/string:strerror_r",
 )
 
 alias(

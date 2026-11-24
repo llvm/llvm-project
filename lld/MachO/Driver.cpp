@@ -2507,6 +2507,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
+    for (const Arg *arg : args.filtered(OPT_mllvm)) {
+      parseClangOption(arg->getValue(), arg->getSpelling());
+      config->mllvmOpts.emplace_back(arg->getValue());
+    }
+
     // Load plugins upfront, so load errors are reported even without LTO
     for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
       Expected<PassPlugin> plugin = PassPlugin::load(path);
@@ -2515,11 +2520,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       else
         config->passPlugins.push_back(std::move(*plugin));
     }
-
-    for (const Arg *arg : args.filtered(OPT_mllvm)) {
-      parseClangOption(arg->getValue(), arg->getSpelling());
-      config->mllvmOpts.emplace_back(arg->getValue());
-    }
+    config->passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
 
     createSyntheticSections();
     createSyntheticSymbols();

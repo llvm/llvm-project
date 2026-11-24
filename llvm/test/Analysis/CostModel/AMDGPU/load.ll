@@ -1384,7 +1384,7 @@ define amdgpu_kernel void @loads_addrspace_4_widened(ptr addrspace(4) %p) {
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = load <7 x i32>, ptr addrspace(4) %p, align 4
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <7 x i32>, ptr addrspace(4) %p, align 8
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = load <7 x i64>, ptr addrspace(4) %p, align 8
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i96, ptr addrspace(4) %p, align 8
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
@@ -1392,7 +1392,7 @@ define amdgpu_kernel void @loads_addrspace_4_widened(ptr addrspace(4) %p) {
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = load <7 x i32>, ptr addrspace(4) %p, align 4
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <7 x i32>, ptr addrspace(4) %p, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = load <7 x i64>, ptr addrspace(4) %p, align 8
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i96, ptr addrspace(4) %p, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
@@ -1400,7 +1400,7 @@ define amdgpu_kernel void @loads_addrspace_4_widened(ptr addrspace(4) %p) {
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = load <7 x i32>, ptr addrspace(4) %p, align 4
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <7 x i32>, ptr addrspace(4) %p, align 8
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = load <7 x i64>, ptr addrspace(4) %p, align 8
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i96, ptr addrspace(4) %p, align 8
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
@@ -1408,7 +1408,7 @@ define amdgpu_kernel void @loads_addrspace_4_widened(ptr addrspace(4) %p) {
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = load <7 x i32>, ptr addrspace(4) %p, align 4
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <7 x i32>, ptr addrspace(4) %p, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = load <7 x i64>, ptr addrspace(4) %p, align 8
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = load <7 x i64>, ptr addrspace(4) %p, align 64
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load i96, ptr addrspace(4) %p, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
@@ -1480,6 +1480,12 @@ define void @loads_addrspace_4_unreachable_cycle() {
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %0 = load <16 x i32>, ptr addrspace(4) %gep, align 64
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX10-LABEL: 'loads_addrspace_4_unreachable_cycle'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr i8, ptr addrspace(4) %gep, i64 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %0 = load <16 x i32>, ptr addrspace(4) %gep, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
 ; GFX12-LABEL: 'loads_addrspace_4_unreachable_cycle'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr i8, ptr addrspace(4) %gep, i64 64
@@ -1498,15 +1504,15 @@ dead:
 define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) {
 ; GFX8-LABEL: 'loads_addrspace_4_illegal_types'
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <31 x i32>, ptr addrspace(4) %p, align 64
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <11 x i8>, ptr addrspace(4) %p, align 8
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <5 x i16>, ptr addrspace(4) %p, align 16
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load i56, ptr addrspace(4) %p, align 8
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load i80, ptr addrspace(4) %p, align 8
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = load i80, ptr addrspace(4) %p, align 16
@@ -1515,20 +1521,20 @@ define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) 
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = load i136, ptr addrspace(4) %p, align 32
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %17 = load i184, ptr addrspace(4) %p, align 8
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load i248, ptr addrspace(4) %p, align 16
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX90A-LABEL: 'loads_addrspace_4_illegal_types'
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <31 x i32>, ptr addrspace(4) %p, align 64
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <11 x i8>, ptr addrspace(4) %p, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <5 x i16>, ptr addrspace(4) %p, align 16
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load i56, ptr addrspace(4) %p, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load i80, ptr addrspace(4) %p, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = load i80, ptr addrspace(4) %p, align 16
@@ -1537,20 +1543,20 @@ define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) 
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = load i136, ptr addrspace(4) %p, align 32
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %17 = load i184, ptr addrspace(4) %p, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load i248, ptr addrspace(4) %p, align 16
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX10-LABEL: 'loads_addrspace_4_illegal_types'
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <31 x i32>, ptr addrspace(4) %p, align 64
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <11 x i8>, ptr addrspace(4) %p, align 8
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <5 x i16>, ptr addrspace(4) %p, align 16
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load i56, ptr addrspace(4) %p, align 8
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load i80, ptr addrspace(4) %p, align 8
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = load i80, ptr addrspace(4) %p, align 16
@@ -1559,20 +1565,20 @@ define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) 
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = load i136, ptr addrspace(4) %p, align 32
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %17 = load i184, ptr addrspace(4) %p, align 8
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load i248, ptr addrspace(4) %p, align 16
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX12-LABEL: 'loads_addrspace_4_illegal_types'
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <31 x i32>, ptr addrspace(4) %p, align 64
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %2 = load <15 x i32>, ptr addrspace(4) %p, align 16
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = load <31 x i32>, ptr addrspace(4) %p, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %4 = load <62 x i32>, ptr addrspace(4) %p, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %5 = load <7 x i64>, ptr addrspace(4) %p, align 32
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %6 = load <60 x i8>, ptr addrspace(4) %p, align 32
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <9 x i8>, ptr addrspace(4) %p, align 16
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <11 x i8>, ptr addrspace(4) %p, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <5 x i16>, ptr addrspace(4) %p, align 16
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <31 x i16>, ptr addrspace(4) %p, align 32
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load i56, ptr addrspace(4) %p, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load i80, ptr addrspace(4) %p, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load i80, ptr addrspace(4) %p, align 16
@@ -1581,7 +1587,7 @@ define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) 
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = load i136, ptr addrspace(4) %p, align 32
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %17 = load i184, ptr addrspace(4) %p, align 8
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load i248, ptr addrspace(4) %p, align 16
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %19 = load i416, ptr addrspace(4) %p, align 32
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
   load <15 x i32>, ptr addrspace(4) %p, align 4

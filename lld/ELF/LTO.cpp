@@ -136,6 +136,8 @@ static lto::Config createConfig(Ctx &ctx) {
   c.StatsFile = std::string(ctx.arg.optStatsFilename);
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
+  for (StringRef arg : ctx.arg.passPluginArgs)
+    c.PassPluginArgs.push_back(std::string(arg));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.DwoDir = std::string(ctx.arg.dwoDir);
 

@@ -1948,6 +1948,16 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
         ++I;
       const ArrayRef<MDOperand> Aux = Ops.slice(AuxBegin, I - AuxBegin);
 
+      // Metadata does not keep globals alive, and passes such as ThinLTO
+      // function import do not follow references from metadata, so a constant
+      // may have been dropped (nulled). Omit the records rather than emit them
+      // without their auxiliary data.
+      if (any_of(Aux, [](const MDOperand &MDO) {
+            const auto *AuxMDs = dyn_cast<MDNode>(MDO);
+            return AuxMDs && is_contained(AuxMDs->operands(), nullptr);
+          }))
+        continue;
+
       auto EmitAux = [&] {
         for (const MDOperand &MDO : Aux) {
           assert(isa<MDNode>(MDO) && "expecting either string or tuple");

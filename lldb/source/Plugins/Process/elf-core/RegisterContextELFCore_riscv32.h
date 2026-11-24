@@ -63,7 +63,7 @@ protected:
 
   lldb_private::DynamicRegisterInfo::Register
   BuildDynamicRegister(const lldb_private::RegisterInfo &reg_info,
-                       const lldb_private::ConstString &set_name,
+                       llvm::StringRef set_name,
                        uint32_t byte_offset);
 
   /// Retrieves enabled RISC-V ISA extension feature names from the module's

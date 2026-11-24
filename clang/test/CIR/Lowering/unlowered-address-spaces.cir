@@ -38,6 +38,7 @@ module attributes {cir.triple = "spirv64-unknown-unknown"} {
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // The union's integer storage converts, but its active initializer does not.
+  // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.ptr<!cir.void, lang_address_space(offload_global)>'}}
   // expected-error @below {{failed to legalize operation 'cir.global'}}
   cir.global external @union_active_initializer_language_address_space = #cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U
 }
@@ -286,6 +287,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @constant_union_active_initializer_language_address_space() {
+    // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.ptr<!cir.void, lang_address_space(offload_global)>'}}
     // expected-error @below {{failed to legalize operation 'cir.const'}}
     %0 = cir.const #cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U
     cir.return
@@ -303,6 +305,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // Propagate adjustment failure through both the enclosing union and struct.
   cir.func @constant_nested_union_initializer_language_address_space() {
+    // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.ptr<!cir.void, lang_address_space(offload_global)>'}}
     // expected-error @below {{failed to legalize operation 'cir.const'}}
     %0 = cir.const #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U}> : !rec_Outer}> : !rec_S
     cir.return
@@ -318,6 +321,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @constant_union_array_initializer_language_address_space() {
+    // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.ptr<!cir.void, lang_address_space(offload_global)>'}}
     // expected-error @below {{failed to legalize operation 'cir.const'}}
     %0 = cir.const #cir.const_array<[#cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U]> : !array
     cir.return

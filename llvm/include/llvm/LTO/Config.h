@@ -58,6 +58,8 @@ struct Config {
   // Pass-plugins already loaded by the client. LTO does not take ownership, so
   // they must outlive the lto::LTO object.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  // "<plugin>,<arg>" values that lto::LTO::run() passes to pass plugins.
+  std::vector<std::string> PassPluginArgs;
   std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;

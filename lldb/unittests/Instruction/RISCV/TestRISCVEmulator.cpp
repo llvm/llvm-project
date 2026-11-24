@@ -277,6 +277,13 @@ TEST_F(RISCVEmulatorTester, TestAtomicSequence) {
   ASSERT_EQ(this->gpr.gpr[0], uint64_t(16));
 }
 
+TEST_F(RISCVEmulatorTester, TestStoreConditionalOutsideSequence) {
+  // sc.w t0, t0, (t0)
+  ASSERT_FALSE(this->DecodeAndExecute(0x1852a2af, false));
+  // sc.d t0, t0, (t0)
+  ASSERT_FALSE(this->DecodeAndExecute(0x1852b2af, false));
+}
+
 struct TestDecode {
   uint32_t inst;
   RISCVInst inst_type;

@@ -669,6 +669,9 @@ private:
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
 
+  // Pass the configured arguments to pass-plugins.
+  Error setupPassPluginArgs();
+
   // LibFuncs that were implemented in bitcode but were not extracted
   // from their libraries. Such functions cannot safely be called, since
   // they have lost their opportunity to be defined.

@@ -400,3 +400,11 @@ define void @test_14_15(ptr addrspace(14) %p, ptr addrspace(15) %p1) {
   load i8, ptr addrspace(15) %p1
   ret void
 }
+
+; CHECK-LABEL: Function: test_12_12
+; CHECK: MayAlias:	i8 addrspace(12)* %p, i8 addrspace(12)* %p1
+define void @test_12_12(ptr addrspace(12) %p, ptr addrspace(12) %p1) {
+  load i8, ptr addrspace(12) %p
+  load i8, ptr addrspace(12) %p1
+  ret void
+}

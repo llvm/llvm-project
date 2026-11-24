@@ -71,12 +71,12 @@ __host__ __device__ int Two_(void) __attribute__((alias("__Two")));
 }
 
 // HOST-LABEL: define linkonce_odr noundef i32 @_Z7__Threev(
-// HOST-SAME: ) #[[ATTR0]] comdat {
+// HOST-SAME: ) #[[ATTR1:[0-9]+]] comdat {
 // HOST-NEXT:  [[ENTRY:.*:]]
 // HOST-NEXT:    ret i32 5
 //
 // DEVICE-LABEL: define linkonce_odr noundef i32 @_Z7__Threev(
-// DEVICE-SAME: ) #[[ATTR0]] comdat {
+// DEVICE-SAME: ) #[[ATTR1:[0-9]+]] comdat {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
 // DEVICE-NEXT:    ret i32 5
 //
@@ -120,8 +120,10 @@ __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
 __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
 //.
 // HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
+// HOST: attributes #[[ATTR1]] = { likely_module_local mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
 //.
 // DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEVICE: attributes #[[ATTR1]] = { convergent likely_module_local mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 //.
 // HOST: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
