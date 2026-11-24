@@ -378,7 +378,7 @@ private:
     --__it;
   }
 
-  template <auto _Np = sizeof...(_Vs)>
+  template <size_t _Np = sizeof...(_Vs)>
   _LIBCPP_HIDE_FROM_ABI constexpr void __advance(difference_type __x) {
     if (__x == 0)
       return;
@@ -408,7 +408,7 @@ private:
     }
   }
 
-  template <auto _Np = sizeof...(_Vs)>
+  template <size_t _Np = sizeof...(_Vs)>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const {
     if (std::get<_Np>(__current_) == ranges::end(std::get<_Np>(__parent_->__bases_)))
       return true;
