@@ -257,16 +257,25 @@ define void @writeonly_result(ptr noalias writable sret(%cell) align 8 %p, i32 %
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1 immarg)
 
 define i64 @pack_before_zero_fill(i8 %bits) {
-; CHECK-LABEL: define i64 @pack_before_zero_fill(
-; CHECK-SAME: i8 [[BITS:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = alloca [8 x i8], align 8
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 8
-; CHECK-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i8 [[BITS]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
-; CHECK-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    ret i64 [[OUT]]
+; LE-LABEL: define i64 @pack_before_zero_fill(
+; LE-SAME: i8 [[BITS:%.*]]) {
+; LE-NEXT:    [[P:%.*]] = alloca [8 x i8], align 8
+; LE-NEXT:    [[TMP1:%.*]] = bitinsert b64 0, i8 [[BITS]], i32 32
+; LE-NEXT:    store b64 [[TMP1]], ptr [[P]], align 8
+; LE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; LE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
+; LE-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
+; LE-NEXT:    ret i64 [[OUT]]
+;
+; BE-LABEL: define i64 @pack_before_zero_fill(
+; BE-SAME: i8 [[BITS:%.*]]) {
+; BE-NEXT:    [[P:%.*]] = alloca [8 x i8], align 8
+; BE-NEXT:    [[TMP1:%.*]] = bitinsert b64 0, i8 [[BITS]], i32 24
+; BE-NEXT:    store b64 [[TMP1]], ptr [[P]], align 8
+; BE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; BE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
+; BE-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
+; BE-NEXT:    ret i64 [[OUT]]
 ;
   %p = alloca [8 x i8], align 8
   store i32 0, ptr %p, align 8
@@ -279,16 +288,27 @@ define i64 @pack_before_zero_fill(i8 %bits) {
 }
 
 define i64 @pack_before_long_zero_fill(i32 %word, i8 %bits) {
-; CHECK-LABEL: define i64 @pack_before_long_zero_fill(
-; CHECK-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = alloca [16 x i8], align 8
-; CHECK-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i8 [[BITS]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 11, i1 false)
-; CHECK-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    ret i64 [[OUT]]
+; LE-LABEL: define i64 @pack_before_long_zero_fill(
+; LE-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; LE-NEXT:    [[P:%.*]] = alloca [16 x i8], align 8
+; LE-NEXT:    [[TMP1:%.*]] = bitinsert b64 0, i32 [[WORD]], i32 0
+; LE-NEXT:    [[TMP2:%.*]] = bitinsert b64 [[TMP1]], i8 [[BITS]], i32 32
+; LE-NEXT:    store b64 [[TMP2]], ptr [[P]], align 8
+; LE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; LE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 11, i1 false)
+; LE-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
+; LE-NEXT:    ret i64 [[OUT]]
+;
+; BE-LABEL: define i64 @pack_before_long_zero_fill(
+; BE-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; BE-NEXT:    [[P:%.*]] = alloca [16 x i8], align 8
+; BE-NEXT:    [[TMP1:%.*]] = bitinsert b64 0, i32 [[WORD]], i32 32
+; BE-NEXT:    [[TMP2:%.*]] = bitinsert b64 [[TMP1]], i8 [[BITS]], i32 24
+; BE-NEXT:    store b64 [[TMP2]], ptr [[P]], align 8
+; BE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; BE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 11, i1 false)
+; BE-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
+; BE-NEXT:    ret i64 [[OUT]]
 ;
   %p = alloca [16 x i8], align 8
   store i32 %word, ptr %p, align 8

@@ -2286,6 +2286,66 @@ static bool packAdjacentStores(StoreInst &Last, AliasAnalysis &AA,
   return true;
 }
 
+/// Pack an adjacent word and byte before a zero fill to private stack storage.
+/// The fill overwrites the extra bytes before any intervening memory access.
+static bool packStoresBeforeZeroFill(MemSetInst &Fill, DominatorTree &DT,
+                                     TargetTransformInfo &TTI) {
+  const DataLayout &DL = Fill.getDataLayout();
+  auto *Length = dyn_cast<ConstantInt>(Fill.getLength());
+  if (Fill.isVolatile() || !match(Fill.getValue(), m_Zero()) || !Length ||
+      Length->getValue().ult(3))
+    return false;
+
+  unsigned Budget = MaxInstrsToScan;
+  auto PreviousStore = [&](Instruction &From) -> StoreInst * {
+    for (Instruction *I = From.getPrevNode(); I; I = I->getPrevNode()) {
+      if (!Budget-- || endsStoreChain(*I))
+        return nullptr;
+      if (I->mayReadOrWriteMemory())
+        return dyn_cast<StoreInst>(I);
+    }
+    return nullptr;
+  };
+  StoreInst *Tag = PreviousStore(Fill);
+  if (!Tag || !Tag->getValueOperand()->getType()->isIntegerTy(8))
+    return false;
+  StoreInst *Word = PreviousStore(*Tag);
+  if (!Word || !Word->getValueOperand()->getType()->isIntegerTy(32))
+    return false;
+
+  auto Low = getAccessRange(*Word, DL);
+  auto High = getAccessRange(*Tag, DL);
+  auto *Storage = Low ? dyn_cast<AllocaInst>(Low->Base) : nullptr;
+  if (!Storage || !High || High->Base != Storage ||
+      Low->Bits.End != High->Bits.Begin || Low->Bits.Begin < 0)
+    return false;
+
+  // The zero fill must start at the first byte beyond the original stores.
+  int64_t FillOffset;
+  Value *FillPtr = Fill.getRawDest();
+  if (FillPtr->getType() != Storage->getType() ||
+      GetPointerBaseWithConstantOffset(FillPtr, FillOffset, DL,
+                                       /*AllowNonInbounds=*/false) != Storage ||
+      FillOffset != High->Bits.End / 8)
+    return false;
+
+  Type *NativeTy = DL.getSmallestLegalIntType(Fill.getContext(), 40);
+  if (!NativeTy || !NativeTy->isIntegerTy(64) || !TTI.isTypeLegal(NativeTy))
+    return false;
+  Value *Ptr = Word->getPointerOperand();
+  Align Alignment =
+      std::max(Word->getAlign(), getKnownAlignment(Ptr, DL, Tag, nullptr, &DT));
+  if (Alignment < Align(8) ||
+      !isDereferenceablePointer(Ptr, NativeTy, SimplifyQuery(DL, Tag)) ||
+      PointerMayBeCaptured(Storage, /*ReturnCaptures=*/true))
+    return false;
+
+  IRBuilder B(Tag);
+  replaceAdjacentStores(*Word, *Tag, B,
+                        Constant::getNullValue(B.getByteNTy(64)), Alignment);
+  return true;
+}
+
 #ifndef NDEBUG
 static void verifyStoreChain(const StoreChain &Chain, const DataLayout &DL) {
   assert(Chain.Ranges.size() >= 2 && "expected at least two stores");
@@ -3240,14 +3300,10 @@ static bool foldMulHigh(Instruction &I) {
 /// Guard a memset whose nonconstant length is known to be in [0, 1].
 /// Inserts a conditional branch around the memset and specialises the
 /// executed path to a one-byte store.
-static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
+static bool foldMemSetZeroOrOneLength(MemSetInst *MI, const DataLayout &DL,
                                       TargetLibraryInfo &TLI,
                                       AssumptionCache &AC, DominatorTree &DT,
                                       bool &MadeCFGChange) {
-  auto *MI = dyn_cast<MemSetInst>(&I);
-  if (!MI || isa<ConstantInt>(MI->getLength()))
-    return false;
-
   SimplifyQuery SQ(DL, &TLI, &DT, &AC, MI);
   KnownBits KnownLen = computeKnownBits(MI->getLength(), SQ);
   if (!KnownLen.getMaxValue().isOne())
@@ -3255,7 +3311,7 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
 
   uint64_t TotalCount;
   SmallVector<InstrProfValueData> MemsetVPMetadata = getValueProfDataFromInst(
-      I, InstrProfValueKind::IPVK_MemOPSize, 2, TotalCount);
+      *MI, InstrProfValueKind::IPVK_MemOPSize, 2, TotalCount);
   std::optional<uint64_t> ZeroCount = std::nullopt;
   std::optional<uint64_t> OneCount = std::nullopt;
   for (const auto [MemOpSize, SizeFrequency] : MemsetVPMetadata) {
@@ -3311,6 +3367,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       continue;
 
     const DataLayout &DL = F.getDataLayout();
+    SmallVector<MemSetInst *, 2> Fills;
 
     // Walk the block backwards for efficiency. We're matching a chain of
     // use->defs, so we're more likely to succeed by starting from the bottom.
@@ -3357,8 +3414,13 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
           MadeChange = true;
           break;
         }
-        if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
-          MadeChange = true;
+        if (auto *Fill = dyn_cast<MemSetInst>(&I)) {
+          if (isa<ConstantInt>(Fill->getLength()))
+            Fills.push_back(Fill);
+          else
+            MadeChange |=
+                foldMemSetZeroOrOneLength(Fill, DL, TLI, AC, DT, MadeCFGChange);
+        }
         break;
       default:;
       }
@@ -3366,6 +3428,8 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
 
     // Do this separately to avoid redundantly scanning stores multiple times.
     MadeChange |= foldConsecutiveStores(BB, DL, TTI, AA);
+    for (MemSetInst *Fill : Fills)
+      MadeChange |= packStoresBeforeZeroFill(*Fill, DT, TTI);
   }
 
   MadeChange |= foldStoreChains(F, AA, DT, TTI);
