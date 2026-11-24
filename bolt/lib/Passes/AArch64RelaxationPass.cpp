@@ -84,9 +84,6 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
                   : BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
       }
 
-      for (MCInst &NewInst : AdrpMaterialization)
-        NewInst.setLoc(Inst.getLoc());
-
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
         It = BB.eraseInstruction(std::prev(It));
       } else if (std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It))) {
