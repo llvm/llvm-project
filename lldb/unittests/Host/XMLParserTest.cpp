@@ -58,6 +58,21 @@ TEST(XMLParserTest, CharacterData) {
                        llvm::HasValue("<r>\xC3\xA9</r>"));
 }
 
+TEST(XMLParserTest, CharactersAreConcatenated) {
+  class Collector : public Handler {
+  public:
+    std::vector<std::string> texts;
+    void Characters(llvm::StringRef text) override {
+      texts.push_back(text.str());
+    }
+  } collector;
+  EXPECT_THAT_ERROR(Parse("<r>a&amp;b<![CDATA[<c>]]><!-- x --><?pi?>d&#x41;"
+                          "<e/>f</r>",
+                          collector),
+                    llvm::Succeeded());
+  EXPECT_EQ(collector.texts, (std::vector<std::string>{"a&b<c>dA", "f"}));
+}
+
 TEST(XMLParserTest, DeepNesting) {
   const size_t depth = 1000000;
   std::string input;
@@ -74,6 +89,11 @@ TEST(XMLParserTest, LineNumbers) {
   EXPECT_THAT_ERROR(
       Parse("<r>\n<a>\n</b></r>", handler),
       llvm::FailedWithMessage("line 3: end tag 'b' does not match 'a'"));
+  EXPECT_THAT_ERROR(
+      Parse("<r>\r\n<a>\r</b></r>", handler),
+      llvm::FailedWithMessage("line 3: end tag 'b' does not match 'a'"));
+  EXPECT_THAT_ERROR(Parse("<r>\r\n\r\x01</r>", handler),
+                    llvm::FailedWithMessage("line 3: invalid character U+1"));
 }
 
 TEST(XMLParserTest, NotWellFormed) {

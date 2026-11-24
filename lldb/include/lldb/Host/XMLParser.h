@@ -27,6 +27,8 @@ public:
   virtual void StartElement(llvm::StringRef name,
                             llvm::ArrayRef<Attribute> attributes) {}
   virtual void EndElement(llvm::StringRef name) {}
+  /// Called once with all the character data between two tags, including
+  /// expanded references and CDATA sections.
   virtual void Characters(llvm::StringRef text) {}
 };
 

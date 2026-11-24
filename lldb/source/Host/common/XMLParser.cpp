@@ -33,25 +33,32 @@ private:
   llvm::Error ParseComment();
   llvm::Error ParsePI();
   llvm::Error ParseName(llvm::StringRef &name);
-  void Characters(llvm::StringRef text) {
-    if (!text.empty())
-      m_handler.Characters(text);
-  }
+  /// Character data is accumulated and reported in a single Characters call
+  /// before the next start or end tag. When the data is a single contiguous
+  /// slice of the input, no copy is made.
+  void AppendText(llvm::StringRef text);
+  std::string &TextBuffer();
+  void FlushText();
 
   llvm::Error MakeError(const llvm::Twine &message) const;
   llvm::Error Expect(llvm::StringRef str);
   bool Consume(llvm::StringRef str);
   bool SkipSpace();
   bool AtEnd() const { return m_pos >= m_text.size(); }
-  llvm::StringRef Rest() const {
-    return llvm::StringRef(m_text).drop_front(m_pos);
-  }
+  llvm::StringRef Rest() const { return m_text.drop_front(m_pos); }
   uint32_t PeekCodePoint(unsigned &length) const;
 
   Handler &m_handler;
-  std::string m_text;
+  /// The document, either the input itself or m_storage if line endings had
+  /// to be normalized.
+  llvm::StringRef m_text;
+  std::string m_storage;
   size_t m_pos = 0;
-  std::vector<std::string> m_open;
+  std::vector<llvm::StringRef> m_open;
+
+  llvm::StringRef m_pending_text;
+  std::string m_text_buffer;
+  bool m_text_in_buffer = false;
 };
 
 } // namespace
@@ -92,7 +99,11 @@ static void AppendUTF8(uint32_t c, std::string &out) {
 }
 
 llvm::Error Parser::MakeError(const llvm::Twine &message) const {
-  size_t line = llvm::StringRef(m_text).take_front(m_pos).count('\n') + 1;
+  // Decode can fail before line endings are normalized, so count "\r\n",
+  // "\r" and "\n" as line breaks.
+  llvm::StringRef prefix = m_text.take_front(m_pos);
+  size_t line =
+      prefix.count('\n') + prefix.count('\r') - prefix.count("\r\n") + 1;
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "line " + llvm::Twine(line) + ": " + message);
 }
@@ -132,28 +143,39 @@ uint32_t Parser::PeekCodePoint(unsigned &length) const {
 
 llvm::Error Parser::Decode(llvm::StringRef input) {
   input.consume_front("\xEF\xBB\xBF");
+  m_text = input;
 
-  m_text.reserve(input.size());
-  const auto *source = reinterpret_cast<const llvm::UTF8 *>(input.data());
-  const auto *end = source + input.size();
+  // Validate the input in place and only copy it if line endings need to be
+  // normalized.
+  bool has_cr = false;
+  const auto *begin = reinterpret_cast<const llvm::UTF8 *>(input.data());
+  const auto *source = begin;
+  const auto *end = begin + input.size();
   while (source != end) {
-    m_pos = m_text.size();
-    const llvm::UTF8 *start = source;
+    m_pos = source - begin;
     llvm::UTF32 c;
     if (llvm::convertUTF8Sequence(&source, end, &c, llvm::strictConversion) !=
         llvm::conversionOK)
       return MakeError("invalid UTF-8 input");
     if (!IsChar(c))
       return MakeError("invalid character U+" + llvm::utohexstr(c));
-    if (c == '\r') {
-      m_text.push_back('\n');
-      if (source != end && *source == '\n')
-        ++source;
-    } else {
-      m_text.append(reinterpret_cast<const char *>(start), source - start);
-    }
+    has_cr |= c == '\r';
   }
   m_pos = 0;
+
+  if (has_cr) {
+    m_storage.reserve(input.size());
+    for (size_t i = 0; i < input.size(); ++i) {
+      if (input[i] != '\r') {
+        m_storage.push_back(input[i]);
+        continue;
+      }
+      m_storage.push_back('\n');
+      if (i + 1 < input.size() && input[i + 1] == '\n')
+        ++i;
+    }
+    m_text = m_storage;
+  }
   return llvm::Error::success();
 }
 
@@ -165,13 +187,13 @@ llvm::Error Parser::ParseName(llvm::StringRef &name) {
   m_pos += length;
   while (IsNameChar(PeekCodePoint(length)))
     m_pos += length;
-  name = llvm::StringRef(m_text).slice(start, m_pos);
+  name = m_text.slice(start, m_pos);
   return llvm::Error::success();
 }
 
 llvm::Error Parser::ParseComment() {
   size_t end = m_text.find("--", m_pos);
-  if (end == std::string::npos)
+  if (end == llvm::StringRef::npos)
     return MakeError("unterminated comment");
   m_pos = end + 2;
   return Expect(">");
@@ -189,7 +211,7 @@ llvm::Error Parser::ParsePI() {
     return MakeError("expected whitespace after the processing instruction "
                      "target");
   size_t end = m_text.find("?>", m_pos);
-  if (end == std::string::npos)
+  if (end == llvm::StringRef::npos)
     return MakeError("unterminated processing instruction");
   m_pos = end + 2;
   return llvm::Error::success();
@@ -211,9 +233,9 @@ llvm::Error Parser::ParseReference(std::string &out) {
   if (Consume("#")) {
     unsigned radix = Consume("x") ? 16 : 10;
     size_t end = m_text.find(';', m_pos);
-    llvm::StringRef digits = llvm::StringRef(m_text).slice(m_pos, end);
+    llvm::StringRef digits = m_text.slice(m_pos, end);
     uint32_t c = 0;
-    if (end == std::string::npos || digits.empty() ||
+    if (end == llvm::StringRef::npos || digits.empty() ||
         !llvm::all_of(digits, radix == 16 ? llvm::isHexDigit : llvm::isDigit) ||
         digits.getAsInteger(radix, c) || !IsChar(c))
       return MakeError("invalid character reference");
@@ -238,6 +260,34 @@ llvm::Error Parser::ParseReference(std::string &out) {
     return MakeError("undeclared entity '" + name + "'");
   out += replacement;
   return llvm::Error::success();
+}
+
+void Parser::AppendText(llvm::StringRef text) {
+  if (text.empty())
+    return;
+  if (!m_text_in_buffer && m_pending_text.empty()) {
+    m_pending_text = text;
+    return;
+  }
+  TextBuffer().append(text);
+}
+
+std::string &Parser::TextBuffer() {
+  if (!m_text_in_buffer) {
+    m_text_buffer.assign(m_pending_text.data(), m_pending_text.size());
+    m_text_in_buffer = true;
+  }
+  return m_text_buffer;
+}
+
+void Parser::FlushText() {
+  llvm::StringRef text =
+      m_text_in_buffer ? llvm::StringRef(m_text_buffer) : m_pending_text;
+  if (!text.empty())
+    m_handler.Characters(text);
+  m_pending_text = {};
+  m_text_buffer.clear();
+  m_text_in_buffer = false;
 }
 
 llvm::Error Parser::ParseAttValue(std::string &value) {
@@ -266,11 +316,10 @@ llvm::Error Parser::ParseAttValue(std::string &value) {
 }
 
 llvm::Error Parser::ParseStartTag(bool &is_empty) {
-  llvm::StringRef name;
-  if (llvm::Error error = ParseName(name))
+  llvm::StringRef element;
+  if (llvm::Error error = ParseName(element))
     return error;
-  std::string element = name.str();
-  std::vector<std::pair<std::string, std::string>> attributes;
+  std::vector<std::pair<llvm::StringRef, std::string>> attributes;
   llvm::StringSet<> names;
 
   while (true) {
@@ -285,6 +334,7 @@ llvm::Error Parser::ParseStartTag(bool &is_empty) {
     }
     if (!space)
       return MakeError("expected whitespace, '>' or '/>'");
+    llvm::StringRef name;
     if (llvm::Error error = ParseName(name))
       return error;
     if (!names.insert(name).second)
@@ -296,17 +346,18 @@ llvm::Error Parser::ParseStartTag(bool &is_empty) {
     std::string value;
     if (llvm::Error error = ParseAttValue(value))
       return error;
-    attributes.emplace_back(name.str(), std::move(value));
+    attributes.emplace_back(name, std::move(value));
   }
 
   std::vector<Attribute> refs;
   for (const auto &[attr_name, value] : attributes)
     refs.push_back({attr_name, value});
+  FlushText();
   m_handler.StartElement(element, refs);
   if (is_empty)
     m_handler.EndElement(element);
   else
-    m_open.push_back(std::move(element));
+    m_open.push_back(element);
   return llvm::Error::success();
 }
 
@@ -330,6 +381,7 @@ llvm::Error Parser::ParseElement() {
       SkipSpace();
       if (llvm::Error error = Expect(">"))
         return error;
+      FlushText();
       m_handler.EndElement(name);
       m_open.pop_back();
     } else if (Consume("<!--")) {
@@ -337,9 +389,9 @@ llvm::Error Parser::ParseElement() {
         return error;
     } else if (Consume("<![CDATA[")) {
       size_t end = m_text.find("]]>", m_pos);
-      if (end == std::string::npos)
+      if (end == llvm::StringRef::npos)
         return MakeError("unterminated CDATA section");
-      Characters(llvm::StringRef(m_text).slice(m_pos, end));
+      AppendText(m_text.slice(m_pos, end));
       m_pos = end + 3;
     } else if (Consume("<?")) {
       if (llvm::Error error = ParsePI())
@@ -348,16 +400,14 @@ llvm::Error Parser::ParseElement() {
       if (llvm::Error error = ParseStartTag(is_empty))
         return error;
     } else if (Consume("&")) {
-      std::string text;
-      if (llvm::Error error = ParseReference(text))
+      if (llvm::Error error = ParseReference(TextBuffer()))
         return error;
-      Characters(text);
     } else {
       size_t end = std::min(m_text.find_first_of("<&", m_pos), m_text.size());
-      llvm::StringRef text = llvm::StringRef(m_text).slice(m_pos, end);
+      llvm::StringRef text = m_text.slice(m_pos, end);
       if (text.contains("]]>"))
         return MakeError("']]>' in character data");
-      Characters(text);
+      AppendText(text);
       m_pos = end;
     }
   }
