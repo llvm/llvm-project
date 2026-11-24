@@ -796,11 +796,13 @@ void RewriteMFMAFormStage::apply(const MFMARewritePlan &Plan) {
   // of a dst that needs restoring and, further on, the AGPR-form value a src2
   // bridge copies back in. Give every disconnected piece its own register.
   for (auto [OldReg, NewReg] : RedefMap) {
-    SmallVector<LiveInterval *, 4> SplitLIs;
-    if (DAG.LIS->hasInterval(OldReg))
-      DAG.LIS->splitSeparateComponents(DAG.LIS->getInterval(OldReg), SplitLIs);
-    if (DAG.LIS->hasInterval(NewReg))
-      DAG.LIS->splitSeparateComponents(DAG.LIS->getInterval(NewReg), SplitLIs);
+    for (Register Reg : {OldReg, NewReg}) {
+      // splitSeparateComponents() hands pieces out from the front of the
+      // vector, so give each register a vector of its own.
+      SmallVector<LiveInterval *, 4> SplitLIs;
+      if (DAG.LIS->hasInterval(Reg))
+        DAG.LIS->splitSeparateComponents(DAG.LIS->getInterval(Reg), SplitLIs);
+    }
   }
 
   // Liveins may have been modified for cross RC copies
