@@ -2450,7 +2450,14 @@ void RegAllocFastImpl::foldInlineAsmReg(MachineInstr *&MI, Register Reg) {
         --StorePos;
     }
 
-    if (ReadReg != Reg || StorePos != MBB.begin()) {
+    if (ReadReg == Reg && StorePos == MBB.begin()) {
+      // Reg lives into the block, and the asm reads it from the slot. A block
+      // that defines Reg spills it there only if Reg may live out of that
+      // block, which a block allocated after this one can no longer tell from
+      // the asm, so record it now, as allocateInstruction() does for the uses
+      // it rewrites.
+      MayLiveAcrossBlocks.set(Reg.virtRegIndex());
+    } else {
       MachineInstrSpan MIS(StorePos, &MBB);
       TII->storeRegToStackSlot(MBB, StorePos, ReadReg, /*isKill=*/false, FI, RC,
                                ReadReg);
