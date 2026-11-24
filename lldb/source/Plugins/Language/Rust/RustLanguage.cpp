@@ -68,7 +68,7 @@ std::unique_ptr<Language::TypeScavenger> RustLanguage::GetTypeScavenger() {
     }
   };
 
-  return std::unique_ptr<TypeScavenger>(new RustTypeScavenger());
+  return std::make_unique<RustTypeScavenger>();
 }
 
 bool RustLanguage::IsNilReference(ValueObject &valobj) {

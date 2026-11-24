@@ -13,6 +13,7 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/MathExtras.h"
 #include <optional>
 
 using namespace lldb;
@@ -74,10 +75,10 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::GetChildAtIndex(
   if (idx >= CalculateNumChildrenIgnoringErrors())
     return lldb::ValueObjectSP();
 
-  uint64_t offset = m_start->GetValueAsUnsigned(0) + idx * m_element_size;
+  uint64_t address = m_start->GetValueAsUnsigned(0) + idx * m_element_size;
   StreamString name;
   name << llvm::formatv("[{0}]", idx);
-  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+  return CreateChildValueObjectFromAddress(name.GetString(), address,
                                            m_backend.GetExecutionContextRef(),
                                            m_element_type);
 }
@@ -98,13 +99,13 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
 
   m_len = m_backend.GetChildMemberWithName("len").get();
 
-  // Verify m_len < 1 << (ptr_bit_size - 1)
+  // Sanity check: Verify m_len < 2^(ptr_bit_size - 1)
   uint64_t len = m_len->GetValueAsUnsigned(0);
   lldb::TargetSP target_sp = m_len->GetTargetSP();
   if (target_sp) {
     uint32_t ptr_byte_size = target_sp->GetArchitecture().GetAddressByteSize();
     uint32_t ptr_bit_size = ptr_byte_size * 8;
-    if (len >= (1 << (ptr_bit_size - 1))) {
+    if (len >= llvm::maxUIntN(ptr_bit_size - 1)) {
       m_start = m_len = nullptr;
       return lldb::ChildCacheState::eRefetch;
     }
