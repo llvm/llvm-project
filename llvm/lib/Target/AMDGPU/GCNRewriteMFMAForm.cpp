@@ -247,6 +247,10 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
   // VGPR class, so it can never be recolored.
   DenseSet<Register> RedefRegs;
 
+  // The (block, register) pairs that already have a bridge copy for uses
+  // outside the MFMA's own block, shared by every MFMA defining the register.
+  DenseSet<std::pair<MachineBasicBlock *, Register>> CrossBlockBridged;
+
   for (MachineInstr *MI : Plan.MFMAs) {
     MFMARewriteEntry Entry;
     Entry.MFMA = MI;
@@ -314,12 +318,13 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
     Entry.DstNeedsRestore =
         !Entry.DstRecolorSafe && (DstUses.empty() || HasTiedUse);
     if (Entry.DstNeedsRestore) {
-      Plan.UseBridges.insert({MI->getParent(), DstReg});
+      Plan.UseBridges.push_back({MI->getParent(), DstReg});
       Plan.Entries.push_back(std::move(Entry));
       RedefRegs.insert(DstReg);
       continue;
     }
 
+    bool HasSameBlockBridge = false;
     for (MachineOperand *RUOp : RedirectableUses) {
       MachineInstr *UserMI = RUOp->getParent();
 
@@ -333,8 +338,17 @@ bool RewriteMFMAFormStage::buildPlan(MFMARewritePlan &Plan,
           MFMAToAGPR->operandAcceptsClass(*RUOp, DstAGPRClass);
       if (!CanReadAGPR && !is_contained(Entry.DstUseBridges, RUOp)) {
         Entry.DstUseBridges.push_back(RUOp);
-        // One copy per block serves every use of this register in it.
-        Plan.UseBridges.insert({UserMI->getParent(), DstReg});
+
+        // Record the copy apply() makes: one per MFMA in the MFMA's own block,
+        // one per register in any other block.
+        MachineBasicBlock *UseMBB = UserMI->getParent();
+        if (UseMBB == MI->getParent()) {
+          if (!HasSameBlockBridge)
+            Plan.UseBridges.push_back({UseMBB, DstReg});
+          HasSameBlockBridge = true;
+        } else if (CrossBlockBridged.insert({UseMBB, DstReg}).second) {
+          Plan.UseBridges.push_back({UseMBB, DstReg});
+        }
       }
 
       // If the dst is wholly recolored to AGPR, its reaching defs are

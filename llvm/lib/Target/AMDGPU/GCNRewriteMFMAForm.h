@@ -67,8 +67,9 @@ private:
     SmallSetVector<Register, 16> RecolorRegs;
     /// (reaching def, register) pairs that get one bridge copy each.
     SmallSetVector<std::pair<MachineInstr *, Register>, 16> DefBridges;
-    /// (block, register) pairs that get one bridge copy each.
-    SmallSetVector<std::pair<MachineBasicBlock *, Register>, 16> UseBridges;
+    /// One (block, register) pair per AGPR->VGPR copy or restore that apply()
+    /// emits, so the same pair can appear more than once.
+    SmallVector<std::pair<MachineBasicBlock *, Register>, 16> UseBridges;
   };
 
   /// Plan the rewrite of \p Cands, which must be in program order, into

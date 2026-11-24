@@ -1,0 +1,55 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -amdgpu-disable-rewrite-mfma-form-sched-stage=false -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+
+# Two MFMAs define %x in the same block. The first one's result is read by a
+# VALU, so it needs an AGPR->VGPR copy before the read. The second one's result
+# is read by a tied FMAC after the loop, so it is restored into %x. Both copies
+# land in the same block for the same register, and both have to be charged:
+# the cost model once keyed them as one. A copy of a 128-bit register in a loop
+# block costs 576.
+
+# CHECK: copy cost 1152
+
+--- |
+  define void @two_copies_one_charge() #0 {
+  entry:
+    unreachable
+  }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+...
+
+---
+name:            two_copies_one_charge
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1(0x7e000000), %bb.2(0x02000000)
+
+    %x:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %v:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %x.sub0, implicit $mode, implicit $exec
+    %x:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %x, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+    S_BRANCH %bb.1
+
+  bb.2:
+    %x.sub0:vreg_128_align2 = nofpexcept V_FMAC_F32_e32 %srca, %srcb, %x.sub0, implicit $mode, implicit $exec
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    KILL %x, %v
+    S_ENDPGM 0
+...
