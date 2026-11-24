@@ -175,14 +175,16 @@ struct Shape {
   PointerType *getSwitchResumePointerType() const {
     assert(ABI == coro::ABI::Switch);
     assert(CoroBegin && "CoroBegin not assigned");
-    return PointerType::getUnqual(CoroBegin->getContext());
+    const DataLayout &DL = CoroBegin->getModule()->getDataLayout();
+    return PointerType::get(CoroBegin->getContext(),
+                            DL.getProgramAddressSpace());
   }
 
   FunctionType *getResumeFunctionType() const {
     switch (ABI) {
     case coro::ABI::Switch:
       return FunctionType::get(Type::getVoidTy(CoroBegin->getContext()),
-                               PointerType::getUnqual(CoroBegin->getContext()),
+                               CoroBegin->getType(),
                                /*IsVarArg=*/false);
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:

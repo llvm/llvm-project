@@ -135,8 +135,8 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
                                         &*Builder.GetInsertPoint());
 
     LLVMContext &Ctx = Builder.getContext();
-    FunctionType *ResumeTy = FunctionType::get(
-        Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false);
+    FunctionType *ResumeTy =
+        FunctionType::get(Type::getVoidTy(Ctx), NewCall->getType(), false);
     auto *ResumeCall = Builder.CreateCall(ResumeTy, ResumeAddr, {NewCall});
 
     // We can't insert the 'ret' instruction and adjust the cc until the
@@ -1097,8 +1097,8 @@ void coro::BaseCloner::create() {
   OldFramePtr->replaceAllUsesWith(NewFramePtr);
 
   // Remap vFrame pointer.
-  auto *NewVFrame = Builder.CreateBitCast(
-      NewFramePtr, PointerType::getUnqual(Builder.getContext()), "vFrame");
+  auto *NewVFrame = Builder.CreatePointerBitCastOrAddrSpaceCast(
+      NewFramePtr, Shape.CoroBegin->getType(), "vFrame");
   Value *OldVFrame = cast<Value>(VMap[Shape.CoroBegin]);
   if (OldVFrame != NewVFrame)
     OldVFrame->replaceAllUsesWith(NewVFrame);
@@ -1479,7 +1479,7 @@ struct SwitchCoroutineSplitter {
     SmallVector<Type *> NewParams;
     NewParams.reserve(OldParams.size() + 1);
     NewParams.append(OldParams.begin(), OldParams.end());
-    NewParams.push_back(PointerType::getUnqual(Shape.FramePtr->getContext()));
+    NewParams.push_back(Shape.FramePtr->getType());
 
     auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
                                       OrigFnTy->isVarArg());

@@ -228,12 +228,13 @@ void CoroIdElider::elideHeapAllocations(uint64_t FrameSize, Align FrameAlign) {
   auto FrameTy = ArrayType::get(Type::getInt8Ty(C), FrameSize);
   auto *Frame = new AllocaInst(FrameTy, DL.getAllocaAddrSpace(), "", InsertPt);
   Frame->setAlignment(FrameAlign);
-  auto *FrameVoidPtr =
-      new BitCastInst(Frame, PointerType::getUnqual(C), "vFrame", InsertPt);
-
   for (auto *CB : CoroBegins) {
+    Value *FramePtr = Frame;
+    if (Frame->getType() != CB->getType())
+      FramePtr = CastInst::CreatePointerBitCastOrAddrSpaceCast(
+          Frame, CB->getType(), "vFrame", InsertPt);
     coro::elideCoroFree(CB);
-    CB->replaceAllUsesWith(FrameVoidPtr);
+    CB->replaceAllUsesWith(FramePtr);
     CB->eraseFromParent();
   }
 
