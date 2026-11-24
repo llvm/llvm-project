@@ -303,10 +303,7 @@ struct SectionHeaderTable : Chunk {
   static constexpr StringRef TypeStr = "SectionHeaderTable";
 };
 
-// The program header table. By default the program headers are written right
-// after the ELF header; this chunk places them at its position in the list of
-// sections instead. It has no section header, but can be included in segments
-// like a Fill.
+// Places the program header table at its position in the list of sections.
 struct ProgramHeaderTable : Chunk {
   ProgramHeaderTable()
       : Chunk(ChunkKind::ProgramHeaderTable, /*Implicit=*/false) {}

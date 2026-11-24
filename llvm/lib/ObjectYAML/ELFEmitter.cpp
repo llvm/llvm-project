@@ -276,8 +276,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
       continue;
     }
 
-    // Unlike the section header table, the program header table can be
-    // referenced by name from program headers, so it is named below.
+    // Named below, so that program headers can reference it.
     if (isa<ELFYAML::ProgramHeaderTable>(C.get())) {
       if (HasProgramHeaderTable)
         reportError("multiple program header tables are not allowed");
@@ -399,12 +398,12 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
   if (Doc.Header.EPhOff)
     Header.e_phoff = *Doc.Header.EPhOff;
-  else if (Doc.ProgramHeaders.empty())
-    Header.e_phoff = 0;
   else if (const ELFYAML::ProgramHeaderTable *PHT = Doc.getProgramHeaderTable())
     Header.e_phoff = *PHT->Offset;
-  else
+  else if (!Doc.ProgramHeaders.empty())
     Header.e_phoff = sizeof(Header);
+  else
+    Header.e_phoff = 0;
 
   if (Doc.Header.EPhEntSize)
     Header.e_phentsize = *Doc.Header.EPhEntSize;
@@ -703,11 +702,15 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       continue;
     }
 
-    if (ELFYAML::ProgramHeaderTable *S =
+    if (ELFYAML::ProgramHeaderTable *PHT =
             dyn_cast<ELFYAML::ProgramHeaderTable>(D.get())) {
-      S->Offset = alignToOffset(CBA, sizeof(typename ELFT::uint), S->Offset);
+      if (!PHT->Offset)
+        PHT->Offset = alignToOffset(CBA, sizeof(typename ELFT::uint),
+                                    /*Offset=*/std::nullopt);
+      else
+        PHT->Offset = alignToOffset(CBA, /*Align=*/1, PHT->Offset);
       uint64_t Size = Doc.ProgramHeaders.size() * sizeof(Elf_Phdr);
-      // The program headers are written once the segment layout is known.
+      // Filled in by writeELF.
       CBA.writeZeros(Size);
       LocationCounter += Size;
       continue;
@@ -1084,8 +1087,9 @@ ELFState<ELFT>::getPhdrFragments(const ELFYAML::ProgramHeader &Phdr,
       continue;
     }
 
-    if (const auto *P = dyn_cast<ELFYAML::ProgramHeaderTable>(C)) {
-      Ret.push_back({*P->Offset, Doc.ProgramHeaders.size() * sizeof(Elf_Phdr),
+    // Not a section, but takes up file space like one with contents.
+    if (const auto *PHT = dyn_cast<ELFYAML::ProgramHeaderTable>(C)) {
+      Ret.push_back({*PHT->Offset, Doc.ProgramHeaders.size() * sizeof(Elf_Phdr),
                      llvm::ELF::SHT_PROGBITS,
                      /*ShAddrAlign=*/sizeof(typename ELFT::uint)});
       continue;
