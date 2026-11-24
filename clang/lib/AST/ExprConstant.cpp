@@ -17817,12 +17817,22 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_isless:
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
-  case Builtin::BI__builtin_isunordered: {
+  case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig: {
     APFloat LHS(0.0);
     APFloat RHS(0.0);
     if (!EvaluateFloat(E->getArg(0), LHS, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
+
+    // iseqsig raises "invalid" for unordered operands. As for the comparison
+    // operators, don't fold that away when FP exceptions are modeled.
+    if (BuiltinOp == Builtin::BI__builtin_iseqsig && !Info.InConstantContext &&
+        LHS.compare(RHS) == APFloat::cmpUnordered &&
+        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained()) {
+      Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+      return false;
+    }
 
     return Success(
         [&] {
@@ -17842,6 +17852,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           }
           case Builtin::BI__builtin_isunordered:
             return LHS.compare(RHS) == APFloat::cmpResult::cmpUnordered;
+          case Builtin::BI__builtin_iseqsig:
+            return LHS.compare(RHS) == APFloat::cmpResult::cmpEqual;
           default:
             llvm_unreachable("Unexpected builtin ID: Should be a floating "
                              "point comparison function");

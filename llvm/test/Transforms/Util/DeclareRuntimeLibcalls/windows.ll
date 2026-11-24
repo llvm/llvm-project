@@ -78,7 +78,7 @@
 ; MSVC-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; MSVC-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
 ; MSVC-NEXT: declare void @__chkstk()
-; MSVC-NEXT: declare void @__clear_cache(ptr, ptr)
+; MSVC-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; MSVC-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
@@ -524,7 +524,7 @@
 ; MINGW-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; MINGW-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; MINGW-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; MINGW-NEXT: declare void @__clear_cache(ptr, ptr)
+; MINGW-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; MINGW-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
@@ -1082,7 +1082,7 @@
 ; CYGWIN-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; CYGWIN-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; CYGWIN-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; CYGWIN-NEXT: declare void @__clear_cache(ptr, ptr)
+; CYGWIN-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
@@ -1590,7 +1590,7 @@
 ; UEFI-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; UEFI-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
 ; UEFI-NEXT: declare void @__chkstk()
-; UEFI-NEXT: declare void @__clear_cache(ptr, ptr)
+; UEFI-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; UEFI-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]

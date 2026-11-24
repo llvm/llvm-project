@@ -2649,8 +2649,13 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       // Round the size up to a power of 2.
       Width = llvm::bit_ceil(Width);
 
-      // Set the alignment equal to the size.
-      Align = static_cast<unsigned>(Width);
+      // Raise the alignment to the size. If that would not raise it, keep the
+      // value type's alignment and alignment requirement; it can exceed the
+      // width only through __attribute__((aligned)) on a typedef or enum.
+      if (Align < Width)
+        Align = static_cast<unsigned>(Width);
+      else
+        AlignRequirement = Info.AlignRequirement;
     }
   }
   break;
