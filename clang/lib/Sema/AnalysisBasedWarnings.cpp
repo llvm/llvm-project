@@ -3061,7 +3061,7 @@ static bool shouldSkipAnalysisForDecl(Sema &S, const Decl *D) {
       (Diags.getSuppressSystemWarnings() &&
        S.SourceMgr.isInSystemHeader(D->getLocation())))
     return true;
-  return cast<DeclContext>(D)->isDependentContext();
+  return D->isTemplated();
 }
 
 static void
@@ -3115,6 +3115,20 @@ static bool shouldSuggestUnsafeBufferUsageSuggestions(const Sema &S) {
   return S.getLangOpts().CPlusPlus20 && !S.getDiagnostics()
                                              .getDiagnosticOptions()
                                              .ShowSafeBufferUsageSuggestions;
+}
+
+void clang::sema::AnalysisBasedWarnings::IssueWarningsForFileScopeInitializer(
+    const VarDecl *VD) {
+  if (VD->isInvalidDecl() || S.hasUncompilableErrorOccurred() ||
+      shouldSkipAnalysisForDecl(S, VD) ||
+      !shouldRunUnsafeBufferUsageAnalysis(S, VD->getBeginLoc()) ||
+      !VD->getInit() || VD->getInit()->isInstantiationDependent())
+    return;
+
+  // Fix-its cover variables within a callable. A file-scope initializer can
+  // be checked immediately in both diagnostic modes.
+  UnsafeBufferUsageReporter R(S, /*SuggestSuggestions=*/false);
+  clang::checkUnsafeBufferUsage(VD, R, /*EmitSuggestions=*/false);
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(

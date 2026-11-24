@@ -119,6 +119,8 @@ public:
   void IssueWarnings(Policy P, FunctionScopeInfo *fscope,
                      const Decl *D, QualType BlockType);
 
+  void IssueWarningsForFileScopeInitializer(const VarDecl *VD);
+
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 

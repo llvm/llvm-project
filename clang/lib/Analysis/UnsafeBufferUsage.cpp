@@ -130,12 +130,13 @@ public:
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
-  MatchDescendantVisitor(ASTContext &Context, FastMatcher &Matcher,
-                         bool FindAll, bool IgnoreUnevaluatedContext,
+  MatchDescendantVisitor(const Decl &D, FastMatcher &Matcher, bool FindAll,
+                         bool IgnoreUnevaluatedContext,
                          const UnsafeBufferUsageHandler &NewHandler)
       : Matcher(&Matcher), FindAll(FindAll), Matches(false),
         IgnoreUnevaluatedContext(IgnoreUnevaluatedContext),
-        ActiveASTContext(&Context), Handler(&NewHandler) {
+        InFileInitializer(isa<VarDecl>(D)), ActiveASTContext(&D.getASTContext()),
+        Handler(&NewHandler) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
   }
@@ -218,9 +219,23 @@ public:
   }
 
   bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) override {
+    // An aggregate can reuse the same field initializer in many variables.
+    if (InFileInitializer)
+      return true;
     if (!TraverseStmt(Node->getExpr()))
       return false;
     return DynamicRecursiveASTVisitor::TraverseCXXDefaultInitExpr(Node);
+  }
+
+  bool TraverseLambdaExpr(LambdaExpr *Node) override {
+    if (!InFileInitializer)
+      return DynamicRecursiveASTVisitor::TraverseLambdaExpr(Node);
+    // A file-scope lambda's call operator is checked separately. Its
+    // init-captures are evaluated as part of the enclosing initializer.
+    for (Expr *Init : Node->capture_inits())
+      if (!TraverseStmt(Init))
+        return false;
+    return true;
   }
 
   bool TraverseStmt(Stmt *Node) override {
@@ -251,6 +266,7 @@ private:
   const bool FindAll;
   bool Matches;
   bool IgnoreUnevaluatedContext;
+  bool InFileInitializer;
   ASTContext *ActiveASTContext;
   const UnsafeBufferUsageHandler *Handler;
 };
@@ -265,18 +281,18 @@ static bool hasArrayType(const Expr &E) {
 }
 
 static void
-forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
+forEachDescendantEvaluatedStmt(const Stmt *S, const Decl &D,
                                const UnsafeBufferUsageHandler &Handler,
                                FastMatcher &Matcher) {
-  MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
+  MatchDescendantVisitor Visitor(D, Matcher, /*FindAll=*/true,
                                  /*IgnoreUnevaluatedContext=*/true, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
-static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
+static void forEachDescendantStmt(const Stmt *S, const Decl &D,
                                   const UnsafeBufferUsageHandler &Handler,
                                   FastMatcher &Matcher) {
-  MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
+  MatchDescendantVisitor Visitor(D, Matcher, /*FindAll=*/true,
                                  /*IgnoreUnevaluatedContext=*/false, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
@@ -3257,16 +3273,16 @@ private:
 };
 
 // Scan the function and return a list of gadgets found with provided kits.
-static void findGadgets(const Stmt *S, ASTContext &Ctx,
+static void findGadgets(const Stmt *S, const Decl &D,
                         const UnsafeBufferUsageHandler &Handler,
                         bool EmitSuggestions, FixableGadgetList &FixableGadgets,
                         WarningGadgetList &WarningGadgets,
                         DeclUseTracker &Tracker) {
   WarningGadgetMatcher WMatcher{WarningGadgets};
-  forEachDescendantEvaluatedStmt(S, Ctx, Handler, WMatcher);
+  forEachDescendantEvaluatedStmt(S, D, Handler, WMatcher);
   if (EmitSuggestions) {
     FixableGadgetMatcher FMatcher{FixableGadgets, Tracker};
-    forEachDescendantStmt(S, Ctx, Handler, FMatcher);
+    forEachDescendantStmt(S, D, Handler, FMatcher);
   }
 }
 
@@ -5020,8 +5036,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   WarningGadgetList WarningGadgets;
   DeclUseTracker Tracker;
   for (const Stmt *S : Stmts) {
-    findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
-                WarningGadgets, Tracker);
+    findGadgets(S, *D, Handler, EmitSuggestions, FixableGadgets, WarningGadgets,
+                Tracker);
   }
   applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
                std::move(Tracker), Handler, EmitSuggestions);
