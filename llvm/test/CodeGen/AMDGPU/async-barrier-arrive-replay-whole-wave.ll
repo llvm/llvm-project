@@ -23,6 +23,7 @@ define amdgpu_gfx_whole_wave void @whole_wave_barrier(i1 %active) {
 ; ON-NEXT:    scratch_store_b32 off, v0, s32 nv ; 4-byte Folded Spill
 ; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_mov_b32 exec_lo, -1
+; ON-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; ON-NEXT:    v_mov_b32_e32 v0, 0
 ; ON-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; ON-NEXT:    ds_atomic_async_barrier_arrive_b64 v0
@@ -46,6 +47,7 @@ define amdgpu_gfx_whole_wave void @whole_wave_barrier(i1 %active) {
 ; OFF-NEXT:    s_xor_saveexec_b32 s0, -1
 ; OFF-NEXT:    scratch_store_b32 off, v0, s32 nv ; 4-byte Folded Spill
 ; OFF-NEXT:    s_mov_b32 exec_lo, -1
+; OFF-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; OFF-NEXT:    v_mov_b32_e32 v0, 0
 ; OFF-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; OFF-NEXT:    ds_atomic_async_barrier_arrive_b64 v0
@@ -356,10 +358,11 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_divergent(i1 %active) {
 ; ON-NEXT:    scratch_store_b32 off, v0, s32 nv ; 4-byte Folded Spill
 ; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_mov_b32 exec_lo, -1
+; ON-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1) 
 ; ON-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; ON-NEXT:    s_mov_b32 s1, exec_lo
-; ON-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; ON-NEXT:    v_and_b32_e32 v0, 1, v0
+; ON-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; ON-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; ON-NEXT:    s_cbranch_execz .LBB4_2
 ; ON-NEXT:  ; %bb.1: ; %arrive
@@ -374,6 +377,7 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_divergent(i1 %active) {
 ; ON-NEXT:  .LBB4_2: ; %exit
 ; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; ON-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; ON-NEXT:    v_cndmask_b32_e64 v0, 7, 42, s0
 ; ON-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; ON-NEXT:    scratch_load_b32 v0, off, s32 nv ; 4-byte Folded Reload
@@ -389,10 +393,11 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_divergent(i1 %active) {
 ; OFF-NEXT:    s_xor_saveexec_b32 s0, -1
 ; OFF-NEXT:    scratch_store_b32 off, v0, s32 nv ; 4-byte Folded Spill
 ; OFF-NEXT:    s_mov_b32 exec_lo, -1
+; OFF-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; OFF-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; OFF-NEXT:    s_mov_b32 s1, exec_lo
-; OFF-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; OFF-NEXT:    v_and_b32_e32 v0, 1, v0
+; OFF-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; OFF-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; OFF-NEXT:  ; %bb.1: ; %arrive
 ; OFF-NEXT:    v_mov_b32_e32 v0, 0
@@ -401,6 +406,7 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_divergent(i1 %active) {
 ; OFF-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; OFF-NEXT:  ; %bb.2: ; %exit
 ; OFF-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; OFF-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; OFF-NEXT:    v_cndmask_b32_e64 v0, 7, 42, s0
 ; OFF-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; OFF-NEXT:    scratch_load_b32 v0, off, s32 nv ; 4-byte Folded Reload
@@ -436,6 +442,7 @@ define amdgpu_gfx_whole_wave void @whole_wave_live_vgprs(i1 %active) {
 ; ON-NEXT:    scratch_store_b32 off, v2, s32 offset:8 nv
 ; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_mov_b32 exec_lo, -1
+; ON-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; ON-NEXT:    v_mov_b32_e32 v2, 0
 ; ON-NEXT:    ;;#ASMSTART
 ; ON-NEXT:    v_mov_b32_e32 v0, 0x7b
@@ -474,6 +481,7 @@ define amdgpu_gfx_whole_wave void @whole_wave_live_vgprs(i1 %active) {
 ; OFF-NEXT:    ; meta instruction
 ; OFF-NEXT:    scratch_store_b32 off, v2, s32 offset:8 nv
 ; OFF-NEXT:    s_mov_b32 exec_lo, -1
+; OFF-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; OFF-NEXT:    v_mov_b32_e32 v2, 0
 ; OFF-NEXT:    ;;#ASMSTART
 ; OFF-NEXT:    v_mov_b32_e32 v0, 0x7b

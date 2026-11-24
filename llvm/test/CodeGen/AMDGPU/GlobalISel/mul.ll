@@ -2732,11 +2732,13 @@ define amdgpu_ps <8 x i32> @s_mul_i256(i256 inreg %num, i256 inreg %den) {
 ; GFX12-NEXT:    s_mul_i32 s0, s0, s8
 ; GFX12-NEXT:    s_add_co_ci_u32 s25, s25, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s23, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_co_ci_u32 s15, s25, s21
 ; GFX12-NEXT:    s_add_co_ci_u32 s21, s22, s26
 ; GFX12-NEXT:    s_cmp_lg_u32 s38, 0
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s21, s1
 ; GFX12-NEXT:    s_cmp_lg_u32 s37, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, s2
 ; GFX12-NEXT:    s_cmp_lg_u32 s36, 0
 ; GFX12-NEXT:    s_mov_b32 s2, s17
@@ -2923,11 +2925,13 @@ define amdgpu_ps <8 x i32> @s_mul_i256(i256 inreg %num, i256 inreg %den) {
 ; GFX1250-NEXT:    s_mul_i32 s0, s0, s8
 ; GFX1250-NEXT:    s_add_co_ci_u32 s25, s25, 0
 ; GFX1250-NEXT:    s_cmp_lg_u32 s23, 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_add_co_ci_u32 s15, s25, s21
 ; GFX1250-NEXT:    s_add_co_ci_u32 s21, s22, s26
 ; GFX1250-NEXT:    s_cmp_lg_u32 s38, 0
 ; GFX1250-NEXT:    s_add_co_ci_u32 s1, s21, s1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s37, 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_add_co_ci_u32 s1, s1, s2
 ; GFX1250-NEXT:    s_cmp_lg_u32 s36, 0
 ; GFX1250-NEXT:    s_mov_b32 s2, s17
@@ -3110,11 +3114,13 @@ define amdgpu_ps <8 x i32> @s_mul_i256(i256 inreg %num, i256 inreg %den) {
 ; GFX13-NEXT:    s_mul_i32 s0, s0, s8
 ; GFX13-NEXT:    s_add_co_ci_u32 s25, s25, 0
 ; GFX13-NEXT:    s_cmp_lg_u32 s23, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_add_co_ci_u32 s15, s25, s21
 ; GFX13-NEXT:    s_add_co_ci_u32 s21, s22, s26
 ; GFX13-NEXT:    s_cmp_lg_u32 s38, 0
 ; GFX13-NEXT:    s_add_co_ci_u32 s1, s21, s1
 ; GFX13-NEXT:    s_cmp_lg_u32 s37, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_add_co_ci_u32 s1, s1, s2
 ; GFX13-NEXT:    s_cmp_lg_u32 s36, 0
 ; GFX13-NEXT:    s_mov_b32 s2, s17

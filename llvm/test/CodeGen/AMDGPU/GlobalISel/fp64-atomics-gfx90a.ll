@@ -1634,10 +1634,10 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %pt
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB36_2
@@ -1719,10 +1719,10 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB37_2
@@ -1806,10 +1806,10 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB38_2
@@ -1891,10 +1891,10 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB39_2
@@ -2096,10 +2096,10 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent_safe(ptr addrs
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB43_2
@@ -2490,10 +2490,10 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB51_2
@@ -2570,10 +2570,10 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB52_2
@@ -2650,10 +2650,10 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1250-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mul_f64_e32 v[0:1], 4.0, v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1250-NEXT:    s_cbranch_execz .LBB53_2

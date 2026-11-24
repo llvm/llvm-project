@@ -1024,6 +1024,7 @@ define amdgpu_kernel void @s_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_co_u32 v0, s0, s2, s3
 ; GFX11-NEXT:    s_cmp_eq_u32 s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB8_2
 ; GFX11-NEXT:  ; %bb.1: ; %if
 ; GFX11-NEXT:    s_xor_b32 s1, s0, -1
@@ -1190,10 +1191,11 @@ define amdgpu_kernel void @v_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 v1, v2
 ; GFX11-NEXT:  ; %bb.1: ; %if
 ; GFX11-NEXT:    s_xor_b32 s4, s6, -1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX11-NEXT:  ; %bb.2: ; %exit
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
 ; GFX11-NEXT:    s_clause 0x1

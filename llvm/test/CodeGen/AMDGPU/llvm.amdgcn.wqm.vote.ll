@@ -134,6 +134,7 @@ define amdgpu_ps float @kill(i32 %v0, i32 %v1) #1 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB3_2
 ; GFX11-NEXT:  ; %bb.1: ; %main_body
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_branch .LBB3_3
 ; GFX11-NEXT:  .LBB3_2:

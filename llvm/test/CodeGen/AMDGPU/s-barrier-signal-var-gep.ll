@@ -20,6 +20,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-NEXT:    s_mov_b32 m0, 0x10003f
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_barrier_init m0
 ; CHECK-NEXT:    s_barrier_signal 63
 ; CHECK-NEXT:    s_barrier_wait 0
@@ -32,7 +33,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; CHECK-OBJ-SDAG-NEXT:    v_nop
 ; CHECK-OBJ-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-OBJ-SDAG-NEXT:    s_and_b32 s0, __amdgpu_named_barrier.bars.7672b1ccf82b48a897c14e26b2081787@abs32@lo, 63
-; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_signal 63
@@ -46,6 +47,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; CHECK-OBJ-GISEL-NEXT:    v_nop
 ; CHECK-OBJ-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-OBJ-GISEL-NEXT:    s_mov_b32 m0, 0x10003f
+; CHECK-OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_signal 63
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_wait 0
@@ -64,6 +66,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; CHECK-SDAG-NEXT:    v_nop
 ; CHECK-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-SDAG-NEXT:    s_mov_b32 m0, 0x100000
+; CHECK-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-SDAG-NEXT:    s_mov_b32 m0, 0
 ; CHECK-SDAG-NEXT:    s_barrier_signal m0
@@ -77,6 +80,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; CHECK-GISEL-NEXT:    v_nop
 ; CHECK-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-GISEL-NEXT:    s_mov_b32 m0, 0x100000
+; CHECK-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-GISEL-NEXT:    s_barrier_init m0
 ; CHECK-GISEL-NEXT:    s_barrier_signal 0
 ; CHECK-GISEL-NEXT:    s_barrier_wait 1
@@ -92,6 +96,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
+; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -105,6 +110,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; CHECK-OBJ-GISEL-NEXT:    v_nop
 ; CHECK-OBJ-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-OBJ-GISEL-NEXT:    s_mov_b32 m0, 0x100000
+; CHECK-OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_signal 0
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_wait 1
@@ -133,6 +139,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; CHECK-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; CHECK-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
+; CHECK-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-SDAG-NEXT:    s_barrier_signal m0
@@ -151,6 +158,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; CHECK-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-GISEL-NEXT:    s_and_b32 s0, s0, 63
 ; CHECK-GISEL-NEXT:    s_or_b32 m0, s0, 0x100000
+; CHECK-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-GISEL-NEXT:    s_barrier_init m0
 ; CHECK-GISEL-NEXT:    s_mov_b32 m0, s0
 ; CHECK-GISEL-NEXT:    s_barrier_signal m0
@@ -169,6 +177,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
+; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -187,6 +196,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; CHECK-OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-OBJ-GISEL-NEXT:    s_and_b32 s0, s0, 63
 ; CHECK-OBJ-GISEL-NEXT:    s_or_b32 m0, s0, 0x100000
+; CHECK-OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
 ; CHECK-OBJ-GISEL-NEXT:    s_barrier_signal m0

@@ -372,9 +372,11 @@ define i16 @global_one_as_atomic_min_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB28_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -411,9 +413,11 @@ define i16 @global_one_as_atomic_min_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB28_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw min ptr addrspace(1) %ptr, i16 %val syncscope("one-as") monotonic
@@ -454,9 +458,11 @@ define i16 @global_one_as_atomic_umin_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB29_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -493,9 +499,11 @@ define i16 @global_one_as_atomic_umin_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB29_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw umin ptr addrspace(1) %ptr, i16 %val syncscope("one-as") monotonic
@@ -536,9 +544,11 @@ define i16 @global_one_as_atomic_max_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB30_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -575,9 +585,11 @@ define i16 @global_one_as_atomic_max_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB30_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw max ptr addrspace(1) %ptr, i16 %val syncscope("one-as") monotonic
@@ -618,9 +630,11 @@ define i16 @global_one_as_atomic_umax_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB31_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -657,9 +671,11 @@ define i16 @global_one_as_atomic_umax_i16(ptr addrspace(1) %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB31_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw umax ptr addrspace(1) %ptr, i16 %val syncscope("one-as") monotonic
@@ -733,6 +749,7 @@ define double @flat_system_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-NEXT:  .LBB34_6: ; %Flow2
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB34_8
 ; GFX1250-NEXT:  ; %bb.7: ; %atomicrmw.shared
@@ -792,6 +809,7 @@ define double @flat_one_as_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-NEXT:  .LBB35_6: ; %Flow2
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB35_8
 ; GFX1250-NEXT:  ; %bb.7: ; %atomicrmw.shared
@@ -1164,7 +1182,7 @@ define i64 @flat_one_as_atomic_min_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1210,7 +1228,7 @@ define i64 @flat_system_atomic_min_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1256,7 +1274,7 @@ define i64 @flat_one_as_atomic_max_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1302,7 +1320,7 @@ define i64 @flat_system_atomic_max_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1348,7 +1366,7 @@ define i64 @flat_one_as_atomic_umin_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1394,7 +1412,7 @@ define i64 @flat_system_atomic_umin_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1440,7 +1458,7 @@ define i64 @flat_one_as_atomic_umax_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1486,7 +1504,7 @@ define i64 @flat_system_atomic_umax_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GFX1250-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -1534,9 +1552,11 @@ define i16 @flat_one_as_atomic_min_i16(ptr %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB60_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -1573,9 +1593,11 @@ define i16 @flat_one_as_atomic_min_i16(ptr %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB60_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw min ptr %ptr, i16 %val syncscope("one-as") monotonic
@@ -1616,9 +1638,11 @@ define i16 @flat_one_as_atomic_umin_i16(ptr %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB61_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -1655,9 +1679,11 @@ define i16 @flat_one_as_atomic_umin_i16(ptr %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB61_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw umin ptr %ptr, i16 %val syncscope("one-as") monotonic
@@ -1698,9 +1724,11 @@ define i16 @flat_one_as_atomic_max_i16(ptr %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB62_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -1737,9 +1765,11 @@ define i16 @flat_one_as_atomic_max_i16(ptr %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB62_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw max ptr %ptr, i16 %val syncscope("one-as") monotonic
@@ -1780,9 +1810,11 @@ define i16 @flat_one_as_atomic_umax_i16(ptr %ptr, i16 %val) {
 ; FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; FAKE16-NEXT:    s_wait_xcnt 0x0
 ; FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_cbranch_execnz .LBB63_1
 ; FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -1819,9 +1851,11 @@ define i16 @flat_one_as_atomic_umax_i16(ptr %ptr, i16 %val) {
 ; REAL16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; REAL16-NEXT:    s_wait_xcnt 0x0
 ; REAL16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_cbranch_execnz .LBB63_1
 ; REAL16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; REAL16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    v_lshrrev_b32_e32 v0, v3, v4
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw umax ptr %ptr, i16 %val syncscope("one-as") monotonic

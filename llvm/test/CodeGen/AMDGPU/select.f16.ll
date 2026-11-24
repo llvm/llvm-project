@@ -501,6 +501,7 @@ define <4 x half> @v_select_v4f16(<4 x half> %a, <4 x half> %b, i32 %cond) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %cond, 0
@@ -609,6 +610,7 @@ define <8 x half> @v_select_v8f16(<8 x half> %a, <8 x half> %b, i32 %cond) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v8
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
 ; GFX11-NEXT:    v_dual_cndmask_b32 v2, v6, v2 :: v_dual_cndmask_b32 v3, v7, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -774,6 +776,7 @@ define <16 x half> @v_select_v16f16(<16 x half> %a, <16 x half> %b, i32 %cond) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v16
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v8, v0 :: v_dual_cndmask_b32 v1, v9, v1
 ; GFX11-NEXT:    v_dual_cndmask_b32 v2, v10, v2 :: v_dual_cndmask_b32 v3, v11, v3
 ; GFX11-NEXT:    v_dual_cndmask_b32 v4, v12, v4 :: v_dual_cndmask_b32 v5, v13, v5
@@ -1075,6 +1078,7 @@ define <32 x half> @v_select_v32f16(<32 x half> %a, <32 x half> %b, i32 %cond) {
 ; GFX11-NEXT:    scratch_load_b32 v32, off, s32
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v31
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v16, v0 :: v_dual_cndmask_b32 v1, v17, v1
 ; GFX11-NEXT:    v_dual_cndmask_b32 v2, v18, v2 :: v_dual_cndmask_b32 v3, v19, v3
 ; GFX11-NEXT:    v_dual_cndmask_b32 v4, v20, v4 :: v_dual_cndmask_b32 v5, v21, v5

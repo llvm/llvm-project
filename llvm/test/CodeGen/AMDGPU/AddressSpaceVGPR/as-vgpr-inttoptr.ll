@@ -15,8 +15,8 @@ define i32 @load_i32() {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 m0, 64
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %p = inttoptr i32 256 to ptr addrspace(13)

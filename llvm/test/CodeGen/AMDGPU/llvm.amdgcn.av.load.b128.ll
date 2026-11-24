@@ -8367,6 +8367,7 @@ define <4 x float> @global_addr_64bit_lsr_iv(ptr addrspace(1) %arg) {
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_add_i32 s0, s0, 1
 ; GFX1100-SDAG-NEXT:    s_cmpk_eq_i32 s0, 0xff
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_cbranch_scc0 .LBB68_1
 ; GFX1100-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-SDAG-NEXT:    s_mov_b32 s1, 0
@@ -8388,6 +8389,7 @@ define <4 x float> @global_addr_64bit_lsr_iv(ptr addrspace(1) %arg) {
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB68_1
 ; GFX1250-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s1, 0
@@ -8409,6 +8411,7 @@ define <4 x float> @global_addr_64bit_lsr_iv(ptr addrspace(1) %arg) {
 ; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1310-SDAG-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_cbranch_scc0 .LBB68_1
 ; GFX1310-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-SDAG-NEXT:    s_mov_b32 s1, 0
@@ -8489,6 +8492,7 @@ define <4 x float> @global_addr_64bit_lsr_iv(ptr addrspace(1) %arg) {
 ; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_add_i32 s0, s0, 1
 ; GFX1100-ISEL-NEXT:    s_cmpk_eq_i32 s0, 0xff
+; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_cbranch_scc0 .LBB68_1
 ; GFX1100-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-ISEL-NEXT:    s_mov_b32 s1, 0
@@ -8512,6 +8516,7 @@ define <4 x float> @global_addr_64bit_lsr_iv(ptr addrspace(1) %arg) {
 ; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-ISEL-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_cbranch_scc0 .LBB68_1
 ; GFX1250-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-ISEL-NEXT:    s_mov_b32 s1, 0
@@ -8537,6 +8542,7 @@ define <4 x float> @global_addr_64bit_lsr_iv(ptr addrspace(1) %arg) {
 ; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1310-ISEL-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_cbranch_scc0 .LBB68_1
 ; GFX1310-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-ISEL-NEXT:    s_mov_b32 s1, 0
@@ -8632,6 +8638,7 @@ define <4 x float> @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) %arg, pt
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_add_i32 s0, s0, 1
 ; GFX1100-SDAG-NEXT:    s_cmpk_eq_i32 s0, 0xff
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_cbranch_scc0 .LBB69_1
 ; GFX1100-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-SDAG-NEXT:    s_mov_b32 s1, 0
@@ -8653,6 +8660,7 @@ define <4 x float> @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) %arg, pt
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB69_1
 ; GFX1250-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s1, 0
@@ -8674,6 +8682,7 @@ define <4 x float> @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) %arg, pt
 ; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1310-SDAG-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_cbranch_scc0 .LBB69_1
 ; GFX1310-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-SDAG-NEXT:    s_mov_b32 s1, 0
@@ -8754,6 +8763,7 @@ define <4 x float> @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) %arg, pt
 ; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_add_i32 s0, s0, 1
 ; GFX1100-ISEL-NEXT:    s_cmpk_eq_i32 s0, 0xff
+; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_cbranch_scc0 .LBB69_1
 ; GFX1100-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-ISEL-NEXT:    s_mov_b32 s1, 0
@@ -8777,6 +8787,7 @@ define <4 x float> @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) %arg, pt
 ; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-ISEL-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_cbranch_scc0 .LBB69_1
 ; GFX1250-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-ISEL-NEXT:    s_mov_b32 s1, 0
@@ -8802,6 +8813,7 @@ define <4 x float> @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) %arg, pt
 ; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1310-ISEL-NEXT:    s_cmp_eq_u32 s0, 0xff
+; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_cbranch_scc0 .LBB69_1
 ; GFX1310-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-ISEL-NEXT:    s_mov_b32 s1, 0
@@ -16878,6 +16890,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_add_i32 s2, s2, 1
 ; GFX1100-SDAG-NEXT:    s_cmpk_eq_i32 s2, 0xff
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_cbranch_scc0 .LBB122_1
 ; GFX1100-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-SDAG-NEXT:    s_mov_b32 s3, 0
@@ -16900,6 +16913,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB122_1
 ; GFX1250-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0
@@ -16923,6 +16937,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1310-SDAG-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_cbranch_scc0 .LBB122_1
 ; GFX1310-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-SDAG-NEXT:    s_mov_b32 s3, 0
@@ -17024,6 +17039,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_add_i32 s2, s2, 1
 ; GFX1100-ISEL-NEXT:    s_cmpk_eq_i32 s2, 0xff
+; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_cbranch_scc0 .LBB122_1
 ; GFX1100-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-ISEL-NEXT:    s_mov_b32 s3, 0
@@ -17053,6 +17069,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1250-ISEL-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_cbranch_scc0 .LBB122_1
 ; GFX1250-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-ISEL-NEXT:    s_mov_b32 s3, 0
@@ -17085,6 +17102,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1310-ISEL-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_cbranch_scc0 .LBB122_1
 ; GFX1310-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-ISEL-NEXT:    s_mov_b32 s3, 0
@@ -17190,6 +17208,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_add_i32 s2, s2, 1
 ; GFX1100-SDAG-NEXT:    s_cmpk_eq_i32 s2, 0xff
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-SDAG-NEXT:    s_cbranch_scc0 .LBB123_1
 ; GFX1100-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-SDAG-NEXT:    s_mov_b32 s3, 0
@@ -17212,6 +17231,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB123_1
 ; GFX1250-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0
@@ -17235,6 +17255,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1310-SDAG-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1310-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-SDAG-NEXT:    s_cbranch_scc0 .LBB123_1
 ; GFX1310-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-SDAG-NEXT:    s_mov_b32 s3, 0
@@ -17336,6 +17357,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_add_i32 s2, s2, 1
 ; GFX1100-ISEL-NEXT:    s_cmpk_eq_i32 s2, 0xff
+; GFX1100-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-ISEL-NEXT:    s_cbranch_scc0 .LBB123_1
 ; GFX1100-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1100-ISEL-NEXT:    s_mov_b32 s3, 0
@@ -17365,6 +17387,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1250-ISEL-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-ISEL-NEXT:    s_cbranch_scc0 .LBB123_1
 ; GFX1250-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-ISEL-NEXT:    s_mov_b32 s3, 0
@@ -17397,6 +17420,7 @@ define <4 x float> @global_saddr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg %
 ; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_add_co_i32 s2, s2, 1
 ; GFX1310-ISEL-NEXT:    s_cmp_eq_u32 s2, 0xff
+; GFX1310-ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1310-ISEL-NEXT:    s_cbranch_scc0 .LBB123_1
 ; GFX1310-ISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX1310-ISEL-NEXT:    s_mov_b32 s3, 0

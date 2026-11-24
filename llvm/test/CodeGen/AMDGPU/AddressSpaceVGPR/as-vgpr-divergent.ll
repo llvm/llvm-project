@@ -27,6 +27,7 @@ define i32 @load_i32(ptr addrspace(13) %p) {
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    v_cmpx_eq_u32_e32 s2, v0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v0
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -34,6 +35,7 @@ define i32 @load_i32(ptr addrspace(13) %p) {
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-SDAG-NEXT:  ; %bb.2:
 ; GFX12-SDAG-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_add_nc_u32_e32 v0, 1, v1
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -58,9 +60,11 @@ define i32 @load_i32(ptr addrspace(13) %p) {
 ; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:
 ; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -129,6 +133,7 @@ define void @store_i32(ptr addrspace(13) %p, i32 %x) {
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-SDAG-NEXT:    v_cmpx_eq_u32_e32 s2, v0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v1
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr1
@@ -162,6 +167,7 @@ define void @store_i32(ptr addrspace(13) %p, i32 %x) {
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:
 ; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s0

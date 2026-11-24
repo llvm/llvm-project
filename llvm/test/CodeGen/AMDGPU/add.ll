@@ -1299,6 +1299,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX11-NEXT:  ; %bb.1: ; %else
 ; GFX11-NEXT:    s_add_u32 s2, s4, s6
@@ -1318,6 +1319,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX12-NEXT:  ; %bb.1: ; %else
 ; GFX12-NEXT:    s_add_nc_u64 s[2:3], s[4:5], s[6:7]

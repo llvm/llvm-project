@@ -46,7 +46,7 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -85,8 +85,8 @@ define void @buffer_fat_ptr_agent_atomic_usub_cond_noret_u32__offset__amdgpu_no_
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v1, v2, v0
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v2, v0
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -95,7 +95,7 @@ define void @buffer_fat_ptr_agent_atomic_usub_cond_noret_u32__offset__amdgpu_no_
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -145,7 +145,7 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_rem
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -195,7 +195,7 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -250,7 +250,7 @@ define i32 @buffer_fat_ptr_system_atomic_usub_cond_ret_u32__offset__amdgpu_no_fi
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end

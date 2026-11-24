@@ -92,6 +92,7 @@ define amdgpu_ps half @ps_ret_cc_f16(half %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -102,6 +103,7 @@ define amdgpu_ps half @ps_ret_cc_f16(half %arg0) {
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
   %add = fadd half %arg0, 1.0
@@ -138,8 +140,8 @@ define amdgpu_ps half @ps_ret_cc_inreg_f16(half inreg %arg0) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-NEXT:    s_add_f16 s0, s0, 1.0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %add = fadd half %arg0, 1.0
@@ -465,6 +467,7 @@ define amdgpu_cs half @cs_mesa(half %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -475,6 +478,7 @@ define amdgpu_cs half @cs_mesa(half %arg0) {
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
   %add = fadd half %arg0, 1.0
@@ -512,6 +516,7 @@ define amdgpu_ps half @ps_mesa_f16(half %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -522,6 +527,7 @@ define amdgpu_ps half @ps_mesa_f16(half %arg0) {
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
   %add = fadd half %arg0, 1.0
@@ -559,6 +565,7 @@ define amdgpu_vs half @vs_mesa(half %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -569,6 +576,7 @@ define amdgpu_vs half @vs_mesa(half %arg0) {
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
   %add = fadd half %arg0, 1.0
@@ -606,6 +614,7 @@ define amdgpu_gs half @gs_mesa(half %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -616,6 +625,7 @@ define amdgpu_gs half @gs_mesa(half %arg0) {
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
   %add = fadd half %arg0, 1.0
@@ -653,6 +663,7 @@ define amdgpu_hs half @hs_mesa(half %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX1250-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -663,6 +674,7 @@ define amdgpu_hs half @hs_mesa(half %arg0) {
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-FAKE16-NEXT:    v_add_f16_e32 v0, 1.0, v0
 ; GFX1250-FAKE16-NEXT:    ; return to shader part epilog
   %add = fadd half %arg0, 1.0
@@ -705,6 +717,7 @@ define amdgpu_ps <2 x half> @ps_mesa_v2f16(<2 x half> %arg0) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %add = fadd <2 x half> %arg0, <half 1.0, half 1.0>
@@ -747,6 +760,7 @@ define amdgpu_ps <2 x half> @ps_mesa_inreg_v2f16(<2 x half> inreg %arg0) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_pk_add_f16 v0, s0, 1.0 op_sel_hi:[1,0]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %add = fadd <2 x half> %arg0, <half 1.0, half 1.0>
@@ -888,6 +902,7 @@ define amdgpu_ps <4 x half> @ps_mesa_v4f16(<4 x half> %arg0) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GFX1250-NEXT:    v_pk_add_f16 v1, v1, 1.0 op_sel_hi:[1,0]
 ; GFX1250-NEXT:    ; return to shader part epilog
@@ -946,6 +961,7 @@ define amdgpu_ps <4 x half> @ps_mesa_inreg_v4f16(<4 x half> inreg %arg0) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_pk_add_f16 v0, s0, 1.0 op_sel_hi:[1,0]
 ; GFX1250-NEXT:    v_pk_add_f16 v1, s1, 1.0 op_sel_hi:[1,0]
 ; GFX1250-NEXT:    ; return to shader part epilog

@@ -602,15 +602,15 @@ define amdgpu_ps void @insertelement_s_v2i8_v_v(ptr addrspace(4) inreg %ptr, i8 
 ; GFX11-FAKE16-NEXT:    global_load_u16 v2, v2, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v2, s0, v0, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
 ; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 8
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v2, 0xff, v2
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, s1, v0, vcc_lo
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v3, 8, v0
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-FAKE16-NEXT:    s_endpgm
@@ -907,7 +907,7 @@ define amdgpu_ps void @insertelement_v_v2i8_v_v(ptr addrspace(1) %ptr, i8 %val, 
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v1.l, 8, v0.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_dual_cndmask_b32 v1, v1, v2 :: v_dual_mov_b32 v2, 0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v1.l
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0

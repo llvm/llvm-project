@@ -2790,6 +2790,7 @@ define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB15_2
 ; GFX11-NEXT:  ; %bb.1: ; %else
 ; GFX11-NEXT:    s_mul_i32 s2, s6, s7
@@ -2815,6 +2816,7 @@ define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB15_2
 ; GFX12-NEXT:  ; %bb.1: ; %else
 ; GFX12-NEXT:    s_mul_i32 s2, s6, s7
@@ -2844,6 +2846,7 @@ define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cbranch_scc0 .LBB15_2
 ; GFX1250-NEXT:  ; %bb.1: ; %else
 ; GFX1250-NEXT:    s_mul_i32 s2, s6, s7
@@ -2868,6 +2871,7 @@ define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_cbranch_scc0 .LBB15_2
 ; GFX13-NEXT:  ; %bb.1: ; %else
 ; GFX13-NEXT:    s_mul_i32 s2, s6, s7
@@ -3058,6 +3062,7 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB16_2
 ; GFX11-NEXT:  ; %bb.1: ; %else
 ; GFX11-NEXT:    s_mul_i32 s2, s4, s7
@@ -3086,6 +3091,7 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB16_2
 ; GFX12-NEXT:  ; %bb.1: ; %else
 ; GFX12-NEXT:    s_mul_u64 s[2:3], s[4:5], s[6:7]
@@ -3113,6 +3119,7 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_lg_u64 s[12:13], 0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cbranch_scc0 .LBB16_2
 ; GFX1250-NEXT:  ; %bb.1: ; %else
 ; GFX1250-NEXT:    s_mul_u64 s[0:1], s[12:13], s[14:15]
@@ -3135,6 +3142,7 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX13-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24 nv
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_cbranch_scc0 .LBB16_2
 ; GFX13-NEXT:  ; %bb.1: ; %else
 ; GFX13-NEXT:    s_mul_u64 s[2:3], s[4:5], s[6:7]

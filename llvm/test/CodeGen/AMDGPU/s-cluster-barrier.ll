@@ -12,6 +12,7 @@ define amdgpu_kernel void @kernel1() #0 {
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX12-NEXT:    s_cmp_eq_u32 0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-NEXT:    s_barrier_wait -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB0_2
@@ -25,6 +26,7 @@ define amdgpu_kernel void @kernel1() #0 {
 ; GFX13-SDAG-LABEL: kernel1:
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-SDAG-NEXT:    s_barrier_wait -1
 ; GFX13-SDAG-NEXT:    s_cbranch_scc0 .LBB0_2
@@ -38,13 +40,14 @@ define amdgpu_kernel void @kernel1() #0 {
 ; GFX13-GISEL-LABEL: kernel1:
 ; GFX13-GISEL:       ; %bb.0:
 ; GFX13-GISEL-NEXT:    s_cmp_eq_u32 0, 0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX13-GISEL-NEXT:    s_barrier_wait -1
 ; GFX13-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_xor_b32 s0, s0, 1
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, s0, 1
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX13-GISEL-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX13-GISEL-NEXT:  ; %bb.1:

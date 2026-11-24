@@ -165,7 +165,7 @@ define amdgpu_ps void @cluster_load_b32_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s3, s3, s2
@@ -186,7 +186,7 @@ define amdgpu_ps void @cluster_load_b32_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s3, s3, s2
@@ -220,7 +220,7 @@ define amdgpu_ps void @cluster_load_b32_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1250S-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250S-GISEL-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250S-GISEL-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250S-GISEL-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s3, s3, s2
@@ -252,6 +252,7 @@ define amdgpu_ps void @cluster_load_monitor_b32_saddr_scale_offset(ptr addrspace
 ; GFX1250-SDAG-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s3, s3, s2
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s4, 0xffff
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 m0, s3, s2
 ; GFX1250-SDAG-NEXT:    cluster_load_b32 v2, v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -272,6 +273,7 @@ define amdgpu_ps void @cluster_load_monitor_b32_saddr_scale_offset(ptr addrspace
 ; GFX1250-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s3, s3, s2
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s4, 0xffff
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 m0, s3, s2
 ; GFX1250-GISEL-NEXT:    cluster_load_b32 v2, v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -304,6 +306,7 @@ define amdgpu_ps void @cluster_load_monitor_b32_saddr_scale_offset(ptr addrspace
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s3, s3, s2
 ; GFX1250S-GISEL-NEXT:    s_cmp_eq_u32 s4, 0xffff
+; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250S-GISEL-NEXT:    s_cselect_b32 m0, s3, s2
 ; GFX1250S-GISEL-NEXT:    cluster_load_b32 v2, v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250S-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -474,7 +477,7 @@ define amdgpu_ps void @cluster_load_b64_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s3, s3, s2
@@ -495,7 +498,7 @@ define amdgpu_ps void @cluster_load_b64_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s3, s3, s2
@@ -529,7 +532,7 @@ define amdgpu_ps void @cluster_load_b64_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1250S-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250S-GISEL-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250S-GISEL-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250S-GISEL-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s3, s3, s2
@@ -561,6 +564,7 @@ define amdgpu_ps void @cluster_load_monitor_b64_saddr_scale_offset(ptr addrspace
 ; GFX1250-SDAG-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s3, s3, s2
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s4, 0xffff
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 m0, s3, s2
 ; GFX1250-SDAG-NEXT:    cluster_load_b64 v[2:3], v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -581,6 +585,7 @@ define amdgpu_ps void @cluster_load_monitor_b64_saddr_scale_offset(ptr addrspace
 ; GFX1250-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s3, s3, s2
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s4, 0xffff
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 m0, s3, s2
 ; GFX1250-GISEL-NEXT:    cluster_load_b64 v[2:3], v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -613,6 +618,7 @@ define amdgpu_ps void @cluster_load_monitor_b64_saddr_scale_offset(ptr addrspace
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s3, s3, s2
 ; GFX1250S-GISEL-NEXT:    s_cmp_eq_u32 s4, 0xffff
+; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250S-GISEL-NEXT:    s_cselect_b32 m0, s3, s2
 ; GFX1250S-GISEL-NEXT:    cluster_load_b64 v[2:3], v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250S-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -783,7 +789,7 @@ define amdgpu_ps void @cluster_load_b128_saddr(ptr addrspace(1) inreg %addr, ptr
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s3, s3, s2
@@ -804,7 +810,7 @@ define amdgpu_ps void @cluster_load_b128_saddr(ptr addrspace(1) inreg %addr, ptr
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s3, s3, s2
@@ -838,7 +844,7 @@ define amdgpu_ps void @cluster_load_b128_saddr(ptr addrspace(1) inreg %addr, ptr
 ; GFX1250S-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250S-GISEL-NEXT:    s_cmp_eq_u32 s3, 15
 ; GFX1250S-GISEL-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250S-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250S-GISEL-NEXT:    s_cselect_b32 s3, s3, 0xffff7fff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX1250S-GISEL-NEXT:    s_and_b32 s3, s3, s2

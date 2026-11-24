@@ -11,6 +11,7 @@ define amdgpu_cs void @dvgpr_spill_under_cap() #0 {
 ; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART

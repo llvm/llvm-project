@@ -91,12 +91,14 @@ define amdgpu_ps i32 @s_uitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX11-LABEL: s_uitofp_i1_to_bf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, 0x3f80, 0
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_uitofp_i1_to_bf16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, 0x3f80, 0
 ; GFX12-NEXT:    ; return to shader part epilog
   %op = uitofp i1 %num to bfloat
@@ -225,6 +227,7 @@ define amdgpu_ps <2 x i32> @s_uitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_and_b32 s0, 1, s0
 ; GFX11-NEXT:    s_bitcmp1_b32 s1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s1, 0x3f80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 1
 ; GFX11-NEXT:    s_cselect_b32 s0, 0x3f80, 0
@@ -234,6 +237,7 @@ define amdgpu_ps <2 x i32> @s_uitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_and_b32 s0, 1, s0
 ; GFX12-NEXT:    s_bitcmp1_b32 s1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, 0x3f80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s0, 1
 ; GFX12-NEXT:    s_cselect_b32 s0, 0x3f80, 0
@@ -392,10 +396,12 @@ define amdgpu_ps <3 x i32> @s_uitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX11-NEXT:    s_and_b32 s0, 1, s0
 ; GFX11-NEXT:    s_and_b32 s1, 1, s1
 ; GFX11-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s2, 0x3f80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX11-NEXT:    s_cselect_b32 s1, 0x3f80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, 0x3f80, 0
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -404,10 +410,12 @@ define amdgpu_ps <3 x i32> @s_uitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX12-NEXT:    s_and_b32 s0, 1, s0
 ; GFX12-NEXT:    s_and_b32 s1, 1, s1
 ; GFX12-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s2, 0x3f80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX12-NEXT:    s_cselect_b32 s1, 0x3f80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, 0x3f80, 0
 ; GFX12-NEXT:    ; return to shader part epilog
   %op = uitofp <3 x i1> %num to <3 x bfloat>
@@ -595,10 +603,12 @@ define amdgpu_ps <4 x i32> @s_uitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX11-NEXT:    s_and_b32 s1, 1, s1
 ; GFX11-NEXT:    s_and_b32 s2, 1, s2
 ; GFX11-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s3, 0x3f80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s2, 1
 ; GFX11-NEXT:    s_cselect_b32 s2, 0x3f80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s1, 0x3f80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 1
 ; GFX11-NEXT:    s_cselect_b32 s0, 0x3f80, 0
@@ -610,10 +620,12 @@ define amdgpu_ps <4 x i32> @s_uitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX12-NEXT:    s_and_b32 s1, 1, s1
 ; GFX12-NEXT:    s_and_b32 s2, 1, s2
 ; GFX12-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s3, 0x3f80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s2, 1
 ; GFX12-NEXT:    s_cselect_b32 s2, 0x3f80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, 0x3f80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s0, 1
 ; GFX12-NEXT:    s_cselect_b32 s0, 0x3f80, 0
@@ -710,16 +722,16 @@ define amdgpu_ps i32 @s_sitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX11-LABEL: s_sitofp_i1_to_bf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, 0xbf80, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_sitofp_i1_to_bf16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, 0xbf80, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
   %op = sitofp i1 %num to bfloat
@@ -850,11 +862,11 @@ define amdgpu_ps <2 x i32> @s_sitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_and_b32 s1, 1, s1
 ; GFX11-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, 0xbf80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX11-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX11-NEXT:    s_cselect_b32 s1, 0xbf80, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -862,11 +874,11 @@ define amdgpu_ps <2 x i32> @s_sitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_and_b32 s1, 1, s1
 ; GFX12-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, 0xbf80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX12-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-NEXT:    s_cselect_b32 s1, 0xbf80, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    ; return to shader part epilog
   %op = sitofp <2 x i1> %num to <2 x bfloat>
@@ -1026,6 +1038,7 @@ define amdgpu_ps <3 x i32> @s_sitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX11-NEXT:    s_and_b32 s2, 1, s2
 ; GFX11-NEXT:    s_and_b32 s1, 1, s1
 ; GFX11-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, 0xbf80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX11-NEXT:    s_sext_i32_i16 s0, s0
@@ -1042,6 +1055,7 @@ define amdgpu_ps <3 x i32> @s_sitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX12-NEXT:    s_and_b32 s2, 1, s2
 ; GFX12-NEXT:    s_and_b32 s1, 1, s1
 ; GFX12-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, 0xbf80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX12-NEXT:    s_sext_i32_i16 s0, s0
@@ -1241,6 +1255,7 @@ define amdgpu_ps <4 x i32> @s_sitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX11-NEXT:    s_and_b32 s2, 1, s2
 ; GFX11-NEXT:    s_and_b32 s1, 1, s1
 ; GFX11-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, 0xbf80, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX11-NEXT:    s_sext_i32_i16 s0, s0
@@ -1261,6 +1276,7 @@ define amdgpu_ps <4 x i32> @s_sitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX12-NEXT:    s_and_b32 s2, 1, s2
 ; GFX12-NEXT:    s_and_b32 s1, 1, s1
 ; GFX12-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, 0xbf80, 0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 1
 ; GFX12-NEXT:    s_sext_i32_i16 s0, s0

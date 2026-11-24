@@ -1422,7 +1422,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:  .LBB12_2: ; %UnifiedReturnBlock
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1439,6 +1439,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX11-SDAG-FAKE16-NEXT:    v_fmac_f16_e32 v2, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-SDAG-FAKE16-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1455,6 +1456,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX11-GISEL-TRUE16-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX11-GISEL-TRUE16-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1470,7 +1472,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX11-GISEL-FAKE16-NEXT:    v_fma_f16 v3, v0, v1, v2 op_sel:[1,0,0,0]
 ; GFX11-GISEL-FAKE16-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1494,7 +1496,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX12-SDAG-TRUE16-NEXT:  .LBB12_2: ; %UnifiedReturnBlock
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1516,6 +1518,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-SDAG-FAKE16-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-SDAG-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1537,6 +1540,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX12-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX12-GISEL-TRUE16-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1557,7 +1561,7 @@ define half @test_fma_hi_src0_other_block(<2 x half> %x, half %y, half %z, i1 %c
 ; GFX12-GISEL-FAKE16-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %x1 = extractelement <2 x half> %x, i32 1

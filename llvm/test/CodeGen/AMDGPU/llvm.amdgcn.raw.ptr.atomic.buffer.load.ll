@@ -21,7 +21,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_ptr_load_i32(ptr addrspace(8) %
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -44,7 +44,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_ptr_load_i32(ptr addrspace(8) %
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -111,7 +111,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_off(ptr addrspace(8) %
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -134,7 +134,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_off(ptr addrspace(8) %
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -200,7 +200,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_soff(ptr addrspace(8) 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -224,7 +224,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_soff(ptr addrspace(8) 
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -292,7 +292,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_dlc(ptr addrspace(8) %
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -315,7 +315,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_dlc(ptr addrspace(8) %
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -381,9 +381,10 @@ define amdgpu_kernel void @raw_nonptr_atomic_buffer_load_i32(ptr addrspace(8) %p
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-NEXT:  .LBB4_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s0, s1, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -405,9 +406,10 @@ define amdgpu_kernel void @raw_nonptr_atomic_buffer_load_i32(ptr addrspace(8) %p
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-NEXT:  .LBB4_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b32 s0, s1, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -476,7 +478,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr)
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[0:1]
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB5_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -501,7 +503,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr)
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[0:1]
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB5_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -531,7 +533,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v2i16(ptr addrspace(8) %pt
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -554,7 +556,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v2i16(ptr addrspace(8) %pt
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -625,6 +627,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX11-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX11-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
@@ -644,7 +647,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-SDAG-FAKE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX11-SDAG-FAKE16-NEXT:  ; %bb.2: ; %bb2
@@ -667,6 +670,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v0
 ; GFX11-GISEL-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -691,6 +695,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
@@ -715,7 +720,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX12-SDAG-FAKE16-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX12-SDAG-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-SDAG-FAKE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-SDAG-FAKE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-SDAG-FAKE16-NEXT:  ; %bb.2: ; %bb2
@@ -743,6 +748,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX12-GISEL-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v0
 ; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX12-GISEL-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-GISEL-TRUE16-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
@@ -769,6 +775,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ; GFX12-GISEL-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v0
 ; GFX12-GISEL-FAKE16-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX12-GISEL-FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-FAKE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-GISEL-FAKE16-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-GISEL-FAKE16-NEXT:    s_endpgm
@@ -798,7 +805,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i32(ptr addrspace(8) %pt
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v4, v0
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -821,7 +828,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i32(ptr addrspace(8) %pt
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v5, v0
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
@@ -891,7 +898,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_ptr(ptr addrspace(8) %ptr)
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -916,7 +923,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_ptr(ptr addrspace(8) %ptr)
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-NEXT:  ; %bb.2: ; %bb2
