@@ -3048,7 +3048,11 @@ OmpVariantMatchContext::OmpVariantMatchContext(bool isDeviceCompilation,
           std::move(targetOffloadTriple), /*DeviceNum=*/-1),
       features_(std::move(targetFeatures)) {
   for (llvm::omp::TraitProperty trait : constructTraits) {
-    addTrait(trait);
+    if (trait == llvm::omp::TraitProperty::invalid) {
+      addUnknownConstruct();
+    } else {
+      addTrait(trait);
+    }
   }
 }
 
@@ -3063,12 +3067,26 @@ OmpVariantMatchContext::OmpVariantMatchContext(const SemanticsContext &context,
 
 void AppendDirectiveContextTraits(llvm::omp::Directive directive,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  for (llvm::omp::TraitProperty trait :
-      llvm::omp::getConstructTraits(directive)) {
-    // TODO: Constructs that cannot be named in a construct selector, such as
-    // TASK, also belong to the construct trait set and count toward scores.
-    if (trait != llvm::omp::TraitProperty::invalid) {
-      constructTraits.push_back(trait);
+  // OpenMP 5.2 [7.1] / 6.0 [9.1]: the construct trait set holds every
+  // enclosing construct, even those that cannot be named in a selector. They
+  // keep their `invalid` placeholder; so far, only those below are handled.
+  auto addsUnknownConstruct{[](llvm::omp::Directive leaf) {
+    switch (leaf) {
+    case llvm::omp::Directive::OMPD_task:
+    case llvm::omp::Directive::OMPD_taskgroup:
+    case llvm::omp::Directive::OMPD_taskloop:
+      return true;
+    default:
+      return false;
+    }
+  }};
+  for (llvm::omp::Directive leaf :
+      llvm::omp::getLeafConstructsOrSelf(directive)) {
+    for (llvm::omp::TraitProperty trait : llvm::omp::getConstructTraits(leaf)) {
+      if (trait != llvm::omp::TraitProperty::invalid ||
+          addsUnknownConstruct(leaf)) {
+        constructTraits.push_back(trait);
+      }
     }
   }
 }

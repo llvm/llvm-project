@@ -233,6 +233,24 @@ contains
     end do
   end subroutine
 
+  ! A nested TASK contributes a position, but must not move the enclosing DO.
+  ! CHECK-LABEL: func.func @_QMloop_depthPnested_task(
+  ! CHECK: omp.parallel
+  ! CHECK: omp.wsloop
+  ! CHECK: omp.task
+  ! CHECK: omp.taskwait
+  ! CHECK: return
+  subroutine nested_task(n)
+    integer :: n, i
+    !$omp parallel do
+    do i = 1, n
+      !$omp task
+        !$omp metadirective when(construct={do}: taskyield) &
+        !$omp& when(implementation={vendor(score(3): llvm)}: taskwait)
+      !$omp end task
+    end do
+  end subroutine
+
   ! TARGET hides the outer PARALLEL. TARGET, PARALLEL, DO give depth three:
   ! CPU scores 9 and loses to the user selector's score of 10.
   ! CHECK-LABEL: func.func @_QMloop_depthPtarget_depth(

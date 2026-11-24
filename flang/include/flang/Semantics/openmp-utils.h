@@ -267,7 +267,9 @@ private:
 /// Append the construct traits contributed by \p directive.
 ///
 /// Combined and composite directives contribute their leaf constructs in
-/// source order. Informational directives do not contribute.
+/// source order. Informational directives do not contribute. Some constructs
+/// that cannot be named in a construct selector contribute an `invalid`
+/// placeholder.
 void AppendDirectiveContextTraits(llvm::omp::Directive directive,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 

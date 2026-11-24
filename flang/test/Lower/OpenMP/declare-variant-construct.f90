@@ -213,4 +213,52 @@ contains
       call base_do_simd()
     end do
   end subroutine test_rank_do_simd
+
+  subroutine base_task_weight
+    !$omp declare variant (vsub_cpu) match(device={kind(cpu)})
+    !$omp declare variant (vsub_score3) &
+    !$omp& match(implementation={vendor(score(3): llvm)})
+  end subroutine
+  subroutine vsub_cpu
+  end subroutine
+  subroutine vsub_score3
+  end subroutine
+
+  ! TASK, TASKLOOP and TASKGROUP cannot be named in a construct selector, but
+  ! they still count toward the device weight. Nested in PARALLEL, CPU scores
+  ! 1 + 2^2 = 5 and beats the vendor selector's 1 + 3 = 4. In the compound
+  ! construct, TASKLOOP is counted even though MASKED is not yet.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_task_weight(
+  ! CHECK:     omp.task
+  ! CHECK-NOT: fir.call
+  ! CHECK:     fir.call @_QMmPvsub_cpu()
+  ! CHECK:     omp.taskloop
+  ! CHECK-NOT: fir.call
+  ! CHECK:     fir.call @_QMmPvsub_cpu()
+  ! CHECK:     omp.taskgroup
+  ! CHECK-NOT: fir.call
+  ! CHECK:     fir.call @_QMmPvsub_cpu()
+  ! CHECK:     omp.masked
+  ! CHECK-NOT: fir.call
+  ! CHECK:     fir.call @_QMmPvsub_cpu()
+  subroutine test_task_weight(n)
+    integer :: n, i
+    !$omp parallel
+      !$omp task
+        call base_task_weight()
+      !$omp end task
+      !$omp taskloop
+      do i = 1, n
+        call base_task_weight()
+      end do
+      !$omp taskgroup
+        call base_task_weight()
+      !$omp end taskgroup
+    !$omp end parallel
+    !$omp parallel masked taskloop
+    do i = 1, n
+      call base_task_weight()
+    end do
+  end subroutine test_task_weight
 end module m
