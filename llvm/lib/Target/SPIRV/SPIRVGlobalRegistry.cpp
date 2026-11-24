@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -992,6 +993,40 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   return Reg;
 }
 
+// A binding is aliased when it is used under more than one name. It's
+// expected that differently typed aliases, for example reinterpretations
+// of a buffer, will use distinct names.
+bool SPIRVGlobalRegistry::isBindingAliased(const Module &M, uint32_t Set,
+                                           uint32_t Binding) {
+  if (!AliasedBindingsComputed) {
+    AliasedBindingsComputed = true;
+    DenseMap<std::pair<uint32_t, uint32_t>, StringRef> FirstName;
+    for (const Function &F : M) {
+      if (F.getIntrinsicID() !=
+          Intrinsic::spv_resource_handlefrombinding_mdname)
+        continue;
+      for (const User *U : F.users()) {
+        const auto *CI = dyn_cast<CallInst>(U);
+        if (!CI)
+          continue;
+        auto *S = dyn_cast<ConstantInt>(CI->getArgOperand(0));
+        auto *B = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+        if (!S || !B)
+          continue;
+        auto *NameMD = cast<MDNode>(
+            cast<MetadataAsValue>(CI->getArgOperand(4))->getMetadata());
+        StringRef Name = cast<MDString>(NameMD->getOperand(0))->getString();
+        std::pair<uint32_t, uint32_t> Key = {S->getZExtValue(),
+                                             B->getZExtValue()};
+        auto [It, Inserted] = FirstName.try_emplace(Key, Name);
+        if (!Inserted && It->second != Name)
+          AliasedBindings.insert(Key);
+      }
+    }
+  }
+  return AliasedBindings.contains({Set, Binding});
+}
+
 // Returns a name based on the Type. Notes that this does not look at
 // decorations, and will return the same string for two types that are the same
 // except for decorations.
@@ -1007,6 +1042,10 @@ Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
 
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::DescriptorSet, {Set});
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Binding, {Binding});
+  if (getPointerStorageClass(VarType) == SPIRV::StorageClass::StorageBuffer &&
+      isBindingAliased(*MIRBuilder.getMF().getFunction().getParent(), Set,
+                       Binding))
+    buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Aliased, {});
   return VarReg;
 }
 
@@ -1171,7 +1210,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypePointer(
   // Check if we should use untyped pointers.
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  if (shouldUseUntypedPointer(ElemType, ST))
+  if (shouldUseUntypedPointer(ElemType, ST, SC))
     return getOrCreateSPIRVUntypedPointerType(SC, MIRBuilder);
 
   if (!Reg.isValid())
@@ -1583,10 +1622,17 @@ bool SPIRVGlobalRegistry::shouldKeepTypedPtrType(SPIRVTypeInst ElemType) const {
 }
 
 bool SPIRVGlobalRegistry::shouldUseUntypedPointer(
-    SPIRVTypeInst ElemType, const SPIRVSubtarget &ST) const {
-  // Shaders keep typed pointers, as this implementation targets compute.
-  return ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-         !ST.isShader() && !shouldKeepTypedPtrType(ElemType);
+    SPIRVTypeInst ElemType, const SPIRVSubtarget &ST,
+    SPIRV::StorageClass::StorageClass SC) const {
+  if (!ST.canUseUntypedPointers(SC) || shouldKeepTypedPtrType(ElemType))
+    return false;
+  if (!ST.isShader())
+    return true;
+  while (ElemType && (ElemType->getOpcode() == SPIRV::OpTypeArray ||
+                      ElemType->getOpcode() == SPIRV::OpTypeRuntimeArray))
+    ElemType = SPIRVTypeInst(ElemType->getMF()->getRegInfo().getVRegDef(
+        ElemType->getOperand(1).getReg()));
+  return !BlockDecoratedTypes.contains(ElemType);
 }
 
 SPIRVTypeInst
@@ -2115,6 +2161,13 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
   return finishCreatingSPIRVType(Ty, NewMI);
 }
 
+SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVTypeForStorageClass(
+    const Type *Ty, MachineIRBuilder &MIRBuilder,
+    SPIRV::StorageClass::StorageClass SC, bool EmitIR) {
+  return getOrCreateSPIRVType(Ty, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
+                              storageClassRequiresExplictLayout(SC), EmitIR);
+}
+
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     const Type *BaseType, MachineInstr &I, SPIRV::StorageClass::StorageClass SC,
     bool ForceTyped) {
@@ -2136,9 +2189,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
                                   DebugLoc(), DS_Error));
   }
   // TODO: Need to check if EmitIr should always be true.
-  SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
-      BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
-      storageClassRequiresExplictLayout(SC), true);
+  SPIRVTypeInst SpirvBaseType =
+      getOrCreateSPIRVTypeForStorageClass(BaseType, MIRBuilder, SC, true);
   assert(SpirvBaseType);
   return getOrCreateSPIRVPointerTypeInternal(SpirvBaseType, MIRBuilder, SC,
                                              ForceTyped);
@@ -2176,7 +2228,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerTypeInternal(
   // Check if we should use untyped pointers.
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  if (!ForceTyped && shouldUseUntypedPointer(BaseType, ST))
+  if (!ForceTyped && shouldUseUntypedPointer(BaseType, ST, SC))
     return getOrCreateSPIRVUntypedPointerType(SC, MIRBuilder);
 
   const Type *PointerElementType = getTypeForSPIRVType(BaseType);
@@ -2202,8 +2254,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVUntypedPointerType(
     SPIRV::StorageClass::StorageClass SC, MachineIRBuilder &MIRBuilder) {
   [[maybe_unused]] const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-         !ST.isShader() && "Untyped pointers are not available");
+  assert(ST.canUseUntypedPointers(SC) && "Untyped pointers are not available");
   unsigned AddressSpace = storageClassToAddressSpace(SC);
   // Use STK_UntypedPointer handle keyed by address space only.
   auto Handle = SPIRV::irhandle_untyped_pointer(AddressSpace);

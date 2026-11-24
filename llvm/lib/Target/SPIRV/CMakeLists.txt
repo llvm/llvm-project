@@ -51,6 +51,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
+  SPIRVLowerByteAddressBuffer.cpp
   SPIRVFinalizeShaderLinkage.cpp
   SPIRVRemoveUnusedResources.cpp
   SPIRVLowerResourceNames.cpp

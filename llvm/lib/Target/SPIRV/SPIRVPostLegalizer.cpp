@@ -229,6 +229,9 @@ static SPIRVTypeInst deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
   }
 
   SPIRVTypeInst PointeeType = GR->getPointeeType(PtrType);
+  const bool IsUntyped = PtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+  if (IsUntyped)
+    PointeeType = GR->getUntypedPtrElementType(PtrReg);
   if (!PointeeType) {
     LLVM_DEBUG(dbgs() << "  Could not get pointee type from pointer type.\n");
     return nullptr;
@@ -286,6 +289,10 @@ static SPIRVTypeInst deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
   LLVM_DEBUG(dbgs() << "  Final pointee type: " << *PointeeType);
 
   SPIRV::StorageClass::StorageClass SC = GR->getPointerStorageClass(PtrType);
+  if (IsUntyped) {
+    GR->setUntypedPtrElementType(I->getOperand(0).getReg(), PointeeType);
+    return GR->getOrCreateSPIRVUntypedPointerType(SC, MIB);
+  }
   SPIRVTypeInst Res = GR->getOrCreateSPIRVPointerType(PointeeType, MIB, SC);
   LLVM_DEBUG(dbgs() << "  Deduced GEP type: " << *Res);
   return Res;

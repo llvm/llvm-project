@@ -35,6 +35,7 @@ MODULE_PASS("spirv-prepare-globals", SPIRVPrepareGlobalsPass())
 MODULE_PASS("spirv-pushconstant-access", SPIRVPushConstantAccessPass(*static_cast<const SPIRVTargetMachine *>(this)))
 MODULE_PASS("spirv-remove-unused-resources", SPIRVRemoveUnusedResourcesPass())
 MODULE_PASS("spirv-lower-resource-names", SPIRVLowerResourceNamesPass())
+MODULE_PASS("spirv-lower-byte-address-buffer", SPIRVLowerByteAddressBufferPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS

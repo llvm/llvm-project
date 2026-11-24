@@ -29,32 +29,32 @@ export float TestLoad() {
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_0_0t.i32(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: %[[VAL:.*]] = load i32, ptr %[[PTR]]
+// DXIL-NEXT: %[[RAW:.*]] = call { i32, i1 } @llvm.dx.resource.load.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison)
+// CHECK-NEXT: %[[VAL:.*]] = extractvalue { i32, i1 } %[[RAW]], 0
 // CHECK-NEXT: ret i32 %[[VAL]]
 
 // CHECK: define {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: %[[VEC:.*]] = load <4 x i32>, ptr %[[PTR]]
+// DXIL-NEXT: %[[RAW:.*]] = call { <4 x i32>, i1 } @llvm.dx.resource.load.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison)
+// CHECK-NEXT: %[[VEC:.*]] = extractvalue { <4 x i32>, i1 } %[[RAW]], 0
 // CHECK-NEXT: ret <4 x i32> %[[VEC]]
 
 // CHECK: define {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_0_0t.i32(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
+// DXIL-NEXT: %[[RAW:.*]] = call { float, i1 } @llvm.dx.resource.load.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison)
+// CHECK-NEXT: %[[VAL:.*]] = extractvalue { float, i1 } %[[RAW]], 0
 // CHECK-NEXT: ret float %[[VAL]]
 
 // CHECK: define {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: %[[VEC:.*]] = load <4 x float>, ptr %[[PTR]]
+// DXIL-NEXT: %[[RAW:.*]] = call { <4 x float>, i1 } @llvm.dx.resource.load.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison)
+// CHECK-NEXT: %[[VEC:.*]] = extractvalue { <4 x float>, i1 } %[[RAW]], 0
 // CHECK-NEXT: ret <4 x float> %[[VEC]]
 
 export float TestLoadWithStatus() {
@@ -140,39 +140,31 @@ export void TestStore() {
 // CHECK: ret void
 
 // CHECK: define {{.*}} void @hlsl::RWByteAddressBuffer::Store(unsigned int, unsigned int)(ptr {{.*}} %this, i32 noundef %Index, i32 noundef %Value)
-// CHECK: %[[VALUE:.*]] = load i32, ptr %Value.addr
-// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
+// DXIL: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %{{.*}}
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: store i32 %[[VALUE]], ptr %[[PTR]]
+// CHECK-NEXT: %[[VALUE:.*]] = load i32, ptr %Value.addr
+// DXIL-NEXT: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison, i32 %[[VALUE]])
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} void @hlsl::RWByteAddressBuffer::Store4(unsigned int, unsigned int vector[4])(ptr {{.*}} %this, i32 noundef %Index, <4 x i32> noundef %Value)
-// CHECK: %[[VALUE:.*]] = load <4 x i32>, ptr %Value.addr
-// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
+// DXIL: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %{{.*}}
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: store <4 x i32> %[[VALUE]], ptr %[[PTR]]
+// CHECK-NEXT: %[[VALUE:.*]] = load <4 x i32>, ptr %Value.addr
+// DXIL-NEXT: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison, <4 x i32> %[[VALUE]])
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} void @void hlsl::RWByteAddressBuffer::Store<float>(unsigned int, float)(ptr {{.*}} %this, i32 noundef %Index, float noundef {{.*}} %Value)
-// CHECK: %[[VALUE:.*]] = load float, ptr %Value.addr
-// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
+// DXIL: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %{{.*}}
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: store float %[[VALUE]], ptr %[[PTR]]
+// CHECK-NEXT: %[[VALUE:.*]] = load float, ptr %Value.addr
+// DXIL-NEXT: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison, float %[[VALUE]])
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} void @void hlsl::RWByteAddressBuffer::Store<float vector[4]>(unsigned int, float vector[4])(ptr {{.*}} %this, i32 noundef %Index, <4 x float> noundef {{.*}} %Value)
-// CHECK: %[[VALUE:.*]] = load <4 x float>, ptr %Value.addr
-// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
-// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %__handle
+// DXIL: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %{{.*}}
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
-// CHECK-NEXT: store <4 x float> %[[VALUE]], ptr %[[PTR]]
+// CHECK-NEXT: %[[VALUE:.*]] = load <4 x float>, ptr %Value.addr
+// DXIL-NEXT: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %[[INDEX]], i32 poison, <4 x float> %[[VALUE]])
 // CHECK-NEXT: ret void
 
 export uint TestGetDimensions() {

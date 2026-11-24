@@ -94,6 +94,19 @@ public:
 
 ModulePass *createSPIRVLegalizeResourceBindingPass();
 
+class SPIRVLowerByteAddressBufferPass
+    : public RequiredPassInfoMixin<SPIRVLowerByteAddressBufferPass> {
+  bool UseUntypedPointers;
+
+public:
+  explicit SPIRVLowerByteAddressBufferPass(bool UseUntypedPointers = false)
+      : UseUntypedPointers(UseUntypedPointers) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *
+createSPIRVLowerByteAddressBufferLegacyPass(bool UseUntypedPointers = false);
+
 class SPIRVLegalizeZeroSizeArraysPass
     : public RequiredPassInfoMixin<SPIRVLegalizeZeroSizeArraysPass> {
   const SPIRVTargetMachine &TM;
@@ -228,6 +241,7 @@ void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareFunctionsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareGlobalsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeResourceBindingLegacyPass(PassRegistry &);
+void initializeSPIRVLowerByteAddressBufferLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
 void initializeSPIRVFinalizeShaderLinkageLegacyPass(PassRegistry &);
 void initializeSPIRVCtorDtorLoweringLegacyPass(PassRegistry &);

@@ -153,6 +153,11 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);
   addModulePass(SPIRVCBufferAccessPass(), PMW);
   addModulePass(SPIRVPushConstantAccessPass(getTM()), PMW);
+  if (TM.getSubtargetImpl()->isShader())
+    addModulePass(SPIRVLowerByteAddressBufferPass(
+                      TM.getSubtargetImpl()->canUseUntypedPointers(
+                          SPIRV::StorageClass::StorageBuffer)),
+                  PMW);
   addModulePass(SPIRVEmitIntrinsicsPass(getTM()), PMW);
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addFunctionPass(SPIRVLegalizePointerCastPass(getTM()), PMW);

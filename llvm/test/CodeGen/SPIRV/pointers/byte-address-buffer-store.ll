@@ -2,6 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#UINT:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#WORDPTR:]] = OpTypePointer StorageBuffer %[[#UINT]]
 ; CHECK-DAG: %[[#C0:]] = OpConstant %[[#UINT]] 0{{$}}
 ; CHECK-DAG: %[[#C1:]] = OpConstant %[[#UINT]] 1{{$}}
 ; CHECK-DAG: %[[#C2:]] = OpConstant %[[#UINT]] 2{{$}}
@@ -9,14 +10,10 @@
 ; CHECK-DAG: %[[#C4:]] = OpConstant %[[#UINT]] 4{{$}}
 
 ; CHECK-LABEL: Begin function main{{$}}
-; CHECK: %[[#AC0:]] = OpAccessChain %[[#]] %[[#]] %[[#C0]] %[[#C0]]
+; CHECK: %[[#AC0:]] = OpAccessChain %[[#WORDPTR]] %[[#]] %[[#C0]] %[[#C0]]
 ; CHECK: OpStore %[[#AC0]]
-; CHECK: %[[#AC1:]] = OpAccessChain %[[#]] %[[#]] %[[#C0]] %[[#C1]]
-; CHECK: OpStore %[[#AC1]]
-; CHECK: %[[#AC2:]] = OpAccessChain %[[#]] %[[#]] %[[#C0]] %[[#C2]]
-; CHECK: OpStore %[[#AC2]]
-; CHECK: %[[#AC3:]] = OpAccessChain %[[#]] %[[#]] %[[#C0]] %[[#C3]]
-; CHECK: OpStore %[[#AC3]]
+; CHECK-NOT: OpStore
+; CHECK: OpFunctionEnd
 
 ; CHECK-LABEL: Begin function main_dyn
 ; CHECK: %[[#TID:]] = OpCompositeExtract %[[#UINT]] %[[#]] 0
@@ -41,8 +38,7 @@
 define void @main() local_unnamed_addr #0 {
 entry:
   %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
-  %ptr = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
-  store i32 42, ptr addrspace(11) %ptr, align 4
+  call void @llvm.spv.resource.store.rawbuffer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0, i32 42, i32 4)
   ret void
 }
 

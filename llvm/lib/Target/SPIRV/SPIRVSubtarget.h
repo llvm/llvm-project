@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRVSUBTARGET_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRVSUBTARGET_H
 
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVCallLowering.h"
 #include "SPIRVFrameLowering.h"
 #include "SPIRVISelLowering.h"
@@ -114,6 +115,8 @@ public:
     return AvailableExtensions;
   }
   bool canUseExtension(SPIRV::Extension::Extension E) const;
+  /// Whether untyped pointers are enabled for the given storage class.
+  bool canUseUntypedPointers(SPIRV::StorageClass::StorageClass SC) const;
   bool canUseExtInstSet(SPIRV::InstructionSet::InstructionSet E) const;
   SPIRV::InstructionSet::InstructionSet getPreferredInstructionSet() const;
 

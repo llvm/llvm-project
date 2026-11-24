@@ -284,9 +284,8 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       bool Redundant =
           AssignedPtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR
               ? GR->getUntypedPtrElementType(Source) ==
-                    GR->getOrCreateSPIRVType(ElemTy, MIB,
-                                             SPIRV::AccessQualifier::ReadWrite,
-                                             /*EmitIR=*/true)
+                    GR->getOrCreateSPIRVTypeForStorageClass(ElemTy, MIB, SC,
+                                                            /*EmitIR=*/true)
               : GR->getSPIRVTypeForVReg(Source) == AssignedPtrType;
       if (Redundant) {
         // Erase Def's assign type instruction if we are going to replace Def.
@@ -886,11 +885,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             GR->getOrCreateSPIRVPointerType(ElementTy, MI, SC);
 
         // For untyped pointers, store the element type for later use.
-        if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-            !ST->isShader()) {
-          SPIRVTypeInst ElemSpvType = GR->getOrCreateSPIRVType(
-              ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite,
-              /*EmitIR=*/true);
+        if (AssignedPtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR) {
+          SPIRVTypeInst ElemSpvType = GR->getOrCreateSPIRVTypeForStorageClass(
+              ElementTy, MIB, SC, /*EmitIR=*/true);
           GR->setUntypedPtrElementType(Reg, ElemSpvType);
         }
 

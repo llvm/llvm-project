@@ -1995,8 +1995,15 @@ addMemoryOperands(const MachineMemOperand *MemOp, MachineInstrBuilder &MIB,
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
   if (MemOp->isNonTemporal())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Nontemporal);
-  // Aligned memory operand requires the Kernel capability.
-  if (!ST->isShader() && MemOp->getAlign().value())
+  bool IsUntypedAccess = false;
+  if (MIB->getOpcode() == SPIRV::OpLoad || MIB->getOpcode() == SPIRV::OpStore) {
+    unsigned PtrOperand = MIB->getOpcode() == SPIRV::OpLoad ? 2 : 0;
+    SPIRVTypeInst PtrType =
+        GR.getSPIRVTypeForVReg(MIB->getOperand(PtrOperand).getReg());
+    IsUntypedAccess =
+        PtrType && PtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+  }
+  if ((!ST->isShader() || IsUntypedAccess) && MemOp->getAlign().value())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned);
 
   [[maybe_unused]] MachineInstr *AliasList = nullptr;
@@ -6151,12 +6158,16 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
 
   Register PtrToCounter =
       MRI->createVirtualRegister(GR.getRegClass(IntPtrType));
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAccessChain))
-      .addDef(PtrToCounter)
-      .addUse(GR.getSPIRVTypeID(IntPtrType))
-      .addUse(CounterHandleReg)
-      .addUse(Zero)
-      .constrainAllUses(TII, TRI, RBI);
+  bool IsUntyped = IntPtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+  auto Access = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                        TII.get(IsUntyped ? SPIRV::OpUntypedAccessChainKHR
+                                          : SPIRV::OpAccessChain))
+                    .addDef(PtrToCounter)
+                    .addUse(GR.getSPIRVTypeID(IntPtrType));
+  if (IsUntyped)
+    Access.addUse(GR.getSPIRVTypeID(
+        GR.getPointeeType(GR.getSPIRVTypeForVReg(CounterHandleReg))));
+  Access.addUse(CounterHandleReg).addUse(Zero).constrainAllUses(TII, TRI, RBI);
 
   // For UAV/SSBO counters, the scope is Device. The counter variable is not
   // used as a flag. So the memory semantics can be None.
@@ -6829,16 +6840,19 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
     return true;
   }
 
-  assert(ResType->getOpcode() == SPIRV::OpTypePointer);
+  assert(ResType.isPointer());
 
   Register ZeroReg =
       buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);
-  auto MIB =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAccessChain))
-          .addDef(ResVReg)
-          .addUse(GR.getSPIRVTypeID(ResType))
-          .addUse(ResourcePtr)
-          .addUse(ZeroReg);
+  bool IsUntyped = ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(IsUntyped ? SPIRV::OpUntypedAccessChainKHR
+                                       : SPIRV::OpAccessChain))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+  if (IsUntyped)
+    MIB.addUse(GR.getSPIRVTypeID(GR.getPointeeType(RegType)));
+  MIB.addUse(ResourcePtr).addUse(ZeroReg);
 
   if (I.getNumExplicitOperands() > 3) {
     Register IndexReg = I.getOperand(3).getReg();

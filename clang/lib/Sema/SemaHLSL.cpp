@@ -4916,6 +4916,28 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_load_rawbuffer:
+  case Builtin::BI__builtin_hlsl_resource_store_rawbuffer: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckIndexType(&SemaRef, TheCall, 1))
+      return true;
+    for (unsigned I = 0; I != 3; ++I) {
+      ExprResult Arg = SemaRef.DefaultLvalueConversion(TheCall->getArg(I));
+      if (Arg.isInvalid())
+        return true;
+      TheCall->setArg(I, Arg.get());
+    }
+    QualType ReturnTy = SemaRef.Context.VoidTy;
+    if (BuiltinID == Builtin::BI__builtin_hlsl_resource_load_rawbuffer) {
+      QualType ArgTy = TheCall->getArg(2)->getType();
+      assert(ArgTy->isPointerType() &&
+             "expected pointer type for third argument");
+      ReturnTy = ArgTy->getPointeeType();
+    }
+    TheCall->setType(ReturnTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||

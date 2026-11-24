@@ -70,39 +70,33 @@ void main(uint GI : SV_GroupIndex) {
 
   /// Forwarding through a call chain: ForwardStore → DoStore (`inout`) stores
   /// 42 at offset 0.
-  // CHECK: %[[P0:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H]], i32 0)
-  // CHECK: store i32 42, ptr %[[P0]]
+  // CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H]], i32 0, i32 poison, i32 42)
   ForwardStore(Comma, 0);
 
   /// Chained call: method invoked directly on a function return; stores at
   /// offset 4.
-  // CHECK: %[[P1:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H]], i32 4)
-  // CHECK: store i32 42, ptr %[[P1]]
+  // CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H]], i32 4, i32 poison, i32 42)
   GetBuf().Store(4, 42);
 
   /// Init directly from a function return.
-  // CHECK: %[[P2:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H]], i32 8)
-  // CHECK: store i32 42, ptr %[[P2]]
+  // CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H]], i32 8, i32 poison, i32 42)
   RWByteAddressBuffer FromRet = GetBuf();
   FromRet.Store(8, 42);
 
   /// Ternary whose arms are the same global — folds even under a runtime
   /// condition.
-  // CHECK: %[[P3:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H]], i32 12)
-  // CHECK: store i32 42, ptr %[[P3]]
+  // CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H]], i32 12, i32 poison, i32 42)
   RWByteAddressBuffer BothSame = (GI != 0) ? GBuf0 : GBuf0;
   BothSame.Store(12, 42);
 
   /// `out` param: the callee initializes an otherwise-uninitialized local.
-  // CHECK: %[[P4:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H]], i32 16)
-  // CHECK: store i32 42, ptr %[[P4]]
+  // CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H]], i32 16, i32 poison, i32 42)
   RWByteAddressBuffer FromOut;
   WriteThrough(FromOut);
   FromOut.Store(16, 42);
 
   /// Struct member assignment with a non-resource field alongside it.
-  // CHECK: %[[P5:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H]], i32 20)
-  // CHECK: store i32 42, ptr %[[P5]]
+  // CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H]], i32 20, i32 poison, i32 42)
   ResHolder Mixed;
   Mixed.Buf = GBuf0;
   Mixed.Value = 42;

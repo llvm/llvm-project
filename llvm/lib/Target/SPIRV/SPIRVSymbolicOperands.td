@@ -407,7 +407,7 @@ defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
 // it. The SPIR-V Environment appendix of the Vulkan specification does not list
 // it, so VUID-VkShaderModuleCreateInfo-pCode-08741 forbids declaring it.
 defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvOpenCL]>;
-defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
+defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL, EnvVulkan]>;
 defm SPV_EXT_long_vector : ExtensionOperand<141, [EnvOpenCL, EnvVulkan]>;
 defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, EnvOpenCL]>;
 defm SPV_EXT_shader_subgroup_partitioned : ExtensionOperand<143, [EnvVulkan]>;
@@ -1756,7 +1756,7 @@ multiclass MemoryOperandOperand<bits<32> value, bits<32> minVersion, bits<32> ma
 
 defm None : MemoryOperandOperand<0x0, 0, 0, [], []>;
 defm Volatile : MemoryOperandOperand<0x1, 0, 0, [], []>;
-defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], [Kernel]>;
+defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], []>;
 defm Nontemporal : MemoryOperandOperand<0x4, 0, 0, [], []>;
 defm MakePointerAvailableKHR : MemoryOperandOperand<0x8, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakePointerVisibleKHR : MemoryOperandOperand<0x10, 0, 0, [], [VulkanMemoryModelKHR]>;

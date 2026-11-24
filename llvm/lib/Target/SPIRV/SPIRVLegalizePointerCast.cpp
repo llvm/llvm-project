@@ -42,6 +42,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -822,9 +823,31 @@ class SPIRVLegalizePointerCastImpl {
     DeadInstructions.push_back(IllegalStore);
   }
 
-  void legalizePointerCast(IntrinsicInst *II) {
+  void legalizePointerCast(IntrinsicInst *II, const SPIRVSubtarget &ST) {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
+
+    auto SC = addressSpaceToStorageClass(
+        cast<PointerType>(II->getType())->getAddressSpace(), ST);
+
+    if (ST.isShader() && ST.canUseUntypedPointers(SC)) {
+      auto *AccessTy =
+          dyn_cast_or_null<FixedVectorType>(GR->findDeducedElementType(II));
+      if (!(AccessTy && AccessTy->getNumElements() > 4 &&
+            !ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
+        return;
+      // We still need to split long vectors into smaller parts
+
+      Type *ViewTy = ArrayType::get(AccessTy->getElementType(),
+                                    AccessTy->getNumElements());
+      IRBuilder<> ViewBuilder(II);
+      OriginalOperand = buildIntrWithMD(
+          Intrinsic::spv_ptrcast, {II->getType(), II->getType()},
+          PoisonValue::get(ViewTy), OriginalOperand,
+          {ViewBuilder.getInt32(getPointerAddressSpace(II->getType()))},
+          ViewBuilder);
+      GR->buildAssignPtr(ViewBuilder, ViewTy, OriginalOperand);
+    }
 
     IRBuilder<> B(*II->getModule());
     std::vector<Value *> Users;
@@ -889,10 +912,13 @@ public:
     }
 
     for (IntrinsicInst *II : WorkList)
-      legalizePointerCast(II);
+      legalizePointerCast(II, ST);
 
-    for (Instruction *I : DeadInstructions)
+    for (Instruction *I : DeadInstructions) {
+      // Newly created views may reuse the addresses of deleted instructions.
+      GR->removeAssignPtrTypeInstr(I);
       I->eraseFromParent();
+    }
 
     return DeadInstructions.size() != 0;
   }
