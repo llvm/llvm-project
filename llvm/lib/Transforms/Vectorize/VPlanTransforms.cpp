@@ -5133,9 +5133,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                     FastMathFlags());
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
+    VPValue *Iden = Plan.getOrAddLiveIn(VPInstruction::getNeutralStartValue(
+        MinMaxKind, NewFindLastSelect->getScalarType(), FastMathFlags()));
     VPValue *ReducedIV =
         MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
-                                   NewFindLastSelect, Flags, ExitDL);
+                                   {Iden, NewFindLastSelect}, Flags, ExitDL);
 
     // If IVOfExpressionToSink is an expression to sink, sink it now.
     VPValue *VectorRegionExitingVal = ReducedIV;

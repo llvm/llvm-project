@@ -148,7 +148,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:  Successor(s): middle.block
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT:  middle.block:
-; IF-EVL-INLOOP-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%add>
+; IF-EVL-INLOOP-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<0>, ir<%add>
 ; IF-EVL-INLOOP-NEXT:  Successor(s): ir-bb<for.end>
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT:  ir-bb<for.end>:
@@ -230,7 +230,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:  Successor(s): middle.block
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT:  middle.block:
-; NO-VP-INLOOP-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%add>
+; NO-VP-INLOOP-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<0>, ir<%add>
 ; NO-VP-INLOOP-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; NO-VP-INLOOP-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; NO-VP-INLOOP-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph

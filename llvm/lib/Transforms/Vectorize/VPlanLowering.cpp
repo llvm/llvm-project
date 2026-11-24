@@ -556,6 +556,20 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
   }
 }
 
+/// Returns the opcode applying the start value of a reduction of kind \p RK.
+static Instruction::BinaryOps getReductionStartOpcode(RecurKind RK) {
+  switch (RK) {
+  // The lanes of a sub reduction hold negated sums: add the start value.
+  case RecurKind::Sub:
+    return Instruction::Add;
+  case RecurKind::FSub:
+    return Instruction::FAdd;
+  default:
+    return static_cast<Instruction::BinaryOps>(
+        RecurrenceDescriptor::getOpcode(RK));
+  }
+}
+
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -649,6 +663,29 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
         Expr->decompose();
         Expr->eraseFromParent();
+        continue;
+      }
+
+      // Apply the start value of a ComputeReductionResult with an explicit
+      // binary operation after it.
+      if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>())) {
+        auto *RdxResult = cast<VPInstruction>(&R);
+        if (VPValue *Start = RdxResult->getAppliedStartValue()) {
+          RecurKind RK = RdxResult->getRecurKind();
+          unsigned Opc = getReductionStartOpcode(RK);
+          VPIRFlags Flags =
+              RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)
+                  ? VPIRFlags(RdxResult->getFastMathFlagsOrNone())
+                  : VPIRFlags::getDefaultFlags(Opc);
+          auto *StartOp = VPBuilder::getToInsertAfter(RdxResult).createNaryOp(
+              Opc, {RdxResult, Start}, Flags, RdxResult->getDebugLoc(),
+              "rdx.start");
+          RdxResult->replaceUsesWithIf(StartOp, not_equal_to(StartOp));
+          RdxResult->setOperand(
+              0, Plan.getOrAddLiveIn(VPInstruction::getNeutralStartValue(
+                     RK, Start->getScalarType(),
+                     RdxResult->getFastMathFlagsOrNone())));
+        }
         continue;
       }
 

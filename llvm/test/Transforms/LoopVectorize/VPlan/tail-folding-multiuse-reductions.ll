@@ -46,10 +46,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (smin) vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (smin) ir<9223372036854775807>, vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp eq vp<[[VP6]]>, vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP10]]>, vp<[[VP7]]>, ir<-1>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (umin) vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (umin) ir<-1>, vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP9]]>, ir<%start>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = select vp<[[VP13]]>, ir<0>, vp<[[VP12]]>
 ; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-part vp<[[VP9]]>

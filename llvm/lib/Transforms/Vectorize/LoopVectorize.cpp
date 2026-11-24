@@ -6578,11 +6578,12 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   return Plan;
 }
 
-/// Makes \p RdxResult apply \p Start after the reduction, unless it has no
-/// start operand or reduces in a narrower type. Returns true if it did.
+/// Makes \p RdxResult apply \p Start after the reduction, unless it is
+/// in-loop or reduces in a narrower type. Returns true if it did.
 static bool applyStartInReductionResult(VPInstruction *RdxResult,
                                         VPValue *Start) {
-  if (!RdxResult->getStartOperand() ||
+  if (RdxResult->getOpcode() != VPInstruction::ComputeReductionResult ||
+      RdxResult->isReductionInLoop() ||
       RdxResult->getScalarType() != Start->getScalarType())
     return false;
   RdxResult->setOperand(0, Start);
@@ -6761,15 +6762,13 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlagsOrNone());
       auto CreateResult = [&](VPValue *V) {
-        // The start operand is the identity while the start is in the phi.
-        SmallVector<VPValue *, 2> Ops;
-        if (!PhiR->isInLoop() && VPInstruction::hasStartOperand(RecurrenceKind))
-          Ops.push_back(Plan->getOrAddLiveIn(
-              getRecurrenceIdentity(RecurrenceKind, V->getScalarType(),
-                                    PhiR->getFastMathFlagsOrNone())));
-        Ops.push_back(V);
+        // The start operand is neutral while the start is in the phi.
+        VPValue *Neutral =
+            Plan->getOrAddLiveIn(VPInstruction::getNeutralStartValue(
+                RecurrenceKind, V->getScalarType(),
+                PhiR->getFastMathFlagsOrNone()));
         VPInstruction *Res = Builder.createNaryOp(
-            VPInstruction::ComputeReductionResult, Ops, Flags, ExitDL);
+            VPInstruction::ComputeReductionResult, {Neutral, V}, Flags, ExitDL);
         RdxResults.push_back(Res);
         if (ExtendOpc != Instruction::CastOpsEnd)
           Res = Builder.createScalarCast(ExtendOpc, Res, PhiTy, {});
@@ -6833,7 +6832,10 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     }
 
     RecurKind RK = PhiR->getRecurrenceKind();
-    if (VPInstruction::hasStartOperand(RK)) {
+    if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));

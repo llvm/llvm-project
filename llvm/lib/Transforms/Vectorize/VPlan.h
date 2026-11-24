@@ -1376,8 +1376,9 @@ public:
     /// scalars extracted from a vector, to be replaced by VF ExtractElement
     /// VPInstructions.
     Unpack,
-    /// Reduce the operands to the final reduction result using the operation
-    /// specified via the operation's VPIRFlags.
+    /// Reduce the operands after operand 0 to the final reduction result using
+    /// the operation specified via the operation's VPIRFlags, then apply the
+    /// start value in operand 0 unless it is neutral (getNeutralStartValue).
     ComputeReductionResult,
     // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,
@@ -1608,26 +1609,22 @@ public:
   /// Returns true if the recipe produces a single scalar value.
   bool doesGenerateSingleScalar() const { return GeneratesSingleScalar; }
 
-  /// Returns true if an out-of-loop ComputeReductionResult of kind \p RK has a
-  /// start operand first: the kinds that reduce with a binary operator.
-  static bool hasStartOperand(RecurKind RK);
+  /// Returns the start operand of a ComputeReductionResult of kind \p RK that
+  /// applies nothing: the identity, or poison if \p RK has none.
+  static Value *getNeutralStartValue(RecurKind RK, Type *Ty, FastMathFlags FMF);
 
-  /// Returns the start operand of this ComputeReductionResult, or nullptr. It
-  /// is the identity while the start value is in the reduction phi.
+  /// Returns the start operand of this ComputeReductionResult.
   VPValue *getStartOperand() const {
-    if (getOpcode() != VPInstruction::ComputeReductionResult ||
-        isReductionInLoop() || !hasStartOperand(getRecurKind()))
-      return nullptr;
+    assert(getOpcode() == VPInstruction::ComputeReductionResult &&
+           "expected ComputeReductionResult");
     return getOperand(0);
   }
 
-  /// Returns the start operand if it is not the identity, or nullptr.
+  /// Returns the start operand if it is not neutral, or nullptr.
   VPValue *getAppliedStartValue() const;
 
   /// Returns the operands to reduce, skipping the start operand.
-  auto getReductionParts() const {
-    return drop_begin(operands(), getStartOperand() != nullptr);
-  }
+  auto getReductionParts() const { return drop_begin(operands()); }
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }

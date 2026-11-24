@@ -36,7 +36,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i32 %iv.next, %n
 ; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP6]]>, ir<%max>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP11]]> = select vp<[[VP6]]>, vp<[[VP3]]>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) vp<[[VP10]]>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) ir<-qnan>, vp<[[VP10]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = not vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP13]]>
@@ -67,7 +67,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 4: IR %ec = icmp eq i32 %iv.next, %n
 ; CHECK:  Cost of 2 for VF 4: EMIT vp<[[VP10]]> = select vp<[[VP6]]>, ir<%max>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP11]]> = select vp<[[VP6]]>, vp<[[VP3]]>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) vp<[[VP10]]>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) ir<-qnan>, vp<[[VP10]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP13]]> = not vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP14]]> = and vp<%cmp.n>, vp<[[VP13]]>
@@ -119,7 +119,7 @@ define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i64 %iv.next, %n
 ; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP6]]>, ir<%max>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP11]]> = select vp<[[VP6]]>, vp<[[VP3]]>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) vp<[[VP10]]>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) ir<-qnan>, vp<[[VP10]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = not vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP13]]>
