@@ -218,8 +218,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
             if (!bfTy || dl.getTypeSizeInBits(bfTy).getFixedValue() <= 64)
               return false;
             return llvm::any_of(bfTy.getFields(), [](cir::BitFieldDeclAttr d) {
-              auto intTy = dyn_cast<cir::IntType>(d.getDeclaredType());
-              return intTy && intTy.getIsBitInt();
+              return cir::isBitIntType(d.getDeclaredType());
             });
           }))
         return false;

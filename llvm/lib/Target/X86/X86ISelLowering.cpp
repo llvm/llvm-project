@@ -5966,13 +5966,27 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   }
 
   // Match not(or(not(X),not(Y))) -> and(X, Y).
-  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
-      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
-    // TODO: Handle cases with single NOT operand -> ANDNP
-    if (SDValue Op1 = IsNOT(V.getOperand(1), DAG))
-      if (SDValue Op0 = IsNOT(V.getOperand(0), DAG))
+  // Match not(or(not(X), Y)) -> andnp(Y, X) for legal vector types.
+  // Match not(or(X, not(Y))) -> andnp(X, Y) for legal vector types.
+  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+    SDValue V0 = V.getOperand(0);
+    SDValue V1 = V.getOperand(1);
+    bool AllowAndnp =
+        V.hasOneUse() &&
+        (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector());
+    SDValue Op1 = V1.hasOneUse() ? IsNOT(V1, DAG) : SDValue();
+    if (Op1 || AllowAndnp) {
+      SDValue Op0 = V0.hasOneUse() ? IsNOT(V0, DAG) : SDValue();
+      if (Op0 && Op1)
         return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
                            DAG.getBitcast(VT, Op1));
+      if (AllowAndnp && (Op0 || Op1)) {
+        SDValue NonNot = Op0 ? V1 : V0;
+        SDValue Not = Op0 ? Op0 : Op1;
+        return DAG.getNode(X86ISD::ANDNP, SDLoc(V), VT,
+                           DAG.getBitcast(VT, NonNot), DAG.getBitcast(VT, Not));
+      }
+    }
   }
 
   return SDValue();
@@ -48739,15 +48753,16 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
     // Convert extract_element(bitcast(<X x i1>) -> bitcast(extract_subvector()).
     // Improves lowering of bool masks on rust which splits them into byte array.
-    if (InputVector.getOpcode() == ISD::BITCAST && (NumEltBits % 8) == 0) {
+    if (InputVector.getOpcode() == ISD::BITCAST && (VecEltBitWidth % 8) == 0) {
       SDValue Src = peekThroughBitcasts(InputVector);
       if (Src.getValueType().getScalarType() == MVT::i1 &&
           TLI.isTypeLegal(Src.getValueType())) {
-        MVT SubVT = MVT::getVectorVT(MVT::i1, NumEltBits);
-        SDValue Sub = DAG.getNode(
-            ISD::EXTRACT_SUBVECTOR, dl, SubVT, Src,
-            DAG.getVectorIdxConstant(CIdx->getZExtValue() * NumEltBits, dl));
-        return DAG.getBitcast(VT, Sub);
+        MVT SubVT = MVT::getVectorVT(MVT::i1, VecEltBitWidth);
+        SDValue Sub = DAG.getExtractSubvector(
+            dl, SubVT, Src, CIdx->getZExtValue() * VecEltBitWidth);
+        Sub = DAG.getBitcast(SrcVT.getScalarType(), Sub);
+        return IsPextr ? DAG.getZExtOrTrunc(Sub, dl, VT)
+                       : DAG.getAnyExtOrTrunc(Sub, dl, VT);
       }
     }
   }

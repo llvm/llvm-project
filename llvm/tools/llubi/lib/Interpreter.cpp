@@ -1299,31 +1299,30 @@ public:
       return Res ? *Res : AnyValue::poison();
     }
     case Intrinsic::vector_reduce_fadd:
-    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmul: {
+      AnyValue Res = Args[0];
+      for (const auto &V : Args[1].asAggregate()) {
+        Res = visitFPBinOpWithResult(
+            RetTy, FMF, Res, V,
+            [IID](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+              return IID == Intrinsic::vector_reduce_fadd ? LHS + RHS
+                                                          : LHS * RHS;
+            });
+        if (Res.isPoison())
+          return Res;
+      }
+      return Res;
+    }
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
     case Intrinsic::vector_reduce_fmaximumnum:
     case Intrinsic::vector_reduce_fminimumnum: {
       const auto DenormMode = getCurrentDenormalMode(RetTy);
-      const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
-                            IID == Intrinsic::vector_reduce_fmul;
       FastMathFlags InputFMF = FMF;
       // FP min/max reductions handle nsz during pairwise comparison.
-      if (!HasStart)
-        InputFMF.setNoSignedZeros(false);
-      const AnyValue &Vector = HasStart ? Args[1] : Args[0];
+      InputFMF.setNoSignedZeros(false);
       std::optional<APFloat> Res;
-      if (HasStart) {
-        if (Args[0].isPoison())
-          return AnyValue::poison();
-        const AnyValue ValidatedStart =
-            handleFMFFlags(Args[0], FMF, /*IsInput=*/true);
-        if (ValidatedStart.isPoison())
-          return AnyValue::poison();
-        Res = handleDenormal(ValidatedStart.asFloat(), DenormMode.Input,
-                             /*IsInput=*/true);
-      }
-      for (const auto &V : Vector.asAggregate()) {
+      for (const auto &V : Args[0].asAggregate()) {
         if (V.isPoison())
           return AnyValue::poison();
         const AnyValue ValidatedOp =
@@ -1336,22 +1335,7 @@ public:
           Res = std::move(Op);
           continue;
         }
-        switch (IID) {
-        case Intrinsic::vector_reduce_fadd:
-          *Res = *Res + Op;
-          break;
-        case Intrinsic::vector_reduce_fmul:
-          *Res = *Res * Op;
-          break;
-        case Intrinsic::vector_reduce_fmaximum:
-        case Intrinsic::vector_reduce_fminimum:
-        case Intrinsic::vector_reduce_fmaximumnum:
-        case Intrinsic::vector_reduce_fminimumnum:
-          *Res = applyFPMinMax(IID, *Res, Op, FMF.noSignedZeros());
-          break;
-        default:
-          llvm_unreachable("Unexpected intrinsic ID");
-        }
+        *Res = applyFPMinMax(IID, *Res, Op, FMF.noSignedZeros());
       }
       assert(Res.has_value());
       const AnyValue ValidatedRes =
@@ -1362,9 +1346,9 @@ public:
           handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
                          /*IsInput=*/false);
       SmallVector<const APFloat *, 8> InputVec;
-      InputVec.reserve(Vector.asAggregate().size());
+      InputVec.reserve(Args[0].asAggregate().size());
       transform(
-          Vector.asAggregate(), std::back_inserter(InputVec),
+          Args[0].asAggregate(), std::back_inserter(InputVec),
           [](const AnyValue &V) -> const APFloat * { return &V.asFloat(); });
       return applyNaNPropagation(FRes, InputVec);
     }

@@ -287,9 +287,9 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK4:       omp.inner.for.cond:
 // CHECK4-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK4-NEXT:    [[CONV7:%.*]] = sext i32 [[TMP14]] to i64
 // CHECK4-NEXT:    [[TMP15:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR]], align 8
-// CHECK4-NEXT:    [[CMP8:%.*]] = icmp ule i64 [[CONV7]], [[TMP15]]
+// CHECK4-NEXT:    [[CONV7:%.*]] = trunc i64 [[TMP15]] to i32
+// CHECK4-NEXT:    [[CMP8:%.*]] = icmp sle i32 [[TMP14]], [[CONV7]]
 // CHECK4-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK4:       omp.inner.for.body:
 // CHECK4-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
@@ -602,7 +602,7 @@ int main(int argc, char **argv) {
 // CHECK5:       omp.inner.for.cond:
 // CHECK5-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK5-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTPREVIOUS_UB__ADDR]], align 4
-// CHECK5-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[TMP14]], [[TMP15]]
+// CHECK5-NEXT:    [[CMP6:%.*]] = icmp sle i32 [[TMP14]], [[TMP15]]
 // CHECK5-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK5:       omp.inner.for.body:
 // CHECK5-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
