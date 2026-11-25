@@ -696,18 +696,21 @@ llvm::createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS) {
 
 PreservedAnalyses MIR2VecVocabPrinterPass::run(Module &M,
                                                ModuleAnalysisManager &MAM) {
-  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (Function &F : M) {
-    if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
-      continue;
-    MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
-    auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(F)
-                     .getManager();
-    printVocabulary(MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+  // The vocabulary is module-wide, so print it once using the first machine
+  // function to reach the target info.
+  auto It = find_if(M, [](const Function &F) {
+    return !F.isDeclaration() && !F.hasAvailableExternallyLinkage();
+  });
+  if (It == M.end()) {
+    OS << "MIR2Vec Vocabulary Printer: Failed to get vocabulary - "
+       << "No machine functions found in module\n";
     return PreservedAnalyses::all();
   }
-  OS << "MIR2Vec Vocabulary Printer: Failed to get vocabulary - "
-     << "No machine functions found in module\n";
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(*It).getMF();
+  auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(*It)
+                   .getManager();
+  printVocabulary(MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
   return PreservedAnalyses::all();
 }
 
