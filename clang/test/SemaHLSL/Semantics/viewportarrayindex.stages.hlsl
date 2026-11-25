@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -finclude-default-header -x hlsl -verify -o - %s
-// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -finclude-default-header -verify -o - %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -verify -o - %s
 
 // Stage and IO direction checks for SV_ViewportArrayIndex: a vertex output
 // and a pixel input. Type, index and interpolation checks are covered by
