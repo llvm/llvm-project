@@ -1132,8 +1132,8 @@ define void @deinterleave1_nxi64_factor3(ptr %ptr, <vscale x 4 x i64>* %s1, <vsc
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld3d { z3.d - z5.d }, p0/z, [x0, #3, mul vl]
-; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    str z3, [x1, #1, mul vl]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    str z4, [x2, #1, mul vl]
 ; CHECK-NEXT:    str z1, [x2]
 ; CHECK-NEXT:    str z5, [x3, #1, mul vl]

@@ -663,16 +663,16 @@ define void @wide_interleave4(ptr %dst, <vscale x 8 x i32> %a, <vscale x 8 x i32
 ; CHECK-LABEL: wide_interleave4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z27.d, z7.d
-; CHECK-NEXT:    mov z31.d, z6.d
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z26.d, z5.d
-; CHECK-NEXT:    mov z30.d, z4.d
 ; CHECK-NEXT:    mov z25.d, z3.d
-; CHECK-NEXT:    mov z29.d, z2.d
+; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z3_z4_z5_z6 def $z3_z4_z5_z6
+; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    mov z28.d, z0.d
+; CHECK-NEXT:    mov z4.d, z2.d
+; CHECK-NEXT:    mov z3.d, z0.d
 ; CHECK-NEXT:    st4w { z24.s - z27.s }, p0, [x0, #4, mul vl]
-; CHECK-NEXT:    st4w { z28.s - z31.s }, p0, [x0]
+; CHECK-NEXT:    st4w { z3.s - z6.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.vec = tail call <vscale x 32 x i32> @llvm.vector.interleave4.nxv32i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c, <vscale x 8 x i32> %d)
   store <vscale x 32 x i32> %interleaved.vec, ptr %dst, align 4
@@ -951,13 +951,13 @@ define void @interleave_nxi8_factor2_masked_store_splatmask(ptr %ptr, <vscale x 
 define void @interleave_wide_nxdouble_factor2(ptr %ptr, <vscale x 4 x double> %l, <vscale x 4 x double> %r) #2 {
 ; CHECK-LABEL: interleave_wide_nxdouble_factor2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.d, z1.d
-; CHECK-NEXT:    mov z4.d, z0.d
-; CHECK-NEXT:    st2d { z2.d, z3.d }, p0, [x0, #2, mul vl]
-; CHECK-NEXT:    st2d { z4.d, z5.d }, p0, [x0]
+; CHECK-NEXT:    mov z3.d, z1.d
+; CHECK-NEXT:    // kill: def $z2 killed $z2 def $z1_z2
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    st2d { z3.d, z4.d }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st2d { z1.d, z2.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleave = tail call <vscale x 8 x double> @llvm.vector.interleave2.nxv8f64(<vscale x 4 x double> %l, <vscale x 4 x double> %r)
   store <vscale x 8 x double> %interleave, ptr %ptr, align 4
@@ -1003,15 +1003,15 @@ define void @interleave1_nxi64_factor3(ptr %ptr, <vscale x 8 x i64> %s1, <vscale
 define void @interleave2_nxi64_factor3(ptr %ptr, <vscale x 4 x i64> %s1, <vscale x 4 x i64> %s2, <vscale x 4 x i64> %s3) #2 {
 ; CHECK-LABEL: interleave2_nxi64_factor3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z3_z4_z5 def $z3_z4_z5
-; CHECK-NEXT:    mov z26.d, z4.d
+; CHECK-NEXT:    mov z7.d, z5.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z4.d, z3.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z3.d, z1.d
-; CHECK-NEXT:    mov z24.d, z0.d
-; CHECK-NEXT:    st3d { z3.d - z5.d }, p0, [x0, #3, mul vl]
-; CHECK-NEXT:    st3d { z24.d - z26.d }, p0, [x0]
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z2_z3_z4 def $z2_z3_z4
+; CHECK-NEXT:    mov z3.d, z2.d
+; CHECK-NEXT:    mov z5.d, z1.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    st3d { z5.d - z7.d }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3d { z2.d - z4.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleave = tail call <vscale x 12 x i64> @llvm.vector.interleave3.nxv12i64(<vscale x 4 x i64> %s1, <vscale x 4 x i64> %s2, <vscale x 4 x i64> %s3)
 
