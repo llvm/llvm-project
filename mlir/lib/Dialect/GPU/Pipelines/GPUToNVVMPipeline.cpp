@@ -90,9 +90,12 @@ void buildHostPostPipeline(OpPassManager &pm,
   opt.kernelBarePtrCallConv = options.kernelUseBarePtrCallConv;
   pm.addPass(createGpuToLLVMConversionPass(opt));
 
+  GpuAttachSelectObjectPassOptions gpuAttachSelectObjectPassOptions;
+  gpuAttachSelectObjectPassOptions.priority = options.defaultCtorPriority;
+  pm.addPass(createGpuAttachSelectObjectPass(gpuAttachSelectObjectPassOptions));
+
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
   gpuModuleToBinaryPassOptions.compilationTarget = options.cubinFormat;
-  gpuModuleToBinaryPassOptions.ctorPriority = options.defaultCtorPriority;
   pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   pm.addPass(createConvertMathToLLVMPass());
   pm.addPass(createCanonicalizerPass());

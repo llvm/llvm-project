@@ -100,11 +100,6 @@ def GpuModuleToBinaryPass
     2. `assembly`, `isa`: produces assembly code.
     3. `binary`, `bin`: produces binaries.
     4. `fatbinary`, `fatbin`: produces fatbinaries.
-
-    The `ctor-priority` argument sets the priority of the global constructor
-    and destructor that load and unload the binary. It applies to modules using
-    the `#gpu.select_object` offloading handler, unless the handler already
-    specifies a priority.
   }];
   let options = [
     Option<"toolkitPath", "toolkit", "std::string", [{""}],
@@ -116,8 +111,30 @@ def GpuModuleToBinaryPass
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
            "The target representation of the compilation process.">,
     Option<"elfSection", "section", "std::string", [{""}],
-           "ELF section where binary is to be located.">,
-    Option<"ctorPriority", "ctor-priority", "unsigned", "65535",
+           "ELF section where binary is to be located.">
+  ];
+}
+
+def GpuAttachSelectObjectPass
+    : Pass<"gpu-attach-select-object", ""> {
+  let summary = "Attaches a select object offloading handler to GPU modules.";
+  let description = [{
+    This pass searches for all GPU modules in the immediate regions and
+    attaches a `#gpu.select_object` offloading handler with the given
+    `priority`, the priority of the global constructor and destructor that
+    load and unload the binary of the module.
+
+    Modules with no offloading handler get a handler selecting the first
+    object. Modules with a `#gpu.select_object` handler keep the target of the
+    handler. Modules with a handler that already specifies a priority, or with
+    any other offloading handler, are left unchanged.
+  }];
+  let options = [
+    Option<"moduleMatcher", "module", "std::string",
+           /*default=*/ [{""}],
+           "Regex used to identify the modules to attach the handler to.">,
+    Option<"priority", "priority", "unsigned",
+           "gpu::SelectObjectAttr::kDefaultPriority",
            "Priority of the global constructor and destructor that load and "
            "unload the binary.">
   ];

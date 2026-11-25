@@ -22,7 +22,7 @@ func.func @test_math(%arg0 : f32) {
     %c1 = arith.constant 1 : index
     // CHECK: gpu.launch_func  @test_math_kernel::@test_math_kernel
     // CHECK: gpu.binary @test_math_kernel  [#gpu.object<#nvvm.target
-    // CHECK-PRIORITY: gpu.binary @test_math_kernel <#gpu.select_object<priority = 101>> [#gpu.object<#nvvm.target
+    // CHECK-PRIORITY: gpu.binary @test_math_kernel <#gpu.select_object<0 : i64, priority = 101>> [#gpu.object<#nvvm.target
     gpu.launch 
         blocks(%0, %1, %2) in (%3 = %c1, %4 = %c1, %5 = %c1) 
         threads(%6, %7, %8) in (%9 = %c2, %10 = %c1, %11 = %c1) { 
