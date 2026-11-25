@@ -154,11 +154,19 @@ public:
 
   template <random_access_range _RARange = _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) {
+    if constexpr (sized_range<_RARange>) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__index >= 0 && __index < ranges::distance(__derived()),
+                                          "The index passed to `view_interface::operator[]` is out of bounds.");
+    }
     return ranges::begin(__derived())[__index];
   }
 
   template <random_access_range _RARange = const _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) const {
+    if constexpr (sized_range<_RARange>) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__index >= 0 && __index < ranges::distance(__derived()),
+                                          "The index passed to `view_interface::operator[]` is out of bounds.");
+    }
     return ranges::begin(__derived())[__index];
   }
 
