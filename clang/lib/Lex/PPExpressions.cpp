@@ -961,7 +961,11 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
     // If we aren't at the tok::eod token, something bad happened, like an extra
     // ')' token.
     if (Tok.isNot(tok::eod)) {
-      Diag(Tok, diag::err_pp_expected_eol);
+      // A top-level comma is left unconsumed because the controlling expression
+      // is parsed as a conditional-expression, so point at the comma itself
+      // rather than complaining about a missing end of line.
+      Diag(Tok, Tok.is(tok::comma) ? diag::err_pp_comma_in_constant_expr
+                                   : diag::err_pp_expected_eol);
       DiscardUntilEndOfDirective(Tok);
     }
   }

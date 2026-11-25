@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -E -pedantic-errors %s -verify=expected,since-cxx23 -std=c++2c -Wno-c++26-extensions
 
 // Test 1: Top-level comma
-// expected-error@+1 {{expected end of line in preprocessor expression}}
+// expected-error@+1 {{comma operator is not allowed in a preprocessor expression}}
 #if 1, 2
 #endif
 
@@ -24,7 +24,7 @@
 #endif
 
 // Test 4: Multiple commas
-// expected-error@+1 {{expected end of line in preprocessor expression}}
+// expected-error@+1 {{comma operator is not allowed in a preprocessor expression}}
 #if 1, 2, 3
 #endif
 
@@ -40,6 +40,6 @@
 
 // Test 7: Comma in #embed limit parameter (C++23+)
 #if __cplusplus >= 202302L
-// since-cxx23-error@+1 {{expected ')'}}
+// since-cxx23-error@+1 {{comma operator is not allowed in a preprocessor expression}}
 #embed "jk.txt" limit(1, 2)
 #endif
