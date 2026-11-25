@@ -60,14 +60,11 @@ public:
 
 #include <__assert>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
-#include <__optional/comparison.h>
-#include <__optional/nullopt_t.h>
-#include <__optional/optional.h>
-#include <__type_traits/is_specialization.h>
 #include <__type_traits/remove_const.h>
-#include <__utility/exchange.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -102,17 +99,29 @@ public:
 
 private:
   __node_pointer_type __ptr_ = nullptr;
-  optional<allocator_type> __alloc_;
+#  ifdef _LIBCPP_ABI_COMPACT_NODE_HANDLE
+  _LIBCPP_NO_UNIQUE_ADDRESS
+#  endif
+  union {
+    _LIBCPP_NO_UNIQUE_ADDRESS allocator_type __alloc_;
+  } __u_;
+#  ifndef _LIBCPP_ABI_COMPACT_NODE_HANDLE
+  bool __has_alloc_;
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __release_ptr() {
-    __ptr_   = nullptr;
-    __alloc_ = std::nullopt;
+    if (__ptr_)
+      std::destroy_at(std::addressof(__u_.__alloc_));
+    __ptr_ = nullptr;
+#  ifndef _LIBCPP_ABI_COMPACT_NODE_HANDLE
+    __has_alloc_ = false;
+#  endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __destroy_node_pointer() {
-    if (__ptr_ != nullptr) {
+    if (!empty()) {
       typedef typename __allocator_traits_rebind< allocator_type, _NodeType>::type __node_alloc_type;
-      __node_alloc_type __alloc(*__alloc_);
+      __node_alloc_type __alloc(__u_.__alloc_);
       __generic_container_node_destructor<_NodeType, __node_alloc_type>(__alloc, true)(__ptr_);
       __ptr_ = nullptr;
     }
@@ -120,33 +129,45 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
   __basic_node_handle(__node_pointer_type __ptr, allocator_type const& __alloc)
-      : __ptr_(__ptr), __alloc_(__alloc) {}
+      : __ptr_(__ptr),
+        __u_(__alloc)
+#  ifndef _LIBCPP_ABI_COMPACT_NODE_HANDLE
+        ,
+        __has_alloc_(true)
+#  endif
+  {
+  }
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __basic_node_handle() = default;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __basic_node_handle(__basic_node_handle&& __other) noexcept
-      : __ptr_(std::exchange(__other.__ptr_, nullptr)), __alloc_(std::exchange(__other.__alloc_, std::nullopt)) {}
+      : __ptr_(__other.__ptr_), __u_(std::move(__other.__u_.__alloc_)) {
+    __other.__release_ptr();
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __basic_node_handle& operator=(__basic_node_handle&& __other) {
-    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
-        __alloc_ == std::nullopt || __alloc_traits::propagate_on_container_move_assignment::value ||
-            __alloc_ == __other.__alloc_,
-        "node_type with incompatible allocator passed to "
-        "node_type::operator=(node_type&&)");
+    if (empty()) {
+      if (__other.empty())
+        return *this;
 
-    __destroy_node_pointer();
-    __ptr_ = std::exchange(__other.__ptr_, nullptr);
+      std::__construct_at(std::addressof(__u_.__alloc_), std::move(__other.__u_.__alloc_));
+    } else if constexpr (__alloc_traits::propagate_on_container_move_assignment::value) {
+      __destroy_node_pointer();
+      __u_.__alloc_ = __other.__u_.__alloc_;
+    } else {
+      _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
+          !__other.empty() && __u_.__alloc_ == __other.__u_.__alloc_,
+          "node_type with incompatible allocator passed to node_type::operator=(node_type&&)");
+    }
 
-    if (__alloc_traits::propagate_on_container_move_assignment::value || __alloc_ == std::nullopt)
-      __alloc_ = std::move(__other.__alloc_);
-
-    __other.__alloc_ = std::nullopt;
+    __ptr_ = __other.__ptr_;
+    __other.__release_ptr();
 
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type get_allocator() const { return *__alloc_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type get_allocator() const { return __u_.__alloc_; }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit operator bool() const { return __ptr_ != nullptr; }
 
@@ -154,11 +175,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(__basic_node_handle& __other) noexcept(
       __alloc_traits::propagate_on_container_swap::value || __alloc_traits::is_always_equal::value) {
-    using std::swap;
-    swap(__ptr_, __other.__ptr_);
-    if (__alloc_traits::propagate_on_container_swap::value || __alloc_ == std::nullopt ||
-        __other.__alloc_ == std::nullopt)
-      swap(__alloc_, __other.__alloc_);
+    if (empty()) {
+      *this = std::move(__other);
+    } else if (__other.empty()) {
+      __other = std::move(*this);
+    } else {
+      swap(__ptr_, __other.__ptr_);
+      if constexpr (__alloc_traits::propagate_on_container_swap::value)
+        swap(__u_.__alloc_, __other.__u_.__alloc_);
+    }
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 friend void
