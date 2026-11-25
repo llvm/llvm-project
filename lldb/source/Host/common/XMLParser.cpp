@@ -25,9 +25,9 @@ public:
 
 private:
   llvm::Error Decode(llvm::StringRef input);
-  llvm::Error ParseMisc(bool &found);
+  llvm::Error ParseMisc();
   llvm::Error ParseElement();
-  llvm::Error ParseStartTag(bool &is_empty);
+  llvm::Error ParseStartTag();
   llvm::Error ParseAttValue(std::string &value);
   llvm::Error ParseReference(std::string &out);
   llvm::Error ParseComment();
@@ -58,7 +58,6 @@ private:
 
   llvm::StringRef m_pending_text;
   std::string m_text_buffer;
-  bool m_text_in_buffer = false;
 };
 
 } // namespace
@@ -217,16 +216,20 @@ llvm::Error Parser::ParsePI() {
   return llvm::Error::success();
 }
 
-llvm::Error Parser::ParseMisc(bool &found) {
-  found = true;
-  if (SkipSpace())
-    return llvm::Error::success();
-  if (Consume("<!--"))
-    return ParseComment();
-  if (Consume("<?"))
-    return ParsePI();
-  found = false;
-  return llvm::Error::success();
+llvm::Error Parser::ParseMisc() {
+  while (true) {
+    if (SkipSpace())
+      continue;
+    if (Consume("<!--")) {
+      if (llvm::Error error = ParseComment())
+        return error;
+    } else if (Consume("<?")) {
+      if (llvm::Error error = ParsePI())
+        return error;
+    } else {
+      return llvm::Error::success();
+    }
+  }
 }
 
 llvm::Error Parser::ParseReference(std::string &out) {
@@ -235,9 +238,8 @@ llvm::Error Parser::ParseReference(std::string &out) {
     size_t end = m_text.find(';', m_pos);
     llvm::StringRef digits = m_text.slice(m_pos, end);
     uint32_t c = 0;
-    if (end == llvm::StringRef::npos || digits.empty() ||
-        !llvm::all_of(digits, radix == 16 ? llvm::isHexDigit : llvm::isDigit) ||
-        digits.getAsInteger(radix, c) || !IsChar(c))
+    if (end == llvm::StringRef::npos || digits.getAsInteger(radix, c) ||
+        !IsChar(c))
       return MakeError("invalid character reference");
     AppendUTF8(c, out);
     m_pos = end + 1;
@@ -265,7 +267,7 @@ llvm::Error Parser::ParseReference(std::string &out) {
 void Parser::AppendText(llvm::StringRef text) {
   if (text.empty())
     return;
-  if (!m_text_in_buffer && m_pending_text.empty()) {
+  if (m_text_buffer.empty() && m_pending_text.empty()) {
     m_pending_text = text;
     return;
   }
@@ -273,21 +275,18 @@ void Parser::AppendText(llvm::StringRef text) {
 }
 
 std::string &Parser::TextBuffer() {
-  if (!m_text_in_buffer) {
+  if (m_text_buffer.empty())
     m_text_buffer.assign(m_pending_text.data(), m_pending_text.size());
-    m_text_in_buffer = true;
-  }
   return m_text_buffer;
 }
 
 void Parser::FlushText() {
   llvm::StringRef text =
-      m_text_in_buffer ? llvm::StringRef(m_text_buffer) : m_pending_text;
+      m_text_buffer.empty() ? m_pending_text : llvm::StringRef(m_text_buffer);
   if (!text.empty())
     m_handler.Characters(text);
   m_pending_text = {};
   m_text_buffer.clear();
-  m_text_in_buffer = false;
 }
 
 llvm::Error Parser::ParseAttValue(std::string &value) {
@@ -315,12 +314,13 @@ llvm::Error Parser::ParseAttValue(std::string &value) {
   }
 }
 
-llvm::Error Parser::ParseStartTag(bool &is_empty) {
+llvm::Error Parser::ParseStartTag() {
   llvm::StringRef element;
   if (llvm::Error error = ParseName(element))
     return error;
   std::vector<std::pair<llvm::StringRef, std::string>> attributes;
   llvm::StringSet<> names;
+  bool is_empty;
 
   while (true) {
     bool space = SkipSpace();
@@ -364,8 +364,7 @@ llvm::Error Parser::ParseStartTag(bool &is_empty) {
 llvm::Error Parser::ParseElement() {
   if (!Consume("<"))
     return MakeError("expected the root element");
-  bool is_empty;
-  if (llvm::Error error = ParseStartTag(is_empty))
+  if (llvm::Error error = ParseStartTag())
     return error;
 
   while (!m_open.empty()) {
@@ -397,7 +396,7 @@ llvm::Error Parser::ParseElement() {
       if (llvm::Error error = ParsePI())
         return error;
     } else if (Consume("<")) {
-      if (llvm::Error error = ParseStartTag(is_empty))
+      if (llvm::Error error = ParseStartTag())
         return error;
     } else if (Consume("&")) {
       if (llvm::Error error = ParseReference(TextBuffer()))
@@ -418,19 +417,12 @@ llvm::Error Parser::Parse(llvm::StringRef input) {
   if (llvm::Error error = Decode(input))
     return error;
 
-  bool found;
-  do {
-    if (llvm::Error error = ParseMisc(found))
-      return error;
-  } while (found);
-
+  if (llvm::Error error = ParseMisc())
+    return error;
   if (llvm::Error error = ParseElement())
     return error;
-
-  do {
-    if (llvm::Error error = ParseMisc(found))
-      return error;
-  } while (found);
+  if (llvm::Error error = ParseMisc())
+    return error;
   if (!AtEnd())
     return MakeError("extra content at the end of the document");
   return llvm::Error::success();
