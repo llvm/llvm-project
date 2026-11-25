@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/InterleavedRange.h"
 
@@ -280,6 +281,23 @@ LogicalResult SwitchOp::verify() {
     return emitOpError() << "number of literals (" << literals->size()
                          << ") should match number of targets ("
                          << targets.size() << ")";
+
+  // "It is invalid for any two literal to be equal to each other."
+  if (literals) {
+    llvm::SmallDenseMap<APInt, unsigned> firstLiteral;
+    for (auto [index, value] : llvm::enumerate(literals->getValues<APInt>())) {
+      auto [it, inserted] = firstLiteral.try_emplace(value, index);
+      if (inserted)
+        continue;
+      std::string asSigned = llvm::toString(value, 10, /*Signed=*/true);
+      std::string asUnsigned = llvm::toString(value, 10, /*Signed=*/false);
+      InFlightDiagnostic diag = emitOpError() << "literal " << asSigned;
+      if (asSigned != asUnsigned)
+        diag << " (unsigned " << asUnsigned << ")";
+      return diag << " is repeated (targets " << it->second << " and " << index
+                  << ")";
+    }
+  }
   return success();
 }
 
