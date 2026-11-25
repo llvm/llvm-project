@@ -19051,7 +19051,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     // whole FMA chain one serial dependency. When E is itself the result of
     // another FP add/FMA (e.g. a second partial sum of a reassociable
     // reduction), this merges independent accumulators into one long chain
-    // and lengthens the critical path (llvm-project issue #121344).
+    // and lengthens the critical path (PR121344).
     // Only perform the fold when E is not such a value.
     if (E && (isFusedOp(E) || E.getOpcode() == ISD::FADD))
       E = SDValue();
