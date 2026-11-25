@@ -4,8 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -riscv-landing-pad-label=778899 -mattr=+d -target-abi=lp64d -O2 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefix=RV64
 
-;; Libcalls created while expanding intrinsics have no CallBase, so they are
-;; not lowered as software-guarded tail calls.
+;; Libcalls created while expanding intrinsics have no CallBase, but they still
+;; need to be lowered as software-guarded tail calls.
 
 define ptr @tail_memset(ptr %p, i64 %n) {
 ; RV32-LABEL: tail_memset:
