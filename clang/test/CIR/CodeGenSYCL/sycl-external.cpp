@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVM-CIR
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -fsycl-is-device -triple spirv64-unknown-unknown -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
 // Verify that sycl_external functions are emitted in device code, matching
 // classic CodeGen, and that their definitions carry the "sycl-module-id"
@@ -62,9 +62,7 @@ int squareNoAttr(int x) { return x * x; }
 // LLVM: define spir_func noundef i32 @_Z8withAttrv() #[[EXT]]
 // LLVM: define spir_func noundef i32 @_Z4ret1v() #[[NOEXT:[0-9]+]]
 // LLVM: define spir_func void @_Z5tFuncIiEvT_(i32 noundef %{{.*}}) #[[EXT]]
-// ClangIR does not yet pass kernel arguments byval.
-// LLVM-CIR: define spir_kernel void @_ZTS2KN({{.*}}) #[[EXT]]
-// OGCG: define spir_kernel void @_ZTS2KN(ptr noundef byval({{.*}}) #[[EXT]]
+// LLVM: define spir_kernel void @_ZTS2KN(ptr noundef byval({{.*}}) #[[EXT]]
 // LLVM-NOT: @_Z8declOnlyv
 // LLVM-NOT: @_Z12squareNoAttri
 // LLVM-DAG: attributes #[[EXT]] = { {{.*}}"sycl-module-id"="{{.*}}sycl-external.cpp" }

@@ -64,7 +64,7 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    flat_load_b128 v[0:3], v[28:29] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[26:27] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[30:31] offset:32 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    flat_load_b128 v[0:3], v[24:25] offset:64 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0

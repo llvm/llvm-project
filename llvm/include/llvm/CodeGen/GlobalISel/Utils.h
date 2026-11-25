@@ -541,16 +541,15 @@ matchUnaryPredicate(const MachineRegisterInfo &MRI, Register Reg,
 /// Returns true if given the TargetLowering's boolean contents information,
 /// the value \p Val contains a true value.
 LLVM_ABI bool isConstTrueVal(const TargetLowering &TLI, int64_t Val,
-                             bool IsVector, bool IsFP);
+                             bool IsVector);
 /// \returns true if given the TargetLowering's boolean contents information,
 /// the value \p Val contains a false value.
 LLVM_ABI bool isConstFalseVal(const TargetLowering &TLI, int64_t Val,
-                              bool IsVector, bool IsFP);
+                              bool IsVector);
 
 /// Returns an integer representing true, as defined by the
 /// TargetBooleanContents.
-LLVM_ABI int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
-                                bool IsFP);
+LLVM_ABI int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector);
 
 using SmallInstListTy = GISelWorkList<4>;
 LLVM_ABI void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
