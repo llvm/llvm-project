@@ -52,10 +52,10 @@ enum class RecurKind;
 namespace llvm::slpvectorizer {
 
 /// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
-/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
-ConstantInt *getStrideBytesIfConstant(ConstantInt *Stride, Type *ScalarTy,
-                                      const DataLayout &DL,
-                                      bool IsReverse = false);
+/// \p IsReverse is set
+ConstantInt *getStrideBytesForConstant(ConstantInt *Stride, Type *ScalarTy,
+                                       const DataLayout &DL,
+                                       bool IsReverse = false);
 
 /// Return the cost of a strided load and accompanying bitcast.
 InstructionCost getStridedLoadCost(

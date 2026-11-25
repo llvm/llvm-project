@@ -38,11 +38,9 @@ using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
 
-ConstantInt *getStrideBytesIfConstant(ConstantInt *Stride, Type *ScalarTy,
-                                      const DataLayout &DL, bool IsReverse) {
-  if (!Stride)
-    return nullptr;
-
+ConstantInt *getStrideBytesForConstant(ConstantInt *Stride, Type *ScalarTy,
+                                       const DataLayout &DL, bool IsReverse) {
+  assert(Stride && "Expected a valid Stride");
   uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
   APInt Bytes = Stride->getValue() * ElementSize;
   return ConstantInt::get(Stride->getContext(), IsReverse ? -Bytes : Bytes);
@@ -79,8 +77,9 @@ InstructionCost getStridedLoadCost(
     Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
     Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
     TargetTransformInfo::TargetCostKind CostKind, bool IsReverse) {
-  Value *Stride = getStrideBytesIfConstant(
-      dyn_cast_if_present<ConstantInt>(StrideVal), ScalarTy, DL, IsReverse);
+  Value *Stride = nullptr;
+  if (auto *ConstStrideVal = dyn_cast_if_present<ConstantInt>(StrideVal))
+    Stride = getStrideBytesForConstant(ConstStrideVal, ScalarTy, DL, IsReverse);
   InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
       MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
                                  StridedLoadTy, Ptr,
