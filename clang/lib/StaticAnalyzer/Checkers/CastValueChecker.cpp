@@ -239,7 +239,7 @@ static void addCastTransition(const CallEvent &Call, DefinedOrUnknownSVal DV,
 
   // Check for infeasible casts.
   if (isInfeasibleCast(CastInfo, CastSucceeds)) {
-    C.generateSink(State, C.getPredecessor());
+    C.addSink(State);
     return;
   }
 
@@ -321,7 +321,7 @@ static void addInstanceOfTransition(const CallEvent &Call,
       if (IsKnownCast)
         return;
     } else if (CastInfo && CastInfo->succeeds()) {
-      C.generateSink(NewState, C.getPredecessor());
+      C.addSink(NewState);
       return;
     }
   }
@@ -437,7 +437,7 @@ void CastValueChecker::evalIsa(const CallEvent &Call, DefinedOrUnknownSVal DV,
   }
 
   if (NullState) {
-    C.generateSink(NullState, C.getPredecessor());
+    C.addSink(NullState);
   }
 }
 

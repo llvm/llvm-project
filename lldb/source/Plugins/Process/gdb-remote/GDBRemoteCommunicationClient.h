@@ -95,7 +95,12 @@ public:
   ///
   /// \param[in] args
   ///     A list of program arguments. The first entry is the program being run.
-  llvm::Error LaunchProcess(const Args &args);
+  ///
+  /// \returns
+  ///     The server's initial stop reply if "vRun" was used, or "OK" from
+  ///     "qLaunchSuccess" if the "A" packet was used. Returns an llvm::Error if
+  ///     launching fails with either packet.
+  llvm::Expected<StringExtractorGDBRemote> LaunchProcess(const Args &args);
 
   /// Sends a "QEnvironment:NAME=VALUE" packet that will build up the
   /// environment that will get used when launching an application
@@ -395,6 +400,11 @@ public:
   llvm::Expected<AcceleratorBreakpointHitResponse>
   AcceleratorBreakpointHit(const AcceleratorBreakpointHitArgs &args);
 
+  /// Returns std::nullopt if the packet failed or the response did not parse.
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args);
+
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -520,6 +530,9 @@ public:
 
   llvm::Expected<std::string> ReadExtFeature(llvm::StringRef object,
                                              llvm::StringRef annex);
+
+  /// Read the siginfo of the given thread using the qXfer:siginfo:read packet.
+  llvm::Expected<std::string> ReadSiginfo(lldb::tid_t tid);
 
   void ServeSymbolLookups(lldb_private::Process *process);
 

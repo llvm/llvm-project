@@ -1,0 +1,7 @@
+VERS1.0 {
+  global:
+    __tgt_acc_rtl_init;
+    __tgt_acc_rtl_deinit;
+  local:
+    *;
+};

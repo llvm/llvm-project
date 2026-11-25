@@ -5,8 +5,11 @@
 name:            narrow_scalar_uadde_s128
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3, $x4
     ; CHECK-LABEL: name: narrow_scalar_uadde_s128
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2, $x3, $x4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
@@ -40,8 +43,11 @@ body:             |
 name:            narrow_scalar_uadde_big_nonpow2
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3, $x4
     ; CHECK-LABEL: name: narrow_scalar_uadde_big_nonpow2
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2, $x3, $x4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
@@ -78,8 +84,11 @@ body:             |
 name:            widen_scalar_uadde_s8
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: widen_scalar_uadde_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
@@ -114,8 +123,11 @@ body:             |
 name:            test_scalar_uadde_32
 body:             |
   bb.0.entry:
+    liveins: $w0, $w1, $w2
     ; CHECK-LABEL: name: test_scalar_uadde_32
-    ; CHECK: %lhs:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs:_(i32) = COPY $w1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w2
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1

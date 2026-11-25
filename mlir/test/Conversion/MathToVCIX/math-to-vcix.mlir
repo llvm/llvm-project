@@ -202,3 +202,23 @@ func.func @no_vector_type(%arg0: f32) -> f32 {
   %0 = math.cos %arg0 : f32
   return %0 : f32
 }
+
+// -----
+
+// Types that cannot be legalized for RVV are left untouched.
+
+// CHECK-LABEL:   func.func @tan_no_vector_type
+// CHECK:           math.tan %{{.*}} : f32
+func.func @tan_no_vector_type(%arg0: f32) -> f32 {
+  %0 = math.tan %arg0 : f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @tan_multi_dim_vector
+// CHECK:           math.tan %{{.*}} : vector<2x4xf32>
+func.func @tan_multi_dim_vector(%arg0: vector<2x4xf32>) -> vector<2x4xf32> {
+  %0 = math.tan %arg0 : vector<2x4xf32>
+  return %0 : vector<2x4xf32>
+}

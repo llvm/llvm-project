@@ -456,21 +456,26 @@ define amdgpu_kernel void @trunc_i64_or_to_i32(ptr addrspace(1) %out, [8 x i32],
 define amdgpu_kernel void @or_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
 ; EG-LABEL: or_i1:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 1, @10, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 4, @12, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 0, @12, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @8
+; EG-NEXT:    ALU 0, @13, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @10
+; EG-NEXT:    ALU 5, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
-; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_32 T1.X, T1.X, 0, #1
+; EG-NEXT:    Fetch clause starting at 8:
 ; EG-NEXT:     VTX_READ_32 T0.X, T0.X, 0, #1
-; EG-NEXT:    ALU clause starting at 10:
-; EG-NEXT:     MOV T0.X, KC0[2].Z,
-; EG-NEXT:     MOV * T1.X, KC0[2].W,
+; EG-NEXT:    Fetch clause starting at 10:
+; EG-NEXT:     VTX_READ_32 T1.X, T1.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 12:
-; EG-NEXT:     MAX_DX10 * T0.W, T0.X, T1.X,
-; EG-NEXT:     SETGE_DX10 * T0.W, PV.W, 0.0,
+; EG-NEXT:     MOV * T0.X, KC0[2].W,
+; EG-NEXT:    ALU clause starting at 13:
+; EG-NEXT:     MOV * T1.X, KC0[2].Z,
+; EG-NEXT:    ALU clause starting at 14:
+; EG-NEXT:     SETGE_DX10 T0.W, T0.X, 0.0,
+; EG-NEXT:     SETGE_DX10 * T1.W, T1.X, 0.0,
+; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     AND_INT T0.X, PV.W, 1,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)

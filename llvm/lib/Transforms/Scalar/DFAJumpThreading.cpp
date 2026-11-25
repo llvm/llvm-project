@@ -108,10 +108,10 @@ public:
 
 class DFAJumpThreading {
 public:
-  DFAJumpThreading(AssumptionCache *AC, DomTreeUpdater *DTU, LoopInfo *LI,
-                   TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE)
-      : Opts(ScalarOptions::Global), AC(AC), DTU(DTU), LI(LI), TTI(TTI),
-        ORE(ORE) {}
+  DFAJumpThreading(const ScalarOptions &Opts, AssumptionCache *AC,
+                   DomTreeUpdater *DTU, LoopInfo *LI, TargetTransformInfo *TTI,
+                   OptimizationRemarkEmitter *ORE)
+      : Opts(Opts), AC(AC), DTU(DTU), LI(LI), TTI(TTI), ORE(ORE) {}
 
   bool run(Function &F);
   bool LoopInfoBroken;
@@ -365,15 +365,8 @@ namespace {
 struct ThreadingPath {
   /// Exit value is DFA's exit state for the given path.
   APInt getExitValue() const { return ExitVal; }
-  void setExitValue(const ConstantInt *V) {
-    ExitVal = V->getValue();
-    IsExitValSet = true;
-  }
-  void setExitValue(const APInt &V) {
-    ExitVal = V;
-    IsExitValSet = true;
-  }
-  bool isExitValueSet() const { return IsExitValSet; }
+  void setExitValue(const ConstantInt *V) { ExitVal = V->getValue(); }
+  void setExitValue(const APInt &V) { ExitVal = V; }
 
   /// Determinator is the basic block that determines the next state of the DFA.
   const BasicBlock *getDeterminatorBB() const { return DBB; }
@@ -396,7 +389,6 @@ private:
   PathType Path;
   APInt ExitVal;
   const BasicBlock *DBB = nullptr;
-  bool IsExitValSet = false;
 };
 
 #ifndef NDEBUG
@@ -1434,7 +1426,6 @@ private:
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
   SmallPtrSet<const Value *, 32> EphValues;
-  std::vector<ThreadingPath> TPaths;
 };
 } // namespace
 
@@ -1530,7 +1521,8 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
   OptimizationRemarkEmitter ORE(&F);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  DFAJumpThreading ThreadImpl(&AC, &DTU, &LI, &TTI, &ORE);
+  const ScalarOptions &Opts = getScalarOptions(F);
+  DFAJumpThreading ThreadImpl(Opts, &AC, &DTU, &LI, &TTI, &ORE);
   if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();
 

@@ -1,0 +1,15 @@
+# NOTE: Do not autogenerate. Check the runtime version definition and its device export.
+# REQUIRES: system-linux, amdgpu-registered-target, lld-available
+# RUN: %clang -ffreestanding -DCOMPILER_RT_PROFILE_BAREMETAL=1 -DCOMPILER_RT_HAS_ATOMICS=1 -S -emit-llvm %S/../../lib/profile/InstrProfilingVersionVar.c -o - | FileCheck %s --check-prefix=CPU
+# RUN: %clang --target=amdgpu9.50-amd-amdhsa -nogpulib -ffreestanding -DCOMPILER_RT_PROFILE_BAREMETAL=1 -DCOMPILER_RT_HAS_ATOMICS=1 -emit-llvm -c %S/../../lib/profile/InstrProfilingVersionVar.c -o %t.bc
+# RUN: opt -S < %t.bc | FileCheck %s --check-prefix=GPU
+# Compile only the header to avoid host libc headers when targeting AMDGPU.
+# RUN: echo 'uint64_t get_version(void) { return __llvm_profile_raw_version; }' | %clang --target=amdgpu9.50-amd-amdhsa -nogpulib -ffreestanding -DCOMPILER_RT_PROFILE_BAREMETAL=1 -DCOMPILER_RT_HAS_ATOMICS=1 -include %S/../../lib/profile/InstrProfiling.h -x c -S -emit-llvm - -o - | FileCheck %s --check-prefix=DECL
+# RUN: ld.lld -shared %t.bc -o %t.so
+# RUN: llvm-readelf --dyn-syms %t.so | FileCheck %s --check-prefix=ELF
+
+# CPU: @__llvm_profile_raw_version = weak hidden global i64
+# GPU: @__llvm_profile_raw_version = weak protected addrspace(1) global i64
+# ELF: OBJECT WEAK PROTECTED {{[0-9]+}} __llvm_profile_raw_version
+
+# DECL: @__llvm_profile_raw_version = external protected addrspace(1) global i64

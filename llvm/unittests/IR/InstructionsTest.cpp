@@ -1586,47 +1586,6 @@ TEST(InstructionsTest, GetSplat) {
   EXPECT_EQ(NotSplatPoison->getSplatValue(true), nullptr);
 }
 
-TEST(InstructionsTest, SkipDebug) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"(
-      declare void @llvm.dbg.value(metadata, metadata, metadata)
-
-      define void @f() {
-      entry:
-        call void @llvm.dbg.value(metadata i32 0, metadata !11, metadata !DIExpression()), !dbg !13
-        ret void
-      }
-
-      !llvm.dbg.cu = !{!0}
-      !llvm.module.flags = !{!3, !4}
-      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-      !1 = !DIFile(filename: "t2.c", directory: "foo")
-      !2 = !{}
-      !3 = !{i32 2, !"Dwarf Version", i32 4}
-      !4 = !{i32 2, !"Debug Info Version", i32 3}
-      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
-      !9 = !DISubroutineType(types: !10)
-      !10 = !{null}
-      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
-      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-      !13 = !DILocation(line: 2, column: 7, scope: !8)
-  )");
-  ASSERT_TRUE(M);
-  Function *F = cast<Function>(M->getNamedValue("f"));
-  // This test wants to see dbg.values.
-  F->convertFromNewDbgValues();
-  BasicBlock &BB = F->front();
-
-  // The first non-debug instruction is the terminator.
-  auto *Term = BB.getTerminator();
-  EXPECT_EQ(Term, BB.begin()->getNextNode());
-  EXPECT_EQ(Term->getIterator(), skipDebugIntrinsics(BB.begin()));
-
-  // After the terminator, there are no non-debug instructions.
-  EXPECT_EQ(nullptr, Term->getNextNode());
-}
-
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
   LLVMContext Context;
   Module M("", Context);
@@ -2014,42 +1973,44 @@ TEST(InstructionsTest, AtomicSyncscope) {
   FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
   Function *F = Function::Create(FT, Function::ExternalLinkage, "Fun", M);
   BasicBlock *BB = BasicBlock::Create(Ctx, "Entry", F);
-  IRBuilder<> Builder(BB);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(wrap(&M));
+  LLVMPositionBuilderAtEnd(Builder, wrap(BB));
 
   // SyncScope-variants of LLVM C IRBuilder APIs are tested by llvm-c-test,
   // so cover the old versions (with a SingleThreaded argument) here.
-  Value *Ptr = ConstantPointerNull::get(Builder.getPtrTy());
+  Value *Ptr = ConstantPointerNull::get(PointerType::getUnqual(Ctx));
   Value *Val = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
 
   // fence
-  LLVMValueRef Fence = LLVMBuildFence(
-      wrap(&Builder), LLVMAtomicOrderingSequentiallyConsistent, 0, "");
+  LLVMValueRef Fence =
+      LLVMBuildFence(Builder, LLVMAtomicOrderingSequentiallyConsistent, 0, "");
   EXPECT_FALSE(LLVMIsAtomicSingleThread(Fence));
-  Fence = LLVMBuildFence(wrap(&Builder),
-                         LLVMAtomicOrderingSequentiallyConsistent, 1, "");
+  Fence =
+      LLVMBuildFence(Builder, LLVMAtomicOrderingSequentiallyConsistent, 1, "");
   EXPECT_TRUE(LLVMIsAtomicSingleThread(Fence));
 
   // atomicrmw
-  LLVMValueRef AtomicRMW = LLVMBuildAtomicRMW(
-      wrap(&Builder), LLVMAtomicRMWBinOpXchg, wrap(Ptr), wrap(Val),
-      LLVMAtomicOrderingSequentiallyConsistent, 0);
+  LLVMValueRef AtomicRMW =
+      LLVMBuildAtomicRMW(Builder, LLVMAtomicRMWBinOpXchg, wrap(Ptr), wrap(Val),
+                         LLVMAtomicOrderingSequentiallyConsistent, 0);
   EXPECT_FALSE(LLVMIsAtomicSingleThread(AtomicRMW));
-  AtomicRMW = LLVMBuildAtomicRMW(wrap(&Builder), LLVMAtomicRMWBinOpXchg,
-                                 wrap(Ptr), wrap(Val),
-                                 LLVMAtomicOrderingSequentiallyConsistent, 1);
+  AtomicRMW =
+      LLVMBuildAtomicRMW(Builder, LLVMAtomicRMWBinOpXchg, wrap(Ptr), wrap(Val),
+                         LLVMAtomicOrderingSequentiallyConsistent, 1);
   EXPECT_TRUE(LLVMIsAtomicSingleThread(AtomicRMW));
 
   // cmpxchg
   LLVMValueRef CmpXchg =
-      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
+      LLVMBuildAtomicCmpXchg(Builder, wrap(Ptr), wrap(Val), wrap(Val),
                              LLVMAtomicOrderingSequentiallyConsistent,
                              LLVMAtomicOrderingSequentiallyConsistent, 0);
   EXPECT_FALSE(LLVMIsAtomicSingleThread(CmpXchg));
-  CmpXchg =
-      LLVMBuildAtomicCmpXchg(wrap(&Builder), wrap(Ptr), wrap(Val), wrap(Val),
-                             LLVMAtomicOrderingSequentiallyConsistent,
-                             LLVMAtomicOrderingSequentiallyConsistent, 1);
+  CmpXchg = LLVMBuildAtomicCmpXchg(Builder, wrap(Ptr), wrap(Val), wrap(Val),
+                                   LLVMAtomicOrderingSequentiallyConsistent,
+                                   LLVMAtomicOrderingSequentiallyConsistent, 1);
   EXPECT_TRUE(LLVMIsAtomicSingleThread(CmpXchg));
+
+  LLVMDisposeBuilder(Builder);
 }
 
 TEST(InstructionsTest, CmpPredicate) {

@@ -11,21 +11,61 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace llvm;
 
 namespace cir {
 namespace direct {
+
+namespace {
+/// Emits the -fgpu-rdc offloading entries once the globals they refer to have
+/// been translated.
+class CUDAOffloadEntries : public mlir::LLVM::ModuleTranslation::Extension {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CUDAOffloadEntries)
+
+  CUDAOffloadEntries(mlir::ModuleOp mod, mlir::ArrayAttr entries,
+                     llvm::Module &llvmModule)
+      : mod(mod), entries(entries), llvmModule(llvmModule) {}
+
+  mlir::LogicalResult finalize() override {
+    for (auto entry : entries.getAsRange<cir::CUDAOffloadEntryAttr>()) {
+      mlir::FlatSymbolRefAttr aux = entry.getAuxAddr();
+      llvm::GlobalValue *addr =
+          llvmModule.getNamedValue(entry.getAddr().getValue());
+      llvm::GlobalValue *auxAddr =
+          aux ? llvmModule.getNamedValue(aux.getValue()) : nullptr;
+      if (!addr || (aux && !auxAddr))
+        return mod.emitError("offloading entry refers to undefined symbol ")
+               << (addr ? aux : entry.getAddr());
+      llvm::offloading::emitOffloadingEntry(
+          llvmModule, static_cast<llvm::object::OffloadKind>(entry.getKind()),
+          addr, entry.getName(), entry.getSize(), entry.getFlags(),
+          entry.getData(), auxAddr);
+    }
+    return mlir::success();
+  }
+
+private:
+  mlir::ModuleOp mod;
+  mlir::ArrayAttr entries;
+  llvm::Module &llvmModule;
+};
+} // namespace
 
 /// Implementation of the dialect interface that converts CIR attributes to LLVM
 /// IR metadata.
@@ -73,7 +113,9 @@ public:
                attribute.getName() ==
                    cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName() ||
                attribute.getName() ==
-                   cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()) {
+                   cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
       amendAMDGPUAtomicMetadata(instructions, attribute, moduleTranslation);
     }
     return mlir::success();
@@ -106,6 +148,16 @@ private:
       llvm::ArrayRef<llvm::Instruction *> instructions,
       mlir::NamedAttribute attribute,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
+      llvm::MDBuilder mdHelper(moduleTranslation.getLLVMContext());
+      llvm::MDNode *asRange = mdHelper.createRange(
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+      for (llvm::Instruction *inst : instructions)
+        inst->setMetadata(llvm::LLVMContext::MD_noalias_addrspace, asRange);
+      return;
+    }
     llvm::MDNode *empty =
         llvm::MDNode::get(moduleTranslation.getLLVMContext(), {});
     // !atomic.ignore.denormal.mode is a fixed metadata kind so it has to be
@@ -170,7 +222,8 @@ private:
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
     llvm::LLVMContext &llvmContext = llvmModule->getContext();
 
-    if (attribute.getName() == "cir.amdhsa_code_object_version") {
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUCodeObjectVersionAttrName()) {
       if (auto intAttr =
               mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
         llvmModule->addModuleFlag(llvm::Module::Error,
@@ -179,7 +232,7 @@ private:
       }
     }
 
-    if (attribute.getName() == "cir.amdgpu_printf_kind") {
+    if (attribute.getName() == cir::CIRDialect::getAMDGPUPrintfKindAttrName()) {
       if (auto strAttr =
               mlir::dyn_cast<mlir::StringAttr>(attribute.getValue())) {
         llvm::MDString *mdStr =
@@ -189,7 +242,7 @@ private:
       }
     }
 
-    if (attribute.getName() == "cir.amdgpu_xnack") {
+    if (attribute.getName() == cir::CIRDialect::getAMDGPUXnackAttrName()) {
       if (auto intAttr =
               mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
         llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.xnack",
@@ -197,7 +250,14 @@ private:
       }
     }
 
-    if (attribute.getName() == "cir.amdgpu_sramecc") {
+    if (attribute.getName() ==
+        cir::CIRDialect::getCUDAOffloadEntriesAttrName()) {
+      if (auto entries = mlir::dyn_cast<mlir::ArrayAttr>(attribute.getValue()))
+        moduleTranslation.getOrCreateExtension<CUDAOffloadEntries>(mod, entries,
+                                                                   *llvmModule);
+    }
+
+    if (attribute.getName() == cir::CIRDialect::getAMDGPUSramEccAttrName()) {
       if (auto intAttr =
               mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
         llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.sramecc",

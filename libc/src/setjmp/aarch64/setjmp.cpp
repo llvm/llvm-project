@@ -8,6 +8,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/setjmp/setjmp_impl.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -37,8 +38,15 @@ namespace LIBC_NAMESPACE_DECL {
         stp x19, x20, [x0,  #0*16]
         stp x21, x22, [x0,  #1*16]
         stp x23, x24, [x0,  #2*16]
+      )"
+#if !defined(LIBC_TARGET_ARCH_IS_LFI)
+      // LFI reserves x25 (ctx), x26 (scratch), x27 (base), and x28 (addr).
+      R"(
         stp x25, x26, [x0,  #3*16]
         stp x27, x28, [x0,  #4*16]
+      )"
+#endif
+      R"(
         stp x29, x30, [x0,  #5*16]
       )"
 

@@ -345,7 +345,7 @@ define void @add_exit_value_differs_in_operand_use_flags(i64 %start, i64 %step, 
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div, %end.div
-; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) Exits: ((((%step * %n) + %start) /u 3) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) Exits: (2 * (((%step * %n) + %start) /u 3))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -371,6 +371,71 @@ loop:
   %i.next = add i64 %i, 1
   %c = icmp eq i64 %i, %n
   br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The exit count of %outer.latch uses (9 + %start)<u nuw>, which may be poison
+; if %outer.header exits before %inner runs, so it must stay in a umin_seq.
+define void @exit_count_with_exit_value_nuw_may_be_poison(i8 noundef %start, i8 noundef %n) {
+; CHECK-LABEL: 'exit_count_with_exit_value_nuw_may_be_poison'
+; CHECK-NEXT:  Classifying expressions for: @exit_count_with_exit_value_nuw_may_be_poison
+; CHECK-NEXT:    %outer.iv = phi i8 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%outer.header> U: [0,100) S: [0,100) Exits: (%n umin_seq (-1 + (1 umax (100 umin (9 + %start)<u nuw>)))<nsw>) LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:    %inner.iv = phi i8 [ %start, %inner.ph ], [ %inner.iv.next, %inner ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%inner> U: full-set S: full-set Exits: (9 + %start)<u nuw> LoopDispositions: { %inner: Computable, %outer.header: Uniform }
+; CHECK-NEXT:    %inner.count = phi i32 [ 0, %inner.ph ], [ %inner.count.next, %inner ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner> U: [0,10) S: [0,10) Exits: 9 LoopDispositions: { %inner: Computable, %outer.header: Uniform }
+; CHECK-NEXT:    %inner.iv.next = add nuw i8 %inner.iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%inner> U: full-set S: full-set Exits: (10 + %start) LoopDispositions: { %inner: Computable, %outer.header: Uniform }
+; CHECK-NEXT:    %inner.count.next = add i32 %inner.count, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%inner> U: [1,11) S: [1,11) Exits: 10 LoopDispositions: { %inner: Computable, %outer.header: Uniform }
+; CHECK-NEXT:    %inner.iv.lcssa = phi i8 [ %inner.iv, %inner ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%inner> U: full-set S: full-set --> (9 + %start)<u nuw> U: full-set S: full-set Exits: (9 + %start)<u nuw> LoopDispositions: { %outer.header: Uniform, %inner: Computable }
+; CHECK-NEXT:    %outer.bound = call i8 @llvm.umin.i8(i8 %inner.iv.lcssa, i8 100)
+; CHECK-NEXT:    --> (100 umin {%start,+,1}<nuw><%inner>) U: [0,101) S: [0,101) --> (100 umin (9 + %start)<u nuw>) U: [0,101) S: [0,101) Exits: (100 umin (9 + %start)<u nuw>) LoopDispositions: { %outer.header: Uniform, %inner: Computable }
+; CHECK-NEXT:    %outer.iv.next = add i8 %outer.iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%outer.header> U: [1,101) S: [1,101) Exits: (1 + (%n umin_seq (-1 + (1 umax (100 umin (9 + %start)<u nuw>)))<nsw>))<nuw><nsw> LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @exit_count_with_exit_value_nuw_may_be_poison
+; CHECK-NEXT:  Loop %inner: backedge-taken count is i32 9
+; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 9
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is i32 9
+; CHECK-NEXT:  Loop %inner: Trip multiple is 10
+; CHECK-NEXT:  Loop %outer.header: <multiple exits> backedge-taken count is (%n umin_seq (-1 + (1 umax (100 umin (9 + %start)<u nuw>)))<nsw>)
+; CHECK-NEXT:    exit count for outer.header: %n
+; CHECK-NEXT:    exit count for outer.latch: (-1 + (1 umax (100 umin (9 + %start)<u nuw>)))<nsw>
+; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i8 99
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is (%n umin_seq (-1 + (1 umax (100 umin (9 + %start)<u nuw>)))<nsw>)
+; CHECK-NEXT:    symbolic max exit count for outer.header: %n
+; CHECK-NEXT:    symbolic max exit count for outer.latch: (-1 + (1 umax (100 umin (9 + %start)<u nuw>)))<nsw>
+; CHECK-NEXT:  Loop %outer.header: Trip multiple is 1
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i8 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %outer.header.ec = icmp eq i8 %outer.iv, %n
+  br i1 %outer.header.ec, label %exit, label %inner.ph
+
+inner.ph:
+  br label %inner
+
+inner:
+  %inner.iv = phi i8 [ %start, %inner.ph ], [ %inner.iv.next, %inner ]
+  %inner.count = phi i32 [ 0, %inner.ph ], [ %inner.count.next, %inner ]
+  %inner.iv.next = add nuw i8 %inner.iv, 1
+  %inner.count.next = add i32 %inner.count, 1
+  %inner.ec = icmp eq i32 %inner.count.next, 10
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  %inner.iv.lcssa = phi i8 [ %inner.iv, %inner ]
+  %outer.bound = call i8 @llvm.umin.i8(i8 %inner.iv.lcssa, i8 100)
+  %outer.iv.next = add i8 %outer.iv, 1
+  %outer.latch.ec = icmp ult i8 %outer.iv.next, %outer.bound
+  br i1 %outer.latch.ec, label %outer.header, label %exit
 
 exit:
   ret void

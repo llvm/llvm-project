@@ -12,8 +12,10 @@
 
 #include "Mips.h"
 #include "MipsSubtarget.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,19 +25,24 @@ using namespace llvm;
 #define DEBUG_TYPE "mips-os16"
 
 namespace {
-  class MipsOs16 : public ModulePass {
-  public:
-    static char ID;
+class MipsOs16Legacy : public ModulePass {
+public:
+  static char ID;
 
-    MipsOs16() : ModulePass(ID) {}
+  MipsOs16Legacy() : ModulePass(ID) {}
 
-    StringRef getPassName() const override { return "MIPS Os16 Optimization"; }
+  StringRef getPassName() const override { return "MIPS Os16 Optimization"; }
 
-    bool runOnModule(Module &M) override;
-  };
+  bool runOnModule(Module &M) override;
 
-  char MipsOs16::ID = 0;
-}
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    ModulePass::getAnalysisUsage(AU);
+  }
+};
+
+char MipsOs16Legacy::ID = 0;
+} // namespace
 
 // Figure out if we need float point based on the function signature.
 // We need to move variables in and/or out of floating point
@@ -100,9 +107,10 @@ static bool needsFP(Function &F) {
   return false;
 }
 
-
-bool MipsOs16::runOnModule(Module &M) {
-  StringRef Mips32FunctionMask = MipsOptions::Global.mips32_function_mask;
+static bool runOs16OnModule(Module &M) {
+  const MipsOptions &Opts =
+      M.getContext().getLibraryOptions().get<MipsOptions>();
+  StringRef Mips32FunctionMask = Opts.mips32_function_mask;
   bool usingMask = !Mips32FunctionMask.empty();
   bool doneUsingMask = false; // this will make it stop repeating
 
@@ -152,4 +160,12 @@ bool MipsOs16::runOnModule(Module &M) {
   return modified;
 }
 
-ModulePass *llvm::createMipsOs16Pass() { return new MipsOs16(); }
+ModulePass *llvm::createMipsOs16LegacyPass() { return new MipsOs16Legacy(); }
+
+bool MipsOs16Legacy::runOnModule(Module &M) { return runOs16OnModule(M); }
+
+PreservedAnalyses MipsOs16Pass::run(Module &M, ModuleAnalysisManager &MAM) {
+  return runOs16OnModule(M)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
+}

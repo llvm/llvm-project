@@ -33,6 +33,7 @@ enum class TypeKind {
   Complex,
   Integer,
   Float,
+  OpaqueFloat8,
   Pointer,
   Array,
   Vector,
@@ -107,6 +108,7 @@ public:
   bool isAtomic() const { return Kind == TypeKind::Atomic; }
   bool isInteger() const { return Kind == TypeKind::Integer; }
   bool isFloat() const { return Kind == TypeKind::Float; }
+  bool isOpaqueFloat8() const { return Kind == TypeKind::OpaqueFloat8; }
   bool isPointer() const { return Kind == TypeKind::Pointer; }
   bool isArray() const { return Kind == TypeKind::Array; }
   bool isVector() const { return Kind == TypeKind::Vector; }
@@ -198,6 +200,20 @@ public:
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Float; }
 };
 
+/// An 8-bit floating-point format with no numeric semantics. This corresponds
+/// to the AArch64 __mfp8 type. A vector of this format uses an 8-bit integer
+/// element, so this type is not a valid vector element. If a similar type is
+/// needed for other targets this should be generalized.
+class OpaqueFloat8Type : public Type {
+public:
+  explicit OpaqueFloat8Type(Align ABIAlign)
+      : Type(TypeKind::OpaqueFloat8, TypeSize::getFixed(8), ABIAlign) {}
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::OpaqueFloat8;
+  }
+};
+
 class PointerLikeType : public Type {
 protected:
   unsigned AddrSpace;
@@ -215,10 +231,19 @@ public:
 };
 
 class PointerType : public PointerLikeType {
+  bool HasAddressSpaceQualifier;
+
 public:
-  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0)
+  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0,
+              bool HasAddressSpaceQualifier = false)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
-                        AddressSpace) {}
+                        AddressSpace),
+        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {
+    assert((HasAddressSpaceQualifier || AddressSpace == 0) &&
+           "an unqualified pointer is in address space 0");
+  }
+
+  bool hasAddressSpaceQualifier() const { return HasAddressSpaceQualifier; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
@@ -306,7 +331,10 @@ public:
              VectorKind VecKind = VectorKind::Generic)
       : Type(TypeKind::Vector, computeSizeInBits(ElementType, NumElements),
              ABIAlign),
-        ElementType(ElementType), NumElements(NumElements), VecKind(VecKind) {}
+        ElementType(ElementType), NumElements(NumElements), VecKind(VecKind) {
+    assert(!ElementType->isOpaqueFloat8() &&
+           "opaque 8-bit float is not a valid vector element type");
+  }
 
   const Type *getElementType() const { return ElementType; }
   ElementCount getNumElements() const { return NumElements; }
@@ -385,7 +413,12 @@ enum RecordFlags : unsigned {
   IsCXXRecord = 1 << 3,
   IsPolymorphic = 1 << 4,
   HasFlexibleArrayMember = 1 << 5,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ HasFlexibleArrayMember),
+  IsCXXEmpty = 1 << 6,
+  HasNonTrivialCopyAssignment = 1 << 7,
+  HasNonTrivialDestructor = 1 << 8,
+  HasNonTrivialDefaultConstructor = 1 << 9,
+  LLVM_MARK_AS_BITMASK_ENUM(
+      /* LargestValue = */ HasNonTrivialDefaultConstructor),
 };
 
 class RecordType : public Type {
@@ -422,6 +455,24 @@ public:
   bool hasFlexibleArrayMember() const {
     return static_cast<unsigned>(Flags & RecordFlags::HasFlexibleArrayMember) !=
            0;
+  }
+  /// True for a C++ class that is empty in the sense of std::is_empty. This
+  /// differs from isEmpty(), which applies the ABI rules for ignoring empty
+  /// records.
+  bool isCXXEmpty() const {
+    return static_cast<unsigned>(Flags & RecordFlags::IsCXXEmpty) != 0;
+  }
+  bool hasNonTrivialCopyAssignment() const {
+    return static_cast<unsigned>(Flags &
+                                 RecordFlags::HasNonTrivialCopyAssignment) != 0;
+  }
+  bool hasNonTrivialDestructor() const {
+    return static_cast<unsigned>(Flags &
+                                 RecordFlags::HasNonTrivialDestructor) != 0;
+  }
+  bool hasNonTrivialDefaultConstructor() const {
+    return static_cast<unsigned>(
+               Flags & RecordFlags::HasNonTrivialDefaultConstructor) != 0;
   }
   uint32_t getNumBaseClasses() const { return BaseClasses.size(); }
   uint32_t getNumVirtualBaseClasses() const {
@@ -486,10 +537,15 @@ public:
     return new (Allocator.Allocate<FloatType>()) FloatType(Semantics, Align);
   }
 
+  const OpaqueFloat8Type *getOpaqueFloat8Type(Align Align) {
+    return new (Allocator.Allocate<OpaqueFloat8Type>()) OpaqueFloat8Type(Align);
+  }
+
   const PointerType *getPointerType(uint64_t Size, Align Align,
-                                    unsigned Addrspace = 0) {
+                                    unsigned Addrspace = 0,
+                                    bool HasAddressSpaceQualifier = false) {
     return new (Allocator.Allocate<PointerType>())
-        PointerType(Size, Align, Addrspace);
+        PointerType(Size, Align, Addrspace, HasAddressSpaceQualifier);
   }
 
   const ArrayType *getArrayType(const Type *ElementType, uint64_t NumElements,

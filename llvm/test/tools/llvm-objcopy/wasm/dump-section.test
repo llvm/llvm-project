@@ -1,7 +1,7 @@
 ## Test the contents of a custom section dumped from a binary.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --dump-section=producers=%t.sec %t
-# RUN: od -t x1 %t.sec | FileCheck %s
+# RUN: od -t x1 %t.sec | FileCheck --ignore-case %s
 
 # RUN: not llvm-objcopy --dump-section=nonexistent=%t.sec %t 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
 # RUN: not llvm-objcopy --dump-section=producers=%t.dir/bar %t 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=DIROUT %s
@@ -15,7 +15,7 @@
 
 ## Test dumping the type section (a known section).
 # RUN: llvm-objcopy --dump-section=TYPE=%t.sec %t
-# RUN: od -t x1 %t.sec | FileCheck %s --check-prefix=TYPESEC
+# RUN: od -t x1 %t.sec | FileCheck --ignore-case %s --check-prefix=TYPESEC
 
 ## Raw contents of the type section.
 # TYPESEC: 000000 01 60 01 7f 01 7d
@@ -23,7 +23,7 @@
 
 ## Check that dumping and removing a section works in the same invocation
 # RUN: llvm-objcopy --dump-section=producers=%t.sec --remove-section=producers %t %t2
-# RUN: od -t x1 %t.sec | FileCheck %s
+# RUN: od -t x1 %t.sec | FileCheck --ignore-case %s
 # RUN: obj2yaml %t2 | FileCheck --check-prefix=REMOVED %s
 
 # REMOVED-NOT: producers

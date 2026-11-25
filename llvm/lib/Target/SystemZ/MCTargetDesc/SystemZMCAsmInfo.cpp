@@ -30,7 +30,6 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   Data64bitsDirective = "\t.quad\t";
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
@@ -52,13 +51,21 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   CodePointerSize = 8;
   CommentString = "*";
   UsesSetToEquateSymbol = true;
-  ExceptionsType = ExceptionHandling::ZOS;
   IsHLASM = true;
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
+}
+
+const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
+    const MCSymbol *Sym, uint64_t Offset, MCContext &Ctx) const {
+  const MCExpr *Expr = MCSpecifierExpr::create(Sym, SystemZ::S_QCon, Ctx);
+  if (Offset)
+    Expr =
+        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+  return Expr;
 }
 
 void SystemZMCAsmInfoGOFF::printSpecifierExpr(

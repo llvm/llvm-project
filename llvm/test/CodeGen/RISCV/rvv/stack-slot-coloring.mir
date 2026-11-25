@@ -4,7 +4,6 @@
 ---
 name:            nop_copy_elim_m1
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -166,7 +165,6 @@ body:             |
 ---
 name:            nop_copy_elim_m2
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Utils/CodegenUtils.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 
 #include "mlir/Conversion/LLVMCommon/StructBuilder.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
@@ -334,7 +336,7 @@ struct StorageSpecifierGetOpConverter
 struct StorageSpecifierInitOpConverter
     : public OpConversionPattern<StorageSpecifierInitOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(StorageSpecifierInitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

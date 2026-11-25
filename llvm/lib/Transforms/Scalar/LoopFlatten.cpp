@@ -131,8 +131,8 @@ struct FlattenInfo {
 
   Value *NewTripCount = nullptr; // The tripcount of the flattened loop.
 
-  FlattenInfo(Loop *OL, Loop *IL)
-      : Opts(ScalarOptions::Global), OuterLoop(OL), InnerLoop(IL) {}
+  FlattenInfo(const ScalarOptions &Opts, Loop *OL, Loop *IL)
+      : Opts(Opts), OuterLoop(OL), InnerLoop(IL) {}
 
   bool isNarrowInductionPhi(PHINode *Phi) {
     // This can't be the narrow phi if we haven't widened the IV first.
@@ -780,6 +780,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   // Replace all uses of the polynomial calculated from the two induction
   // variables with the one new one.
   IRBuilder<> Builder(FI.OuterInductionPHI->getParent()->getTerminator());
+  Builder.disableGEPCanonicalization();
   for (Value *V : FI.LinearIVUses) {
     Value *OuterValue = FI.OuterInductionPHI;
     if (FI.Widened)
@@ -994,11 +995,12 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // regardless of whether anything ends up being flattened.
   LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr,
                              &AR.AC);
+  const ScalarOptions &Opts = getScalarOptions(*LN.getParent());
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)
       continue;
-    FlattenInfo FI(OuterLoop, InnerLoop);
+    FlattenInfo FI(Opts, OuterLoop, InnerLoop);
     Changed |=
         FlattenLoopPair(FI, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
                         MSSAU ? &*MSSAU : nullptr, LAIM.getInfo(*OuterLoop));

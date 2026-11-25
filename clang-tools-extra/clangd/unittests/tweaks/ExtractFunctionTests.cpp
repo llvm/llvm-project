@@ -79,7 +79,7 @@ void f(int a) {
 struct Foo {
   int x;
 };
-void extracted(int &a, int b, int * &ptr, const Foo &foo) {
+void extracted(int &a, int b, int *&ptr, const Foo &foo) {
 a += foo.x + b;
   *ptr++;
 }
@@ -744,7 +744,7 @@ TEST_F(ExtractFunctionTest, RangeBasedFor) {
     struct Vec { int *begin(); int *end(); };
     Vec V;
     void foo(int);
-    void f() { for (auto X : V) { [[foo(X);]] } }
+    void f() { for (auto X : V) { [[foo(X + 1);]] } }
   )cpp"),
               HasSubstr("extracted"));
 }
@@ -782,10 +782,11 @@ TEST_F(ExtractFunctionTest, ConstParameters) {
   Context = File;
   // A captured scalar that's only read becomes a by-value parameter;
   // non-scalars instead become a const reference (see the `S` cases
-  // below).
+  // below). The duplicated calls below are there to prevent "pure forwarding"
+  // suppression.
   EXPECT_THAT(apply(R"cpp(
     void use(int);
-    void f(int x) { [[use(x);]] }
+    void f(int x) { [[use(x); use(x);]] }
   )cpp"),
               HasSubstr("void extracted(int x)"));
   // Direct assignment: stays non-const.
@@ -800,45 +801,46 @@ TEST_F(ExtractFunctionTest, ConstParameters) {
   // A non-const method call may mutate the object: stays non-const.
   EXPECT_THAT(apply(R"cpp(
     struct S { void mutate(); };
-    void f(S s) { [[s.mutate();]] }
+    void f(S s) { [[s.mutate(); s.mutate();]] }
   )cpp"),
               HasSubstr("void extracted(S &s)"));
   // A const method call cannot mutate the object: becomes const.
   EXPECT_THAT(apply(R"cpp(
     struct S { void inspect() const; };
-    void f(S s) { [[s.inspect();]] }
+    void f(S s) { [[s.inspect(); s.inspect();]] }
   )cpp"),
               HasSubstr("void extracted(const S &s)"));
   // Passed to a parameter taking a non-const reference: stays non-const,
   // since the callee could mutate it through that reference.
   EXPECT_THAT(apply(R"cpp(
     void mayMutate(int &);
-    void f(int x) { [[mayMutate(x);]] }
+    void f(int x) { [[mayMutate(x); mayMutate(x);]] }
   )cpp"),
               HasSubstr("void extracted(int &x)"));
   // Passed to a parameter taking a const reference or by value: becomes
   // an unmutated scalar, so by value.
   EXPECT_THAT(apply(R"cpp(
     void readOnly(const int &);
-    void f(int x) { [[readOnly(x);]] }
+    void f(int x) { [[readOnly(x); readOnly(x);]] }
   )cpp"),
               HasSubstr("void extracted(int x)"));
   EXPECT_THAT(apply(R"cpp(
     void byValue(int);
-    void f(int x) { [[byValue(x);]] }
+    void f(int x) { [[byValue(x); byValue(x);]] }
   )cpp"),
               HasSubstr("void extracted(int x)"));
   // A scalar parameter that's already declared const keeps that
   // qualifier when passed by value: It might be relevant for overload
   // resolution.
-  EXPECT_THAT(apply("void use(int); void f(const int x) { [[use(x);]] }"),
-              HasSubstr("void extracted(const int x)"));
+  EXPECT_THAT(
+      apply("void use(int); void f(const int x) { [[use(x); use(x);]] }"),
+      HasSubstr("void extracted(const int x)"));
   // A non-scalar parameter that's already declared const keeps that
   // qualifier, since it's still passed by reference.
   EXPECT_THAT(apply(R"cpp(
     struct S {};
     void use(const S &);
-    void f(const S s) { [[use(s);]] }
+    void f(const S s) { [[use(s); use(s);]] }
   )cpp"),
               HasSubstr("void extracted(const S &s)"));
 }
@@ -895,7 +897,7 @@ TEST_F(ExtractFunctionTest, ConstParametersMemberCallArguments) {
   // the argument check from the object check.
   EXPECT_THAT(apply(R"cpp(
     struct S { void mayMutate(int &) const; };
-    void f(S s, int x) { [[s.mayMutate(x);]] }
+    void f(S s, int x) { [[s.mayMutate(x); s.mayMutate(x);]] }
   )cpp"),
               HasSubstr("extracted(const S &s, int &x)"));
   // Same, but through an overloaded operator: the implicit object is
@@ -903,7 +905,7 @@ TEST_F(ExtractFunctionTest, ConstParametersMemberCallArguments) {
   // found at the right offset.
   EXPECT_THAT(apply(R"cpp(
     struct S { void operator()(int &) const; };
-    void f(S s, int x) { [[s(x);]] }
+    void f(S s, int x) { [[s(x); s(x);]] }
   )cpp"),
               HasSubstr("extracted(const S &s, int &x)"));
   // A free (non-member) operator overload has no implicit object, so all
@@ -911,7 +913,7 @@ TEST_F(ExtractFunctionTest, ConstParametersMemberCallArguments) {
   EXPECT_THAT(apply(R"cpp(
     struct S {};
     void operator+(const S &, int &);
-    void f(S s, int x) { [[s + x;]] }
+    void f(S s, int x) { [[s + x; s + x;]] }
   )cpp"),
               HasSubstr("extracted(const S &s, int &x)"));
 }
@@ -927,12 +929,12 @@ TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
     struct S { int x; };
     void f(S *ptr) { [[ptr->x = 1;]] }
   )cpp"),
-              HasSubstr("extracted(S * ptr)"));
+              HasSubstr("extracted(S *ptr)"));
   EXPECT_THAT(apply("void f(int *p) { [[p[0] = 1;]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
   // Same for a plain dereference.
   EXPECT_THAT(apply("void f(int *p) { [[*p = 1;]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
@@ -970,21 +972,41 @@ TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
   ExtraArgs.push_back("-std=c++23");
   EXPECT_THAT(apply(R"cpp(
     struct S { static void operator()(int); };
-    void f(S s, int x) { [[s(x);]] }
+    void f(S s, int x) { [[s(x); s(x);]] }
   )cpp"),
               HasSubstr("extracted(const S &s, int x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersFunctionPointer) {
+  Context = File;
+  // A function pointer's declarator syntax puts the name inside the
+  // parens around the "*", not after the whole type: printType()'s
+  // placeholder must be threaded through for this to render as
+  // `void (*F)(int)` rather than the uncompilable `void (*)(int) F`.
+  EXPECT_THAT(apply("void f(void (*F)(int)) { [[F(1);]] }"),
+              HasSubstr("extracted(void (*F)(int))"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersFunctionReference) {
+  Context = File;
+  // A (non-pointer) function type can't be cv-qualified at all, unlike
+  // every other non-scalar, non-array type this conservative-const
+  // logic otherwise applies to: adding const here would produce
+  // unparseable output (`void (const &F)(int)`).
+  EXPECT_THAT(apply("void f(void (&F)(int)) { [[F(0);]] }"),
+              HasSubstr("extracted(void (&F)(int))"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
   Context = File;
   // An unmutated pointer is a scalar too: passed by value.
-  EXPECT_THAT(apply("void use(int *); void f(int *p) { [[use(p);]] }"),
-              HasSubstr("extracted(int * p)"));
+  EXPECT_THAT(apply("void use(int *); void f(int *p) { [[use(p); use(p);]] }"),
+              HasSubstr("extracted(int *p)"));
   // An unmutated enum: passed by value.
   EXPECT_THAT(apply(R"cpp(
     enum E { A, B };
     void use(E);
-    void f(E e) { [[use(e);]] }
+    void f(E e) { [[use(e); use(e);]] }
   )cpp"),
               HasSubstr("extracted(E e)"));
   // A class type, even one that's small and trivially copyable, is never
@@ -998,7 +1020,7 @@ TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
   // An unmutated array is not a scalar (even though its element type is):
   // stays a non-const reference, per the existing array carve-out.
   EXPECT_THAT(apply("void f() { int arr[5]; [[int x = arr[0];]] }"),
-              HasSubstr("extracted(int[5] &arr)"));
+              HasSubstr("extracted(int (&arr)[5])"));
 }
 
 // Variables of reference type, const or non-const, must stay references,
@@ -1065,7 +1087,7 @@ TEST_F(ExtractFunctionTest, CFileModifiedScalarBecomesPointer) {
          int j;
          [[j = 0;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(int * j)"), HasSubstr("(*j) = 0;"),
+              AllOf(HasSubstr("extracted(int *j)"), HasSubstr("(*j) = 0;"),
                     HasSubstr("extracted(&j)")));
 }
 
@@ -1082,7 +1104,7 @@ TEST_F(ExtractFunctionTest, CFileUnmodifiedStructBecomesConstPointer) {
          p.v1 = 0;
          [[i = p.v1;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(const struct pair * p)"),
+              AllOf(HasSubstr("extracted(const struct pair *p)"),
                     HasSubstr("i = p->v1;"), HasSubstr("extracted(&p)")));
 }
 
@@ -1134,7 +1156,7 @@ TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
          int arr[5];
          [[arr[0] = 1;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(int * arr)"), HasSubstr("arr[0] = 1;"),
+              AllOf(HasSubstr("extracted(int *arr)"), HasSubstr("arr[0] = 1;"),
                     HasSubstr("extracted(arr)"), Not(HasSubstr("&arr"))));
 }
 
@@ -1209,6 +1231,391 @@ TEST_F(ExtractFunctionTest, CFileRejectArrayTypeof) {
          [[__typeof__(arr) copy;]]
     })cpp"),
             "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileAllowSingleDimensionVariableLengthArray) {
+  // A VLA's own outermost dimension is never a problem: once decayed,
+  // it no longer appears in the parameter type at all (`int A[N]`
+  // decays to plain `int *A`, not something that needs to mention `N`).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo(int N) {
+         int A[N];
+         [[A[0] = 1;]]
+    })cpp"),
+              HasSubstr("extracted(int *A)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMultiDimensionVariableLengthArray) {
+  // Unlike the single-dimension case, an inner dimension that's still
+  // variable-length after decaying the outer one (`int A[2][N]` decays
+  // to `int (*A)[N]`) is a real hazard: `N` is an arbitrary expression,
+  // typically another variable's name, that isn't necessarily (and
+  // here isn't at all) itself a parameter of the extracted function,
+  // and even printing it would reference a name meaningless in the new
+  // scope.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[2][N];
+         [[A[0][0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXRejectVariableLengthArray) {
+  // Clang also supports VLAs in C++ as a GNU extension. An unmutated
+  // array capture is passed by reference there (see
+  // ConstParametersScalarsByValue's plain, fixed-size array case,
+  // which that's still fine for) rather than decaying it to a pointer
+  // the way C does -- but a reference's declared type spells out every
+  // dimension's bound, including the outermost one:
+  // `void extracted(int (&A)[2][N])` looks plausible, and even
+  // compiles, but a call to it doesn't -- `N` in the parameter list
+  // isn't the same `N` as at the call site, and a reference-to-array
+  // parameter can't be bound by just matching the spelling.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[2][N];
+         [[A[0][0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXRejectSingleDimensionVariableLengthArray) {
+  // Unlike in C (where a single-dimension VLA decays to a pointer that
+  // no longer mentions the bound at all, see
+  // CFileAllowSingleDimensionVariableLengthArray), a C++ reference's
+  // declared type keeps the bound regardless of dimension count, so
+  // even this simpler case has the same hazard as the 2D one above.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[N];
+         [[A[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXRejectPointerToVariableLengthArray) {
+  // A pointer to a VLA (`int (*)[N]`) isn't an array type itself, so
+  // the array-specific VLA checks above don't apply to it -- but it
+  // has the exact same hazard: its pointee's bound is baked into the
+  // type regardless of how the pointer itself ends up passed (by
+  // value, by reference, or, in C, by a further pointer indirection),
+  // so it can't be printed without mentioning a name that isn't in
+  // scope.
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int (*A)[N];
+         [[(*A)[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMutatedPointerToVariableLengthArray) {
+  // Same hazard as above, but in C, and with the pointer additionally
+  // mutated (so it would otherwise go through the C pointer-adapter
+  // path instead of being passed by value): the bound is baked into
+  // the pointee type regardless, so `int (**A)[N]` is just as broken
+  // as the unmutated `int (*A)[N]` would have been.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int (*A)[N];
+         A = 0;
+         [[(*A)[0] = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingZeroArgCall) {
+  Context = File;
+  // No abstraction gained: the extracted function would just rename the
+  // call, with no customizable behavior at all.
+  EXPECT_EQ(apply("void foo(); void f() { [[foo();]] }"), "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingSingleArgCall) {
+  Context = File;
+  // x is forwarded to foo unchanged: still just a rename.
+  EXPECT_EQ(apply("void foo(int); void f(int x) { [[foo(x);]] }"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_LiteralArg) {
+  Context = File;
+  // Hardcoding 100 is a real specialization, unlike a plain rename.
+  EXPECT_THAT(apply("void foo(int); void f() { [[foo(100);]] }"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_GlobalArg) {
+  Context = File;
+  // Hardcoding which already-visible global to use is likewise a real
+  // specialization: unlike a captured local, globalVar doesn't need to
+  // become a parameter at all.
+  EXPECT_THAT(apply(R"cpp(
+    int globalVar;
+    void foo(int);
+    void f() { [[foo(globalVar);]] }
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_ComputedArg) {
+  Context = File;
+  // foo(x + y) needs 2 parameters for 1 argument slot: real computation,
+  // not just forwarding x and y unchanged.
+  EXPECT_THAT(apply("void foo(int); void f(int x, int y) { [[foo(x + y);]] }"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingMethodCall) {
+  Context = File;
+  // Both the receiver and the argument are forwarded unchanged.
+  EXPECT_EQ(apply(R"cpp(
+    struct S { void method(int); };
+    void f(S s, int x) { [[s.method(x);]] }
+  )cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_GlobalReceiver) {
+  Context = File;
+  // Hardcoding which already-visible object to call the method on is a
+  // real specialization, same as a global argument.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void method(); };
+    S globalS;
+    void f() { [[globalS.method();]] }
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingOperatorCall) {
+  Context = File;
+  // Both operands of a + b are forwarded unchanged; the operator function
+  // itself (never customizable) is correctly excluded from the check.
+  EXPECT_EQ(apply(R"cpp(
+    struct S {};
+    void operator+(const S &, int);
+    void f(S s, int x) { [[s + x;]] }
+  )cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingFunctionPointerCall) {
+  Context = File;
+  // Unlike an ordinary function name, a function-pointer variable callee
+  // does need to become a parameter -- but it's still forwarded
+  // unchanged here, same as x.
+  EXPECT_EQ(apply("void f(void (*fp)(int), int x) { [[fp(x);]] }"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_ComputedCallee) {
+  Context = File;
+  // Which function pointer gets called is itself computed here, not a
+  // bare forwarded reference: real logic, not just forwarding.
+  EXPECT_THAT(
+      apply("void f(void (*fp[2])(int), int i, int x) { [[fp[i](x);]] }"),
+      HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingReturnStmt) {
+  Context = File;
+  // A call wrapped in a ReturnStmt is just as much a pure rename as a
+  // bare call statement.
+  EXPECT_EQ(apply("int foo(int); int f(int x) { [[return foo(x);]] }"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingReturnStmtImplicitConversion) {
+  Context = File;
+  // The implicit int-to-long conversion doesn't change the verdict: the
+  // extracted function would perform the exact same conversion
+  // internally, so this is still just a rename.
+  EXPECT_EQ(apply("int foo(int); long f(int x) { [[return foo(x);]] }"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_ReturnStmtComputedArg) {
+  Context = File;
+  // Same as the non-return case: a computed argument is real abstraction.
+  EXPECT_THAT(
+      apply("int foo(int); int f(int x, int y) { [[return foo(x + y);]] }"),
+      HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectBareReturnStmt) {
+  Context = File;
+  // A value-less return has nothing to abstract over at all: extracting
+  // it would just wrap it in a function that does the exact same thing.
+  EXPECT_EQ(apply("void f() { [[return;]] }"), "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_PointerToMemberCallee) {
+  Context = File;
+  // Unlike an ordinary method call, a pointer-to-member call has no
+  // statically known method (getMethodDecl() is null): which member is
+  // invoked is itself computed here (table[I]), not inherent to what the
+  // wrapper does, so it must be checked like any other operand.
+  EXPECT_THAT(apply(R"cpp(
+    struct St {};
+    void f(St S, void (St::*table[2])(int), int I, int A) {
+      [[(S.*table[I])(A);]]
+    })cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingImplicitThis) {
+  Context = File;
+  // An implicit `this` receiver always refers to the same object -- the
+  // extracted function becomes a sibling member itself, so `this` stays
+  // implicit there too -- same as an ordinary function name, it must not
+  // disqualify suppression just for not being a "bare" reference.
+  EXPECT_EQ(apply(R"cpp(
+    struct S {
+       void foo(int);
+       void bar(int A) {
+         [[foo(A);]]
+       }
+    };)cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingDefaultArg) {
+  Context = File;
+  // An argument filled in from the callee's own default (as opposed to
+  // one actually written at this call site) isn't something to hardcode
+  // a judgement about: it must not disqualify suppression.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int A, int B = 0);
+    void bar(int A) {
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingParenthesizedReturn) {
+  Context = File;
+  // Parentheses around the returned call must be looked through, same as
+  // an implicit conversion.
+  EXPECT_EQ(apply(R"cpp(
+    int foo(int);
+    int bar(int A) {
+      [[return (foo(A));]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_RepeatedArg) {
+  Context = File;
+  // Using the same captured local for more than one argument constrains a
+  // relationship (both slots must hold the same value) that a plain
+  // rename wouldn't: the same kind of real specialization as hardcoding
+  // a literal, even though each individual operand is bare.
+  EXPECT_THAT(apply(R"cpp(
+    void foo(int A, int B);
+    void bar(int A, int B) {
+      [[foo(A, A);]]
+    })cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_ReorderedArgs) {
+  Context = File;
+  // createParameters orders the extracted function's parameters by each
+  // Decl's declaration order in bar (A, then B), not by how they're used
+  // here -- so despite every argument being an independently bare,
+  // distinct local, the extracted function ends up permuting its own
+  // parameters internally (extracted(int A, int B) { foo(B, A); }): not
+  // a transparent pass-through, since its signature alone no longer
+  // predicts its behavior the way a plain rename's would.
+  EXPECT_THAT(apply(R"cpp(
+    void foo(int A, int B);
+    void bar(int A, int B) {
+      [[foo(B, A);]]
+    })cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingPreservedArgOrder) {
+  Context = File;
+  // Same distinct locals as the reordered case above, but passed in the
+  // same order they're declared in bar: no permutation is hidden in the
+  // extracted function, so this is still just a rename.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int A, int B);
+    void bar(int A, int B) {
+      [[foo(A, B);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingFunctionScopeStatic) {
+  Context = File;
+  // A function-scope static variable's name, unlike a namespace-scope
+  // global's, isn't visible wherever the extracted function ends up: it
+  // does need forwarding, same as an ordinary local variable, so this is
+  // still just a rename.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int);
+    void bar() {
+      static int A;
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingFunctionScopeThreadLocal) {
+  Context = File;
+  // Same as the static case: thread_local doesn't change the variable's
+  // name visibility, only its storage.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int);
+    void bar() {
+      thread_local int A;
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_NamespaceScopeStatic) {
+  Context = File;
+  // Unlike a function-scope static, a namespace-scope one (internal
+  // linkage notwithstanding) is visible wherever the extracted function
+  // ends up, same as an ordinary global: hardcoding it is a real
+  // specialization.
+  EXPECT_THAT(apply(R"cpp(
+    static int A;
+    void foo(int);
+    void bar() { [[foo(A);]] }
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingStructuredBinding) {
+  Context = File;
+  // A structured-binding name is declared by a BindingDecl, not a
+  // VarDecl, but is just as function-local and needs forwarding the
+  // same way.
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int);
+    struct Pair { int A, B; };
+    Pair make();
+    void bar() {
+      auto [A, B] = make();
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
 }
 
 } // namespace

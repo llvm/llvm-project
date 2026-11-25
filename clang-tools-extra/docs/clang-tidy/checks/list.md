@@ -118,6 +118,7 @@ readability/*
 | {doc}`bugprone-integer-division <bugprone/integer-division>` |  |
 | {doc}`bugprone-invalid-enum-default-initialization <bugprone/invalid-enum-default-initialization>` |  |
 | {doc}`bugprone-lambda-function-name <bugprone/lambda-function-name>` |  |
+| {doc}`bugprone-macro-condition <bugprone/macro-condition>` |  |
 | {doc}`bugprone-macro-parentheses <bugprone/macro-parentheses>` | Yes |
 | {doc}`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>` |  |
 | {doc}`bugprone-misleading-setter-of-reference <bugprone/misleading-setter-of-reference>` |  |
@@ -324,6 +325,7 @@ readability/*
 | {doc}`modernize-use-emplace <modernize/use-emplace>` | Yes |
 | {doc}`modernize-use-equals-default <modernize/use-equals-default>` | Yes |
 | {doc}`modernize-use-equals-delete <modernize/use-equals-delete>` | Yes |
+| {doc}`modernize-use-if-consteval <modernize/use-if-consteval>` | Yes |
 | {doc}`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>` | Yes |
 | {doc}`modernize-use-nodiscard <modernize/use-nodiscard>` | Yes |
 | {doc}`modernize-use-noexcept <modernize/use-noexcept>` | Yes |

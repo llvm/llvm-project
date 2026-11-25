@@ -176,11 +176,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   // setcc operations results (slt, sgt, ...).
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
-  // The cmp.cond.fmt instruction in MIPS32r6/MIPS64r6 uses 0 and -1 like MSA
-  // does. Integer booleans still use 0 and 1.
-  if (Subtarget.hasMips32r6())
-    setBooleanContents(ZeroOrOneBooleanContent,
-                       ZeroOrNegativeOneBooleanContent);
 
   // Load extented operations for i1 types must be promoted
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -230,6 +225,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::BRCOND,             MVT::Other, Custom);
   setOperationAction(ISD::FABS,               MVT::f32,   Custom);
   setOperationAction(ISD::FABS,               MVT::f64,   Custom);
+  setOperationAction(ISD::FNEG, MVT::f32, Custom);
+  setOperationAction(ISD::FNEG, MVT::f64, Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f32,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
@@ -573,7 +570,7 @@ static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
 
   // Assume the 3rd operand is a CondCodeSDNode. Add code to check the type of
   // node if necessary.
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
 
   return DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
                      DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
@@ -598,6 +595,25 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
 
   SDValue SetCC = N->getOperand(0);
 
+  // An R6 FP compare is lowered to (and Mask, 1), where Mask is 0 or -1.
+  // (select (and X, 1), -1, 0) -> (sext X) and
+  // (select (and X, 1), 0, -1) -> (sext (not X))
+  // when every bit of X is a copy of its sign bit.
+  EVT VT = N->getValueType(0);
+  if (SetCC.getOpcode() == ISD::AND && isOneConstant(SetCC.getOperand(1)) &&
+      VT.isScalarInteger()) {
+    SDValue X = SetCC.getOperand(0);
+    SDValue True = N->getOperand(1), False = N->getOperand(2);
+    EVT XVT = X.getValueType();
+    if (DAG.ComputeNumSignBits(X) == XVT.getScalarSizeInBits()) {
+      SDLoc DL(N);
+      if (isAllOnesConstant(True) && isNullConstant(False))
+        return DAG.getSExtOrTrunc(X, DL, VT);
+      if (isNullConstant(True) && isAllOnesConstant(False))
+        return DAG.getSExtOrTrunc(DAG.getNOT(DL, X, XVT), DL, VT);
+    }
+  }
+
   if ((SetCC.getOpcode() != ISD::SETCC) ||
       !SetCC.getOperand(0).getValueType().isInteger())
     return SDValue();
@@ -607,6 +623,22 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
 
   if (!FalseTy.isInteger())
     return SDValue();
+
+  // r6 selects can test canonical words directly in i64.
+  SDValue LHS = SetCC.getOperand(0);
+  ISD::CondCode CC = SetCC.getOperandCondCode(2);
+  if (Subtarget.hasMips64r6() && FalseTy == MVT::i64 &&
+      LHS.getOpcode() == ISD::TRUNCATE && LHS.getValueType() == MVT::i32 &&
+      LHS.getOperand(0).getValueType() == MVT::i64 &&
+      (CC == ISD::SETEQ || CC == ISD::SETNE) &&
+      isNullConstant(SetCC.getOperand(1)) &&
+      DAG.ComputeNumSignBits(LHS.getOperand(0)) > 32) {
+    SDLoc DL(N);
+    SDValue WideCC = DAG.getSetCC(DL, SetCC.getValueType(), LHS.getOperand(0),
+                                  DAG.getConstant(0, DL, MVT::i64), CC);
+    return DAG.getNode(ISD::SELECT, DL, FalseTy, WideCC, N->getOperand(1),
+                       False);
+  }
 
   ConstantSDNode *FalseC = dyn_cast<ConstantSDNode>(False);
 
@@ -623,7 +655,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   const SDLoc DL(N);
 
   if (!FalseC->getZExtValue()) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+    ISD::CondCode CC = SetCC.getOperandCondCode(2);
     SDValue True = N->getOperand(1);
 
     SetCC = DAG.getSetCC(DL, SetCC.getValueType(), SetCC.getOperand(0),
@@ -660,7 +692,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   //  xor $reg1, $reg1, 1
   //  addiu $reg2, $reg1, y-1
   if (Diff == -1) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+    ISD::CondCode CC = SetCC.getOperandCondCode(2);
     SetCC = DAG.getSetCC(DL, SetCC.getValueType(), SetCC.getOperand(0),
                          SetCC.getOperand(1),
                          ISD::getSetCCInverse(CC, SetCC.getValueType()));
@@ -1134,6 +1166,20 @@ static SDValue performSignExtendCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
+  // Widen AND/OR on canonical words; sign-extended constants preserve this
+  // form. Require one use to avoid duplicating shared operations and constants.
+  if (VT == MVT::i64 && N0.getValueType() == MVT::i32 && N0.hasOneUse() &&
+      (N0.getOpcode() == ISD::AND || N0.getOpcode() == ISD::OR) &&
+      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      isa<ConstantSDNode>(N0.getOperand(1))) {
+    SDValue Src = N0.getOperand(0).getOperand(0);
+    if (Src.getValueType() == MVT::i64 && DAG.ComputeNumSignBits(Src) > 32) {
+      int64_t Imm = cast<ConstantSDNode>(N0.getOperand(1))->getSExtValue();
+      return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, Src,
+                         DAG.getConstant(Imm, SDLoc(N), VT));
+    }
+  }
+
   // Pattern match XOR.
   // $dst = sign_extend (xor (trunc $src, i32), imm)
   // => $dst = xor (signext_inreg $src, i32), imm
@@ -1245,6 +1291,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::VAARG:              return lowerVAARG(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
   case ISD::FABS:               return lowerFABS(Op, DAG);
+  case ISD::FNEG:
+    return lowerFNEG(Op, DAG);
   case ISD::FCANONICALIZE:
     return lowerFCANONICALIZE(Op, DAG);
   case ISD::FRAMEADDR:          return lowerFRAMEADDR(Op, DAG);
@@ -1320,7 +1368,7 @@ insertDivByZeroTrap(const MipsMCOptions &MCCLOpts, MachineInstr &MI,
     // slot.
     BuildMI(&MBB, DL, TII.get(Mips::BNE))
         .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addMBB(SinkMBB);
 
     // BreakMBB: break 7
@@ -1341,7 +1389,7 @@ insertDivByZeroTrap(const MipsMCOptions &MCCLOpts, MachineInstr &MI,
                 TII.get(TrapKind == DivByZeroTrapKind::TeqMM ? Mips::TEQ_MM
                                                              : Mips::TEQ))
             .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-            .addReg(Mips::ZERO)
+            .addReg(Mips::R0)
             .addImm(7);
 
   // Use the 32-bit sub-register if this is a 64-bit division.
@@ -1876,10 +1924,11 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
   }
   BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::ZERO).addImm(MaskImm);
+      .addReg(Mips::R0)
+      .addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
-  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::R0).addReg(Mask);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Incr2).addReg(Incr).addReg(ShiftAmt);
 
 
@@ -2064,10 +2113,11 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
   }
   BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::ZERO).addImm(MaskImm);
+      .addReg(Mips::R0)
+      .addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
-  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::R0).addReg(Mask);
   BuildMI(BB, DL, TII->get(Mips::ANDi), MaskedCmpVal)
     .addReg(CmpVal).addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), ShiftedCmpVal)
@@ -2125,7 +2175,7 @@ SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
     // TODO: DAG.getConstant(0) should be optimized to avoid generate an extra
     // instr `addiu $x, $zero, 0`.
     SDValue Low =
-        DAG.getCopyFromReg(DAG.getEntryNode(), DL, Mips::ZERO, MVT::i32);
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, Mips::R0, MVT::i32);
     SDValue Hi = DAG.getConstant(INTVal.extractBits(32, 32), DL, MVT::i32);
     return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Low, Hi);
   }
@@ -2210,7 +2260,18 @@ lowerSELECT(SDValue Op, SelectionDAG &DAG) const
 }
 
 SDValue MipsTargetLowering::lowerSETCC(SDValue Op, SelectionDAG &DAG) const {
-  assert(!Subtarget.hasMips32r6() && !Subtarget.hasMips64r6());
+  // cmp.cond.fmt writes 0 or -1, while scalar booleans are 0 or 1. Take the
+  // low bit of the mask as the SETCC result. Selects and branches test only
+  // the low bit or whether the value is zero, so they can use the mask itself.
+  if (Subtarget.hasMips32r6()) {
+    SDLoc DL(Op);
+    SDValue Mask = DAG.getNode(MipsISD::R6FCmp, DL, MVT::i32, Op.getOperand(0),
+                               Op.getOperand(1), Op.getOperand(2));
+    SDValue Res = DAG.getNode(ISD::AND, DL, MVT::i32, Mask,
+                              DAG.getConstant(1, DL, MVT::i32));
+    return DAG.getZExtOrTrunc(Res, DL, Op.getValueType());
+  }
+
   SDValue Cond = createFPCmp(DAG, Op);
 
   assert(Cond.getOpcode() == MipsISD::FPCmp &&
@@ -2230,7 +2291,7 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(3);
 
   SDValue Cond = DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
                              DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
@@ -2619,7 +2680,7 @@ SDValue MipsTargetLowering::lowerFABS32(SDValue Op, SelectionDAG &DAG,
   // Clear MSB.
   if (HasExtractInsert)
     Res = DAG.getNode(MipsISD::Ins, DL, MVT::i32,
-                      DAG.getRegister(Mips::ZERO, MVT::i32),
+                      DAG.getRegister(Mips::R0, MVT::i32),
                       DAG.getConstant(31, DL, MVT::i32), Const1, X);
   else {
     // TODO: Provide DAG patterns which transform (and x, cst)
@@ -2655,7 +2716,7 @@ SDValue MipsTargetLowering::lowerFABS64(SDValue Op, SelectionDAG &DAG,
   // Clear MSB.
   if (HasExtractInsert)
     Res = DAG.getNode(MipsISD::Ins, DL, MVT::i64,
-                      DAG.getRegister(Mips::ZERO_64, MVT::i64),
+                      DAG.getRegister(Mips::R0_64, MVT::i64),
                       DAG.getConstant(63, DL, MVT::i32), Const1, X);
   else {
     SDValue SllX = DAG.getNode(ISD::SHL, DL, MVT::i64, X, Const1);
@@ -2670,6 +2731,40 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
     return lowerFABS64(Op, DAG, Subtarget.hasExtractInsert());
 
   return lowerFABS32(Op, DAG, Subtarget.hasExtractInsert());
+}
+
+SDValue MipsTargetLowering::lowerFNEG(SDValue Op, SelectionDAG &DAG) const {
+  // Unless in abs2008 mode, neg.fmt is arithmetic: it raises invalid for a
+  // signaling NaN and does not flip the sign of a NaN. Only use it when NaNs
+  // can be ignored, otherwise flip the sign bit in a GPR.
+  if (Op->getFlags().hasNoNaNs() || Subtarget.inAbs2008Mode())
+    return Op;
+
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(0);
+
+  if (VT == MVT::f32) {
+    SDValue X = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Src);
+    X = DAG.getNode(ISD::XOR, DL, MVT::i32, X,
+                    DAG.getConstant(APInt::getSignMask(32), DL, MVT::i32));
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f32, X);
+  }
+
+  if (ABI.IsN32() || ABI.IsN64()) {
+    SDValue X = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Src);
+    X = DAG.getNode(ISD::XOR, DL, MVT::i64, X,
+                    DAG.getConstant(APInt::getSignMask(64), DL, MVT::i64));
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f64, X);
+  }
+
+  SDValue Lo = DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Src,
+                           DAG.getConstant(0, DL, MVT::i32));
+  SDValue Hi = DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Src,
+                           DAG.getConstant(1, DL, MVT::i32));
+  Hi = DAG.getNode(ISD::XOR, DL, MVT::i32, Hi,
+                   DAG.getConstant(APInt::getSignMask(32), DL, MVT::i32));
+  return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
 }
 
 SDValue MipsTargetLowering::lowerFCANONICALIZE(SDValue Op,
@@ -2799,8 +2894,13 @@ SDValue MipsTargetLowering::lowerShiftLeftParts(SDValue Op,
   SDValue ShiftLeftHi = DAG.getNode(ISD::SHL, DL, VT, Hi, Shamt);
   SDValue Or = DAG.getNode(ISD::OR, DL, VT, ShiftLeftHi, ShiftRightLo);
   SDValue ShiftLeftLo = DAG.getNode(ISD::SHL, DL, VT, Lo, Shamt);
-  SDValue Cond = DAG.getNode(ISD::AND, DL, MVT::i32, Shamt,
-                             DAG.getConstant(VT.getSizeInBits(), DL, MVT::i32));
+  // The masked shift amount is 0 or VT.bits, not a 0/1 boolean, so compare it
+  // against zero to form a proper select condition.
+  SDValue Masked =
+      DAG.getNode(ISD::AND, DL, MVT::i32, Shamt,
+                  DAG.getConstant(VT.getSizeInBits(), DL, MVT::i32));
+  SDValue Cond = DAG.getSetCC(DL, MVT::i32, Masked,
+                              DAG.getConstant(0, DL, MVT::i32), ISD::SETNE);
   Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond,
                    DAG.getConstant(0, DL, VT), ShiftLeftLo);
   Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond, ShiftLeftLo, Or);
@@ -2839,20 +2939,27 @@ SDValue MipsTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
   SDValue Or = DAG.getNode(ISD::OR, DL, VT, ShiftLeftHi, ShiftRightLo);
   SDValue ShiftRightHi = DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL,
                                      DL, VT, Hi, Shamt);
-  SDValue Cond = DAG.getNode(ISD::AND, DL, MVT::i32, Shamt,
-                             DAG.getConstant(VT.getSizeInBits(), DL, MVT::i32));
+  SDValue Masked =
+      DAG.getNode(ISD::AND, DL, MVT::i32, Shamt,
+                  DAG.getConstant(VT.getSizeInBits(), DL, MVT::i32));
   SDValue Ext = DAG.getNode(ISD::SRA, DL, VT, Hi,
                             DAG.getConstant(VT.getSizeInBits() - 1, DL, VT));
 
   if (!(Subtarget.hasMips4() || Subtarget.hasMips32())) {
+    // DOUBLE_SELECT_I* branches on the condition being non-zero, so the
+    // masked shift amount can be used directly.
     SDVTList VTList = DAG.getVTList(VT, VT);
     return DAG.getNode(Subtarget.isGP64bit() ? MipsISD::DOUBLE_SELECT_I64
                                              : MipsISD::DOUBLE_SELECT_I,
-                       DL, VTList, Cond, ShiftRightHi,
+                       DL, VTList, Masked, ShiftRightHi,
                        IsSRA ? Ext : DAG.getConstant(0, DL, VT), Or,
                        ShiftRightHi);
   }
 
+  // The masked shift amount is 0 or VT.bits, not a 0/1 boolean, so compare it
+  // against zero to form a proper select condition.
+  SDValue Cond = DAG.getSetCC(DL, MVT::i32, Masked,
+                              DAG.getConstant(0, DL, MVT::i32), ISD::SETNE);
   Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond, ShiftRightHi, Or);
   Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond,
                    IsSRA ? Ext : DAG.getConstant(0, DL, VT), ShiftRightHi);
@@ -3144,10 +3251,10 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     // shadow the register lost to alignment requirements.
     if (ArgFlags.isSplit()) {
       Reg = State.AllocateReg(FloatVectorIntRegs);
-      if (Reg == Mips::A2)
-        State.AllocateReg(Mips::A1);
+      if (Reg == IntRegs[2])
+        State.AllocateReg(IntRegs[1]);
       else if (Reg == 0)
-        State.AllocateReg(Mips::A3);
+        State.AllocateReg(IntRegs[3]);
     } else {
       // If we're an intermediate component of the split, we can just attempt to
       // allocate a register directly.
@@ -3158,14 +3265,17 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     Reg = State.AllocateReg(IntRegs);
     // If this is the first part of an i64 arg,
     // the allocated register must be either A0 or A2.
-    if (isI64 && (Reg == Mips::A1 || Reg == Mips::A3))
+    if (isI64 && (Reg == IntRegs[1] || Reg == IntRegs[3]))
       Reg = State.AllocateReg(IntRegs);
-    LocVT = MVT::i32;
+    // An f32 is only passed as an i32 when it is in an integer register. On
+    // the stack it keeps its own type, as f64 does.
+    if (Reg)
+      LocVT = MVT::i32;
   } else if (ValVT == MVT::f64 && AllocateFloatsInIntReg) {
     // Allocate int register and shadow next int register. If first
-    // available register is Mips::A1 or Mips::A3, shadow it too.
+    // available register is $a1 or $a3, shadow it too.
     Reg = State.AllocateReg(IntRegs);
-    if (Reg == Mips::A1 || Reg == Mips::A3)
+    if (Reg == IntRegs[1] || Reg == IntRegs[3])
       Reg = State.AllocateReg(IntRegs);
 
     if (Reg) {
@@ -3189,7 +3299,7 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
       Reg = State.AllocateReg(F64Regs);
       // Shadow int registers
       MCRegister Reg2 = State.AllocateReg(IntRegs);
-      if (Reg2 == Mips::A1 || Reg2 == Mips::A3)
+      if (Reg2 == IntRegs[1] || Reg2 == IntRegs[3])
         State.AllocateReg(IntRegs);
       State.AllocateReg(IntRegs);
     }
@@ -3374,6 +3484,12 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       MI.addOperand(MachineOperand::CreateMCSymbol(S, MipsII::MO_JALR));
     }
   }
+}
+
+void MipsTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  // Compute the max call frame size early so we can reserve FP if needed.
+  MF.getFrameInfo().computeMaxCallFrameSize(MF);
+  TargetLoweringBase::finalizeLowering(MF);
 }
 
 /// LowerCall - functions arguments are copied from virtual regs to
@@ -4569,13 +4685,14 @@ EVT MipsTargetLowering::getOptimalMemOpType(
   return MVT::i32;
 }
 
-bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                      bool ForCodeSize) const {
+TargetLowering::FPImmAction
+MipsTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                   bool ForCodeSize) const {
   if (VT != MVT::f32 && VT != MVT::f64)
-    return false;
+    return FPImmAction::ConstantPool;
   if (Imm.isNegZero())
-    return false;
-  return Imm.isZero();
+    return FPImmAction::ConstantPool;
+  return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
 }
 
 bool MipsTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
@@ -4584,6 +4701,15 @@ bool MipsTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 
 bool MipsTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   return isInt<16>(Imm);
+}
+
+unsigned MipsTargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  // cmp.cond.fmt writes 0 or -1.
+  if (Op.getOpcode() == MipsISD::R6FCmp)
+    return Op.getScalarValueSizeInBits();
+  return 1;
 }
 
 unsigned MipsTargetLowering::getJumpTableEncoding() const {
@@ -4896,7 +5022,7 @@ MachineBasicBlock *MipsTargetLowering::emitPseudoSELECT(MachineInstr &MI,
     // bne rs, $0, sinkMBB
     BuildMI(BB, DL, TII->get(Opc))
         .addReg(MI.getOperand(1).getReg())
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addMBB(sinkMBB);
   }
 
@@ -4967,7 +5093,7 @@ MipsTargetLowering::emitPseudoD_SELECT(MachineInstr &MI,
   // bne rs, $0, sinkMBB
   BuildMI(BB, DL, TII->get(Mips::BNE))
       .addReg(MI.getOperand(2).getReg())
-      .addReg(Mips::ZERO)
+      .addReg(Mips::R0)
       .addMBB(sinkMBB);
 
   //  copy0MBB:

@@ -30,11 +30,9 @@
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
-#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -64,8 +62,6 @@
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 static void printDie(const DWARFDie &DIE) {
   DIDumpOptions DumpOpts;
@@ -2013,9 +2009,6 @@ void DWARFRewriter::finalizeDebugSections(
   if (opts::KeepARanges || !BC.getGdbIndexSection()) {
     SmallVector<char, 16> ARangesBuffer;
     raw_svector_ostream OS(ARangesBuffer);
-
-    auto MAB = std::unique_ptr<MCAsmBackend>(
-        BC.TheTarget->createMCAsmBackend(*BC.STI, *BC.MRI, MCTargetOptions()));
 
     ARangesSectionWriter->writeARangesSection(OS, CUMap);
     const StringRef &ARangesContents = OS.str();

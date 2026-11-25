@@ -3,13 +3,13 @@
 float test_no_second_arg(float2 p0) {
   return fmod(p0);
   // expected-error@-1 {{no matching function for call to 'fmod'}}
-  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 8 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 38 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
 }
 
 float test_too_many_arg(float2 p0) {
   return fmod(p0, p0, p0);
   // expected-error@-1 {{no matching function for call to 'fmod'}}
-  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 8 {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 38 {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 }
 
 float test_double_inputs(double p0, double p1) {

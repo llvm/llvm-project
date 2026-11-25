@@ -1340,6 +1340,10 @@ public:
     return LandingPads;
   }
 
+  /// Forget the landing pads: a target turned them into ordinary blocks and
+  /// there is no exception table to emit.
+  void clearLandingPads() { LandingPads.clear(); }
+
   /// Provide the begin and end labels of an invoke style call and associate it
   /// with a try landing pad block.
   void addInvoke(MachineBasicBlock *LandingPad,

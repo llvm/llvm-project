@@ -15,7 +15,6 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Target/BorrowedStackFrame.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -382,12 +381,15 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
   FindInterveningFrames(*next_func, *prev_func, exe_ctx, target, return_pc,
                         path, images, log);
 
-  // Push synthetic tail call frames.
+  // Push synthetic tail call frames. A tail call reuses its caller's frame, so
+  // each one takes the CFA of the younger frame that replaced it.
+  const addr_t prev_cfa = prev_frame.m_id.GetCallFrameAddressWithMetadata();
+  uint32_t tail_call_depth = 0;
   for (const auto &calleeInfo : llvm::reverse(path)) {
     Function *callee = calleeInfo.callee.function;
     uint32_t frame_idx = m_frames.size();
     uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
-    addr_t cfa = LLDB_INVALID_ADDRESS;
+    addr_t cfa = prev_cfa;
     bool cfa_is_valid = false;
     addr_t pc = calleeInfo.address;
     // If the callee address refers to the call instruction, we do not want to
@@ -401,6 +403,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
         cfa_is_valid, pc, StackFrame::Kind::Regular, artificial,
         behaves_like_zeroth_frame, &sc);
+    synth_frame->m_id.SetTailCallDepth(++tail_call_depth);
     synth_frame->m_frame_list_id = GetIdentifier();
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
@@ -641,18 +644,19 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       if (curr_frame->GetStackID() != prev_frame->GetStackID())
         break;
 
-      // Never adopt a frame borrowed from another StackFrameList, which only a
-      // provider's SyntheticStackFrameList hands out: it keeps reporting the
-      // index of the frame it borrows, and the update below cannot change
-      // that. Skipping it is safe because the merge only carries cached state
-      // onto a frame this list has already unwound correctly.
-      if (llvm::isa<BorrowedStackFrame>(prev_frame))
+      // Only adopt a frame that a list with this identifier produced. A frame
+      // from another layer of the provider chain, scripted or borrowed, can
+      // share its StackID with a frame of this list without being
+      // interchangeable with it. Skipping it is safe because the merge only
+      // carries cached state onto a frame this list has already unwound
+      // correctly.
+      if (prev_frame->GetContainingStackFrameListIdentifier() !=
+          GetIdentifier())
         continue;
 
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the
       // pointer doesn't change.
-      prev_frame_sp->m_frame_list_id = GetIdentifier();
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)
@@ -772,11 +776,6 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   return frame_sp;
 }
 
-static bool CompareStackID(const StackFrameSP &stack_sp,
-                           const StackID &stack_id) {
-  return stack_sp->GetStackID().IsYoungerThan(stack_id);
-}
-
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   StackFrameSP frame_sp;
 
@@ -786,10 +785,14 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       // First see if the frame is already realized.  This is the scope for
       // the shared mutex:
       llvm::sys::ScopedReader guard(m_list_mutex);
-      // Do a binary search in case the stack frame is already in our cache
+      // Look for the stack frame in our cache. Ordering frames can require the
+      // language runtimes (see StackID::IsYoungerThan()), so compare them for
+      // equality instead of doing a binary search.
       collection::const_iterator pos =
-          llvm::lower_bound(m_frames, stack_id, CompareStackID);
-      if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
+          llvm::find_if(m_frames, [&](const StackFrameSP &frame_sp) {
+            return frame_sp->GetStackID() == stack_id;
+          });
+      if (pos != m_frames.end())
         return *pos;
     }
     // If we needed to add more frames, we would get to here.

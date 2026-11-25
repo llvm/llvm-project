@@ -15,7 +15,7 @@
 // RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SCALAR-COORD \
 // RUN:   -DTEXTURE=Texture1D -DCOORD_DIM=1 -DLOAD_DIM=2 \
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 0, 2, 0, 0, 1, 0)' \
-// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM=float -DCOORD_CXX=float -DINDEX_LLVM=i32 \
 // RUN:   -DINDEX_CXX=int -DOFFSET_LLVM=i32 -DOFFSET_ZERO=0
 
@@ -38,7 +38,7 @@
 // RUN:   --check-prefixes=CHECK,COORD2,VEC-COORD -DTEXTURE=Texture1DArray \
 // RUN:   -DCOORD_DIM=2 -DLOAD_DIM=3 \
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 0, 2, 1, 0, 1, 0)' \
-// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
 // RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX="int vector[2]" \
 // RUN:   -DOFFSET_LLVM=i32 -DOFFSET_ZERO=0
@@ -60,7 +60,7 @@
 // RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,COORD2,VEC-COORD \
 // RUN:   -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOAD_DIM=3 \
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 1, 2, 0, 0, 1, 0)' \
-// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM="<2 x float>" -DCOORD_CXX="float vector[2]" \
 // RUN:   -DINDEX_LLVM="<2 x i32>" -DINDEX_CXX="int vector[2]" \
 // RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_ZERO=zeroinitializer
@@ -84,7 +84,7 @@
 // RUN:   --check-prefixes=CHECK,COORD3,VEC-COORD -DTEXTURE=Texture2DArray \
 // RUN:   -DCOORD_DIM=3 -DLOAD_DIM=4 \
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 1, 2, 1, 0, 1, 0)' \
-// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
 // RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX="int vector[3]" \
 // RUN:   -DOFFSET_LLVM="<2 x i32>" -DOFFSET_ZERO=zeroinitializer
@@ -106,7 +106,7 @@
 // RUN:   llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,COORD3,VEC-COORD \
 // RUN:   -DTEXTURE=Texture3D -DCOORD_DIM=3 -DLOAD_DIM=4 \
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 2, 2, 0, 0, 1, 0)' \
-// RUN:   -DMIPS_OFFSET='i64 8' \
+// RUN:   -DMIPS_OFFSET='i32 4' \
 // RUN:   -DCOORD_LLVM="<3 x float>" -DCOORD_CXX="float vector[3]" \
 // RUN:   -DINDEX_LLVM="<3 x i32>" -DINDEX_CXX="int vector[3]" \
 // RUN:   -DOFFSET_LLVM="<3 x i32>" -DOFFSET_ZERO=zeroinitializer

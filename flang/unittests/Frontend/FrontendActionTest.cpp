@@ -10,6 +10,10 @@
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/FrontendTool/Utils.h"
+#include "flang/Parser/dump-parse-tree.h"
+#include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/parsing.h"
+#include "flang/Parser/unparse.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,6 +25,30 @@
 using namespace Fortran::frontend;
 
 namespace {
+
+struct RecoveryNodeVisitor {
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const Fortran::parser::ProgramUnit &x) {
+    program += std::holds_alternative<Fortran::parser::ErrorRecovery>(x.u);
+    return true;
+  }
+  bool Pre(const Fortran::parser::InternalSubprogram &x) {
+    internal += std::holds_alternative<Fortran::parser::ErrorRecovery>(x.u);
+    return true;
+  }
+  bool Pre(const Fortran::parser::ModuleSubprogram &x) {
+    module += std::holds_alternative<Fortran::parser::ErrorRecovery>(x.u);
+    return true;
+  }
+  bool Pre(const Fortran::parser::InterfaceSpecification &x) {
+    interface += std::holds_alternative<Fortran::parser::ErrorRecovery>(x.u);
+    return true;
+  }
+
+  unsigned program{0}, internal{0}, module{0}, interface{0};
+};
 
 class FrontendActionTest : public ::testing::Test {
 protected:
@@ -38,6 +66,46 @@ protected:
   std::error_code ec;
 
   CompilerInstance compInst;
+
+  // Exercise every list whose variant now includes an ErrorRecovery node.
+  void parseRecoveryNodes() {
+    *(inputFileOs) << "!$acc declare create(x)\n"
+                   << "subroutine outer()\n"
+                   << "interface\n"
+                   << "!$acc declare create(x)\n"
+                   << "subroutine iface()\n"
+                   << "end subroutine\n"
+                   << "end interface\n"
+                   << "contains\n"
+                   << "!$acc declare create(x)\n"
+                   << "subroutine inner()\n"
+                   << "end subroutine\n"
+                   << "end subroutine\n"
+                   << "module m\n"
+                   << "contains\n"
+                   << "!$acc declare create(x)\n"
+                   << "subroutine child()\n"
+                   << "end subroutine\n"
+                   << "end module\n";
+    inputFileOs.reset();
+
+    auto &options = compInst.getInvocation().getFortranOpts();
+    options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+    auto &parsing = compInst.getParsing();
+    ASSERT_NE(parsing.Prescan(inputFilePath, options), nullptr);
+    ASSERT_FALSE(parsing.messages().AnyFatalError());
+    parsing.Parse(llvm::nulls(), compInst.getInvocation().getLangOpts());
+    ASSERT_TRUE(parsing.consumedWholeFile());
+    ASSERT_TRUE(parsing.messages().AnyFatalError());
+    ASSERT_TRUE(parsing.parseTree().has_value());
+  }
+
+  // Targets register their library options, which compInst holds from its
+  // construction.
+  static void SetUpTestSuite() {
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+  }
 
   void SetUp() override {
     // Generate a unique test file name.
@@ -59,12 +127,10 @@ protected:
     inputFilePath = cwd.c_str();
     inputFilePath += "/" + inputFileName;
 
-    // Set-up default target triple and initialize LLVM Targets so that the
-    // target data layout can be passed to the frontend.
+    // Set-up default target triple so that the target data layout can be
+    // passed to the frontend.
     compInst.getInvocation().getTargetOpts().triple =
         llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
 
     compInst.createDiagnostics();
     compInst.getFrontendOpts().inputs.push_back(
@@ -166,6 +232,127 @@ TEST_F(FrontendActionTest, ParseSyntaxOnly) {
       llvm::StringRef(outputDiagBuffer.data())
           .contains(
               ":1:14: error: IF statement is not allowed in IF statement\n"));
+}
+
+TEST_F(FrontendActionTest, RecoverOpenACCDeclarePreservesDirectives) {
+  *(inputFileOs) << "!$acc declare create(x)\n"
+                 << "!$acc declare create(y)\n"
+                 << "!$acc routine(s) seq\n"
+                 << "!dir$ ivdep\n"
+                 << "!$acc declare create(z)\n"
+                 << "!$acc declare create(w)\n"
+                 << "!dir$ ivdep; subroutine s()\n"
+                 << "end subroutine\n";
+  inputFileOs.reset();
+
+  auto &options = compInst.getInvocation().getFortranOpts();
+  options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+  options.compilerDirectiveSentinels.emplace_back("dir$");
+  auto &parsing = compInst.getParsing();
+  ASSERT_NE(parsing.Prescan(inputFilePath, options), nullptr);
+  ASSERT_FALSE(parsing.messages().AnyFatalError());
+  parsing.Parse(llvm::nulls(), compInst.getInvocation().getLangOpts());
+  ASSERT_TRUE(parsing.consumedWholeFile());
+  ASSERT_TRUE(parsing.messages().AnyFatalError());
+  ASSERT_TRUE(parsing.parseTree().has_value());
+
+  // Consecutive DECLAREs share a recovery node. Other directives and the
+  // following procedure retain their positions and their actual node types.
+  const auto &units = parsing.parseTree()->v;
+  ASSERT_EQ(units.size(), 6u);
+  auto unit = units.begin();
+  EXPECT_TRUE(
+      std::holds_alternative<Fortran::parser::ErrorRecovery>(unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::OpenACCRoutineConstruct>>(
+      unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::CompilerDirective>>(
+      unit++->u));
+  EXPECT_TRUE(
+      std::holds_alternative<Fortran::parser::ErrorRecovery>(unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::CompilerDirective>>(
+      unit++->u));
+  EXPECT_TRUE(std::holds_alternative<
+      Fortran::common::Indirection<Fortran::parser::SubroutineSubprogram>>(
+      unit->u));
+}
+
+TEST_F(FrontendActionTest, RecoveryNodesSupportTreeConsumers) {
+  ASSERT_NO_FATAL_FAILURE(parseRecoveryNodes());
+  auto &program = *compInst.getParsing().parseTree();
+
+  RecoveryNodeVisitor visitor, mutator;
+  const auto &constProgram = program;
+  Fortran::parser::Walk(constProgram, visitor);
+  Fortran::parser::Walk(program, mutator);
+  for (const auto *counts : {&visitor, &mutator}) {
+    EXPECT_EQ(counts->program, 1u);
+    EXPECT_EQ(counts->internal, 1u);
+    EXPECT_EQ(counts->module, 1u);
+    EXPECT_EQ(counts->interface, 1u);
+  }
+
+  std::string dump;
+  llvm::raw_string_ostream dumpStream{dump};
+  Fortran::parser::DumpTree(dumpStream, constProgram);
+  EXPECT_EQ(llvm::StringRef(dump).count("ErrorRecovery"), 4u);
+
+  std::string unparsed;
+  llvm::raw_string_ostream unparseStream{unparsed};
+  Fortran::parser::Unparse(
+      unparseStream, constProgram, compInst.getInvocation().getLangOpts());
+  EXPECT_FALSE(llvm::StringRef(unparsed).contains("DECLARE"));
+  for (const char *name : {"outer", "iface", "inner", "child"}) {
+    EXPECT_TRUE(llvm::StringRef(unparsed).contains(name));
+  }
+}
+
+TEST_F(FrontendActionTest, RecoveryNodesStopBeforeSemanticConsumers) {
+  ASSERT_NO_FATAL_FAILURE(parseRecoveryNodes());
+  llvm::InitializeAllAsmPrinters();
+  for (auto action : {ParseSyntaxOnly, DebugDumpParseTreeNoSema,
+           DebugUnparseNoSema, DebugMeasureParseTree, DebugDumpSymbols,
+           DebugDumpPFT, EmitFIR, EmitLLVM}) {
+    SCOPED_TRACE(static_cast<int>(action));
+    CompilerInstance instance;
+    auto &invocation = instance.getInvocation();
+    invocation.getTargetOpts().triple =
+        llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
+    invocation.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::OpenACC);
+    invocation.getFrontendOpts().inputs.emplace_back(
+        inputFilePath, Language::Fortran);
+    invocation.getFrontendOpts().programAction = action;
+    instance.createDiagnostics();
+
+    llvm::SmallVector<char> diagnostics, output;
+    instance.setSemaOutputStream(
+        std::make_unique<llvm::raw_svector_ostream>(diagnostics));
+    instance.setOutputStream(
+        std::make_unique<llvm::raw_svector_ostream>(output));
+    EXPECT_FALSE(executeCompilerInvocation(&instance));
+    EXPECT_TRUE(output.empty());
+    EXPECT_TRUE(instance.getParsing().messages().AnyFatalError());
+    EXPECT_TRUE(instance.getParsing().parseTree().has_value());
+  }
+}
+
+TEST_F(FrontendActionTest, ModuleFileRecoveryIsRejected) {
+  ASSERT_NO_FATAL_FAILURE(parseRecoveryNodes());
+  CompilerInstance moduleInstance;
+  auto &options = moduleInstance.getInvocation().getFortranOpts();
+  options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+  options.isModuleFile = true;
+  auto &parsing = moduleInstance.getParsing();
+  ASSERT_NE(parsing.Prescan(inputFilePath, options), nullptr);
+  ASSERT_FALSE(parsing.messages().AnyFatalError());
+  parsing.Parse(llvm::nulls(), moduleInstance.getInvocation().getLangOpts());
+
+  // Module files defer messages. A recovered tree must not be mistaken for
+  // a successful parse merely because it has no diagnostic messages.
+  EXPECT_FALSE(parsing.parseTree().has_value());
 }
 
 TEST_F(FrontendActionTest, EmitLLVM) {

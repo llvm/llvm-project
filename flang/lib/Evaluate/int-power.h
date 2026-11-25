@@ -11,51 +11,19 @@
 
 // Computes an integer power of a real or complex value.
 
+#include "flang/Evaluate/complex-value.h"
+#include "flang/Evaluate/real-value.h"
 #include "flang/Evaluate/target.h"
 
 namespace Fortran::evaluate {
 
-template <typename REAL, typename INT>
-ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
-    const INT &power,
-    Rounding rounding = TargetCharacteristics::defaultRounding) {
-  ValueWithRealFlags<REAL> result{factor};
-  if (base.IsNotANumber()) {
-    result.value = REAL::NotANumber();
-    result.flags.set(RealFlag::InvalidArgument);
-  } else if (power.IsZero()) {
-    if (base.IsZero() || base.IsInfinite()) {
-      result.flags.set(RealFlag::InvalidArgument);
-    }
-  } else {
-    bool negativePower{power.IsNegative()};
-    INT absPower{power.ABS().value};
-    REAL squares{base};
-    int nbits{INT::bits - absPower.LEADZ()};
-    for (int j{0}; j < nbits; ++j) {
-      if (j > 0) { // avoid spurious overflow on last iteration
-        squares =
-            squares.Multiply(squares, rounding).AccumulateFlags(result.flags);
-      }
-      if (absPower.BTEST(j)) {
-        if (negativePower) {
-          result.value = result.value.Divide(squares, rounding)
-                             .AccumulateFlags(result.flags);
-        } else {
-          result.value = result.value.Multiply(squares, rounding)
-                             .AccumulateFlags(result.flags);
-        }
-      }
-    }
-  }
-  return result;
-}
+ValueWithRealFlags<value::RealValue> IntPower(const value::RealValue &base,
+    const value::IntegerValue &power,
+    Rounding rounding = TargetCharacteristics::defaultRounding);
 
-template <typename REAL, typename INT>
-ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
-    Rounding rounding = TargetCharacteristics::defaultRounding) {
-  REAL one{REAL::FromInteger(INT{1}).value};
-  return TimesIntPowerOf(one, base, power, rounding);
-}
+ValueWithRealFlags<value::ComplexValue> IntPower(
+    const value::ComplexValue &base, const value::IntegerValue &power,
+    Rounding rounding = TargetCharacteristics::defaultRounding);
+
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_INT_POWER_H_

@@ -14,11 +14,13 @@ unittest("CASTests") {
     "NamedValuesSchemaTest.cpp",
     "ObjectStoreTest.cpp",
     "OnDiskCommonUtils.cpp",
+    "UniqueTempFileTest.cpp",
   ]
 
   if (llvm_enable_ondisk_cas) {
     sources += [
       "BuiltinUnifiedCASDatabasesTest.cpp",
+      "FileLockTest.cpp",
       "OnDiskCASLoggerTest.cpp",
       "OnDiskDataAllocatorTest.cpp",
       "OnDiskGraphDBTest.cpp",
@@ -37,6 +39,7 @@ unittest("CASTests") {
     } else {
       shlib_ext = ".so"
     }
+
     # FIXME: Make this not an absolute path.
     plugin_path = rebase_path("$root_build_dir/lib") + "/CASPluginTest"
     defines = [ "CAS_PLUGIN_PATH=\"$plugin_path$shlib_ext\"" ]

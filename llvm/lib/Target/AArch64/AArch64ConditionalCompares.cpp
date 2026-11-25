@@ -493,12 +493,9 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
 namespace {
 class AArch64ConditionalComparesImpl {
   const MachineBranchProbabilityInfo *MBPI;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
   const AArch64Subtarget *STI;
   // Does the proceeded function has Oz attribute.
   bool MinSize;
-  MachineRegisterInfo *MRI;
   MachineDominatorTree *DomTree;
   MachineLoopInfo *Loops;
   MachineTraceMetrics *Traces;
@@ -678,10 +675,7 @@ bool AArch64ConditionalComparesImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                     << "********** Function: " << MF.getName() << '\n');
 
-  TII = MF.getSubtarget().getInstrInfo();
-  TRI = MF.getSubtarget().getRegisterInfo();
   STI = &MF.getSubtarget<AArch64Subtarget>();
-  MRI = &MF.getRegInfo();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
 

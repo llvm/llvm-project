@@ -9,7 +9,6 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "OutputSegment.h"
-#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -118,9 +117,16 @@ bool TextOutputSection::isTargetKnownInRange(const ConcatInputSection &isec,
                        : 0;
   uint64_t highVA = callVA + target->forwardBranchRange;
   auto *funcSym = cast<Symbol *>(r.referent);
-  uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.addend);
+  uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.getAddend());
   // Check if the referent is reachable with a simple call instruction.
   return lowVA <= funcVA && funcVA <= highVA;
+}
+Defined *TextOutputSection::findThunkInRange(const ConcatInputSection &isec,
+                                             const Relocation &r) const {
+  auto it = thunkMap.find(ThunkKey(r));
+  if (it == thunkMap.end())
+    return nullptr;
+  return getThunkInRange(isec, r, it->second);
 }
 
 Defined *TextOutputSection::getThunkInRange(const ConcatInputSection &isec,
@@ -145,12 +151,13 @@ void TextOutputSection::updateBranchTargetToThunk(Relocation &r,
   r.referent = thunk;
   // The thunk itself bakes in the addend, so the call-site reloc must
   // branch to the thunk start with no extra offset.
-  r.addend = 0;
+  r.setAddend(0);
   ++thunkCallCount;
 }
 
 void TextOutputSection::createThunk(const ConcatInputSection &isec,
-                                    Relocation &r, ThunkInfo &thunkInfo) {
+                                    Relocation &r) {
+  auto &thunkInfo = thunkMap[r];
   assert(getThunkInRange(isec, r, thunkInfo) == nullptr);
   assert(isec.isFinal);
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
@@ -168,29 +175,22 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   assert(thunkInfo.isec->live);
 
   std::string addendSuffix;
-  if (r.addend != 0)
-    addendSuffix = "+" + std::to_string(r.addend);
+  if (r.getAddend() != 0)
+    addendSuffix = "+" + std::to_string(r.getAddend());
   size_t thunkSize = target->thunkSize;
   auto *funcSym = cast<Symbol *>(r.referent);
   StringRef thunkName =
       saver().save(funcSym->getName() + addendSuffix + ".thunk." +
                    std::to_string(thunkInfo.sequence++));
-  if (!isa<Defined>(funcSym) || cast<Defined>(funcSym)->isExternal()) {
-    thunkInfo.sym = symtab->addDefined(
-        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-        /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-        /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
-        /*isWeakDefCanBeHidden=*/false);
-  } else {
-    thunkInfo.sym = make<Defined>(
-        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-        /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
-        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
-        /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
-  }
+  thunkInfo.sym = make<Defined>(
+      thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
+      /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/false,
+      /*includeInSymtab=*/!isPrivateLabel(funcSym->getName()),
+      /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
+      /*isWeakDefCanBeHidden=*/false);
   thunkInfo.sym->used = true;
   thunkInfo.sym->branchExtensionThunk = true;
-  target->populateThunk(thunkInfo.isec, funcSym, r.addend);
+  target->populateThunk(thunkInfo.isec, funcSym, r.getAddend());
   updateBranchTargetToThunk(r, thunkInfo.sym);
   finalizeOne(thunkInfo.isec);
   thunks.push_back(thunkInfo.isec);
@@ -241,7 +241,7 @@ bool TextOutputSection::isTargetStubsAndInRange(
   if (!funcSym->isInStubs() && !(in.objcStubs && in.objcStubs->isNeeded() &&
                                  ObjCStubsSection::isObjCStubSymbol(funcSym)))
     return false;
-  if (r.addend)
+  if (r.getAddend())
     return false;
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
   return *estimatedStubsEnd <= highVA;
@@ -268,12 +268,11 @@ void TextOutputSection::finalize() {
     while (!branchesToProcess.empty()) {
       auto [callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
-      auto &thunkInfo = thunkMap[*r];
       if (isTargetKnownInRange(*callerIsec, *r)) {
         branchesToProcess.pop_front();
         continue;
       }
-      if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
+      if (auto *thunk = findThunkInRange(*callerIsec, *r)) {
         deferredBranchRedirects.emplace_back(callerIsec, r, thunk);
         branchesToProcess.pop_front();
         continue;
@@ -284,27 +283,24 @@ void TextOutputSection::finalize() {
           alignToPowerOf2(addr + size, isec->align) + isec->getSize();
       // If we were to emit this section, would we have enough space for more
       // thunks? If we do, then we can delay processing this thunk so we may
-      // finalize more potencial target sections. Otherwise we must emit thunks
+      // finalize more potential target sections. Otherwise we must emit thunks
       // until we have enough space.
       if (nextEnd + slop <= highVA)
         break;
 
-      createThunk(*callerIsec, *r, thunkInfo);
+      createThunk(*callerIsec, *r);
       branchesToProcess.pop_front();
     }
     finalizeOne(isec);
 
-    // TODO: Remove this check and the assert below. In fact, I don't believe
-    // the relocation iteration order matters for correctness.
     bool hasCallsite = llvm::any_of(isec->relocs, [](Relocation &r) {
       return target->hasAttr(r.type, RelocAttrBits::BRANCH);
     });
     if (!hasCallsite)
       continue;
 
-    // Process relocs by ascending address, i.e., ascending offset within isec
-    // FIXME: This property does not hold for object files produced by ld64's
-    // `-r` mode.
+    // Process relocs by ascending address, i.e., ascending offset within isec.
+    // parseRelocations() ensures they are in descending order.
     assert(is_sorted(isec->relocs, [](Relocation &a, Relocation &b) {
       return a.offset > b.offset;
     }));
@@ -313,8 +309,7 @@ void TextOutputSection::finalize() {
         continue;
       if (isTargetKnownInRange(*isec, r))
         continue;
-      auto &thunkInfo = thunkMap[r];
-      if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
+      if (auto *thunk = findThunkInRange(*isec, r)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
       }
@@ -331,10 +326,8 @@ void TextOutputSection::finalize() {
   // when estimating where __stubs / __objc_stubs could end up.
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
   for (auto [callerIsec, r] : branchesToProcess) {
-    ThunkKey thunkKey(*r);
-    auto &thunkInfo = thunkMap[thunkKey];
-    if (!getThunkInRange(*callerIsec, *r, thunkInfo))
-      branchTargets.insert(thunkKey);
+    if (!findThunkInRange(*callerIsec, *r))
+      branchTargets.insert(ThunkKey(*r));
   }
 
   auto estimatedStubsEnd = estimateStubsEndVA(branchTargets.size());
@@ -349,12 +342,11 @@ void TextOutputSection::finalize() {
   for (auto [isec, r] : branchesToProcess) {
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
-    auto &thunkInfo = thunkMap[*r];
-    if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
+    if (auto *thunk = findThunkInRange(*isec, *r)) {
       updateBranchTargetToThunk(*r, thunk);
       continue;
     }
-    createThunk(*isec, *r, thunkInfo);
+    createThunk(*isec, *r);
   }
 
   if (!thunks.empty())

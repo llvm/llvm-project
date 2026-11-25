@@ -1,12 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
-
+cmake_minimum_required(VERSION 3.31.0)
 set(LLVM_SUBPROJECT_TITLE "libc")
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -123,6 +115,10 @@ endif()
 
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
+set(LIBC_TEST_BUILTINS_TARGET "" CACHE STRING
+  "CMake target of compiler-rt builtins to link into libc tests")
+set(LIBC_TEST_BUILTINS_LIBRARY "" CACHE FILEPATH
+  "Compiler runtime builtins library to link into libc tests")
 set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
@@ -284,6 +280,14 @@ if(LIBC_TARGET_OS_IS_LINUX)
     set(kernel_headers "/usr/${LIBC_TARGET_TRIPLE}/include")
   else()
     set(kernel_headers "/usr/include")
+    if(LIBC_TARGET_TRIPLE)
+      set(multiarch_triple "${LIBC_TARGET_TRIPLE}")
+    else()
+      set(multiarch_triple "${CMAKE_LIBRARY_ARCHITECTURE}")
+    endif()
+    if(multiarch_triple AND EXISTS "/usr/include/${multiarch_triple}/asm")
+      list(PREPEND kernel_headers "/usr/include/${multiarch_triple}")
+    endif()
   endif()
 endif()
 set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")

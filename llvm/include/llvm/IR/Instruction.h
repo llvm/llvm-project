@@ -861,9 +861,7 @@ public:
   LLVM_ABI bool mayReadFromMemory() const LLVM_READONLY;
 
   /// Return true if this instruction may read or write memory.
-  bool mayReadOrWriteMemory() const {
-    return mayReadFromMemory() || mayWriteToMemory();
-  }
+  LLVM_ABI bool mayReadOrWriteMemory() const LLVM_READONLY;
 
   /// Return true if this instruction has an AtomicOrdering of unordered or
   /// higher.
@@ -951,9 +949,6 @@ public:
   /// Return true if the instruction is a llvm.lifetime.start or
   /// llvm.lifetime.end marker.
   LLVM_ABI bool isLifetimeStartOrEnd() const LLVM_READONLY;
-
-  /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
-  LLVM_ABI bool isDebugOrPseudoInst() const LLVM_READONLY;
 
   /// Create a copy of 'this' instruction that is identical in all ways except
   /// the following:

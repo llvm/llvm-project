@@ -253,6 +253,100 @@ void foo10() {
   }
 }
 
+void indirectCallInGuardedScope(void (*callback)()) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    callback();
+    bar->method();
+  }
+}
+
+void guardianPassedByReferenceToIndirectCall(void (*callback)(RefPtr<RefCountable>&)) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    callback(foo);
+    bar->method();
+  }
+}
+
+void guardianPassedByConstReferenceToIndirectCall(void (*callback)(const RefPtr<RefCountable>&)) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    callback(foo);
+    bar->method();
+  }
+}
+
+void memberFunctionPointerCallOnGuardian(void (RefPtr<RefCountable>::*mutate)()) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    (foo.*mutate)();
+    bar->method();
+  }
+}
+
+void memberFunctionPointerCallOnGuardianViaPointer(void (RefPtr<RefCountable>::*mutate)()) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    (&foo->*mutate)();
+    bar->method();
+  }
+}
+
+void constMemberFunctionPointerCallOnGuardian(void (RefPtr<RefCountable>::*inspect)() const) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    (foo.*inspect)();
+    bar->method();
+  }
+}
+
+void memberFunctionPointerCallOnUnrelatedObject(RefCountable& other, void (RefCountable::*callback)()) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    (other.*callback)();
+    bar->method();
+  }
+}
+
+void memberFunctionPointerCallOnUnrelatedObjectViaPointer(RefCountable* other, void (RefCountable::*callback)()) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    (other->*callback)();
+    bar->method();
+  }
+}
+
+void guardianPassedByReferenceToMemberFunctionPointerCall(RefCountable& other, void (RefCountable::*callback)(RefPtr<RefCountable>&)) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    (other.*callback)(foo);
+    bar->method();
+  }
+}
+
+void guardianPassedByConstReferenceToMemberFunctionPointerCall(RefCountable& other, void (RefCountable::*callback)(const RefPtr<RefCountable>&)) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    (other.*callback)(foo);
+    bar->method();
+  }
+}
+
 } // namespace guardian_scopes
 
 namespace auto_keyword {
@@ -1049,6 +1143,27 @@ void non_null_temporary(RefCountable& obj) {
     auto* bar = HashTraits<Ref<RefCountable>>::peek(makeRef(obj));
     // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     bar->trivial();
+  }
+}
+
+void null_temporary_swapped_with_guardian(RefCountable& src) {
+  RefPtr<RefCountable> obj = &src;
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    RefPtr<RefCountable>().swap(obj);
+    foo->trivial();
+  }
+}
+
+void moveInto(RefPtr<RefCountable>&& dst, RefPtr<RefCountable>& src) { dst.swap(src); }
+
+void null_temporary_filled_by_callee(RefPtr<RefCountable> obj) {
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    moveInto(RefPtr<RefCountable>(), obj);
+    foo->trivial();
   }
 }
 

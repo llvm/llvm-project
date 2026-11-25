@@ -16,14 +16,30 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
+#include <utility>
 
 namespace llvm {
 class RISCVTargetMachine : public CodeGenTargetMachineImpl {
   const RISCVOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS, VScaleRange;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             VScaleRange == RHS.VScaleRange;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<RISCVSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   RISCVTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

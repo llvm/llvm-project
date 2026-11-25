@@ -154,7 +154,7 @@ public:
     }
 
 #ifndef NDEBUG
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
 #endif
   };
@@ -187,7 +187,7 @@ public:
   uint32_t getUniqueNameCount() const { return Entries.size(); }
 
 #ifndef NDEBUG
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
   void dump() const { print(dbgs()); }
 #endif
 
@@ -243,7 +243,7 @@ public:
     constexpr Atom(uint16_t Type, uint16_t Form) : Type(Type), Form(Form) {}
 
 #ifndef NDEBUG
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
 #endif
   };
@@ -283,12 +283,11 @@ template <> struct DenseMapInfo<OffsetAndUnitID> {
 /// Apple Data classes, this class is just a DIE wrapper, and does not know to
 /// serialize itself. The complete serialization logic is in the
 /// emitDWARF5AccelTable function.
-class DWARF5AccelTableData : public AccelTableData {
+class LLVM_ABI DWARF5AccelTableData : public AccelTableData {
 public:
   static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
 
-  LLVM_ABI DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID,
-                                const bool IsTU);
+  DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID, const bool IsTU);
   DWARF5AccelTableData(const uint64_t DieOffset,
                        const std::optional<uint64_t> DefiningParentOffset,
                        const unsigned DieTag, const unsigned UnitID,
@@ -343,8 +342,7 @@ public:
 
   /// If `Die` has a non-null parent and the parent is not a declaration,
   /// return its offset.
-  LLVM_ABI static std::optional<uint64_t>
-  getDefiningParentDieOffset(const DIE &Die);
+  static std::optional<uint64_t> getDefiningParentDieOffset(const DIE &Die);
 
 protected:
   std::variant<const DIE *, uint64_t> OffsetVal;

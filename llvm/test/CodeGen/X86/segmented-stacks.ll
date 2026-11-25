@@ -28,6 +28,8 @@
 ; RUN: not --crash llc < %s -mcpu=generic -mtriple=i686-freebsd 2> %t.log
 ; RUN: FileCheck %s -input-file=%t.log -check-prefix=X86-FreeBSD
 
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux  -verify-machineinstrs -enable-new-pm | FileCheck %s -check-prefix=X64-Linux
+
 ; X64-Solaris: Segmented stacks not supported on this platform
 ; X86-FreeBSD: Segmented stacks not supported on FreeBSD i386
 

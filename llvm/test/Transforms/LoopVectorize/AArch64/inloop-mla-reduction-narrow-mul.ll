@@ -71,11 +71,12 @@ define i32 @zext_i8_mul_i12_zext_i32(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i12>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD1]] to <16 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <16 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD1]] to <16 x i12>
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <16 x i12> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i12> [[TMP9]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7]] = add i32 [[VEC_PHI]], [[TMP6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16

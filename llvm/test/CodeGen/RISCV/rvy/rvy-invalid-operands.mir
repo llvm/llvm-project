@@ -12,5 +12,6 @@
 name: verify_all_invalid
 body: |
   bb.0:
+    liveins: $x10_y
     $x10_y = YBNDSWI $x10_y, 0
 ...
