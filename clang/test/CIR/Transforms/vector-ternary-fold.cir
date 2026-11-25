@@ -1,6 +1,7 @@
 // RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!s128i = !cir.int<s, 128>
 
 module {
   cir.func @vector_ternary_fold_test() -> !cir.vector<4 x !s32i> {
@@ -41,6 +42,20 @@ module {
   // CHECK-LABEL: cir.func{{.*}} @vector_ternary_bool_cond_test() -> !cir.vector<4 x !s32i> {
   // CHECK: %[[RES:.*]] = cir.vec.ternary(%{{.*}}, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.bool>, !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
+
+  cir.func @vector_ternary_wide_cond_test() -> !cir.vector<4 x !s128i> {
+    %cond = cir.const #cir.const_vector<[#cir.int<18446744073709551616> : !s128i, #cir.int<0> : !s128i, #cir.int<-18446744073709551617> : !s128i, #cir.int<0> : !s128i]> : !cir.vector<4 x !s128i>
+    %lhs = cir.const #cir.const_vector<[#cir.int<1> : !s128i, #cir.int<2> : !s128i, #cir.int<3> : !s128i, #cir.int<4> : !s128i]> : !cir.vector<4 x !s128i>
+    %rhs = cir.const #cir.const_vector<[#cir.int<5> : !s128i, #cir.int<6> : !s128i, #cir.int<7> : !s128i, #cir.int<8> : !s128i]> : !cir.vector<4 x !s128i>
+    %res = cir.vec.ternary(%cond, %lhs, %rhs) : !cir.vector<4 x !s128i>, !cir.vector<4 x !s128i>
+    cir.return %res : !cir.vector<4 x !s128i>
+  }
+
+  // A condition element wider than 64 bits is true when any of its bits is set.
+  // [2^64, 0, -(2^64 + 1), 0] ? [1, 2, 3, 4] : [5, 6, 7, 8] folds to [1, 6, 3, 8]
+  // CHECK-LABEL: cir.func{{.*}} @vector_ternary_wide_cond_test() -> !cir.vector<4 x !s128i> {
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s128i, #cir.int<6> : !s128i, #cir.int<3> : !s128i, #cir.int<8> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
 }
 
 

@@ -654,3 +654,132 @@ module  {
   // CHECK-SAME: !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CHECK-SAME: fenv<strict_except = true>
 }
+
+// -----
+
+!s128i = !cir.int<s, 128>
+!u128i = !cir.int<u, 128>
+
+module  {
+  // Elements wider than 64 bits are compared at their full width. The
+  // elements are 2^64 > 1, 1 < 2^64, 2^127 > 2^64 and 2^100 == 2^100.
+  cir.func @fold_cmp_vector_u128_lt() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<18446744073709551616> : !u128i, #cir.int<1> : !u128i,
+      #cir.int<170141183460469231731687303715884105728> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !u128i, #cir.int<18446744073709551616> : !u128i,
+      #cir.int<18446744073709551616> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %new_vec = cir.vec.cmp(lt, %vec_1, %vec_2) : !cir.vector<4 x !u128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_u128_lt()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s128i, #cir.int<-1> : !s128i,
+  // CHECK-SAME: #cir.int<0> : !s128i, #cir.int<0> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+
+  cir.func @fold_cmp_vector_u128_le() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<18446744073709551616> : !u128i, #cir.int<1> : !u128i,
+      #cir.int<170141183460469231731687303715884105728> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !u128i, #cir.int<18446744073709551616> : !u128i,
+      #cir.int<18446744073709551616> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %new_vec = cir.vec.cmp(le, %vec_1, %vec_2) : !cir.vector<4 x !u128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_u128_le()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s128i, #cir.int<-1> : !s128i,
+  // CHECK-SAME: #cir.int<0> : !s128i, #cir.int<-1> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+
+  cir.func @fold_cmp_vector_u128_gt() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<18446744073709551616> : !u128i, #cir.int<1> : !u128i,
+      #cir.int<170141183460469231731687303715884105728> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !u128i, #cir.int<18446744073709551616> : !u128i,
+      #cir.int<18446744073709551616> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %new_vec = cir.vec.cmp(gt, %vec_1, %vec_2) : !cir.vector<4 x !u128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_u128_gt()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<-1> : !s128i, #cir.int<0> : !s128i,
+  // CHECK-SAME: #cir.int<-1> : !s128i, #cir.int<0> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+
+  cir.func @fold_cmp_vector_u128_ge() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<18446744073709551616> : !u128i, #cir.int<1> : !u128i,
+      #cir.int<170141183460469231731687303715884105728> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !u128i, #cir.int<18446744073709551616> : !u128i,
+      #cir.int<18446744073709551616> : !u128i, #cir.int<1267650600228229401496703205376> : !u128i]> : !cir.vector<4 x !u128i>
+    %new_vec = cir.vec.cmp(ge, %vec_1, %vec_2) : !cir.vector<4 x !u128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_u128_ge()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<-1> : !s128i, #cir.int<0> : !s128i,
+  // CHECK-SAME: #cir.int<-1> : !s128i, #cir.int<-1> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+}
+
+// -----
+
+!s128i = !cir.int<s, 128>
+
+module  {
+  // The elements are -(2^64 + 1) < 1, 2^64 > -(2^64), -1 < 2^64 and
+  // -(2^127) == -(2^127).
+  cir.func @fold_cmp_vector_s128_lt() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<-18446744073709551617> : !s128i, #cir.int<18446744073709551616> : !s128i,
+      #cir.int<-1> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !s128i, #cir.int<-18446744073709551616> : !s128i,
+      #cir.int<18446744073709551616> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %new_vec = cir.vec.cmp(lt, %vec_1, %vec_2) : !cir.vector<4 x !s128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_s128_lt()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<-1> : !s128i, #cir.int<0> : !s128i,
+  // CHECK-SAME: #cir.int<-1> : !s128i, #cir.int<0> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+
+  cir.func @fold_cmp_vector_s128_le() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<-18446744073709551617> : !s128i, #cir.int<18446744073709551616> : !s128i,
+      #cir.int<-1> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !s128i, #cir.int<-18446744073709551616> : !s128i,
+      #cir.int<18446744073709551616> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %new_vec = cir.vec.cmp(le, %vec_1, %vec_2) : !cir.vector<4 x !s128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_s128_le()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<-1> : !s128i, #cir.int<0> : !s128i,
+  // CHECK-SAME: #cir.int<-1> : !s128i, #cir.int<-1> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+
+  cir.func @fold_cmp_vector_s128_gt() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<-18446744073709551617> : !s128i, #cir.int<18446744073709551616> : !s128i,
+      #cir.int<-1> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !s128i, #cir.int<-18446744073709551616> : !s128i,
+      #cir.int<18446744073709551616> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %new_vec = cir.vec.cmp(gt, %vec_1, %vec_2) : !cir.vector<4 x !s128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_s128_gt()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s128i, #cir.int<-1> : !s128i,
+  // CHECK-SAME: #cir.int<0> : !s128i, #cir.int<0> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+
+  cir.func @fold_cmp_vector_s128_ge() -> !cir.vector<4 x !s128i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<-18446744073709551617> : !s128i, #cir.int<18446744073709551616> : !s128i,
+      #cir.int<-1> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<1> : !s128i, #cir.int<-18446744073709551616> : !s128i,
+      #cir.int<18446744073709551616> : !s128i, #cir.int<-170141183460469231731687303715884105728> : !s128i]> : !cir.vector<4 x !s128i>
+    %new_vec = cir.vec.cmp(ge, %vec_1, %vec_2) : !cir.vector<4 x !s128i>, !cir.vector<4 x !s128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @fold_cmp_vector_s128_ge()
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s128i, #cir.int<-1> : !s128i,
+  // CHECK-SAME: #cir.int<0> : !s128i, #cir.int<-1> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s128i>
+}

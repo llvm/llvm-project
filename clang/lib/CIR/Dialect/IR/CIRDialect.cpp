@@ -4533,53 +4533,27 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
   SmallVector<mlir::Attribute, 16> elements(vecSize);
   bool isUnsignedInt = IntTy.isUnsigned();
   for (uint64_t i = 0; i < vecSize; i++) {
-    mlir::Attribute lhsAttr = lhsVecElhs[i];
-    mlir::Attribute rhsAttr = rhsVecElhs[i];
+    llvm::APInt lhs = mlir::cast<cir::IntAttr>(lhsVecElhs[i]).getValue();
+    llvm::APInt rhs = mlir::cast<cir::IntAttr>(rhsVecElhs[i]).getValue();
     bool cmpResult = false;
     switch (opKind) {
-    case cir::CmpOpKind::lt: {
-      if (isUnsignedInt)
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <
-                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-      else
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+    case cir::CmpOpKind::lt:
+      cmpResult = isUnsignedInt ? lhs.ult(rhs) : lhs.slt(rhs);
       break;
-    }
-    case cir::CmpOpKind::le: {
-      if (isUnsignedInt)
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-      else
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+    case cir::CmpOpKind::le:
+      cmpResult = isUnsignedInt ? lhs.ule(rhs) : lhs.sle(rhs);
       break;
-    }
-    case cir::CmpOpKind::gt: {
-      if (isUnsignedInt)
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >
-                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-      else
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+    case cir::CmpOpKind::gt:
+      cmpResult = isUnsignedInt ? lhs.ugt(rhs) : lhs.sgt(rhs);
       break;
-    }
-    case cir::CmpOpKind::ge: {
-      if (isUnsignedInt)
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-      else
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+    case cir::CmpOpKind::ge:
+      cmpResult = isUnsignedInt ? lhs.uge(rhs) : lhs.sge(rhs);
       break;
-    }
     case cir::CmpOpKind::eq:
-      cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getValue() ==
-                  mlir::cast<cir::IntAttr>(rhsAttr).getValue();
+      cmpResult = lhs == rhs;
       break;
     case cir::CmpOpKind::ne:
-      cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getValue() !=
-                  mlir::cast<cir::IntAttr>(rhsAttr).getValue();
+      cmpResult = lhs != rhs;
       break;
     case cir::CmpOpKind::one:
     case cir::CmpOpKind::uno: {
@@ -4771,10 +4745,12 @@ LogicalResult cir::VecShuffleOp::verify() {
 
   const uint64_t maxValidIndex =
       vec1Ty.getFixedSize() + vec2Ty.getFixedSize() - 1;
-  if (llvm::any_of(
-          getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
-            return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
-          })) {
+  // An index of -1 means that the result element does not matter.
+  auto isOutOfRange = [&](cir::IntAttr idxAttr) {
+    llvm::APInt idx = idxAttr.getValue();
+    return !idx.isAllOnes() && idx.ugt(maxValidIndex);
+  };
+  if (llvm::any_of(getIndices().getAsRange<cir::IntAttr>(), isOutOfRange)) {
     return emitOpError() << ": index for __builtin_shufflevector must be "
                             "less than the total number of vector elements";
   }
@@ -4805,8 +4781,8 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
 
     const uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
     for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
-      uint64_t idxValue = idxAttr.getUInt();
-      uint64_t newIdx = idxValue & maskBits;
+      // Mask before narrowing: an index can be wider than 64 bits.
+      uint64_t newIdx = (idxAttr.getValue() & maskBits).getZExtValue();
       // The mask rounds the element count up to a power of two, so a masked
       // index can still be out of range.
       if (newIdx >= numElements)
@@ -4871,7 +4847,7 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
 
   for (const auto &[idx, condAttr] :
        llvm::enumerate(condElts.getAsRange<cir::IntAttr>())) {
-    if (condAttr.getSInt()) {
+    if (!condAttr.isNullValue()) {
       elements.push_back(lhsVec.getElts()[idx]);
     } else {
       elements.push_back(rhsVec.getElts()[idx]);
