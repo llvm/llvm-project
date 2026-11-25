@@ -3722,7 +3722,6 @@ private:
   void verifyCandidateOwnership() const;
 #endif
 
-public:
   /// Owns the graph and its candidate-local state.
   /// Keep this object in place while its entries exist: TreeEntry::Container
   /// refers to its graph.
@@ -3737,7 +3736,6 @@ public:
     CandidateState(CandidateState &&) = delete;
     CandidateState &operator=(CandidateState &&) = delete;
 
-  private:
     /// Holds all of the tree entries. Declared first so entries are destroyed
     /// after the candidate state that refers to them.
     TreeEntry::VecTreeTy VectorizableTree;
@@ -4549,7 +4547,7 @@ private:
   }
 #endif
 
-  friend struct SLPGraphView;
+  friend struct ::SLPGraphView;
   friend struct GraphTraits<SLPGraphView *>;
   friend struct DOTGraphTraits<SLPGraphView *>;
   friend class ::HorizontalReduction;
