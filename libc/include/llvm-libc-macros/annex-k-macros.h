@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_INCLUDE_LLVM_LIBC_MACROS_ANNEX_K_MACROS_H
-#define LLVM_LIBC_INCLUDE_LLVM_LIBC_MACROS_ANNEX_K_MACROS_H
+#ifndef LIBC_HAS_ANNEX_K
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||              \
     (defined(__cplusplus) && __cplusplus >= 201703L)
@@ -18,10 +17,10 @@
 
 #if defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ == 1
 
-#define LIBC_HAS_ANNEX_K
+#define LIBC_HAS_ANNEX_K 1
 
 #endif // defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ == 1
 
 #endif // (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||
        // (defined(__cplusplus) && __cplusplus >= 201703L)
-#endif // LLVM_LIBC_INCLUDE_LLVM_LIBC_MACROS_ANNEX_K_MACROS_H
+#endif // LIBC_HAS_ANNEX_K
