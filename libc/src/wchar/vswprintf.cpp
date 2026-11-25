@@ -61,6 +61,12 @@ LLVM_LIBC_FUNCTION(int, vswprintf,
     return -1;
   }
 
+  if (ret_val.value() >= bufsz) {
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::TRUNCATION_ERROR);
+    return -1;
+  }
+
   return static_cast<int>(ret_val.value());
 }
 

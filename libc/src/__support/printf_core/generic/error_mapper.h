@@ -35,6 +35,8 @@ LIBC_INLINE static int internal_error_to_errno(int internal_error) {
   case FIXED_POINT_CONVERSION_ERROR:
   case OVERFLOW_ERROR:
     return ERANGE;
+  case TRUNCATION_ERROR:
+    return E2BIG;
   default:
     LIBC_ASSERT(
         false &&
