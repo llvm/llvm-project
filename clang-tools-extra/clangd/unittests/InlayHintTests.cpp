@@ -1908,6 +1908,97 @@ TEST(DesignatorHints, ParenInitTemplate) {
                         ExpectedHint{".ptr=", "ptr"});
 }
 
+TEST(DesignatorHints, StructuredBindings) {
+  assertDesignatorHints(R"cpp(
+    struct Person {
+      const char *name;
+      int age;
+      const char *email;
+    };
+    Person p;
+    auto [$n[[n]], $a[[a]], $e[[e]]] = p;
+    // No hint when the binding name matches its field, but one when swapped.
+    auto &[name, $email[[email]], $age[[age]]] = p;
+  )cpp",
+                        ExpectedHint{"=.name", "n"}, ExpectedHint{"=.age", "a"},
+                        ExpectedHint{"=.email", "e"},
+                        ExpectedHint{"=.age", "email"},
+                        ExpectedHint{"=.email", "age"});
+}
+
+TEST(DesignatorHints, StructuredBindings_FieldKinds) {
+  assertDesignatorHints(R"cpp(
+    struct Base { int x, y; };
+    struct Derived : Base {};
+    struct Bits { int a : 3; int : 5; int b : 5; };
+    struct Refs { int &r; const int &cr; };
+    struct Mutable { mutable int m; };
+    void f(Derived d, Bits b, Refs r, const Mutable cm) {
+      auto [$x[[x1]], $y[[y1]]] = d;
+      auto [$a[[a1]], $b[[b1]]] = b;
+      auto [$r[[r1]], $cr[[cr1]]] = r;
+      auto &[$m[[m1]]] = cm;
+    }
+    // Packs have no hint.
+    template <typename = void> void g(Base b) {
+      auto [$first[[first]], ...rest] = b;
+    }
+  )cpp",
+                        ExpectedHint{"=.x", "x"}, ExpectedHint{"=.y", "y"},
+                        ExpectedHint{"=.a", "a"}, ExpectedHint{"=.b", "b"},
+                        ExpectedHint{"=.r", "r"}, ExpectedHint{"=.cr", "cr"},
+                        ExpectedHint{"=.m", "m"}, ExpectedHint{"=.x", "first"});
+}
+
+TEST(DesignatorHints, StructuredBindings_NotMembers) {
+  assertDesignatorHints(R"cpp(
+    // Array and tuple-like bindings have no field names.
+    struct IntPair { int a, b; };
+    namespace std {
+      template <typename T> struct tuple_size;
+      template <> struct tuple_size<IntPair> {
+        constexpr static unsigned value = 2;
+      };
+      template <unsigned I, typename T> struct tuple_element;
+      template <unsigned I> struct tuple_element<I, IntPair> {
+        using type = int;
+      };
+    }
+    template <unsigned I> int get(const IntPair &p) { return I ? p.b : p.a; }
+    void f(IntPair p) {
+      int arr[2];
+      auto [x, y] = arr;
+      auto [z, w] = p;
+    }
+    // Dependent bindings are not resolved.
+    template <typename T> void g(T t) { auto [u, v] = t; }
+    struct Point { int x, y; };
+    void h() { g(Point{}); }
+  )cpp");
+}
+
+TEST(InlayHints, StructuredBindingsTypeAndDesignator) {
+  Annotations Source(R"cpp(
+    struct Point { int x, y; };
+    auto [$a[[a]], $b[[b]]] = Point{};
+  )cpp");
+  auto AST = TestTU::withCode(Source.code()).build();
+  Config Cfg;
+  Cfg.InlayHints.DeducedTypes = true;
+  Cfg.InlayHints.Designators = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  auto Hints = inlayHints(AST, std::nullopt, DefaultOptsForTests);
+  EXPECT_THAT(
+      Hints,
+      ElementsAre(HintMatcher(ExpectedHint{"=.x", "a", Right}, Source),
+                  HintMatcher(ExpectedHint{": int", "a", Right}, Source),
+                  HintMatcher(ExpectedHint{"=.y", "b", Right}, Source),
+                  HintMatcher(ExpectedHint{": int", "b", Right}, Source)));
+  // Both kinds of hint are placed after the binding's name.
+  for (const auto &Hint : Hints)
+    EXPECT_EQ(Hint.position, Hint.range.end);
+}
+
 TEST(InlayHints, RestrictRange) {
   Annotations Code(R"cpp(
     auto a = false;
