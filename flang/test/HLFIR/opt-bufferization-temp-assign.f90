@@ -1,8 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --cse --opt-bufferization | FileCheck %s
 
-! CSE makes the section destination's shape available before the temporary
-! allocation, allowing optimized bufferization to hoist the destination.
-
 ! Constant size constructor of a trivial type can have its temporary removed.
 ! CHECK-LABEL: func.func @_QPbasic_scalar(
 ! CHECK-NOT: fir.allocmem
@@ -49,6 +46,7 @@ subroutine constructor_call(dest, source)
 end subroutine
 
 ! A section destination can be hoisted to eliminate the constructor temporary.
+! Even when the intial code doesn't match the pattern.
 ! CHECK-LABEL: func.func @_QPsection_non_default_lb(
 ! CHECK-NOT: fir.allocmem
 ! CHECK: return

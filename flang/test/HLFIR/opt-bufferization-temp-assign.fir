@@ -29,7 +29,7 @@ func.func @non_default_lower_bounds(%dest: !fir.ref<!fir.array<1xf32>>, %value: 
   return
 }
 
-// Scalar logical conversion remains in the redirected element assignment.
+// Scalar logical conversion should have its temporary removed.
 // CHECK-LABEL: func.func @logical_constructor(
 // CHECK-NOT: fir.allocmem
 // CHECK: %[[BOX:.*]] = fir.embox %arg0
@@ -91,6 +91,69 @@ func.func @section_constructor_custom_lb(%dest: !fir.ref<!fir.array<8xf32>>, %va
   return
 }
 
+// Freeing a distinct allocation between construction and assignment must not
+// prevent removal of the temporary. Use the same array type so rejection comes from the
+// allocation, not a difference in element types.
+// CHECK-LABEL: func.func @unrelated_allocation_freed(
+// CHECK-SAME: %[[DEST:[^:]+]]: !fir.ref<!fir.array<1xf64>>
+// CHECK-NOT: fir.allocmem
+// CHECK: %[[OTHER:.*]] = fir.allocmem !fir.array<1xf64>
+// CHECK-NEXT: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+// CHECK-NEXT: %[[EMBOX:.*]] = fir.embox %[[DEST]](%[[SHAPE]]) : (!fir.ref<!fir.array<1xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<1xf64>>
+// CHECK-NEXT: %[[SHIFT:.*]] = fir.shift %c1 : (index) -> !fir.shift<1>
+// CHECK-NEXT: %[[REBOX:.*]] = fir.rebox %[[EMBOX]](%[[SHIFT]]) : (!fir.box<!fir.array<1xf64>>, !fir.shift<1>) -> !fir.box<!fir.array<1xf64>>
+// CHECK-NEXT: %[[ELEMENT:.*]] = hlfir.designate %[[REBOX]] (%{{.*}}) : (!fir.box<!fir.array<1xf64>>, index) -> !fir.ref<f64>
+// CHECK-NEXT: hlfir.assign {{.*}} to %[[ELEMENT]] : f64, !fir.ref<f64>
+// CHECK-NEXT: fir.freemem %[[OTHER]] : !fir.heap<!fir.array<1xf64>>
+// CHECK-NEXT: return
+func.func @unrelated_allocation_freed(%dest: !fir.ref<!fir.array<1xf64>>) {
+  %one = arith.constant 1 : index
+  %zero = arith.constant 0.0 : f64
+  %must_free = arith.constant true
+  %shape = fir.shape %one : (index) -> !fir.shape<1>
+  %other = fir.allocmem !fir.array<1xf64>
+  %storage = fir.allocmem !fir.array<1xf64>
+  %tmp:2 = hlfir.declare %storage(%shape) uniq_name("tmp") : (!fir.heap<!fir.array<1xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<1xf64>>, !fir.heap<!fir.array<1xf64>>)
+  %element = hlfir.designate %tmp#0 (%one) : (!fir.heap<!fir.array<1xf64>>, index) -> !fir.ref<f64>
+  hlfir.assign %zero to %element : f64, !fir.ref<f64>
+  fir.freemem %other : !fir.heap<!fir.array<1xf64>>
+  %expr = hlfir.as_expr %tmp#0 move %must_free : (!fir.heap<!fir.array<1xf64>>, i1) -> !hlfir.expr<1xf64>
+  hlfir.assign %expr to %dest : !hlfir.expr<1xf64>, !fir.ref<!fir.array<1xf64>>
+  hlfir.destroy %expr : !hlfir.expr<1xf64>
+  return
+}
+
+// Minimal eligible construction shared by some of the cases below.
+// CHECK-LABEL: func.func @simple_constructor(
+// CHECK-SAME: %[[DEST:[^:]+]]: !fir.ref<!fir.array<1xf64>>
+// CHECK-NOT: fir.allocmem
+// CHECK-NOT: fir.convert
+// CHECK-NOT: hlfir.declare
+// CHECK: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+// CHECK: %[[EMBOX:.*]] = fir.embox %[[DEST]](%[[SHAPE]]) : (!fir.ref<!fir.array<1xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<1xf64>>
+// CHECK: %[[SHIFT:.*]] = fir.shift %c1 : (index) -> !fir.shift<1>
+// CHECK: %[[REBOX:.*]] = fir.rebox %[[EMBOX]](%[[SHIFT]]) : (!fir.box<!fir.array<1xf64>>, !fir.shift<1>) -> !fir.box<!fir.array<1xf64>>
+// CHECK: %[[ELEMENT:.*]] = hlfir.designate %[[REBOX]] (%{{.*}}) : (!fir.box<!fir.array<1xf64>>, index) -> !fir.ref<f64>
+// CHECK: hlfir.assign {{.*}} to %[[ELEMENT]] : f64, !fir.ref<f64>
+// CHECK-NOT: hlfir.as_expr
+// CHECK-NOT: hlfir.assign
+// CHECK-NOT: hlfir.destroy
+// CHECK: return
+func.func @simple_constructor(%dest: !fir.ref<!fir.array<1xf64>>) {
+  %one = arith.constant 1 : index
+  %zero = arith.constant 0.0 : f64
+  %must_free = arith.constant true
+  %shape = fir.shape %one : (index) -> !fir.shape<1>
+  %storage = fir.allocmem !fir.array<1xf64>
+  %tmp:2 = hlfir.declare %storage(%shape) uniq_name("tmp") : (!fir.heap<!fir.array<1xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<1xf64>>, !fir.heap<!fir.array<1xf64>>)
+  %element = hlfir.designate %tmp#0 (%one) : (!fir.heap<!fir.array<1xf64>>, index) -> !fir.ref<f64>
+  hlfir.assign %zero to %element : f64, !fir.ref<f64>
+  %expr = hlfir.as_expr %tmp#0 move %must_free : (!fir.heap<!fir.array<1xf64>>, i1) -> !hlfir.expr<1xf64>
+  hlfir.assign %expr to %dest : !hlfir.expr<1xf64>, !fir.ref<!fir.array<1xf64>>
+  hlfir.destroy %expr : !hlfir.expr<1xf64>
+  return
+}
+
 // Keep the temporary when a destination section bound is computed after the
 // allocation.
 // CHECK-LABEL: func.func @section_constructor_late_bounds(
@@ -129,39 +192,10 @@ func.func @section_constructor_late_bounds(%dest: !fir.ref<!fir.array<8xf32>>, %
   return
 }
 
-// Minimal eligible construction shared by the negative cases below.
-// CHECK-LABEL: func.func @simple_constructor(
-// CHECK-SAME: %[[DEST:[^:]+]]: !fir.ref<!fir.array<1xf64>>
-// CHECK-NOT: fir.allocmem
-// CHECK-NOT: fir.convert
-// CHECK-NOT: hlfir.declare
-// CHECK: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-// CHECK: %[[EMBOX:.*]] = fir.embox %[[DEST]](%[[SHAPE]]) : (!fir.ref<!fir.array<1xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<1xf64>>
-// CHECK: %[[SHIFT:.*]] = fir.shift %c1 : (index) -> !fir.shift<1>
-// CHECK: %[[REBOX:.*]] = fir.rebox %[[EMBOX]](%[[SHIFT]]) : (!fir.box<!fir.array<1xf64>>, !fir.shift<1>) -> !fir.box<!fir.array<1xf64>>
-// CHECK: %[[ELEMENT:.*]] = hlfir.designate %[[REBOX]] (%{{.*}}) : (!fir.box<!fir.array<1xf64>>, index) -> !fir.ref<f64>
-// CHECK: hlfir.assign {{.*}} to %[[ELEMENT]] : f64, !fir.ref<f64>
-// CHECK-NOT: hlfir.as_expr
-// CHECK-NOT: hlfir.assign
-// CHECK-NOT: hlfir.destroy
-// CHECK: return
-func.func @simple_constructor(%dest: !fir.ref<!fir.array<1xf64>>) {
-  %one = arith.constant 1 : index
-  %zero = arith.constant 0.0 : f64
-  %must_free = arith.constant true
-  %shape = fir.shape %one : (index) -> !fir.shape<1>
-  %storage = fir.allocmem !fir.array<1xf64>
-  %tmp:2 = hlfir.declare %storage(%shape) uniq_name("tmp") : (!fir.heap<!fir.array<1xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<1xf64>>, !fir.heap<!fir.array<1xf64>>)
-  %element = hlfir.designate %tmp#0 (%one) : (!fir.heap<!fir.array<1xf64>>, index) -> !fir.ref<f64>
-  hlfir.assign %zero to %element : f64, !fir.ref<f64>
-  %expr = hlfir.as_expr %tmp#0 move %must_free : (!fir.heap<!fir.array<1xf64>>, i1) -> !hlfir.expr<1xf64>
-  hlfir.assign %expr to %dest : !hlfir.expr<1xf64>, !fir.ref<!fir.array<1xf64>>
-  hlfir.destroy %expr : !hlfir.expr<1xf64>
-  return
-}
 
 // Keep the temporary when its lower bound is not one. Replacing it with the
-// one-based destination view would leave the construction subscript -1 unchanged.
+// one-based destination view would leave the construction subscript with
+// lowerbound -1 unchanged.
 // CHECK-LABEL: func.func @non_default_temporary_lower_bounds(
 // CHECK-SAME: %[[DEST:[^:]+]]: !fir.ref<!fir.array<1xf64>>
 // CHECK: %[[LB:.*]] = arith.constant -1 : index
@@ -185,38 +219,6 @@ func.func @non_default_temporary_lower_bounds(%dest: !fir.ref<!fir.array<1xf64>>
   %element = hlfir.designate %tmp#0 (%minus_one) : (!fir.box<!fir.array<1xf64>>, index) -> !fir.ref<f64>
   hlfir.assign %zero to %element : f64, !fir.ref<f64>
   %expr = hlfir.as_expr %tmp#0 move %must_free : (!fir.box<!fir.array<1xf64>>, i1) -> !hlfir.expr<1xf64>
-  hlfir.assign %expr to %dest : !hlfir.expr<1xf64>, !fir.ref<!fir.array<1xf64>>
-  hlfir.destroy %expr : !hlfir.expr<1xf64>
-  return
-}
-
-// Freeing a distinct allocation between construction and assignment must not
-// prevent removal of the temporary. Use the same array type so rejection comes from the
-// allocation, not a difference in element types.
-// CHECK-LABEL: func.func @unrelated_allocation_freed(
-// CHECK-SAME: %[[DEST:[^:]+]]: !fir.ref<!fir.array<1xf64>>
-// CHECK-NOT: fir.allocmem
-// CHECK: %[[OTHER:.*]] = fir.allocmem !fir.array<1xf64>
-// CHECK-NEXT: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-// CHECK-NEXT: %[[EMBOX:.*]] = fir.embox %[[DEST]](%[[SHAPE]]) : (!fir.ref<!fir.array<1xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<1xf64>>
-// CHECK-NEXT: %[[SHIFT:.*]] = fir.shift %c1 : (index) -> !fir.shift<1>
-// CHECK-NEXT: %[[REBOX:.*]] = fir.rebox %[[EMBOX]](%[[SHIFT]]) : (!fir.box<!fir.array<1xf64>>, !fir.shift<1>) -> !fir.box<!fir.array<1xf64>>
-// CHECK-NEXT: %[[ELEMENT:.*]] = hlfir.designate %[[REBOX]] (%{{.*}}) : (!fir.box<!fir.array<1xf64>>, index) -> !fir.ref<f64>
-// CHECK-NEXT: hlfir.assign {{.*}} to %[[ELEMENT]] : f64, !fir.ref<f64>
-// CHECK-NEXT: fir.freemem %[[OTHER]] : !fir.heap<!fir.array<1xf64>>
-// CHECK-NEXT: return
-func.func @unrelated_allocation_freed(%dest: !fir.ref<!fir.array<1xf64>>) {
-  %one = arith.constant 1 : index
-  %zero = arith.constant 0.0 : f64
-  %must_free = arith.constant true
-  %shape = fir.shape %one : (index) -> !fir.shape<1>
-  %other = fir.allocmem !fir.array<1xf64>
-  %storage = fir.allocmem !fir.array<1xf64>
-  %tmp:2 = hlfir.declare %storage(%shape) uniq_name("tmp") : (!fir.heap<!fir.array<1xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<1xf64>>, !fir.heap<!fir.array<1xf64>>)
-  %element = hlfir.designate %tmp#0 (%one) : (!fir.heap<!fir.array<1xf64>>, index) -> !fir.ref<f64>
-  hlfir.assign %zero to %element : f64, !fir.ref<f64>
-  fir.freemem %other : !fir.heap<!fir.array<1xf64>>
-  %expr = hlfir.as_expr %tmp#0 move %must_free : (!fir.heap<!fir.array<1xf64>>, i1) -> !hlfir.expr<1xf64>
   hlfir.assign %expr to %dest : !hlfir.expr<1xf64>, !fir.ref<!fir.array<1xf64>>
   hlfir.destroy %expr : !hlfir.expr<1xf64>
   return
@@ -467,8 +469,7 @@ func.func @unknown_extent_dest_known_tmp(%dest: !fir.box<!fir.array<?xf64>>, %n:
   return
 }
 
-// Keep the temporary: it has known rank and unknown extent
-// but the destination has known extent.
+// Keep the temporary: it has known rank and unknown extent.
 // CHECK-LABEL: func.func @unknown_extent_tmp_known_dest(
 // CHECK: fir.allocmem
 // CHECK: hlfir.as_expr
