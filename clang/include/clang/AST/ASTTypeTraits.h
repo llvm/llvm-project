@@ -131,7 +131,9 @@ private:
     NKI_TemplateArgumentLoc,
     NKI_LambdaCapture,
     NKI_TemplateName,
+    NKI_NestedNameSpecifier,
     NKI_NestedNameSpecifierLoc,
+    NKI_ObjCProtocolLoc,
     NKI_QualType,
 #define TYPELOC(CLASS, PARENT) NKI_##CLASS##TypeLoc,
 #include "clang/AST/TypeLocNodes.def"
@@ -139,7 +141,6 @@ private:
     NKI_LastKindWithoutPointerIdentity = NKI_TypeLoc,
     NKI_CXXBaseSpecifier,
     NKI_CXXCtorInitializer,
-    NKI_NestedNameSpecifier,
     NKI_Decl,
 #define DECL(DERIVED, BASE) NKI_##DERIVED##Decl,
 #include "clang/AST/DeclNodes.inc"
@@ -156,7 +157,6 @@ private:
     NKI_Attr,
 #define ATTR(A) NKI_##A##Attr,
 #include "clang/Basic/AttrList.inc"
-    NKI_ObjCProtocolLoc,
     NKI_ConceptReference,
     NKI_OffsetOfNode,
     NKI_NumberOfKinds
@@ -253,9 +253,15 @@ inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
 class DynTypedNode {
 public:
   /// Creates a \c DynTypedNode from \c Node.
-  template <typename T>
-  static DynTypedNode create(const T &Node) {
-    return BaseConverter<T>::create(Node);
+  template <typename T> static DynTypedNode create(const T &Node) {
+    using Converter = BaseConverter<T>;
+    static_assert(
+        Converter::StoresPointer ==
+            ASTNodeKind::getFromNodeKind<typename Converter::BaseType>()
+                .hasPointerIdentity(),
+        "hasPointerIdentity() must agree with whether DynTypedNode "
+        "stores a node by pointer");
+    return Converter::create(Node);
   }
 
   /// Retrieve the stored node as type \c T.
@@ -264,7 +270,7 @@ public:
   /// convertible to \c T.
   ///
   /// For types that have identity via their pointer in the AST
-  /// (like \c Stmt, \c Decl, \c Type and \c NestedNameSpecifier) the returned
+  /// (like \c Stmt, \c Decl and \c Type) the returned
   /// pointer points to the referenced AST node.
   /// For other types (like \c QualType) the value is stored directly
   /// in the \c DynTypedNode, and the returned pointer points at
@@ -308,9 +314,8 @@ public:
   /// @{
   /// Imposes an order on \c DynTypedNode.
   ///
-  /// Supports comparison of nodes that support memoization.
-  /// FIXME: Implement comparison for other node types (currently
-  /// only Stmt, Decl, Type and NestedNameSpecifier return memoization data).
+  /// FIXME: Implement comparison for TemplateName, LambdaCapture,
+  /// TemplateArgument, and TemplateArgumentLoc.
   bool operator<(const DynTypedNode &Other) const {
     if (!NodeKind.isSame(Other.NodeKind))
       return NodeKind < Other.NodeKind;
@@ -338,6 +343,17 @@ public:
                             NNSLB.getOpaqueData());
     }
 
+    if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(NodeKind))
+      return getUnchecked<NestedNameSpecifier>().getAsVoidPointer() <
+             Other.getUnchecked<NestedNameSpecifier>().getAsVoidPointer();
+
+    if (ASTNodeKind::getFromNodeKind<ObjCProtocolLoc>().isSame(NodeKind)) {
+      auto PLA = getUnchecked<ObjCProtocolLoc>();
+      auto PLB = Other.getUnchecked<ObjCProtocolLoc>();
+      return std::make_pair(PLA.getProtocol(), PLA.getLocation()) <
+             std::make_pair(PLB.getProtocol(), PLB.getLocation());
+    }
+
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() < Other.getMemoizationData();
   }
@@ -357,6 +373,17 @@ public:
     if (ASTNodeKind::getFromNodeKind<NestedNameSpecifierLoc>().isSame(NodeKind))
       return getUnchecked<NestedNameSpecifierLoc>() ==
              Other.getUnchecked<NestedNameSpecifierLoc>();
+
+    if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(NodeKind))
+      return getUnchecked<NestedNameSpecifier>() ==
+             Other.getUnchecked<NestedNameSpecifier>();
+
+    if (ASTNodeKind::getFromNodeKind<ObjCProtocolLoc>().isSame(NodeKind)) {
+      auto PLA = getUnchecked<ObjCProtocolLoc>();
+      auto PLB = Other.getUnchecked<ObjCProtocolLoc>();
+      return PLA.getProtocol() == PLB.getProtocol() &&
+             PLA.getLocation() == PLB.getLocation();
+    }
 
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() == Other.getMemoizationData();
@@ -384,6 +411,18 @@ public:
             NNSL.getOpaqueData());
       }
 
+      if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(
+              Val.NodeKind))
+        return llvm::DenseMapInfo<NestedNameSpecifier>::getHashValue(
+            Val.getUnchecked<NestedNameSpecifier>());
+
+      if (ASTNodeKind::getFromNodeKind<ObjCProtocolLoc>().isSame(
+              Val.NodeKind)) {
+        auto PL = Val.getUnchecked<ObjCProtocolLoc>();
+        return llvm::hash_combine(PL.getProtocol(),
+                                  PL.getLocation().getRawEncoding());
+      }
+
       assert(Val.getMemoizationData());
       return llvm::hash_value(Val.getMemoizationData());
     }
@@ -398,6 +437,8 @@ private:
 
   /// Converter that uses dyn_cast<T> from a stored BaseT*.
   template <typename T, typename BaseT> struct DynCastPtrConverter {
+    static constexpr bool StoresPointer = true;
+    using BaseType = BaseT;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind))
         return &getUnchecked(NodeKind, Storage);
@@ -418,6 +459,8 @@ private:
 
   /// Converter that stores T* (by pointer).
   template <typename T> struct PtrConverter {
+    static constexpr bool StoresPointer = true;
+    using BaseType = T;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return &getUnchecked(NodeKind, Storage);
@@ -438,6 +481,8 @@ private:
 
   /// Converter that stores T (by value).
   template <typename T> struct ValueConverter {
+    static constexpr bool StoresPointer = false;
+    using BaseType = T;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return reinterpret_cast<const T *>(Storage);
@@ -461,6 +506,8 @@ private:
   template <typename T, typename BaseT,
             typename = std::enable_if_t<(sizeof(T) == sizeof(BaseT))>>
   struct DynCastValueConverter {
+    static constexpr bool StoresPointer = false;
+    using BaseType = BaseT;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind))
         return &getUnchecked(NodeKind, Storage);
@@ -482,15 +529,16 @@ private:
 
   /// Stores the data of the node.
   ///
-  /// Note that we can store \c Decls, \c Stmts, \c Types,
-  /// \c NestedNameSpecifiers and \c CXXCtorInitializer by pointer as they are
-  /// guaranteed to be unique pointers pointing to dedicated storage in the AST.
-  /// \c QualTypes, \c NestedNameSpecifierLocs, \c TypeLocs,
-  /// \c TemplateArguments and \c TemplateArgumentLocs on the other hand do not
-  /// have storage or unique pointers and thus need to be stored by value.
-  llvm::AlignedCharArrayUnion<const void *, TemplateArgument,
-                              TemplateArgumentLoc, NestedNameSpecifierLoc,
-                              QualType, TypeLoc, ObjCProtocolLoc>
+  /// Note that we can store \c Decls, \c Stmts, \c Types and
+  /// \c CXXCtorInitializer by pointer as they are guaranteed to be unique
+  /// pointers pointing to dedicated storage in the AST.
+  /// \c QualTypes, \c NestedNameSpecifiers, \c NestedNameSpecifierLocs,
+  /// \c TypeLocs, \c TemplateArguments and \c TemplateArgumentLocs on the other
+  /// hand do not have storage or unique pointers and thus need to be stored by
+  /// value.
+  llvm::AlignedCharArrayUnion<
+      const void *, TemplateArgument, TemplateArgumentLoc, NestedNameSpecifier,
+      NestedNameSpecifierLoc, QualType, TypeLoc, ObjCProtocolLoc>
       Storage;
 };
 

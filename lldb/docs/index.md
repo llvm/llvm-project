@@ -194,6 +194,7 @@ Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
 resources/sbapi
 resources/dataformatters
 resources/formatterbytecode
+resources/dil
 resources/addinglanguagesupport
 resources/addingtargetsupport
 resources/caveats

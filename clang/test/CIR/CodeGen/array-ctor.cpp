@@ -1,10 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o -  2>&1 | FileCheck --check-prefixes=CIR-BEFORE-LPP %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -emit-cir %s -o %t.eh.cir
+// RUN: FileCheck --input-file=%t.eh.cir %s --check-prefixes=TEMP,TEMP-EH
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o -  2>&1 | FileCheck --check-prefixes=CIR-BEFORE-LPP %s
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR,TEMP,TEMP-NOEH
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,TEMP-IR,TEMP-LLVM
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG,TEMP-IR
 
 struct S {
     S();
@@ -345,3 +347,182 @@ void Temp2InArray() {
 // OGCG-NEXT:  call void @_ZN5Temp2D1Ev({{.*}}[[TMP]])
 // OGCG:       %[[DTOR_ELT:.*]] = getelementptr inbounds %struct.CausesTemp2, ptr %{{.*}}, i64 -1
 // OGCG-NEXT:  call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[DTOR_ELT]])
+
+// Constructor default arguments are destroyed before the next array element.
+// Filler and capture-copy loops have the same boundary. Lifetime-extended
+// temporaries retain their enclosing cleanup ownership.
+
+struct ArgTemp {
+  ArgTemp(int);
+  ~ArgTemp();
+};
+
+extern "C" bool flag();
+extern "C" int g(const ArgTemp &);
+extern "C" void use(int);
+
+struct E {
+  E(const ArgTemp & = ArgTemp(1));
+  ~E();
+};
+
+struct F {
+  F(int = flag() ? g(ArgTemp(2)) : 0);
+  ~F();
+};
+
+extern "C" int take(F *);
+
+// TEMP-LABEL: cir.func {{.*}} @new_in_conditional(
+// TEMP: %[[TMP:.*]] = cir.alloca "ref.tmp0"
+// TEMP: %[[FLAG:.*]] = cir.alloca "cleanup.cond"
+// TEMP: cir.ternary(
+// TEMP: cir.do {
+// TEMP: cir.call @flag()
+// TEMP: %[[FALSE:.*]] = cir.const #false
+// TEMP-NEXT: cir.store %[[FALSE]], %[[FLAG]]
+// TEMP: cir.ternary(
+// TEMP: cir.call @_ZN7ArgTempC1Ei(%[[TMP]],
+// TEMP-NEXT: %[[TRUE:.*]] = cir.const #true
+// TEMP-NEXT: cir.store %[[TRUE]], %[[FLAG]]
+// TEMP: cir.call @_ZN1FC1Ei(
+// TEMP-NOEH: } cleanup normal {
+// TEMP-EH: } cleanup all {
+// TEMP: %[[LIVE:.*]] = cir.load {{.*}} %[[FLAG]]
+// TEMP-NEXT: cir.if %[[LIVE]] {
+// TEMP-NEXT: cir.call @_ZN7ArgTempD1Ev(%[[TMP]])
+// TEMP: } while {
+// TEMP: cir.call @take(
+// TEMP: cir.call @use(
+
+// TEMP-IR-LABEL: define {{.*}} void @new_in_conditional(
+// TEMP-IR: call void @_ZN7ArgTempC1Ei(ptr {{.*}} %[[TMP:[^,]+]], i32 {{.*}} 2)
+// TEMP-IR: call void @_ZN1FC1Ei(
+// TEMP-IR: call void @_ZN7ArgTempD1Ev(ptr {{.*}} %[[TMP]])
+// TEMP-IR: call i32 @take(
+// TEMP-IR: call void @use(
+
+extern "C" void new_in_conditional(bool b) { use(b ? take(new F[2]) : 0); }
+
+struct E3 {
+  E e[3];
+};
+
+extern "C" int take3(const E3 &);
+
+// TEMP-LABEL: cir.func {{.*}} @filler_in_conditional(
+// TEMP: %[[EXPLICIT:.*]] = cir.alloca "ref.tmp1"
+// TEMP: cir.ternary(
+// TEMP: cir.call @_ZN7ArgTempC1Ei(%[[EXPLICIT]],
+// TEMP: cir.do {
+// TEMP: cir.call @_ZN7ArgTempC1Ei(%[[TMP:[^,]+]],
+// TEMP: cir.cleanup.scope {
+// TEMP: cir.call @_ZN1EC1ERK7ArgTemp(
+// TEMP-NOEH: } cleanup normal {
+// TEMP-EH: } cleanup all {
+// TEMP-NEXT: cir.call @_ZN7ArgTempD1Ev(%[[TMP]])
+// TEMP: } while {
+// TEMP: cir.call @take3(
+// TEMP: cir.call @use(
+// TEMP: cir.call @_ZN2E3D1Ev(
+// TEMP: cir.call @_ZN7ArgTempD1Ev(%[[EXPLICIT]])
+
+// TEMP-IR-LABEL: define {{.*}} void @filler_in_conditional(
+// TEMP-IR: call void @_ZN7ArgTempC1Ei(ptr {{.*}} %[[EXPLICIT:[^,]+]], i32 {{.*}} 5)
+// TEMP-IR: call void @_ZN7ArgTempC1Ei(ptr {{.*}} %[[TMP:[^,]+]], i32 {{.*}} 1)
+// TEMP-IR: call void @_ZN1EC1ERK7ArgTemp(
+// TEMP-IR: call void @_ZN7ArgTempD1Ev(ptr {{.*}} %[[TMP]])
+// TEMP-IR: call i32 @take3(
+// TEMP-IR: call void @use(
+// TEMP-IR: call void @_ZN2E3D1Ev(
+// TEMP-IR: call void @_ZN7ArgTempD1Ev(ptr {{.*}} %[[EXPLICIT]])
+
+extern "C" void filler_in_conditional(bool b) { use(b ? take3(E3{{E(ArgTemp(5))}}) : 0); }
+
+struct C {
+  C();
+  C(const C &, const ArgTemp & = ArgTemp(3));
+  ~C();
+};
+
+// TEMP-LABEL: cir.func {{.*}} @capture(
+// TEMP: %[[TMP:.*]] = cir.alloca "ref.tmp0"
+// TEMP: cir.do {
+// TEMP: cir.call @_ZN7ArgTempC1Ei(%[[TMP]],
+// TEMP: cir.cleanup.scope {
+// TEMP: cir.call @_ZN1CC1ERKS_RK7ArgTemp(
+// TEMP-NOEH: } cleanup normal {
+// TEMP-EH: } cleanup all {
+// TEMP-NEXT: cir.call @_ZN7ArgTempD1Ev(%[[TMP]])
+// TEMP: } while {
+
+// TEMP-IR-LABEL: define {{.*}} void @capture(
+// TEMP-IR: call void @_ZN7ArgTempC1Ei(ptr {{.*}} %[[TMP:.*]], i32 {{.*}} 3)
+// TEMP-IR: call void @_ZN1CC1ERKS_RK7ArgTemp(
+// TEMP-IR: call void @_ZN7ArgTempD1Ev(ptr {{.*}} %[[TMP]])
+
+extern "C" void capture() {
+  C arr[2];
+  (void)[arr] {};
+}
+
+struct R {
+  const ArgTemp &s = ArgTemp(4);
+  int x;
+};
+
+extern "C" void use_r(R *);
+
+// TEMP-LABEL: cir.func {{.*}} @extended_member_filler(
+// TEMP: %[[TMP:.*]] = cir.alloca "ref.tmp0"
+// TEMP: cir.do {
+// TEMP: cir.call @_ZN7ArgTempC1Ei(%[[TMP]],
+// TEMP: } while {
+// TEMP: cir.call @use_r(
+// TEMP-NOEH: } cleanup normal {
+// TEMP-EH: } cleanup all {
+// TEMP-NEXT: cir.call @_ZN7ArgTempD1Ev(%[[TMP]])
+
+// TEMP-LLVM-LABEL: define {{.*}} void @extended_member_filler(
+// TEMP-LLVM: call void @_ZN7ArgTempC1Ei(ptr {{.*}} %[[TMP:.*]], i32 {{.*}} 4)
+// TEMP-LLVM-NOT: call void @_ZN7ArgTempD1Ev
+// TEMP-LLVM: call void @use_r(
+// TEMP-LLVM: call void @_ZN7ArgTempD1Ev(ptr {{.*}} %[[TMP]])
+
+extern "C" void extended_member_filler() {
+  R a[2] = {};
+  use_r(a);
+}
+
+struct Range {
+  int *begin();
+  int *end();
+};
+
+extern "C" Range take_range(E *);
+
+// TEMP-LABEL: cir.func {{.*}} @extended_default_arg(
+// TEMP: %[[TMP:.*]] = cir.alloca "ref.tmp1"
+// TEMP: cir.do {
+// TEMP: cir.call @_ZN7ArgTempC1Ei(%[[TMP]],
+// TEMP: cir.call @_ZN1EC1ERK7ArgTemp(
+// TEMP: } while {
+// TEMP: cir.call @take_range(
+// TEMP: cir.for : cond {
+// TEMP: cir.call @use(
+// TEMP: } step {
+// TEMP-NOEH: } cleanup normal {
+// TEMP-EH: } cleanup all {
+// TEMP-NEXT: cir.call @_ZN7ArgTempD1Ev(%[[TMP]])
+
+// TEMP-LLVM-LABEL: define {{.*}} void @extended_default_arg(
+// TEMP-LLVM: call void @_ZN7ArgTempC1Ei(ptr {{.*}} %[[TMP:.*]], i32 {{.*}} 1)
+// TEMP-LLVM: call void @take_range(
+// TEMP-LLVM-NOT: call void @_ZN7ArgTempD1Ev
+// TEMP-LLVM: call void @use(
+// TEMP-LLVM: call void @_ZN7ArgTempD1Ev(ptr {{.*}} %[[TMP]])
+
+extern "C" void extended_default_arg() {
+  for (int i : take_range(new E[2]))
+    use(i);
+}

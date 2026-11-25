@@ -17,7 +17,8 @@ namespace scudo {
 
 inline uptr scaledLog2(uptr Size, uptr ZeroLog, uptr LogBits) {
   const uptr L = getMostSignificantSetBitIndex(Size);
-  const uptr LBits = (Size >> (L - LogBits)) - (1 << LogBits);
+  const uptr LBits =
+      (Size >> (L - LogBits)) - (static_cast<uptr>(1) << LogBits);
   const uptr HBits = (L - ZeroLog) << LogBits;
   return LBits + HBits;
 }
@@ -93,7 +94,8 @@ public:
   static constexpr bool usesCompressedLSBFormat() { return false; }
 
   static uptr getClassIdBySize(uptr Size) {
-    if (Size <= Config::SizeDelta + (1 << Config::MinSizeLog))
+    if (Size <=
+        Config::SizeDelta + (static_cast<uptr>(1) << Config::MinSizeLog))
       return 1;
     Size -= Config::SizeDelta;
     DCHECK_LE(Size, MaxSize);
@@ -119,8 +121,8 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
 
   struct SizeTable {
     constexpr SizeTable() {
-      uptr Pos = 1 << Config::MidSizeLog;
-      uptr Inc = 1 << (Config::MidSizeLog - S);
+      uptr Pos = static_cast<uptr>(1) << Config::MidSizeLog;
+      uptr Inc = static_cast<uptr>(1) << (Config::MidSizeLog - S);
       for (uptr i = 0; i != getTableSize(); ++i) {
         Pos += Inc;
         if ((Pos & (Pos - 1)) == 0)
@@ -151,7 +153,7 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
       u8 Min = 255, Max = 0;
       for (uptr I = 0; I != ClassesSize; ++I) {
         for (u8 Bit = 0; Bit != 64; ++Bit) {
-          if (Config::Classes[I] & (1 << Bit)) {
+          if (Config::Classes[I] & (static_cast<uptr>(1) << Bit)) {
             Tab[I] = Bit;
             if (Bit < Min)
               Min = Bit;
@@ -210,7 +212,7 @@ public:
       return 1;
     Size -= Config::SizeDelta;
     DCHECK_LE(Size, MaxSize);
-    if (Size <= (1 << Config::MidSizeLog))
+    if (Size <= (static_cast<uptr>(1) << Config::MidSizeLog))
       return ((Size - 1) >> Config::MinSizeLog) + 1;
     return SzTable.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
   }

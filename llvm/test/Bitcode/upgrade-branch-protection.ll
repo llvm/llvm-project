@@ -3,7 +3,7 @@
 ;; as the module is converted to the semantic.
 
 ; RUN: llvm-as %s -o - | llvm-dis - | FileCheck %s
-; RUN: %if asserts %{ llvm-as %s -debug-only=auto-upgrade -o /dev/null 2>&1 | FileCheck %s --check-prefix CHECK-LOG %}
+; RUN: %if asserts %{ llvm-as %s -debug-only=auto-upgrade -disable-output 2>&1 | FileCheck %s --check-prefix CHECK-LOG %}
 
 target triple = "aarch64-unknown-linux-gnu"
 

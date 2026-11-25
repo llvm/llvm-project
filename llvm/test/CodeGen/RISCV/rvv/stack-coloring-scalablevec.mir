@@ -19,7 +19,6 @@
 ...
 ---
 name:            dont_merge
-tracksRegLiveness: true
 stack:
   - { id: 0, name: buf1, size: 16, alignment: 16 }
   - { id: 1, name: buf2, size: 16, alignment: 16, stack-id: scalable-vector }

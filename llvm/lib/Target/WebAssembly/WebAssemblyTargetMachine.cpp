@@ -128,41 +128,11 @@ using WebAssembly::WasmDisableExplicitLocals;
 using WebAssembly::WasmEnableEmSjLj;
 using WebAssembly::WasmEnableSjLj;
 
-static void basicCheckForEHAndSjLj(TargetMachine *TM) {
-
-  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
-  bool EnableWasmEH = TM->Options.ExceptionModel == ExceptionHandling::Wasm;
-
+static void basicCheckForEHAndSjLj() {
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
-    report_fatal_error(
+    reportFatalUsageError(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
-  // You can't mix Emscripten EH with Wasm SjLj.
-  if (EnableEmEH && WasmEnableSjLj)
-    report_fatal_error(
-        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
-  // You can't mix Wasm EH with Emscripten SjLj.
-  if (EnableWasmEH && WasmEnableEmSjLj)
-    report_fatal_error(
-        "-exception-model=wasm not allowed with -enable-emscripten-sjlj");
-
-  if (TM->Options.ExceptionModel == ExceptionHandling::Default) {
-    // FIXME: This flag should be removed in favor of directly using the
-    // generically configured ExceptionsType.
-    if (WebAssembly::WasmEnableSjLj)
-      TM->Options.ExceptionModel = ExceptionHandling::Wasm;
-  }
-
-  // Basic Correctness checking related to -exception-model
-  if (TM->Options.ExceptionModel != ExceptionHandling::Default &&
-      TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
-      TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
-    report_fatal_error(
-        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
-  if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error(
-        "-wasm-enable-sjlj only allowed with -exception-model=wasm");
 }
 
 /// Create an WebAssembly architecture model.
@@ -191,7 +161,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  basicCheckForEHAndSjLj(this);
+  basicCheckForEHAndSjLj();
   initAsmInfo();
 
   // WebAssembly does not run RegAllocFast; tied operands must be lowered by
@@ -220,13 +190,26 @@ WebAssemblyTargetMachine::getSubtargetImpl(StringRef CPU, StringRef FS,
 
 const WebAssemblySubtarget *
 WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
-  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.ABIName = getTargetABIName(*M);
 
-  return getSubtargetImpl(CPU, FS, getTargetABIName(*F.getParent()));
+  if (const WebAssemblySubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : TargetCPU;
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : TargetFS;
+
+  const WebAssemblySubtarget *ST = getSubtargetImpl(CPU, FS, Attrs.ABIName);
+  LastSubtarget.set(FnAttrs, M, Attrs, ST);
+  return ST;
 }
 
 namespace {
@@ -241,10 +224,7 @@ public:
     return getTM<WebAssemblyTargetMachine>();
   }
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
-
   void addIRPasses() override;
-  void addPassesToHandleExceptions() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
   void addOptimizedRegAlloc() override;
@@ -252,12 +232,6 @@ public:
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
   bool addPreISel() override;
-
-  // No reg alloc
-  bool addRegAssignAndRewriteFast() override { return false; }
-
-  // No reg alloc
-  bool addRegAssignAndRewriteOptimized() override { return false; }
 
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -283,10 +257,6 @@ WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) const {
 TargetPassConfig *
 WebAssemblyTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new WebAssemblyPassConfig(*this, PM);
-}
-
-FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr; // No reg alloc
 }
 
 //===----------------------------------------------------------------------===//
@@ -321,13 +291,6 @@ void WebAssemblyPassConfig::addIRPasses() {
       getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
-}
-
-void WebAssemblyPassConfig::addPassesToHandleExceptions() {
-  // Wasm EH needs WinEHPrepare to remove the catchswitch PHIs SelectionDAG
-  // cannot lower.
-  addPass(createWinEHPass());
-  addPass(createWasmEHPass());
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {
@@ -381,21 +344,6 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
-  // TODO: The following CodeGen passes don't currently support code containing
-  // virtual registers. Consider removing their restrictions and re-enabling
-  // them.
-
-  // These functions all require the NoVRegs property.
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
-
   // This pass hurts code size for wasm because it can generate irreducible
   // control flow.
   disablePass(&MachineBlockPlacementID);

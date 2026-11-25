@@ -74,9 +74,6 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
   SupportsDebugInformation = true;
   UseDataRegionDirectives = X86_MC::getCLOpts(Options).mark_data_regions;
 
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
-
   // old assembler lacks some directives
   // FIXME: this should really be a check on the assembler characteristics
   // rather than OS version
@@ -116,9 +113,6 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
   // Debug Information
   SupportsDebugInformation = true;
 
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
-
   initializeAtSpecifiers(atSpecifiers);
 }
 
@@ -147,8 +141,6 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple,
     // output. In particular, usesWindowsCFI() returns false.
     WinEHEncodingType = WinEH::EncodingType::X86;
   }
-
-  ExceptionsType = ExceptionHandling::WinEH;
 
   AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
@@ -182,9 +174,6 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
     InternalSymbolPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
-    ExceptionsType = ExceptionHandling::WinEH;
-  } else {
-    ExceptionsType = ExceptionHandling::DwarfCFI;
   }
 
   AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;

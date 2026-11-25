@@ -14,6 +14,7 @@
 
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/move_only_function.h"
+#include "orc-rt/support/sps/SPSSymbolLookupResult.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 
 // Wrapper for Session methods that uses the wrapper's Session argument.
@@ -24,7 +25,7 @@
                                                (HandlerBuilder)(S));           \
   }
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 namespace {
 
@@ -67,4 +68,4 @@ Error addSession(SimpleSymbolTable &ST) noexcept {
   return ST.addUnique(orc_rt_ci_Session_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

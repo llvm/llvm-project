@@ -25,6 +25,7 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
+struct AMDGPUOptions;
 class GCNSubtarget;
 class InstCombiner;
 class Loop;
@@ -39,7 +40,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   friend BaseT;
 
-  Triple TargetTriple;
+  const AMDGPUOptions &CLOpts;
 
   const TargetSubtargetInfo *ST;
   const TargetLoweringBase *TLI;
@@ -66,6 +67,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   friend BaseT;
 
+  const AMDGPUOptions &CLOpts;
   const GCNSubtarget *ST;
   const SITargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
@@ -240,6 +242,10 @@ public:
                                              IntrinsicInst &II,
                                              const APInt &DemandedElts,
                                              APInt &UndefElts) const;
+
+  Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
+                                               IntrinsicInst &II,
+                                               APInt DemandedElts) const;
 
   Instruction *hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                                 IntrinsicInst &II) const;

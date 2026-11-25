@@ -21,7 +21,6 @@
 ...
 ---
 name:            f
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false

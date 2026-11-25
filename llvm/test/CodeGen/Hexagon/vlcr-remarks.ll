@@ -1,7 +1,7 @@
 ; RUN: opt -mtriple=hexagon-- -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b \
 ; RUN:   -passes='loop(hexagon-vlcr)' -S \
 ; RUN:   -pass-remarks=hexagon-vlcr -pass-remarks-missed=hexagon-vlcr \
-; RUN:   %s -o /dev/null 2>&1 | FileCheck %s
+; RUN:   %s -disable-output 2>&1 | FileCheck %s
 
 ;; Test that HexagonVectorLoopCarriedReuse emits optimization remarks.
 

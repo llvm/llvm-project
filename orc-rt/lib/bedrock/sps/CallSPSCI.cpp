@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 using VoidVoidFn = void();
 
@@ -60,4 +60,4 @@ Error addCall(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_sps_call_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

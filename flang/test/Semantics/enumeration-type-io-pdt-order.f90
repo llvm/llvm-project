@@ -1,11 +1,10 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fenumeration-type
+! RUN: %python %S/test_errors.py %s %flang_fc1
 !
 ! This test verifies that the transversal order for enumeration type components
 ! does not impact the correct recognition/reporting of unformatted output
 ! errors.
 
 module enum_pdt_order_mod
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type

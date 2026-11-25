@@ -4,8 +4,11 @@
 name:            test_urem_64
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_urem_64
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(i64) = G_UDIV [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[UDIV]], [[COPY1]]
@@ -21,8 +24,11 @@ body:             |
 name:            test_srem_32
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_srem_32
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
@@ -42,8 +48,11 @@ body:             |
 name:            test_srem_8
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_srem_8
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i32) = G_SEXT_INREG [[TRUNC]], 8
@@ -68,8 +77,11 @@ body:             |
 name:            test_srem_1
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_srem_1
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i32) = G_SEXT_INREG [[TRUNC]], 1
@@ -93,8 +105,11 @@ body:             |
 name:            test_urem_1
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_urem_1
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
@@ -119,31 +134,34 @@ body:             |
 name:            test_frem
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_frem
-    ; CHECK: [[COPY:%[0-9]+]]:_(f64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY $w1
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $d0 = COPY [[COPY]](f64)
     ; CHECK-NEXT: $d1 = COPY [[COPY1]](f64)
     ; CHECK-NEXT: BL &fmod, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f64) = COPY $d0
-    ; CHECK-NEXT: $x0 = COPY [[COPY2]](f64)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f32) = COPY $w0
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(f32) = COPY $w1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f64) = COPY $d0
+    ; CHECK-NEXT: $x0 = COPY [[COPY3]](f64)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK-NEXT: $s0 = COPY [[COPY3]](f32)
-    ; CHECK-NEXT: $s1 = COPY [[COPY4]](f32)
+    ; CHECK-NEXT: $s0 = COPY [[COPY4]](f32)
+    ; CHECK-NEXT: $s1 = COPY [[COPY2]](f32)
     ; CHECK-NEXT: BL &fmodf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: $w0 = COPY [[COPY5]](f32)
     %0:_(f64) = COPY $x0
     %1:_(f64) = COPY $x1
+    %4:_(f32) = COPY $w1
     %2:_(f64) = G_FREM %0, %1
     $x0 = COPY %2(f64)
     %3:_(f32) = COPY $w0
-    %4:_(f32) = COPY $w1
     %5:_(f32) = G_FREM %3, %4
     $w0 = COPY %5(f32)
 
@@ -152,8 +170,11 @@ body:             |
 name:            test_srem_v2s32
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_srem_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<2 x i32>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<2 x i32>)
@@ -173,8 +194,11 @@ body:             |
 name:            test_srem_v4s32
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_srem_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32), [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
@@ -196,8 +220,11 @@ body:             |
 name:            test_srem_v2s64
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_srem_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY]](<2 x i64>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY1]](<2 x i64>)
@@ -217,8 +244,11 @@ body:             |
 name:            test_srem_v4s16
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_srem_v4s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<4 x i32>) = G_ZEXT [[COPY]](<4 x i16>)
     ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(<4 x i32>) = G_ZEXT [[COPY1]](<4 x i16>)

@@ -104,6 +104,9 @@ public:
   void emitExternalName(MCSection *Sec, StringRef Name) {
     static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
   }
+  void emitRenameable(MCSymbol *Sym, bool IsRenamable) {
+    static_cast<MCSymbolGOFF *>(Sym)->setRenameable(IsRenamable);
+  }
   void emitADA(MCSymbol *Sym, MCSection *Section) {
     static_cast<MCSymbolGOFF *>(Sym)->setADA(
         static_cast<MCSectionGOFF *>(Section));
@@ -111,14 +114,12 @@ public:
 
   void emitPPA1(PPA1Info &Info);
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                           const MCSymbol *Lo) = 0;
+                                           const MCSymbol *Lo);
 };
 
 class SystemZTargetGOFFStreamer : public SystemZTargetzOSStreamer {
 public:
   SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetzOSStreamer(S) {}
-  const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                   const MCSymbol *Lo) override;
 };
 
 class SystemZTargetHLASMStreamer : public SystemZTargetzOSStreamer {

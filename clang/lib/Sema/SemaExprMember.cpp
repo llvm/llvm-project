@@ -1640,9 +1640,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
                                            Member, MemberLoc);
     if (ret.isNull())
       return ExprError();
-    Qualifiers BaseQ =
-        S.Context.getCanonicalType(BaseExpr.get()->getType()).getQualifiers();
-    ret = S.Context.getQualifiedType(ret, BaseQ);
+
+    if (VK != VK_PRValue)
+      ret = S.Context.getQualifiedType(ret, BaseType.getQualifiers());
 
     return new (S.Context)
         ExtVectorElementExpr(ret, VK, BaseExpr.get(), *Member, MemberLoc);

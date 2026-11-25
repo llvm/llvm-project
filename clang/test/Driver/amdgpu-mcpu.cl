@@ -1,54 +1,6 @@
 // Check that -mcpu works for all supported GPUs.
 
 //
-// R600-based processors.
-//
-
-// RUN: %clang -### -target r600 -mcpu=r600 %s 2>&1 | FileCheck --check-prefix=R600 %s
-// RUN: %clang -### -target r600 -mcpu=rv630 %s 2>&1 | FileCheck --check-prefix=R600 %s
-// RUN: %clang -### -target r600 -mcpu=rv635 %s 2>&1 | FileCheck --check-prefix=R600 %s
-// RUN: %clang -### -target r600 -mcpu=r630 %s 2>&1 | FileCheck --check-prefix=R630 %s
-// RUN: %clang -### -target r600 -mcpu=rs780 %s 2>&1 | FileCheck --check-prefix=RS880 %s
-// RUN: %clang -### -target r600 -mcpu=rs880 %s 2>&1 | FileCheck --check-prefix=RS880 %s
-// RUN: %clang -### -target r600 -mcpu=rv610 %s 2>&1 | FileCheck --check-prefix=RS880 %s
-// RUN: %clang -### -target r600 -mcpu=rv620 %s 2>&1 | FileCheck --check-prefix=RS880 %s
-// RUN: %clang -### -target r600 -mcpu=rv670 %s 2>&1 | FileCheck --check-prefix=RV670 %s
-// RUN: %clang -### -target r600 -mcpu=rv710 %s 2>&1 | FileCheck --check-prefix=RV710 %s
-// RUN: %clang -### -target r600 -mcpu=rv730 %s 2>&1 | FileCheck --check-prefix=RV730 %s
-// RUN: %clang -### -target r600 -mcpu=rv740 %s 2>&1 | FileCheck --check-prefix=RV770 %s
-// RUN: %clang -### -target r600 -mcpu=rv770 %s 2>&1 | FileCheck --check-prefix=RV770 %s
-// RUN: %clang -### -target r600 -mcpu=cedar %s 2>&1 | FileCheck --check-prefix=CEDAR %s
-// RUN: %clang -### -target r600 -mcpu=palm %s 2>&1 | FileCheck --check-prefix=CEDAR %s
-// RUN: %clang -### -target r600 -mcpu=cypress %s 2>&1 | FileCheck --check-prefix=CYPRESS %s
-// RUN: %clang -### -target r600 -mcpu=hemlock %s 2>&1 | FileCheck --check-prefix=CYPRESS %s
-// RUN: %clang -### -target r600 -mcpu=juniper %s 2>&1 | FileCheck --check-prefix=JUNIPER %s
-// RUN: %clang -### -target r600 -mcpu=redwood %s 2>&1 | FileCheck --check-prefix=REDWOOD %s
-// RUN: %clang -### -target r600 -mcpu=sumo %s 2>&1 | FileCheck --check-prefix=SUMO %s
-// RUN: %clang -### -target r600 -mcpu=sumo2 %s 2>&1 | FileCheck --check-prefix=SUMO %s
-// RUN: %clang -### -target r600 -mcpu=barts %s 2>&1 | FileCheck --check-prefix=BARTS %s
-// RUN: %clang -### -target r600 -mcpu=caicos %s 2>&1 | FileCheck --check-prefix=CAICOS %s
-// RUN: %clang -### -target r600 -mcpu=aruba %s 2>&1 | FileCheck --check-prefix=CAYMAN %s
-// RUN: %clang -### -target r600 -mcpu=cayman %s 2>&1 | FileCheck --check-prefix=CAYMAN %s
-// RUN: %clang -### -target r600 -mcpu=turks %s 2>&1 | FileCheck --check-prefix=TURKS %s
-
-// R600:    "-target-cpu" "r600"
-// R630:    "-target-cpu" "r630"
-// RS880:   "-target-cpu" "rs880"
-// RV670:   "-target-cpu" "rv670"
-// RV710:   "-target-cpu" "rv710"
-// RV730:   "-target-cpu" "rv730"
-// RV770:   "-target-cpu" "rv770"
-// CEDAR:   "-target-cpu" "cedar"
-// CYPRESS: "-target-cpu" "cypress"
-// JUNIPER: "-target-cpu" "juniper"
-// REDWOOD: "-target-cpu" "redwood"
-// SUMO:    "-target-cpu" "sumo"
-// BARTS:   "-target-cpu" "barts"
-// CAICOS:  "-target-cpu" "caicos"
-// CAYMAN:  "-target-cpu" "cayman"
-// TURKS:   "-target-cpu" "turks"
-
-//
 // AMDGCN-based processors.
 //
 

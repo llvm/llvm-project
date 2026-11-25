@@ -992,8 +992,7 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSAA)
     MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAA->getMSSA());
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   if (!GuardWideningImpl(Opts, DT, &PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
                          DT.getRootNode(), [](BasicBlock *) { return true; })
            .run())
@@ -1017,8 +1016,7 @@ PreservedAnalyses GuardWideningPass::run(Loop &L, LoopAnalysisManager &AM,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   if (!GuardWideningImpl(Opts, AR.DT, nullptr, AR.LI, AR.AC,
                          MSSAU ? MSSAU.get() : nullptr, AR.DT.getNode(RootBB),
                          BlockFilter)

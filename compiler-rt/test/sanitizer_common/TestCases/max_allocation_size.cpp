@@ -28,13 +28,8 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
 // RUN: %env_tool_opts=max_allocation_size_mb=2:allocator_may_return_null=0 \
 // RUN:   not %run %t new 2>&1 | FileCheck %s --check-prefix=CHECK-nCRASH
-// flag=1 + throwing new: asan uses the operator new framework and throws
-// bad_alloc, which allocate() catches and converts to CHECK-NULL; the other
-// tools abort inside operator new.
-// TODO: Drop the !asan line once hwasan, lsan, msan and tsan adopt
-// sanitizer_common/sanitizer_new_operators.inc.
-// RUN: %if asan %{ %env_tool_opts=max_allocation_size_mb=2:allocator_may_return_null=1     %run %t new 2>&1 | FileCheck %s --check-prefix=CHECK-NULL %}
-// RUN: %if !asan %{ %env_tool_opts=max_allocation_size_mb=2:allocator_may_return_null=1 not %run %t new 2>&1 | FileCheck %s --check-prefix=CHECK-nCRASH-OOM %}
+// RUN: %env_tool_opts=max_allocation_size_mb=2:allocator_may_return_null=1 \
+// RUN:   not %run %t new 2>&1 | FileCheck %s --check-prefix=CHECK-nCRASH-OOM
 // RUN: %env_tool_opts=max_allocation_size_mb=2:allocator_may_return_null=0 \
 // RUN:   not %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnCRASH
@@ -46,8 +41,6 @@
 // RUN:   %run %t strndup 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
 
 // win32 is disabled due to failing errno tests.
-// When re-enabling, note that Windows asan aborts in the flag=1 throwing-new
-// case: its runtime is built without exceptions, so it cannot throw bad_alloc.
 // UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
 // Symbolizer needs to allocated memory when reporting.
@@ -79,18 +72,8 @@ static void *allocate(const char *Action, size_t Size) {
     free(P);
     return nullptr;
   }
-  if (!strcmp(Action, "new")) {
-    try {
-      void *p = ::operator new(Size);
-      assert(p != nullptr &&
-             "throwing operator new returned nullptr without throwing -- "
-             "violates [basic.stc.dynamic.allocation]/3");
-      return p;
-    } catch (const std::bad_alloc &) {
-      errno = ENOMEM;
-      return nullptr;
-    }
-  }
+  if (!strcmp(Action, "new"))
+    return ::operator new(Size);
   if (!strcmp(Action, "new-nothrow"))
     return ::operator new(Size, std::nothrow);
   if (!strcmp(Action, "strndup")) {
@@ -155,22 +138,18 @@ int main(int Argc, char **Argv) {
 // CHECK-mrCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.* in allocate}}
 // CHECK-nCRASH: new:
 // CHECK-nCRASH: #{{[0-9]+.*}}max_allocation_size.cpp
-// Tools using the operator new framework return nullptr from their allocator
-// so std::get_new_handler() runs first; the chain-exhausted abort then emits
-// "out-of-memory" rather than the in-place "allocation-size-too-big" emitted
-// by other tools. Same alternation applies to CHECK-nnCRASH.
-// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: (allocation-size-too-big|out-of-memory).* in allocate}}
+// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.* in allocate}}
 // CHECK-nCRASH-OOM: new:
 // CHECK-nCRASH-OOM: #{{[0-9]+.*}}max_allocation_size.cpp
 // CHECK-nCRASH-OOM: {{SUMMARY: .*Sanitizer: out-of-memory.* in allocate}}
 // CHECK-nnCRASH: new-nothrow:
 // CHECK-nnCRASH: #{{[0-9]+.*}}max_allocation_size.cpp
-// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: (allocation-size-too-big|out-of-memory).* in allocate}}
+// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.* in allocate}}
 // CHECK-sCRASH: strndup:
 // CHECK-sCRASH: #{{[0-9]+.*}}max_allocation_size.cpp
 // CHECK-sCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*}}
 
-// CHECK-NULL: {{malloc|calloc|calloc-overflow|realloc|realloc-after-malloc|new-nothrow|new|strndup}}
+// CHECK-NULL: {{malloc|calloc|calloc-overflow|realloc|realloc-after-malloc|new-nothrow|strndup}}
 // CHECK-NULL: errno: 12, P: 0
 //
 // CHECK-NOTNULL-NOT: P: 0

@@ -1,0 +1,85 @@
+//===-- copyprof_interceptors.cpp ----------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// This file implements standard library function interceptors for CopyProf,
+/// tracking memory operations across intercepted library calls.
+///
+//===----------------------------------------------------------------------===//
+
+#include "copyprof_interceptors.h"
+
+#include "copyprof/copyprof_interface_internal.h"
+#include "copyprof/copyprof_internal.h"
+#include "interception/interception.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
+
+using namespace __copyprof;
+
+namespace __copyprof {
+
+int CopyProfOnExit() { return 0; }
+
+}  // namespace __copyprof
+
+#define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
+  do {                                            \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd) \
+  do {                                         \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) \
+  do {                                         \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) \
+  do {                                                      \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
+  do {                                                \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_ON_EXIT(ctx) CopyProfOnExit()
+
+#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
+  do {                                                         \
+  } while (false)
+
+#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
+  do {                                                                    \
+    if (!INTERCEPT_FUNCTION_VER(name, ver))                               \
+      VReport(1, "CopyProf: failed to intercept '%s@@%s'\n", #name, ver); \
+  } while (0)
+
+#define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver)       \
+  do {                                                                      \
+    if (!INTERCEPT_FUNCTION_VER(name, ver) && !INTERCEPT_FUNCTION(name))    \
+      VReport(1, "CopyProf: failed to intercept '%s@@%s' or '%s'\n", #name, \
+              ver, #name);                                                  \
+  } while (0)
+
+#define COMMON_INTERCEPTOR_BLOCK_REAL(name) REAL(name)
+
+#include "sanitizer_common/sanitizer_common_interceptors.inc"
+
+namespace __copyprof {
+
+void InitializeInterceptors() {
+  static bool initialized;
+  CHECK(!initialized);
+  initialized = true;
+  InitializeHeapInterceptors();
+  InitializeCommonInterceptors();
+}
+
+}  // namespace __copyprof

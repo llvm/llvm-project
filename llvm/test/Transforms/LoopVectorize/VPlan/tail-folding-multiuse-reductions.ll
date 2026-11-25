@@ -31,7 +31,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%0>, ir<%min>
 ; CHECK-NEXT:      WIDEN ir<%min.loc.next> = select ir<%cmp>, ir<%iv>, ir<%min.loc>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%min.next> = call llvm.smin(ir<%0>, ir<%min>)
-; CHECK-NEXT:      WIDEN ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%exitcond.not> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:

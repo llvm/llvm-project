@@ -7,7 +7,8 @@
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -format experimental-full -log-path=%t/scan.log -j 1 -o %t/deps.json
-// RUN: FileCheck %s < %t/scan.log
+// The background thread flushes PCMs at nondeterministic points, ignore that.
+// RUN: grep -v pcm_flush: %t/scan.log | FileCheck %s
 
 // The check lines below form a strict sequence of events logged when we only
 // build a single scanning pcm. We should only log these events, no more and no

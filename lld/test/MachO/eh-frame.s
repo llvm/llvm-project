@@ -182,6 +182,7 @@ ld -r eh-frame-arm64.o -o eh-frame-arm64-r.o
 obj2yaml eh-frame-arm64-r.o -o -
 #--- eh-frame-x86_64-r.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007
@@ -611,6 +612,7 @@ LinkEditData:
 ...
 #--- eh-frame-arm64-r.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

@@ -32,6 +32,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -44,6 +45,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <array>
 #include <cinttypes>
@@ -77,7 +79,9 @@ bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
       return true;
     }
   }
-  return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+
+  const auto &desc{llvm::omp::getDescriptor(dirId)};
+  return descriptor::GetAllowedElements(desc, version).test(clauseId);
 }
 
 bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
@@ -146,14 +150,13 @@ SourcedActionStmt GetActionStmt(const parser::Block &block) {
 }
 
 std::string ThisVersion(llvm::omp::Version version) {
-  auto v{static_cast<unsigned>(version)};
+  auto v{version.value()};
   std::string tv{std::to_string(v / 10) + "." + std::to_string(v % 10)};
   return "OpenMP v" + tv;
 }
 
 std::string TryVersion(llvm::omp::Version version) {
-  return "try -fopenmp-version=" +
-      std::to_string(static_cast<unsigned>(version));
+  return "try -fopenmp-version=" + std::to_string(version.value());
 }
 
 static const Symbol *GetFunctionReferenceSymbol(
@@ -292,8 +295,16 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   return false;
 }
 
+bool IsCoindexedObject(const parser::OmpObject &object) {
+  const auto *designator{GetDesignatorFromObj(object)};
+  return designator && parser::GetCoindexedNamedObject(*designator);
+}
+
 bool IsExtendedListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx)) {
     return true;
   }
@@ -307,6 +318,9 @@ bool IsExtendedListItem(
 
 bool IsLocatorListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx) || GetLocatorFromObj(object)) {
     return true;
   }
@@ -321,19 +335,32 @@ bool IsLocatorListItem(
 
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
     return IsVariableListItem(*sym);
   }
   return false;
 }
 
-bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (auto *desg{GetDesignatorFromObj(object)}) {
+std::optional<bool> IsSubstringAndValidate(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  // Whole objects and other designators cannot be substrings. Analyzing them
+  // as expressions can reject otherwise valid OpenMP list items.
+  if (auto *desg{GetDesignatorFromObj(object)}; desg &&
+      (std::holds_alternative<parser::Substring>(desg->u) ||
+          GetArrayElementFromObj(object))) {
+    // This query also validates potential substrings, including in clauses
+    // where they are permitted. Expression analysis can mark symbols erroneous
+    // and rewrite the parse tree, so it is not free of side effects. Retain its
+    // diagnostics: discarding them leaves erroneous symbols without a reported
+    // error and can cause assertion failures when those symbols are used again.
     evaluate::ExpressionAnalyzer ea(*semaCtx);
-    auto restorer{ea.GetContextualMessages().DiscardMessages()};
     if (MaybeExpr expr{ea.Analyze(*desg)}) {
       return ExtractSubstring(*expr).has_value();
     }
+    return std::nullopt;
   }
   return false;
 }
@@ -1161,13 +1188,7 @@ namespace {
 // parentheses).
 struct ArrayExpressionRecognizer {
   template <TypeCategory C>
-  static bool isArrayExpression(
-      const evaluate::Expr<evaluate::SomeKind<C>> &x) {
-    return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
-  }
-
-  template <TypeCategory C, int K>
-  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C, K>> &x) {
+  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
         evaluate::match::deparen(x).u);
   }
@@ -1328,7 +1349,19 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
   bool allowsOrdered{IsClauseAllowedOnDirective(
       llvm::omp::Clause::OMPC_ordered, dir, version, overrides)};
 
-  if (allowsCollapse || allowsOrdered) {
+  // KLUDGE:
+  // LOOP is the only non-loop-transforming loop-associated directive
+  // that is not present in 4.5. With version=45 both allowsCollapse and
+  // allowsOrdered will be false, and the function will return nullopt.
+  // This will be handled properly once version checks for directives
+  // are present: LOOP will be added to the semantic overrides if it
+  // ends up being allowed.
+  // Until then treat it as a special case.
+  bool hasLoopConstruct{
+      llvm::is_contained(llvm::omp::getLeafConstructsOrSelf(dir),
+          llvm::omp::Directive::OMPD_loop)};
+
+  if (allowsCollapse || allowsOrdered || hasLoopConstruct) {
     auto [ccount, creason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_collapse, version, semaCtx)};
     auto [ocount, oreason]{GetArgumentValueWithReason(
@@ -2353,7 +2386,8 @@ std::optional<bool> EvaluateUserCondition(
     return *constVal != 0;
 
   if (auto logicalVal =
-          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
+          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
+              evaluate::LogicalResultKind, foldedExpr))
     return logicalVal->IsTrue();
 
   return std::nullopt;
@@ -2409,10 +2443,8 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
       vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
           name->v, scorePtr);
     } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
-      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+      // An unknown property never matches, but its selector is still scored.
+      vmi.addUnknownTrait(selector, scorePtr);
     }
   }
 }
@@ -2521,10 +2553,17 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
     return;
   }
 
-  // Construct trait selector with no properties (e.g. `construct={simd}`):
-  // the selector itself implies the property.
+  // A construct selector without properties, such as `construct={parallel}`,
+  // requires the construct traits of the directive it names. SIMD is handled
+  // separately: because it may take clause properties, it is parsed as a
+  // predefined selector name rather than as a directive name.
   if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
     AppendConstructTraitsForDirective(*dir, vmi);
+  } else if (const auto *value{std::get_if<parser::OmpTraitSelectorName::Value>(
+                 &traitName.u)}) {
+    if (*value == parser::OmpTraitSelectorName::Value::Simd) {
+      AppendConstructTraitsForDirective(llvm::omp::Directive::OMPD_simd, vmi);
+    }
   }
 }
 
@@ -2548,20 +2587,38 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
   return dynamicCond;
 }
 
+const parser::OmpContextSelector *GetContextSelector(
+    const parser::OmpClause &clause) {
+  if (auto *when{parser::Unwrap<parser::OmpWhenClause>(clause)}) {
+    const auto &modifiers{OmpGetModifiers(*when)};
+    return OmpGetUniqueModifier<parser::OmpContextSelector>(modifiers);
+  }
+  return nullptr;
+}
+
+const parser::OmpDirectiveSpecification *GetDirectiveVariant(
+    const parser::OmpClause &clause) {
+  using DirectiveSpecification =
+      common::Indirection<parser::OmpDirectiveSpecification>;
+  if (auto *when{parser::Unwrap<parser::OmpWhenClause>(clause)}) {
+    if (auto &spec{std::get<std::optional<DirectiveSpecification>>(when->t)}) {
+      return &spec->value();
+    }
+  } else if (auto *other{parser::Unwrap<parser::OmpOtherwiseClause>(clause)}) {
+    if (auto &spec{other->v}) {
+      return &spec->value();
+    }
+  } else if (auto *def{
+                 parser::Unwrap<parser::OmpDefaultVariantClause>(clause)}) {
+    return &def->v.value();
+  }
+  return nullptr;
+}
+
 std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     const parser::OmpClauseList &clauses, SemanticsContext &context,
     const OmpVariantMatchContext &matchContext) {
   MetadirectiveCandidateSet result;
-
-  auto getContextSelector = [](const parser::OmpClause::When &whenClause)
-      -> const parser::modifier::OmpContextSelector * {
-    const auto &modifiers{std::get<0>(whenClause.v.t)};
-    if (!modifiers || modifiers->size() != 1) {
-      return nullptr;
-    }
-    return std::get_if<parser::modifier::OmpContextSelector>(
-        &modifiers->front().u);
-  };
 
   auto getVariant = [](const parser::OmpDirectiveSpecification &spec) {
     // Keep NOTHING with clauses, e.g. APPLY, so they are not silently dropped.
@@ -2571,26 +2628,23 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         : &spec;
   };
 
-  auto getDirectiveVariant = [&](const parser::OmpClause::When &whenClause)
+  auto getDirectiveVariant = [&](const parser::OmpClause &clause)
       -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
-    const auto &optionalSpec{std::get<1>(whenClause.v.t)};
-    if (!optionalSpec) {
-      return {nullptr, false};
-    }
-    return {getVariant(optionalSpec->value()), true};
+    auto *variant{GetDirectiveVariant(clause)};
+    return variant ? std::make_pair(getVariant(*variant), true)
+                   : std::make_pair(nullptr, false);
   };
 
   for (const parser::OmpClause &clause : clauses.v) {
-    if (const auto *whenClause{
-            std::get_if<parser::OmpClause::When>(&clause.u)}) {
-      const auto *ctxSel{getContextSelector(*whenClause)};
+    if (clause.Id() == llvm::omp::Clause::OMPC_when) {
+      const auto *ctxSel{GetContextSelector(clause)};
       if (!ctxSel ||
           FindUnsupportedSelectorFeature(*ctxSel, context) !=
               UnsupportedSelectorFeature::None) {
         return std::nullopt;
       }
 
-      auto [spec, isExplicit]{getDirectiveVariant(*whenClause)};
+      auto [spec, isExplicit]{getDirectiveVariant(clause)};
       llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCondition{
           MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
@@ -2775,11 +2829,9 @@ struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
     return common::Clone(parentheses.left());
   }
 
-  template <int KIND>
-  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-  operator()(evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-                 &&expr,
-      const evaluate::LogicalOperation<KIND> &operation) {
+  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> operator()(
+      evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> &&expr,
+      const evaluate::LogicalOperation &operation) {
     if ((operation.logicalOperator == evaluate::LogicalOperator::And ||
             operation.logicalOperator == evaluate::LogicalOperator::Or) &&
         AreSameMetadirectiveCondition(operation.left(), operation.right()))
@@ -3019,6 +3071,15 @@ bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   return llvm::is_contained(tokens, want);
 }
 
+bool IsTypeCompatible(const DeclTypeSpec &formal, const DeclTypeSpec &actual) {
+  auto fdt = evaluate::DynamicType::From(formal);
+  auto adt = evaluate::DynamicType::From(actual);
+  if (fdt && adt) {
+    return fdt->IsTkCompatibleWith(*adt);
+  }
+  return false;
+}
+
 // User-defined reduction resolution, shared between the OpenMP semantic checks
 // and lowering. The two public entry points (FindUserReductionSymbol and
 // FindOperatorUserReductionSymbol) return the resolved (non-ultimate) reduction
@@ -3243,10 +3304,5 @@ const Symbol *FindOperatorUserReductionSymbol(
     const Scope &scope, const Symbol &operatorSym, const DeclTypeSpec *type) {
   return FindUserReductionSymbol(
       scope, MangleDefinedOperator(operatorSym.name()), type);
-}
-
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context) {
-  return MakeNameFromOperator(op, context);
 }
 } // namespace Fortran::semantics::omp

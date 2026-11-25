@@ -113,6 +113,7 @@ public:
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
+  bool useF16FTZ(const MachineFunction &MF) const;
   bool useF32FTZ(const MachineFunction &MF) const;
 
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
@@ -156,6 +157,15 @@ public:
     // There's rarely any point of packing something into a vector type if we
     // already have the source data.
     return true;
+  }
+
+  bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override {
+    // The DAGCombiner replaces a conversion from i1 with a select of the two
+    // exact results. A selp of the exact result replaces selp.b32 plus a
+    // conversion.
+    if (VT == MVT::i1 && (Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP))
+      return false;
+    return TargetLowering::isTypeDesirableForOp(Opc, VT);
   }
 
   bool shouldInsertFencesForAtomic(const Instruction *) const override;

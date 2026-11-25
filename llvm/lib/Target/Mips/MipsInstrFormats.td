@@ -197,6 +197,13 @@ class MFC3OP_FM<bits<6> op, bits<5> mfmt, bits<3> guest> : StdArch {
   let Inst{2-0}   = sel;
 }
 
+class MFC0OP_FM<bits<5> mfmt, bits<3> guest>
+    : MFC3OP_FM<0x10, mfmt, guest> {
+  bits<10> cop0;
+  let rd = cop0{9-5};
+  let sel = cop0{2-0};
+}
+
 class MFC2OP_FM<bits<6> op, bits<5> mfmt> : StdArch {
   bits<5>  rt;
   bits<16> imm16;

@@ -17,7 +17,7 @@ module attributes {
   // error in this driver mode rather than being left silently unrewritten.
   cir.func @caller(%fp: !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>,
                    %arg0: !s32i, %arg1: !s32i) -> !s32i
-      attributes { test_classify = #passthrough } {
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
     %0 = cir.call %fp(%arg0, %arg1)
         : (!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>, !s32i, !s32i) -> !s32i
     cir.return %0 : !s32i
@@ -47,7 +47,7 @@ module attributes {
   // cannot describe a callee resolved at run time either way.
   cir.func @variadic_try_caller(%fp: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
                                 %fmt: !cir.ptr<!s8i>, %n: !s32i) -> !s32i
-      attributes { test_classify = #passthrough } {
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
     %0 = cir.try_call %fp(%fmt, %n) ^bb1, ^bb2
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
   ^bb1:
@@ -85,7 +85,7 @@ module attributes {
 } {
 
   cir.func @try_caller(%fp: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %n: !s32i)
-      -> !s32i attributes { test_classify = #passthrough } {
+      -> !s32i requires_call_conv_lowering attributes { test_classify = #passthrough } {
     %0 = cir.try_call %fp(%n) ^bb1, ^bb2
         : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
   ^bb1:

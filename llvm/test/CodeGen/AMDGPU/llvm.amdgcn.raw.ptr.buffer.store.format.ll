@@ -58,6 +58,15 @@ main_body:
   ret void
 }
 
+;CHECK-LABEL: {{^}}buffer_store_x1_i32:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_format_x v0, v1, s[0:3], 0 offen
+define amdgpu_ps void @buffer_store_x1_i32(ptr addrspace(8) inreg %rsrc, i32 %data, i32 %offset) {
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.i32(i32 %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
+  ret void
+}
+
 ;CHECK-LABEL: {{^}}buffer_store_x2:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_store_format_xy v[0:1], v2, s[0:3], 0 offen

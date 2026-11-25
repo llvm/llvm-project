@@ -126,8 +126,6 @@ public:
   bool IsVectorType(CompilerType *element_type = nullptr,
                     uint64_t *size = nullptr) const;
 
-  bool IsArrayOfScalarType() const;
-
   bool IsAggregateType() const;
 
   bool IsAnonymousType() const;
@@ -183,8 +181,6 @@ public:
   bool IsPossibleDynamicType(CompilerType *target_type, bool check_cplusplus,
                              bool check_objc) const;
 
-  bool IsPointerToScalarType() const;
-
   bool IsRuntimeGeneratedType() const;
 
   bool IsPointerType(CompilerType *pointee_type = nullptr) const;
@@ -205,6 +201,8 @@ public:
   bool IsVoidType() const;
 
   bool HasPointerAuthQualifier() const;
+
+  std::optional<uint32_t> GetTargetAddressSpace() const;
 
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
@@ -399,6 +397,11 @@ public:
   /// supports ptrauth modifiers, else return an invalid type. Note that this
   /// does not check if this type is a pointer.
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
+
+  /// Return a new CompilerType that qualifies this type with the given target
+  /// address space if this type is valid and the type system supports target
+  /// address spaces.
+  CompilerType AddAddressSpaceModifier(uint32_t address_space) const;
   /// \}
 
   /// Exploring the type.
@@ -409,6 +412,10 @@ public:
   llvm::Expected<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
+
+  /// Return the stride of the type in bytes. This is the distance between
+  /// consecutive elements of this type in contiguous storage (e.g. array).
+  std::optional<uint64_t> GetByteStride() const;
 
   lldb::Encoding GetEncoding() const;
 

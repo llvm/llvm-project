@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdMain.h"
+#include "ClangTidyFeatureModule.h"
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
@@ -519,12 +520,18 @@ opt<bool> PreambleParseForwardingFunctions{
     init(ParseOptions().PreambleParseForwardingFunctions),
 };
 
-opt<bool> SkipPreambleBuild{
+opt<ClangdServer::SkipPreambleBuildPolicy> SkipPreambleBuild{
     "skip-preamble-build",
     cat(Misc),
-    desc("If ture, skip preamble build"),
+    desc("Skip building the preamble"),
     Hidden,
-    init(ParseOptions().SkipPreambleBuild),
+    values(clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Never, "never",
+                      "never skip"),
+           clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Modules, "modules",
+                      "only if module use is encountered (default)"),
+           clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Always, "always",
+                      "always skip")),
+    init(ClangdServer::Options().SkipPreambleBuild),
 };
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
@@ -1019,7 +1026,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Providers.push_back(provideDefaultChecks());
     Providers.push_back(disableUnusableChecks());
     ClangTidyOptProvider = combine(std::move(Providers));
-    Opts.ClangTidyProvider = ClangTidyOptProvider;
   }
   Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
@@ -1037,6 +1043,9 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.Encoding = ForceOffsetEncoding;
 
   FeatureModuleSet ModuleSet = FeatureModuleSet::fromRegistry();
+  if (EnableClangTidy)
+    ModuleSet.add(std::make_unique<ClangTidyFeatureModule>(
+        std::move(ClangTidyOptProvider)));
   if (ModuleSet.begin() != ModuleSet.end())
     Opts.FeatureModules = &ModuleSet;
 

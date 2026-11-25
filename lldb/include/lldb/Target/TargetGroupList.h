@@ -13,6 +13,8 @@
 
 #include <memory>
 #include <mutex>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace lldb_private {
@@ -40,7 +42,24 @@ public:
   TargetGroupList(TargetGroupList &&) = delete;
   TargetGroupList &operator=(TargetGroupList &&) = delete;
 
+  /// Create and register a target group.
   lldb::TargetGroupSP CreateTargetGroup(llvm::StringRef description);
+
+  /// Create and register a target group of type GroupT. GroupT is constructed
+  /// with this list, \p description, and \p args. Its constructor may be
+  /// private if it friends TargetGroupList. Runtime-identifiable subclasses
+  /// should use llvm::RTTIExtends<GroupT, TargetGroup>.
+  template <typename GroupT, typename... Args>
+  std::shared_ptr<GroupT> CreateTargetGroup(llvm::StringRef description,
+                                            Args &&...args) {
+    static_assert(std::is_base_of_v<TargetGroup, GroupT>,
+                  "GroupT must derive from TargetGroup");
+    auto group_sp = std::shared_ptr<GroupT>(
+        new GroupT(*this, description, std::forward<Args>(args)...));
+    std::lock_guard<std::recursive_mutex> guard(*m_mutex);
+    m_groups.push_back(group_sp);
+    return group_sp;
+  }
 
   /// Remove \p group_sp from this list. Other shared references, including
   /// target membership lists, remain valid.

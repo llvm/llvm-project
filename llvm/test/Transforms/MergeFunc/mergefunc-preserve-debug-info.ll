@@ -80,11 +80,9 @@ define i32 @maxA(i32 %x, i32 %y) !dbg !6 {
 ; OPTIMIZATION_LEVEL_2-NEXT:  entry:
 ; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[X]], [[META11:![0-9]+]], !DIExpression(), [[META12:![0-9]+]])
 ; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[Y]], [[META13:![0-9]+]], !DIExpression(), [[META12]])
-; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_declare(ptr poison, [[META14:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
-; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_declare(ptr poison, [[META16:![0-9]+]], !DIExpression(), [[META17:![0-9]+]])
 ; OPTIMIZATION_LEVEL_2-NEXT:    [[X_Y:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y]])
-; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[X_Y]], [[META18:![0-9]+]], !DIExpression(), [[META12]])
-; OPTIMIZATION_LEVEL_2-NEXT:    ret i32 [[X_Y]], !dbg [[DBG19:![0-9]+]]
+; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[X_Y]], [[META14:![0-9]+]], !DIExpression(), [[META12]])
+; OPTIMIZATION_LEVEL_2-NEXT:    ret i32 [[X_Y]], !dbg [[DBG15:![0-9]+]]
 ;
 entry:
   %x.addr = alloca i32, align 4
@@ -137,12 +135,12 @@ define i32 @maxB(i32 %x, i32 %y) !dbg !34 {
 ; OPTIMIZATION_LEVEL_0-NEXT:    ret i32 [[TMP0]], !dbg [[DBG38]]
 ;
 ; OPTIMIZATION_LEVEL_2-LABEL: define i32 @maxB
-; OPTIMIZATION_LEVEL_2-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG20:![0-9]+]] {
+; OPTIMIZATION_LEVEL_2-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG16:![0-9]+]] {
 ; OPTIMIZATION_LEVEL_2-NEXT:  entry:
-; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[X]], [[META21:![0-9]+]], !DIExpression(), [[META22:![0-9]+]])
-; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[Y]], [[META23:![0-9]+]], !DIExpression(), [[META22]])
-; OPTIMIZATION_LEVEL_2-NEXT:    [[TMP0:%.*]] = tail call i32 @maxA(i32 [[X]], i32 [[Y]]) #[[ATTR0]], !dbg [[DBG24:![0-9]+]]
-; OPTIMIZATION_LEVEL_2-NEXT:    ret i32 [[TMP0]], !dbg [[DBG24]]
+; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[X]], [[META17:![0-9]+]], !DIExpression(), [[META18:![0-9]+]])
+; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[Y]], [[META19:![0-9]+]], !DIExpression(), [[META18]])
+; OPTIMIZATION_LEVEL_2-NEXT:    [[TMP0:%.*]] = tail call i32 @maxA(i32 [[X]], i32 [[Y]]) #[[ATTR0]], !dbg [[DBG20:![0-9]+]]
+; OPTIMIZATION_LEVEL_2-NEXT:    ret i32 [[TMP0]], !dbg [[DBG20]]
 ;
 
 
@@ -189,9 +187,9 @@ define void @f() !dbg !57 {
 ; OPTIMIZATION_LEVEL_0-NEXT:    ret void, !dbg [[DBG44:![0-9]+]]
 ;
 ; OPTIMIZATION_LEVEL_2-LABEL: define void @f
-; OPTIMIZATION_LEVEL_2-SAME: () local_unnamed_addr #[[ATTR0]] !dbg [[DBG25:![0-9]+]] {
+; OPTIMIZATION_LEVEL_2-SAME: () local_unnamed_addr #[[ATTR0]] !dbg [[DBG21:![0-9]+]] {
 ; OPTIMIZATION_LEVEL_2-NEXT:  entry:
-; OPTIMIZATION_LEVEL_2-NEXT:    ret void, !dbg [[DBG28:![0-9]+]]
+; OPTIMIZATION_LEVEL_2-NEXT:    ret void, !dbg [[DBG24:![0-9]+]]
 ;
 entry:
   %call = call i32 @maxA(i32 3, i32 4), !dbg !60

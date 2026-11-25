@@ -195,14 +195,13 @@ class ProcessLaunchTestCase(TestBase):
             "// Set breakpoint here.", main_source_spec
         )
 
-        process = target.LaunchSimple(
-            None, ["EVIL=" + evil_var], self.get_process_working_directory()
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(["EVIL=" + evil_var], False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint, launch_info
         )
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(threads), 1)
-        frame = threads[0].GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         sbvalue = frame.EvaluateExpression("evil")
         value = sbvalue.GetSummary().strip('"')
 

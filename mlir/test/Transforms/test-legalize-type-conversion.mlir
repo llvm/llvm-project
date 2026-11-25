@@ -140,6 +140,27 @@ func.func @test_scf_if_dropped_condition() {
 
 // -----
 
+// CHECK-LABEL: func @test_scf_execute_region(
+//  CHECK-SAME:     %[[ARG:.*]]: f64)
+//       CHECK:   %[[RESULT:.*]] = scf.execute_region -> f64 {
+//       CHECK:     cf.br ^[[BB1:.*]](%[[ARG]] : f64)
+//       CHECK:   ^[[BB1]](%[[VALUE:.*]]: f64):
+//       CHECK:     scf.yield %[[VALUE]] : f64
+//       CHECK:   } {test.attr}
+//       CHECK:   %[[CAST:.*]] = "test.cast"(%[[RESULT]]) : (f64) -> f32
+//       CHECK:   "test.type_consumer"(%[[CAST]]) : (f32) -> ()
+func.func @test_scf_execute_region(%arg0: f32) {
+  %result = scf.execute_region -> f32 {
+    cf.br ^bb1(%arg0 : f32)
+  ^bb1(%value: f32):
+    scf.yield %value : f32
+  } {test.attr}
+  "test.type_consumer"(%result) : (f32) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @recursive_type_conversion
 func.func @recursive_type_conversion() {
   // CHECK:  !test.test_rec<outer_converted_type, smpla>

@@ -88,7 +88,7 @@ def NVVM_Dialect : Dialect {
                                            NamedAttribute argAttr) override;
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 #endif // NVVMIR_DIALECT

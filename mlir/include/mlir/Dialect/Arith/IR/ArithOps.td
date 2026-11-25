@@ -746,7 +746,8 @@ def Arith_CeilDivSIOp : Arith_IntBinaryOp<"ceildivsi",
 // FloorDivSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_FloorDivSIOp : Arith_TotalIntBinaryOp<"floordivsi"> {
+def Arith_FloorDivSIOp
+    : Arith_IntBinaryOp<"floordivsi", [ConditionallySpeculatable]> {
   let summary = "signed floor integer division operation";
   let description = [{
     Signed integer division. Rounds towards negative infinity, i.e. `5 / -2 = -3`.
@@ -763,6 +764,10 @@ def Arith_FloorDivSIOp : Arith_TotalIntBinaryOp<"floordivsi"> {
     %a = arith.floordivsi %b, %c : i64
 
     ```
+  }];
+  let extraClassDeclaration = [{
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
   }];
   let hasFolder = 1;
 }

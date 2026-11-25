@@ -351,3 +351,17 @@ llvm.func @loop_ids(%cond: i1) {
 // CHECK: ![[MUST_PROGRESS]] = !{!"llvm.loop.mustprogress"}
 // CHECK: ![[LOOP0]] = distinct !{![[LOOP0]], ![[MUST_PROGRESS]]}
 // CHECK: ![[LOOP1]] = distinct !{![[LOOP1]], ![[MUST_PROGRESS]]}
+
+// -----
+
+// CHECK-LABEL: @loop_align
+llvm.func @loop_align() {
+  // CHECK: br label %{{.*}}, !llvm.loop ![[ALIGN_LOOP:[0-9]+]]
+  llvm.br ^bb1 loop_annotation = #llvm.loop_annotation<mustProgress = true, align = 32>
+^bb1:
+  llvm.return
+}
+
+// CHECK: ![[ALIGN_LOOP]] = distinct !{![[ALIGN_LOOP]], ![[MUST_PROGRESS:[0-9]+]], ![[ALIGN:[0-9]+]]}
+// CHECK-DAG: ![[MUST_PROGRESS]] = !{!"llvm.loop.mustprogress"}
+// CHECK-DAG: ![[ALIGN]] = !{!"llvm.loop.align", i32 32}
