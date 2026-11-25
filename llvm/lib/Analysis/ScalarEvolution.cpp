@@ -15381,6 +15381,9 @@ bool SCEVUnionPredicate::implies(const SCEVPredicate *N,
       return this->implies(I, SE);
     });
 
+  if (is_contained(Preds, N))
+    return true;
+
   if (any_of(Preds,
              [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); }))
     return true;
