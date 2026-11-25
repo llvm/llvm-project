@@ -869,8 +869,8 @@ static bool canHoistDesignateBefore(hlfir::DesignateOp designate,
   // Every operand must be available immediately before anchor.
   for (mlir::Value operand : op->getOperands()) {
     mlir::Operation *def = operand.getDefiningOp();
-    if (operand.getParentBlock() != anchor->getBlock() || !def ||
-        !def->isBeforeInBlock(anchor))
+    if (operand.getParentBlock() != anchor->getBlock() ||
+        (def && !def->isBeforeInBlock(anchor)))
       return false;
   }
   return true;
