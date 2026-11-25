@@ -4094,6 +4094,8 @@ add_fp_unittest(
   HDRS
     HypotTest.h
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.hypotf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.properties.architectures
@@ -4121,9 +4123,12 @@ add_fp_unittest(
   HDRS
     HypotTest.h
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.hypot
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_fp_unittest(
