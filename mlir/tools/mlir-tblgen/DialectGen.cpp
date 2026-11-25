@@ -91,7 +91,7 @@ static StringRef getRegistrationKindName(RegistrationKind kind) {
   case RegistrationKind::Type:
     return "Type";
   }
-  llvm_unreachable("unknown registration kind");
+  llvm::reportFatalInternalError("unknown registration kind");
 }
 
 /// Returns the class whose `insert` method registers a definition of `kind`.
@@ -104,7 +104,7 @@ static StringRef getRegistrar(RegistrationKind kind) {
   case RegistrationKind::Type:
     return "::mlir::AbstractType";
   }
-  llvm_unreachable("unknown registration kind");
+  llvm::reportFatalInternalError("unknown registration kind");
 }
 
 std::string tblgen::getRegistrationHookName(const Dialect &dialect,
