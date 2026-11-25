@@ -45,7 +45,12 @@ static void test_mbrtoc32_null_src() {
 static void test_mbrtoc32_zero_length() {
   mbstate_t st = {};
   char32_t c32 = U'x';
+#if defined(__sun__) && defined(__svr4__)
+  // Solaris returns 0 instead of (size_t)-2 when n == 0.
+  assert(mbrtoc32(&c32, "z", 0, &st) == 0);
+#else
   assert(mbrtoc32(&c32, "z", 0, &st) == (size_t)-2);
+#endif
   assert(c32 == U'x');
 }
 

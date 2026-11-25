@@ -45,7 +45,12 @@ static void test_mbrtoc16_null_src() {
 static void test_mbrtoc16_zero_length() {
   mbstate_t st = {};
   char16_t c16 = u'x';
+#if defined(__sun__) && defined(__svr4__)
+  // Solaris returns 0 instead of (size_t)-2 when n == 0.
+  assert(mbrtoc16(&c16, "a", 0, &st) == 0);
+#else
   assert(mbrtoc16(&c16, "a", 0, &st) == (size_t)-2);
+#endif
   assert(c16 == u'x');
 }
 
@@ -60,7 +65,7 @@ static void test_mbrtoc16_utf8_surrogate_pair() {
   char16_t c16_lo = 0;
   assert(mbrtoc16(&c16_hi, emoji, sizeof(emoji), &st) == 4);
   assert(c16_hi == 0xd83e);
-  assert(mbrtoc16(&c16_lo, emoji + 4, 0, &st) == (size_t)-3);
+  assert(mbrtoc16(&c16_lo, "", 1, &st) == (size_t)-3);
   assert(c16_lo == 0xdd21);
 }
 

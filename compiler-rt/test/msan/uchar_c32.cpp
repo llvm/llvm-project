@@ -126,6 +126,7 @@ static void test_c32rtomb_utf8_multibyte() {
 }
 
 static void test_mbrtoc32_big5hkscs_continuation() {
+#ifdef __GLIBC__
   if (!setlocale(LC_CTYPE, "zh_HK.BIG5-HKSCS") &&
       !setlocale(LC_CTYPE, "zh_HK.big5hkscs"))
     return;
@@ -148,6 +149,7 @@ static void test_mbrtoc32_big5hkscs_continuation() {
   assert(res == 0 || res == (size_t)-3);
   assert(__msan_test_shadow(&c2, sizeof(c2)) == -1);
   assert(c2 == 0x304);
+#endif  // __GLIBC__
 }
 
 int main(int argc, char **argv) {

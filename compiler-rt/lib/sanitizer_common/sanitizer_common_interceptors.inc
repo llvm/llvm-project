@@ -4123,7 +4123,9 @@ static ALWAYS_INLINE SIZE_T MbrtocImpl(void* ctx, Fn real, CharT* pc,
   CHECK_LE(read_cnt, n);
   if (read_cnt > 0)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, s, read_cnt);
-  if (pc) {
+  // On Solaris, mbrtoc* return 0 without writing *pc when n == 0 (whereas
+  // glibc multi-codepoint continuations write a non-zero local_pc).
+  if (pc && (n > 0 || local_pc != 0)) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
     *pc = local_pc;
   }

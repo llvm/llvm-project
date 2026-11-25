@@ -45,6 +45,7 @@ static void test_mbrtoc16_short_alloc() {
 // (U+00CA, U+0304) and the second call returns 0 with *pc16 != 0 without
 // reading from `s`.
 static void test_mbrtoc16_big5hkscs_continuation() {
+#ifdef __GLIBC__
   if (!setlocale(LC_CTYPE, "zh_HK.BIG5-HKSCS") &&
       !setlocale(LC_CTYPE, "zh_HK.big5hkscs"))
     return;
@@ -61,6 +62,7 @@ static void test_mbrtoc16_big5hkscs_continuation() {
   assert(res == 0 || res == (size_t)-3);
   assert(c2 == 0x304);
   free(two_bytes);
+#endif  // __GLIBC__
 }
 
 int main(int argc, char **argv) {
