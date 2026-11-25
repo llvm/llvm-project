@@ -43648,6 +43648,7 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            ISD::isBuildVectorOfConstantFPSDNodes(Op) ||
            getTargetConstantFromNode(dyn_cast<LoadSDNode>(Op)) ||
            (Op.getOpcode() == Opc && Op->hasOneUse()) ||
+           (Op.getOpcode() == X86ISD::VTRUNC && Op->hasOneUse()) ||
            (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op->hasOneUse()) ||
            (Op.getOpcode() == ISD::CONCAT_VECTORS && Op->hasOneUse()) ||
            (FoldShuf && isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
