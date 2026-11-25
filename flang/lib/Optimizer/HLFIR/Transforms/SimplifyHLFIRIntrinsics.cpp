@@ -1362,7 +1362,8 @@ mlir::Value ReductionAsElementalConverter::genMaskValue(
 template <typename Op>
 class ReductionConversion : public mlir::OpRewritePattern<Op> {
 public:
-  using mlir::OpRewritePattern<Op>::OpRewritePattern;
+  ReductionConversion(mlir::MLIRContext *context, bool compensatedSum = false)
+      : mlir::OpRewritePattern<Op>{context}, compensatedSum{compensatedSum} {}
 
   llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
@@ -1374,6 +1375,14 @@ public:
       AllAnyAsElementalConverter<Op> converter(op, rewriter);
       return converter.convert();
     } else if constexpr (std::is_same_v<Op, hlfir::SumOp>) {
+      mlir::Type elementType =
+          hlfir::getFortranElementType(op.getResult().getType());
+
+      if (compensatedSum &&
+          mlir::isa<mlir::FloatType, mlir::ComplexType>(elementType))
+        return rewriter.notifyMatchFailure(
+            op, "preserve compensated real or complex SUM");
+
       SumAsElementalConverter converter{op, rewriter};
       return converter.convert();
     } else if constexpr (std::is_same_v<Op, hlfir::ProductOp>) {
@@ -1382,6 +1391,9 @@ public:
     }
     return rewriter.notifyMatchFailure(op, "unexpected reduction operation");
   }
+
+private:
+  bool compensatedSum;
 };
 
 /// Convert an operation that is a partial or total max/min reduction
@@ -3443,17 +3455,10 @@ public:
 
     mlir::RewritePatternSet patterns(context);
 
-    const bool simplifySum =
-        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::All ||
-        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::SumOnly;
-    const bool simplifyOtherIntrinsics =
-        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::All ||
-        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::ExceptSum;
+    patterns.insert<ReductionConversion<hlfir::SumOp>>(context,
+                                                       this->compensatedSum);
 
-    if (simplifySum)
-      patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
-
-    if (simplifyOtherIntrinsics) {
+    if (!this->onlySum) {
       patterns.insert<TransposeAsElementalConversion>(context);
       patterns.insert<ReductionConversion<hlfir::ProductOp>>(context);
       patterns.insert<ArrayShiftConversion<hlfir::CShiftOp>>(context);

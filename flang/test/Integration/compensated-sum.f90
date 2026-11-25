@@ -15,7 +15,7 @@
 ! RUN: %flang_fc1 -emit-llvm -O3 %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=CHECK,INT-INLINE,FP-INLINE
 ! RUN: %flang_fc1 -emit-llvm -O0 -fcompensated-sum %s -o - \
-! RUN:   | FileCheck %s --check-prefixes=CHECK,INT-RUNTIME,FP-RUNTIME
+! RUN:   | FileCheck %s --check-prefixes=CHECK,INT-INLINE,FP-RUNTIME
 ! RUN: %flang_fc1 -emit-llvm -O1 -fcompensated-sum %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=CHECK,INT-INLINE,FP-RUNTIME
 ! RUN: %flang_fc1 -emit-llvm -O2 -fcompensated-sum %s -o - \
@@ -32,7 +32,6 @@ end function
 ! INT-INLINE-NOT: @_FortranASumInteger4(
 ! INT-INLINE: add {{.*}}i32
 ! INT-INLINE-NOT: @_FortranASumInteger4(
-! INT-RUNTIME: call i32 @_FortranASumInteger4(
 ! CHECK: ret i32
 
 real function sum_real(x)

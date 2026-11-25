@@ -76,29 +76,13 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                           "extremum", "arith.max/minimumf"),
                clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
                           "extremenum", "arith.max/minnumf"))}]>,
-                 Option<"scope", "scope",
-                        "::hlfir::HLFIRIntrinsicSimplificationScope",
-                        /*default=*/"::hlfir::HLFIRIntrinsicSimplificationScope::"
-                                    "All",
-                        "Select which HLFIR intrinsic operations to simplify",
-                        [{::llvm::cl::values(
-                          clEnumValN(
-                            ::hlfir::HLFIRIntrinsicSimplificationScope::All,
-                            "all",
-                            "Simplify all supported HLFIR intrinsic operations"),
-                          clEnumValN(
-                            ::hlfir::HLFIRIntrinsicSimplificationScope::SumOnly,
-                            "only-sum",
-                            "Simplify only hlfir.sum operations"),
-                          clEnumValN(
-                            ::hlfir::HLFIRIntrinsicSimplificationScope::ExceptSum,
-                            "except-sum",
-                            "Simplify all supported HLFIR intrinsic operations "
-                            "except hlfir.sum"),
-                          clEnumValN(
-                            ::hlfir::HLFIRIntrinsicSimplificationScope::None,
-                            "none",
-                            "Do not simplify any HLFIR intrinsic operations"))}]>];
+                 Option<"onlySum", "only-sum", "bool",
+                        /*default=*/"false",
+                        "Simplify only hlfir.sum operations">,
+                 Option<"compensatedSum", "compensated-sum", "bool",
+                        /*default=*/"false",
+                        "Preserve runtime calls for real and complex SUM "
+                        "that use compensated summation">];
 }
 
 def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
