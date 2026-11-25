@@ -7318,7 +7318,6 @@ static void preparePlanForEpilogueVectorLoop(
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
-      using namespace VPlanPatternMatch;
       VPValue *SentinelVPV = nullptr;
       bool IsFindIV = any_of(RdxResult->users(), [&](VPUser *U) {
         return match(U, VPlanPatternMatch::m_SpecificICmp(
