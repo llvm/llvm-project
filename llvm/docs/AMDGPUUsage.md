@@ -2135,6 +2135,69 @@ upper 32 bits of the generic pointer.
 As the LDS aperture is defined by its 16 most significant bits, we can theoretically
 support up to `(1 << 16) - 1` synthetic apertures safely.
 
+(amdgpu-clusters)=
+
+### Clusters
+
+On targets that support workgroup clusters (for example `gfx1250`), the
+workgroups of a grid can be grouped into *clusters*. A cluster is a fixed-size
+block of workgroups that are co-scheduled on the same shader engine so that
+they can cooperate more closely than workgroups in different clusters.
+
+On each subtarget, the maximum size of a cluster is limited by the number of
+WGPs on a shader engine; each workgroup in a cluster runs on a separate WGP. A
+WGP may simultaneously host workgroups from different clusters.
+
+(amdgpu-cluster-dims)=
+
+#### Cluster Dimensions
+
+Clusters may be 1D, 2D, or 3D. The cluster dimensions are determined by the
+`"amdgpu-cluster-dims"` function attribute.
+
+```llvm
+"amdgpu-cluster-dims"="x,y,z"
+```
+
+- An absent attribute indicates that it is statically unknown whether clustering
+  is enabled.
+- A value of "1024,1024,1024" indicates that clustering is enabled, but the
+  dimensions are not statically known.
+- A value of "0,0,0" indicates that clustering is disabled.
+- Any other value enables clustering and explicitly specifies the cluster
+  dimensions.
+
+#### Workgroups in a Cluster
+
+Every workgroup in a cluster is the same size, and every cluster in a dispatch
+is the same size.
+
+A workgroup can query its position within the grid and its cluster using the
+following intrinsics:
+
+* `llvm.amdgcn.cluster.id.{x,y,z}` -- the coordinates of this workgroup's
+  cluster within the grid.
+* `llvm.amdgcn.cluster.workgroup.id.{x,y,z}` -- the coordinates of this
+  workgroup within its cluster.
+* `llvm.amdgcn.cluster.workgroup.flat.id` -- the flattened index of this
+  workgroup within its cluster. The linearization treats X as the innermost
+  dimension and Z as the outermost:
+
+  `flat_id = x + y * cluster_dim_x + z * cluster_dim_x * cluster_dim_y`.
+* `llvm.amdgcn.cluster.workgroup.max.id.{x,y,z}` -- the largest workgroup
+  index within the cluster in each dimension.
+* `llvm.amdgcn.cluster.workgroup.max.flat.id` -- the largest flattened
+  workgroup within the cluster.
+
+#### Cluster Multicast Loads
+
+Within a cluster, several workgroups can combine matching load requests via
+{ref}`cluster multicast DMA operations <amdgpu-cluster-multicast-dma>` so that
+each populates its own LDS from a single shared fetch of global memory. The
+`cluster` memory scope (see {ref}`amdgpu-memory-scopes`) synchronizes operations
+performed by threads in workgroups of the same cluster. On targets that do not
+support clusters, `cluster` scope behaves like `agent` scope.
+
 (amdgpu-memory-scopes)=
 
 ### Memory Scopes
@@ -3515,10 +3578,8 @@ The AMDGPU backend supports the following LLVM IR attributes.
     If a shader has this attribute, then all its callees must match its value.
     An amd_cs_chain CC function with this enabled has an extra symbol prefixed with "\_dvgpr$" with the value of the function symbol, offset by one less than the number of dynamic VGPR blocks required by the function encoded in bits 5..3.
 * - "amdgpu-cluster-dims"="x,y,z"
-  - Specify the cluster workgroup dimensions.
-    A value of "0,0,0" indicates that cluster is disabled.
-    A value of "1024,1024,1024" indicates that cluster is enabled, but the dimensions cannot be determined at compile time.
-    Any other value explicitly specifies the cluster dimensions.
+  - Specify the cluster workgroup dimensions. See {ref}`amdgpu-cluster-dims` for
+    details.
 
     This is only relevant on targets with cluster support.
 * - "amdgpu-expert-scheduling-mode" true/false.
