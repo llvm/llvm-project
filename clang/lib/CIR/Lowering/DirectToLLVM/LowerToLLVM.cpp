@@ -108,8 +108,7 @@ static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
                                            mlir::Type cirType,
                                            mlir::Type llvmMemType,
                                            const mlir::DataLayout &dataLayout) {
-  auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
-  if ((intTy && intTy.isBitInt()) || mlir::isa<cir::SveCountType>(cirType))
+  if (cir::isBitIntType(cirType) || mlir::isa<cir::SveCountType>(cirType))
     return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
         .getTypeLanguageAlignment(cirType);
   return dataLayout.getTypeABIAlignment(llvmMemType);
@@ -215,7 +214,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Truncate the padded storage integer back to the _BitInt's literal width.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getType());
-      intTy && intTy.isBitInt())
+      cir::isBitIntType(intTy))
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/false);
 
@@ -261,7 +260,7 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Sign/zero-extend the _BitInt value to its padded storage integer.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(origType);
-      intTy && intTy.isBitInt())
+      cir::isBitIntType(intTy))
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/true);
 
@@ -827,9 +826,9 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
   mlir::DataLayout layout(parentModule);
 
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(intAttr.getType());
-      intTy && intTy.isBitInt()) {
-    mlir::Type biTy = convertTypeForMemory(*converter, layout, intTy);
+  mlir::Type type = intAttr.getType();
+  if (cir::isBitIntType(type)) {
+    mlir::Type biTy = convertTypeForMemory(*converter, layout, type);
     return mlir::LLVM::ConstantOp::create(
         rewriter, parentLoc, biTy,
         getBitIntStorageAttr(rewriter, intAttr, layout));
@@ -1382,8 +1381,7 @@ public:
     // A split-storage _BitInt's memory representation is a byte array (see
     // convertTypeForMemory), not a scalar, so its constant must be built as
     // raw bytes rather than a single sign/zero-extended IntegerAttr.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(attr.getType());
-        intTy && intTy.isBitInt())
+    if (cir::isBitIntType(attr.getType()))
       return getBitIntStorageAttr(rewriter, attr, dataLayout);
 
     return rewriter.getIntegerAttr(llvmType, attr.getValue());
@@ -4619,8 +4617,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     // Vector-of-_BitInt memory layout is not modeled here (the element would
     // stay at its literal width); report a conversion failure rather than emit
     // an unvalidated vector.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(type.getElementType());
-        intTy && intTy.isBitInt())
+    if (cir::isBitIntType(type.getElementType()))
       return {};
     mlir::Type ty = converter.convertType(type.getElementType());
     if (!ty)

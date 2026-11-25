@@ -40,6 +40,11 @@ bool cir::isSized(mlir::Type ty) {
   return false;
 }
 
+bool cir::isBitIntType(mlir::Type ty) {
+  auto intTy = mlir::dyn_cast_if_present<cir::IntType>(ty);
+  return intTy && intTy.isBitInt();
+}
+
 cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
                                                mlir::MLIRContext *ctx) {
   switch (llvm::APFloat::SemanticsToEnum(sem)) {
