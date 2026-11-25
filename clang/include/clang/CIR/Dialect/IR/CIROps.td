@@ -1890,7 +1890,7 @@ def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 
 def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  AttrSizedOperandSegments, Terminator
+  AttrSizedOperandSegments, Pure, Terminator
 ]> {
   let summary = "A flattened version of cir.switch";
 
@@ -5104,11 +5104,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       return getOperand(0);
     }
 
-    /// Set the callee for this operation.
-    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr(getCalleeAttrName(),
-                       mlir::cast<mlir::SymbolRefAttr>(callee));
-    }
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee);
 
     /// Returns the `cir.func` being called or null if the call is indirect or
     /// cannot be resolved.
@@ -5127,6 +5123,25 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   let extraClassDefinition = [{
     bool $cppClass::isIndirect() { return !getCallee(); }
+
+    void $cppClass::setCalleeFromCallable(
+        ::mlir::CallInterfaceCallable callee) {
+      bool wasIndirect = isIndirect();
+      if (auto symbol = llvm::dyn_cast<mlir::SymbolRefAttr>(callee)) {
+        if (wasIndirect)
+          (*this)->eraseOperand(0);
+        (*this)->setAttr(getCalleeAttrName(), symbol);
+        return;
+      }
+
+      auto calleeValue = llvm::cast<mlir::Value>(callee);
+      if (wasIndirect) {
+        setOperand(0, calleeValue);
+        return;
+      }
+      (*this)->removeAttr(getCalleeAttrName());
+      (*this)->insertOperands(0, calleeValue);
+    }
 
     cir::FuncOp $cppClass::resolveCalleeInTable(
         mlir::SymbolTableCollection &symbolTable) {
@@ -6803,8 +6818,6 @@ def CIR_VecInsertOp : CIR_Op<"vec.insert", [
     $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
     qualified(type($vec))
   }];
-
-  let llvmOp = "InsertElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6836,8 +6849,6 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
   }];
 
   let hasFolder = 1;
-
-  let llvmOp = "ExtractElementOp";
 }
 
 //===----------------------------------------------------------------------===//

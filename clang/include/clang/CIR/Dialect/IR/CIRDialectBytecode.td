@@ -300,6 +300,7 @@ def FP128Type : DialectType<(type)>;
 def LongDoubleType : CheckedDialectType<(type
   Type:$underlying
 )>;
+def MFloat8Type : DialectType<(type)>;
 
 def BoolType : DialectType<(type)>;
 def VoidType : DialectType<(type)>;
@@ -444,6 +445,7 @@ def CIRDialectTypes : DialectTypes<"CIR"> {
     EhTokenType,
     CleanupTokenType,
     CatchTokenType,
+    MFloat8Type,
     // APPEND ONLY, as for the attributes. Types not listed here, including
     // the mutable struct and union types, keep the assembly-format fallback.
   ];

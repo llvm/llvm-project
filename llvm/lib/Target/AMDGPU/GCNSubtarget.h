@@ -1034,12 +1034,6 @@ public:
     return false;
   }
 
-  // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
-  // and surronded by S_WAIT_ALU(0xFFE3).
-  bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
-    return getGeneration() == GFX12;
-  }
-
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
   // read.
   bool hasScratchBaseForwardingHazard() const {
