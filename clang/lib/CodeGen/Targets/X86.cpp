@@ -2019,6 +2019,16 @@ X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
   return SSE;
 }
 
+/// Return true if \p FD is a flexible array member or an array of length zero,
+/// i.e. an array field that occupies no storage.
+static bool isNoStorageArrayField(const FieldDecl &FD) {
+  QualType FT = FD.getType();
+  if (FT->isIncompleteArrayType())
+    return true;
+  const ASTContext &Context = FD.getASTContext();
+  return Context.getAsConstantArrayType(FT) && Context.getTypeSize(FT) == 0;
+}
+
 void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
                              Class &Hi, bool isNamedArg, bool IsRegCall) const {
   // FIXME: This code can be simplified by introducing a simple value class for
@@ -2278,8 +2288,17 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 
     const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
 
+    // A field that occupies no storage, such as a flexible array member or an
+    // array of length zero, is NO_CLASS regardless of its offset. Clang 23 and
+    // PlayStation instead pass any record with a flexible array member in
+    // memory and classify zero-length arrays like any other field.
+    bool ClassifyNoStorageFieldsAsNoClass =
+        getContext().getLangOpts().getClangABICompat() >
+            LangOptions::ClangABI::Ver23 &&
+        !getContext().getTargetInfo().getTriple().isPS();
+
     // Assume variable sized types are passed in memory.
-    if (RD->hasFlexibleArrayMember())
+    if (!ClassifyNoStorageFieldsAsNoClass && RD->hasFlexibleArrayMember())
       return;
 
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
@@ -2334,6 +2353,14 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
            i != e; ++i, ++idx) {
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
+
+      // A flexible array member or an array of length zero occupies no
+      // storage, so it is NO_CLASS. Skip it before the size and alignment
+      // checks below; it may still affect the size and alignment of the
+      // record, but the resulting padding is NO_CLASS too.
+      if (ClassifyNoStorageFieldsAsNoClass && !BitField &&
+          isNoStorageArrayField(**i))
+        continue;
 
       // Ignore padding bit-fields. Normally only zero-length bit-fields are
       // padding, but under -fclang-abi-compat=23 every unnamed bit-field is,
