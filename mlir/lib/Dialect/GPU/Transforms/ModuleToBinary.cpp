@@ -52,6 +52,36 @@ void GpuModuleToBinaryPass::runOnOperation() {
     return signalPassFailure();
   }
 
+  if (ctorPriority > SelectObjectAttr::kDefaultPriority) {
+    getOperation()->emitError()
+        << "Invalid ctor-priority specified: " << ctorPriority.getValue()
+        << " (expected a value in the range [0, 65535])";
+    return signalPassFailure();
+  }
+
+  // Set the constructor priority on the modules using the `select_object`
+  // offloading handler, which is the default handler, unless the handler
+  // already specifies a priority.
+  if (ctorPriority != SelectObjectAttr::kDefaultPriority) {
+    for (Region &region : getOperation()->getRegions()) {
+      for (Block &block : region.getBlocks()) {
+        for (GPUModuleOp module : block.getOps<GPUModuleOp>()) {
+          Attribute handler = module.getOffloadingHandlerAttr();
+          auto selectObject = dyn_cast_or_null<SelectObjectAttr>(handler);
+          if (handler && !selectObject)
+            continue;
+          if (selectObject &&
+              selectObject.getPriority() != SelectObjectAttr::kDefaultPriority)
+            continue;
+          module.setOffloadingHandlerAttr(SelectObjectAttr::get(
+              &getContext(),
+              selectObject ? selectObject.getTarget() : Attribute(),
+              ctorPriority));
+        }
+      }
+    }
+  }
+
   // Lazy symbol table builder callback.
   std::optional<SymbolTable> parentTable;
   auto lazyTableBuilder = [&]() -> SymbolTable * {

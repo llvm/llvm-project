@@ -100,6 +100,11 @@ def GpuModuleToBinaryPass
     2. `assembly`, `isa`: produces assembly code.
     3. `binary`, `bin`: produces binaries.
     4. `fatbinary`, `fatbin`: produces fatbinaries.
+
+    The `ctor-priority` argument sets the priority of the global constructor
+    and destructor that load and unload the binary. It applies to modules using
+    the `#gpu.select_object` offloading handler, unless the handler already
+    specifies a priority.
   }];
   let options = [
     Option<"toolkitPath", "toolkit", "std::string", [{""}],
@@ -111,7 +116,10 @@ def GpuModuleToBinaryPass
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
            "The target representation of the compilation process.">,
     Option<"elfSection", "section", "std::string", [{""}],
-           "ELF section where binary is to be located.">
+           "ELF section where binary is to be located.">,
+    Option<"ctorPriority", "ctor-priority", "unsigned", "65535",
+           "Priority of the global constructor and destructor that load and "
+           "unload the binary.">
   ];
 }
 
