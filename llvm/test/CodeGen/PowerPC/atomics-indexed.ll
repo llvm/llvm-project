@@ -15,8 +15,8 @@ define i8 @load_x_i8_seq_cst(ptr %mem) {
 ; PPC32-NEXT:    sync
 ; PPC32-NEXT:    ori r4, r4, 24464
 ; PPC32-NEXT:    lbzx r3, r3, r4
-; PPC32-NEXT:    cmpw cr7, r3, r3
-; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    cmpw r3, r3
+; PPC32-NEXT:    bne- cr0, .+4
 ; PPC32-NEXT:    isync
 ; PPC32-NEXT:    blr
 ;
@@ -26,8 +26,8 @@ define i8 @load_x_i8_seq_cst(ptr %mem) {
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:    ori r4, r4, 24464
 ; PPC64-NEXT:    lbzx r3, r3, r4
-; PPC64-NEXT:    cmpd cr7, r3, r3
-; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    cmpd r3, r3
+; PPC64-NEXT:    bne- cr0, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
   %ptr = getelementptr inbounds [100000 x i8], ptr %mem, i64 0, i64 90000
@@ -40,8 +40,8 @@ define i16 @load_x_i16_acquire(ptr %mem) {
 ; PPC32-NEXT:    lis r4, 2
 ; PPC32-NEXT:    ori r4, r4, 48928
 ; PPC32-NEXT:    lhzx r3, r3, r4
-; PPC32-NEXT:    cmpw cr7, r3, r3
-; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    cmpw r3, r3
+; PPC32-NEXT:    bne- cr0, .+4
 ; PPC32-NEXT:    isync
 ; PPC32-NEXT:    blr
 ;
@@ -50,8 +50,8 @@ define i16 @load_x_i16_acquire(ptr %mem) {
 ; PPC64-NEXT:    lis r4, 2
 ; PPC64-NEXT:    ori r4, r4, 48928
 ; PPC64-NEXT:    lhzx r3, r3, r4
-; PPC64-NEXT:    cmpd cr7, r3, r3
-; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    cmpd r3, r3
+; PPC64-NEXT:    bne- cr0, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
   %ptr = getelementptr inbounds [100000 x i16], ptr %mem, i64 0, i64 90000

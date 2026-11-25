@@ -19,8 +19,8 @@ define dso_local void @test() {
 ; CHECK-NEXT:    stq r4, -16(r1)
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:    lq r4, -16(r1)
-; CHECK-NEXT:    cmpd cr7, r5, r5
-; CHECK-NEXT:    bne- cr7, .+4
+; CHECK-NEXT:    cmpd r5, r5
+; CHECK-NEXT:    bne- cr0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    std r4, -24(r1)
 ; CHECK-NEXT:    std r5, -32(r1)

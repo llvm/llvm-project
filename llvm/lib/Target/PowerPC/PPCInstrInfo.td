@@ -5573,8 +5573,8 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
 
-let Defs = [CR7], Itinerary = IIC_LdStSync in
-def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr)>;
+let Itinerary = IIC_LdStSync in
+def CFENCE : PPCPostRAExpPseudo<(outs crrc:$BF), (ins gprc:$RA)>;
 
 // Now both high word and low word are reversed, next
 // swap the high word and low word.

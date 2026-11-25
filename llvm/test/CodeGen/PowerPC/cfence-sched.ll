@@ -8,17 +8,17 @@
 define signext i32 @f(ptr %p, i32 signext %a) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpwi 7, 4, 0
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    cmpwi 7, 4, 0
 ; CHECK-NEXT:    lwz 3, 0(3)
-; CHECK-NEXT:    cmplwi 3, 0
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    mfocrf 4, 1
-; CHECK-NEXT:    cmpd 7, 3, 3
+; CHECK-NEXT:    cmplwi 3, 0
 ; CHECK-NEXT:    rlwinm 5, 4, 30, 31, 31
 ; CHECK-NEXT:    rlwinm 4, 4, 29, 31, 31
-; CHECK-NEXT:    sub 4, 5, 4
-; CHECK-NEXT:    bne- 7, .+4
 ; CHECK-NEXT:    isync
+; CHECK-NEXT:    sub 4, 5, 4
 ; CHECK-NEXT:    iseleq 3, 0, 4
 ; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr
@@ -28,15 +28,15 @@ define signext i32 @f(ptr %p, i32 signext %a) {
 ; ANTIDEP-NEXT:    cmpwi 7, 4, 0
 ; ANTIDEP-NEXT:    sync
 ; ANTIDEP-NEXT:    lwz 3, 0(3)
-; ANTIDEP-NEXT:    cmplwi 3, 0
-; ANTIDEP-NEXT:    cmpd 6, 3, 3
+; ANTIDEP-NEXT:    cmpd 3, 3
+; ANTIDEP-NEXT:    bne- 0, .+4
 ; ANTIDEP-NEXT:    mfocrf 4, 1
+; ANTIDEP-NEXT:    cmplwi 7, 3, 0
 ; ANTIDEP-NEXT:    rlwinm 5, 4, 30, 31, 31
 ; ANTIDEP-NEXT:    rlwinm 4, 4, 29, 31, 31
-; ANTIDEP-NEXT:    bne- 6, .+4
 ; ANTIDEP-NEXT:    isync
 ; ANTIDEP-NEXT:    sub 4, 5, 4
-; ANTIDEP-NEXT:    iseleq 3, 0, 4
+; ANTIDEP-NEXT:    isel 3, 0, 4, 30
 ; ANTIDEP-NEXT:    extsw 3, 3
 ; ANTIDEP-NEXT:    blr
   %r = call i32 @llvm.scmp.i32.i32(i32 %a, i32 0)

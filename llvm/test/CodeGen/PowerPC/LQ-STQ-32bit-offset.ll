@@ -56,8 +56,8 @@ define dso_local void @LQ() #0 {
 ; CHECK-NEXT:    ori r3, r3, 14016
 ; CHECK-NEXT:    add r3, r3, r1
 ; CHECK-NEXT:    lq r4, 0(r3)
-; CHECK-NEXT:    cmpd cr7, r5, r5
-; CHECK-NEXT:    bne- cr7, .+4
+; CHECK-NEXT:    cmpd r5, r5
+; CHECK-NEXT:    bne- cr0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    ld r1, 0(r1)
 ; CHECK-NEXT:    blr
