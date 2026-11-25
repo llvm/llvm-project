@@ -133,7 +133,6 @@ public:
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
   bool ActOnUninitializedVarDecl(VarDecl *D);
-  void DiagnoseVulkanResourceElementTypes(const VarDecl *VD);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   bool ActOnResourceMemberAccessExpr(MemberExpr *ME);
   void CheckEntryPoint(FunctionDecl *FD);
@@ -215,6 +214,7 @@ public:
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
   bool IsTypedResourceElementCompatible(QualType T1);
+  bool IsVulkanTypedResourceElementCompatible(QualType T1);
   bool IsConstantBufferElementCompatible(QualType T1);
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);

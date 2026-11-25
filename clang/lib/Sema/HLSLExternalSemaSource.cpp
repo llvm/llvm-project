@@ -20,6 +20,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -518,6 +519,7 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
 // this concept:
 // template<typename T> concept is_typed_resource_element_compatible =
 // __is_typed_resource_element_compatible<T>;
+// For SPIR-V, use the Vulkan-specific concept and builtin instead.
 static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                                 TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
@@ -532,9 +534,11 @@ static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
   TypeSourceInfo *TTypeSourceInfo =
       Context.getTrivialTypeSourceInfo(TType, NameLoc);
 
+  TypeTrait Trait = Context.getTargetInfo().getTriple().isSPIRV()
+                        ? UTT_IsVulkanTypedResourceElementCompatible
+                        : UTT_IsTypedResourceElementCompatible;
   TypeTraitExpr *TypedResExpr = TypeTraitExpr::Create(
-      Context, BoolTy, NameLoc, UTT_IsTypedResourceElementCompatible,
-      {TTypeSourceInfo}, NameLoc, true);
+      Context, BoolTy, NameLoc, Trait, {TTypeSourceInfo}, NameLoc, true);
 
   return TypedResExpr;
 }
@@ -644,8 +648,10 @@ static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
 
   switch (BT) {
   case HLSLBufferType::Typed:
-    DeclName = DeclarationName(
-        &Context.Idents.get("__is_typed_resource_element_compatible"));
+    DeclName = DeclarationName(&Context.Idents.get(
+        Context.getTargetInfo().getTriple().isSPIRV()
+            ? "__is_vulkan_typed_resource_element_compatible"
+            : "__is_typed_resource_element_compatible"));
     ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
     break;
   case HLSLBufferType::Structured:

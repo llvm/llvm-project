@@ -359,10 +359,7 @@ unknown, the backend cannot distinguish the two case.
 
 When targeting Vulkan, the Sampled Type of every `OpTypeImage`, sampled or
 storage, must be a scalar 32-bit float, 32-bit integer or 64-bit integer
-([VUID-StandaloneSpirv-OpTypeImage-04656][vulkan-image-sampled-type]). The
-backend reports an error for any other Sampled Type, whichever frontend produced
-the LLVM IR. Other target environments are not affected; OpenCL images, for
-example, use a `void` Sampled Type.
+([VUID-StandaloneSpirv-OpTypeImage-04656][vulkan-image-sampled-type]).
 
 See [wg-hlsl proposal 0018](https://github.com/llvm/wg-hlsl/blob/main/proposals/0018-spirv-resource-representation.md)
 for details on `spirv.VulkanBuffer`.

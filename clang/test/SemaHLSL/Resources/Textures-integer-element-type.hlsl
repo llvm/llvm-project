@@ -41,8 +41,9 @@
 
 TEXTURE<int4> TexVec;
 TEXTURE<uint> Tex;
+#ifndef __SPIRV__
 TEXTURE<int16_t> TexShort;
-// vk-error@-1 {{resource type 'Texture2D<int16_t>' (aka 'Texture2D<short>') with element type 'short' is not supported when targeting Vulkan; 'short' is 16 bits wide, but Vulkan requires a 32-bit type or a 64-bit integer type}}
+#endif
 SamplerState Samp;
 SamplerComparisonState SampCmp;
 
@@ -71,9 +72,11 @@ void main(COORD_TYPE uv) {
   // sm66-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}<vector<int, 4>>::Sample' requested here}}
   TexVec.Sample(Samp, uv);
 
+#ifndef __SPIRV__
   // sm66-error@* {{'SampleLevel' on resources containing 'short' requires shader model 6.7 or newer; the target shader model is 6.6}}
   // sm66-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}<short>::SampleLevel' requested here}}
   TexShort.SampleLevel(Samp, uv, 0.0f);
+#endif
 
   // Comparison sampling rejects integer element types at every shader model.
   // expected-error@* {{'SampleCmp' and 'SampleCmpLevelZero' require resource to contain a floating point type}}

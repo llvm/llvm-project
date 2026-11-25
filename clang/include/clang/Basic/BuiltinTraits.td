@@ -626,6 +626,11 @@ def IsTypedResourceElementCompatible : UnaryTrait {
   let KeyFlags = [KEYHLSL];
 }
 
+def IsVulkanTypedResourceElementCompatible : UnaryTrait {
+  let Spelling = "__builtin_hlsl_is_vulkan_typed_resource_element_compatible";
+  let KeyFlags = [KEYHLSL];
+}
+
 def IsConstantBufferElementCompatible : UnaryTrait {
   let Spelling = "__builtin_hlsl_is_constant_buffer_element_compatible";
   let KeyFlags = [KEYHLSL];

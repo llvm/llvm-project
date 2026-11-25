@@ -54,18 +54,8 @@ Textures and typed buffers lower to SPIR-V images on Vulkan. The
 scalar element type, or vector component type, of an image must
 be a 32-bit floating-point type or a 32-bit or 64-bit integer type
 ([VUID-StandaloneSpirv-OpTypeImage-04656][vulkan-image-sampled-type]).
-
-When targeting SPIR-V, Clang reports an error for each variable or parameter
-declaration of a typed resource whose element type breaks this rule, whether
-or not the shader uses it. This covers global, `static` and local variables,
-function parameters, arrays of resources, declarations in instantiated
-templates, and resources embedded in structs, which are diagnosed at their
-field. A parameter of a function template is checked while its template
-arguments are deduced, so the error makes that candidate non-viable. Native
-16-bit types and `double` are rejected. Without native 16-bit types, `half`
-is a 32-bit type and stays valid. A typed resource is any SRV or UAV resource
-whose handle has a contained type and is not a raw buffer, so structured and
-byte-address buffers are not affected.
+Clang rejects other element types when targeting SPIR-V. `StructuredBuffer`
+and `ByteAddressBuffer` do not lower to images and are not affected.
 
 [constantbuffer]: https://learn.microsoft.com/en-us/windows/win32/direct3d12/resource-binding-in-hlsl#constant-buffers
 [rasterizerorderedtexture2d]: https://learn.microsoft.com/en-us/windows/win32/direct3d11/rasterizer-order-views
