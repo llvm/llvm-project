@@ -26,6 +26,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TBAAUtils.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -115,46 +116,6 @@ llvm::MDNode *CodeGenTBAA::getAnyPtr(unsigned PtrDepth) {
   }
 
   return AnyPtrs[PtrDepth - 1];
-}
-
-static bool TypeHasMayAlias(QualType QTy) {
-  // Tagged types have declarations, and therefore may have attributes.
-  if (auto *TD = QTy->getAsTagDecl())
-    if (TD->hasAttr<MayAliasAttr>())
-      return true;
-
-  // Also look for may_alias as a declaration attribute on a typedef.
-  // FIXME: We should follow GCC and model may_alias as a type attribute
-  // rather than as a declaration attribute.
-  while (auto *TT = QTy->getAs<TypedefType>()) {
-    if (TT->getDecl()->hasAttr<MayAliasAttr>())
-      return true;
-    QTy = TT->desugar();
-  }
-
-  // Also consider an array type as may_alias when its element type (at
-  // any level) is marked as such.
-  if (auto *ArrayTy = QTy->getAsArrayTypeUnsafe())
-    if (TypeHasMayAlias(ArrayTy->getElementType()))
-      return true;
-
-  return false;
-}
-
-/// Check if the given type is a valid base type to be used in access tags.
-static bool isValidBaseType(QualType QTy) {
-  if (const auto *RD = QTy->getAsRecordDecl()) {
-    // Incomplete types are not valid base access types.
-    if (!RD->isCompleteDefinition())
-      return false;
-    if (RD->hasFlexibleArrayMember())
-      return false;
-    // RD can be struct, union, class, interface or enum.
-    // For now, we only handle struct and class.
-    if (RD->isStruct() || RD->isClass())
-      return true;
-  }
-  return false;
 }
 
 llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
@@ -384,7 +345,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
 
   // If the type has the may_alias attribute (even on a typedef), it is
   // effectively in the general char alias class.
-  if (TypeHasMayAlias(QTy))
+  if (CodeGenUtils::typeHasMayAlias(QTy))
     return getChar();
 
   // We need this function to not fall back to returning the "omnipotent char"
@@ -394,7 +355,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // be considered may-alias too.
   // TODO: Combine getTypeInfo() and getValidBaseTypeInfo() into a single
   // function.
-  if (isValidBaseType(QTy))
+  if (CodeGenUtils::isValidTBAABaseType(QTy))
     return getValidBaseTypeInfo(QTy);
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
@@ -414,7 +375,7 @@ TBAAAccessInfo CodeGenTBAA::getAccessInfo(QualType AccessType) {
   if (AccessType->isIncompleteType())
     return TBAAAccessInfo::getIncompleteInfo();
 
-  if (TypeHasMayAlias(AccessType))
+  if (CodeGenUtils::typeHasMayAlias(AccessType))
     return TBAAAccessInfo::getMayAliasInfo();
 
   uint64_t Size = Context.getTypeSizeInChars(AccessType).getQuantity();
@@ -491,7 +452,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
       QualType FieldQTy = i->getType();
       if (!CollectFields(Offset, FieldQTy, Fields,
-                         MayAlias || TypeHasMayAlias(FieldQTy)))
+                         MayAlias || CodeGenUtils::typeHasMayAlias(FieldQTy)))
         return false;
     }
     return true;
@@ -529,7 +490,7 @@ CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
     return N;
 
   SmallVector<llvm::MDBuilder::TBAAStructField, 4> Fields;
-  if (CollectFields(0, QTy, Fields, TypeHasMayAlias(QTy)))
+  if (CollectFields(0, QTy, Fields, CodeGenUtils::typeHasMayAlias(QTy)))
     return MDHelper.createTBAAStructNode(Fields);
 
   // For now, handle any other kind of type conservatively.
@@ -555,7 +516,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
         const CXXRecordDecl *BaseRD = BaseQTy->getAsCXXRecordDecl();
         if (BaseRD->isEmpty())
           continue;
-        llvm::MDNode *TypeNode = isValidBaseType(BaseQTy)
+        llvm::MDNode *TypeNode = CodeGenUtils::isValidTBAABaseType(BaseQTy)
                                      ? getValidBaseTypeInfo(BaseQTy)
                                      : getTypeInfo(BaseQTy);
         if (!TypeNode)
@@ -580,7 +541,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       if (Field->isZeroSize(Context) || Field->isUnnamedBitField())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
+      llvm::MDNode *TypeNode = CodeGenUtils::isValidTBAABaseType(FieldQTy)
                                    ? getValidBaseTypeInfo(FieldQTy)
                                    : getTypeInfo(FieldQTy);
       if (!TypeNode)
@@ -621,7 +582,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
 }
 
 llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
-  assert(isValidBaseType(QTy) && "Must be a valid base type");
+  assert(CodeGenUtils::isValidTBAABaseType(QTy) && "Must be a valid base type");
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
 
@@ -640,7 +601,8 @@ llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
 }
 
 llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  return isValidBaseType(QTy) ? getValidBaseTypeInfo(QTy) : nullptr;
+  return CodeGenUtils::isValidTBAABaseType(QTy) ? getValidBaseTypeInfo(QTy)
+                                                : nullptr;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {

@@ -723,7 +723,7 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
       cir::VTableGetVPtrOp::create(builder, loc, classAddr.getPointer());
   Address vtableField = Address(vtablePtr, classAddr.getAlignment());
   builder.createStore(loc, vtableAddressPoint, vtableField);
-  assert(!cir::MissingFeatures::opTBAA());
+  assert(!cir::MissingFeatures::tbaaVTablePtr());
   assert(!cir::MissingFeatures::createInvariantGroup());
 }
 
@@ -1600,7 +1600,7 @@ mlir::Value CIRGenFunction::getVTablePtr(mlir::Location loc, Address thisAddr,
   Address vtablePtrAddr = Address(vtablePtr, thisAddr.getAlignment());
 
   auto vtable = builder.createLoad(loc, vtablePtrAddr);
-  assert(!cir::MissingFeatures::opTBAA());
+  assert(!cir::MissingFeatures::tbaaVTablePtr());
 
   if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
       cgm.getCodeGenOpts().StrictVTablePointers) {

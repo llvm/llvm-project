@@ -251,6 +251,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   if (langOpts.OpenMP)
     createOpenMPRuntime();
 
+  // Enable TBAA unless it's suppressed.
+  assert(!cir::MissingFeatures::sanitizers());
+  assert(!cir::MissingFeatures::tbaaNewStructPath());
+  if (!codeGenOpts.RelaxedAliasing && codeGenOpts.OptimizationLevel > 0 &&
+      !codeGenOpts.NewStructPathTBAA)
+    tbaa = std::make_unique<CIRGenTBAA>(mlirContext, astContext, getCXXABI(),
+                                        codeGenOpts, langOpts);
+
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.
@@ -267,6 +275,65 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+mlir::Attribute CIRGenModule::getTBAATypeInfo(QualType qty) {
+  if (!tbaa)
+    return {};
+  return tbaa->getTypeInfo(qty);
+}
+
+TBAAAccessInfo CIRGenModule::getTBAAAccessInfo(QualType accessType) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  if (getLangOpts().CUDAIsDevice) {
+    // As CUDA builtin surface/texture types are replaced, skip generating TBAA
+    // access info.
+    if (accessType->isCUDADeviceBuiltinSurfaceType() ||
+        accessType->isCUDADeviceBuiltinTextureType())
+      return TBAAAccessInfo();
+  }
+  return tbaa->getAccessInfo(accessType);
+}
+
+mlir::Attribute CIRGenModule::getTBAABaseTypeInfo(QualType qty) {
+  if (!tbaa)
+    return {};
+  return tbaa->getBaseTypeInfo(qty);
+}
+
+cir::TBAATagAttr CIRGenModule::getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo) {
+  if (!tbaa)
+    return {};
+  return tbaa->getAccessTagInfo(tbaaInfo);
+}
+
+TBAAAccessInfo CIRGenModule::mergeTBAAInfoForCast(TBAAAccessInfo sourceInfo,
+                                                  TBAAAccessInfo targetInfo) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForCast(sourceInfo, targetInfo);
+}
+
+TBAAAccessInfo
+CIRGenModule::mergeTBAAInfoForConditionalOperator(TBAAAccessInfo infoA,
+                                                  TBAAAccessInfo infoB) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForConditionalOperator(infoA, infoB);
+}
+
+void CIRGenModule::decorateOperationWithTBAA(mlir::Operation *op,
+                                             TBAAAccessInfo tbaaInfo) {
+  cir::TBAATagAttr tag = getTBAAAccessTagInfo(tbaaInfo);
+  if (!tag)
+    return;
+  if (auto load = mlir::dyn_cast<cir::LoadOp>(op))
+    load.setTbaaAttr(tag);
+  else if (auto store = mlir::dyn_cast<cir::StoreOp>(op))
+    store.setTbaaAttr(tag);
+  else
+    llvm_unreachable("unexpected operation to decorate with TBAA");
+}
 
 void CIRGenModule::setOpenCLVersionAttr(StringRef attrName, unsigned version) {
   getModule()->setAttr(

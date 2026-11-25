@@ -145,7 +145,7 @@ Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
                              /*is_nontemporal=*/false, getSrcAlignmentAttr(),
                              /*sync_scope=*/cir::SyncScopeKindAttr(),
                              /*mem_order=*/cir::MemOrderAttr(),
-                             /*invariant=*/false);
+                             /*invariant=*/false, /*tbaa=*/{});
 }
 
 DeletionKind cir::CopyOp::removeBlockingUses(
@@ -157,7 +157,7 @@ DeletionKind cir::CopyOp::removeBlockingUses(
                          /*is_volatile=*/false,
                          /*is_nontemporal=*/false, getDstAlignmentAttr(),
                          /*sync_scope=*/cir::SyncScopeKindAttr(),
-                         /*mem-order=*/cir::MemOrderAttr());
+                         /*mem-order=*/cir::MemOrderAttr(), /*tbaa=*/{});
   return DeletionKind::Delete;
 }
 

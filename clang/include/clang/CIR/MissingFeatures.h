@@ -273,6 +273,9 @@ struct MissingFeatures {
   static bool openMPRequiresUnifiedSharedMemory() { return false; }
   static bool sycl() { return false; }
   static bool opTBAA() { return false; }
+  static bool tbaaNewStructPath() { return false; }
+  static bool tbaaStruct() { return false; }
+  static bool tbaaVTablePtr() { return false; }
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }

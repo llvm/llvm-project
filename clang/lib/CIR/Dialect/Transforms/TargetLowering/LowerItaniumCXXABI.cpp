@@ -408,7 +408,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
                             /*alignment=*/mlir::IntegerAttr(),
                             /*sync_scope=*/cir::SyncScopeKindAttr{},
                             /*mem_order=*/cir::MemOrderAttr(),
-                            /*invariant=*/false);
+                            /*invariant=*/false, /*tbaa=*/{});
 
     // Apply the offset.
     // On ARM64, to reserve extra space in virtual member function pointers,
@@ -785,7 +785,7 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
                           /*alignment=*/builder.getI64IntegerAttr(vptrAlign),
                           /*sync_scope=*/cir::SyncScopeKindAttr(),
                           /*mem_order=*/cir::MemOrderAttr(),
-                          /*invariant=*/false);
+                          /*invariant=*/false, /*tbaa=*/{});
   // The Itanium ABI always places an offset to the complete object at entry -2
   // in the vtable.
   mlir::Value offsetToTop = cir::VTableGetOffsetOp::create(
@@ -890,7 +890,7 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
       /*isNontemporal=*/false,
       builder.getI64IntegerAttr(countAlignment.getQuantity()),
       cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
-      /*invariant=*/false);
+      /*invariant=*/false, /*tbaa=*/{});
 }
 
 } // namespace cir

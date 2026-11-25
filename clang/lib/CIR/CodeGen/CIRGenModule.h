@@ -17,6 +17,7 @@
 #include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
 #include "CIRGenOpenMPRuntime.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
@@ -112,6 +113,9 @@ private:
 
   /// Holds the OpenMP runtime
   std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
+
+  /// Holds the TBAA information, if TBAA is enabled.
+  std::unique_ptr<CIRGenTBAA> tbaa;
 
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
@@ -556,6 +560,40 @@ public:
       return getMinimumClassObjectSize(rd);
     return getASTContext().getTypeSizeInChars(ty);
   }
+
+  /// Returns the type descriptor used to describe accesses to objects of the
+  /// given type, or null if TBAA is disabled.
+  mlir::Attribute getTBAATypeInfo(QualType qty);
+
+  /// Returns the TBAA information that describes an access to an object of the
+  /// given type.
+  TBAAAccessInfo getTBAAAccessInfo(QualType accessType);
+
+  /// Returns the type descriptor that describes the given base access type, or
+  /// null if the type is not suitable for use in TBAA access tags.
+  mlir::Attribute getTBAABaseTypeInfo(QualType qty);
+
+  /// Returns the TBAA access tag for the given memory access.
+  cir::TBAATagAttr getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo);
+
+  /// Returns the merged TBAA information for the purpose of type casts.
+  TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo sourceInfo,
+                                      TBAAAccessInfo targetInfo);
+
+  /// Returns the merged TBAA information for the purpose of conditional
+  /// operator.
+  TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo infoA,
+                                                     TBAAAccessInfo infoB);
+
+  /// Returns the TBAA information for an access with a given base lvalue.
+  TBAAAccessInfo getTBAAInfoForSubobject(LValue base, QualType accessType) {
+    if (base.getTBAAInfo().isMayAlias())
+      return TBAAAccessInfo::getMayAliasInfo();
+    return getTBAAAccessInfo(accessType);
+  }
+
+  /// Attaches the TBAA access tag of \p tbaaInfo to the load or store \p op.
+  void decorateOperationWithTBAA(mlir::Operation *op, TBAAAccessInfo tbaaInfo);
 
   /// TODO: Add TBAAAccessInfo
   CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,

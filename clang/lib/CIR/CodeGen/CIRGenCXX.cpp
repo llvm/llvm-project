@@ -412,7 +412,7 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
       }
     }
     cgf.emitStoreOfScalar(rv.getValue(), declAddr, /*isVolatile=*/false, ty,
-                          LValueBaseInfo{});
+                          LValueBaseInfo{}, cgf.cgm.getTBAAAccessInfo(ty));
   }
 
   builder.setInsertionPointToEnd(builder.getInsertionBlock());

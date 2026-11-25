@@ -1791,7 +1791,8 @@ rewriteIndirectReturnCall(cir::CallOp call, const FunctionClassification &fc,
                                     /*alignment=*/mlir::IntegerAttr(),
                                     /*sync_scope=*/cir::SyncScopeKindAttr(),
                                     /*mem_order=*/cir::MemOrderAttr(),
-                                    /*invariant=*/mlir::UnitAttr());
+                                    /*invariant=*/mlir::UnitAttr(),
+                                    /*tbaa=*/cir::TBAATagAttr());
     call.getResult().replaceAllUsesWith(load);
   }
   call->erase();

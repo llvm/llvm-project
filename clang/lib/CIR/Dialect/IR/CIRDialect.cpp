@@ -46,6 +46,13 @@ using namespace cir;
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
+
+/// Prints the identifier of a TBAA type descriptor as an alias suffix.
+static void printTBAAAliasId(llvm::StringRef id, llvm::raw_ostream &os) {
+  for (char c : id)
+    os << (llvm::isAlnum(c) ? c : '_');
+}
+
 namespace {
 struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
@@ -93,6 +100,24 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
             mlir::dyn_cast<cir::CmpThreeWayInfoAttr>(attr)) {
       os << cmpThreeWayInfoAttr.getAlias();
       return AliasResult::FinalAlias;
+    }
+    if (mlir::isa<cir::TBAAOmnipotentCharAttr>(attr)) {
+      os << "tbaa_char";
+      return AliasResult::OverridableAlias;
+    }
+    if (auto scalar = mlir::dyn_cast<cir::TBAAScalarAttr>(attr)) {
+      os << "tbaa_scalar_";
+      printTBAAAliasId(scalar.getId(), os);
+      return AliasResult::OverridableAlias;
+    }
+    if (auto record = mlir::dyn_cast<cir::TBAAStructAttr>(attr)) {
+      os << "tbaa_struct_";
+      printTBAAAliasId(record.getId(), os);
+      return AliasResult::OverridableAlias;
+    }
+    if (mlir::isa<cir::TBAATagAttr>(attr)) {
+      os << "tbaa_tag";
+      return AliasResult::OverridableAlias;
     }
     return AliasResult::NoAlias;
   }

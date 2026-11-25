@@ -20,6 +20,7 @@
 #include "clang/AST/Type.h"
 
 #include "CIRGenRecordLayout.h"
+#include "CIRGenTBAA.h"
 #include "mlir/IR/Value.h"
 
 #include "clang/CIR/MissingFeatures.h"
@@ -173,13 +174,15 @@ class LValue {
   mlir::Attribute vectorElts; // ExtVector element subset: V.xyx
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
+  TBAAAccessInfo tbaaInfo;
   const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
   // This flag shows if a nontemporal load/stores should be used when accessing
   // this lvalue.
   bool nontemporal;
 
   void initialize(clang::QualType type, clang::Qualifiers quals,
-                  clang::CharUnits alignment, LValueBaseInfo baseInfo) {
+                  clang::CharUnits alignment, LValueBaseInfo baseInfo,
+                  TBAAAccessInfo tbaaInfo = {}) {
     assert((!alignment.isZero() || type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     this->type = type;
@@ -191,6 +194,7 @@ class LValue {
     assert(this->alignment == alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->baseInfo = baseInfo;
+    this->tbaaInfo = tbaaInfo;
     this->nontemporal = false;
   }
 
@@ -240,8 +244,12 @@ public:
   LValueBaseInfo getBaseInfo() const { return baseInfo; }
   void setBaseInfo(LValueBaseInfo info) { baseInfo = info; }
 
+  TBAAAccessInfo getTBAAInfo() const { return tbaaInfo; }
+  void setTBAAInfo(TBAAAccessInfo info) { tbaaInfo = info; }
+
   static LValue makeAddr(Address address, clang::QualType t,
-                         LValueBaseInfo baseInfo) {
+                         LValueBaseInfo baseInfo,
+                         TBAAAccessInfo tbaaInfo = {}) {
     // Classic codegen sets the objc gc qualifier here. That requires an
     // ASTContext, which is passed in from CIRGenFunction::makeAddrLValue.
     assert(!cir::MissingFeatures::objCGC());
@@ -250,7 +258,8 @@ public:
     r.lvType = Simple;
     r.v = address.getPointer();
     r.elementType = address.getElementType();
-    r.initialize(t, t.getQualifiers(), address.getAlignment(), baseInfo);
+    r.initialize(t, t.getQualifiers(), address.getAlignment(), baseInfo,
+                 tbaaInfo);
     return r;
   }
 

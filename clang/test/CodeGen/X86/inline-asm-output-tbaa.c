@@ -1,6 +1,7 @@
 // REQUIRES: x86-registered-target
 // Clang emits TBAA only when optimizing, so this test needs -O1.
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -disable-llvm-passes -fclangir -emit-llvm %s -o - | FileCheck %s %}
 
 // A struct output with a register constraint is returned as an integer and
 // stored to the destination. The store must not have the integer's TBAA tag,

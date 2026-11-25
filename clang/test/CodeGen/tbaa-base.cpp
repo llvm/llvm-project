@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O1 %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,OLD-PATH
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-linux-gnu -O1 %s -fclangir -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,OLD-PATH %}
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O1 %s -emit-llvm -new-struct-path-tbaa -o - | FileCheck %s -check-prefixes=CHECK,NEW-PATH
 //
 // Test generating of TBAA metadata for accesses to members of base classes.

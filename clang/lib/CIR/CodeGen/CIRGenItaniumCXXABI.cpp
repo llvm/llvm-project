@@ -1918,7 +1918,7 @@ static mlir::Value emitExactDynamicCast(CIRGenItaniumCXXABI &abi,
   mlir::Value srcVPtr = builder.createLoad(loc, srcVPtrPtr);
 
   // TODO(cir): decorate SrcVPtr with TBAA info.
-  assert(!cir::MissingFeatures::opTBAA());
+  assert(!cir::MissingFeatures::tbaaVTablePtr());
 
   mlir::Value success =
       builder.createCompare(loc, cir::CmpOpKind::eq, srcVPtr, expectedVPtr);

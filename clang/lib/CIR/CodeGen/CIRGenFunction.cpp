@@ -544,8 +544,11 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     // Location of the store to the param storage tracked as beginning of
     // the function body.
     mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
-    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal,
-                                          addr.getPointer());
+    cir::StoreOp store = builder.CIRBaseBuilderTy::createStore(
+        fnBodyBegin, paramVal, addr.getPointer());
+    if (hasScalarEvaluationKind(paramVar->getType()))
+      cgm.decorateOperationWithTBAA(store,
+                                    cgm.getTBAAAccessInfo(paramVar->getType()));
 
     if (paramVar->hasAttr<AnnotateAttr>())
       emitVarAnnotations(paramVar, addr.getPointer());
@@ -1085,7 +1088,6 @@ LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
   // FIXME(cir): is it safe to assume Op->getResult(0) is valid? Perhaps
   // assert on the result type first.
   LValueBaseInfo baseInfo;
-  assert(!cir::MissingFeatures::opTBAA());
   CharUnits align = cgm.getNaturalTypeAlignment(ty, &baseInfo);
   return makeAddrLValue(Address(val, align), ty, baseInfo);
 }
@@ -1095,7 +1097,6 @@ LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
   LValueBaseInfo baseInfo;
   CharUnits alignment = cgm.getNaturalTypeAlignment(ty, &baseInfo);
   Address addr(val, convertTypeForMem(ty), alignment);
-  assert(!cir::MissingFeatures::opTBAA());
   return makeAddrLValue(addr, ty, baseInfo);
 }
 
@@ -1326,7 +1327,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
       mlir::Value v = addr.getPointer();
       scope.exit({&v});
       return LValue::makeAddr(addr.withPointer(v), lv.getType(),
-                              lv.getBaseInfo());
+                              lv.getBaseInfo(), lv.getTBAAInfo());
     }
     // FIXME: Is it possible to create an ExprWithCleanups that produces a
     // bitfield lvalue or some other non-simple lvalue?

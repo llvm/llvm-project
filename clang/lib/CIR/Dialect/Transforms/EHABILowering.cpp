@@ -888,7 +888,7 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
     mlir::Value casted =
         cir::CastOp::create(builder, loc, paramAddrType.getPointee(),
                             cir::CastKind::bitcast, exnObj);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr);
     op.erase();
     return success();
   }
@@ -1057,7 +1057,7 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
   case InitCatchKind::Reference: {
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
                                              cir::CastKind::bitcast, exnPtr);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr);
     break;
   }
   case InitCatchKind::ReferenceToPointer:
@@ -1086,8 +1086,8 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
     }
     mlir::Value casted = cir::CastOp::create(builder, loc, caughtType,
                                              cir::CastKind::bitcast, exnPtr);
-    cir::StoreOp::create(builder, loc, casted, byRefTmp, {}, {}, {}, {}, {});
-    cir::StoreOp::create(builder, loc, byRefTmp, paramAddr, {}, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, byRefTmp);
+    cir::StoreOp::create(builder, loc, byRefTmp, paramAddr);
     break;
   }
   case InitCatchKind::TrivialCopy: {
@@ -1107,14 +1107,13 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
     mlir::Value srcPtr = cir::CastOp::create(builder, loc, paramAddrType,
                                              cir::CastKind::bitcast, exnPtr);
     auto loadOp = cir::LoadOp::create(builder, loc, elementType, srcPtr);
-    cir::StoreOp::create(builder, loc, loadOp.getResult(), paramAddr, {}, {},
-                         {}, {}, {});
+    cir::StoreOp::create(builder, loc, loadOp.getResult(), paramAddr);
     break;
   }
   case InitCatchKind::Pointer: {
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
                                              cir::CastKind::bitcast, exnPtr);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr);
     break;
   }
   case InitCatchKind::Objc:

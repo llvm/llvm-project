@@ -1,0 +1,39 @@
+// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s | cir-opt | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+#char = #cir.tbaa_omnipotent_char
+#int = #cir.tbaa_scalar<id = "int", size = 4>
+#long = #cir.tbaa_scalar<id = "long", size = 8>
+#any_ptr = #cir.tbaa_scalar<id = "any pointer", size = 8>
+#p1_int = #cir.tbaa_scalar<id = "p1 int", size = 8, parent = #any_ptr>
+#S = #cir.tbaa_struct<"_ZTS1S", [<#int, 0>, <#long, 8>]>
+#Empty = #cir.tbaa_struct<"_ZTS5Empty", []>
+
+// CHECK-DAG: #[[CHAR:.*]] = #cir.tbaa_omnipotent_char
+// CHECK-DAG: #[[INT:.*]] = #cir.tbaa_scalar<id = "int", size = 4>
+// CHECK-DAG: #[[LONG:.*]] = #cir.tbaa_scalar<id = "long", size = 8>
+// CHECK-DAG: #[[ANY_PTR:.*]] = #cir.tbaa_scalar<id = "any pointer", size = 8>
+// CHECK-DAG: #[[P1_INT:.*]] = #cir.tbaa_scalar<id = "p1 int", size = 8, parent = #[[ANY_PTR]]>
+// CHECK-DAG: #[[S:.*]] = #cir.tbaa_struct<"_ZTS1S", [<#[[INT]], 0>, <#[[LONG]], 8>]>
+// CHECK-DAG: #[[EMPTY:.*]] = #cir.tbaa_struct<"_ZTS5Empty", []>
+// CHECK-DAG: #[[CHAR_TAG:.*]] = #cir.tbaa_tag<base = #[[CHAR]], access = #[[CHAR]], offset = 0>
+// CHECK-DAG: #[[P1_INT_TAG:.*]] = #cir.tbaa_tag<base = #[[P1_INT]], access = #[[P1_INT]], offset = 0>
+// CHECK-DAG: #[[S_B_TAG:.*]] = #cir.tbaa_tag<base = #[[S]], access = #[[LONG]], offset = 8>
+
+// The module attribute only exercises parsing a descriptor no tag refers to.
+module attributes {cir.empty = #Empty} {
+  // CHECK-LABEL: cir.func @tags
+  cir.func @tags(%p: !cir.ptr<!cir.ptr<!s32i>>, %s: !cir.ptr<!s64i>, %c: !cir.ptr<!s32i>) {
+    // CHECK: cir.load %{{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i> tbaa(#[[P1_INT_TAG]])
+    %0 = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i> tbaa(#cir.tbaa_tag<base = #p1_int, access = #p1_int, offset = 0>)
+    // CHECK: cir.store align(8) %{{.*}}, %{{.*}} : !s64i, !cir.ptr<!s64i> tbaa(#[[S_B_TAG]])
+    %1 = cir.const #cir.int<1> : !s64i
+    cir.store align(8) %1, %s : !s64i, !cir.ptr<!s64i> tbaa(#cir.tbaa_tag<base = #S, access = #long, offset = 8>)
+    // CHECK: cir.load volatile %{{.*}} : !cir.ptr<!s32i>, !s32i tbaa(#[[CHAR_TAG]])
+    %2 = cir.load volatile %c : !cir.ptr<!s32i>, !s32i tbaa(#cir.tbaa_tag<base = #char, access = #char, offset = 0>)
+    cir.return
+  }
+}

@@ -18,6 +18,7 @@ static_library("CodeGenUtils") {
     "ModuleUtils.cpp",
     "RecordLayoutUtils.cpp",
     "StmtUtils.cpp",
+    "TBAAUtils.cpp",
     "TargetUtils.cpp",
   ]
 }
