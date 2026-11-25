@@ -65,7 +65,7 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %arg1
         : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_bf16_to_fma
+      transform.apply_patterns.x86.vector_contract_16bit_fp_to_fma
     } : !transform.any_op
     transform.yield
   }

@@ -4,7 +4,7 @@ add_mlir_dialect_library(MLIRX86Transforms
   MathRsqrtApproximation.cpp
   VectorContractToFMA.cpp
   VectorContractToPackedTypeDotProduct.cpp
-  VectorContractBF16ToFMA.cpp
+  VectorContract16BitFPToFMA.cpp
   SinkVectorProducerOps.cpp
   ShuffleVectorFMAOps.cpp
   VectorContractToAMXDotProduct.cpp

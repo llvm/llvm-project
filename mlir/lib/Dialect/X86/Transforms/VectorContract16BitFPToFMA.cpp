@@ -1,4 +1,4 @@
-//===- VectorContractBF16ToFMA.cpp-----------------------------------------===//
+//===- VectorContract16BitFPToFMA.cpp--------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,6 +37,12 @@ static bool validateVectorContractOperands(Value prodOp, bool isVnni) {
 
   if (auto readOp = prodOp.getDefiningOp<mlir::vector::TransferReadOp>()) {
     if (readOp.hasOutOfBoundsDim())
+      return false;
+
+    // The x86 packed loads read every lane, so they cannot keep a mask. A read
+    // in `vector.mask` never gets here: the operand is then the `vector.mask`
+    // result, which is rejected below as it is not a load.
+    if (readOp.getMask())
       return false;
 
     if (!readOp.getPermutationMap().isMinorIdentity())
@@ -218,7 +224,7 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
 //   %4 = x86.avx.cvt.packed.odd.indexed_to_f32 %m2 -> vector<8xf32>
 //   %5 = vector.fma %1, %4, %arg2
 //   scf.yield %3, %5
-struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
+struct VectorContract16BitFPToFMA : public AddContractionOpRewritePattern {
   using AddContractionOpRewritePattern::AddContractionOpRewritePattern;
 
   LogicalResult
@@ -298,7 +304,7 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
         !validateVectorContractOperands(contractOp.getRhs(), isVnni)) {
       return rewriter.notifyMatchFailure(
           contractOp, "The LHS or RHS is in an invalid format. Either it has "
-                      "false in-bounds, "
+                      "false in-bounds, a mask, "
                       "a non-identity permutation map, a non-zero VNNI offset, "
                       "a non-memref "
                       "source, or a non-unit VNNI stride");
@@ -352,6 +358,13 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
 
       if (!pairContractOp)
         return failure();
+
+      // The pair is rewritten too, so its reads need the same checks.
+      if (!validateVectorContractOperands(pairContractOp.getLhs(), isVnni) ||
+          !validateVectorContractOperands(pairContractOp.getRhs(), isVnni))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The LHS or RHS of the pair contract is in an invalid "
+                        "format.");
 
       Operation *accReadOp0 =
           traceToVectorReadLikeParentOperation(contractOp.getAcc());
@@ -497,6 +510,7 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
   }
 };
 
-void x86::populateVectorContractBF16ToFMAPatterns(RewritePatternSet &patterns) {
-  patterns.add<VectorContractBF16ToFMA>(patterns.getContext());
+void x86::populateVectorContract16BitFPToFMAPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<VectorContract16BitFPToFMA>(patterns.getContext());
 }

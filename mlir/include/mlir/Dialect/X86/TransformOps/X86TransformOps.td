@@ -38,12 +38,12 @@ def ApplyVectorContractToPackedTypeDotProductPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyVectorContractBF16ToFMAPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.x86.vector_contract_bf16_to_fma",
+def ApplyVectorContract16BitFPToFMAPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_16bit_fp_to_fma",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect patterns to lower a BF16 type vector.contract operation
-        to a FMA via emulation lowering using BF16 packed operations.
+    Collect patterns to lower a BF16/F16 type vector.contract operation
+        to a FMA via emulation lowering using BF16/F16 packed operations.
   }];
 
   let assemblyFormat = "attr-dict";
