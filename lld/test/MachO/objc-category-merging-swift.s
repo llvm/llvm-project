@@ -5,7 +5,7 @@
 ## Apply category merging to swiftc code just make sure we can handle addends
 ## and don't erase category names for swift -- in order to not crash
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o cat_swift.o %s
-# RUN: %lld -arch arm64 -dylib -o cat_swift.dylib cat_swift.o -objc_category_merging -no_objc_relative_method_lists
+# RUN: %lld -arch arm64 -dylib -o cat_swift.dylib cat_swift.o -objc_category_merging
 # RUN: llvm-objdump --objc-meta-data --macho cat_swift.dylib | FileCheck %s --check-prefixes=CHECK-MERGE
 
 ; CHECK-MERGE:      Contents of (__DATA_CONST,__objc_classlist) section
@@ -22,17 +22,17 @@
 ; CHECK-MERGE-NEXT:                ivarLayout 0x0
 ; CHECK-MERGE-NEXT:                      name {{.+}} _TtC11SimpleClass11SimpleClass
 ; CHECK-MERGE-NEXT:               baseMethods {{.+}} (struct method_list_t *)
-; CHECK-MERGE-NEXT:                    entsize 24
+; CHECK-MERGE-NEXT:                    entsize 12 (relative)
 ; CHECK-MERGE-NEXT:                      count 3
 ; CHECK-MERGE-NEXT:                       name {{.+}} categoryInstanceMethod
 ; CHECK-MERGE-NEXT:                      types {{.+}} q16@0:8
-; CHECK-MERGE-NEXT:                        imp _$s11SimpleClassAAC22categoryInstanceMethodSiyFTo
+; CHECK-MERGE-NEXT:                        imp {{.*}} _$s11SimpleClassAAC22categoryInstanceMethodSiyFTo
 ; CHECK-MERGE-NEXT:                       name {{.+}} baseClassInstanceMethod
 ; CHECK-MERGE-NEXT:                      types {{.+}} i16@0:8
-; CHECK-MERGE-NEXT:                        imp _$s11SimpleClassAAC04baseB14InstanceMethods5Int32VyFTo
+; CHECK-MERGE-NEXT:                        imp {{.*}} _$s11SimpleClassAAC04baseB14InstanceMethods5Int32VyFTo
 ; CHECK-MERGE-NEXT:                       name {{.+}} init
 ; CHECK-MERGE-NEXT:                      types {{.+}} @16@0:8
-; CHECK-MERGE-NEXT:                        imp _$s11SimpleClassAACABycfcTo
+; CHECK-MERGE-NEXT:                        imp {{.*}} _$s11SimpleClassAACABycfcTo
 ; CHECK-MERGE-NEXT:             baseProtocols 0x0
 ; CHECK-MERGE-NEXT:                     ivars 0x0
 ; CHECK-MERGE-NEXT:            weakIvarLayout 0x0

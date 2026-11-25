@@ -41,6 +41,11 @@ using namespace mlir;
 
 // Return true if the contract op can be convert to MMA matmul.
 static bool contractSupportsMMAMatrixType(vector::ContractionOp contract) {
+  // gpu.subgroup_mma_compute computes C += A * B, so only the `add` kind
+  // matches.
+  if (!contract.isAddKind())
+    return false;
+
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
   auto infer = [&](MapList m) {
     return AffineMap::inferFromExprList(m, contract.getContext());
@@ -275,7 +280,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op) {
     if (!isa<vector::ContractionOp>(nestedOp) &&
         !elementwiseSupportsMMAMatrixType(nestedOp))
       return;
-    if (backwardSliceCache.contains(nestedOp))
+    if (opToConvert.contains(nestedOp))
       return;
 
     SetVector<Operation *> dependentOps;

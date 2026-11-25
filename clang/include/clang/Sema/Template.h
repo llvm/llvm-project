@@ -721,8 +721,34 @@ enum class TemplateSubstitutionKind : char {
     }
 
     // Helper functions for instantiating methods.
+
+    /// Container for the late-parsed attributes of a function's parameters,
+    /// which SubstFunctionType defers until the function is declared.
+    class DeferredParamAttrs {
+      TemplateDeclInstantiator &Instantiator;
+      // The scope that the attributes' saved scopes extend.
+      LocalInstantiationScope *Outer;
+
+    public:
+      Sema::LateInstantiatedAttrVec Attrs;
+
+      explicit DeferredParamAttrs(TemplateDeclInstantiator &Instantiator)
+          : Instantiator(Instantiator),
+            Outer(Instantiator.SemaRef.CurrentInstantiationScope) {}
+      DeferredParamAttrs(const DeferredParamAttrs &) = delete;
+      DeferredParamAttrs &operator=(const DeferredParamAttrs &) = delete;
+      ~DeferredParamAttrs() { discard(); }
+
+      /// Free the attributes without instantiating them.
+      void discard();
+      /// Instantiate the attributes, once the function is declared. In a
+      /// class, they are deferred again until the class is instantiated.
+      void instantiate();
+    };
+
     TypeSourceInfo *SubstFunctionType(FunctionDecl *D,
-                                      SmallVectorImpl<ParmVarDecl *> &Params);
+                                      SmallVectorImpl<ParmVarDecl *> &Params,
+                                      DeferredParamAttrs &ParamAttrs);
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
 

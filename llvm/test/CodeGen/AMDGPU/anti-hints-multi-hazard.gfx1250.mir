@@ -47,7 +47,6 @@
 # before %c3)
 # %c1/%c2 get vgpr32/vgpr33 in both runs.
 name:            two_wmma_overlapping
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr40
@@ -118,7 +117,6 @@ body:             |
 # vgpr0/vgpr1 (outside the window, no V_NOP)
 # Without anti-hints: %c1 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            wmma_multi_consumer_slots
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr40
@@ -173,7 +171,6 @@ body:             |
 # no V_NOP)
 # Without anti-hints: %c2 gets vgpr0 (overlaps!, 4 V_NOPs)
 name:            trans_plus_wmma_interleave
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr40, $vgpr41
@@ -233,7 +230,6 @@ body:             |
 # Both runs: %p0/%p1 get vgpr10/vgpr11, %l1/%l2 get vgpr0-7 (no overlap,
 # no va_vdst wait)
 name:            vavdst_multi_producer
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr10, $vgpr11, $vgpr12
@@ -280,7 +276,6 @@ body:             |
 # Without anti-hints: %l1 gets vgpr1 (overlaps %a0!, vm_vsrc 0 wait), %c1 gets
 # vgpr2 (overlaps %a1!, xcnt 0 and vm_vsrc 0 waits)
 name:            addr_multi_producer
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr20

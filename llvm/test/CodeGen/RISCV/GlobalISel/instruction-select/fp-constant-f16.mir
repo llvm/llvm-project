@@ -16,8 +16,8 @@ body:             |
     ; CHECK-NEXT: [[FMV_H_X:%[0-9]+]]:fpr16 = FMV_H_X [[ADDI]]
     ; CHECK-NEXT: $f10_h = COPY [[FMV_H_X]]
     ; CHECK-NEXT: PseudoRET implicit $f10_h
-    %0:fprb(s16) = G_FCONSTANT half 0xH4248
-    $f10_h = COPY %0(s16)
+    %0:fprb(f16) = G_FCONSTANT half 0xH4248
+    $f10_h = COPY %0(f16)
     PseudoRET implicit $f10_h
 
 ...
@@ -39,10 +39,10 @@ body:             |
     ; CHECK-NEXT: [[FADD_H:%[0-9]+]]:fpr16 = nofpexcept FADD_H [[COPY]], [[FMV_H_X]], 7
     ; CHECK-NEXT: $f10_h = COPY [[FADD_H]]
     ; CHECK-NEXT: PseudoRET implicit $f10_h
-    %0:fprb(s16) = COPY $f10_h
-    %1:fprb(s16) = G_FCONSTANT half 1.000000e+00
-    %2:fprb(s16) = G_FADD %0, %1
-    $f10_h = COPY %2(s16)
+    %0:fprb(f16) = COPY $f10_h
+    %1:fprb(f16) = G_FCONSTANT half 1.000000e+00
+    %2:fprb(f16) = G_FADD %0, %1
+    $f10_h = COPY %2(f16)
     PseudoRET implicit $f10_h
 
 ...
@@ -60,8 +60,8 @@ body:             |
     ; CHECK-NEXT: [[FMV_H_X:%[0-9]+]]:fpr16 = FMV_H_X $x0
     ; CHECK-NEXT: $f10_h = COPY [[FMV_H_X]]
     ; CHECK-NEXT: PseudoRET implicit $f10_h
-    %1:fprb(s16) = G_FCONSTANT half 0.000000e+00
-    $f10_h = COPY %1(s16)
+    %1:fprb(f16) = G_FCONSTANT half 0.000000e+00
+    $f10_h = COPY %1(f16)
     PseudoRET implicit $f10_h
 
 ...
@@ -80,8 +80,8 @@ body:             |
     ; CHECK-NEXT: [[FMV_H_X:%[0-9]+]]:fpr16 = FMV_H_X [[LUI]]
     ; CHECK-NEXT: $f10_h = COPY [[FMV_H_X]]
     ; CHECK-NEXT: PseudoRET implicit $f10_h
-    %1:fprb(s16) = G_FCONSTANT half -0.000000e+00
-    $f10_h = COPY %1(s16)
+    %1:fprb(f16) = G_FCONSTANT half -0.000000e+00
+    $f10_h = COPY %1(f16)
     PseudoRET implicit $f10_h
 
 ...

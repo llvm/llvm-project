@@ -113,6 +113,29 @@ TEST(JITLinkGenericTest, SuccessfulLookupWithGraphOwnedPool) {
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 }
 
+TEST(JITLinkGenericTest, EmptySectionsAreNotAllocated) {
+  // Sections with no blocks need no memory.
+  auto G = makeEmptyGraph();
+  G->createSection("__text", orc::MemProt::Read | orc::MemProt::Exec);
+
+  bool AllocateCalled = false;
+  Error Err = Error::success();
+  auto Ctx = makeMockContext(
+      JoinErrorsInto(Err),
+      [&](MockJITLinkMemoryManager &MemMgr) {
+        MemMgr.Allocate = [&](const JITLinkDylib *JD, LinkGraph &LG) {
+          AllocateCalled = true;
+          return MemMgr.defaultAllocate(JD, LG);
+        };
+      },
+      defaultCtxSetup);
+
+  link_MachO_x86_64(std::move(G), std::move(Ctx));
+
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+  EXPECT_FALSE(AllocateCalled);
+}
+
 TEST_P(JITLinkGenericPassErrorTest, FailingPassIsReported) {
   // Check that an error returned by a pass at any stage of the pipeline is
   // reported exactly once via notifyFailed, that the link stops, and that any

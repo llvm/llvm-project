@@ -53,3 +53,24 @@ class TestPtrAuth(Arm64eTestBase):
             "p pSpecial",
             substrs=["(__ptrauth(2,0,0) intp)", "(actual=0x"],
         )
+
+        special = self.frame().FindVariable("pSpecial")
+        signed = special.GetValueAsUnsigned()
+        stripped = special.GetValueAsAddress()
+        self.assertNotEqual(signed, stripped, "pSpecial carries signature bits")
+
+        unqualified_type = self.frame().FindVariable("pNormal").GetType()
+        cast = special.Cast(unqualified_type)
+        self.assertSuccess(cast.GetError())
+        self.assertEqual(cast.GetValueAsUnsigned(), stripped)
+        self.assertEqual(cast.GetLoadAddress(), special.GetLoadAddress())
+        self.assertEqual(cast.GetLocation(), special.GetLocation())
+        self.assertEqual(
+            cast.Cast(unqualified_type).GetLoadAddress(), special.GetLoadAddress()
+        )
+        self.assertEqual(
+            cast.Cast(unqualified_type).GetLocation(), special.GetLocation()
+        )
+        self.assertFailure(
+            cast.CanSet(), "cannot modify a value through a cast that drops __ptrauth"
+        )

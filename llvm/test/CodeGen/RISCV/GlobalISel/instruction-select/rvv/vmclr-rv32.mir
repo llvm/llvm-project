@@ -12,9 +12,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 -1 /* vl=VLMAX */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -1
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -1
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 
 ...
@@ -28,9 +28,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B32_:%[0-9]+]]:vr = PseudoVMCLR_M_B32 -1 /* vl=VLMAX */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B32_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -1
-    %1:vrb(<vscale x 2 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 2 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -1
+    %1:vrb(<vscale x 2 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 2 x i1>)
     PseudoRET implicit $v0
 
 ...
@@ -44,9 +44,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B16_:%[0-9]+]]:vr = PseudoVMCLR_M_B16 -1 /* vl=VLMAX */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B16_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -1
-    %1:vrb(<vscale x 4 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 4 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -1
+    %1:vrb(<vscale x 4 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 4 x i1>)
     PseudoRET implicit $v0
 
 ...
@@ -60,9 +60,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B8_:%[0-9]+]]:vr = PseudoVMCLR_M_B8 -1 /* vl=VLMAX */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B8_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -1
-    %1:vrb(<vscale x 8 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 8 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -1
+    %1:vrb(<vscale x 8 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 8 x i1>)
     PseudoRET implicit $v0
 
 ...
@@ -76,9 +76,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B4_:%[0-9]+]]:vr = PseudoVMCLR_M_B4 -1 /* vl=VLMAX */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B4_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -1
-    %1:vrb(<vscale x 16 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 16 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -1
+    %1:vrb(<vscale x 16 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 16 x i1>)
     PseudoRET implicit $v0
 
 ...
@@ -92,9 +92,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B2_:%[0-9]+]]:vr = PseudoVMCLR_M_B2 -1 /* vl=VLMAX */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B2_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -1
-    %1:vrb(<vscale x 32 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 32 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -1
+    %1:vrb(<vscale x 32 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 32 x i1>)
     PseudoRET implicit $v0
 
 ...
@@ -108,9 +108,9 @@ body:             |
     ; CHECK: [[PseudoVMCLR_M_B1_:%[0-9]+]]:vr = PseudoVMCLR_M_B1 -1 /* vl=VLMAX */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B1_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -1
-    %1:vrb(<vscale x 64 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 64 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -1
+    %1:vrb(<vscale x 64 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 64 x i1>)
     PseudoRET implicit $v0
 
 ...

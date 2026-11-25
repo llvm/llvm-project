@@ -614,6 +614,18 @@ bool HexagonMCInstrInfo::isCVINew(MCInstrInfo const &MCII, MCInst const &MCI) {
   return ((F >> HexagonII::CVINewPos) & HexagonII::CVINewMask);
 }
 
+bool HexagonMCInstrInfo::isHVXALU2SRC(MCInstrInfo const &MCII,
+                                      MCInst const &MCI) {
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlag(MID, HexagonII::isHVXALU2SRCPos);
+}
+
+bool HexagonMCInstrInfo::isHVXVS3SRC(MCInstrInfo const &MCII,
+                                     MCInst const &MCI) {
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlag(MID, HexagonII::isHVXVS3SRCPos);
+}
+
 bool HexagonMCInstrInfo::isDblRegForSubInst(MCRegister Reg) {
   return ((Reg >= Hexagon::D0 && Reg <= Hexagon::D3) ||
           (Reg >= Hexagon::D8 && Reg <= Hexagon::D11));
