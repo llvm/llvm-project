@@ -76,7 +76,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit drop_view(_View __base, range_difference_t<_View> __count)
       : __count_(__count), __base_(std::move(__base)) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__count_ >= 0, "count must be greater than or equal to zero.");
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count_ >= 0, "count must be greater than or equal to zero.");
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
@@ -229,8 +229,10 @@ struct __fn {
               // Note: deliberately not forwarding `__rng` to guard against double moves.
               ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)),
               ranges::end(__rng))) {
+    auto __count = static_cast<_Dist>(std::forward<_Np>(__n));
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count >= 0, "views::drop(range, count) called with a negative count");
     return __passthrough_type_t<_RawRange>(
-        ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)), ranges::end(__rng));
+        ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), __count), ranges::end(__rng));
   }
 
   // [range.drop.overview]: the `subrange (StoreSize == true)` case.
@@ -253,8 +255,10 @@ struct __fn {
                                   std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n))))) {
     // Introducing local variables avoids calculating `min` and `distance` twice (at the cost of diverging from the
     // expression used in the `noexcept` clause and the return statement).
+    auto __count = static_cast<_Dist>(std::forward<_Np>(__n));
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count >= 0, "views::drop(range, count) called with a negative count");
     auto __dist    = ranges::distance(__rng);
-    auto __clamped = std::min<_Dist>(__dist, std::forward<_Np>(__n));
+    auto __clamped = std::min<_Dist>(__dist, __count);
     return _RawRange(ranges::begin(__rng) + __clamped, ranges::end(__rng), std::__to_unsigned_like(__dist - __clamped));
   }
   // clang-format off
