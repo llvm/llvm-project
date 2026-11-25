@@ -95,7 +95,8 @@ static void injectCondLpIndexStores(
     mlir::Value structArg, mlir::Region &region,
     const llvm::MapVector<mlir::Value, std::string> &valAddrToSymName,
     llvm::function_ref<mlir::Value(fir::FirOpBuilder &, mlir::Location)>
-        genIndexVal);
+        genIndexVal,
+    bool indexAtWrite = false);
 
 static mlir::Value
 computeFlattenedCanonicalIV(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -3631,12 +3632,76 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 static mlir::omp::ScanOp
 genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-          semantics::SemanticsContext &semaCtx, mlir::Location loc,
-          const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+          semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+          mlir::Location loc, const ConstructQueue &queue,
+          ConstructQueue::const_iterator item) {
   mlir::omp::ScanOperands clauseOps;
   genScanClauses(converter, semaCtx, item->clauses, loc, clauseOps);
-  return mlir::omp::ScanOp::create(converter.getFirOpBuilder(),
-                                   converter.getCurrentLocation(), clauseOps);
+  mlir::omp::ScanOp scanOp = mlir::omp::ScanOp::create(
+      converter.getFirOpBuilder(), converter.getCurrentLocation(), clauseOps);
+
+  /// Scan reduction is not implemented with nested workshare loops, linear
+  /// clause, tiling
+  mlir::omp::LoopNestOp loopNestOp =
+      scanOp->getParentOfType<mlir::omp::LoopNestOp>();
+  llvm::SmallVector<mlir::omp::LoopWrapperInterface> loopWrappers;
+  loopNestOp.gatherWrappers(loopWrappers);
+  mlir::Operation *loopWrapperOp = loopWrappers.front().getOperation();
+  if (llvm::isa<mlir::omp::SimdOp>(loopWrapperOp))
+    TODO(loc, "unsupported simd");
+  if (loopWrappers.size() > 1)
+    TODO(loc, "unsupported composite");
+  mlir::omp::WsloopOp wsLoopOp = llvm::cast<mlir::omp::WsloopOp>(loopWrapperOp);
+  bool isNested =
+      (loopNestOp.getNumLoops() > 1) ||
+      (wsLoopOp && (wsLoopOp->getParentOfType<mlir::omp::WsloopOp>()));
+  if (isNested)
+    TODO(loc, "Scan directive inside nested workshare loops");
+  if (wsLoopOp && !wsLoopOp.getLinearVars().empty())
+    TODO(loc, "Scan directive with linear clause");
+  if (loopNestOp.getTileSizes())
+    TODO(loc, "Scan directive with loop tiling");
+
+  // All loop indices should be loaded after the scan construct as otherwise,
+  // it would result in using the index variable across scan directive.
+  // (`Intra-iteration dependences from a statement in the structured
+  // block sequence that precede a scan directive to a statement in the
+  // structured block sequence that follows a scan directive must not exist,
+  // except for dependences for the list items specified in an inclusive or
+  // exclusive clause.`).
+  // TODO: Nested loops are not handled.
+  mlir::Region &region = loopNestOp->getRegion(0);
+  mlir::Value indexVal = fir::getBase(region.getArgument(0));
+  // The scan directive's immediate parent is not necessarily the DO construct
+  // it binds to: other constructs (for example a BLOCK) may be nested between
+  // the scan directive and the DO loop. Walk up the parent-construct chain to
+  // the nearest enclosing DO construct, whose induction variable is the scan
+  // loop's index.
+  lower::pft::Evaluation *doConstructEval = eval.parentConstruct;
+  bool crossesBlockConstruct = false;
+  while (doConstructEval && !doConstructEval->isA<parser::DoConstruct>()) {
+    if (doConstructEval->isA<parser::BlockConstruct>())
+      crossesBlockConstruct = true;
+    doConstructEval = doConstructEval->parentConstruct;
+  }
+  assert(doConstructEval &&
+         "Expected an enclosing DO construct for the scan directive");
+  // A BLOCK construct brackets its body with stacksave/stackrestore. Since the
+  // scan directive splits the loop body into separate input- and scan-phase
+  // loops, that bracket would be torn across the two loops and produce invalid
+  // IR (the stacksave would not dominate the stackrestore), so reject it.
+  if (crossesBlockConstruct)
+    TODO(loc, "Scan directive nested inside a BLOCK construct");
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // Fetch the associated DO loop's induction variable symbol.
+  // getIterationVariableSymbol safely handles a missing loop control or a
+  // non-bounds DO (e.g. DO WHILE) by returning null, rather than dereferencing
+  // the optional loop control and the bounds variant unconditionally.
+  semantics::Symbol *loopVarSym = getIterationVariableSymbol(*doConstructEval);
+  assert(loopVarSym && "Expected the scan loop's iteration variable symbol");
+  mlir::Operation *storeOp = setLoopVar(converter, loc, indexVal, loopVarSym);
+  firOpBuilder.setInsertionPointAfter(storeOp);
+  return scanOp;
 }
 
 /// Walk up the parent-op chain from the current insertion point and return
@@ -5201,7 +5266,8 @@ static mlir::omp::WsloopOp genStandaloneDo(
         builder, loc, lpType, structArg, loopNestOp.getRegion(), condLpValAddrs,
         [&](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
           return computeFlattenedCanonicalIV(b, l, loopNestOp);
-        });
+        },
+        wsloopOp.hasReductionModifier(mlir::omp::ReductionModifier::inscan));
   }
 
   // Post-reduction copy-back.  When nowait is absent, the wsloop's implicit
@@ -5895,7 +5961,7 @@ genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                   loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_scan:
-    newOp = genScanOp(converter, symTable, semaCtx, loc, queue, item);
+    newOp = genScanOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");
@@ -6413,7 +6479,8 @@ static void injectCondLpIndexStores(
     mlir::Value structArg, mlir::Region &region,
     const llvm::MapVector<mlir::Value, std::string> &valAddrToSymName,
     llvm::function_ref<mlir::Value(fir::FirOpBuilder &, mlir::Location)>
-        genIndexVal) {
+        genIndexVal,
+    bool indexAtWrite) {
   // Look through hlfir.declare to find the underlying struct field address.
   // When symbols are bound via bindCondLpSymsToStructFields, the lowering
   // wraps the fir.coordinate_of result in hlfir.declare, so the actual write
@@ -6484,10 +6551,10 @@ static void injectCondLpIndexStores(
     });
   });
 
-  // Compute the canonical index once at the region entry so that it dominates
-  // all write sites (which may be inside nested fir.if blocks).
+  // Compute the index at the region entry unless scan splits its execution
+  // into phases, in which case it must be computed at each write site.
   mlir::Value indexVal;
-  if (!writes.empty()) {
+  if (!writes.empty() && !indexAtWrite) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(&region.front());
     indexVal = genIndexVal(builder, loc);
@@ -6508,6 +6575,11 @@ static void injectCondLpIndexStores(
 
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointAfter(writeOp);
+    mlir::Value writeIndex =
+        indexAtWrite ? genIndexVal(builder, loc) : indexVal;
+    if (writeIndex.getType() != builder.getI64Type())
+      writeIndex = fir::ConvertOp::create(builder, loc, builder.getI64Type(),
+                                          writeIndex);
 
     // The value just written to the private copy of the list item.
     mlir::Value curVal = fir::LoadOp::create(builder, loc, writeAddr);
@@ -6529,11 +6601,11 @@ static void injectCondLpIndexStores(
     // overwrite a higher-index one.
     mlir::Value curIdx = fir::LoadOp::create(builder, loc, idxAddr);
     mlir::Value cmp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::sge, indexVal, curIdx);
+        builder, loc, mlir::arith::CmpIPredicate::sge, writeIndex, curIdx);
     auto ifOp = fir::IfOp::create(builder, loc, cmp, /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     fir::StoreOp::create(builder, loc, curVal, valAddr);
-    fir::StoreOp::create(builder, loc, indexVal, idxAddr);
+    fir::StoreOp::create(builder, loc, writeIndex, idxAddr);
   }
 }
 
