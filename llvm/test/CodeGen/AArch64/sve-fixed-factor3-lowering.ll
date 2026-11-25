@@ -6,161 +6,82 @@ define void @interleave6_intrinsic(ptr noalias %src, ptr noalias %dst, i64 %grou
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    cbz x2, .LBB0_4
 ; SVE-NEXT:  // %bb.1: // %loop.preheader
-; SVE-NEXT:    stp d13, d12, [sp, #-48]! // 16-byte Folded Spill
+; SVE-NEXT:    sub sp, sp, #48
+; SVE-NEXT:    ptrue p0.b, vl8
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    add x9, x0, #24
-; SVE-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
-; SVE-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
+; SVE-NEXT:    add x10, sp, #24
+; SVE-NEXT:    mov x11, sp
 ; SVE-NEXT:  .LBB0_2: // %loop
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
-; SVE-NEXT:    ldp d1, d2, [x9, #8]
+; SVE-NEXT:    ldp d3, d0, [x9, #-16]
 ; SVE-NEXT:    add x8, x8, #1
-; SVE-NEXT:    ldp d3, d0, [x9, #-8]
+; SVE-NEXT:    ldp d2, d1, [x9, #8]
 ; SVE-NEXT:    cmp x8, x2
-; SVE-NEXT:    ldp d4, d7, [x9, #-24]
-; SVE-NEXT:    add x9, x9, #48
-; SVE-NEXT:    mov z5.b, z2.b[7]
-; SVE-NEXT:    mov z16.b, z2.b[6]
-; SVE-NEXT:    mov z18.b, z2.b[5]
-; SVE-NEXT:    mov z6.b, z3.b[7]
-; SVE-NEXT:    mov z17.b, z3.b[6]
-; SVE-NEXT:    mov z19.b, z3.b[5]
-; SVE-NEXT:    mov z20.b, z2.b[4]
-; SVE-NEXT:    mov z21.b, z3.b[4]
-; SVE-NEXT:    mov z22.b, z1.b[7]
-; SVE-NEXT:    mov z23.b, z1.b[5]
-; SVE-NEXT:    mov z24.b, z7.b[5]
-; SVE-NEXT:    mov z25.b, z1.b[4]
-; SVE-NEXT:    zip1 z5.b, z6.b, z5.b
-; SVE-NEXT:    zip1 z6.b, z17.b, z16.b
+; SVE-NEXT:    ldur d4, [x9, #-24]
+; SVE-NEXT:    ldr d5, [x9], #48
+; SVE-NEXT:    mov z7.b, z0.b[7]
+; SVE-NEXT:    mov z19.b, z0.b[5]
+; SVE-NEXT:    mov z20.b, z3.b[6]
+; SVE-NEXT:    zip1 z18.b, z0.b, z1.b
+; SVE-NEXT:    mov z6.b, z1.b[7]
+; SVE-NEXT:    mov z21.b, z2.b[5]
+; SVE-NEXT:    zip1 z17.b, z3.b, z2.b
+; SVE-NEXT:    mov z22.b, z3.b[5]
+; SVE-NEXT:    mov z23.b, z5.b[7]
+; SVE-NEXT:    zip1 z16.b, z4.b, z5.b
+; SVE-NEXT:    mov z24.b, z4.b[7]
+; SVE-NEXT:    mov z25.b, z5.b[6]
+; SVE-NEXT:    zip1 z6.b, z7.b, z6.b
+; SVE-NEXT:    mov z26.b, z4.b[6]
+; SVE-NEXT:    mov z27.b, z5.b[5]
+; SVE-NEXT:    mov z28.b, z4.b[5]
+; SVE-NEXT:    mov z5.b, z5.b[4]
+; SVE-NEXT:    mov z4.b, z4.b[4]
+; SVE-NEXT:    st3b { z16.b - z18.b }, p0, [x10]
+; SVE-NEXT:    mov z16.b, z1.b[6]
+; SVE-NEXT:    mov z17.b, z0.b[6]
+; SVE-NEXT:    mov z18.b, z1.b[5]
+; SVE-NEXT:    mov z1.b, z1.b[4]
+; SVE-NEXT:    mov z0.b, z0.b[4]
+; SVE-NEXT:    zip1 z4.b, z4.b, z5.b
+; SVE-NEXT:    zip1 z7.b, z17.b, z16.b
+; SVE-NEXT:    mov z17.b, z2.b[7]
 ; SVE-NEXT:    zip1 z16.b, z19.b, z18.b
-; SVE-NEXT:    mov z17.b, z7.b[7]
-; SVE-NEXT:    mov z18.b, z1.b[6]
-; SVE-NEXT:    mov z19.b, z7.b[6]
-; SVE-NEXT:    mov z26.b, z7.b[4]
-; SVE-NEXT:    mov z27.b, z0.b[7]
-; SVE-NEXT:    mov z28.b, z4.b[7]
-; SVE-NEXT:    mov z29.b, z0.b[6]
-; SVE-NEXT:    mov z30.b, z4.b[6]
-; SVE-NEXT:    mov z31.b, z0.b[5]
-; SVE-NEXT:    mov z8.b, z4.b[5]
-; SVE-NEXT:    mov z9.b, z0.b[4]
-; SVE-NEXT:    mov z10.b, z4.b[4]
-; SVE-NEXT:    zip1 z20.b, z21.b, z20.b
-; SVE-NEXT:    zip1 z17.b, z17.b, z22.b
-; SVE-NEXT:    zip1 z18.b, z19.b, z18.b
-; SVE-NEXT:    zip1 z19.b, z24.b, z23.b
-; SVE-NEXT:    zip1 z21.b, z26.b, z25.b
-; SVE-NEXT:    zip1 z22.b, z28.b, z27.b
-; SVE-NEXT:    zip1 z23.b, z30.b, z29.b
-; SVE-NEXT:    zip1 z24.b, z8.b, z31.b
-; SVE-NEXT:    zip1 z25.b, z10.b, z9.b
-; SVE-NEXT:    zip1 z5.h, z6.h, z5.h
-; SVE-NEXT:    zip1 z6.h, z20.h, z16.h
-; SVE-NEXT:    zip1 z17.h, z18.h, z17.h
-; SVE-NEXT:    zip1 z18.h, z21.h, z19.h
+; SVE-NEXT:    mov z18.b, z3.b[7]
+; SVE-NEXT:    mov z19.b, z2.b[6]
+; SVE-NEXT:    mov z2.b, z2.b[4]
+; SVE-NEXT:    mov z3.b, z3.b[4]
+; SVE-NEXT:    zip1 z0.b, z0.b, z1.b
+; SVE-NEXT:    zip1 z5.h, z7.h, z6.h
+; SVE-NEXT:    zip1 z1.b, z18.b, z17.b
+; SVE-NEXT:    zip1 z17.b, z20.b, z19.b
+; SVE-NEXT:    zip1 z18.b, z22.b, z21.b
 ; SVE-NEXT:    zip1 z2.b, z3.b, z2.b
-; SVE-NEXT:    zip1 z0.b, z4.b, z0.b
-; SVE-NEXT:    zip1 z19.h, z23.h, z22.h
-; SVE-NEXT:    zip1 z20.h, z25.h, z24.h
-; SVE-NEXT:    zip1 z7.b, z7.b, z1.b
-; SVE-NEXT:    zip1 z16.s, z6.s, z5.s
-; SVE-NEXT:    zip1 z17.s, z18.s, z17.s
-; SVE-NEXT:    mov z30.b, z0.b[3]
-; SVE-NEXT:    mov z31.b, z2.b[2]
-; SVE-NEXT:    zip1 z18.s, z20.s, z19.s
-; SVE-NEXT:    mov z29.b, z7.b[3]
-; SVE-NEXT:    mov z8.b, z7.b[2]
-; SVE-NEXT:    mov z5.b, z16.b[7]
-; SVE-NEXT:    mov z20.b, z16.b[6]
-; SVE-NEXT:    mov z23.b, z16.b[5]
-; SVE-NEXT:    mov z6.b, z17.b[7]
-; SVE-NEXT:    mov z21.b, z17.b[6]
-; SVE-NEXT:    mov z24.b, z17.b[5]
-; SVE-NEXT:    mov z19.b, z18.b[7]
-; SVE-NEXT:    mov z22.b, z18.b[6]
-; SVE-NEXT:    mov z25.b, z17.b[2]
-; SVE-NEXT:    mov z26.b, z18.b[2]
-; SVE-NEXT:    mov z27.b, z16.b[1]
-; SVE-NEXT:    mov z28.b, z17.b[1]
-; SVE-NEXT:    zip1 z5.b, z6.b, z5.b
-; SVE-NEXT:    mov z4.b, z18.b[1]
-; SVE-NEXT:    mov z9.b, z0.b[2]
-; SVE-NEXT:    zip1 z6.b, z20.b, z19.b
-; SVE-NEXT:    zip1 z19.b, z22.b, z21.b
-; SVE-NEXT:    zip1 z20.b, z24.b, z23.b
-; SVE-NEXT:    mov z21.b, z18.b[5]
-; SVE-NEXT:    mov z22.b, z16.b[4]
-; SVE-NEXT:    mov z23.b, z17.b[4]
-; SVE-NEXT:    mov z24.b, z18.b[4]
-; SVE-NEXT:    zip1 z4.b, z16.b, z4.b
-; SVE-NEXT:    mov z10.b, z2.b[1]
-; SVE-NEXT:    zip1 z5.h, z6.h, z5.h
-; SVE-NEXT:    zip1 z6.h, z20.h, z19.h
-; SVE-NEXT:    mov z11.b, z7.b[1]
-; SVE-NEXT:    zip1 z19.b, z22.b, z21.b
-; SVE-NEXT:    mov z21.b, z16.b[3]
-; SVE-NEXT:    mov z22.b, z17.b[3]
-; SVE-NEXT:    zip1 z20.b, z24.b, z23.b
-; SVE-NEXT:    mov z23.b, z18.b[3]
-; SVE-NEXT:    mov z24.b, z16.b[2]
-; SVE-NEXT:    zip1 z17.b, z18.b, z17.b
-; SVE-NEXT:    mov z18.b, z0.b[5]
-; SVE-NEXT:    mov z12.b, z0.b[1]
-; SVE-NEXT:    zip1 z3.b, z22.b, z21.b
-; SVE-NEXT:    zip1 z22.b, z26.b, z25.b
-; SVE-NEXT:    mov z25.b, z7.b[6]
-; SVE-NEXT:    zip1 z21.b, z24.b, z23.b
-; SVE-NEXT:    mov z24.b, z2.b[4]
-; SVE-NEXT:    zip1 z1.h, z20.h, z19.h
-; SVE-NEXT:    mov z19.b, z2.b[7]
-; SVE-NEXT:    mov z20.b, z7.b[7]
-; SVE-NEXT:    zip1 z23.b, z28.b, z27.b
-; SVE-NEXT:    mov z27.b, z0.b[4]
-; SVE-NEXT:    mov z26.b, z0.b[6]
-; SVE-NEXT:    mov z28.b, z2.b[3]
-; SVE-NEXT:    zip1 z18.b, z24.b, z18.b
-; SVE-NEXT:    mov z24.b, z7.b[4]
-; SVE-NEXT:    mov z13.b, z2.b[5]
-; SVE-NEXT:    zip1 z16.b, z20.b, z19.b
-; SVE-NEXT:    mov z19.b, z0.b[7]
-; SVE-NEXT:    mov z20.b, z2.b[6]
-; SVE-NEXT:    zip1 z28.b, z29.b, z28.b
-; SVE-NEXT:    zip1 z29.b, z31.b, z30.b
-; SVE-NEXT:    zip1 z30.b, z9.b, z8.b
-; SVE-NEXT:    zip1 z24.b, z27.b, z24.b
-; SVE-NEXT:    mov z27.b, z7.b[5]
-; SVE-NEXT:    zip1 z31.b, z11.b, z10.b
-; SVE-NEXT:    zip1 z0.b, z0.b, z7.b
-; SVE-NEXT:    zip1 z2.b, z2.b, z12.b
-; SVE-NEXT:    zip1 z7.b, z20.b, z19.b
+; SVE-NEXT:    zip1 z3.b, z24.b, z23.b
 ; SVE-NEXT:    zip1 z19.b, z26.b, z25.b
-; SVE-NEXT:    zip1 z3.h, z21.h, z3.h
-; SVE-NEXT:    zip1 z21.h, z23.h, z22.h
-; SVE-NEXT:    zip1 z20.b, z27.b, z13.b
-; SVE-NEXT:    zip1 z18.h, z24.h, z18.h
-; SVE-NEXT:    zip1 z22.h, z29.h, z28.h
-; SVE-NEXT:    zip1 z23.h, z31.h, z30.h
-; SVE-NEXT:    zip1 z0.h, z0.h, z2.h
-; SVE-NEXT:    zip1 z2.h, z17.h, z4.h
-; SVE-NEXT:    zip1 z4.h, z7.h, z16.h
-; SVE-NEXT:    zip1 z5.s, z6.s, z5.s
-; SVE-NEXT:    zip1 z1.s, z3.s, z1.s
-; SVE-NEXT:    zip1 z7.h, z20.h, z19.h
-; SVE-NEXT:    zip1 z3.s, z22.s, z18.s
-; SVE-NEXT:    zip1 z0.s, z0.s, z23.s
-; SVE-NEXT:    zip1 z2.s, z2.s, z21.s
-; SVE-NEXT:    zip1 z1.d, z1.d, z5.d
-; SVE-NEXT:    zip1 z4.s, z7.s, z4.s
-; SVE-NEXT:    zip1 z0.d, z0.d, z3.d
-; SVE-NEXT:    zip1 z2.d, z4.d, z2.d
-; SVE-NEXT:    stp q2, q1, [x1, #16]
-; SVE-NEXT:    str q0, [x1], #48
+; SVE-NEXT:    zip1 z20.b, z28.b, z27.b
+; SVE-NEXT:    zip1 z0.h, z0.h, z16.h
+; SVE-NEXT:    zip1 z1.h, z17.h, z1.h
+; SVE-NEXT:    zip1 z2.h, z2.h, z18.h
+; SVE-NEXT:    zip1 z3.h, z19.h, z3.h
+; SVE-NEXT:    zip1 z4.h, z4.h, z20.h
+; SVE-NEXT:    zip1 z7.s, z0.s, z5.s
+; SVE-NEXT:    zip1 z6.s, z2.s, z1.s
+; SVE-NEXT:    zip1 z5.s, z4.s, z3.s
+; SVE-NEXT:    st3b { z5.b - z7.b }, p0, [x11]
+; SVE-NEXT:    ldp d1, d0, [sp, #8]
+; SVE-NEXT:    ldr d4, [sp]
+; SVE-NEXT:    ldp d3, d2, [sp, #24]
+; SVE-NEXT:    ldr d5, [sp, #40]
+; SVE-NEXT:    splice z1.b, p0, z1.b, z0.b
+; SVE-NEXT:    splice z5.b, p0, z5.b, z4.b
+; SVE-NEXT:    splice z3.b, p0, z3.b, z2.b
+; SVE-NEXT:    stp q5, q1, [x1, #16]
+; SVE-NEXT:    str q3, [x1], #48
 ; SVE-NEXT:    b.lo .LBB0_2
 ; SVE-NEXT:  // %bb.3:
-; SVE-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
-; SVE-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
-; SVE-NEXT:    ldp d13, d12, [sp], #48 // 16-byte Folded Reload
+; SVE-NEXT:    add sp, sp, #48
 ; SVE-NEXT:  .LBB0_4: // %exit
 ; SVE-NEXT:    ret
 entry:
@@ -196,114 +117,163 @@ define void @deinterleave6_intrinsic(ptr noalias %src, ptr noalias %dst, i64 %gr
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    cbz x2, .LBB1_4
 ; SVE-NEXT:  // %bb.1: // %loop.preheader
-; SVE-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
+; SVE-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; SVE-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; SVE-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; SVE-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; SVE-NEXT:    str x29, [sp, #64] // 8-byte Spill
+; SVE-NEXT:    sub sp, sp, #48
+; SVE-NEXT:    addvl sp, sp, #-14
+; SVE-NEXT:    ptrue p0.b, vl8
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    add x9, x1, #24
-; SVE-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
+; SVE-NEXT:    mov x10, sp
+; SVE-NEXT:    add x11, sp, #24
 ; SVE-NEXT:  .LBB1_2: // %loop
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
-; SVE-NEXT:    ldp q1, q3, [x0, #16]
+; SVE-NEXT:    ldp q1, q0, [x0, #16]
+; SVE-NEXT:    add x12, sp, #48
+; SVE-NEXT:    ldr q4, [x0]
 ; SVE-NEXT:    add x8, x8, #1
-; SVE-NEXT:    ldr q0, [x0], #48
+; SVE-NEXT:    add x0, x0, #48
 ; SVE-NEXT:    cmp x8, x2
-; SVE-NEXT:    movprfx z4, z3
-; SVE-NEXT:    ext z4.b, z4.b, z3.b, #8
-; SVE-NEXT:    movprfx z2, z1
-; SVE-NEXT:    ext z2.b, z2.b, z1.b, #8
-; SVE-NEXT:    mov z7.b, z3.b[3]
-; SVE-NEXT:    mov z5.b, z1.b[7]
-; SVE-NEXT:    mov z6.b, z1.b[1]
-; SVE-NEXT:    mov z21.b, z1.b[6]
-; SVE-NEXT:    movprfx z16, z0
-; SVE-NEXT:    ext z16.b, z16.b, z0.b, #8
-; SVE-NEXT:    mov z24.b, z3.b[7]
-; SVE-NEXT:    mov z28.b, z1.b[4]
-; SVE-NEXT:    mov z17.b, z4.b[7]
-; SVE-NEXT:    mov z19.b, z4.b[1]
-; SVE-NEXT:    mov z20.b, z2.b[5]
-; SVE-NEXT:    mov z22.b, z4.b[6]
-; SVE-NEXT:    mov z25.b, z4.b[5]
-; SVE-NEXT:    zip1 z5.b, z6.b, z5.b
-; SVE-NEXT:    mov z26.b, z4.b[4]
-; SVE-NEXT:    mov z27.b, z2.b[2]
-; SVE-NEXT:    mov z29.b, z16.b[6]
-; SVE-NEXT:    zip1 z6.b, z19.b, z17.b
-; SVE-NEXT:    zip1 z7.b, z20.b, z7.b
-; SVE-NEXT:    zip1 z19.b, z1.b, z21.b
-; SVE-NEXT:    zip1 z17.b, z4.b, z22.b
-; SVE-NEXT:    zip1 z20.b, z24.b, z25.b
-; SVE-NEXT:    mov z21.b, z3.b[1]
-; SVE-NEXT:    mov z22.b, z2.b[3]
-; SVE-NEXT:    mov z25.b, z3.b[6]
-; SVE-NEXT:    mov z30.b, z3.b[5]
-; SVE-NEXT:    mov z31.b, z4.b[3]
-; SVE-NEXT:    mov z18.b, z3.b[2]
-; SVE-NEXT:    mov z23.b, z2.b[4]
-; SVE-NEXT:    mov z8.b, z2.b[1]
-; SVE-NEXT:    mov z4.b, z4.b[2]
-; SVE-NEXT:    mov z24.b, z16.b[7]
-; SVE-NEXT:    zip1 z21.b, z22.b, z21.b
-; SVE-NEXT:    mov z22.b, z2.b[7]
-; SVE-NEXT:    zip1 z25.b, z25.b, z26.b
-; SVE-NEXT:    zip1 z26.b, z27.b, z3.b
-; SVE-NEXT:    zip1 z27.b, z29.b, z28.b
-; SVE-NEXT:    zip1 z28.b, z30.b, z31.b
-; SVE-NEXT:    mov z29.b, z0.b[7]
-; SVE-NEXT:    mov z30.b, z0.b[1]
-; SVE-NEXT:    mov z3.b, z3.b[4]
-; SVE-NEXT:    zip1 z18.b, z23.b, z18.b
-; SVE-NEXT:    mov z23.b, z1.b[5]
-; SVE-NEXT:    zip1 z22.b, z8.b, z22.b
-; SVE-NEXT:    mov z31.b, z2.b[6]
-; SVE-NEXT:    mov z8.b, z0.b[6]
-; SVE-NEXT:    mov z9.b, z1.b[2]
-; SVE-NEXT:    mov z10.b, z16.b[4]
-; SVE-NEXT:    zip1 z29.b, z30.b, z29.b
-; SVE-NEXT:    mov z1.b, z1.b[3]
-; SVE-NEXT:    mov z30.b, z16.b[5]
-; SVE-NEXT:    zip1 z3.b, z3.b, z4.b
-; SVE-NEXT:    mov z4.b, z0.b[2]
-; SVE-NEXT:    zip1 z23.b, z24.b, z23.b
-; SVE-NEXT:    mov z24.b, z0.b[3]
-; SVE-NEXT:    zip1 z2.b, z2.b, z31.b
-; SVE-NEXT:    mov z31.b, z16.b[1]
-; SVE-NEXT:    zip1 z8.b, z0.b, z8.b
-; SVE-NEXT:    zip1 z9.b, z10.b, z9.b
-; SVE-NEXT:    mov z10.b, z0.b[4]
-; SVE-NEXT:    zip1 z1.b, z30.b, z1.b
-; SVE-NEXT:    mov z30.b, z16.b[2]
-; SVE-NEXT:    mov z0.b, z0.b[5]
-; SVE-NEXT:    zip1 z4.b, z4.b, z16.b
-; SVE-NEXT:    mov z16.b, z16.b[3]
-; SVE-NEXT:    zip1 z24.b, z24.b, z31.b
-; SVE-NEXT:    zip1 z2.h, z2.h, z3.h
-; SVE-NEXT:    zip1 z3.h, z8.h, z9.h
-; SVE-NEXT:    zip1 z30.b, z10.b, z30.b
-; SVE-NEXT:    zip1 z22.h, z22.h, z28.h
-; SVE-NEXT:    zip1 z1.h, z29.h, z1.h
-; SVE-NEXT:    zip1 z0.b, z0.b, z16.b
-; SVE-NEXT:    zip1 z16.h, z26.h, z25.h
-; SVE-NEXT:    zip1 z4.h, z4.h, z27.h
-; SVE-NEXT:    zip1 z20.h, z21.h, z20.h
-; SVE-NEXT:    zip1 z21.h, z24.h, z23.h
-; SVE-NEXT:    zip1 z2.s, z3.s, z2.s
-; SVE-NEXT:    zip1 z3.h, z18.h, z17.h
-; SVE-NEXT:    zip1 z17.h, z30.h, z19.h
-; SVE-NEXT:    zip1 z1.s, z1.s, z22.s
-; SVE-NEXT:    zip1 z6.h, z7.h, z6.h
-; SVE-NEXT:    zip1 z0.h, z0.h, z5.h
-; SVE-NEXT:    zip1 z4.s, z4.s, z16.s
-; SVE-NEXT:    zip1 z5.s, z21.s, z20.s
-; SVE-NEXT:    stp d2, d1, [x9, #-24]
-; SVE-NEXT:    zip1 z1.s, z17.s, z3.s
-; SVE-NEXT:    zip1 z0.s, z0.s, z6.s
-; SVE-NEXT:    stp d4, d5, [x9, #-8]
-; SVE-NEXT:    stp d1, d0, [x9, #8]
+; SVE-NEXT:    movprfx z2, z0
+; SVE-NEXT:    ext z2.b, z2.b, z0.b, #8
+; SVE-NEXT:    movprfx z3, z1
+; SVE-NEXT:    ext z3.b, z3.b, z1.b, #8
+; SVE-NEXT:    stp d0, d2, [sp, #8]
+; SVE-NEXT:    movprfx z0, z4
+; SVE-NEXT:    ext z0.b, z0.b, z4.b, #8
+; SVE-NEXT:    str d3, [sp]
+; SVE-NEXT:    stp d0, d1, [sp, #32]
+; SVE-NEXT:    str d4, [sp, #24]
+; SVE-NEXT:    ld3b { z18.b - z20.b }, p0/z, [x10]
+; SVE-NEXT:    ld3b { z2.b - z4.b }, p0/z, [x11]
+; SVE-NEXT:    mov z0.b, z20.b[3]
+; SVE-NEXT:    mov z30.b, z20.b[2]
+; SVE-NEXT:    mov z31.b, z19.b[2]
+; SVE-NEXT:    mov z10.b, z18.b[2]
+; SVE-NEXT:    mov z24.b, z20.b[7]
+; SVE-NEXT:    mov z25.b, z20.b[5]
+; SVE-NEXT:    mov z8.b, z20.b[4]
+; SVE-NEXT:    mov z11.b, z19.b[6]
+; SVE-NEXT:    mov z12.b, z19.b[4]
+; SVE-NEXT:    str z0, [x12, #12, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z20.b[1]
+; SVE-NEXT:    mov z9.b, z4.b[2]
+; SVE-NEXT:    mov z13.b, z3.b[2]
+; SVE-NEXT:    mov z14.b, z2.b[2]
+; SVE-NEXT:    zip1 z30.b, z20.b, z30.b
+; SVE-NEXT:    zip1 z31.b, z19.b, z31.b
+; SVE-NEXT:    mov z15.b, z18.b[6]
+; SVE-NEXT:    zip1 z10.b, z18.b, z10.b
+; SVE-NEXT:    str z0, [x12, #11, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z4.b[7]
+; SVE-NEXT:    mov z22.b, z18.b[4]
+; SVE-NEXT:    mov z28.b, z4.b[1]
+; SVE-NEXT:    zip1 z9.b, z4.b, z9.b
+; SVE-NEXT:    zip1 z13.b, z3.b, z13.b
+; SVE-NEXT:    zip1 z14.b, z2.b, z14.b
+; SVE-NEXT:    mov z6.b, z3.b[5]
+; SVE-NEXT:    mov z26.b, z3.b[3]
+; SVE-NEXT:    str z0, [x12, #10, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z4.b[5]
+; SVE-NEXT:    mov z23.b, z3.b[1]
+; SVE-NEXT:    mov z17.b, z2.b[5]
+; SVE-NEXT:    mov z21.b, z2.b[3]
+; SVE-NEXT:    mov z16.b, z4.b[6]
+; SVE-NEXT:    mov z7.b, z4.b[4]
+; SVE-NEXT:    mov z5.b, z3.b[6]
+; SVE-NEXT:    mov z1.b, z3.b[4]
+; SVE-NEXT:    str z0, [x12, #9, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z4.b[3]
+; SVE-NEXT:    zip1 z27.b, z25.b, z24.b
+; SVE-NEXT:    zip1 z22.b, z22.b, z15.b
+; SVE-NEXT:    zip1 z11.b, z12.b, z11.b
+; SVE-NEXT:    zip1 z1.b, z1.b, z5.b
+; SVE-NEXT:    zip1 z7.b, z7.b, z16.b
+; SVE-NEXT:    str z0, [x12, #13, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z19.b[7]
+; SVE-NEXT:    zip1 z1.h, z13.h, z1.h
+; SVE-NEXT:    zip1 z7.h, z9.h, z7.h
+; SVE-NEXT:    str z0, [x12, #8, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z19.b[5]
+; SVE-NEXT:    str z0, [x12, #7, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z19.b[3]
+; SVE-NEXT:    str z0, [x12, #6, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z19.b[1]
+; SVE-NEXT:    mov z19.b, z2.b[7]
+; SVE-NEXT:    str z0, [x12, #5, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z18.b[7]
+; SVE-NEXT:    zip1 z5.b, z17.b, z19.b
+; SVE-NEXT:    ldr z29, [x12, #5, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z19.b, z23.b, z26.b
+; SVE-NEXT:    str z0, [x12, #4, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z18.b[5]
+; SVE-NEXT:    str z0, [x12, #2, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z18.b[3]
+; SVE-NEXT:    str z0, [x12, #3, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z18.b[1]
+; SVE-NEXT:    mov z18.b, z2.b[1]
+; SVE-NEXT:    str z0, [x12, #1, mul vl] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z20.b[6]
+; SVE-NEXT:    mov z20.b, z3.b[7]
+; SVE-NEXT:    zip1 z16.b, z18.b, z21.b
+; SVE-NEXT:    zip1 z18.h, z10.h, z22.h
+; SVE-NEXT:    ldr z22, [x12, #13, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z21.h, z31.h, z11.h
+; SVE-NEXT:    str z0, [x12] // 16-byte Folded Spill
+; SVE-NEXT:    mov z0.b, z2.b[6]
+; SVE-NEXT:    mov z2.b, z2.b[4]
+; SVE-NEXT:    ldr z3, [x12, #12, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    ldr z4, [x12, #11, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z6.b, z6.b, z20.b
+; SVE-NEXT:    ldr z20, [x12, #4, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    ldr z17, [x12] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z22.b, z28.b, z22.b
+; SVE-NEXT:    zip1 z0.b, z2.b, z0.b
+; SVE-NEXT:    ldr z2, [x12, #3, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z5.h, z16.h, z5.h
+; SVE-NEXT:    zip1 z25.b, z4.b, z3.b
+; SVE-NEXT:    ldr z3, [x12, #10, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    ldr z4, [x12, #9, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z17.b, z8.b, z17.b
+; SVE-NEXT:    zip1 z1.s, z1.s, z21.s
+; SVE-NEXT:    zip1 z0.h, z14.h, z0.h
+; SVE-NEXT:    zip1 z24.b, z4.b, z3.b
+; SVE-NEXT:    ldr z3, [x12, #8, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    ldr z4, [x12, #7, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z17.h, z30.h, z17.h
+; SVE-NEXT:    zip1 z0.s, z0.s, z18.s
+; SVE-NEXT:    zip1 z4.b, z4.b, z3.b
+; SVE-NEXT:    ldr z3, [x12, #6, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z16.h, z22.h, z24.h
+; SVE-NEXT:    zip1 z7.s, z7.s, z17.s
+; SVE-NEXT:    stp d0, d1, [x9, #-24]
+; SVE-NEXT:    zip1 z3.b, z29.b, z3.b
+; SVE-NEXT:    ldr z29, [x12, #2, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z20.b, z29.b, z20.b
+; SVE-NEXT:    ldr z29, [x12, #1, mul vl] // 16-byte Folded Reload
+; SVE-NEXT:    zip1 z3.h, z3.h, z4.h
+; SVE-NEXT:    zip1 z4.h, z19.h, z6.h
+; SVE-NEXT:    zip1 z6.h, z25.h, z27.h
+; SVE-NEXT:    zip1 z2.b, z29.b, z2.b
+; SVE-NEXT:    zip1 z0.s, z4.s, z3.s
+; SVE-NEXT:    zip1 z1.s, z16.s, z6.s
+; SVE-NEXT:    zip1 z2.h, z2.h, z20.h
+; SVE-NEXT:    stp d0, d1, [x9, #8]
+; SVE-NEXT:    zip1 z2.s, z5.s, z2.s
+; SVE-NEXT:    stp d7, d2, [x9, #-8]
 ; SVE-NEXT:    add x9, x9, #48
 ; SVE-NEXT:    b.lo .LBB1_2
 ; SVE-NEXT:  // %bb.3:
-; SVE-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; SVE-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload
+; SVE-NEXT:    addvl sp, sp, #14
+; SVE-NEXT:    add sp, sp, #48
+; SVE-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; SVE-NEXT:    ldr x29, [sp, #64] // 8-byte Reload
+; SVE-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; SVE-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; SVE-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; SVE-NEXT:  .LBB1_4: // %exit
 ; SVE-NEXT:    ret
 entry:

@@ -2682,6 +2682,10 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::VECREDUCE_UMIN, VT, Default);
   setOperationAction(ISD::VECREDUCE_XOR, VT, Default);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Default);
+  // For two lane interleaves shuffle is better
+  if (VT.getVectorNumElements() != 2)
+    setVectorInterleaveAction(
+        {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {3}, VT, Default);
   setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Default);
   setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Default);
   setOperationAction(ISD::VSELECT, VT, Default);
@@ -35853,11 +35857,13 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+  bool UseFixedSVE = OpVT.isFixedLengthVector() &&
+                     Subtarget->useSVEForFixedLengthVectors(OpVT);
 
   if (SDValue Result = lowerInterleaveWithTBL(Op, DAG, *Subtarget))
     return Result;
 
-  if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
+  if (OpVT.isFixedLengthVector() && !UseFixedSVE && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
@@ -35888,33 +35894,36 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
         {LD3.getValue(0), LD3.getValue(1), LD3.getValue(2)}, DL);
   }
 
-  if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+  if ((OpVT.isScalableVector() || UseFixedSVE) && Op->getNumOperands() == 3) {
     if (OpVT.getVectorElementType() == MVT::i1)
       return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
 
     // aarch64_sve_ld3 only supports packed datatypes.
-    EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
-    Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
+    EVT PackedVT = UseFixedSVE
+                       ? getContainerForFixedLengthVector(DAG, OpVT)
+                       : getPackedSVEVectorVT(OpVT.getVectorElementCount());
+    EVT StoreVT = UseFixedSVE ? OpVT : PackedVT;
+    Align Alignment = DAG.getReducedAlign(StoreVT, /*UseABI=*/false);
     SDValue StackPtr =
-        DAG.CreateStackTemporary(PackedVT.getStoreSize() * 3, Alignment);
+        DAG.CreateStackTemporary(StoreVT.getStoreSize() * 3, Alignment);
 
     // Write out unmodified operands.
     SmallVector<SDValue, 3> Chains;
     for (unsigned I = 0; I < 3; ++I) {
       SDValue Ptr =
-          DAG.getMemBasePlusOffset(StackPtr, PackedVT.getStoreSize() * I, DL);
-      SDValue V = getSVESafeBitCast(PackedVT, Op.getOperand(I), DAG);
+          DAG.getMemBasePlusOffset(StackPtr, StoreVT.getStoreSize() * I, DL);
+      SDValue V = UseFixedSVE
+                      ? Op.getOperand(I)
+                      : getSVESafeBitCast(PackedVT, Op.getOperand(I), DAG);
       Chains.push_back(
           DAG.getStore(DAG.getEntryNode(), DL, V, Ptr, MachinePointerInfo()));
     }
 
     Intrinsic::ID IntID = Intrinsic::aarch64_sve_ld3_sret;
-    EVT PredVT = PackedVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
-
     SmallVector<SDValue, 7> Ops;
     Ops.push_back(DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains));
     Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
-    Ops.push_back(DAG.getConstant(1, DL, PredVT));
+    Ops.push_back(getPredicateForVector(DAG, DL, OpVT));
     Ops.push_back(StackPtr);
 
     // Read back and deinterleave data.
@@ -35922,9 +35931,10 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
     SDValue LD3 = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops);
 
     SmallVector<SDValue, 3> Results;
-    Results.push_back(getSVESafeBitCast(OpVT, LD3.getValue(0), DAG));
-    Results.push_back(getSVESafeBitCast(OpVT, LD3.getValue(1), DAG));
-    Results.push_back(getSVESafeBitCast(OpVT, LD3.getValue(2), DAG));
+    for (unsigned I = 0; I < 3; ++I)
+      Results.push_back(
+          UseFixedSVE ? convertFromScalableVector(DAG, OpVT, LD3.getValue(I))
+                      : getSVESafeBitCast(OpVT, LD3.getValue(I), DAG));
     return DAG.getMergeValues(Results, DL);
   }
 
@@ -35969,11 +35979,13 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+  bool UseFixedSVE = OpVT.isFixedLengthVector() &&
+                     Subtarget->useSVEForFixedLengthVectors(OpVT);
 
   if (SDValue Result = lowerInterleaveWithTBL(Op, DAG, *Subtarget))
     return Result;
 
-  if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
+  if (OpVT.isFixedLengthVector() && !UseFixedSVE && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
@@ -36004,36 +36016,38 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     return DAG.getMergeValues(Results, DL);
   }
 
-  if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+  if ((OpVT.isScalableVector() || UseFixedSVE) && Op->getNumOperands() == 3) {
     if (OpVT.getVectorElementType() == MVT::i1)
       return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
 
     // aarch64_sve_st3 only supports packed datatypes.
-    EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
+    EVT PackedVT = UseFixedSVE
+                       ? getContainerForFixedLengthVector(DAG, OpVT)
+                       : getPackedSVEVectorVT(OpVT.getVectorElementCount());
     SmallVector<SDValue, 3> InVecs;
     for (SDValue V : Op->ops())
-      InVecs.push_back(getSVESafeBitCast(PackedVT, V, DAG));
+      InVecs.push_back(UseFixedSVE ? convertToScalableVector(DAG, PackedVT, V)
+                                   : getSVESafeBitCast(PackedVT, V, DAG));
 
-    Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
+    EVT StoreVT = UseFixedSVE ? OpVT : PackedVT;
+    Align Alignment = DAG.getReducedAlign(StoreVT, /*UseABI=*/false);
     SDValue StackPtr =
-        DAG.CreateStackTemporary(PackedVT.getStoreSize() * 3, Alignment);
+        DAG.CreateStackTemporary(StoreVT.getStoreSize() * 3, Alignment);
     MachinePointerInfo StackPtrInfo = MachinePointerInfo::getFixedStack(
         DAG.getMachineFunction(), cast<FrameIndexSDNode>(StackPtr)->getIndex());
 
     Intrinsic::ID IntID = Intrinsic::aarch64_sve_st3;
-    EVT PredVT = PackedVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
-
     SmallVector<SDValue, 7> Ops;
     Ops.push_back(DAG.getEntryNode());
     Ops.push_back(DAG.getTargetConstant(IntID, DL, MVT::i64));
     Ops.append(InVecs);
-    Ops.push_back(DAG.getConstant(1, DL, PredVT));
+    Ops.push_back(getPredicateForVector(DAG, DL, OpVT));
     Ops.push_back(StackPtr);
 
     // Interleave operands and store.
     EVT TriplePackedVT =
-        EVT::getVectorVT(*DAG.getContext(), PackedVT.getVectorElementType(),
-                         PackedVT.getVectorElementCount() * 3);
+        EVT::getVectorVT(*DAG.getContext(), StoreVT.getVectorElementType(),
+                         StoreVT.getVectorElementCount() * 3);
     SDValue Chain = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TriplePackedVT,
         StackPtrInfo, Alignment, MachineMemOperand::MOStore);
@@ -36042,9 +36056,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     SmallVector<SDValue, 3> Results;
     for (unsigned I = 0; I < 3; ++I) {
       SDValue Ptr =
-          DAG.getMemBasePlusOffset(StackPtr, PackedVT.getStoreSize() * I, DL);
-      SDValue L = DAG.getLoad(PackedVT, DL, Chain, Ptr, MachinePointerInfo());
-      Results.push_back(getSVESafeBitCast(OpVT, L, DAG));
+          DAG.getMemBasePlusOffset(StackPtr, StoreVT.getStoreSize() * I, DL);
+      SDValue L = DAG.getLoad(StoreVT, DL, Chain, Ptr, MachinePointerInfo());
+      Results.push_back(UseFixedSVE ? L : getSVESafeBitCast(OpVT, L, DAG));
     }
 
     return DAG.getMergeValues(Results, DL);
