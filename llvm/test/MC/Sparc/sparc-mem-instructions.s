@@ -90,6 +90,18 @@
         ! V8: ldd [%g1], %o2        ! encoding: [0xd4,0x18,0x40,0x00]
         ! V9: ldd [%g1], %o2        ! encoding: [0xd4,0x18,0x40,0x00]
         ldd [%g1], %o2
+        ! V8: ldd [%g1], %sp        ! encoding: [0xdc,0x18,0x40,0x00]
+        ! V9: ldd [%g1], %sp        ! encoding: [0xdc,0x18,0x40,0x00]
+        ldd [%g1], %o6
+        ! V8: ldd [%g1], %sp        ! encoding: [0xdc,0x18,0x40,0x00]
+        ! V9: ldd [%g1], %sp        ! encoding: [0xdc,0x18,0x40,0x00]
+        ldd [%g1], %sp
+        ! V8: ldd [%g1], %fp        ! encoding: [0xfc,0x18,0x40,0x00]
+        ! V9: ldd [%g1], %fp        ! encoding: [0xfc,0x18,0x40,0x00]
+        ldd [%g1], %i6
+        ! V8: ldd [%g1], %fp        ! encoding: [0xfc,0x18,0x40,0x00]
+        ! V9: ldd [%g1], %fp        ! encoding: [0xfc,0x18,0x40,0x00]
+        ldd [%g1], %fp
         ! V8: ldda [%i0+%l6] 131, %o2 ! encoding: [0xd4,0x9e,0x10,0x76]
         ! V9: ldda [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0x9e,0x10,0x76]
         ldda [%i0 + %l6] 131, %o2
@@ -190,6 +202,12 @@
         ! V8: std %o2, [%g1]        ! encoding: [0xd4,0x38,0x40,0x00]
         ! V9: std %o2, [%g1]        ! encoding: [0xd4,0x38,0x40,0x00]
         std %o2, [%g1]
+        ! V8: std %sp, [%g1]        ! encoding: [0xdc,0x38,0x40,0x00]
+        ! V9: std %sp, [%g1]        ! encoding: [0xdc,0x38,0x40,0x00]
+        std %o6, [%g1]
+        ! V8: std %fp, [%g1]        ! encoding: [0xfc,0x38,0x40,0x00]
+        ! V9: std %fp, [%g1]        ! encoding: [0xfc,0x38,0x40,0x00]
+        std %i6, [%g1]
         ! V8: stda %o2, [%i0+%l6] 131 ! encoding: [0xd4,0xbe,0x10,0x76]
         ! V9: stda %o2, [%i0+%l6] #ASI_SNF ! encoding: [0xd4,0xbe,0x10,0x76]
         stda %o2, [%i0 + %l6] 131

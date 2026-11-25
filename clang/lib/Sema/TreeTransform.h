@@ -13629,9 +13629,13 @@ StmtResult TreeTransform<Derived>::TransformOpenACCAtomicConstruct(
       getSema().OpenACC(), C->getDirectiveKind(), C->getDirectiveLoc(), {}, {});
 
   StmtResult AssocStmt = getDerived().TransformStmt(C->getAssociatedStmt());
-  AssocStmt = getSema().OpenACC().ActOnAssociatedStmt(
-      C->getBeginLoc(), C->getDirectiveKind(), C->getAtomicKind(), {},
-      AssocStmt);
+
+  // DeclStmt is never valid here. Our pass through this while dependent already
+  // diagnosed it, so there is no reason to check it again.
+  if (!isa<DeclStmt>(C->getAssociatedStmt()))
+    AssocStmt = getSema().OpenACC().ActOnAssociatedStmt(
+        C->getBeginLoc(), C->getDirectiveKind(), C->getAtomicKind(), {},
+        AssocStmt);
 
   return getDerived().RebuildOpenACCAtomicConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getAtomicKind(),

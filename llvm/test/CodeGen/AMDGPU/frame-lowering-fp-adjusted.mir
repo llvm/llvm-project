@@ -13,7 +13,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 liveins:         
   - { reg: '$vgpr0' }
   - { reg: '$sgpr4_sgpr5' }

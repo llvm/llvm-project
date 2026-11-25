@@ -3,434 +3,434 @@
 # RUN: | FileCheck %s
 
 ---
-name:            sitofp_s32_s1
+name:            sitofp_f32_i1
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s32_s1
+    ; CHECK-LABEL: name: sitofp_f32_i1
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 63
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SHL]], [[C]](i64)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %1(s64)
-    %2:_(s32) = G_SITOFP %0(s1)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %1(i64)
+    %2:_(f32) = G_SITOFP %0(i1)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            uitofp_s32_s1
+name:            uitofp_f32_i1
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s32_s1
+    ; CHECK-LABEL: name: uitofp_f32_i1
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %1(s64)
-    %2:_(s32) = G_UITOFP %0(s1)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %1(i64)
+    %2:_(f32) = G_UITOFP %0(i1)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            sitofp_s32_s8
+name:            sitofp_f32_i8
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s32_s8
+    ; CHECK-LABEL: name: sitofp_f32_i8
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 56
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SHL]], [[C]](i64)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s8) = G_TRUNC %1(s64)
-    %2:_(s32) = G_SITOFP %0(s8)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i8) = G_TRUNC %1(i64)
+    %2:_(f32) = G_SITOFP %0(i8)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            uitofp_s32_s8
+name:            uitofp_f32_i8
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s32_s8
+    ; CHECK-LABEL: name: uitofp_f32_i8
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s8) = G_TRUNC %1(s64)
-    %2:_(s32) = G_UITOFP %0(s8)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i8) = G_TRUNC %1(i64)
+    %2:_(f32) = G_UITOFP %0(i8)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            sitofp_s32_s16
+name:            sitofp_f32_i16
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s32_s16
+    ; CHECK-LABEL: name: sitofp_f32_i16
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 48
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SHL]], [[C]](i64)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[ASHR]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s16) = G_TRUNC %1(s64)
-    %2:_(s32) = G_SITOFP %0(s16)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i16) = G_TRUNC %1(i64)
+    %2:_(f32) = G_SITOFP %0(i16)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            uitofp_s32_s16
+name:            uitofp_f32_i16
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s32_s16
+    ; CHECK-LABEL: name: uitofp_f32_i16
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s16) = G_TRUNC %1(s64)
-    %2:_(s32) = G_UITOFP %0(s16)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i16) = G_TRUNC %1(i64)
+    %2:_(f32) = G_UITOFP %0(i16)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            sitofp_s32_s32
+name:            sitofp_f32_i32
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s32_s32
+    ; CHECK-LABEL: name: sitofp_f32_i32
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[SEXT_INREG]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s32) = G_TRUNC %1(s64)
-    %2:_(s32) = G_SITOFP %0(s32)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i32) = G_TRUNC %1(i64)
+    %2:_(f32) = G_SITOFP %0(i32)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            uitofp_s32_s32
+name:            uitofp_f32_i32
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s32_s32
+    ; CHECK-LABEL: name: uitofp_f32_i32
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s64) = COPY $x10
-    %0:_(s32) = G_TRUNC %1(s64)
-    %2:_(s32) = G_UITOFP %0(s32)
-    $f10_f = COPY %2(s32)
+    %1:_(i64) = COPY $x10
+    %0:_(i32) = G_TRUNC %1(i64)
+    %2:_(f32) = G_UITOFP %0(i32)
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            sitofp_s32_s64
+name:            sitofp_f32_i64
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s32_s64
+    ; CHECK-LABEL: name: sitofp_f32_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f32) = G_SITOFP [[COPY]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[SITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:_(s64) = COPY $x10
-    %1:_(s32) = G_SITOFP %0(s64)
-    $f10_f = COPY %1(s32)
+    %0:_(i64) = COPY $x10
+    %1:_(f32) = G_SITOFP %0(i64)
+    $f10_f = COPY %1(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            uitofp_s32_s64
+name:            uitofp_f32_i64
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s32_s64
+    ; CHECK-LABEL: name: uitofp_f32_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s64)
-    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f32) = G_UITOFP [[COPY]](i64)
+    ; CHECK-NEXT: $f10_f = COPY [[UITOFP]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:_(s64) = COPY $x10
-    %1:_(s32) = G_UITOFP %0(s64)
-    $f10_f = COPY %1(s32)
+    %0:_(i64) = COPY $x10
+    %1:_(f32) = G_UITOFP %0(i64)
+    $f10_f = COPY %1(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
-name:            sitofp_s64_s1
+name:            sitofp_f64_i1
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s64_s1
+    ; CHECK-LABEL: name: sitofp_f64_i1
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 63
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SHL]], [[C]](i64)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %1(s64)
-    %2:_(s64) = G_SITOFP %0(s1)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %1(i64)
+    %2:_(f64) = G_SITOFP %0(i1)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            uitofp_s64_s1
+name:            uitofp_f64_i1
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s64_s1
+    ; CHECK-LABEL: name: uitofp_f64_i1
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %1(s64)
-    %2:_(s64) = G_UITOFP %0(s1)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %1(i64)
+    %2:_(f64) = G_UITOFP %0(i1)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            sitofp_s64_s8
+name:            sitofp_f64_i8
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s64_s8
+    ; CHECK-LABEL: name: sitofp_f64_i8
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 56
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SHL]], [[C]](i64)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s8) = G_TRUNC %1(s64)
-    %2:_(s64) = G_SITOFP %0(s8)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i8) = G_TRUNC %1(i64)
+    %2:_(f64) = G_SITOFP %0(i8)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            uitofp_s64_s8
+name:            uitofp_f64_i8
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s64_s8
+    ; CHECK-LABEL: name: uitofp_f64_i8
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s8) = G_TRUNC %1(s64)
-    %2:_(s64) = G_UITOFP %0(s8)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i8) = G_TRUNC %1(i64)
+    %2:_(f64) = G_UITOFP %0(i8)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            sitofp_s64_s16
+name:            sitofp_f64_i16
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s64_s16
+    ; CHECK-LABEL: name: sitofp_f64_i16
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 48
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[SHL]], [[C]](i64)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[ASHR]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s16) = G_TRUNC %1(s64)
-    %2:_(s64) = G_SITOFP %0(s16)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i16) = G_TRUNC %1(i64)
+    %2:_(f64) = G_SITOFP %0(i16)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            uitofp_s64_s16
+name:            uitofp_f64_i16
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s64_s16
+    ; CHECK-LABEL: name: uitofp_f64_i16
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s16) = G_TRUNC %1(s64)
-    %2:_(s64) = G_UITOFP %0(s16)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i16) = G_TRUNC %1(i64)
+    %2:_(f64) = G_UITOFP %0(i16)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            sitofp_s64_s32
+name:            sitofp_f64_i32
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s64_s32
+    ; CHECK-LABEL: name: sitofp_f64_i32
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[SEXT_INREG]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[SEXT_INREG]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s32) = G_TRUNC %1(s64)
-    %2:_(s64) = G_SITOFP %0(s32)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i32) = G_TRUNC %1(i64)
+    %2:_(f64) = G_SITOFP %0(i32)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            uitofp_s64_s32
+name:            uitofp_f64_i32
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s64_s32
+    ; CHECK-LABEL: name: uitofp_f64_i32
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[AND]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %1:_(s64) = COPY $x10
-    %0:_(s32) = G_TRUNC %1(s64)
-    %2:_(s64) = G_UITOFP %0(s32)
-    $f10_d = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %0:_(i32) = G_TRUNC %1(i64)
+    %2:_(f64) = G_UITOFP %0(i32)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            sitofp_s64_s64
+name:            sitofp_f64_i64
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: sitofp_s64_s64
+    ; CHECK-LABEL: name: sitofp_f64_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(f64) = G_SITOFP [[COPY]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[SITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:_(s64) = COPY $x10
-    %1:_(s64) = G_SITOFP %0(s64)
-    $f10_d = COPY %1(s64)
+    %0:_(i64) = COPY $x10
+    %1:_(f64) = G_SITOFP %0(i64)
+    $f10_d = COPY %1(f64)
     PseudoRET implicit $f10_d
 
 ...
 ---
-name:            uitofp_s64_s64
+name:            uitofp_f64_i64
 body:             |
   bb.1:
     liveins: $x10
 
-    ; CHECK-LABEL: name: uitofp_s64_s64
+    ; CHECK-LABEL: name: uitofp_f64_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[COPY]](s64)
-    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(f64) = G_UITOFP [[COPY]](i64)
+    ; CHECK-NEXT: $f10_d = COPY [[UITOFP]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:_(s64) = COPY $x10
-    %1:_(s64) = G_UITOFP %0(s64)
-    $f10_d = COPY %1(s64)
+    %0:_(i64) = COPY $x10
+    %1:_(f64) = G_UITOFP %0(i64)
+    $f10_d = COPY %1(f64)
     PseudoRET implicit $f10_d
 
 ...

@@ -455,7 +455,6 @@ public:
   std::string getIdName() const;
   std::string getQualifiedIdName() const;
   ArrayRef<ValueTypeByHwMode> getValueTypes() const { return VTs; }
-  unsigned getNumValueTypes() const { return VTs.size(); }
   bool hasType(const ValueTypeByHwMode &VT) const;
 
   const ValueTypeByHwMode &getValueTypeNum(unsigned VTNum) const {
