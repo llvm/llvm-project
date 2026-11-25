@@ -641,12 +641,9 @@ AArch64TTIImpl::getHistogramCost(const AArch64Subtarget *ST,
   if (!ST->isSVEAvailable() || !ST->hasSVE2())
     return InstructionCost::getInvalid();
 
-  auto *BucketPtrsTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
-  if (!BucketPtrsTy)
-    return InstructionCost::getInvalid();
-
   // FIXME: We should be able to generate histcnt for fixed-length vectors
   //        using ptrue with a specific VL.
+  auto *BucketPtrsTy = cast<VectorType>(ICA.getArgTypes()[0]);
   unsigned MinEC = BucketPtrsTy->getElementCount().getKnownMinValue();
   if (!isPowerOf2_64(MinEC) || !BucketPtrsTy->isScalableTy() || MinEC == 1)
     return InstructionCost::getInvalid();
