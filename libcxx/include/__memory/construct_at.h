@@ -15,6 +15,7 @@
 #include <__memory/addressof.h>
 #include <__new/placement_new_delete.h>
 #include <__type_traits/is_array.h>
+#include <__type_traits/is_trivially_destructible.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 
@@ -56,7 +57,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* __construct_at(_Tp* __location, _Args&&... __
 
 template <class _Tp>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy_at(_Tp* __loc) {
-  _LIBCPP_ASSERT_NON_NULL(__loc != nullptr, "null pointer given to destroy_at");
+  // Destroying a trivially destructible object does not access memory, so skip
+  // the per-element dereference check to allow range-destruction loops to fold.
+  if _LIBCPP_CONSTEXPR (!is_trivially_destructible<_Tp>::value)
+    _LIBCPP_ASSERT_NON_NULL(__loc != nullptr, "null pointer given to destroy_at");
 #if _LIBCPP_STD_VER >= 20
   if constexpr (is_array_v<_Tp>) {
     for (auto&& __val : *__loc)
@@ -71,6 +75,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy_at(_Tp* __loc) {
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy_at(_Tp* _LIBCPP_DIAGNOSE_NULLPTR __loc) {
+  _LIBCPP_ASSERT_NON_NULL(__loc != nullptr, "null pointer given to destroy_at");
   std::__destroy_at(__loc);
 }
 #endif // _LIBCPP_STD_VER >= 17
