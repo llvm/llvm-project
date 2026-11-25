@@ -1301,7 +1301,7 @@ def warn_failed_to_resolve_pragma : Warning<
   "failed to resolve '#pragma %0' to a declaration">,
   InGroup<IgnoredPragmas>;
 def warn_pragma_different_asm_label : Warning<
-  "#pragma map has conflicting asm label; not applied to %0">,
+  "'#pragma map' has conflicting asm label; not applied to %0">,
   InGroup<IgnoredPragmas>;
 def warn_pragma_not_applied : Warning<
   "#pragma %0 is applicable to symbols with external linkage only; "
