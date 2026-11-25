@@ -9965,7 +9965,7 @@ def err_cannot_pass_to_vararg_format : Error<
   "string was %3">;
 
 def err_typecheck_call_invalid_ordered_compare : Error<
-  "ordered compare requires two args of floating point type"
+  "floating point comparison requires two arguments of floating point type"
   "%diff{ ($ and $)|}0,1">;
 def err_typecheck_call_invalid_unary_fp : Error<
   "floating point classification requires argument of floating point type "

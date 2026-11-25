@@ -91,7 +91,7 @@ build_if_nameindex_list(BlockStore<InterfaceEntry, 16> &store) {
 
   cpp::span<struct if_nameindex> result(
       reinterpret_cast<struct if_nameindex *>(buffer), count + 1);
-  char *str_ptr = reinterpret_cast<char *>(result.end());
+  char *str_ptr = reinterpret_cast<char *>(result.data() + result.size());
 
   size_t idx = 0;
   for (const InterfaceEntry &entry : store) {

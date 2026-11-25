@@ -1332,8 +1332,7 @@ public:
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
-          NewMemCheckCost = std::max(NewMemCheckCost.getValue(),
-                                     (InstructionCost::CostType)1);
+          NewMemCheckCost = std::max(NewMemCheckCost, InstructionCost(1));
 
           if (BestTripCount > 1)
             LLVM_DEBUG(dbgs()
@@ -3538,8 +3537,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
         InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
         if (StallCycles.isValid() && RecipThroughput.isValid() &&
             StallCycles > 0 && RecipThroughput > 0) {
-          unsigned ThisIC = bit_floor<uint64_t>(
-              1 + (StallCycles / RecipThroughput).getValue());
+          InstructionCost ModifiedCycles = (StallCycles / RecipThroughput) + 1;
+          unsigned ThisIC = bit_floor<uint64_t>(ModifiedCycles.getValue());
           StallsIC = std::max(StallsIC, ThisIC);
         }
       }
@@ -3584,9 +3583,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // We assume that the cost overhead is 1 and we use the cost model
     // to estimate the cost of the loop and interleave until the cost of the
     // loop overhead is about 5% of the cost of the loop.
+    InstructionCost NumLoops = InstructionCost(Opts.small_loop_cost) / LoopCost;
     unsigned SmallIC =
-        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(Opts.small_loop_cost /
-                                                         LoopCost.getValue()));
+        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(NumLoops.getValue()));
 
     // Interleave until store/load ports (estimated by max interleave count) are
     // saturated.
@@ -6453,6 +6452,11 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
+  // Form interleave groups before scalarization decisions, so those see the
+  // group's single address use.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, PlanCM.isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   // Widened calls may only use the first lane of some operands.
@@ -6476,7 +6480,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                     VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
                     VPWidenCallRecipe, VPWidenIntrinsicRecipe,
                     VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                    VPHistogramRecipe, VPInstruction>) &&
+                    VPHistogramRecipe, VPInterleaveRecipe, VPInstruction>) &&
         "Unexpected recipe");
     for (VPInstruction &VPI :
          make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
@@ -6541,12 +6545,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // Create whole-vector selects for find-last recurrences.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, PlanCM.isEpilogueAllowed());
 
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
@@ -7840,15 +7838,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IntDiagMsg = {
         "PartialAliasingVectorization",
         "Unable to interleave due to partial aliasing vectorization."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
-
-  // FIXME: Enable interleaving for EE-with-side-effects.
-  if (InterleaveLoop && LVL.hasUncountableExitWithSideEffects()) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
-    IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
-                  "Unable to interleave due to early exit with side effects."};
     InterleaveLoop = false;
     IC = 1;
   }

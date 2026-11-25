@@ -167,6 +167,10 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat()) {
     addRegisterClass(MVT::f32, &Mips::FGR32RegClass);
 
+    // The rounding mode is in FCSR.
+    setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+
     // RINT uses the current rounding mode and may raise inexact.
     if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -200,6 +204,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
                     ISD::STRICT_FDIV, ISD::STRICT_FSQRT}) {
       setOperationAction(Op, MVT::f32, Legal);
       setOperationAction(Op, MVT::f64, Legal);
+    }
+
+    // MIPS I has no sqrt.fmt, use a libcall.
+    if (!Subtarget.hasMips2()) {
+      for (auto Op : {ISD::FSQRT, ISD::STRICT_FSQRT}) {
+        setOperationAction(Op, MVT::f32, Expand);
+        setOperationAction(Op, MVT::f64, Expand);
+      }
     }
   }
 
@@ -296,12 +308,12 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::i32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 
-    setOperationAction(ISD::SETCC, MVT::f32, Legal);
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
     setOperationAction(ISD::SELECT, MVT::f32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
-    setOperationAction(ISD::SETCC, MVT::f64, Legal);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
     setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
