@@ -39,6 +39,8 @@ void M68kTargetCodeGenInfo::setTargetAttributes(
       F->setCallingConv(llvm::CallingConv::M68k_INTR);
 
       // Step 2: Emit ISR vector alias.
+      if (F->isDeclaration())
+        return;
       unsigned Num = attr->getNumber() / 2;
       llvm::GlobalAlias::create(llvm::Function::ExternalLinkage,
                                 "__isr_" + Twine(Num), F);
