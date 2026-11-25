@@ -3900,6 +3900,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":WebAssemblyOptionsTableGen",
             ":webassembly_isel_target_gen",
         ],
     },
@@ -4357,6 +4358,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/SystemZ/SystemZOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/SystemZ/SystemZOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "WebAssemblyOptionsTableGen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {"lib/Target/WebAssembly/WebAssemblyOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
