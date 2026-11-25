@@ -267,7 +267,7 @@ public:
   /// Number of elements that can be read from the global.
   uint64_t size() const { return ElementCount; }
 
-  /// Get the index value of the linear experession that can be compared against
+  /// Get the index value of the linear expression that can be compared against
   /// known index values. E.g. if `elementAt(5)` returns a constant, then the
   /// load instruction, when the returned value here is '5' reads the same
   /// constant.
