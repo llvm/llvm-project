@@ -9,7 +9,13 @@ $multi = comdat any
 define i32 @caller_single(i32 %x) {
 ; CHECK-LABEL: define i32 @caller_single(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[A_I:%.*]] = call i32 @callee_single(i32 [[X]])
+; CHECK-NEXT:    [[V1_I:%.*]] = mul i32 [[X]], 3
+; CHECK-NEXT:    [[V2_I:%.*]] = mul i32 [[V1_I]], 5
+; CHECK-NEXT:    [[V3_I:%.*]] = mul i32 [[V2_I]], 7
+; CHECK-NEXT:    [[V4_I:%.*]] = mul i32 [[V3_I]], 11
+; CHECK-NEXT:    [[V5_I:%.*]] = mul i32 [[V4_I]], 13
+; CHECK-NEXT:    [[V6_I:%.*]] = mul i32 [[V5_I]], 17
+; CHECK-NEXT:    [[A_I:%.*]] = mul i32 [[V6_I]], 19
 ; CHECK-NEXT:    ret i32 [[A_I]]
 ;
   %r = call i32 @single(i1 true, i32 %x)
@@ -27,17 +33,6 @@ else:
 }
 
 define internal i32 @callee_single(i32 %x) {
-; CHECK-LABEL: define internal i32 @callee_single(
-; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = mul i32 [[X]], 3
-; CHECK-NEXT:    [[V2:%.*]] = mul i32 [[V1]], 5
-; CHECK-NEXT:    [[V3:%.*]] = mul i32 [[V2]], 7
-; CHECK-NEXT:    [[V4:%.*]] = mul i32 [[V3]], 11
-; CHECK-NEXT:    [[V5:%.*]] = mul i32 [[V4]], 13
-; CHECK-NEXT:    [[V6:%.*]] = mul i32 [[V5]], 17
-; CHECK-NEXT:    [[V7:%.*]] = mul i32 [[V6]], 19
-; CHECK-NEXT:    ret i32 [[V7]]
-;
   %v1 = mul i32 %x, 3
   %v2 = mul i32 %v1, 5
   %v3 = mul i32 %v2, 7
