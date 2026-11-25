@@ -673,7 +673,8 @@ private:
   // Pass-plugins that we loaded from the provided configuration.
   SmallVector<std::unique_ptr<PassPlugin>, 0> PassPlugins;
 
-  // Load pass-plugins from the provided configuration.
+  // Load pass-plugins and pass them their arguments from the provided
+  // configuration.
   Error setupPassPlugins();
 
   // LibFuncs that were implemented in bitcode but were not extracted

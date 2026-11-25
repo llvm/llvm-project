@@ -2408,8 +2408,9 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
 // folds to true, the trap branch becomes dead, and later passes fold it
 // away. Required because the backend cannot select these intrinsics
 // ("must be lowered by the LowerTypeTests pass before code generation").
-bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
-                                            bool IsRelative) {
+bool lowertypetests::cleanUpTypeCheckedLoad(
+    Module &M, Function &CheckedLoadFn, bool IsRelative,
+    SmallSetVector<Function *, 8> *ModifiedFunctions) {
   bool Changed = false;
   for (User *User : llvm::make_early_inc_range(CheckedLoadFn.users())) {
     Instruction *I = dyn_cast<Instruction>(User);
@@ -2435,6 +2436,9 @@ bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
     Replacement = IRB.CreateInsertValue(Replacement, Load, {0});
     I->replaceAllUsesWith(Replacement);
 
+    if (ModifiedFunctions)
+      ModifiedFunctions->insert(I->getFunction());
+
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": erase " << *I << "\n");
     I->eraseFromParent();
     Changed = true;
@@ -2447,10 +2451,11 @@ bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
   return Changed;
 }
 
-static void dropTypeTests(Module &M, Function &TypeTestFunc,
-                          bool ShouldDropAll) {
+static void dropTypeTests(Module &M, Function &TypeTestFunc, bool ShouldDropAll,
+                          SmallSetVector<Function *, 8> &ModifiedFunctions) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
     auto *CI = cast<CallInst>(U.getUser());
+    ModifiedFunctions.insert(CI->getFunction());
     // Find and erase llvm.assume intrinsics for this llvm.type.test call.
     for (Use &CIU : llvm::make_early_inc_range(CI->uses()))
       if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
@@ -2471,11 +2476,12 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc,
   }
 }
 
-static bool dropTypeTests(Module &M, bool ShouldDropAll) {
+static bool dropTypeTests(Module &M, bool ShouldDropAll,
+                          SmallSetVector<Function *, 8> &ModifiedFunctions) {
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   if (TypeTestFunc)
-    dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
+    dropTypeTests(M, *TypeTestFunc, ShouldDropAll, ModifiedFunctions);
   // Only drop checked loads when dropping everything: in Assume mode a
   // checked load may feed a CFI trap check, which must keep diagnosing
   // loudly instead of being turned to true.
@@ -2483,12 +2489,12 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
   if (ShouldDropAll) {
     if (Function *F =
             Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load))
-      DroppedCheckedLoads |=
-          lowertypetests::cleanUpTypeCheckedLoad(M, *F, false);
+      DroppedCheckedLoads |= lowertypetests::cleanUpTypeCheckedLoad(
+          M, *F, false, &ModifiedFunctions);
     if (Function *F = Intrinsic::getDeclarationIfExists(
             &M, Intrinsic::type_checked_load_relative))
-      DroppedCheckedLoads |=
-          lowertypetests::cleanUpTypeCheckedLoad(M, *F, true);
+      DroppedCheckedLoads |= lowertypetests::cleanUpTypeCheckedLoad(
+          M, *F, true, &ModifiedFunctions);
   }
   // Normally we'd have already removed all @llvm.public.type.test calls,
   // except for in the case where we originally were performing ThinLTO but
@@ -2496,7 +2502,7 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
   Function *PublicTypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (PublicTypeTestFunc)
-    dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
+    dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll, ModifiedFunctions);
   bool Changed = TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads;
   if (Changed || ShouldDropAll) {
     // We have deleted the type intrinsics, so we no longer have enough
@@ -3058,8 +3064,33 @@ void DropTypeTestsPass::printPipeline(
 }
 
 PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
-  return dropTypeTests(M, Kind == DropTestKind::All) ? PreservedAnalyses::none()
-                                                     : PreservedAnalyses::all();
+  bool ShouldDropAll = Kind == DropTestKind::All;
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  // Dropping all type tests erases the checked load declarations. Since the
+  // proxy is preserved, their analyses need to be cleared before they are
+  // deleted.
+  if (ShouldDropAll) {
+    for (Intrinsic::ID ID : {Intrinsic::type_checked_load,
+                             Intrinsic::type_checked_load_relative}) {
+      if (Function *F = Intrinsic::getDeclarationIfExists(&M, ID))
+        FAM.clear(*F, F->getName());
+    }
+  }
+
+  SmallSetVector<Function *, 8> ModifiedFunctions;
+  if (!dropTypeTests(M, ShouldDropAll, ModifiedFunctions))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *F : ModifiedFunctions)
+    FAM.invalidate(*F, FuncPA);
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
 
 PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,

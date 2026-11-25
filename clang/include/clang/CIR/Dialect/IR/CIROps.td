@@ -1890,7 +1890,7 @@ def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 
 def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  AttrSizedOperandSegments, Terminator
+  AttrSizedOperandSegments, Pure, Terminator
 ]> {
   let summary = "A flattened version of cir.switch";
 
@@ -2761,6 +2761,100 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let hasVerifier = 1;
   let isLLVMLoweringRecursive = true;
   let hasCXXABILowering = true;
+}
+
+//===----------------------------------------------------------------------===//
+// FCmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FCmpOpKind : CIR_I32Enum<"FCmpOpKind", "floating compare operation kind", [
+  I32EnumCase<"_false", 0, "false">,
+  I32EnumCase<"oeq", 1>,
+  I32EnumCase<"ogt", 2>,
+  I32EnumCase<"oge", 3>,
+  I32EnumCase<"olt", 4>,
+  I32EnumCase<"ole", 5>,
+  I32EnumCase<"one", 6>,
+  I32EnumCase<"ord", 7>,
+  I32EnumCase<"ueq", 8>,
+  I32EnumCase<"ugt", 9>,
+  I32EnumCase<"uge", 10>,
+  I32EnumCase<"ult", 11>,
+  I32EnumCase<"ule", 12>,
+  I32EnumCase<"une", 13>,
+  I32EnumCase<"uno", 14>,
+  I32EnumCase<"_true", 15, "true">
+]>;
+
+def CIR_FCmpOpKindAttr : CIR_EnumAttr<CIR_FCmpOpKind, "fcmp">;
+
+def CIR_FCmpOp : CIR_Op<"fcmp",
+    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
+  let summary = "Compare two floating point values and produce a boolean result";
+  let description = [{
+    The `cir.fcmp` operation compares two operands of the same floating type and
+    produces a `!cir.bool` result.
+
+    The following comparison predicates are available:
+
+    - `false`: no comparison, always returns false
+    - `oeq`: ordered and equal
+    - `ogt`: ordered and greater than
+    - `oge`: ordered and greater than or equal
+    - `olt`: ordered and less than
+    - `ole`: ordered and less than or equal
+    - `one`: ordered and not equal
+    - `ord`: ordered (no nans)
+    - `ueq`: unordered or equal
+    - `ugt`: unordered or greater than
+    - `uge`: unordered or greater than or equal
+    - `ult`: unordered or less than
+    - `ule`: unordered or less than or equal
+    - `une`: unordered or not equal
+    - `uno`: unordered (either nans)
+    - `true`: no comparison, always returns true
+
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation. It is only valid for floating-point
+    comparisons.
+
+    `signaling` attribute overrides whether a floating-point
+    comparison raises an invalid exception for quiet NaN operands if fenv
+    attribute is present.
+
+    ```
+    %0 = cir.fcmp olt %x, %y : !cir.float fenv<>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_FCmpOpKindAttr:$kind,
+    CIR_AnyFloatType:$lhs,
+    CIR_AnyFloatType:$rhs,
+    UnitAttr:$signaling,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    enum($kind) $lhs `,` $rhs `:` type($lhs)
+    (`signaling` $signaling^)?
+    (`fenv` `` $fenv^)? attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "cir::FCmpOpKind":$kind, "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      build($_builder, $_state, kind, lhs, rhs, /*signaling=*/false,
+        cir::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "mlir::Type":$result, "cir::FCmpOpKind":$kind,
+                   "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, kind, lhs, rhs, /*signaling=*/false,
+        cir::FenvAttr{});
+    }]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -5010,11 +5104,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       return getOperand(0);
     }
 
-    /// Set the callee for this operation.
-    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr(getCalleeAttrName(),
-                       mlir::cast<mlir::SymbolRefAttr>(callee));
-    }
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee);
 
     /// Returns the `cir.func` being called or null if the call is indirect or
     /// cannot be resolved.
@@ -5033,6 +5123,25 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   let extraClassDefinition = [{
     bool $cppClass::isIndirect() { return !getCallee(); }
+
+    void $cppClass::setCalleeFromCallable(
+        ::mlir::CallInterfaceCallable callee) {
+      bool wasIndirect = isIndirect();
+      if (auto symbol = llvm::dyn_cast<mlir::SymbolRefAttr>(callee)) {
+        if (wasIndirect)
+          (*this)->eraseOperand(0);
+        (*this)->setAttr(getCalleeAttrName(), symbol);
+        return;
+      }
+
+      auto calleeValue = llvm::cast<mlir::Value>(callee);
+      if (wasIndirect) {
+        setOperand(0, calleeValue);
+        return;
+      }
+      (*this)->removeAttr(getCalleeAttrName());
+      (*this)->insertOperands(0, calleeValue);
+    }
 
     cir::FuncOp $cppClass::resolveCalleeInTable(
         mlir::SymbolTableCollection &symbolTable) {
@@ -6709,8 +6818,6 @@ def CIR_VecInsertOp : CIR_Op<"vec.insert", [
     $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
     qualified(type($vec))
   }];
-
-  let llvmOp = "InsertElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6742,8 +6849,6 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
   }];
 
   let hasFolder = 1;
-
-  let llvmOp = "ExtractElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6897,27 +7002,6 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
 //===----------------------------------------------------------------------===//
 // VecFCmpOp
 //===----------------------------------------------------------------------===//
-
-def CIR_FCmpOpKind : CIR_I32Enum<"FCmpOpKind", "floating compare operation kind", [
-  I32EnumCase<"_false", 0, "false">,
-  I32EnumCase<"oeq", 1>,
-  I32EnumCase<"ogt", 2>,
-  I32EnumCase<"oge", 3>,
-  I32EnumCase<"olt", 4>,
-  I32EnumCase<"ole", 5>,
-  I32EnumCase<"one", 6>,
-  I32EnumCase<"ord", 7>,
-  I32EnumCase<"ueq", 8>,
-  I32EnumCase<"ugt", 9>,
-  I32EnumCase<"uge", 10>,
-  I32EnumCase<"ult", 11>,
-  I32EnumCase<"ule", 12>,
-  I32EnumCase<"une", 13>,
-  I32EnumCase<"uno", 14>,
-  I32EnumCase<"_true", 15, "true">
-]>;
-
-def CIR_FCmpOpKindAttr : CIR_EnumAttr<CIR_FCmpOpKind, "fcmp">;
 
 def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
     !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
