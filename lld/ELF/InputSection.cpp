@@ -268,25 +268,37 @@ void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
 
   auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content().data());
   if (hdr->ch_type == ELFCOMPRESS_ZLIB) {
-    if (!compression::zlib::isAvailable())
+    if (!compression::zlib::isAvailable()) {
       ErrAlways(ctx) << this
                      << " is compressed with ELFCOMPRESS_ZLIB, but lld is "
                         "not built with zlib support";
+      return;
+    }
   } else if (hdr->ch_type == ELFCOMPRESS_ZSTD) {
-    if (!compression::zstd::isAvailable())
+    if (!compression::zstd::isAvailable()) {
       ErrAlways(ctx) << this
                      << " is compressed with ELFCOMPRESS_ZSTD, but lld is "
                         "not built with zstd support";
+      return;
+    }
   } else {
     ErrAlways(ctx) << this << ": unsupported compression type ("
                    << uint32_t(hdr->ch_type) << ")";
     return;
   }
 
-  compressed = true;
-  compressedSize = size;
-  size = hdr->ch_size;
   addralign = std::max<uint32_t>(hdr->ch_addralign, 1);
+  // SHF_ALLOC sections are read via content() and use jumpInstrMod/relaxAux,
+  // which overlap compressedSize. Decompress now.
+  if (flags & SHF_ALLOC) {
+    uint8_t *buf = makeThreadLocalN<uint8_t>(hdr->ch_size);
+    decompressAux<ELFT>(ctx, *this, content(), buf, hdr->ch_size);
+    content_ = buf;
+  } else {
+    compressed = true;
+    compressedSize = size;
+  }
+  size = hdr->ch_size;
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
