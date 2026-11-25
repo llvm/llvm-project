@@ -276,6 +276,38 @@ entry:
   ret void
 }
 
+define void @extract_16xi8_sext(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: extract_16xi8_sext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
+; CHECK-NEXT:    ext.w.b $a0, $a0
+; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = load volatile <16 x i8>, ptr %src
+  %1 = extractelement <16 x i8> %0, i64 1
+  %2 = sext i8 %1 to i32
+  store i32 %2, ptr %dst
+  ret void
+}
+
+define void @extract_8xi16_sext(ptr %src, ptr %dst) nounwind {
+; CHECK-LABEL: extract_8xi16_sext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
+; CHECK-NEXT:    ext.w.h $a0, $a0
+; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %0 = load volatile <8 x i16>, ptr %src
+  %1 = extractelement <8 x i16> %0, i64 1
+  %2 = sext i16 %1 to i32
+  store i32 %2, ptr %dst
+  ret void
+}
+
 define void @eliminate_frame_index(<4 x i32> %a) nounwind {
 ; LA32-LABEL: eliminate_frame_index:
 ; LA32:       # %bb.0:
