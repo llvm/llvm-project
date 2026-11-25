@@ -388,6 +388,8 @@ using TargetRegisterClass = MCRegisterClass;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
 

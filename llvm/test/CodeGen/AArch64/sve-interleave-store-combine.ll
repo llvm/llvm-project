@@ -700,6 +700,54 @@ define void @mix_interleave4_interleave2(ptr %dst1, ptr %dst2, <vscale x 4 x i32
   ret void
 }
 
+define void @interleave6(ptr %ptr, <vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x double> %d, <vscale x 2 x double> %e, <vscale x 2 x double> %f) {
+; CHECK-LABEL: interleave6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 z26.d, z2.d, z5.d
+; CHECK-NEXT:    zip1 z7.d, z2.d, z5.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    zip2 z25.d, z1.d, z4.d
+; CHECK-NEXT:    zip1 z6.d, z1.d, z4.d
+; CHECK-NEXT:    zip2 z24.d, z0.d, z3.d
+; CHECK-NEXT:    zip1 z5.d, z0.d, z3.d
+; CHECK-NEXT:    st3d { z24.d - z26.d }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3d { z5.d - z7.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <vscale x 12 x double> @llvm.vector.interleave6.nxv12f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x double> %d, <vscale x 2 x double> %e, <vscale x 2 x double> %f)
+  store <vscale x 12 x double> %interleaved.vec, ptr %ptr, align 8
+  ret void
+}
+
+define void @wide_interleave6(ptr %ptr, <vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d, <vscale x 4 x double> %e, <vscale x 4 x double> %f) {
+; CHECK-LABEL: wide_interleave6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z24, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z25, [x1, #1, mul vl]
+; CHECK-NEXT:    zip2 z26.d, z1.d, z7.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z29, [x1]
+; CHECK-NEXT:    ldr z30, [x2]
+; CHECK-NEXT:    zip2 z28.d, z5.d, z24.d
+; CHECK-NEXT:    zip2 z27.d, z3.d, z25.d
+; CHECK-NEXT:    st3d { z26.d - z28.d }, p0, [x0, #9, mul vl]
+; CHECK-NEXT:    zip1 z26.d, z1.d, z7.d
+; CHECK-NEXT:    zip1 z28.d, z5.d, z24.d
+; CHECK-NEXT:    zip1 z27.d, z3.d, z25.d
+; CHECK-NEXT:    st3d { z26.d - z28.d }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    zip2 z24.d, z0.d, z6.d
+; CHECK-NEXT:    zip1 z5.d, z0.d, z6.d
+; CHECK-NEXT:    zip2 z26.d, z4.d, z30.d
+; CHECK-NEXT:    zip1 z7.d, z4.d, z30.d
+; CHECK-NEXT:    zip2 z25.d, z2.d, z29.d
+; CHECK-NEXT:    zip1 z6.d, z2.d, z29.d
+; CHECK-NEXT:    st3d { z24.d - z26.d }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3d { z5.d - z7.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <vscale x 24 x double> @llvm.vector.interleave6.nxv24f64(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d, <vscale x 4 x double> %e, <vscale x 4 x double> %f)
+  store <vscale x 24 x double> %interleaved.vec, ptr %ptr, align 8
+  ret void
+}
+
 define void @interleave8(ptr %ptr, <vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x double> %d, <vscale x 2 x double> %e, <vscale x 2 x double> %f, <vscale x 2 x double> %g, <vscale x 2 x double> %h) {
 ; CHECK-LABEL: interleave8:
 ; CHECK:       // %bb.0:

@@ -1840,6 +1840,7 @@
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
 // CHECK_DMR_M32: #define __AMX_MOVRS__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
+// CHECK_DMR_M32: #define __APX_F__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
 // CHECK_GNR_M32: #define __AVX2__ 1
@@ -1865,6 +1866,7 @@
 // CHECK_GNR_M32: #define __BMI2__ 1
 // CHECK_GNR_M32: #define __BMI__ 1
 // CHECK_DMR_M32: #define __CCMP__ 1
+// CHECK_DMR_M32: #define __CF__ 1
 // CHECK_GNR_M32: #define __CLDEMOTE__ 1
 // CHECK_GNR_M32: #define __CLFLUSHOPT__ 1
 // CHECK_GNR_M32: #define __CLWB__ 1
@@ -1945,6 +1947,7 @@
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
 // CHECK_DMR_M64: #define __AMX_MOVRS__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
+// CHECK_DMR_M64: #define __APX_F__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
 // CHECK_GNR_M64: #define __AVX2__ 1
@@ -1970,6 +1973,7 @@
 // CHECK_GNR_M64: #define __BMI2__ 1
 // CHECK_GNR_M64: #define __BMI__ 1
 // CHECK_DMR_M64: #define __CCMP__ 1
+// CHECK_DMR_M64: #define __CF__ 1
 // CHECK_GNR_M64: #define __CLDEMOTE__ 1
 // CHECK_GNR_M64: #define __CLFLUSHOPT__ 1
 // CHECK_GNR_M64: #define __CLWB__ 1
@@ -2533,6 +2537,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_CWF_M32,CHECK_NVL_M32,CHECK_NKL_M32
 // CHECK_ARL_M32: #define __ADX__ 1
 // CHECK_ARL_M32: #define __AES__ 1
+// CHECK_NVL_M32: #define __APX_F__ 1
 // CHECK_NVL_M32: #define __AVX10_1__ 1
 // CHECK_NVL_M32: #define __AVX10_2__ 1
 // CHECK_ARL_M32: #define __AVX2__ 1
@@ -2562,6 +2567,7 @@
 // CHECK_ARL_M32: #define __BMI2__ 1
 // CHECK_ARL_M32: #define __BMI__ 1
 // CHECK_NVL_M32: #define __CCMP__ 1
+// CHECK_NVL_M32: #define __CF__ 1
 // CHECK_ARLS_M32-NOT: __CLDEMOTE__
 // CHECK_SRF_M32: #define __CLDEMOTE__ 1
 // CHECK_ARL_M32: #define __CLFLUSHOPT__ 1
@@ -2669,6 +2675,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_CWF_M64,CHECK_NVL_M64,CHECK_NKL_M64
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
+// CHECK_NVL_M64: #define __APX_F__ 1
 // CHECK_NVL_M64: #define __AVX10_1__ 1
 // CHECK_NVL_M64: #define __AVX10_2__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
@@ -2696,6 +2703,7 @@
 // CHECK_ARL_M64: #define __BMI2__ 1
 // CHECK_ARL_M64: #define __BMI__ 1
 // CHECK_NVL_M64: #define __CCMP__ 1
+// CHECK_NVL_M64: #define __CF__ 1
 // CHECK_ARLS_M64-NOT: __CLDEMOTE__
 // CHECK_SRF_M64: #define __CLDEMOTE__ 1
 // CHECK_ARL_M64: #define __CLFLUSHOPT__ 1
@@ -4814,6 +4822,20 @@
 // CHECK_SPARC-V9-NOT: #define __sparcv9 1
 // CHECK_SPARC-V9-NOT: #define __sparcv9__ 1
 
+// V7 lacks integer multiply and divide, so it gets none of the V8 macros.
+// RUN: %clang -mcpu=v7 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V7
+// RUN: %clang -mcpu=v7 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V7
+// CHECK_SPARC-V7: #define __sparc 1
+// CHECK_SPARC-V7: #define __sparc__ 1
+// CHECK_SPARC-V7-NOT: #define __sparc_v8__ 1
+// CHECK_SPARC-V7-NOT: #define __sparc_v9__ 1
+// CHECK_SPARC-V7-NOT: #define __sparcv8 1
+// CHECK_SPARC-V7-NOT: #define __sparcv8__ 1
+
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-sun-solaris \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOLARIS_GCC_ATOMICS
@@ -5123,20 +5145,6 @@
 // CHECK_AMDGCN: #define __HAS_FMAF__ 1
 // CHECK_AMDGCN: #define __HAS_FP64__ 1
 // CHECK_AMDGCN: #define __HAS_LDEXPF__ 1
-
-// Begin r600 tests ----------------
-
-// RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target r600-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600
-// CHECK_R600: #define __R600__ 1
-// CHECK_R600-NOT: #define __HAS_FMAF__ 1
-
-// RUN: %clang -mcpu=cypress -E -dM %s -o - 2>&1 \
-// RUN:     -target r600-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
-// CHECK_R600_FP64-DAG: #define __R600__ 1
-// CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
 
 // Begin HIP host tests -----------
 

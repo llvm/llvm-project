@@ -226,7 +226,8 @@ class TypeSuffix<string S, FuncArgType Ty> {
 class ErrnoMathLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
     : RuntimeLibcall<RetType, ArgTypes> {
   let FnAttrs = CommonFnAttrs;
-  let Memory = ErrnoMemWriteOnly;
+  let Memory = NoMemory;
+  let MathErrno = true;
 }
 
 class PureLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
@@ -383,14 +384,16 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ATAN2_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
     let FnAttrs = CommonFnAttrs;
-    let Memory = ArgOrErrnoMemWriteOnly;
+    let Memory = ArgMemWriteOnly;
+    let MathErrno = true;
     let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
   }
   def REMQUO_#FPTy.Suffix
       : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]> {
     let FnAttrs = CommonFnAttrs;
-    let Memory = ArgOrErrnoMemWriteOnly;
+    let Memory = ArgMemWriteOnly;
+    let MathErrno = true;
     let ParamAttrs = [[], [], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, NoneType, Int];
   }
@@ -434,7 +437,8 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   }
   def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
     let FnAttrs = CommonFnAttrs;
-    let Memory = ArgOrErrnoMemWriteOnly;
+    let Memory = ArgMemWriteOnly;
+    let MathErrno = true;
     let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
   }

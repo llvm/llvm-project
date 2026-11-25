@@ -6171,6 +6171,8 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
 let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
+  def SEH_StartProc : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_EndProc : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
@@ -6189,7 +6191,9 @@ let isPseudo = 1 in {
   def SEH_SetFP : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_AddFP : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
   def SEH_Nop : Pseudo<(outs), (ins), []>, Sched<[]>;
-  def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
+  // Windows unwind range insertion supports only one physical prologue.
+  let isNotDuplicable = 1 in
+    def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
