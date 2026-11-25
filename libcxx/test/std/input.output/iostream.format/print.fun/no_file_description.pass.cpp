@@ -14,7 +14,6 @@
 // XFAIL: target={{.+}}-windows-gnu
 // XFAIL: availability-fp_to_chars-missing
 
-
 // <print>
 
 // The FILE returned by fmemopen does not have file descriptor.

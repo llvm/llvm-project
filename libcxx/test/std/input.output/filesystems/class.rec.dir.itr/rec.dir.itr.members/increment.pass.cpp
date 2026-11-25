@@ -10,7 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
-
 // <filesystem>
 
 // class recursive_directory_iterator
