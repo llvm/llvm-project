@@ -591,25 +591,25 @@ struct CollapsedLoopNest {
 /// Describe a rectangular loop whose iteration count can be decided at compile
 /// time. Use arbitrary-precision arithmetic before checking the runtime width.
 static std::optional<CollapsedLoop> getCollapsibleLoop(isl::ast_node_for For) {
-  auto *Payload = IslAstInfo::getNodePayload(For);
+  IslAstInfo::IslAstUserPayload *Payload = IslAstInfo::getNodePayload(For);
   // isParallel() only reports outermost and innermost parallel loops. The
   // payload also records independence for intermediate dimensions.
   if (!Payload || !Payload->IsParallel || Payload->IsReductionParallel)
     return std::nullopt;
 
-  auto Lower = For.init();
-  auto Step = For.inc();
-  auto Cond = For.cond();
-  auto Upper = Cond.get_op_arg(1);
-  auto Predicate = isl_ast_expr_get_op_type(Cond.get());
+  isl::ast_expr Lower = For.init();
+  isl::ast_expr Step = For.inc();
+  isl::ast_expr Cond = For.cond();
+  isl::ast_expr Upper = Cond.get_op_arg(1);
+  isl_ast_expr_op_type Predicate = isl_ast_expr_get_op_type(Cond.get());
   if (!Lower.isa<isl::ast_expr_int>() || !Step.isa<isl::ast_expr_int>() ||
       !Upper.isa<isl::ast_expr_int>() ||
       (Predicate != isl_ast_op_lt && Predicate != isl_ast_op_le))
     return std::nullopt;
 
-  auto LowerVal = Lower.get_val();
-  auto StepVal = Step.get_val();
-  auto UpperVal = Upper.get_val();
+  isl::val LowerVal = Lower.get_val();
+  isl::val StepVal = Step.get_val();
+  isl::val UpperVal = Upper.get_val();
   if (!StepVal.is_pos().is_true() || !APIntFromVal(LowerVal).isSignedIntN(64) ||
       !APIntFromVal(StepVal).isSignedIntN(64) ||
       !APIntFromVal(UpperVal).isSignedIntN(64))
@@ -617,7 +617,7 @@ static std::optional<CollapsedLoop> getCollapsibleLoop(isl::ast_node_for For) {
 
   if (Predicate == isl_ast_op_lt)
     UpperVal = UpperVal.sub(isl::val(For.ctx(), 1));
-  auto Count =
+  isl::val Count =
       UpperVal.sub(LowerVal).div(StepVal).floor().add(isl::val(For.ctx(), 1));
   if (!Count.is_pos().is_true())
     return std::nullopt;
@@ -645,7 +645,8 @@ static CollapsedLoopNest getLoopsToCollapse(isl::ast_node Node,
     if (!Node.isa<isl::ast_node_for>())
       break;
 
-    auto Loop = getCollapsibleLoop(Node.as<isl::ast_node_for>());
+    std::optional<CollapsedLoop> Loop =
+        getCollapsibleLoop(Node.as<isl::ast_node_for>());
     if (!Loop || Loop->TripCount > MaxTripCount / Nest.TripCount)
       break;
 
@@ -710,7 +711,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
       fitsInTy(ValueInc, IntPtrTy))
     MaxType = IntPtrTy;
 
-  auto Collapse =
+  CollapsedLoopNest Collapse =
       getLoopsToCollapse(isl::manage_copy(For), DL.getPointerSizeInBits());
   if (Collapse.Loops.empty()) {
     // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
@@ -838,7 +839,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // then index /= N. Restore each loop's original lower bound and stride.
   Value *Index = IV;
   for (const auto &Loop : llvm::reverse(Collapse.Loops)) {
-    auto *Count = ConstantInt::get(IV->getType(), Loop.TripCount);
+    Constant *Count = ConstantInt::get(IV->getType(), Loop.TripCount);
     Value *Coordinate = Builder.CreateURem(Index, Count, "polly.collapse.rem");
     Coordinate = Builder.CreateMul(
         Coordinate, ConstantInt::getSigned(IV->getType(), Loop.Stride));
