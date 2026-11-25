@@ -985,6 +985,13 @@ spirv::Deserializer::getSpecConstantOperation(uint32_t id) {
   return constIt->getSecond();
 }
 
+std::optional<std::pair<Type, SmallVector<uint32_t>>>
+spirv::Deserializer::getUndefComposite(uint32_t id) {
+  if (auto it = undefCompositeMap.find(id); it != undefCompositeMap.end())
+    return it->second;
+  return std::nullopt;
+}
+
 std::string spirv::Deserializer::getFunctionSymbol(uint32_t id) {
   auto funcName = nameMap.lookup(id).str();
   if (funcName.empty()) {
@@ -1976,16 +1983,27 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
                      "OpConstantComposite must have at least 1 parameter");
   }
 
+  ArrayRef<uint32_t> constituents = operands.drop_front(2);
+  bool canHoldUndef =
+      isa<VectorType, spirv::ArrayType, spirv::StructType>(resultType);
   SmallVector<Attribute, 4> elements;
-  elements.reserve(operands.size() - 2);
-  for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
+  elements.reserve(constituents.size());
+  for (auto [index, id] : llvm::enumerate(constituents)) {
     std::optional<std::pair<Attribute, Type>> elementInfo = getConstant(id);
     if (!elementInfo) {
+      if (canHoldUndef && (getUndefType(id) || undefCompositeMap.contains(id)))
+        continue;
       // spirv.Constant cannot represent undefined constituents.
       if (getUndefType(id)) {
         return emitError(unknownLoc, "OpConstantComposite component #")
                << index << " <id> " << id
                << " is an OpUndef, which cannot be represented in "
+                  "spirv.Constant";
+      }
+      if (undefCompositeMap.contains(id)) {
+        return emitError(unknownLoc, "OpConstantComposite component #")
+               << index << " <id> " << id
+               << " has OpUndef constituents, which cannot be represented in "
                   "spirv.Constant";
       }
       return emitError(unknownLoc, "OpConstantComposite component #")
@@ -1995,6 +2013,12 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
+  if (elements.size() != constituents.size()) {
+    undefCompositeMap.try_emplace(resultID, resultType,
+                                  SmallVector<uint32_t>(constituents));
+    return success();
+  }
+
   if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
     SmallVector<Attribute> flattenedElems;
     for (Attribute element : elements) {
