@@ -1115,8 +1115,9 @@ getFieldBeingInitializedByLambda(const CXXRecordDecl *Closure) {
       return dyn_cast<FieldDecl>(ContextDecl);
     const auto *EnclosingMethod =
         dyn_cast<CXXMethodDecl>(Closure->getDeclContext());
-    if (EnclosingMethod == nullptr || !EnclosingMethod->getParent()->isLambda())
+    if (EnclosingMethod == nullptr) {
       return nullptr;
+    }
     Closure = EnclosingMethod->getParent();
   }
   return nullptr;

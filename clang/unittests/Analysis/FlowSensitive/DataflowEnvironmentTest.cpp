@@ -571,14 +571,11 @@ TEST_F(EnvironmentTest, NestedLambdaCapturingThisInFieldInitializer) {
                            .bind("method"),
                        Context);
 
-  // We will get 4 matches (2 matches for the inner lambda, and 2 matches for
-  // the outer lambda). Make sure environment initialization doesn't fail on
-  // them.
+  // We will get 4 matches. Make sure environment initialization doesn't
+  // fail on them.
   int LambdaCount = 0;
   for (const auto &Node : Results) {
     const auto *Method = Node.getNodeAs<CXXMethodDecl>("method");
-    if (Method->isDependentContext())
-      continue;
     Environment Env(DAContext, *Method);
     // Don't crash when initializing.
     Env.initialize();
@@ -611,14 +608,13 @@ TEST_F(EnvironmentTest,
                            .bind("method"),
                        Context);
 
-  // We will get 8 matches (2 for the inner lambda in the template and 2 for the
-  // outer lambda in the template. Similarly, we will get 2+2 matches for the
-  // lambdas in the template instantiation). Make sure environment
-  // initialization doesn't fail on them.
+  // We will get 8 matches (excluding ones in the template). Make sure
+  // environment initialization doesn't fail on them.
   int LambdaCount = 0;
   for (const auto &Node : Results) {
     const auto *Method = Node.getNodeAs<CXXMethodDecl>("method");
-    if (Method->isDependentContext())
+    // Skip nodes in template.
+    if (Method->isTemplated())
       continue;
     Environment Env(DAContext, *Method);
     // Don't crash when initializing.
