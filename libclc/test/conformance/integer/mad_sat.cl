@@ -30,6 +30,18 @@ __kernel void mad_sat_i64(void) {
   CHECK_EQ(mad_sat(TEST_INPUT(long, LONG_MIN), TEST_INPUT(long, -1L),
                    TEST_INPUT(long, -1L)),
            LONG_MAX);
+  CHECK_EQ(mad_sat(TEST_INPUT(long, LONG_MAX), TEST_INPUT(long, 1L),
+                   TEST_INPUT(long, LONG_MIN)),
+           -1L);
+  CHECK_EQ(mad_sat(TEST_INPUT(long, LONG_MIN), TEST_INPUT(long, 1L),
+                   TEST_INPUT(long, 5L)),
+           LONG_MIN + 5);
+  CHECK_EQ(mad_sat(TEST_INPUT(long, LONG_MAX), TEST_INPUT(long, LONG_MAX),
+                   TEST_INPUT(long, 0L)),
+           LONG_MAX);
+  CHECK_EQ(mad_sat(TEST_INPUT(long, LONG_MIN), TEST_INPUT(long, LONG_MAX),
+                   TEST_INPUT(long, 0L)),
+           LONG_MIN);
 }
 
 // Every lane carries into the high half.
