@@ -45,6 +45,16 @@ namespace __hwasan {
 bool InitShadow() {
   __sanitizer::InitShadowBounds();
   CHECK_NE(__sanitizer::ShadowBounds.shadow_limit, 0);
+  CHECK_NE(__sanitizer::ShadowBounds.memory_limit, 0);
+
+  // `shadow_limit` is the end of the shadow reservation (`shadow_offset +
+  // (memory_limit >> kShadowScale)`), whereas `shadow_base` is the start of
+  // the mapped shadow VMO above the unmapped shadow gap.
+  uptr full_shadow_size =
+      __sanitizer::ShadowBounds.memory_limit >> kShadowScale;
+  CHECK_GE(__sanitizer::ShadowBounds.shadow_limit, full_shadow_size);
+  __hwasan_shadow_memory_dynamic_address =
+      __sanitizer::ShadowBounds.shadow_limit - full_shadow_size;
 
   // These variables are used by MemIsShadow for asserting we have a correct
   // shadow address. On Fuchsia, we only have one region of shadow, so the
