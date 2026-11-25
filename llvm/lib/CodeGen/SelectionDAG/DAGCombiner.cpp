@@ -10367,8 +10367,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     Loads.insert(L);
   }
 
-  assert(!Loads.empty() && "All the bytes of the value must be loaded from "
-         "memory, so there must be at least one load which produces the value");
+  if (Loads.empty())
+    return SDValue();
+
   assert(Base && "Base address of the accessed memory location must be set");
   assert(FirstOffset != INT64_MAX && "First byte offset must be set");
 
