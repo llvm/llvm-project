@@ -401,8 +401,9 @@ public:
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
     // __builtin_convertvector is an element-wise cast, and is implemented as a
     // regular cast. The back end handles casts of vectors correctly.
-    return emitScalarConversion(Visit(e->getSrcExpr()),
-                                e->getSrcExpr()->getType(), e->getType(),
+    mlir::Value src = Visit(e->getSrcExpr());
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, e);
+    return emitScalarConversion(src, e->getSrcExpr()->getType(), e->getType(),
                                 e->getSourceRange().getBegin());
   }
 
