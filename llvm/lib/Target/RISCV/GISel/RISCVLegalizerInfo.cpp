@@ -769,8 +769,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZfa(), {f32})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {f64})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {f16})
-      // f16 extends exactly to f32, so round there. This also avoids needing
-      // f16 support in G_PHI.
+      .customFor(ST.hasStdExtZfh(), {f16})
+      // Without Zfh there is no fcvt.w.h, so round in f32, which f16 extends
+      // to exactly.
       .widenScalarIf(typeIs(0, f16), changeTo(0, f32))
       .customFor(ST.hasStdExtF(), {f32})
       // Rounding an f64 needs an integer that can hold every value below 2^52.
@@ -1747,9 +1748,14 @@ bool RISCVLegalizerInfo::legalizeFpRound(
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   LLT Ty = MRI.getType(Src);
 
-  // SelectionDAG keeps the libcall when optimizing for size.
-  if (MIRBuilder.getMF().getFunction().hasOptSize())
+  // SelectionDAG keeps the libcall when optimizing for size. There is no f16
+  // libcall, so round in f32, which f16 extends to exactly.
+  if (MIRBuilder.getMF().getFunction().hasOptSize()) {
+    if (Ty == LLT::float16())
+      return Helper.widenScalar(MI, 0, LLT::float32()) ==
+             LegalizerHelper::Legalized;
     return Helper.libcall(MI, LocObserver) == LegalizerHelper::Legalized;
+  }
 
   RISCVFPRndMode::RoundingMode FRM;
   switch (MI.getOpcode()) {
@@ -1775,68 +1781,24 @@ bool RISCVLegalizerInfo::legalizeFpRound(
     llvm_unreachable("Unexpected rounding opcode");
   }
 
-  // Values with a magnitude of at least 2^(precision-1) have no fractional
-  // bits, so they are already rounded. NaN has to be passed through too.
+  // Create an integer the size of the mantissa with the MSB set. This and all
+  // values larger than it have no fractional bits, so emitFROUND passes them
+  // through instead of converting. NaN is passed through as well.
   const fltSemantics &Sem = getFltSemanticForLLT(Ty);
   unsigned Precision = APFloat::semanticsPrecision(Sem);
   APFloat MaxVal(Sem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
                           /*IsSigned=*/false, APFloat::rmNearestTiesToEven);
-
-  MachineBasicBlock *BB = MI.getParent();
-  MachineFunction &MF = *BB->getParent();
-  const BasicBlock *LLVMBB = BB->getBasicBlock();
-  DebugLoc DL = MI.getDebugLoc();
-
-  // Split BB so that only the values that need rounding are converted,
-  // mirroring emitFROUND in RISCVISelLowering.cpp. Converting the others would
-  // raise the invalid exception, since fcvt saturates out-of-range inputs.
-  MachineFunction::iterator It = std::next(BB->getIterator());
-  MachineBasicBlock *CvtMBB = MF.CreateMachineBasicBlock(LLVMBB);
-  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
-  MF.insert(It, CvtMBB);
-  MF.insert(It, DoneMBB);
-
-  // Splice the instructions after MI into DoneMBB, notifying the observer about
-  // each moved instruction so CSEInfo stays consistent.
-  for (MachineBasicBlock::iterator I = std::next(MI.getIterator()),
-                                   E = BB->end();
-       I != E; ++I)
-    Helper.Observer.changingInstr(*I);
-  DoneMBB->splice(DoneMBB->begin(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
-  for (MachineInstr &MovedMI : DoneMBB->instrs())
-    Helper.Observer.changedInstr(MovedMI);
-  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
-  BB->addSuccessor(CvtMBB);
-  BB->addSuccessor(DoneMBB);
-  CvtMBB->addSuccessor(DoneMBB);
-
-  unsigned Flags = MI.getFlags() & MachineInstr::NoFPExcept;
-  auto Abs = MIRBuilder.buildFAbs(Ty, Src);
   auto Max = MIRBuilder.buildFConstant(Ty, MaxVal);
-  // RISC-V G_FCMP results are XLen wide, and so are G_BRCOND conditions.
-  auto Cmp = MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, iXLen, Abs, Max, Flags);
-  MIRBuilder.buildBrCond(Cmp, *CvtMBB);
-  MIRBuilder.buildBr(*DoneMBB);
 
-  MIRBuilder.setMBB(*CvtMBB);
-  auto Int =
-      MIRBuilder.buildInstr(RISCV::G_FCVT_X, {iXLen}, {Src}, Flags).addImm(FRM);
-  auto FP = MIRBuilder.buildSITOFP(Ty, Int).setMIFlags(Flags);
-  // Restore the sign bit so that -0.0 is preserved.
-  auto Rounded = MIRBuilder.buildFCopysign(Ty, FP, Src);
-  MIRBuilder.buildBr(*DoneMBB);
+  // Leave the guarded round trip through the integer domain to emitFROUND, so
+  // the expansion stays shared with SelectionDAG.
+  MIRBuilder
+      .buildInstr(RISCV::G_FROUND, {Dst}, {Src, Max},
+                  MI.getFlags() & MachineInstr::NoFPExcept)
+      .addImm(FRM);
 
   MI.eraseFromParent();
-
-  MIRBuilder.setInsertPt(*DoneMBB, DoneMBB->begin());
-  MIRBuilder.setDebugLoc(DL);
-  MIRBuilder.buildInstr(TargetOpcode::G_PHI, {Dst}, {})
-      .addUse(Src)
-      .addMBB(BB)
-      .addUse(Rounded.getReg(0))
-      .addMBB(CvtMBB);
   return true;
 }
 
