@@ -2117,6 +2117,14 @@ private:
   /// SCEV+Loop pair.
   SCEVUse computeSCEVAtScope(const SCEV *S, const Loop *L);
 
+  /// Infer wrap flags for \p AR, or queue it for inferDeferredWrapFlags() when
+  /// an inference is already running above us (so re-entering it would recurse).
+  void inferWrapFlagsOrDefer(const SCEVAddRecExpr *AR);
+
+  /// Run the deferred wrap-flag inference for the addrecs of \p L. Only valid
+  /// once L's backedge-taken count is final.
+  void inferDeferredWrapFlags(const Loop *L);
+
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is
   /// guaranteed not to be predicated.
@@ -2619,6 +2627,17 @@ private:
 
   /// This maps loops to a list of addrecs that directly use said loop.
   DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> LoopUsers;
+
+  /// Addrecs that were built while a wrap-flag inference was already running
+  /// higher up the stack. Inferring a flag needs its loop's backedge-taken
+  /// count, and computing that count builds SCEVs, so inferring those in turn
+  /// would recurse - once per unrolled sibling loop. They are queued instead
+  /// and take their flags when the count they wait on is final.
+  DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> DeferredWrapFlags;
+
+  /// True while a wrap-flag inference is on the stack, so an addrec built as a
+  /// side effect of it is queued instead of starting another inference.
+  bool InWrapFlagInference = false;
 
   /// Cache tentative mappings from UnknownSCEVs in a Loop, to a SCEV expression
   /// they can be rewritten into under certain predicates.
