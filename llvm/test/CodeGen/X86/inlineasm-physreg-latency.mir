@@ -8,7 +8,6 @@
 
 ---
 name: native_load_use
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: native_load_use:%bb.0
   ; CHECK: SU(0): {{.*}}MOV64rm
@@ -22,7 +21,6 @@ body: |
 
 ---
 name: explicit_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: explicit_input:%bb.0
   ; CHECK: SU(0): {{.*}}MOV64rm
@@ -36,7 +34,6 @@ body: |
 
 ---
 name: tied_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: tied_input:%bb.0
   ; CHECK: SU(0): {{.*}}MOV64rm
@@ -50,7 +47,6 @@ body: |
 
 ---
 name: implicit_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: implicit_input:%bb.0
   ; CHECK: SU(0): {{.*}}MOV64rm
@@ -64,7 +60,6 @@ body: |
 
 ---
 name: implicit_pseudo_def
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: implicit_pseudo_def:%bb.0
   ; CHECK: SU(0): {{.*}}MOV32ri
@@ -77,7 +72,6 @@ body: |
 
 ---
 name: real_implicit_def
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: real_implicit_def:%bb.0
   ; CHECK: SU(0): {{.*}}ADD32ri8
@@ -91,7 +85,6 @@ body: |
 
 ---
 name: asm_output_to_asm_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_output_to_asm_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
@@ -104,7 +97,6 @@ body: |
 
 ---
 name: asm_output_to_native_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_output_to_native_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
@@ -120,7 +112,6 @@ body: |
 # latency as asm_output_to_asm_input above.
 ---
 name: asm_fixed_output_to_asm_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_fixed_output_to_asm_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
@@ -134,7 +125,6 @@ body: |
 
 ---
 name: asm_fixed_earlyclobber_output_to_asm_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_fixed_earlyclobber_output_to_asm_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
@@ -148,7 +138,6 @@ body: |
 
 ---
 name: asm_implicit_pseudo_def
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_implicit_pseudo_def:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
@@ -161,7 +150,6 @@ body: |
 
 ---
 name: asm_output_to_implicit_input
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: asm_output_to_implicit_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM

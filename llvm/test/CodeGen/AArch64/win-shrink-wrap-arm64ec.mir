@@ -62,7 +62,6 @@
 ...
 ---
 name: ec_fragments
-tracksRegLiveness: true
 alignment: 4
 hasWinCFI: true
 noPhis: true

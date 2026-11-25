@@ -32,7 +32,6 @@
 # An entry-block prologue must retain implicit function-wide unwind emission;
 # this pass must not insert explicit range or phantom-prologue pseudos.
 name: entry_prologue
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -61,7 +60,6 @@ body: |
 # A personality-bearing function must remain unchanged even when its prologue
 # is delayed, since explicit range splitting does not preserve handler data yet.
 name: handler_prologue
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -95,7 +93,6 @@ body: |
 # with the prologue in effect needs a phantom recipe, and a completed epilogue
 # must end its range before the aligned, leaf-style fallthrough return block.
 name: section_ranges
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -168,7 +165,6 @@ body: |
 # A loop backedge within the framed region must neither restart traversal nor
 # split its unwind record. Only the shared frameless return ends the range.
 name: loop_range
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -234,7 +230,6 @@ body: |
 # the assembly string happens to be empty. Do not use an estimated code size to
 # decide whether the suffix is frameless.
 name: inline_asm_suffix
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -273,7 +268,6 @@ body: |
 # frame themselves. Repeated mismatches on those unreachable edges must not
 # trigger an error or affect the live unwind range.
 name: dead_predecessors
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false

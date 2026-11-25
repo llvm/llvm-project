@@ -5,7 +5,6 @@
 # high lane still dies at its last real read.
 ---
 name:            dbg_phi_between_copies
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dbg_phi_between_copies
   ; CHECK: bb.0:
