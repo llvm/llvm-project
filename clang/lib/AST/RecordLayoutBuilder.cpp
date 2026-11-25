@@ -657,7 +657,8 @@ protected:
   /// field has been handled, if any.
   bool HandledFirstNonOverlappingEmptyField;
 
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
+  typedef llvm::SortedVectorMap<const CXXRecordDecl *, CharUnits>
+      BaseOffsetsMapTy;
 
   /// Bases - base classes and their offsets in the record.
   BaseOffsetsMapTy Bases;
@@ -1094,7 +1095,8 @@ void ItaniumRecordLayoutBuilder::LayoutNonVirtualBase(
   CharUnits Offset = LayoutBase(Base);
 
   // Add its base class offset.
-  assert(!Bases.count(Base->Class) && "base offset already exists!");
+  assert(Bases.find(Base->Class) == Bases.end() &&
+         "base offset already exists!");
   Bases.insert(std::make_pair(Base->Class, Offset));
 
   AddPrimaryVirtualBaseOffsets(Base, Offset);
@@ -1112,7 +1114,7 @@ void ItaniumRecordLayoutBuilder::AddPrimaryVirtualBaseOffsets(
            "Primary virtual base is not virtual!");
     if (Info->PrimaryVirtualBaseInfo->Derived == Info) {
       // Add the offset.
-      assert(!VBases.count(Info->PrimaryVirtualBaseInfo->Class) &&
+      assert(VBases.find(Info->PrimaryVirtualBaseInfo->Class) == VBases.end() &&
              "primary vbase offset already exists!");
       VBases.insert(std::make_pair(Info->PrimaryVirtualBaseInfo->Class,
                                    ASTRecordLayout::VBaseInfo(Offset, false)));
@@ -1187,7 +1189,8 @@ void ItaniumRecordLayoutBuilder::LayoutVirtualBase(
   CharUnits Offset = LayoutBase(Base);
 
   // Add its base class offset.
-  assert(!VBases.count(Base->Class) && "vbase offset already exists!");
+  assert(VBases.find(Base->Class) == VBases.end() &&
+         "vbase offset already exists!");
   VBases.insert(std::make_pair(Base->Class,
                        ASTRecordLayout::VBaseInfo(Offset, false)));
 
@@ -1401,14 +1404,15 @@ void ItaniumRecordLayoutBuilder::Layout(const CXXRecordDecl *RD) {
 
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
 
-    assert(Bases.count(BaseDecl) && "Did not find base offset!");
+    assert(Bases.find(BaseDecl) != Bases.end() && "Did not find base offset!");
   }
 
   // And all virtual bases.
   for (const CXXBaseSpecifier &Base : RD->vbases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
 
-    assert(VBases.count(BaseDecl) && "Did not find base offset!");
+    assert(VBases.find(BaseDecl) != VBases.end() &&
+           "Did not find base offset!");
   }
 #endif
 }
@@ -2553,7 +2557,8 @@ struct MicrosoftRecordLayoutBuilder {
     /// the record's alignment (only its required alignment).
     CharUnits NonRequiredAlignment;
   };
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
+  typedef llvm::SortedVectorMap<const CXXRecordDecl *, CharUnits>
+      BaseOffsetsMapTy;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
                                EmptySubobjectMap *EmptySubobjects)
       : Context(Context), EmptySubobjects(EmptySubobjects),
@@ -3486,7 +3491,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           Builder.Alignment, Builder.Alignment, Builder.NonRequiredAlignment,
           CharUnits::Zero(), Builder.PrimaryBase, false,
           Builder.SharedVBPtrBase, Builder.EndsWithZeroSizedObject,
-          Builder.LeadsWithZeroSizedBase, Builder.Bases, Builder.VBases);
+          Builder.LeadsWithZeroSizedBase, std::move(Builder.Bases),
+          std::move(Builder.VBases));
     } else {
       MicrosoftRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
       Builder.layout(D);
@@ -3523,8 +3529,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           NonVirtualSize, Builder.NonVirtualAlignment,
           Builder.PreferredNVAlignment, Builder.NonVirtualAlignment,
           EmptySubobjects.SizeOfLargestEmptySubobject, Builder.PrimaryBase,
-          Builder.PrimaryBaseIsVirtual, nullptr, false, false, Builder.Bases,
-          Builder.VBases);
+          Builder.PrimaryBaseIsVirtual, nullptr, false, false,
+          std::move(Builder.Bases), std::move(Builder.VBases));
     } else {
       ItaniumRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
       Builder.Layout(D);
