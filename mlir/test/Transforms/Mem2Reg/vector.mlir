@@ -729,9 +729,9 @@ func.func @partial_read_positions(%v: vector<8xf32>, %pad: f32) -> (vector<4xf32
   %c4 = arith.constant 4 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %origin = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
-  %middle = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
-  %end = vector.transfer_read %a[%c4], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  %origin = vector.transfer_read %a[%c0], %pad : memref<8xf32>, vector<4xf32>
+  %middle = vector.transfer_read %a[%c2], %pad : memref<8xf32>, vector<4xf32>
+  %end = vector.transfer_read %a[%c4], %pad : memref<8xf32>, vector<4xf32>
   return %origin, %middle, %end : vector<4xf32>, vector<4xf32>, vector<4xf32>
 }
 
@@ -749,7 +749,7 @@ func.func @partial_read_2d(%v: vector<4x8xf32>, %pad: f32) -> vector<2x4xf32> {
   %c2 = arith.constant 2 : index
   %a = memref.alloca() : memref<4x8xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
-  %r = vector.transfer_read %a[%c1, %c2], %pad {in_bounds = [true, true]} : memref<4x8xf32>, vector<2x4xf32>
+  %r = vector.transfer_read %a[%c1, %c2], %pad : memref<4x8xf32>, vector<2x4xf32>
   return %r : vector<2x4xf32>
 }
 
@@ -763,7 +763,7 @@ func.func @negative_partial_read_dynamic_index(%v: vector<8xf32>, %pad: f32, %of
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %r = vector.transfer_read %a[%offset], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  %r = vector.transfer_read %a[%offset], %pad : memref<8xf32>, vector<4xf32>
   return %r : vector<4xf32>
 }
 
@@ -778,23 +778,7 @@ func.func @negative_partial_read_exceeds_extent(%v: vector<8xf32>, %pad: f32) ->
   %c6 = arith.constant 6 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %r = vector.transfer_read %a[%c6], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
-  return %r : vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @partial_read_static_bounds
-// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
-// CHECK-NOT: memref.alloca
-// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
-// CHECK: return %[[R]]
-func.func @partial_read_static_bounds(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
-  %c0 = arith.constant 0 : index
-  %c2 = arith.constant 2 : index
-  %a = memref.alloca() : memref<8xf32>
-  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %r = vector.transfer_read %a[%c2], %pad : memref<8xf32>, vector<4xf32>
+  %r = vector.transfer_read %a[%c6], %pad : memref<8xf32>, vector<4xf32>
   return %r : vector<4xf32>
 }
 
@@ -812,7 +796,7 @@ func.func @partial_read_with_mask(%v: vector<8xf32>, %pad: f32, %mask: vector<4x
   %c2 = arith.constant 2 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %r = vector.transfer_read %a[%c2], %pad, %mask {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  %r = vector.transfer_read %a[%c2], %pad, %mask : memref<8xf32>, vector<4xf32>
   return %r : vector<4xf32>
 }
 
@@ -826,7 +810,7 @@ func.func @negative_partial_read_transpose_map(%v: vector<4x8xf32>, %pad: f32) -
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<4x8xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
-  %r = vector.transfer_read %a[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : memref<4x8xf32>, vector<2x4xf32>
+  %r = vector.transfer_read %a[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<4x8xf32>, vector<2x4xf32>
   return %r : vector<2x4xf32>
 }
 
@@ -846,7 +830,7 @@ func.func @subview_static_partial_read(%v: vector<8xf32>, %pad: f32) -> vector<2
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
   %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
-  %r = vector.transfer_read %sv[%c1], %pad {in_bounds = [true]} : memref<4xf32, strided<[1], offset: 2>>, vector<2xf32>
+  %r = vector.transfer_read %sv[%c1], %pad : memref<4xf32, strided<[1], offset: 2>>, vector<2xf32>
   return %r : vector<2xf32>
 }
 
@@ -864,6 +848,6 @@ func.func @negative_partial_read_scalable(%v: vector<[8]xf32>, %pad: f32) -> vec
   %size = arith.muli %scale, %c8 : index
   %a = memref.alloca(%size) : memref<?xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<[8]xf32>, memref<?xf32>
-  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<?xf32>, vector<[4]xf32>
+  %r = vector.transfer_read %a[%c0], %pad : memref<?xf32>, vector<[4]xf32>
   return %r : vector<[4]xf32>
 }
