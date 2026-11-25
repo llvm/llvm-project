@@ -1119,8 +1119,8 @@ void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
   GCNSchedStrategy::initPolicy(Begin, End, NumRegionInstrs);
-  if (getPreRADirection() == MISched::BottomUp ||
-      getPreRADirection() == MISched::Bidirectional)
+  MISched::Direction Direction = getPreRADirection(*Context->MF);
+  if (Direction == MISched::BottomUp || Direction == MISched::Bidirectional)
     report_fatal_error("CoExecSchedStrategy only support TopDown scheduling.");
   RegionPolicy.OnlyTopDown = true;
   RegionPolicy.OnlyBottomUp = false;
@@ -1228,8 +1228,8 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
       AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       SGPRPressure = DownwardTracker.getPressure().getSGPRNum();
-      VGPRPressure = DownwardTracker.getPressure().getArchVGPRNum();
-      AGPRPressure = DownwardTracker.getPressure().getAGPRNum();
+      std::tie(VGPRPressure, AGPRPressure) =
+          getBankedPressure(DownwardTracker.getPressure());
     }
   }
 

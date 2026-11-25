@@ -67,7 +67,7 @@ define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %
 ; CHECK-ZNVER4-LABEL: define void @compress_store(
 ; CHECK-ZNVER4-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-ZNVER4-NEXT:  [[ENTRY:.*:]]
-; CHECK-ZNVER4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
+; CHECK-ZNVER4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 48
 ; CHECK-ZNVER4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-ZNVER4:       [[VECTOR_PH]]:
 ; CHECK-ZNVER4-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 15

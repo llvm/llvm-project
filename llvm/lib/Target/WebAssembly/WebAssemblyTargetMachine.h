@@ -17,6 +17,7 @@
 
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
@@ -32,6 +33,20 @@ extern cl::opt<bool> WasmUseLegacyEH;  // Legacy Wasm EH
 class WebAssemblyTargetMachine final : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS;
+    StringRef ABIName;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS && ABIName == RHS.ABIName;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<WebAssemblySubtarget, SubtargetAttrs>
+      LastSubtarget;
 
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

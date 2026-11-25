@@ -17,10 +17,10 @@ define void @reverse_load_scatter(ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [8 x i8], ptr [[TMP1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST]], <vscale x 2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [8 x i8], ptr [[DST]], <vscale x 2 x i64> [[TMP6]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[TMP6]], <vscale x 2 x ptr> align 8 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP2]], [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP2]]

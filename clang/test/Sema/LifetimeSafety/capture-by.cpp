@@ -739,6 +739,25 @@ void test() {
   int a;
   T2(1, a); // expected-warning {{object whose reference is captured by}}
 }
+
+// The attribute is inherited by a redeclaration, even with renamed parameters.
+struct T4 {
+  T4(const int& t [[clang::lifetime_capture_by_this]]);
+};
+T4::T4(const int& renamed) {}
+
+void sink(const int& x [[clang::lifetime_capture_by(c)]], std::vector<const int*>& c);
+void sink(const int& y, std::vector<const int*>& other);
+
+void redeclared() {
+  T4 t4(1); // expected-warning {{temporary whose address is used}} \
+            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+  use(t4);  // cfg-note {{later used here}}
+  std::vector<const int*> v;
+  sink(1, v); // expected-warning {{object whose reference is captured by 'v'}} \
+              // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+  use(v);     // cfg-note {{later used here}}
+}
 } // namespace on_constructor
 
 namespace GH121391 {

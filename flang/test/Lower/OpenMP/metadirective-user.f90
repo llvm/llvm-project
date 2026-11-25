@@ -51,6 +51,21 @@ subroutine test_condition_score()
 #endif
 end subroutine
 
+! All three score 5. The first is a strict subset of the third, which ties
+! with the second, so the second is selected.
+! CHECK-LABEL: func.func @_QPtest_condition_strict_subset_tie()
+! CHECK-NOT:     omp.taskyield
+! CHECK-NOT:     omp.barrier
+! CHECK:         omp.taskwait
+! CHECK-NOT:     omp.barrier
+! CHECK:         return
+subroutine test_condition_strict_subset_tie()
+  !$omp metadirective &
+  !$omp & when(user={condition(score(4): .true.)}: taskyield) &
+  !$omp & when(device={kind(host)}, implementation={vendor(score(3): llvm)}: taskwait) &
+  !$omp & when(user={condition(score(3): .true.)}, device={kind(host)}: barrier)
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_begin_condition_true()
 ! CHECK:         omp.parallel
 ! CHECK:           omp.terminator

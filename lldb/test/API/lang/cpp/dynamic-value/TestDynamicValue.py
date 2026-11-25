@@ -31,38 +31,22 @@ class DynamicValueTestCase(TestBase):
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target from the debugger.
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Set up our breakpoints:
+
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("pass-to-base.cpp", False), self.main_first_call_line
+        )
 
         do_something_bpt = target.BreakpointCreateByLocation(
             "pass-to-base.cpp", self.do_something_line
         )
         self.assertTrue(do_something_bpt, VALID_BREAKPOINT)
 
-        first_call_bpt = target.BreakpointCreateByLocation(
-            "pass-to-base.cpp", self.main_first_call_line
-        )
-        self.assertTrue(first_call_bpt, VALID_BREAKPOINT)
-
         second_call_bpt = target.BreakpointCreateByLocation(
             "pass-to-base.cpp", self.main_second_call_line
         )
         self.assertTrue(second_call_bpt, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, first_call_bpt)
-        self.assertEqual(len(threads), 1)
-        thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
 

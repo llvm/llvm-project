@@ -82,6 +82,22 @@ functions:
     arguments:
       - type: accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: expuhk
+    standards:
+      - stdc_ext
+      - llvm_libc_stdfix_ext
+    return_type: unsigned short accum
+    arguments:
+      - type: unsigned short accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: expuk
+    standards:
+      - stdc_ext
+      - llvm_libc_stdfix_ext
+    return_type: unsigned accum
+    arguments:
+      - type: unsigned accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
   - name: hrbits
     standards:
       - stdc_ext

@@ -414,6 +414,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  posix_close
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.posix_close
+)
+
+add_entrypoint_object(
   pread
   ALIAS
   DEPENDS
@@ -547,10 +554,10 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  __llvm_libc_syscall
+  syscall
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.__llvm_libc_syscall
+    .${LIBC_TARGET_OS}.syscall
 )
 
 add_entrypoint_object(

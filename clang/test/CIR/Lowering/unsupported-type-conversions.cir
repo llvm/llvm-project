@@ -184,7 +184,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // Propagate initializer failure before lowering the referenced global.
   // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.vector<4 x !cir.int<s, 7, bitint>>'}}
   // expected-error @below {{failed to legalize operation 'cir.global'}}
-  cir.global external @vtable_view = #cir.vtable<{#cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !cir.array<!ptr x 1>}> : !cir.struct<{data !cir.array<!ptr x 1>}>
+  cir.global external @vtable_view = #cir.vtable<{#cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !cir.array<!ptr x 1>}, address_points = [#cir.address_point<index = 0, offset = 0>]> : !cir.struct<{data !cir.array<!ptr x 1>}>
 
   cir.global external @target = #cir.zero : !vec
 }

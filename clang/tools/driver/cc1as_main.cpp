@@ -172,6 +172,8 @@ struct AssemblerInvocation {
   unsigned Crel : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned ImplicitMapsyms : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned MachORelocatableDwarf : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned X86RelaxRelocations : 1;
@@ -225,6 +227,7 @@ public:
     EmitCompactUnwindNonCanonical = false;
     Crel = false;
     ImplicitMapsyms = 0;
+    MachORelocatableDwarf = 0;
     X86RelaxRelocations = 0;
     X86Sse2Avx = 0;
   }
@@ -371,8 +374,9 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.RelocationModel =
       std::string(Args.getLastArgValue(OPT_mrelocation_model, "pic"));
   Opts.TargetABI = std::string(Args.getLastArgValue(OPT_target_abi));
-  Opts.IncrementalLinkerCompatible =
-      Args.hasArg(OPT_mincremental_linker_compatible);
+  Opts.IncrementalLinkerCompatible = Args.hasFlag(
+      OPT_mincremental_linker_compatible, OPT_mno_incremental_linker_compatible,
+      Opts.Triple.isDefaultIncrementalLinkerCompatibleByDefault());
   Opts.SymbolDefs = Args.getAllArgValues(OPT_defsym);
 
   // EmbedBitcode Option. If -fembed-bitcode is enabled, set the flag.
@@ -398,6 +402,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
       Args.hasArg(OPT_femit_compact_unwind_non_canonical);
   Opts.EmitSFrameUnwind = Args.hasArg(OPT_gsframe);
   Opts.Crel = Args.hasArg(OPT_crel);
+  Opts.MachORelocatableDwarf = Args.hasArg(OPT_grelocatable_dwarf);
   Opts.RelocSectionSym = RelocSectionSymType::All;
   if (auto *A = Args.getLastArg(OPT_reloc_section_sym))
     Opts.RelocSectionSym = StringSwitch<RelocSectionSymType>(A->getValue())
@@ -468,6 +473,7 @@ executeAssemblerImpl(const cl::LibraryOptionsContext &LibraryOptions,
   MCTargetOptions MCOptions;
   MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.MCRelaxAll = Opts.RelaxAll;
+  MCOptions.MCIncrementalLinkerCompatible = Opts.IncrementalLinkerCompatible;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;
   MCOptions.EmitSFrameUnwind = Opts.EmitSFrameUnwind;
@@ -475,6 +481,7 @@ executeAssemblerImpl(const cl::LibraryOptionsContext &LibraryOptions,
   MCOptions.Crel = Opts.Crel;
   MCOptions.RelocSectionSym = Opts.RelocSectionSym;
   MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;
+  MCOptions.MachORelocatableDwarf = Opts.MachORelocatableDwarf;
   MCOptions.X86RelaxRelocations = Opts.X86RelaxRelocations;
   MCOptions.X86Sse2Avx = Opts.X86Sse2Avx;
   MCOptions.MCNoExecStack = Opts.NoExecStack;

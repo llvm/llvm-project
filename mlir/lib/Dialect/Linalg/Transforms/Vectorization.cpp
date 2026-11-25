@@ -250,6 +250,14 @@ struct VectorizationState {
   maskOperation(RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
                 std::optional<AffineMap> maybeIndexingMap = std::nullopt);
 
+  /// Create or retrieve an existing mask value for the canonical vector
+  /// iteration space. If `maybeMaskingMap` the mask is permuted using that
+  /// permutation map. If a new mask is created, it will be cached for future
+  /// users. Returns a null value if no mask is needed.
+  Value
+  getOrCreateMaskFor(RewriterBase &rewriter, LinalgOp linalgOp,
+                     std::optional<AffineMap> maybeMaskingMap = std::nullopt);
+
 private:
   /// Initializes the iteration space static sizes using the Linalg op
   /// information. This may become more complicated in the future.
@@ -262,14 +270,6 @@ private:
   /// vectorized and store them in `iterSpaceValueSizes`.
   LogicalResult precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                               LinalgOp linalgOp);
-
-  /// Create or retrieve an existing mask value to mask `opToMask` in the
-  /// canonical vector iteration space. If `maybeMaskingMap` the mask is
-  /// permuted using that permutation map. If a new mask is created, it will be
-  /// cached for future users.
-  Value getOrCreateMaskFor(RewriterBase &rewriter, Operation *opToMask,
-                           LinalgOp linalgOp,
-                           std::optional<AffineMap> maybeMaskingMap);
 
   /// Check whether this permutation map can be used for masking. At the
   /// moment we only make sure that there are no broadcast dimensions, but this
@@ -407,24 +407,12 @@ LogicalResult VectorizationState::initState(RewriterBase &rewriter,
   return success();
 }
 
-/// Create or retrieve an existing mask value to mask `opToMask` in the
-/// canonical vector iteration space. If `maybeMaskingMap` the mask is permuted
-/// using that permutation map. If a new mask is created, it will be cached for
-/// future users.
 Value VectorizationState::getOrCreateMaskFor(
-    RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
+    RewriterBase &rewriter, LinalgOp linalgOp,
     std::optional<AffineMap> maybeMaskingMap) {
 
   assert((!maybeMaskingMap || isValidMaskingMap(*maybeMaskingMap)) &&
          "Ill-formed masking map.");
-
-  // No mask is needed if the operation is not maskable.
-  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
-  if (!maskableOp)
-    return Value();
-
-  assert(!maskableOp.isMasked() &&
-         "Masking an operation that is already masked");
 
   // If no masking map was provided, use an identity map with the loop dims.
   assert((!maybeMaskingMap || *maybeMaskingMap) &&
@@ -502,13 +490,21 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
                                   std::optional<AffineMap> maybeIndexingMap) {
   LDBG() << "Trying to mask: " << *opToMask;
 
+  // No mask is needed if the operation is not maskable.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
+  if (!maskableOp) {
+    LDBG() << "Operation is not maskable";
+    return opToMask;
+  }
+  assert(!maskableOp.isMasked() &&
+         "Masking an operation that is already masked");
+
   std::optional<AffineMap> maybeMaskingMap = std::nullopt;
   if (maybeIndexingMap)
     maybeMaskingMap = getMaskingMapFromIndexingMap(*maybeIndexingMap);
 
   // Create or retrieve mask for this operation.
-  Value mask =
-      getOrCreateMaskFor(rewriter, opToMask, linalgOp, maybeMaskingMap);
+  Value mask = getOrCreateMaskFor(rewriter, linalgOp, maybeMaskingMap);
 
   if (!mask) {
     LDBG() << "No mask required";
@@ -1205,11 +1201,16 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
     Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
 
+    // vector.gather is not maskable, so the iteration space mask (if any) is
+    // passed as its mask operand.
+    Value mask = state.getOrCreateMaskFor(rewriter, linalgOp);
+    if (!mask)
+      mask = maskConstantOp;
+
     // Generate the gather load
     Operation *gatherOp = vector::GatherOp::create(
         rewriter, loc, resultType, extractOp.getTensor(), baseIndices, offset,
-        maskConstantOp, passThruConstantOp);
-    gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
+        mask, passThruConstantOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp, gatherOp};

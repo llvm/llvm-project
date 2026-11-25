@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-spirv-to-llvm -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-spirv-to-llvm='allow-pattern-rollback=0' -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Array type

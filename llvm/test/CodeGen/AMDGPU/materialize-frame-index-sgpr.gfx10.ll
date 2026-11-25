@@ -902,11 +902,12 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset() #0
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    v_writelane_b32 v0, s55, 0
 ; GFX11-NEXT:    s_add_i32 s0, s32, 64
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 s55, s0
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s55
 ; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_readlane_b32 s55, v0, 0
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    s_add_i32 s1, s32, 0x4040

@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_ITERABLE_H
 #define LLDB_UTILITY_ITERABLE_H
 
+#include <cassert>
 #include <mutex>
 #include <utility>
 
@@ -42,6 +43,14 @@ public:
   LockingAdaptedIterable(const C &container, MutexType &mutex)
       : std::unique_lock<MutexType>(mutex),
         llvm::iterator_range<IteratorT>(container) {}
+
+  /// Takes ownership of an already-held lock.
+  LockingAdaptedIterable(const C &container, std::unique_lock<MutexType> &&lock)
+      : std::unique_lock<MutexType>(std::move(lock)),
+        llvm::iterator_range<IteratorT>(container) {
+    assert(this->owns_lock() &&
+           "LockingAdaptedIterable requires an owning lock");
+  }
 
   LockingAdaptedIterable(LockingAdaptedIterable &&rhs) = default;
 

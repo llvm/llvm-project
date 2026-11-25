@@ -27,6 +27,7 @@ public:
   lldb::StateType GetState() override;
   bool GetStopReason(ThreadStopInfo &stop_info,
                      std::string &description) override;
+  void SetStopReason(lldb::StopReason reason) { m_stop_info.reason = reason; }
   RegisterContextMockAccelerator &GetRegisterContext() override {
     return m_reg_context;
   }

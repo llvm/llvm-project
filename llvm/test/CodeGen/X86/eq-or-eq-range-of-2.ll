@@ -240,7 +240,7 @@ define <4 x i32> @eq_or_eq_ult_3_fail(<4 x i32> %x) {
 define <4 x i32> @eq_or_eq_ugt_m3(<4 x i32> %x) {
 ; AVX512-LABEL: eq_or_eq_ugt_m3:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4294967285,4294967282,4294967285,4294967285]
 ; AVX512-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -277,7 +277,7 @@ define <4 x i32> @eq_or_eq_ugt_m3(<4 x i32> %x) {
 define <4 x i32> @eq_or_eq_ule_1(<4 x i32> %x) {
 ; AVX512-LABEL: eq_or_eq_ule_1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,4]
 ; AVX512-NEXT:    vpcmpleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -314,7 +314,7 @@ define <4 x i32> @eq_or_eq_ule_1(<4 x i32> %x) {
 define <2 x i64> @eq_or_eq_uge_m2_i64(<2 x i64> %x) {
 ; AVX512-LABEL: eq_or_eq_uge_m2_i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2]
 ; AVX512-NEXT:    vpcmpnltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
@@ -401,7 +401,7 @@ define <2 x i64> @eq_or_eq_uge_m2_i64_m1(<2 x i64> %x) {
 define <4 x i32> @eq_or_eq_uge_2_fail_(<4 x i32> %x) {
 ; AVX512-LABEL: eq_or_eq_uge_2_fail_:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,4]
 ; AVX512-NEXT:    vpcmpnltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -409,14 +409,14 @@ define <4 x i32> @eq_or_eq_uge_2_fail_(<4 x i32> %x) {
 ;
 ; AVX1-LABEL: eq_or_eq_uge_2_fail_:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,4]
 ; AVX1-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: eq_or_eq_uge_2_fail_:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,4]
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,2,2,2]
 ; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -424,7 +424,7 @@ define <4 x i32> @eq_or_eq_uge_2_fail_(<4 x i32> %x) {
 ;
 ; SSE41-LABEL: eq_or_eq_uge_2_fail_:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,3,4]
 ; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm1 = [2,2,2,2]
 ; SSE41-NEXT:    pmaxud %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -432,7 +432,7 @@ define <4 x i32> @eq_or_eq_uge_2_fail_(<4 x i32> %x) {
 ;
 ; SSE2-LABEL: eq_or_eq_uge_2_fail_:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,3,4]
 ; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483650,2147483650,2147483650,2147483650]
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
@@ -681,7 +681,7 @@ define <16 x i8> @eq_or_eq_ult_2_128_i8_m1(<16 x i8> %x) {
 define <16 x i8> @eq_or_eq_ult_2_128_i8(<16 x i8> %x) {
 ; AVX512-LABEL: eq_or_eq_ult_2_128_i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25]
 ; AVX512-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq

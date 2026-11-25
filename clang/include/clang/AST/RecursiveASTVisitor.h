@@ -1381,25 +1381,24 @@ DEF_TRAVERSE_TYPELOC(DependentAddressSpaceType, {
 // FIXME: order? why not size expr first?
 // FIXME: base VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(DependentSizedExtVectorType, {
-  if (TL.getTypePtr()->getSizeExpr())
-    TRY_TO(TraverseStmt(TL.getTypePtr()->getSizeExpr()));
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
 // FIXME: VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(VectorType, {
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
 DEF_TRAVERSE_TYPELOC(DependentVectorType, {
-  if (TL.getTypePtr()->getSizeExpr())
-    TRY_TO(TraverseStmt(TL.getTypePtr()->getSizeExpr()));
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
-// FIXME: size and attributes
 // FIXME: base VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(ExtVectorType, {
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
@@ -3454,6 +3453,9 @@ DEF_TRAVERSE_STMT(OMPParallelGenericLoopDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPTargetParallelGenericLoopDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPTargetGenericLoopDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPAssumeDirective,

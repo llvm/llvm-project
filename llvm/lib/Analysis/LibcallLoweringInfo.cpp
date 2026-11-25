@@ -45,6 +45,7 @@ bool ModuleLibcallLoweringInfo::invalidate(
 
 ModuleLibcallLoweringInfo
 LibcallLoweringModuleAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
-  LibcallLoweringMap.init(&MAM.getResult<RuntimeLibraryAnalysis>(M));
-  return LibcallLoweringMap;
+  ModuleLibcallLoweringInfo Result;
+  Result.init(&MAM.getResult<RuntimeLibraryAnalysis>(M));
+  return Result;
 }

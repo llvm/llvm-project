@@ -24,7 +24,6 @@ body:             |
 ---
 name:            combine_vec_udiv_uniform
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -59,7 +58,6 @@ body:             |
 ---
 name:            combine_vec_udiv_nonuniform
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -115,7 +113,6 @@ body:             |
 ---
 name:            combine_vec_udiv_nonuniform2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -165,7 +162,6 @@ body:             |
 ---
 name:            combine_vec_udiv_nonuniform3
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -217,7 +213,6 @@ body:             |
 ---
 name:            combine_vec_udiv_nonuniform4
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -253,7 +248,6 @@ body:             |
 ---
 name:            pr38477
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
