@@ -196,8 +196,8 @@ module attributes {gpu.container_module} {
 
 // -----
 
-// A gang routine that calls another gang routine keeps the heap allocation:
-// its callers reserve slot room only for the gang routines they call directly.
+// A gang routine that calls another gang routine still takes a slot, which
+// stays live across the call: the two routines' slots are distinct.
 
 module attributes {gpu.container_module} {
   func.func private @gang_inner() attributes {acc.routine_info = #acc.routine_info<[@routine_inner]>}
@@ -209,10 +209,15 @@ module attributes {gpu.container_module} {
     func.func private @use(memref<f64>)
 
     // CHECK-LABEL: gpu.func @gang_outer
-    // CHECK-SAME:    workgroup(%{{[^ ]+}} : memref<memref<f64>, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
-    // CHECK:         memref.alloc() : memref<f64>
+    // CHECK-SAME:    workgroup(%[[SLOT:[^ ]+]] : memref<f64, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
+    // CHECK-NOT:     memref.alloc
+    // CHECK:         %[[MEM:.*]] = memref.memory_space_cast %[[SLOT]]
+    // CHECK:         memref.store %{{.*}}, %[[MEM]][] : memref<f64>
     // CHECK:         call @gang_inner()
-    // CHECK:         memref.dealloc %{{.*}} : memref<f64>
+    // CHECK:         func.call @use(%[[MEM]])
+    // CHECK:         gpu.barrier
+    // CHECK-NOT:     memref.dealloc
+    // CHECK:         gpu.return
     gpu.func @gang_outer()
         attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "gang_outer">} {
       %c1 = arith.constant 1 : index

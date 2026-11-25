@@ -730,10 +730,11 @@ private:
   // Reusable privatize broadcast slots per type; disabled for kernels.
   llvm::DenseMap<Type, Value> privatizeBroadcastCache;
 
-  // Each gang routine called from a kernel adds up to this many bytes of
-  // private data slots, reserved in the caller's shared memory budget.
+  // Each gang routine adds up to this many bytes of private data slots,
+  // reserved in the budget of its direct callers only: callees defined in
+  // other files are invisible, so deeper levels are not counted.
   static constexpr int64_t kMaxRoutineSharedSlotBytes = 256;
-  std::optional<bool> routineCallsGangRoutine;
+  std::optional<bool> routineCallsItself;
   Block *routineSlotBarrierBlock = nullptr;
 
   int64_t staticBlockDimX = 1024;
@@ -2818,25 +2819,21 @@ Value ACCCGToGPULowering::allocateRoutineSharedSlot(acc::PrivatizeOp privatize,
       slotBlock->getTerminator()->getNumSuccessors() != 0 ||
       isInsideConditional(slotBlock))
     return {};
-  // Activations of a recursive routine would share the slot, and callers
-  // reserve slot room only for the gang routines they call directly.
-  if (!routineCallsGangRoutine) {
+  // Activations of a recursive routine would share the slot.
+  if (!routineCallsItself) {
     StringRef funcName = gpuFuncOp.getName();
-    routineCallsGangRoutine =
+    routineCallsItself =
         gpuFuncOp
             .walk([&](CallOpInterface call) {
               auto callee = dyn_cast_if_present<SymbolRefAttr>(
                   call.getCallableForCallee());
-              GPUParallelDimAttr calleeDim =
-                  getAccRoutineCallParDim(call, defaultPolicy);
-              return (callee && callee.getLeafReference() == funcName) ||
-                             (calleeDim && calleeDim.isAnyBlock())
+              return callee && callee.getLeafReference() == funcName
                          ? WalkResult::interrupt()
                          : WalkResult::advance();
             })
             .wasInterrupted();
   }
-  if (*routineCallsGangRoutine)
+  if (*routineCallsItself)
     return {};
   // Count the slots of earlier compute regions of this routine as well.
   ModuleOp module = computeRegion->getParentOfType<ModuleOp>();
