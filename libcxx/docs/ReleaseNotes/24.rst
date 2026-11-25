@@ -62,6 +62,8 @@ Improvements and New Features
 -----------------------------
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
+- ``std::ranges::view_interface::operator[]`` now enforces bounds checking when hardening is enabled (``fast``,
+  ``extensive``, or ``debug`` mode) and the derived view models ``std::ranges::sized_range`` (per LWG4577).
 
 Deprecations and Removals
 -------------------------
