@@ -36,7 +36,8 @@
 # expected-error@-1 {{unknown directive}}
 # expected-error@-2 {{unknown directive}}
 .dup_directive; .dup_directive
-# expected-error@-1 2 {{unknown directive}}
+# expected-error@-1 @times(2) {{unknown directive}}
+.dup_directive; .dup_directive # expected-error@times(2) {{unknown directive}}
 
 ## A directive that was already matched does not steal a later diagnostic from
 ## a second directive on the same line.
@@ -135,10 +136,10 @@ nop
 # RUN: not llvm-mc --triple=x86_64 --verify too-few.s 2>&1 \
 # RUN:   | FileCheck too-few.s --implicit-check-not=error:
 .foo_directive
-# expected-error@-1 2 {{unknown directive}}
-# expected-warning@-2 0 {{zero count}}
+# expected-error@-1 @times(2) {{unknown directive}}
+# expected-warning@-2 @times(0) {{zero count}}
 # CHECK: too-few.s:[[#@LINE-1]]:3: error: invalid count '0'
-# CHECK: too-few.s:[[#@LINE-3]]:3: error: expected error "unknown directive" was produced 1 of 2 times
+# CHECK: too-few.s:[[#@LINE-3]]:3: error: expected error "unknown directive" was produced 1 times (expected 2 times)
 
 #--- no-diagnostics.s
 ## A file without diagnostics or directives passes.

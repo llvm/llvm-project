@@ -2,7 +2,7 @@
 // RUN:     debug-bind-trailing-args=^test.some_returning_op,^test.some_other_returning_op})' \
 // RUN:             --split-input-file --verify-diagnostics
 
-// expected-remark @below 2 {{first extra}}
+// expected-remark @below @times(2) {{first extra}}
 // expected-note @below {{value handle points to an op result #0}}
 // expected-note @below {{value handle points to an op result #1}}
 %0:2 = "test.some_returning_op"() : () -> (i32, i64)
@@ -11,7 +11,7 @@
 // expected-note @below {{value handle points to an op result #0}}
 %1 = "test.some_returning_op"() : () -> index
 
-// expected-remark @below 2 {{second extra}}
+// expected-remark @below @times(2) {{second extra}}
 // expected-note @below {{value handle points to an op result #0}}
 // expected-note @below {{value handle points to an op result #1}}
 %2:2 = "test.some_other_returning_op"() : () -> (f32, f64)

@@ -101,7 +101,7 @@ static Regex buildExpectedRegex(ArrayRef<StringRef> prefixes) {
       [&] { pattern += '|'; });
   pattern += ")-(error|note|remark|warning)(-re)?"
              "( *@([+-][0-9]+|above|below|unknown))?(:([0-9]+))?"
-             "( +([0-9]+))? *{{(.*)}}$";
+             "( *@times\\(([0-9]+)\\))? *{{(.*)}}$";
   return Regex(pattern);
 }
 
@@ -294,7 +294,8 @@ bool SourceMgrDiagnosticVerifier::verify(raw_ostream &os, SourceMgr &mgr) {
     else
       diag.emitError(os, mgr,
                      expectedMsg + " was produced " + Twine(diag.numSeen) +
-                         " of " + Twine(diag.numExpected) + " times");
+                         " times (expected " + Twine(diag.numExpected) +
+                         " times)");
     ok = false;
   };
   for (auto &expectedDiagsPair : expectedDiagsPerFile)
