@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -86,7 +87,6 @@ public:
     } else if (magic == "oncg") {
       de = DataExtractor(buf.substr(4), true);
     } else {
-      errs() << "unexpected magic: " << magic << "\n";
       return false;
     }
     consumeError(cursor.takeError());
@@ -144,7 +144,6 @@ public:
       this->version = version = GCOV::V304;
       return true;
     }
-    errs() << "unexpected version: " << str << "\n";
     return false;
   }
 
@@ -162,7 +161,6 @@ public:
     Val = de.getU32(cursor);
     if (!cursor) {
       Val = 0;
-      errs() << "unexpected end of memory buffer: " << cursor.tell() << "\n";
       return false;
     }
     return true;
@@ -216,8 +214,8 @@ class GCOVFile {
 public:
   GCOVFile() = default;
 
-  LLVM_ABI bool readGCNO(GCOVBuffer &Buffer);
-  LLVM_ABI bool readGCDA(GCOVBuffer &Buffer);
+  LLVM_ABI Error readGCNO(GCOVBuffer &Buffer);
+  LLVM_ABI Error readGCDA(GCOVBuffer &Buffer);
   GCOV::GCOVVersion getVersion() const { return version; }
   LLVM_ABI void print(raw_ostream &OS) const;
   LLVM_ABI void dump() const;

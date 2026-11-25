@@ -17,13 +17,14 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cinttypes>
 #include <optional>
 #include <system_error>
 
@@ -99,20 +100,29 @@ private:
 //===----------------------------------------------------------------------===//
 // GCOVFile implementation.
 
+static Error makeGCOVError(GCOVBuffer &Buf, const Twine &Msg) {
+  const std::error_code EC = make_error_code(errc::illegal_byte_sequence);
+  if (Error E = Buf.cursor.takeError()) {
+    std::string CursorErr = toString(std::move(E));
+    return createStringError(EC, Msg + " (" + CursorErr + ")");
+  }
+  return createStringError(EC, Msg);
+}
+
 /// readGCNO - Read GCNO buffer.
-bool GCOVFile::readGCNO(GCOVBuffer &buf) {
+Error GCOVFile::readGCNO(GCOVBuffer &buf) {
   if (!buf.readGCNOFormat())
-    return false;
+    return makeGCOVError(buf, "invalid GCOV notes file magic");
   if (!buf.readGCOVVersion(version))
-    return false;
+    return makeGCOVError(buf, "invalid or unsupported GCOV version");
 
   if (!buf.readInt(checksum))
-    return false;
+    return makeGCOVError(buf, "truncated GCOV notes header");
   if (version >= GCOV::V900 && !buf.readString(cwd))
-    return false;
+    return makeGCOVError(buf, "malformed working directory in GCOV header");
   uint32_t hasUnexecutedBlocks = 0;
   if (version >= GCOV::V800 && !buf.readInt(hasUnexecutedBlocks))
-    return false;
+    return makeGCOVError(buf, "truncated GCOV notes header");
 
   uint32_t tag = 0, length = 0;
   GCOVFunction *fn = nullptr;
@@ -120,16 +130,16 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
   const uint64_t maxBlocks = uint64_t(buf.de.size()) + 1024;
   while (!buf.de.eof(buf.cursor)) {
     if (!buf.readInt(tag))
-      return false;
+      return makeGCOVError(buf, "truncated GCOV record tag");
     if (tag == 0)
       break;
     if (!buf.readInt(length))
-      return false;
+      return makeGCOVError(buf, "truncated GCOV record length");
     const uint64_t pos = buf.cursor.tell();
     const uint64_t byteLen =
         version >= GCOV::V1200 ? uint64_t(length) : uint64_t(length) * 4;
     if (byteLen > buf.de.size() - pos)
-      return false;
+      return makeGCOVError(buf, "GCOV record length exceeds buffer size");
     const uint64_t endPos = pos + byteLen;
     if (tag == GCOV_TAG_FUNCTION) {
       fn = nullptr;
@@ -137,46 +147,46 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
       if (!buf.readInt(newFn->ident) || !buf.readInt(newFn->linenoChecksum) ||
           (version >= GCOV::V407 && !buf.readInt(newFn->cfgChecksum)) ||
           !buf.readString(newFn->Name, /*AllowEmpty=*/true))
-        return false;
+        return makeGCOVError(buf, "malformed GCOV_TAG_FUNCTION record");
       StringRef filename;
       if (version < GCOV::V800) {
         if (!buf.readString(filename) || !buf.readInt(newFn->startLine))
-          return false;
+          return makeGCOVError(buf, "malformed GCOV_TAG_FUNCTION record");
       } else {
         uint32_t artificial = 0;
         if (!buf.readInt(artificial) || !buf.readString(filename) ||
             !buf.readInt(newFn->startLine) ||
             !buf.readInt(newFn->startColumn) || !buf.readInt(newFn->endLine) ||
             (version >= GCOV::V900 && !buf.readInt(newFn->endColumn)))
-          return false;
+          return makeGCOVError(buf, "malformed GCOV_TAG_FUNCTION record");
         newFn->artificial = artificial;
       }
       if (endPos < buf.cursor.tell())
-        return false;
+        return makeGCOVError(buf, "GCOV_TAG_FUNCTION overran record length");
       newFn->srcIdx = addNormalizedPathToMap(filename);
       fn = newFn.get();
       identToFunction[fn->ident] = fn;
       functions.push_back(std::move(newFn));
     } else if (tag == GCOV_TAG_BLOCKS && fn) {
       if (!fn->blocks.empty())
-        return false;
+        return makeGCOVError(buf, "duplicate GCOV_TAG_BLOCKS record");
       if (version < GCOV::V800) {
         if (length > maxBlocks - totalBlocks)
-          return false;
+          return makeGCOVError(buf, "GCOV block count exceeds file limit");
         totalBlocks += length;
         fn->blocks.reserve(length);
         for (uint32_t i = 0; i != length; ++i) {
           uint32_t ignoredFlags = 0;
           if (!buf.readInt(ignoredFlags))
-            return false;
+            return makeGCOVError(buf, "malformed GCOV_TAG_BLOCKS record");
           fn->blocks.push_back(std::make_unique<GCOVBlock>(i));
         }
       } else {
         uint32_t num = 0;
         if (byteLen < 4 || !buf.readInt(num))
-          return false;
+          return makeGCOVError(buf, "malformed GCOV_TAG_BLOCKS record");
         if (num > maxBlocks - totalBlocks)
-          return false;
+          return makeGCOVError(buf, "GCOV block count exceeds file limit");
         totalBlocks += num;
         fn->blocks.reserve(num);
         for (uint32_t i = 0; i != num; ++i)
@@ -185,26 +195,23 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
     } else if (tag == GCOV_TAG_ARCS && fn) {
       uint32_t srcNo = 0;
       if (byteLen < 4 || !buf.readInt(srcNo))
-        return false;
-      if (srcNo >= fn->blocks.size()) {
-        errs() << "unexpected block number: " << srcNo << " (in "
-               << fn->blocks.size() << ")\n";
-        return false;
-      }
+        return makeGCOVError(buf, "malformed GCOV_TAG_ARCS record");
+      if (srcNo >= fn->blocks.size())
+        return makeGCOVError(buf, "unexpected block number: " + Twine(srcNo) +
+                                      " (in " + Twine(fn->blocks.size()) + ")");
       GCOVBlock *src = fn->blocks[srcNo].get();
       const uint64_t arcsBytes = byteLen - 4;
       if (arcsBytes % 8 != 0)
-        return false;
+        return makeGCOVError(buf, "malformed GCOV_TAG_ARCS record");
       const uint64_t e = arcsBytes / 8;
       for (uint64_t i = 0; i != e; ++i) {
         uint32_t dstNo = 0, flags = 0;
         if (!buf.readInt(dstNo) || !buf.readInt(flags))
-          return false;
-        if (dstNo >= fn->blocks.size()) {
-          errs() << "unexpected block number: " << dstNo << " (in "
-                 << fn->blocks.size() << ")\n";
-          return false;
-        }
+          return makeGCOVError(buf, "malformed GCOV_TAG_ARCS record");
+        if (dstNo >= fn->blocks.size())
+          return makeGCOVError(buf, "unexpected block number: " + Twine(dstNo) +
+                                        " (in " + Twine(fn->blocks.size()) +
+                                        ")");
         GCOVBlock *dst = fn->blocks[dstNo].get();
         auto arc = std::make_unique<GCOVArc>(*src, *dst, flags);
         src->addDstEdge(arc.get());
@@ -217,27 +224,26 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
     } else if (tag == GCOV_TAG_LINES && fn) {
       uint32_t srcNo = 0;
       if (byteLen < 4 || !buf.readInt(srcNo))
-        return false;
-      if (srcNo >= fn->blocks.size()) {
-        errs() << "unexpected block number: " << srcNo << " (in "
-               << fn->blocks.size() << ")\n";
-        return false;
-      }
+        return makeGCOVError(buf, "malformed GCOV_TAG_LINES record");
+      if (srcNo >= fn->blocks.size())
+        return makeGCOVError(buf, "unexpected block number: " + Twine(srcNo) +
+                                      " (in " + Twine(fn->blocks.size()) + ")");
       GCOVBlock &Block = *fn->blocks[srcNo];
       while (buf.cursor.tell() < endPos) {
         uint32_t line = 0;
         if (!buf.readInt(line))
-          return false;
+          return makeGCOVError(buf, "malformed GCOV_TAG_LINES record");
         if (line != 0) {
           if (Block.locations.empty())
-            return false;
+            return makeGCOVError(
+                buf, "line number before initial filename in GCOV_TAG_LINES");
           Block.addLine(line);
         } else {
           if (buf.cursor.tell() >= endPos)
-            return false;
+            return makeGCOVError(buf, "truncated GCOV_TAG_LINES filename");
           StringRef filename;
           if (!buf.readString(filename, /*AllowEmpty=*/true))
-            return false;
+            return makeGCOVError(buf, "malformed GCOV_TAG_LINES filename");
           if (filename.empty())
             break;
           Block.addFile(addNormalizedPathToMap(filename));
@@ -245,63 +251,61 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
       }
     }
     if (!buf.cursor || endPos < buf.cursor.tell())
-      return false;
+      return makeGCOVError(buf, "GCOV record overran declared length");
     if (uint64_t rem = endPos - buf.cursor.tell()) {
       buf.de.skip(buf.cursor, rem);
       if (!buf.cursor)
-        return false;
+        return makeGCOVError(buf, "truncated GCOV record");
     }
   }
 
   GCNOInitialized = true;
-  return true;
+  return Error::success();
 }
 
 /// readGCDA - Read GCDA buffer. It is required that readGCDA() can only be
 /// called after readGCNO().
-bool GCOVFile::readGCDA(GCOVBuffer &buf) {
+Error GCOVFile::readGCDA(GCOVBuffer &buf) {
   assert(GCNOInitialized && "readGCDA() can only be called after readGCNO()");
   if (!buf.readGCDAFormat())
-    return false;
+    return makeGCOVError(buf, "invalid GCOV data file magic");
   GCOV::GCOVVersion GCDAVersion;
   if (!buf.readGCOVVersion(GCDAVersion))
-    return false;
-  if (version != GCDAVersion) {
-    errs() << "GCOV versions do not match.\n";
-    return false;
-  }
+    return makeGCOVError(buf, "invalid or unsupported GCOV version");
+  if (version != GCDAVersion)
+    return makeGCOVError(buf, "GCOV versions do not match");
 
   uint32_t GCDAChecksum = 0;
   if (!buf.readInt(GCDAChecksum))
-    return false;
-  if (checksum != GCDAChecksum) {
-    errs() << "file checksums do not match: " << checksum
-           << " != " << GCDAChecksum << "\n";
-    return false;
-  }
+    return makeGCOVError(buf, "truncated GCOV data header");
+  if (checksum != GCDAChecksum)
+    return makeGCOVError(buf,
+                         "file checksums do not match: " + Twine(checksum) +
+                             " != " + Twine(GCDAChecksum));
+
   uint32_t dummy = 0, tag = 0, length = 0;
   uint32_t ident = 0;
   GCOVFunction *fn = nullptr;
   while (!buf.de.eof(buf.cursor)) {
     if (!buf.readInt(tag))
-      return false;
+      return makeGCOVError(buf, "truncated GCOV record tag");
     if (tag == 0)
       break;
     if (!buf.readInt(length))
-      return false;
+      return makeGCOVError(buf, "truncated GCOV record length");
     const uint64_t pos = buf.cursor.tell();
     const uint64_t byteLen =
         version >= GCOV::V1200 ? uint64_t(length) : uint64_t(length) * 4;
     if (byteLen > buf.de.size() - pos)
-      return false;
+      return makeGCOVError(buf, "GCOV record length exceeds buffer size");
     const uint64_t endPos = pos + byteLen;
     if (tag == GCOV_TAG_OBJECT_SUMMARY) {
       if (byteLen < 8 || !buf.readInt(runCount) || !buf.readInt(dummy))
-        return false;
+        return makeGCOVError(buf, "malformed GCOV_TAG_OBJECT_SUMMARY record");
     } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
       if (byteLen < 12 || !buf.readInt(dummy) || !buf.readInt(dummy) ||
           !buf.readInt(runCount))
-        return false;
+        return makeGCOVError(buf, "malformed GCOV_TAG_PROGRAM_SUMMARY record");
       ++programCount;
     } else if (tag == GCOV_TAG_FUNCTION) {
       fn = nullptr;
@@ -312,33 +316,30 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
       if (byteLen < minFuncBytes || !buf.readInt(ident) ||
           !buf.readInt(linenoChecksum) ||
           (version >= GCOV::V407 && !buf.readInt(cfgChecksum)))
-        return false;
+        return makeGCOVError(buf, "malformed GCOV_TAG_FUNCTION record");
       auto It = identToFunction.find(ident);
       if (It != identToFunction.end()) {
         fn = It->second;
         if (linenoChecksum != fn->linenoChecksum ||
-            cfgChecksum != fn->cfgChecksum) {
-          errs() << fn->Name
-                 << format(": checksum mismatch, (%u, %u) != (%u, %u)\n",
-                           linenoChecksum, cfgChecksum, fn->linenoChecksum,
-                           fn->cfgChecksum);
-          return false;
-        }
+            cfgChecksum != fn->cfgChecksum)
+          return makeGCOVError(buf, fn->Name + ": checksum mismatch, (" +
+                                        Twine(linenoChecksum) + ", " +
+                                        Twine(cfgChecksum) + ") != (" +
+                                        Twine(fn->linenoChecksum) + ", " +
+                                        Twine(fn->cfgChecksum) + ")");
       }
     } else if (tag == GCOV_TAG_COUNTER_ARCS && fn) {
       const uint64_t expectedBytes = uint64_t(fn->arcs.size()) * 8;
       if (byteLen != expectedBytes) {
         const uint64_t expectedLength =
             version >= GCOV::V1200 ? expectedBytes : expectedBytes / 4;
-        errs() << fn->Name
-               << format(": GCOV_TAG_COUNTER_ARCS mismatch, got %u, expected "
-                         "%" PRIu64 "\n",
-                         length, expectedLength);
-        return false;
+        return makeGCOVError(
+            buf, fn->Name + ": GCOV_TAG_COUNTER_ARCS mismatch, got " +
+                     Twine(length) + ", expected " + Twine(expectedLength));
       }
       for (std::unique_ptr<GCOVArc> &arc : fn->arcs) {
         if (!buf.readInt64(arc->count))
-          return false;
+          return makeGCOVError(buf, "truncated GCOV_TAG_COUNTER_ARCS record");
         arc->src.count += arc->count;
       }
 
@@ -359,15 +360,15 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
       fn = nullptr;
     }
     if (!buf.cursor || endPos < buf.cursor.tell())
-      return false;
+      return makeGCOVError(buf, "GCOV record overran declared length");
     if (uint64_t rem = endPos - buf.cursor.tell()) {
       buf.de.skip(buf.cursor, rem);
       if (!buf.cursor)
-        return false;
+        return makeGCOVError(buf, "truncated GCOV record");
     }
   }
 
-  return true;
+  return Error::success();
 }
 
 void GCOVFile::print(raw_ostream &OS) const {

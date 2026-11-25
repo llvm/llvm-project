@@ -16,13 +16,19 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <system_error>
 #include <vector>
+
+#if LLVM_ENABLE_THREADS
+#include <thread>
+#endif
 
 #if defined(_WIN32)
 #include "llvm/Support/Windows/WindowsSupport.h"
@@ -32,6 +38,7 @@
 #endif
 
 using namespace llvm;
+using ::testing::HasSubstr;
 
 namespace {
 
@@ -235,13 +242,13 @@ std::unique_ptr<MemoryBuffer> createBuffer(ArrayRef<uint8_t> Bytes) {
       "gcov-test", /*RequiresNullTerminator=*/false);
 }
 
-bool parseGCNO(ArrayRef<uint8_t> Bytes, GCOVFile &GF) {
+Error parseGCNO(ArrayRef<uint8_t> Bytes, GCOVFile &GF) {
   auto MemBuf = createBuffer(Bytes);
   GCOVBuffer GB(MemBuf.get());
   return GF.readGCNO(GB);
 }
 
-bool parseGCDA(ArrayRef<uint8_t> Bytes, GCOVFile &GF) {
+Error parseGCDA(ArrayRef<uint8_t> Bytes, GCOVFile &GF) {
   auto MemBuf = createBuffer(Bytes);
   GCOVBuffer GB(MemBuf.get());
   return GF.readGCDA(GB);
@@ -345,8 +352,8 @@ TEST(GCOVTest, ValidMinimalRoundTrip) {
       }
 
       GCOVFile GF;
-      ASSERT_TRUE(parseGCNO(GCNO.bytes(), GF));
-      ASSERT_TRUE(parseGCDA(GCDA.bytes(), GF));
+      ASSERT_THAT_ERROR(parseGCNO(GCNO.bytes(), GF), Succeeded());
+      ASSERT_THAT_ERROR(parseGCDA(GCDA.bytes(), GF), Succeeded());
       EXPECT_EQ(GF.getVersion(), Version);
       EXPECT_EQ(GF.runCount, 1u);
       ASSERT_EQ(GF.functions.size(), 1u);
@@ -360,42 +367,54 @@ TEST(GCOVTest, ValidMinimalRoundTrip) {
     // Empty function name (len == 0) in GCOV_TAG_FUNCTION is accepted.
     GCOVBinaryBuilder EmptyNameGCNO = buildMinimalValidGCNO(Version, "");
     GCOVFile EmptyNameFile;
-    ASSERT_TRUE(parseGCNO(EmptyNameGCNO.bytes(), EmptyNameFile));
+    ASSERT_THAT_ERROR(parseGCNO(EmptyNameGCNO.bytes(), EmptyNameFile),
+                      Succeeded());
     ASSERT_EQ(EmptyNameFile.functions.size(), 1u);
     EXPECT_EQ(EmptyNameFile.functions[0]->getName(/*demangle=*/false), "");
   }
 }
 
 TEST(GCOVTest, TruncatedAndMalformedHeaders) {
-  // Shorter than 4-byte magic, wrong magic, truncated version, and unsupported
-  // version.
-  for (StringRef Bad : {StringRef("onc"), StringRef("xxxx*08A12345678"),
-                        StringRef("oncg*0"), StringRef("oncg*30312345678")}) {
+  // Shorter than 4-byte magic and wrong magic.
+  for (StringRef Bad : {StringRef("onc"), StringRef("xxxx*08A12345678")}) {
     GCOVFile GF;
     ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Bad.data()),
                             Bad.size());
-    EXPECT_FALSE(parseGCNO(Bytes, GF));
+    EXPECT_THAT_ERROR(parseGCNO(Bytes, GF),
+                      FailedWithMessage(HasSubstr("magic")));
+  }
+
+  // Truncated version and unsupported version.
+  for (StringRef Bad : {StringRef("oncg*0"), StringRef("oncg*30312345678")}) {
+    GCOVFile GF;
+    ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Bad.data()),
+                            Bad.size());
+    EXPECT_THAT_ERROR(parseGCNO(Bytes, GF),
+                      FailedWithMessage(HasSubstr("version")));
   }
 
   // Missing checksum (only 8 bytes).
   {
     GCOVFile GF;
     StringRef Trunc("oncg*804");
-    EXPECT_FALSE(parseGCNO(
-        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Trunc.data()),
-                          Trunc.size()),
-        GF));
+    EXPECT_THAT_ERROR(
+        parseGCNO(
+            ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Trunc.data()),
+                              Trunc.size()),
+            GF),
+        FailedWithMessage(HasSubstr("truncated GCOV notes header")));
   }
 
-  // 12-byte V800 .gcno missing hasUnexecutedBlocks word (previously returned
-  // true silently via unchecked getWord() + while ((tag = buf.getWord()))).
+  // 12-byte V800 .gcno missing hasUnexecutedBlocks word.
   {
     GCOVBinaryBuilder B(GCOV::V800);
     B.writeBytes("oncg");
     B.writeBytes("*08A");
     B.writeU32(0x12345678);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCNO(B.bytes(), GF),
+        FailedWithMessage(HasSubstr("truncated GCOV notes header")));
     EXPECT_FALSE(GF.GCNOInitialized);
   }
 
@@ -407,7 +426,7 @@ TEST(GCOVTest, TruncatedAndMalformedHeaders) {
     B.writeU32(0x12345678);
     B.writeU32(4); // Claims 16 bytes of cwd, but EOF follows.
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF), Failed());
   }
 }
 
@@ -421,13 +440,17 @@ TEST(GCOVTest, TrailingTruncatedTagAndLengthBytes) {
       std::vector<uint8_t> BadGCNO = BaseGCNO;
       BadGCNO.insert(BadGCNO.end(), Extra, 0xaa);
       GCOVFile GF;
-      EXPECT_FALSE(parseGCNO(BadGCNO, GF));
+      EXPECT_THAT_ERROR(
+          parseGCNO(BadGCNO, GF),
+          FailedWithMessage(HasSubstr("truncated GCOV record tag")));
 
       GCOVFile ValidGF;
-      ASSERT_TRUE(parseGCNO(BaseGCNO, ValidGF));
+      ASSERT_THAT_ERROR(parseGCNO(BaseGCNO, ValidGF), Succeeded());
       std::vector<uint8_t> BadGCDA = BaseGCDA;
       BadGCDA.insert(BadGCDA.end(), Extra, 0xaa);
-      EXPECT_FALSE(parseGCDA(BadGCDA, ValidGF));
+      EXPECT_THAT_ERROR(
+          parseGCDA(BadGCDA, ValidGF),
+          FailedWithMessage(HasSubstr("truncated GCOV record tag")));
     }
 
     // Non-zero tag at EOF missing its 4-byte length word must fail.
@@ -435,7 +458,9 @@ TEST(GCOVTest, TrailingTruncatedTagAndLengthBytes) {
       GCOVBinaryBuilder B = buildMinimalValidGCNO(Version);
       B.writeU32(GCOV_TAG_BLOCKS);
       GCOVFile GF;
-      EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+      EXPECT_THAT_ERROR(
+          parseGCNO(B.bytes(), GF),
+          FailedWithMessage(HasSubstr("truncated GCOV record length")));
     }
   }
 }
@@ -449,7 +474,8 @@ TEST(GCOVTest, RecordLengthExceedsBufferOrOverreadsRecordEnd) {
       B.writeU32(GCOV_TAG_FUNCTION);
       B.writeU32(0xffffffff);
       GCOVFile GF;
-      EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+      EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                        FailedWithMessage(HasSubstr("exceeds buffer size")));
     }
 
     // Record length 4 bytes larger than remaining buffer.
@@ -460,7 +486,8 @@ TEST(GCOVTest, RecordLengthExceedsBufferOrOverreadsRecordEnd) {
       B.writeU32(Version >= GCOV::V1200 ? 8 : 2);
       B.writeU32(0); // Only 4 bytes present instead of 8.
       GCOVFile GF;
-      EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+      EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                        FailedWithMessage(HasSubstr("exceeds buffer size")));
     }
   }
 
@@ -484,7 +511,8 @@ TEST(GCOVTest, RecordLengthExceedsBufferOrOverreadsRecordEnd) {
     B.writeU32(0);
 
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                      FailedWithMessage(HasSubstr("overran record length")));
     EXPECT_TRUE(GF.functions.empty());
     EXPECT_TRUE(GF.filenames.empty());
     EXPECT_TRUE(GF.identToFunction.empty());
@@ -501,7 +529,8 @@ TEST(GCOVTest, ArcsLengthUnderflowAndOddBytes) {
     B.writeU32(GCOV_TAG_ARCS);
     B.writeU32(0);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                      FailedWithMessage(HasSubstr("malformed GCOV_TAG_ARCS")));
   }
 
   // V1200 length = 0..3 previously underflowed (length / 4 - 1) / 2.
@@ -515,7 +544,8 @@ TEST(GCOVTest, ArcsLengthUnderflowAndOddBytes) {
     for (uint32_t I = 0; I < BadLen; ++I)
       B.writeBytes(StringRef("\0", 1));
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                      FailedWithMessage(HasSubstr("malformed GCOV_TAG_ARCS")));
   }
 
   // Partial arc trailing bytes (byteLen = 8 -> srcNo + 4 leftover bytes).
@@ -529,7 +559,8 @@ TEST(GCOVTest, ArcsLengthUnderflowAndOddBytes) {
     B.writeU32(1); // dstNo without flags word
     B.endRecord(Off);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                      FailedWithMessage(HasSubstr("malformed GCOV_TAG_ARCS")));
   }
 }
 
@@ -542,7 +573,8 @@ TEST(GCOVTest, ArcsOutOfBoundsSrcAndDstBlock) {
     B.writeBlocksRecord(2);
     B.writeArcsRecord(BadArc.first, {{BadArc.second, 0}});
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                      FailedWithMessage(HasSubstr("unexpected block number")));
   }
 }
 
@@ -555,7 +587,8 @@ TEST(GCOVTest, LinesBeforeInitialFilenameAndOutOfBoundsBlock) {
     B.writeBlocksRecord(2);
     B.writeLinesRecord(/*BlockNo=*/2, "f.c", {10});
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                      FailedWithMessage(HasSubstr("unexpected block number")));
   }
 
   // Non-zero line number before any line == 0 filename entry (locations is
@@ -572,7 +605,8 @@ TEST(GCOVTest, LinesBeforeInitialFilenameAndOutOfBoundsBlock) {
     B.writeU32(0);
     B.endRecord(Off);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCNO(B.bytes(), GF),
+                      FailedWithMessage(HasSubstr("before initial filename")));
   }
 }
 
@@ -589,7 +623,9 @@ TEST(GCOVTest, LinesTruncatedAfterZeroSentinel) {
       B.writeU32(0); // line == 0 sentinel with missing filename length!
       B.endRecord(Off);
       GCOVFile GF;
-      EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+      EXPECT_THAT_ERROR(
+          parseGCNO(B.bytes(), GF),
+          FailedWithMessage(HasSubstr("truncated GCOV_TAG_LINES filename")));
     }
 
     // Case 2: Same truncated GCOV_TAG_LINES followed by {0, 0} trailer so the
@@ -607,7 +643,9 @@ TEST(GCOVTest, LinesTruncatedAfterZeroSentinel) {
       B.writeU32(0);
       B.writeU32(0);
       GCOVFile GF;
-      EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+      EXPECT_THAT_ERROR(
+          parseGCNO(B.bytes(), GF),
+          FailedWithMessage(HasSubstr("truncated GCOV_TAG_LINES filename")));
     }
   }
 }
@@ -621,7 +659,9 @@ TEST(GCOVTest, BlocksDuplicateTagAndHugeCountOOM) {
     B.writeBlocksRecord(2);
     B.writeBlocksRecord(2);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCNO(B.bytes(), GF),
+        FailedWithMessage(HasSubstr("duplicate GCOV_TAG_BLOCKS")));
   }
 
   // V800 GCOV_TAG_BLOCKS with 0-byte payload (missing block count word).
@@ -632,7 +672,9 @@ TEST(GCOVTest, BlocksDuplicateTagAndHugeCountOOM) {
     size_t Off = B.beginRecord(GCOV_TAG_BLOCKS);
     B.endRecord(Off);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCNO(B.bytes(), GF),
+        FailedWithMessage(HasSubstr("malformed GCOV_TAG_BLOCKS")));
   }
 
   // Single-function V800 num = 0xffffffff OOM amplification must fail
@@ -643,7 +685,9 @@ TEST(GCOVTest, BlocksDuplicateTagAndHugeCountOOM) {
     B.writeFunctionRecord(1, "f", "f.c");
     B.writeBlocksRecord(0xffffffffu);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCNO(B.bytes(), GF),
+        FailedWithMessage(HasSubstr("block count exceeds file limit")));
   }
 
   // Multi-function cumulative cap: each function requests 800 blocks
@@ -657,7 +701,9 @@ TEST(GCOVTest, BlocksDuplicateTagAndHugeCountOOM) {
       B.writeBlocksRecord(800);
     }
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCNO(B.bytes(), GF),
+        FailedWithMessage(HasSubstr("block count exceeds file limit")));
   }
 }
 
@@ -683,8 +729,8 @@ TEST(GCOVTest, ReadStringMalformedLengthsAndMissingNul) {
     EXPECT_EQ(Next, 0u);
   }
 
-  // V1200 string missing trailing NUL byte in GCOVBuffer::readString and inside
-  // GCOV_TAG_LINES (must fail rather than masquerading as empty terminator).
+  // V1200 string missing trailing NUL byte in GCOV_TAG_LINES (must fail rather
+  // than masquerading as empty terminator).
   {
     GCOVBinaryBuilder B(GCOV::V1200);
     B.writeGCNOHeader();
@@ -697,7 +743,9 @@ TEST(GCOVTest, ReadStringMalformedLengthsAndMissingNul) {
     B.writeBytes("abc"); // Missing trailing '\0'!
     B.endRecord(Off);
     GCOVFile GF;
-    EXPECT_FALSE(parseGCNO(B.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCNO(B.bytes(), GF),
+        FailedWithMessage(HasSubstr("malformed GCOV_TAG_LINES filename")));
   }
 
   // V408 len = 0x40000000 (uint32_t len * 4 wraps to 0) in both readString()
@@ -758,7 +806,7 @@ TEST(GCOVTest, DemangleNonNullTerminatedBuffer) {
     B.endRecord(Off);
 
     GCOVFile GF;
-    ASSERT_TRUE(parseGCNO(B.bytes(), GF));
+    ASSERT_THAT_ERROR(parseGCNO(B.bytes(), GF), Succeeded());
     ASSERT_EQ(GF.functions.size(), 1u);
     EXPECT_EQ(GF.functions[0]->getName(/*demangle=*/true), "foo(int, int)");
   }
@@ -767,40 +815,60 @@ TEST(GCOVTest, DemangleNonNullTerminatedBuffer) {
 TEST(GCOVTest, ReadGcdaMalformedAndStaleFunctionState) {
   GCOVBinaryBuilder ValidGCNO = buildMinimalValidGCNO(GCOV::V1200);
 
-  // Version mismatch and checksum mismatch.
+  // Version mismatch, file checksum mismatch, function checksum mismatch, and
+  // counter length mismatch.
   {
     GCOVFile GF;
-    ASSERT_TRUE(parseGCNO(ValidGCNO.bytes(), GF));
+    ASSERT_THAT_ERROR(parseGCNO(ValidGCNO.bytes(), GF), Succeeded());
     GCOVBinaryBuilder WrongVerGCDA = buildMinimalValidGCDA(GCOV::V800);
-    EXPECT_FALSE(parseGCDA(WrongVerGCDA.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCDA(WrongVerGCDA.bytes(), GF),
+                      FailedWithMessage(HasSubstr("versions do not match")));
 
     GCOVBinaryBuilder WrongSumGCDA(GCOV::V1200);
     WrongSumGCDA.writeGCDAHeader(/*Checksum=*/0xdeadbeef);
-    EXPECT_FALSE(parseGCDA(WrongSumGCDA.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCDA(WrongSumGCDA.bytes(), GF),
+        FailedWithMessage(HasSubstr("file checksums do not match")));
+
+    GCOVBinaryBuilder WrongFnSumGCDA(GCOV::V1200);
+    WrongFnSumGCDA.writeGCDAHeader();
+    WrongFnSumGCDA.writeGCDAFunctionRecord(/*Ident=*/1, /*LinenoChecksum=*/99);
+    EXPECT_THAT_ERROR(parseGCDA(WrongFnSumGCDA.bytes(), GF),
+                      FailedWithMessage(HasSubstr("checksum mismatch")));
+
+    GCOVBinaryBuilder WrongCtrLenGCDA(GCOV::V1200);
+    WrongCtrLenGCDA.writeGCDAHeader();
+    WrongCtrLenGCDA.writeGCDAFunctionRecord(/*Ident=*/1);
+    WrongCtrLenGCDA.writeGCDACounterArcsRecord({1, 2});
+    EXPECT_THAT_ERROR(
+        parseGCDA(WrongCtrLenGCDA.bytes(), GF),
+        FailedWithMessage(HasSubstr("GCOV_TAG_COUNTER_ARCS mismatch")));
   }
 
   // V1200 GCOV_TAG_FUNCTION with length = 4 bytes (< 12 required bytes).
   {
     GCOVFile GF;
-    ASSERT_TRUE(parseGCNO(ValidGCNO.bytes(), GF));
+    ASSERT_THAT_ERROR(parseGCNO(ValidGCNO.bytes(), GF), Succeeded());
     GCOVBinaryBuilder B(GCOV::V1200);
     B.writeGCDAHeader();
     size_t Off = B.beginRecord(GCOV_TAG_FUNCTION);
     B.writeU32(1); // Only 4 bytes instead of 12
     B.endRecord(Off);
-    EXPECT_FALSE(parseGCDA(B.bytes(), GF));
+    EXPECT_THAT_ERROR(
+        parseGCDA(B.bytes(), GF),
+        FailedWithMessage(HasSubstr("malformed GCOV_TAG_FUNCTION")));
   }
 
   // Truncated summary records (OBJECT_SUMMARY < 8 bytes, PROGRAM_SUMMARY < 12).
   for (uint32_t Tag : {GCOV_TAG_OBJECT_SUMMARY, GCOV_TAG_PROGRAM_SUMMARY}) {
     GCOVFile GF;
-    ASSERT_TRUE(parseGCNO(ValidGCNO.bytes(), GF));
+    ASSERT_THAT_ERROR(parseGCNO(ValidGCNO.bytes(), GF), Succeeded());
     GCOVBinaryBuilder B(GCOV::V1200);
     B.writeGCDAHeader();
     size_t Off = B.beginRecord(Tag);
     B.writeU32(1); // Only 4 bytes
     B.endRecord(Off);
-    EXPECT_FALSE(parseGCDA(B.bytes(), GF));
+    EXPECT_THAT_ERROR(parseGCDA(B.bytes(), GF), Failed());
   }
 
   // Stale fn reset: valid function 1 followed by:
@@ -811,7 +879,7 @@ TEST(GCOVTest, ReadGcdaMalformedAndStaleFunctionState) {
   // None of these may overwrite or double-count function 1's entry count.
   {
     GCOVFile GF;
-    ASSERT_TRUE(parseGCNO(ValidGCNO.bytes(), GF));
+    ASSERT_THAT_ERROR(parseGCNO(ValidGCNO.bytes(), GF), Succeeded());
     GCOVBinaryBuilder B(GCOV::V1200);
     B.writeGCDAHeader();
     B.writeGCDAObjectSummaryRecord(1);
@@ -827,10 +895,110 @@ TEST(GCOVTest, ReadGcdaMalformedAndStaleFunctionState) {
     B.writeGCDAFunctionRecord(/*Ident=*/999);
     B.writeGCDACounterArcsRecord({55});
 
-    ASSERT_TRUE(parseGCDA(B.bytes(), GF));
+    ASSERT_THAT_ERROR(parseGCDA(B.bytes(), GF), Succeeded());
     ASSERT_EQ(GF.functions.size(), 1u);
     EXPECT_EQ(GF.functions[0]->getEntryCount(), 11u);
   }
 }
+
+#if LLVM_ENABLE_THREADS
+TEST(GCOVTest, ConcurrentMalformedInputsAreThreadSafe) {
+  std::vector<uint8_t> ValidGCNO =
+      buildMinimalValidGCNO(GCOV::V1200).takeBytes();
+  std::vector<uint8_t> ValidGCDA =
+      buildMinimalValidGCDA(GCOV::V1200, /*MeasuredCount=*/5).takeBytes();
+
+  // Diverse malformed .gcno payloads that previously wrote to global
+  // llvm::errs() from GCOVBuffer and GCOVFile::readGCNO.
+  std::vector<std::vector<uint8_t>> BadGCNOs;
+  {
+    StringRef BadMagic("xxxx 02B12345678");
+    BadGCNOs.emplace_back(BadMagic.bytes_begin(), BadMagic.bytes_end());
+  }
+  {
+    StringRef BadVer("oncg*30312345678");
+    BadGCNOs.emplace_back(BadVer.bytes_begin(), BadVer.bytes_end());
+  }
+  {
+    StringRef Trunc("oncg 02B");
+    BadGCNOs.emplace_back(Trunc.bytes_begin(), Trunc.bytes_end());
+  }
+  {
+    GCOVBinaryBuilder OOB(GCOV::V800);
+    OOB.writeGCNOHeader();
+    OOB.writeFunctionRecord(1, "f", "f.c");
+    OOB.writeBlocksRecord(2);
+    OOB.writeArcsRecord(0, {{99, 0}});
+    BadGCNOs.push_back(OOB.takeBytes());
+  }
+
+  // Malformed .gcda payloads that previously wrote to global llvm::errs() from
+  // GCOVFile::readGCDA.
+  std::vector<std::vector<uint8_t>> BadGCDAs;
+  BadGCDAs.push_back(buildMinimalValidGCDA(GCOV::V800).takeBytes());
+  {
+    GCOVBinaryBuilder BadSum(GCOV::V1200);
+    BadSum.writeGCDAHeader(0xdeadbeef);
+    BadGCDAs.push_back(BadSum.takeBytes());
+  }
+  {
+    GCOVBinaryBuilder BadFnSum(GCOV::V1200);
+    BadFnSum.writeGCDAHeader();
+    BadFnSum.writeGCDAFunctionRecord(1, 0x99999999);
+    BadGCDAs.push_back(BadFnSum.takeBytes());
+  }
+  {
+    GCOVBinaryBuilder BadCtr(GCOV::V1200);
+    BadCtr.writeGCDAHeader();
+    BadCtr.writeGCDAFunctionRecord(1);
+    BadCtr.writeGCDACounterArcsRecord({1, 2});
+    BadGCDAs.push_back(BadCtr.takeBytes());
+  }
+
+  std::atomic<bool> FailedUnexpectedly{false};
+  constexpr unsigned NumThreads = 12;
+  constexpr unsigned Iterations = 64;
+  std::vector<std::thread> Threads;
+  Threads.reserve(NumThreads);
+
+  for (unsigned T = 0; T < NumThreads; ++T) {
+    Threads.emplace_back([&, T]() {
+      for (unsigned I = 0; I < Iterations; ++I) {
+        for (const auto &Bad : BadGCNOs) {
+          GCOVFile GF;
+          Error Err = parseGCNO(Bad, GF);
+          if (!Err || toString(std::move(Err)).empty())
+            FailedUnexpectedly.store(true, std::memory_order_relaxed);
+        }
+
+        GCOVFile GF;
+        if (Error Err = parseGCNO(ValidGCNO, GF)) {
+          consumeError(std::move(Err));
+          FailedUnexpectedly.store(true, std::memory_order_relaxed);
+          return;
+        }
+        const auto &BadGCDA = BadGCDAs[(T + I) % BadGCDAs.size()];
+        Error GCDAErr = parseGCDA(BadGCDA, GF);
+        if (!GCDAErr || toString(std::move(GCDAErr)).empty())
+          FailedUnexpectedly.store(true, std::memory_order_relaxed);
+
+        if (Error OkErr = parseGCDA(ValidGCDA, GF)) {
+          consumeError(std::move(OkErr));
+          FailedUnexpectedly.store(true, std::memory_order_relaxed);
+        } else if (GF.functions.empty() ||
+                   GF.functions[0]->getName(/*demangle=*/true) != "foo()" ||
+                   GF.functions[0]->getEntryCount() != 5u) {
+          FailedUnexpectedly.store(true, std::memory_order_relaxed);
+        }
+      }
+    });
+  }
+
+  for (std::thread &Th : Threads)
+    Th.join();
+
+  EXPECT_FALSE(FailedUnexpectedly.load());
+}
+#endif
 
 } // namespace

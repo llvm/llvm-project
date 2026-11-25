@@ -17,6 +17,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
@@ -76,7 +77,8 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
     return;
   }
   GCOVBuffer GCNO_GB(GCNO_Buff.get().get());
-  if (!GF.readGCNO(GCNO_GB)) {
+  if (llvm::Error Err = GF.readGCNO(GCNO_GB)) {
+    errs() << toString(std::move(Err)) << "\n";
     errs() << "Invalid .gcno File!\n";
     return;
   }
@@ -93,10 +95,12 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
     GCDA = "-";
   } else {
     GCOVBuffer gcda_buf(GCDA_Buff.get().get());
-    if (!gcda_buf.readGCDAFormat())
+    if (!gcda_buf.readGCDAFormat()) {
       errs() << GCDA << ":not a gcov data file\n";
-    else if (!GF.readGCDA(gcda_buf))
+    } else if (llvm::Error Err = GF.readGCDA(gcda_buf)) {
+      errs() << toString(std::move(Err)) << "\n";
       errs() << "Invalid .gcda File!\n";
+    }
   }
 
   if (DumpGCOV)
