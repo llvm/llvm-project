@@ -15,7 +15,6 @@
 
 ---
 name:            _amdgpu_cs_main
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
 body: |

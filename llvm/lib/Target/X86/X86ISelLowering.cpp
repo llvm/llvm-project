@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -13076,7 +13077,7 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
   if (VT == MVT::v4i32 &&
       (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
       Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
-    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, DAG.getBitcast(VT, V1));
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
@@ -16536,7 +16537,7 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
 
       // Avoid returning the same shuffle operation. For example,
       // v8i32 = vector_shuffle<0,1,0,1,0,1,0,1> t5, undef:v8i32
-      if (BroadcastMask == Mask)
+      if (isShuffleEquivalent(Mask, BroadcastMask))
         return SDValue();
 
       return DAG.getVectorShuffle(VT, DL, RepeatShuf, DAG.getUNDEF(VT),
@@ -32000,10 +32001,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // than 7, the result will be zero.
       SmallVector<APInt, 8> MaskBits, IdxBits;
       for (unsigned I = 0, E = VT.getSizeInBits() / 128; I != E; ++I) {
-        MaskBits.push_back(APInt(64, 0x0103070F1F3F7FFFULL));
-        IdxBits.push_back(APInt(64, 0x8040201008040201ULL));
-        MaskBits.push_back(APInt::getZero(64));
-        IdxBits.push_back(APInt::getZero(64));
+        MaskBits.emplace_back(64, 0x0103070F1F3F7FFFULL);
+        IdxBits.emplace_back(64, 0x8040201008040201ULL);
+        MaskBits.emplace_back(64, 0);
+        IdxBits.emplace_back(64, 0);
       }
 
       MVT CVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
@@ -43517,6 +43518,26 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
     }
     break;
   }
+  // Shuffle With Zero - attempt to merge with logic ops.
+  case X86ISD::VZEXT_MOVL: {
+    SDValue N0 = N.getOperand(0);
+    if (N0.hasOneUse()) {
+      N0 = peekThroughOneUseBitcasts(N0);
+      unsigned SrcOpcode = N0.getOpcode();
+      if (ISD::isBitwiseLogicOp(SrcOpcode)) {
+        SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
+        SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
+        if (IsMergeableWithShuffle(Op00) && IsMergeableWithShuffle(Op01)) {
+          Op00 = DAG.getBitcast(ShuffleVT, Op00);
+          Op01 = DAG.getBitcast(ShuffleVT, Op01);
+          Op00 = DAG.getNode(Opc, DL, ShuffleVT, Op00);
+          Op01 = DAG.getNode(Opc, DL, ShuffleVT, Op01);
+          return DAG.getNode(SrcOpcode, DL, ShuffleVT, Op00, Op01);
+        }
+      }
+    }
+    break;
+  }
   // Binary and Binary+Permute Shuffles.
   case X86ISD::INSERTPS: {
     // Don't merge INSERTPS if it contains zero'd elements.
@@ -46502,6 +46523,15 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     break;
   }
+  case X86ISD::BZHI: {
+    // Only the bottom 8 bits of the index are used.
+    KnownBits Known1;
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 8));
+    if (SimplifyDemandedBits(Op.getOperand(1), DemandedMask, Known1, TLO,
+                             Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
     KnownBits KnownOp0, KnownOp1, KnownOp2;
@@ -46743,6 +46773,23 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
                                                   Depth + 1);
     }
     return DAG.isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+  }
+  case X86ISD::VBROADCAST_LOAD:
+  case X86ISD::SUBV_BROADCAST_LOAD: {
+    // If we're loading from the constant pool, check if the constant
+    // contains poison/undef.
+    // TODO: type size mismatch handling.
+    auto *LD = cast<MemIntrinsicSDNode>(Op);
+    if (const Constant *Cst = getTargetConstantFromBasePtr(LD->getBasePtr())) {
+      // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+      if (includesPoison(Kind) && includesUndef(Kind))
+        return ::isGuaranteedNotToBeUndefOrPoison(Cst);
+      if (includesPoison(Kind))
+        return ::isGuaranteedNotToBePoison(Cst);
+      assert(includesUndef(Kind) && "UndefOnly expected");
+      return ::isGuaranteedNotToBeUndef(Cst);
+    }
+    break;
   }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
@@ -52002,10 +52049,13 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   // which DAG folds to: srl(vecreduce_umax(x),bw-1).
   // This attempts to reconstruct the signbit reduction.
   if (sd_match(N1, m_SpecificInt(EltSizeInBits - 1))) {
-    SDValue X = N0;
+    SDValue X;
     ISD::CondCode CC = ISD::SETNE;
+    // A failed match can still have bound X to an xor operand.
     if (sd_match(N0, m_Not(m_Value(X))))
       CC = ISD::SETEQ;
+    else
+      X = N0;
     if (X.getOpcode() == ISD::VECREDUCE_UMAX) {
       SDValue V = X.getOperand(0);
       EVT VecVT = V.getValueType();
@@ -56048,7 +56098,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
   //         store(cmov(x, load(p), CC), p) to cstore(x, p, InvertCC)
   if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-      Subtarget.hasCF() && St->isSimple()) {
+      Subtarget.hasCF() && Subtarget.preferCFMemOperand() && St->isSimple()) {
     SDValue Cmov;
     if (StoredVal.getOpcode() == X86ISD::CMOV)
       Cmov = StoredVal;
@@ -61439,6 +61489,8 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61448,6 +61500,18 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.isConstantIntBuildVectorOrConstantInt(Op,
                                                      /*AllowOpaques*/ false);
   };
+
+  // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
+  if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
+      VT.isVectorOf(MVT::i64)) {
+    SDValue X;
+    if (sd_match(N, m_Neg(m_OneUse(m_And(m_Value(X), m_One()))))) {
+      SDValue VecConst =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X, VecConst);
+      return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
+    }
+  }
 
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
@@ -65356,7 +65420,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     // Literal immediates are always ok.
     if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
       bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
-      BooleanContent BCont = getBooleanContents(MVT::i64);
+      BooleanContent BCont = getBooleanContents(/*isVec=*/false);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
       SDLoc DL(Op);

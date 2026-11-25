@@ -34,9 +34,12 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
+#include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -2463,7 +2466,49 @@ bool CPlusPlusLanguage::IsCategoryApplicable(
   if (category_language != lldb::eLanguageTypeC_plus_plus)
     return Language::IsCategoryApplicable(category_language, valobj_language);
   return Language::LanguageIsC(valobj_language) ||
-         valobj_language == lldb::eLanguageTypeC_plus_plus;
+         valobj_language == lldb::eLanguageTypeC_plus_plus ||
+         valobj_language == lldb::eLanguageTypeRust;
+}
+
+#define LLDB_OPTIONS_expression_cplusplus
+#include "LanguageCPlusPlusOptions.inc"
+
+namespace {
+/// The options that C++ adds to the commands that evaluate expressions.
+class CPlusPlusExpressionOptions : public OptionGroupLanguageExpression {
+public:
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::ArrayRef(g_expression_cplusplus_options);
+  }
+
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                        ExecutionContext *execution_context) override {
+    switch (GetDefinitions()[option_idx].short_option) {
+    case 'Q':
+      m_ignore_context_qualifiers = true;
+      break;
+    default:
+      llvm_unreachable("Unimplemented option");
+    }
+    return {};
+  }
+
+  void OptionParsingStarting(ExecutionContext *execution_context) override {
+    m_ignore_context_qualifiers = false;
+  }
+
+  void Apply(EvaluateExpressionOptions &options) const override {
+    options.SetCppIgnoreContextQualifiers(m_ignore_context_qualifiers);
+  }
+
+private:
+  bool m_ignore_context_qualifiers = false;
+};
+} // namespace
+
+std::unique_ptr<OptionGroupLanguageExpression>
+CPlusPlusLanguage::CreateExpressionOptions() {
+  return std::make_unique<CPlusPlusExpressionOptions>();
 }
 
 HardcodedFormatters::HardcodedSummaryFinder

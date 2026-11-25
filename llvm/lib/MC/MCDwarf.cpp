@@ -2215,15 +2215,16 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   // This isn't technically necessary according to the DWARF standard,
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
-  std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  llvm::stable_sort(FrameArrayX, [IsEH](const MCDwarfFrameInfo &X,
-                                        const MCDwarfFrameInfo &Y) {
-    return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
-  });
+  SmallVector<const MCDwarfFrameInfo *, 0> Frames(
+      llvm::make_pointer_range(FrameArray));
+  llvm::stable_sort(
+      Frames, [IsEH](const MCDwarfFrameInfo *X, const MCDwarfFrameInfo *Y) {
+        return CIEKey(*X, IsEH) < CIEKey(*Y, IsEH);
+      });
   CIEKey LastKey;
   const MCSymbol *LastCIEStart = nullptr;
-  for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
-    const MCDwarfFrameInfo &Frame = *I;
+  for (auto I = Frames.begin(), E = Frames.end(); I != E;) {
+    const MCDwarfFrameInfo &Frame = **I;
     ++I;
     if (CanOmitDwarf && Frame.CompactUnwindEncoding !=
           MOFI->getCompactUnwindDwarfEHFrameOnly() && IsEH)

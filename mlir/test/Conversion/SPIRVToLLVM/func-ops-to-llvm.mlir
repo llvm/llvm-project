@@ -40,12 +40,14 @@ spirv.func @dont_inline() "DontInline" {
   spirv.Return
 }
 
-// CHECK-LABEL: llvm.func @pure() attributes {passthrough = ["readonly"]}
+// CHECK-LABEL: llvm.func @pure()
+// CHECK-SAME: memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem = read, targetMem0 = read, targetMem1 = read>
 spirv.func @pure() "Pure" {
   spirv.Return
 }
 
-// CHECK-LABEL: llvm.func @const() attributes {passthrough = ["readnone"]}
+// CHECK-LABEL: llvm.func @const()
+// CHECK-SAME: memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>
 spirv.func @const() "Const" {
   spirv.Return
 }
