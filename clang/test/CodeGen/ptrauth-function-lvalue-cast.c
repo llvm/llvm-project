@@ -15,7 +15,7 @@ void test1() {
   (*(fptr_t)cptr)();
 }
 
-// CHECK: define {{(dso_local )?}}i8 @test2
+// CHECK: define {{(dso_local )?}}{{(signext )?}}i8 @test2
 char test2() {
   return *(char *)fptr;
   // CHECK: [[LOAD:%.*]] = load ptr, ptr @fptr

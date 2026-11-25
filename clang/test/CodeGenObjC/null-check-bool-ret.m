@@ -26,7 +26,7 @@ typedef struct {
 @end
 
 // CHECK-LABEL: msgSend.call:
-// CHECK: [[CALL:%[^ ]+]] = call i1 @objc_msgSend
+// CHECK: [[CALL:%[^ ]+]] = call zeroext i1 @objc_msgSend
 // CHECK-NEXT: br label %msgSend.cont
 
 // CHECK-LABEL: msgSend.null-receiver:
