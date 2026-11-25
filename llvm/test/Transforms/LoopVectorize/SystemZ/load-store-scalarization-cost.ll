@@ -2,11 +2,11 @@
 ; RUN: opt -force-vplan-cost-model=true -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
 ; RUN:   -debug-only=loop-vectorize \
 ; RUN:   -disable-output -enable-interleaved-mem-accesses=false < %s 2>&1 | \
-; RUN:   FileCheck %s --check-prefixes=COMMON,NO_SKIP
+; RUN:   FileCheck %s --check-prefixes=COMMON,VPLAN
 ; RUN: opt -force-vplan-cost-model=false -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
 ; RUN:   -debug-only=loop-vectorize \
 ; RUN:   -disable-output -enable-interleaved-mem-accesses=false < %s 2>&1 | \
-; RUN:   FileCheck %s --check-prefixes=COMMON,SKIP
+; RUN:   FileCheck %s --check-prefixes=COMMON,DEFAULT
 ;
 ; Check that a scalarized load/store does not get a cost for insterts/
 ; extracts, since z13 supports element load/store.
@@ -38,11 +38,11 @@ for.end:
 define void @predicated_store(ptr noalias %dst, ptr %src.float, ptr %src.i32.0, ptr %src.i32.1, i64 %n) #0 {
 ; COMMON-LABEL: LV: Checking a loop in 'predicated_store'
 ; COMMON:  Cost of 0 for VF 2: REPLICATE ir<%load.0> = load ir<%gep.0>
-; NO_SKIP: Cost of 1 for VF 2: REPLICATE store ir<0>, ir<%dst>
-; SKIP:    Cost of 0 for VF 2: REPLICATE store ir<0>, ir<%dst>
+; VPLAN: Cost of 1 for VF 2: REPLICATE store ir<0>, ir<%dst>
+; DEFAULT:    Cost of 0 for VF 2: REPLICATE store ir<0>, ir<%dst>
 ; COMMON:  Cost of 0 for VF 4: REPLICATE ir<%load.0> = load ir<%gep.0>
-; NO_SKIP: Cost of 2 for VF 4: REPLICATE store ir<0>, ir<%dst>
-; SKIP:    Cost of 0 for VF 4: REPLICATE store ir<0>, ir<%dst>
+; VPLAN: Cost of 2 for VF 4: REPLICATE store ir<0>, ir<%dst>
+; DEFAULT:    Cost of 0 for VF 4: REPLICATE store ir<0>, ir<%dst>
 ;
 entry:
   br label %loop
