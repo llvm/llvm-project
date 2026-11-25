@@ -1361,6 +1361,12 @@ def HasStdExtZyhybrid
     : Predicate<"Subtarget->hasStdExtZyhybrid()">,
       AssemblerPredicate<(all_of FeatureStdExtZyhybrid),
                          "'Zyhybrid' (Hybrid Extension for RVI Compatibility)">;
+def HasStdExtYCapMode
+    : Predicate<"Subtarget->hasStdExtYCapMode()">,
+      AssemblerPredicate<(all_of FeatureStdExtY), "RVY capability pointer mode">;
+def NoStdExtYCapMode
+    : Predicate<"!Subtarget->hasStdExtYCapMode()">,
+      AssemblerPredicate<(none_of FeatureStdExtY), "RVI integral pointer mode">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
