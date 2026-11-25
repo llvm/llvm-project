@@ -56066,7 +56066,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
   //         store(cmov(x, load(p), CC), p) to cstore(x, p, InvertCC)
   if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-      Subtarget.hasCF() && St->isSimple()) {
+      Subtarget.hasCF() && Subtarget.preferCFMemOperand() && St->isSimple()) {
     SDValue Cmov;
     if (StoredVal.getOpcode() == X86ISD::CMOV)
       Cmov = StoredVal;
@@ -65388,7 +65388,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     // Literal immediates are always ok.
     if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
       bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
-      BooleanContent BCont = getBooleanContents(MVT::i64);
+      BooleanContent BCont = getBooleanContents(/*isVec=*/false);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
       SDLoc DL(Op);

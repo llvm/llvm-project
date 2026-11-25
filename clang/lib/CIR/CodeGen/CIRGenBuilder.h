@@ -331,6 +331,7 @@ public:
   cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
+  cir::MFloat8Type getMFloat8Ty() { return typeCache.mFloat8Ty; }
 
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 

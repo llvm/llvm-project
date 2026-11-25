@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -517,6 +518,11 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
   }
+
+  // Mark all the instructions added to the prologue as frame setup, so the
+  // scavenger doesn't place emergency spills above them.
+  for (MachineInstr &MI : make_range(MBB.begin(), MBBI))
+    MI.setFlag(MachineInstr::FrameSetup);
 }
 
 void MipsSEFrameLowering::emitInterruptPrologueStub(

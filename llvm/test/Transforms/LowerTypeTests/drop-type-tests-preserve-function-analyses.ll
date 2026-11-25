@@ -1,5 +1,5 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),drop-type-tests,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck -check-prefix=ASSUME %s
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),drop-type-tests<all>,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck -check-prefix=ALL %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=0 -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),drop-type-tests,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck -check-prefix=ASSUME %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=0 -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),drop-type-tests<all>,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck -check-prefix=ALL %s
 
 ; Dropping type tests should only invalidate the non-CFG analyses of the
 ; modified functions, and not the analyses of @other.

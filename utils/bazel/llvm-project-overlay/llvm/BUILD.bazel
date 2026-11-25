@@ -3900,6 +3900,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":WebAssemblyOptionsTableGen",
             ":webassembly_isel_target_gen",
         ],
     },
@@ -4357,6 +4358,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/SystemZ/SystemZOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/SystemZ/SystemZOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "WebAssemblyOptionsTableGen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {"lib/Target/WebAssembly/WebAssemblyOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -5509,16 +5519,14 @@ llvm_driver_cc_binary(
     deps = [":dsymutil-lib"],
 )
 
-cc_library(
-    name = "llc-driver",
-    srcs = [
-        "tools/llc/lib/NewPMDriver.cpp",
-        "tools/llc/lib/llcdriver.cpp",
-    ],
-    hdrs = glob([
-        "tools/llc/lib/*.h",
+cc_binary(
+    name = "llc",
+    srcs = glob([
+        "tools/llc/*.cpp",
+        "tools/llc/*.h",
     ]),
     copts = llvm_copts,
+    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -5539,17 +5547,6 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":TransformUtils",
-    ],
-)
-
-cc_binary(
-    name = "llc",
-    srcs = ["tools/llc/llc.cpp"],
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Support",
-        ":llc-driver",
     ],
 )
 

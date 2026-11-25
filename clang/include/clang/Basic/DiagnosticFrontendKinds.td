@@ -123,6 +123,7 @@ def err_fe_remap_missing_to_file : Error<
 def err_fe_unable_to_load_ast_file : Error<"unable to load precompiled file">;
 def err_fe_unable_to_load_plugin : Error<
     "unable to load plugin '%0': '%1'">;
+def err_fe_pass_plugin_arg : Error<"%0">;
 def err_fe_unable_to_create_target : Error<
     "unable to create target: '%0'">;
 def err_fe_unable_to_create_subtarget : Error<

@@ -525,10 +525,17 @@ bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
+
+  Rgn.getContext().save();
   // Try to vectorize starting from the seed slice. The returned value
   // is true if we found vectorizable code and generated some vector
   // code for it. It does not mean that the code is profitable.
-  return tryVectorize(SeedSliceVals, Legality);
+  bool Change = tryVectorize(SeedSliceVals, Legality);
+  if (!Change)
+    Rgn.getContext().revert();
+  else
+    Rgn.getContext().accept();
+  return Change;
 }
 
 } // namespace sandboxir
