@@ -557,7 +557,6 @@ static Value *getUnwindDestToken(Instruction *EHPad,
 /// nodes in that block with the values specified in InvokeDestPHIValues.
 static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     BasicBlock *BB, BasicBlock *UnwindEdge,
-    SmallSetVector<const Value *, 4> &OriginallyIndirectCalls,
     UnwindDestMemoTy *FuncletUnwindMap = nullptr) {
   for (Instruction &I : llvm::make_early_inc_range(*BB)) {
     // We only need to check for function calls: inlined invoke
@@ -603,10 +602,7 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
 #endif // NDEBUG
     }
 
-    bool WasIndirect = OriginallyIndirectCalls.remove(CI);
     changeToInvokeAndSplitBasicBlock(CI, UnwindEdge);
-    if (WasIndirect)
-      OriginallyIndirectCalls.insert(BB->getTerminator());
     return BB;
   }
   return nullptr;
@@ -653,8 +649,7 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
        BB != E; ++BB) {
     if (InlinedCodeInfo.ContainsCalls)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, Invoke.getOuterResumeDest(),
-              InlinedCodeInfo.OriginallyIndirectCalls))
+              &*BB, Invoke.getOuterResumeDest()))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         Invoke.addIncomingPHIValuesFor(NewBB);
@@ -788,8 +783,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
                             E = Caller->end();
          BB != E; ++BB)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, UnwindDest, InlinedCodeInfo.OriginallyIndirectCalls,
-              &FuncletUnwindMap))
+              &*BB, UnwindDest, &FuncletUnwindMap))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         UpdatePHINodes(NewBB);
@@ -3333,12 +3327,18 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
             IFI.InlinedCallSites.push_back(CB);
   }
 
+  SmallPtrSet<const CallBase *, 4> OriginallyIndirectCalls;
+  if (!TrackInlineHistory && !IFI.InlinedCallSites.empty()) {
+    for (const WeakTrackingVH &VH : InlinedFunctionInfo.OriginallyIndirectCalls)
+      if (const auto *IndirectCB = dyn_cast_or_null<CallBase>(VH))
+        OriginallyIndirectCalls.insert(IndirectCB);
+  }
+
   for (CallBase *ICB : IFI.InlinedCallSites) {
     // We only track inline history if requested, or if the inlined call site
     // was originally an indirect call (it may have become a direct call
     // during inlining).
-    if (TrackInlineHistory ||
-        InlinedFunctionInfo.OriginallyIndirectCalls.contains(ICB)) {
+    if (TrackInlineHistory || OriginallyIndirectCalls.contains(ICB)) {
       // !inline_history is {Callee, CB.inline_history, ICB.inline_history}.
       // Metadata nodes may be null if the referenced function was erased from
       // the module.

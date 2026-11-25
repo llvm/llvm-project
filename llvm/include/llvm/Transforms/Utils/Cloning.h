@@ -89,9 +89,10 @@ struct ClonedCodeInfo {
   /// check whether the main VMap mapping involves simplification or not.
   DenseMap<const Value *, const Value *> OrigVMap;
 
-  // Cloned calls that were originally an indirect call. They may be direct or
-  // indirect after cloning.
-  SmallSetVector<const Value *, 4> OriginallyIndirectCalls;
+  /// Cloned calls that were originally an indirect call. They may be direct or
+  /// indirect after cloning. Entries may become null or non-CallBase values if
+  /// the call was erased or simplified after cloning.
+  SmallVector<WeakTrackingVH, 4> OriginallyIndirectCalls;
 
   ClonedCodeInfo() = default;
 
