@@ -112,6 +112,7 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemAllocKind AllocKind;
   bool IsConstant = false;
   bool IsIRGlobalValue = false;
+  bool IsInaccessible = false;
 
   // Tagged provenances related to this memory object.
   // It is used to erasing the tags after the memory object is freed.
@@ -139,6 +140,8 @@ public:
   bool isIRGlobalValue() const { return IsIRGlobalValue; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
+  bool isInaccessible() const { return IsInaccessible; }
+  void setIsInaccessible(bool V) { IsInaccessible = V; }
 
   bool inBounds(const APInt &NewAddr) const {
     return NewAddr.uge(Address) && NewAddr.ule(Address + Size);

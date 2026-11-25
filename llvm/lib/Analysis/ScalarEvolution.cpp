@@ -3353,6 +3353,20 @@ const SCEV *ScalarEvolution::getURemExpr(SCEVUse LHS, SCEVUse RHS) {
     }
   }
 
+  // Fold LHS urem X and LHS urem (C * X) to 0 if X is a power of 2 and LHS is
+  // a multiple of C * max(X).
+  const APInt *C = nullptr;
+  const SCEV *X = RHS;
+  match(RHS, m_scev_Mul(m_scev_APInt(C), m_SCEV(X)));
+  if (isKnownToBeAPowerOfTwo(X)) {
+    APInt MaxX = getUnsignedRangeMax(X);
+    bool Overflow = false;
+    APInt MaxRHS = C ? C->umul_ov(MaxX, Overflow) : MaxX;
+    if (MaxX.isPowerOf2() && !Overflow &&
+        getConstantMultiple(LHS).urem(MaxRHS) == 0)
+      return getZero(LHS->getType());
+  }
+
   // Fallback to %a == %x urem %y == %x -<nuw> ((%x udiv %y) *<nuw> %y)
   const SCEV *UDiv = getUDivExpr(LHS, RHS);
   const SCEV *Mult = getMulExpr(UDiv, RHS, SCEV::FlagNUW);

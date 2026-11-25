@@ -38,57 +38,57 @@ define void @foo(ptr nocapture %buf, ptr nocapture %dest, i32 %offset, i32 %oddB
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r15 = memw(r0+#256)
-; CHECK-NEXT:     r10 = memw(r0+#512)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r9:8 = vasrw(r15:14,#31)
 ; CHECK-NEXT:     r19:18 = vasrw(r15:14,r3)
-; CHECK-NEXT:     r12 = memw(r0+#1024)
+; CHECK-NEXT:     r10 = memw(r0+#512)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = vcmpw.eq(r9:8,r19:18)
 ; CHECK-NEXT:     r17:16 = xor(r9:8,r7:6)
-; CHECK-NEXT:     r11 = memw(r0+#768)
+; CHECK-NEXT:     r12 = memw(r0+#1024)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r15:14 = vmux(p0,r15:14,r17:16)
+; CHECK-NEXT:     r11 = memw(r0+#768)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     r19:18 = vasrw(r11:10,#31)
+; CHECK-NEXT:     r21:20 = vasrw(r11:10,r3)
 ; CHECK-NEXT:     r13 = memw(r0+#1280)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r21:20 = vasrw(r11:10,r3)
 ; CHECK-NEXT:     r15:14 = vaslw(r15:14,r4)
+; CHECK-NEXT:     p1 = vcmpw.eq(r19:18,r21:20)
 ; CHECK-NEXT:     r8 = memw(r0+#1536)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = vcmpw.eq(r19:18,r21:20)
 ; CHECK-NEXT:     r19:18 = xor(r19:18,r7:6)
-; CHECK-NEXT:     r9 = memw(r0+#1792)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r21:20 = vasrw(r13:12,#31)
-; CHECK-NEXT:     r11:10 = vmux(p1,r11:10,r19:18)
+; CHECK-NEXT:     r9 = memw(r0+#1792)
 ; CHECK-NEXT:     memw(r0+#32) = r14
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r11:10 = vmux(p1,r11:10,r19:18)
 ; CHECK-NEXT:     r17:16 = vasrw(r13:12,r3)
-; CHECK-NEXT:     r11:10 = vaslw(r11:10,r4)
 ; CHECK-NEXT:     r14 = memw(r0+#2048)
 ; CHECK-NEXT:     memw(r1+r5<<#2) = r14
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r11:10 = vaslw(r11:10,r4)
 ; CHECK-NEXT:     p0 = vcmpw.eq(r21:20,r17:16)
-; CHECK-NEXT:     r19:18 = xor(r21:20,r7:6)
 ; CHECK-NEXT:     memw(r0+#288) = r15
 ; CHECK-NEXT:     memw(r0+#256) = r15
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r19:18 = xor(r21:20,r7:6)
 ; CHECK-NEXT:     r17:16 = vasrw(r9:8,#31)
-; CHECK-NEXT:     r19:18 = vmux(p0,r13:12,r19:18)
 ; CHECK-NEXT:     r15 = memw(r0+#2304)
 ; CHECK-NEXT:     memw(r0+#544) = r10
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r19:18 = vmux(p0,r13:12,r19:18)
 ; CHECK-NEXT:     r21:20 = vasrw(r9:8,r3)
 ; CHECK-NEXT:     memw(r0+#800) = r11
 ; CHECK-NEXT:     memw(r0+#512) = r10
@@ -106,11 +106,11 @@ define void @foo(ptr nocapture %buf, ptr nocapture %dest, i32 %offset, i32 %oddB
 ; CHECK-NEXT:     r21:20 = xor(r13:12,r7:6)
 ; CHECK-NEXT:     r17:16 = xor(r17:16,r7:6)
 ; CHECK-NEXT:     r12 = memw(r0+#2560)
-; CHECK-NEXT:     r13 = memw(r0+#2816)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r11:10 = vaslw(r19:18,r4)
 ; CHECK-NEXT:     r17:16 = vmux(p0,r9:8,r17:16)
+; CHECK-NEXT:     r13 = memw(r0+#2816)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r9:8 = vmux(p1,r15:14,r21:20)

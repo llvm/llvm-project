@@ -753,7 +753,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                     (ST.hasStdExtZfh() &&
                      Query.Types[0].getSizeInBits() == 16));
           },
-          LegalizeMutations::changeTo(1, sXLen))
+          LegalizeMutations::changeTo(1, iXLen))
       // Otherwise only promote to s32 since we have si libcalls.
       .minScalar(1, s32)
       .libcallFor({{f32, s32}, {f64, s32}, {f32, s64}, {f64, s64}})
@@ -838,14 +838,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       // We don't have the ability to slide mask vectors down indexed by their
       // i1 elements; the smallest we can do is i8. Often we are able to bitcast
       // to equivalent i8 vectors.
-      .bitcastIf(
-          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
-              typeIsLegalBoolVec(1, BoolVecTys, ST), ExtractSubvecBitcastPred),
-          [=](const LegalityQuery &Query) {
-            LLT CastTy = LLT::vector(
-                Query.Types[0].getElementCount().divideCoefficientBy(8), 8);
-            return std::pair(0, CastTy);
-          })
+      .bitcastIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+                     typeIsLegalBoolVec(1, BoolVecTys, ST),
+                     ExtractSubvecBitcastPred),
+                 [=](const LegalityQuery &Query) {
+                   LLT CastTy = LLT::vector(
+                       Query.Types[0].getElementCount().divideCoefficientBy(8),
+                       LLT::integer(8));
+                   return std::pair(0, CastTy);
+                 })
       .customIf(LegalityPredicates::any(
           all(typeIsLegalBoolVec(0, BoolVecTys, ST),
               typeIsLegalBoolVec(1, BoolVecTys, ST)),
@@ -941,16 +942,19 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
     MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (Ty == iXLen)
-      return true;
-    if (!STI.is64Bit() || Ty != LLT::scalar(32))
+    if (Ty != iXLen && (!STI.is64Bit() || Ty != LLT::scalar(32)))
       return false;
 
-    // Each output byte depends only on the corresponding input byte.
-    auto Src = MIRBuilder.buildAnyExt(iXLen, MI.getOperand(2));
-    auto Result = MIRBuilder.buildIntrinsic(IntrinsicID, {DstOp(iXLen)})
-                      .addUse(Src.getReg(0));
-    MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    // Each output byte depends only on the corresponding input byte, so any
+    // extension is fine for narrow types.
+    Register Src = MI.getOperand(2).getReg();
+    if (Ty != iXLen)
+      Src = MIRBuilder.buildAnyExt(iXLen, Src).getReg(0);
+    auto Result = MIRBuilder.buildInstr(RISCV::G_ORC_B, {iXLen}, {Src});
+    if (Ty != iXLen)
+      MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    else
+      MIRBuilder.buildCopy(MI.getOperand(0), Result);
     MI.eraseFromParent();
     return true;
   }
@@ -1316,7 +1320,7 @@ bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
   // Calculate the new vector type with i8 elements
   unsigned NumElements =
       DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
-  LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
+  LLT NewDataTy = LLT::scalable_vector(NumElements, LLT::integer(8));
 
   Helper.bitcast(MI, 0, NewDataTy);
 
@@ -1561,7 +1565,8 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
     if (BigTyMinElts >= 8 && LitTyMinElts >= 8)
       return Helper.bitcast(
           IS, 0,
-          LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8));
+          LLT::vector(BigTy.getElementCount().divideCoefficientBy(8),
+                      LLT::integer(8)));
 
     // We can't slide this mask vector up indexed by its i1 elements.
     // This poses a problem when we wish to insert a scalable vector which

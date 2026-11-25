@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestOpsTraits.h"
+// The generated op definitions parse prop-dicts with `FieldParser`.
+#include "mlir/IR/DialectImplementation.h"
 
 using namespace mlir;
 using namespace test;
