@@ -1,5 +1,7 @@
 // clang-format off
 // REQUIRES: msvc, target-windows
+// https://github.com/llvm/llvm-project/issues/243048
+// XFAIL: target-aarch64
 
 // Test that breakpoints on functions are placed at the end of the prologue
 // that the procedure records describe (DbgStart), also when the body is on the

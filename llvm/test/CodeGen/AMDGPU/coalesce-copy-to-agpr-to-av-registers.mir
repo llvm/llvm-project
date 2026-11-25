@@ -8,7 +8,6 @@
 # class
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -33,7 +32,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -58,7 +56,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -87,7 +84,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -116,7 +112,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -141,7 +136,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -166,7 +160,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -191,7 +184,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -216,7 +208,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -241,7 +232,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -266,7 +256,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -291,7 +280,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -314,7 +302,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64_coalesce_with_av64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -339,7 +326,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -362,7 +348,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -385,7 +370,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -412,7 +396,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -439,7 +422,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_other_v_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -466,7 +448,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64_coalesce_with_av64_other_v_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -491,7 +472,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64_and_vreg64_coalesce_with_av64_other_v_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -521,7 +501,6 @@ body:             |
 # class
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -546,7 +525,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -571,7 +549,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -600,7 +577,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -629,7 +605,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -656,7 +631,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -681,7 +655,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -706,7 +679,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -731,7 +703,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -756,7 +727,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -781,7 +751,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -806,7 +775,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -829,7 +797,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -854,7 +821,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -877,7 +843,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -904,7 +869,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128_align2_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -931,7 +895,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -956,7 +919,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -981,7 +943,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1010,7 +971,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1039,7 +999,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1064,7 +1023,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1089,7 +1047,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -1114,7 +1071,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1139,7 +1095,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_shuffle_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1165,7 +1120,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_align2_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1190,7 +1144,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -1215,7 +1168,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1240,7 +1192,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_mismatch_both_sub
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1265,7 +1216,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1286,7 +1236,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1307,7 +1256,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1328,7 +1276,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1349,7 +1296,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1370,7 +1316,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1391,7 +1336,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -1412,7 +1356,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_mismatch_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1433,7 +1376,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1458,7 +1400,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1483,7 +1424,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1512,7 +1452,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1541,7 +1480,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1566,7 +1504,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1591,7 +1528,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -1616,7 +1552,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1641,7 +1576,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1666,7 +1600,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -1691,7 +1624,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -1716,7 +1648,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1739,7 +1670,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64_coalesce_with_av64_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1764,7 +1694,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1787,7 +1716,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1810,7 +1738,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1837,7 +1764,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128_align2_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1864,7 +1790,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1889,7 +1814,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1914,7 +1838,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1943,7 +1866,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1972,7 +1894,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -1999,7 +1920,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2024,7 +1944,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -2049,7 +1968,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2074,7 +1992,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2099,7 +2016,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -2124,7 +2040,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2149,7 +2064,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x2_to_areg64_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -2172,7 +2086,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -2197,7 +2110,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x3_to_areg96_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -2220,7 +2132,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -2247,7 +2158,6 @@ body:             |
 
 ---
 name: copy_vgpr32_x4_to_areg128_align2_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -2274,7 +2184,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -2299,7 +2208,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -2324,7 +2232,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -2353,7 +2260,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -2382,7 +2288,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2407,7 +2312,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2432,7 +2336,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -2457,7 +2360,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2481,7 +2383,6 @@ body:             |
 ...
 
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_shuffle_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2507,7 +2408,6 @@ body:             |
 
 ---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_align2_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2532,7 +2432,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -2557,7 +2456,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2582,7 +2480,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_mismatch_both_sub_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2
@@ -2608,7 +2505,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_coalesce_with_av64_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -2629,7 +2525,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg64_align2_coalesce_with_av64_align2_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -2650,7 +2545,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -2671,7 +2565,6 @@ body:             |
 
 ---
 name: copy_vgpr32_to_areg96_coalesce_with_av96_align2_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -2692,7 +2585,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_coalesce_with_av128_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2713,7 +2605,6 @@ body:             |
 
 ---
 name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -2734,7 +2625,6 @@ body:             |
 
 ---
 name: copy_sgpr32_to_areg64_align2_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -2755,7 +2645,6 @@ body:             |
 
 ---
 name: copy_vgpr64_vgpr32_to_areg96_coalesce_with_av96_align2_mismatch_whole_reg_snop
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1_vgpr2

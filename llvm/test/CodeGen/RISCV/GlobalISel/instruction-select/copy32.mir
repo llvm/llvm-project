@@ -13,8 +13,8 @@ body:             |
     ; RV32I: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
     ; RV32I-NEXT: $x10 = COPY [[ADDI]]
     ; RV32I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 1
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 1
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -44,8 +44,8 @@ body:             |
 
     ; RV32I-LABEL: name: virt_to_virt
     ; RV32I: PseudoRET
-    %0:gprb(s32) = G_CONSTANT i32 1
-    %1:gprb(s32) = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 1
+    %1:gprb(i32) = COPY %0(i32)
     PseudoRET
 
 ...
@@ -61,7 +61,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: PseudoRET
-    %0:gprb(s32) = COPY $x10
+    %0:gprb(i32) = COPY $x10
     PseudoRET
 
 ...

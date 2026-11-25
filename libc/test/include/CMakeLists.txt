@@ -421,6 +421,31 @@ add_libc_test(
     libc.include.llvm-libc-macros.math_function_macros
 )
 
+add_fp_unittest(
+  math_comparison_macros_test
+  SUITE
+    libc-include-tests
+  SRCS
+    math_comparison_macros_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+    libc.src.__support.macros.properties.types
+)
+
+add_libc_test(
+  math_comparison_macros_c_test
+  C_TEST
+  SUITE
+    libc-include-tests
+  SRCS
+    math_comparison_macros_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
 # TODO(https://github.com/llvm/llvm-project/issues/114618): fix linkage failures
 # add_libc_test(
 #   issignaling_c_test

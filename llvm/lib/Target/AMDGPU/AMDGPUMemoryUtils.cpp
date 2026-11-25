@@ -9,16 +9,20 @@
 #include "AMDGPUMemoryUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
 
@@ -35,6 +39,8 @@ unsigned getSyntheticApertureNumber(unsigned AS) {
   switch (AS) {
   case AMDGPUAS::BARRIER:
     return SyntheticAperture::BARRIER;
+  case AMDGPUAS::VGPR:
+    return SyntheticAperture::VGPR;
   default:
     return SyntheticAperture::None;
   }
@@ -377,9 +383,6 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
 bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   Instruction *DefInst = Def->getMemoryInst();
 
-  if (isa<FenceInst>(DefInst))
-    return false;
-
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
@@ -403,15 +406,36 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     }
   }
 
-  // Ignore atomics not aliasing with the original load, any atomic is a
-  // universal MemoryDef from MSSA's point of view too, just like a fence.
-  const auto checkNoAlias = [AA, Ptr](auto I) -> bool {
-    return I && AA->isNoAlias(I->getPointerOperand(), Ptr);
+  // Ignore non-acquire fences/atomics not aliasing with the original load; MSSA
+  // counts any atomic or fence as a universal MemoryDef.
+  // Acquire (or stronger) fences/atomics act as clobbers because they can bring
+  // in effects from other threads.
+  const auto MayAlias = [AA, Ptr](auto I) -> bool {
+    return !AA->isNoAlias(I->getPointerOperand(), Ptr);
   };
 
-  if (checkNoAlias(dyn_cast<AtomicCmpXchgInst>(DefInst)) ||
-      checkNoAlias(dyn_cast<AtomicRMWInst>(DefInst)))
-    return false;
+  if (const auto *F = dyn_cast<FenceInst>(DefInst)) {
+    if (!isAcquireOrStronger(F->getOrdering()))
+      return false;
+    SIAtomicAddrSpace AccessedAS =
+        toSIAtomicAddrSpace(Ptr->getType()->getPointerAddressSpace());
+    return (AccessedAS & getSynchronizeAddrSpace(*F)) !=
+           SIAtomicAddrSpace::NONE;
+  }
+
+  if (const auto *I = dyn_cast<AtomicRMWInst>(DefInst))
+    return isAcquireOrStronger(I->getOrdering()) || MayAlias(I);
+
+  if (const auto *I = dyn_cast<AtomicCmpXchgInst>(DefInst))
+    return isAcquireOrStronger(I->getMergedOrdering()) || MayAlias(I);
+
+  // TODO This is pessimistic for one-as load-acquires from a different AS.
+  if (const auto *I = dyn_cast<LoadInst>(DefInst))
+    return isAcquireOrStronger(I->getOrdering());
+
+  // (Atomic) stores that don't alias do not clobber.
+  if (const auto *I = dyn_cast<StoreInst>(DefInst))
+    return MayAlias(I);
 
   return true;
 }
@@ -433,8 +457,8 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
   // case add all Defs to WorkList and continue going up and checking all
   // the definitions of this memory location until the root. When all the
   // defs are exhausted and came to the entry state we have no clobber.
-  // Along the scan ignore barriers and fences which are considered clobbers
-  // by the MemorySSA, but not really writing anything into the memory.
+  // Along the scan ignore barriers which are considered clobbers by the
+  // MemorySSA, but not really writing anything into the memory.
   while (!WorkList.empty()) {
     MemoryAccess *MA = WorkList.pop_back_val();
     if (!Visited.insert(MA).second)
@@ -464,6 +488,72 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
   LLVM_DEBUG(dbgs() << "      -> no clobber\n");
   return false;
+}
+
+static constexpr SIAtomicAddrSpace LLVMToSIAtomicAddrSpaceMapping[] = {
+    SIAtomicAddrSpace::FLAT,    //< AMDGPUAS::FLAT_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::GLOBAL_ADDRESS
+    SIAtomicAddrSpace::GDS,     //< AMDGPUAS::REGION_ADDRESS
+    SIAtomicAddrSpace::LDS,     //< AMDGPUAS::LOCAL_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::CONSTANT_ADDRESS
+    SIAtomicAddrSpace::SCRATCH, //< AMDGPUAS::PRIVATE_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::CONSTANT_ADDRESS_32BIT
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_FAT_POINTER
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_RESOURCE
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_STRIDED_POINTER
+};
+
+SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned LLVMAddrSpace) {
+  constexpr unsigned SizeOfLLVMToSIAtomicAddrSpaceMapping =
+      sizeof(LLVMToSIAtomicAddrSpaceMapping) /
+      sizeof(LLVMToSIAtomicAddrSpaceMapping[0]);
+  if (LLVMAddrSpace > AMDGPUAS::MAX_AMDGPU_ADDRESS)
+    return SIAtomicAddrSpace::GLOBAL;
+  if (LLVMAddrSpace < SizeOfLLVMToSIAtomicAddrSpaceMapping)
+    return LLVMToSIAtomicAddrSpaceMapping[LLVMAddrSpace];
+  return SIAtomicAddrSpace::OTHER;
+}
+
+static const StringMap<SIAtomicAddrSpace> ASNames = {{
+    {"global", SIAtomicAddrSpace::GLOBAL},
+    {"local", SIAtomicAddrSpace::LDS},
+}};
+
+SIAtomicAddrSpace getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
+                                          const Function *DiagFn,
+                                          const DebugLoc &DL) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
+
+  if (!MMRA)
+    return SIAtomicAddrSpace::ATOMIC;
+
+  SIAtomicAddrSpace Result{};
+  for (const auto &[Prefix, Suffix] : MMRA) {
+    if (Prefix != FenceASPrefix)
+      continue;
+
+    if (auto It = ASNames.find(Suffix); It != ASNames.end()) {
+      Result |= It->second;
+    } else if (DiagFn) {
+      SmallString<128> Str;
+      raw_svector_ostream OS(Str);
+      OS << "unknown address space '" << Suffix << "'; expected one of ";
+      ListSeparator LS;
+      for (const auto &[Name, Val] : ASNames)
+        OS << LS << '\'' << Name << '\'';
+      DiagFn->getContext().diagnose(
+          DiagnosticInfoUnsupported(*DiagFn, Str, DL, DS_Warning));
+    }
+  }
+
+  if (Result == SIAtomicAddrSpace::NONE)
+    return SIAtomicAddrSpace::ATOMIC;
+
+  return Result;
+}
+
+SIAtomicAddrSpace getSynchronizeAddrSpace(const Instruction &I) {
+  return getSynchronizeAddrSpace(MMRAMetadata(I));
 }
 
 } // end namespace llvm::AMDGPU

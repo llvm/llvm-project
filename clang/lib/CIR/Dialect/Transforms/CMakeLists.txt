@@ -17,6 +17,7 @@ add_clang_library(MLIRCIRTransforms
   LibOpt.cpp
   RecordTypeConverter.cpp
   CIRABIClassifier.cpp
+  CIRABIClassifierAArch64.cpp
   CIRABIClassifierAMDGPU.cpp
   CIRABIClassifierSPIRV.cpp
   CIRABIClassifierX86_64.cpp
@@ -27,6 +28,7 @@ add_clang_library(MLIRCIRTransforms
 
   LINK_COMPONENTS
   ABI
+  TargetParser
 
   LINK_LIBS PUBLIC
   clangBasic

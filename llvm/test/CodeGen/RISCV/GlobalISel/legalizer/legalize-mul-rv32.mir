@@ -9,23 +9,23 @@ body:             |
     ; CHECK-LABEL: name: mul_i7
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[COPY]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[COPY1]](i32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s7) = G_TRUNC %0(s32)
-    %3:_(s7) = G_TRUNC %1(s32)
-    %4:_(s7) = G_MUL %2, %3
-    %5:_(s32) = G_ANYEXT %4(s7)
-    $x10 = COPY %5(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i7) = G_TRUNC %0(i32)
+    %3:_(i7) = G_TRUNC %1(i32)
+    %4:_(i7) = G_MUL %2, %3
+    %5:_(i32) = G_ANYEXT %4(i7)
+    $x10 = COPY %5(i32)
     PseudoRET implicit $x10
 
 ...
@@ -37,23 +37,23 @@ body:             |
     ; CHECK-LABEL: name: mul_i8
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[COPY]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[COPY1]](i32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s8) = G_TRUNC %0(s32)
-    %3:_(s8) = G_TRUNC %1(s32)
-    %4:_(s8) = G_MUL %2, %3
-    %5:_(s32) = G_ANYEXT %4(s8)
-    $x10 = COPY %5(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i8) = G_TRUNC %0(i32)
+    %3:_(i8) = G_TRUNC %1(i32)
+    %4:_(i8) = G_MUL %2, %3
+    %5:_(i32) = G_ANYEXT %4(i8)
+    $x10 = COPY %5(i32)
     PseudoRET implicit $x10
 
 ...
@@ -65,23 +65,23 @@ body:             |
     ; CHECK-LABEL: name: mul_i16
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[COPY]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[COPY1]](i32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s16) = G_TRUNC %0(s32)
-    %3:_(s16) = G_TRUNC %1(s32)
-    %4:_(s16) = G_MUL %2, %3
-    %5:_(s32) = G_ANYEXT %4(s16)
-    $x10 = COPY %5(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i16) = G_TRUNC %0(i32)
+    %3:_(i16) = G_TRUNC %1(i32)
+    %4:_(i16) = G_MUL %2, %3
+    %5:_(i32) = G_ANYEXT %4(i16)
+    $x10 = COPY %5(i32)
     PseudoRET implicit $x10
 
 ...
@@ -93,20 +93,20 @@ body:             |
     ; CHECK-LABEL: name: mul_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[COPY]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[COPY1]](i32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s32) = G_MUL %0, %1
-    $x10 = COPY %2(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i32) = G_MUL %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -118,32 +118,32 @@ body:             |
     ; CHECK-LABEL: name: mul_i64
     ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %lo1:_(s32) = COPY $x10
-    ; CHECK-NEXT: %hi1:_(s32) = COPY $x11
-    ; CHECK-NEXT: %lo2:_(s32) = COPY $x12
-    ; CHECK-NEXT: %hi2:_(s32) = COPY $x13
+    ; CHECK-NEXT: %lo1:_(i32) = COPY $x10
+    ; CHECK-NEXT: %hi1:_(i32) = COPY $x11
+    ; CHECK-NEXT: %lo2:_(i32) = COPY $x12
+    ; CHECK-NEXT: %hi2:_(i32) = COPY $x13
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: $x10 = COPY %lo1(s32)
-    ; CHECK-NEXT: $x11 = COPY %hi1(s32)
-    ; CHECK-NEXT: $x12 = COPY %lo2(s32)
-    ; CHECK-NEXT: $x13 = COPY %hi2(s32)
+    ; CHECK-NEXT: $x10 = COPY %lo1(i32)
+    ; CHECK-NEXT: $x11 = COPY %hi1(i32)
+    ; CHECK-NEXT: $x12 = COPY %lo2(i32)
+    ; CHECK-NEXT: $x13 = COPY %hi2(i32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: $x10 = COPY [[COPY]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[COPY1]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
-    %lo1:_(s32) = COPY $x10
-    %hi1:_(s32) = COPY $x11
-    %lo2:_(s32) = COPY $x12
-    %hi2:_(s32) = COPY $x13
-    %x1:_(s64) = G_MERGE_VALUES %lo1(s32), %hi1(s32)
-    %x2:_(s64) = G_MERGE_VALUES %lo2(s32), %hi2(s32)
-    %y:_(s64) = G_MUL %x1, %x2
-    %loy:_(s32), %hiy:_(s32) = G_UNMERGE_VALUES %y(s64)
-    $x10 = COPY %loy(s32)
-    $x11 = COPY %hiy(s32)
+    %lo1:_(i32) = COPY $x10
+    %hi1:_(i32) = COPY $x11
+    %lo2:_(i32) = COPY $x12
+    %hi2:_(i32) = COPY $x13
+    %x1:_(i64) = G_MERGE_VALUES %lo1(i32), %hi1(i32)
+    %x2:_(i64) = G_MERGE_VALUES %lo2(i32), %hi2(i32)
+    %y:_(i64) = G_MUL %x1, %x2
+    %loy:_(i32), %hiy:_(i32) = G_UNMERGE_VALUES %y(i64)
+    $x10 = COPY %loy(i32)
+    $x11 = COPY %hiy(i32)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -155,25 +155,25 @@ body:             |
     ; CHECK-LABEL: name: smulh_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[COPY1]], [[C]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(i32) = G_ASHR [[COPY1]], [[C]](i32)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[ASHR]](s32)
-    ; CHECK-NEXT: $x12 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: $x13 = COPY [[ASHR1]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[COPY]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[ASHR]](i32)
+    ; CHECK-NEXT: $x12 = COPY [[COPY1]](i32)
+    ; CHECK-NEXT: $x13 = COPY [[ASHR1]](i32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s32) = COPY $x10
-    %1:_(s32) = COPY $x11
-    %2:_(s32) = G_SMULH %0, %1
-    $x10 = COPY %2(s32)
+    %0:_(i32) = COPY $x10
+    %1:_(i32) = COPY $x11
+    %2:_(i32) = G_SMULH %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...

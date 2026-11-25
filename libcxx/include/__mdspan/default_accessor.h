@@ -45,15 +45,13 @@ struct default_accessor {
   using reference        = _ElementType&;
   using data_handle_type = _ElementType*;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr default_accessor() noexcept = default;
+  constexpr default_accessor() noexcept = default;
   template <class _OtherElementType>
     requires(is_convertible_v<_OtherElementType (*)[], element_type (*)[]>)
-  _LIBCPP_HIDE_FROM_ABI constexpr default_accessor(default_accessor<_OtherElementType>) noexcept {}
+  constexpr default_accessor(default_accessor<_OtherElementType>) noexcept {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference access(data_handle_type __p, size_t __i) const noexcept { return __p[__i]; }
-  _LIBCPP_HIDE_FROM_ABI constexpr data_handle_type offset(data_handle_type __p, size_t __i) const noexcept {
-    return __p + __i;
-  }
+  constexpr reference access(data_handle_type __p, size_t __i) const noexcept { return __p[__i]; }
+  constexpr data_handle_type offset(data_handle_type __p, size_t __i) const noexcept { return __p + __i; }
 };
 
 #endif // _LIBCPP_STD_VER >= 23
