@@ -590,7 +590,7 @@ exit:
 define void @backward_vectorizable_dep_and_unknown_deps(ptr %a, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'backward_vectorizable_dep_and_unknown_deps'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits, with a maximum safe store-load forward width of 128 bits with run-time checks
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 4, with a maximum safe store-load forward number of elements to operate on equal to 4 with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l.a = load i32, ptr %gep.a, align 4 ->

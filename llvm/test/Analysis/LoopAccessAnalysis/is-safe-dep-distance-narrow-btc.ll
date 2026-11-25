@@ -111,7 +111,7 @@ exit:
 define void @backward_dep_i8_btc_product_wraps(ptr %a, i8 %n) {
 ; CHECK-LABEL: 'backward_dep_i8_btc_product_wraps'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 4
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l.a = load i32, ptr %gep.a, align 4 ->
