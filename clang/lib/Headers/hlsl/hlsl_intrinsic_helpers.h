@@ -110,16 +110,32 @@ template <typename T> constexpr T fmod_impl(T X, T Y) {
 template <typename T> constexpr T frexp_impl(T X, out T Exp) {
   auto Bits = bit_cast<uint>(X);
   auto ExpBits = Bits & 0x7f800000u;
-  // Zeros, denormals, infinities and NaNs are returned as they are, with an
-  // exponent of 0. These are exactly the cases where the exponent field is 0 or
-  // all ones, so ExpBits - 1 is at least 0x7f7fffff, whether it wraps around or
-  // not. This avoids ||, which is not supported on vectors.
-  auto IsSpecial = (ExpBits - 1u) >= 0x7f7fffffu;
-  // Keep the sign and the fraction, and replace the exponent with the one for
-  // 0.5, which scales X into [0.5, 1).
-  auto MantBits = (Bits & 0x807fffffu) | 0x3f000000u;
+  auto Fraction = Bits & 0x007fffffu;
+  // Zeros are returned as they are, with an exponent of 0. Infinities and NaNs
+  // have no exponent in the range of a 32-bit integer, so the result for them
+  // is unspecified, and they are handled the same way. Shifting the sign out of
+  // the bits of X leaves 0 for zeros and at least 0xff000000 for infinities and
+  // NaNs. Subtracting 1 makes these all at least 0xfeffffff, with 0 wrapping
+  // around. This avoids ||, which is not supported on vectors. It also avoids
+  // masking the sign, which is turned into fabs, and that can flush denormals.
+  auto IsSpecial = ((Bits << 1u) - 1u) >= 0xfeffffffu;
+  // A denormal has no implicit leading one bit. Its fraction is an integer
+  // below 2^23, which converts to a float exactly. The exponent of that float
+  // is the position of the highest set bit and its fraction is the normalized
+  // fraction. This only uses integer operations on the bits of X, so it does
+  // not depend on how denormal floats are handled.
+  auto IsDenormal = ExpBits == 0u;
+  auto Normalized = bit_cast<uint>(static_cast<T>(Fraction));
+  // The exponent field X would have if it could be normalized, which is below
+  // 1 for a denormal.
+  auto ExpField =
+      select(IsDenormal, (Normalized >> 23u) - 149u, ExpBits >> 23u);
+  auto MantFraction = select(IsDenormal, Normalized & 0x007fffffu, Fraction);
+  // Keep the sign and the fraction, and use the exponent field for 0.5, which
+  // scales X into [0.5, 1).
+  auto MantBits = (Bits & 0x80000000u) | 0x3f000000u | MantFraction;
   T Mant = select(IsSpecial, X, bit_cast<float>(MantBits));
-  auto RawExp = (ExpBits >> 23u) - 126u;
+  auto RawExp = ExpField - 126u;
   Exp = select(IsSpecial, static_cast<T>(0),
                static_cast<T>(bit_cast<int>(RawExp)));
   return Mant;

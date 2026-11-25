@@ -231,8 +231,10 @@ firstbithigh(vector<T, N> X) {
 /// \param Exp The returned exponent of X.
 ///
 /// The mantissa has the same sign as X and an absolute value in [0.5, 1), such
-/// that X = mantissa * 2^Exp. If X is 0, both the mantissa and the exponent
-/// are 0.
+/// that X = mantissa * 2^Exp, including when X is a denormal. If X is 0, both
+/// the mantissa and the exponent are 0. The result is unspecified if the
+/// exponent would be outside the range of a 32-bit integer, which is the case
+/// for infinities and NaNs.
 inline float frexp(float X, out float Exp) {
   return __detail::frexp_impl(X, Exp);
 }
