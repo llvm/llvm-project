@@ -1880,6 +1880,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.align = Align(Info.memVT.getStoreSize());
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    Info.flags |= Flags & MachineMemOperand::MONonTemporal;
     // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
     // flags appropriately.
     Info.order = AtomicOrdering::Monotonic;
@@ -3988,6 +3989,7 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::AExt:
+      Arg = DAG.getBitcast(VA.getValVT().changeTypeToInteger(), Arg);
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     default:
@@ -4058,28 +4060,7 @@ SDValue SITargetLowering::LowerCallResult(
     } else
       llvm_unreachable("unknown argument location type");
 
-    switch (VA.getLocInfo()) {
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::ZExt:
-      Val = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::SExt:
-      Val = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    default:
-      llvm_unreachable("Unknown loc info!");
-    }
+    Val = convertABITypeToValueType(DAG, Val, VA, DL);
 
     InVals.push_back(Val);
   }
@@ -5096,16 +5077,7 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
     return SDValue();
 
-  // Prefetch the 64-bit address that a 32-bit constant pointer is cast to, as
-  // a load does.
-  SDValue Ptr = Op.getOperand(1);
-  if (Ptr.getValueType() != MVT::i32)
-    return Op;
-  SmallVector<SDValue, 5> Ops(Op->ops());
-  Ops[1] = DAG.getAddrSpaceCast(SDLoc(Op), MVT::i64, Ptr,
-                                AMDGPUAS::CONSTANT_ADDRESS_32BIT,
-                                AMDGPUAS::CONSTANT_ADDRESS);
-  return SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
+  return Op;
 }
 
 // Work around DAG legality rules only based on the result type.

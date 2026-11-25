@@ -170,6 +170,13 @@ func.func @simple_load() -> () {
   return
 }
 
+// CHECK-LABEL: @untyped_load
+func.func @untyped_load(%arg0 : !spirv.untyped_ptr<Workgroup>) -> () {
+  // CHECK: spirv.Load %{{.*}} ["Aligned", 4] : !spirv.untyped_ptr<Workgroup> -> f32
+  %0 = spirv.Load %arg0 ["Aligned", 4] : !spirv.untyped_ptr<Workgroup> -> f32
+  return
+}
+
 // CHECK-LABEL: @load_none_access
 func.func @load_none_access() -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
@@ -270,7 +277,7 @@ func.func @volatile_aligned_load() -> () {
 
 func.func @simple_load_missing_storageclass() -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // expected-error @+1 {{expected attribute value}}
+  // expected-error @+1 {{expected spirv.untyped_ptr, but found 'f32'}}
   %1 = spirv.Load %0 : f32
   return
 }
@@ -367,6 +374,14 @@ func.func @load_unknown_memory_access() -> () {
 
 // -----
 
+func.func @untyped_load_none(%arg0 : !spirv.untyped_ptr<Workgroup>) -> () {
+  // expected-error @+1 {{cannot access a value of type 'none' through an untyped pointer}}
+  %0 = spirv.Load %arg0 : !spirv.untyped_ptr<Workgroup> -> none
+  return
+}
+
+// -----
+
 func.func @aligned_load_incorrect_attributes() -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{expected ']'}}
@@ -411,6 +426,15 @@ func.func @simple_store(%arg0 : f32) -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   // CHECK: spirv.Store  "Function" %0, %arg0 : f32
   spirv.Store  "Function" %0, %arg0 : f32
+  return
+}
+
+// CHECK-LABEL: @untyped_store
+func.func @untyped_store(%arg0 : !spirv.untyped_ptr<Workgroup>, %arg1 : f32) -> () {
+  // CHECK: spirv.Store %arg0, %arg1 ["Volatile"] : !spirv.untyped_ptr<Workgroup>, f32
+  spirv.Store %arg0, %arg1 ["Volatile"] : !spirv.untyped_ptr<Workgroup>, f32
+  // CHECK: spirv.Store %arg0, %arg1 : !spirv.untyped_ptr<Workgroup>, f32 {foo}
+  spirv.Store %arg0, %arg1 : !spirv.untyped_ptr<Workgroup>, f32 {foo}
   return
 }
 
@@ -460,8 +484,16 @@ func.func @store_make_pointer_available_missing_non_private(%arg0 : f32) -> () {
 
 func.func @simple_store_missing_ptr_type(%arg0 : f32) -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // expected-error @+1 {{expected attribute value}}
+  // expected-error @+1 {{expected spirv.untyped_ptr, but found 'f32'}}
   spirv.Store  %0, %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @untyped_store_none(%arg0 : !spirv.untyped_ptr<Workgroup>, %arg1 : none) -> () {
+  // expected-error @+1 {{cannot access a value of type 'none' through an untyped pointer}}
+  spirv.Store %arg0, %arg1 : !spirv.untyped_ptr<Workgroup>, none
   return
 }
 

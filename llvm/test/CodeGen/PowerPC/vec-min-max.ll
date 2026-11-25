@@ -221,9 +221,9 @@ define i128 @invalidv1i128(<2 x i128> %v1, <2 x i128> %v2) {
 ; PWR7-NEXT:    cror 20, 21, 20
 ; PWR7-NEXT:    isel 3, 3, 7, 20
 ; PWR7-NEXT:    isel 4, 4, 8, 20
+; PWR7-NEXT:    std 4, -24(1)
 ; PWR7-NEXT:    std 3, -32(1)
 ; PWR7-NEXT:    addi 3, 1, -32
-; PWR7-NEXT:    std 4, -24(1)
 ; PWR7-NEXT:    lxvd2x 0, 0, 3
 ; PWR7-NEXT:    addi 3, 1, -16
 ; PWR7-NEXT:    stxvd2x 0, 0, 3

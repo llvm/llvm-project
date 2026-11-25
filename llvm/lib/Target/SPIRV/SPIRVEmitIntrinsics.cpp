@@ -494,10 +494,11 @@ bool isConvergenceIntrinsic(const Instruction *I) {
 }
 
 bool expectIgnoredInIRTranslation(const Instruction *I) {
-  return match(I, m_AnyIntrinsic<Intrinsic::invariant_start,
-                                 Intrinsic::spv_resource_handlefrombinding,
-                                 Intrinsic::spv_resource_getbasepointer,
-                                 Intrinsic::spv_resource_getpointer>());
+  return match(I,
+               m_AnyIntrinsic<Intrinsic::invariant_start,
+                              Intrinsic::spv_resource_handlefrombinding_mdname,
+                              Intrinsic::spv_resource_getbasepointer,
+                              Intrinsic::spv_resource_getpointer>());
 }
 
 // Returns the source pointer from `I` ignoring intermediate ptrcast.
@@ -2641,6 +2642,8 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
       // However, we may have assumptions about the formal argument's type and
       // may have a need to insert a ptr cast for the actual parameter of this
       // call.
+      if (OpIdx >= CalledF->arg_size())
+        continue;
       Argument *CalledArg = CalledF->getArg(OpIdx);
       if (!GR->findDeducedElementType(CalledArg))
         continue;

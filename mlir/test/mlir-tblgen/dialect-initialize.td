@@ -11,17 +11,21 @@
 // RUN: mlir-tblgen -gen-dialect-defs -dialect=none -I %S/../../include %s | FileCheck %s --check-prefix=NONE
 // RUN: mlir-tblgen -gen-attrdef-decls -attrdefs-dialect=none -I %S/../../include %s | FileCheck %s --check-prefix=NONE-HOOK
 // RUN: mlir-tblgen -gen-attrdef-defs -attrdefs-dialect=none -I %S/../../include %s | FileCheck %s --check-prefix=NONE-HOOK
+// RUN: mlir-tblgen -gen-dialect-decls -dialect=noinit -I %S/../../include %s | FileCheck %s --check-prefix=NOINIT-DECL
+// RUN: mlir-tblgen -gen-dialect-defs -dialect=noinit -I %S/../../include %s | FileCheck %s --check-prefix=NOINIT
 
 include "mlir/IR/AttrTypeBase.td"
 
 // `hasAttributes` (or `hasTypes`) provides the default of
 // `useDefaultAttributeRegistration` and `useDefaultAttributePrinterParser` (or
-// their type counterparts). The constructor registers the attributes and types
-// independently of whether the dialect has a custom destructor.
+// their type counterparts). The constructor registers the attributes, types and,
+// with `useDefaultOperationRegistration`, the ops independently of whether the
+// dialect has a custom destructor.
 
 def Both_Dialect : Dialect {
   let name = "both";
   let cppNamespace = "::both";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
   let hasTypes = 1;
   let hasNonDefaultDestructor = 1;
@@ -33,10 +37,12 @@ def Both_Dialect : Dialect {
 
 // BOTH: void registerBothDialectAttributes(BothDialect *dialect);
 // BOTH-NEXT: void registerBothDialectTypes(BothDialect *dialect);
+// BOTH-NEXT: void registerBothDialectOperations(BothDialect *dialect);
 // BOTH: BothDialect::BothDialect(::mlir::MLIRContext *context)
 // BOTH: getContext()->loadDialect<::foo::FooDialect>();
 // BOTH-NEXT: registerBothDialectAttributes(this);
 // BOTH-NEXT: registerBothDialectTypes(this);
+// BOTH-NEXT: registerBothDialectOperations(this);
 // BOTH-NEXT: initialize();
 // BOTH-NEXT: }
 // BOTH-NOT: ~BothDialect
@@ -44,6 +50,7 @@ def Both_Dialect : Dialect {
 def Attrs_Dialect : Dialect {
   let name = "attrs";
   let cppNamespace = "::attrs";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
 }
 
@@ -54,6 +61,7 @@ def Attrs_Dialect : Dialect {
 // ATTRS: void registerAttrsDialectAttributes(AttrsDialect *dialect);
 // ATTRS: AttrsDialect::AttrsDialect(::mlir::MLIRContext *context)
 // ATTRS: registerAttrsDialectAttributes(this);
+// ATTRS-NEXT: registerAttrsDialectOperations(this);
 // ATTRS-NEXT: initialize();
 // ATTRS-NEXT: }
 // ATTRS: AttrsDialect::~AttrsDialect() = default;
@@ -66,6 +74,7 @@ def Attrs_Dialect : Dialect {
 def Custom_Dialect : Dialect {
   let name = "custom";
   let cppNamespace = "::custom";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
   let hasTypes = 1;
   let useDefaultAttributePrinterParser = 0;
@@ -79,14 +88,16 @@ def Custom_Type : TypeDef<Custom_Dialect, "Bar"> { let mnemonic = "bar"; }
 
 // CUSTOM-NOT: Types
 // CUSTOM: registerCustomDialectAttributes(this);
+// CUSTOM-NEXT: registerCustomDialectOperations(this);
 // CUSTOM-NEXT: initialize();
 // CUSTOM-NOT: Types
 
 // CUSTOM-ATTRS: void registerCustomDialectAttributes(CustomDialect *dialect) {
 // CUSTOM-TYPES-NOT: registerCustomDialectTypes
 
-// By default, nothing is registered and no hook is generated, even if the
-// definitions are visible.
+// Without `hasAttributes`, `hasTypes` and `useDefaultOperationRegistration`,
+// nothing is registered and no hook is generated, even if the definitions are
+// visible.
 
 def None_Dialect : Dialect {
   let name = "none";
@@ -98,3 +109,20 @@ def None_Type : TypeDef<None_Dialect, "Bar"> { let mnemonic = "bar"; }
 // NONE-DECL-NOT: registered to this dialect
 // NONE-NOT: register
 // NONE-HOOK-NOT: registerNoneDialectAttributes
+
+// Without `hasInitializer`, `initialize` is neither declared nor called.
+
+def NoInit_Dialect : Dialect {
+  let name = "noinit";
+  let cppNamespace = "::noinit";
+  let useDefaultOperationRegistration = 1;
+  let hasInitializer = 0;
+}
+
+// NOINIT-DECL: class NoInitDialect
+// NOINIT-DECL-NOT: initialize
+
+// NOINIT: NoInitDialect::NoInitDialect(::mlir::MLIRContext *context)
+// NOINIT: registerNoInitDialectOperations(this);
+// NOINIT-NEXT: }
+// NOINIT-NOT: initialize
