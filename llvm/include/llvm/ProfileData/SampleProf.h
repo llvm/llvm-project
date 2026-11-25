@@ -1305,6 +1305,10 @@ public:
 
   uint64_t getFunctionHash() const { return FunctionHash; }
 
+  bool hasIRToProfileLocationMap() const {
+    return IRToProfileLocationMap && !IRToProfileLocationMap->empty();
+  }
+
   void setIRToProfileLocationMap(const LocToLocMap *LTLM) {
     assert(IRToProfileLocationMap == nullptr && "this should be set only once");
     IRToProfileLocationMap = LTLM;

@@ -1126,7 +1126,8 @@ SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
 }
 
 std::error_code
-SampleProfileReader::readInlineFunctionProfiles(const Module &M) {
+SampleProfileReader::readInlineFunctionProfiles(const Module &M,
+                                                bool ForMatching) {
   if (getFormat() != SPF_Ext_Binary || profileIsCS())
     return sampleprof_error::success;
 
@@ -1193,7 +1194,7 @@ SampleProfileReader::readInlineFunctionProfiles(const Module &M) {
       // A known caller without this target cannot use its root for annotation.
       // An unknown caller must not hide deeper frames: it may itself be inlined
       // later, acquiring a nested profile in its new caller.
-      if (Parent) {
+      if (Parent && !ForMatching) {
         auto Targets = Parent->findCallTargetMapAt(Loc);
         if (!Targets || Targets->find(getRepInFormat(Name)) == Targets->end())
           continue;

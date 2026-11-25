@@ -609,8 +609,10 @@ public:
 
   /// Load missing roots referenced by inline frames, preferring existing
   /// nested profiles. Collect the frames once and batch reads by inline depth;
-  /// each missing name is requested at most once.
-  LLVM_ABI std::error_code readInlineFunctionProfiles(const Module &M);
+  /// each missing name is requested at most once. Matching also needs roots
+  /// when the caller's recorded locations no longer match the IR.
+  LLVM_ABI std::error_code readInlineFunctionProfiles(const Module &M,
+                                                      bool ForMatching = false);
 
   /// The implementaion to read sample profiles from the associated file.
   virtual std::error_code readImpl() = 0;
