@@ -891,6 +891,10 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       // This might be reference to a function declaration.
       if (DieTag == DW_TAG_GNU_call_site && RefTag == DW_TAG_subprogram)
         break;
+      if (Attr == DW_AT_abstract_origin &&
+          DieTag == DW_TAG_GNU_call_site_parameter &&
+          RefTag == DW_TAG_formal_parameter)
+        break;
       ReportError("Incompatible DW_AT_abstract_origin tag reference",
                   formatv("DIE with tag {0} has {1} that points to DIE with "
                           "incompatible tag {2}",
