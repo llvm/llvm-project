@@ -1,20 +1,18 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ;;
-;; Two intermediate DIFiles with identical content under different filenames
-;; collapse onto one emitted .file number (a sourced file is named by its
-;; checksum digest). Check the source section emits exactly one .code_block
-;; for that number.
+;; Two intermediate DIFiles with the same checksum but different filenames share
+;; one .file number, since a file is named by its checksum. The source section
+;; must hold one .code_block for that number, not two.
 
-;; Both layers resolve to the same .file number, so both .loc_intermediate
-;; directives reference it, and only one .file directive is emitted for it.
+;; Both layers refer to the one .file number.
 ; CHECK-DAG: .loc_intermediate [[F:[0-9]+]] 100 10
 ; CHECK-DAG: .loc_intermediate [[F]] 200 20
 ; CHECK-DAG: .file [[F]] ".{{/|\\\\}}cccccccccccccccccccccccccccccccc"
 
-;; EXACTLY ONE code_block: the section closes immediately after it.
+;; One code_block; the section closes right after it.
 ; CHECK: .nv_intermediate_source_section {
 ; CHECK-NEXT: .code_block {
-; CHECK-NEXT: .ir_name: "tile ir"
+; CHECK-NEXT: .ir_name: "intermediate ir"
 ; CHECK-NEXT: .sourceFileName: [[F]]
 ; CHECK-NEXT: .source_begin
 ; CHECK-NEXT: shared source line
@@ -43,14 +41,13 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 
-;; Two DIFile nodes differing ONLY in filename -- same directory, same checksum,
-;; same source -- so they are distinct metadata but name the same content.
-!14 = !DIFile(filename: "a.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "cccccccccccccccccccccccccccccccc", source: "shared source line")
-!15 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "tile ir")
+;; Two DIFiles that differ only in filename.
+!14 = !DIFile(filename: "a.ir", directory: ".", checksumkind: CSK_MD5, checksum: "cccccccccccccccccccccccccccccccc", source: "shared source line")
+!15 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "intermediate ir")
 !16 = !DILayerLocList(!15)
 
-!24 = !DIFile(filename: "b.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "cccccccccccccccccccccccccccccccc", source: "shared source line")
-!25 = !DILayerLoc(line: 200, column: 20, file: !24, kind: "tile ir")
+!24 = !DIFile(filename: "b.ir", directory: ".", checksumkind: CSK_MD5, checksum: "cccccccccccccccccccccccccccccccc", source: "shared source line")
+!25 = !DILayerLoc(line: 200, column: 20, file: !24, kind: "intermediate ir")
 !26 = !DILayerLocList(!25)
 
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !16)

@@ -1,10 +1,8 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ;;
-;; The .code_blocks in .nv_intermediate_source_section are emitted in a
-;; deterministic order: first-reference (insertion) order. The test pins that
-;; the ordering key is reference order, not the filename -- "bbb.tileir" is
-;; referenced first and "aaa.tileir" second, so bbb's code_block is emitted
-;; first even though "aaa" sorts earlier alphabetically.
+;; .code_blocks are emitted in the order their files are first referenced, so
+;; the output is deterministic. "bbb.ir" is referenced before "aaa.ir"
+;; and must come first, which rules out ordering by filename.
 
 define dso_local ptx_kernel void @test_kernel(ptr noundef %v) #0 !dbg !8 {
 entry:
@@ -21,16 +19,16 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 ; CHECK-DAG: .file [[FAAA:[0-9]+]] "{{.*}}11111111111111111111111111111111"
 
 ; CHECK: .nv_intermediate_source_section {
-;; "bbb.tileir" is referenced first -> lower file number -> emitted first.
+;; bbb's block comes first.
 ; CHECK:      .code_block {
-; CHECK-NEXT:   .ir_name: "tile ir"
+; CHECK-NEXT:   .ir_name: "intermediate ir"
 ; CHECK-NEXT:   .sourceFileName: [[FBBB]]
 ; CHECK-NEXT:   .source_begin
 ; CHECK-NEXT:   bbb source line
 ; CHECK-NEXT:   .source_end
-;; "aaa.tileir" second (higher file number), despite sorting earlier by name.
+;; aaa's block comes second, though its name sorts first.
 ; CHECK:      .code_block {
-; CHECK-NEXT:   .ir_name: "tile ir"
+; CHECK-NEXT:   .ir_name: "intermediate ir"
 ; CHECK-NEXT:   .sourceFileName: [[FAAA]]
 ; CHECK-NEXT:   .source_begin
 ; CHECK-NEXT:   aaa source line
@@ -48,17 +46,17 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 
-;; aaa.tileir: sorts first by filename; carries a distinct checksum + source.
-!14 = !DIFile(filename: "aaa.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "11111111111111111111111111111111", source: "aaa source line")
-!15 = !DILayerLoc(line: 10, column: 1, file: !14, kind: "tile ir")
+;; aaa.ir: sorts first by filename.
+!14 = !DIFile(filename: "aaa.ir", directory: ".", checksumkind: CSK_MD5, checksum: "11111111111111111111111111111111", source: "aaa source line")
+!15 = !DILayerLoc(line: 10, column: 1, file: !14, kind: "intermediate ir")
 !16 = !DILayerLocList(!15)
 
-;; bbb.tileir: sorts second by filename.
-!24 = !DIFile(filename: "bbb.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "22222222222222222222222222222222", source: "bbb source line")
-!25 = !DILayerLoc(line: 20, column: 1, file: !24, kind: "tile ir")
+;; bbb.ir: sorts second by filename.
+!24 = !DIFile(filename: "bbb.ir", directory: ".", checksumkind: CSK_MD5, checksum: "22222222222222222222222222222222", source: "bbb source line")
+!25 = !DILayerLoc(line: 20, column: 1, file: !24, kind: "intermediate ir")
 !26 = !DILayerLocList(!25)
 
-;; First instruction references bbb, second references aaa (reverse of sort).
+;; bbb is referenced first, aaa second.
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !26)
 !21 = !DILocation(line: 3, column: 5, scope: !8, irlayers: !16)
 !22 = !DILocation(line: 4, column: 1, scope: !8)

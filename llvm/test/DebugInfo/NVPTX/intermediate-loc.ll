@@ -1,11 +1,7 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
-;; [TODO] Re-enable once ptxas changes have landed.
-;; RUN-TODO: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
-;;
-;; Test that DILocation.irlayers (multi-level line info) generates
-;; .loc_intermediate directives in PTX output: the primary source location is
-;; the DILocation, and each DILayerLoc entry emits a secondary directive.
-;; Instructions with only a source DILocation (no irlayers) do not emit one.
+
+;; A layer on a DILocation's irlayers emits a .loc_intermediate right after the
+;; primary .loc. A location without irlayers emits none.
 
 ; CHECK: .target sm_{{[0-9]+}}, debug
 
@@ -60,17 +56,16 @@ attributes #0 = { noinline optnone }
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 
-;; Intermediate-IR layer: one DILayerLoc, shared (uniqued) across all layered
-;; instructions via a single DILayerLocList.
-!14 = !DIFile(filename: "intermediate.ptx", directory: ".", checksumkind: CSK_MD5, checksum: "0123456789abcdef0123456789abcdef", source: "intermediate ptx text")
+;; One layer, shared by every layered instruction.
+!14 = !DIFile(filename: "intermediate.ir", directory: ".", checksumkind: CSK_MD5, checksum: "0123456789abcdef0123456789abcdef", source: "intermediate ir text")
 !30 = !DILayerLocList(!31)
-!31 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "TileIR")
+!31 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "intermediate ir")
 
-;; Source-only instruction locations (no irlayers).
+;; Locations without the layer.
 !12 = !DILocation(line: 3, column: 5, scope: !8)
 !19 = !DILocation(line: 6, column: 5, scope: !8)
 
-;; Layered instruction locations: primary source loc + irlayers.
+;; Locations with the layer.
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !30)
 !22 = !DILocation(line: 4, column: 1, scope: !8, irlayers: !30)
 !23 = !DILocation(line: 5, column: 5, scope: !8, irlayers: !30)

@@ -1,23 +1,21 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ;;
-;; An intermediate file that carries source but NO checksum still needs a unique
-;; hash for its secondary .file name -- ptxas stores the .code_block's .source in
-;; the cubin keyed by that name -- so emission hashes the DIFile's directory and
-;; filename instead of using the path verbatim. Contrast
-;; intermediate-checksum-secondary-file.ll, where a checksum is present and that
-;; content-addressed digest is used instead.
+;; An intermediate file with source but no checksum still needs a unique
+;; secondary .file name, because ptxas keys the stored source by that name. The
+;; name is then a hash of the DIFile's directory and filename. With a checksum,
+;; the checksum is the name; see intermediate-checksum-secondary-file.ll.
 
-;; MD5(".kernel.tileir") == directory "." concatenated with filename.
+;; The name is MD5(".intermediate.ir"): the directory followed by the filename.
 ; CHECK-DAG: .loc_intermediate [[F:[0-9]+]] 42 5
-; CHECK-DAG: .file [[F]] ".{{/|\\\\}}f3c6d19eaf8d63898bcec70cb38e2482"
+; CHECK-DAG: .file [[F]] ".{{/|\\\\}}b8d144e9353de1a3231a42ddb1305268"
 
-;; ...and the source still reaches the section.
+;; The source still reaches the section.
 ; CHECK: .nv_intermediate_source_section {
 ; CHECK-NEXT: .code_block {
-; CHECK-NEXT: .ir_name: "tile ir"
+; CHECK-NEXT: .ir_name: "intermediate ir"
 ; CHECK-NEXT: .sourceFileName: [[F]]
 ; CHECK-NEXT: .source_begin
-; CHECK-NEXT: tile ir source
+; CHECK-NEXT: intermediate ir source
 ; CHECK-NEXT: .source_end
 ; CHECK-NEXT: }
 ; CHECK-NEXT: }
@@ -43,9 +41,9 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !10 = !{null}
 
 ;; Source present, checksum absent.
-!14 = !DIFile(filename: "kernel.tileir", directory: ".", source: "tile ir source")
+!14 = !DIFile(filename: "intermediate.ir", directory: ".", source: "intermediate ir source")
 !30 = !DILayerLocList(!31)
-!31 = !DILayerLoc(line: 42, column: 5, file: !14, kind: "tile ir")
+!31 = !DILayerLoc(line: 42, column: 5, file: !14, kind: "intermediate ir")
 
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !30)
 !21 = !DILocation(line: 3, column: 1, scope: !8)

@@ -1,43 +1,34 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ;;
-;; Two stacked layer-bearing frames in ONE inlined-at chain. The front end
-;; inlined funcB into funcA (snapshot on the funcA frame), and funcA was then
-;; inlined into kernelA -- which ALSO carried its own snapshot layer. So the
-;; store's chain is:
+;; When more than one frame of an inlined-at chain carries layers, the innermost
+;; one is emitted: it is the most specific intermediate position for the
+;; instruction. Layers on the frames enclosing it are not emitted.
 ;;
-;;   funcB : 52   (head)   -- no irlayers
-;;     -> funcA : 38       -- irlayers: tile ir @ 45   (INNER, wins)
-;;       -> kernelA : 15   -- irlayers: tile ir @ 12   (OUTER, shadowed)
+;;   funcB : 52   (head)   -- no layers
+;;     -> funcA : 38       -- layer at line 45 (innermost, emitted)
+;;       -> kernelA : 15   -- layer at line 12 (enclosing, not emitted)
 ;;
-;; The producer disassembles the whole module into ONE frozen snapshot text, so both the
-;; funcA op (line 45) and the kernelA call op (line 12) index into the SAME
-;; intermediate DIFile -- they differ only by (line, col), not by file. The
-;; shadowing is therefore line-level: the NVPTX backend walks head -> outward
-;; to the FIRST (innermost) layer-bearing frame and stops, so the funcA line (45)
-;; is emitted and the kernelA line (12) never is. (Distinct intermediate DIFiles
-;; only arise across separately-snapshotted modules.)
+;; Both layers point into the same intermediate file, so only the line tells
+;; them apart.
 
-;; Primary .loc = the head (funcB, line 52); the winning intermediate layer is
-;; funcA's (line 45), read off a middle (non-head, non-outermost) frame.
+;; The primary .loc is the head's. The layer is funcA's, a frame that is neither
+;; the head nor the outermost.
 ; CHECK: .loc [[SRC:[0-9]+]] 52 3
 ; CHECK-NEXT: .loc_intermediate [[INT:[0-9]+]] 45 7
-;; Exactly one .loc_intermediate: the shadowed kernelA line (12) is not emitted.
-;; (A wrong outermost-frame walk would print `12 1` here; emitting both frames
-;; would add a second .loc_intermediate -- either way this fails.)
+;; kernelA's layer (line 12) is not emitted.
 ; CHECK-NOT: .loc_intermediate
 
 ; CHECK: .file [[SRC]] "/k{{/|\\\\}}kernel.py"
-;; A single intermediate .file (the shared module snapshot), named by its carried
-;; checksum digest (not MD5(filename)).
+;; One intermediate .file, shared by both layers.
 ; CHECK: .file [[INT]] ".{{/|\\\\}}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-;; One code_block for the one shared snapshot file.
+;; One code_block for that file.
 ; CHECK: .nv_intermediate_source_section {
 ; CHECK-NEXT: .code_block {
-; CHECK-NEXT: .ir_name: "tile ir"
+; CHECK-NEXT: .ir_name: "intermediate ir"
 ; CHECK-NEXT: .sourceFileName: [[INT]]
 ; CHECK-NEXT: .source_begin
-; CHECK-NEXT: whole-module-tile-ir-snapshot
+; CHECK-NEXT: whole-module-ir-text
 ; CHECK-NEXT: .source_end
 ; CHECK-NEXT: }
 ; CHECK-NEXT: }
@@ -53,7 +44,7 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "tile", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "kernel.py", directory: "/k")
 !2 = !{i32 7, !"Dwarf Version", i32 2}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
@@ -65,20 +56,18 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !7 = distinct !DISubprogram(name: "funcA", scope: !1, file: !1, line: 30, type: !4, spFlags: DISPFlagDefinition, unit: !0)
 !12 = distinct !DISubprogram(name: "funcB", scope: !1, file: !1, line: 50, type: !4, spFlags: DISPFlagDefinition, unit: !0)
 
-;; ONE whole-module tile-IR snapshot DIFile. Both frames' layers reference it,
-;; at different (line, col): funcA's op at 45:7, kernelA's call op at 12:1.
-!14 = !DIFile(filename: "module.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "whole-module-tile-ir-snapshot")
+;; One intermediate file; both layers point into it.
+!14 = !DIFile(filename: "module.ir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "whole-module-ir-text")
 
-;; funcA's layer (the INNER layer that wins).
-!15 = !DILayerLoc(line: 45, column: 7, file: !14, kind: "tile ir")
+;; funcA's layer: innermost, emitted.
+!15 = !DILayerLoc(line: 45, column: 7, file: !14, kind: "intermediate ir")
 !16 = !DILayerLocList(!15)
 
-;; kernelA's layer (the OUTER layer that is SHADOWED) -- SAME file, different line.
-!25 = !DILayerLoc(line: 12, column: 1, file: !14, kind: "tile ir")
+;; kernelA's layer: enclosing, not emitted.
+!25 = !DILayerLoc(line: 12, column: 1, file: !14, kind: "intermediate ir")
 !26 = !DILayerLocList(!25)
 
-;; The inlined-at chain: funcB head (no layer) -> funcA frame (layer 45) ->
-;; kernelA frame (layer 12, shadowed / outermost).
+;; The inlined-at chain: funcB (no layer), funcA (line 45), kernelA (line 12).
 !9 = !DILocation(line: 52, column: 3, scope: !12, inlinedAt: !10)
 !10 = !DILocation(line: 38, column: 7, scope: !7, inlinedAt: !11, irlayers: !16)
 !11 = !DILocation(line: 15, column: 1, scope: !6, irlayers: !26)

@@ -210,7 +210,7 @@ the file on disk:
 ```text
 .nv_intermediate_source_section {
   .code_block {
-    .ir_name: "tile ir"
+    .ir_name: "intermediate ir"
     .sourceFileName: 2
     .source_begin
 ...intermediate IR text...

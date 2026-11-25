@@ -1,23 +1,21 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ;;
-;; Mixed intermediate files: one carries DIFile.source, the other only a checksum
-;; (no source). A .loc_intermediate is only meaningful with the source it points
-;; into -- the consumer rejects a reference to a file with no .code_block -- so
-;; the source-less layer is dropped ENTIRELY: no .loc_intermediate, no .file
-;; entry, no .code_block. The sourced layer is emitted as usual, named by its
-;; checksum digest. Contrast intermediate-source-section-empty.ll, where EVERY
-;; file is source-less and the section disappears with them.
+;; Of two intermediate files, one has source: text and one does not. The layer
+;; into the source-less file is dropped whole (no .loc_intermediate, no .file,
+;; no .code_block), because the consumer rejects a reference to a file with no
+;; .code_block. The other layer is emitted as usual. In
+;; intermediate-source-section-empty.ll every file is source-less and the
+;; section goes too.
 
 ; CHECK: .loc_intermediate [[FA:[0-9]+]] 100 10
 ; CHECK-NOT: .loc_intermediate
 ; CHECK: .file [[FA]] ".{{/|\\\\}}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 ; CHECK-NOT: .file
 
-;; The section holds EXACTLY ONE code_block -- the sourced file's. It closes
-;; right after it.
+;; The section holds only the sourced file's code_block.
 ; CHECK: .nv_intermediate_source_section {
 ; CHECK-NEXT: .code_block {
-; CHECK-NEXT: .ir_name: "tile ir"
+; CHECK-NEXT: .ir_name: "intermediate ir"
 ; CHECK-NEXT: .sourceFileName: [[FA]]
 ; CHECK-NEXT: .source_begin
 ; CHECK-NEXT: aaa source line
@@ -46,17 +44,17 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 
-;; Sourced intermediate file (referenced first -> lower .file number).
-!14 = !DIFile(filename: "aaa.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "aaa source line")
-!15 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "tile ir")
+;; Intermediate file with source.
+!14 = !DIFile(filename: "aaa.ir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "aaa source line")
+!15 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "intermediate ir")
 !16 = !DILayerLocList(!15)
 
-;; Source-less intermediate file (checksum only, no source:).
-!24 = !DIFile(filename: "bbb.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-!25 = !DILayerLoc(line: 200, column: 20, file: !24, kind: "tile ir")
+;; Intermediate file without source.
+!24 = !DIFile(filename: "bbb.ir", directory: ".", checksumkind: CSK_MD5, checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+!25 = !DILayerLoc(line: 200, column: 20, file: !24, kind: "intermediate ir")
 !26 = !DILayerLocList(!25)
 
-;; First instruction references the sourced file; second the source-less file.
+;; The first instruction uses the sourced file, the second the source-less one.
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !16)
 !21 = !DILocation(line: 3, column: 5, scope: !8, irlayers: !26)
 !22 = !DILocation(line: 4, column: 1, scope: !8)

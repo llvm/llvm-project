@@ -6,27 +6,27 @@
 ;; each contributes its own .code_block.
 
 ; CHECK: .loc [[SRC:[0-9]+]] 2 5
-; CHECK-NEXT: .loc_intermediate [[TILE:[0-9]+]] 100 1
-; CHECK-NEXT: .loc_intermediate [[GPU:[0-9]+]] 7 3
+; CHECK-NEXT: .loc_intermediate [[HIGH:[0-9]+]] 100 1
+; CHECK-NEXT: .loc_intermediate [[LOW:[0-9]+]] 7 3
 
 ;; Each layer file gets its own secondary .file, named by its checksum digest.
-; CHECK-DAG: .file [[TILE]] ".{{/|\\\\}}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-; CHECK-DAG: .file [[GPU]] ".{{/|\\\\}}bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+; CHECK-DAG: .file [[HIGH]] ".{{/|\\\\}}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+; CHECK-DAG: .file [[LOW]] ".{{/|\\\\}}bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 ;; Both levels appear in the source section, in first-reference order.
 ; CHECK: .nv_intermediate_source_section {
 ; CHECK-NEXT: .code_block {
-; CHECK-NEXT: .ir_name: "tile ir"
-; CHECK-NEXT: .sourceFileName: [[TILE]]
+; CHECK-NEXT: .ir_name: "high ir"
+; CHECK-NEXT: .sourceFileName: [[HIGH]]
 ; CHECK-NEXT: .source_begin
-; CHECK-NEXT: tile ir text
+; CHECK-NEXT: high ir text
 ; CHECK-NEXT: .source_end
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .code_block {
-; CHECK-NEXT: .ir_name: "gpu ir"
-; CHECK-NEXT: .sourceFileName: [[GPU]]
+; CHECK-NEXT: .ir_name: "low ir"
+; CHECK-NEXT: .sourceFileName: [[LOW]]
 ; CHECK-NEXT: .source_begin
-; CHECK-NEXT: gpu ir text
+; CHECK-NEXT: low ir text
 ; CHECK-NEXT: .source_end
 ; CHECK-NEXT: }
 ; CHECK-NEXT: }
@@ -51,11 +51,11 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 
-;; Two intermediate levels: tile IR lowered to GPU IR.
-!14 = !DIFile(filename: "kernel.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "tile ir text")
-!15 = !DIFile(filename: "kernel.gpuir", directory: ".", checksumkind: CSK_MD5, checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source: "gpu ir text")
-!16 = !DILayerLoc(line: 100, column: 1, file: !14, kind: "tile ir")
-!17 = !DILayerLoc(line: 7, column: 3, file: !15, kind: "gpu ir")
+;; Two intermediate levels: a high-level IR lowered to a low-level IR.
+!14 = !DIFile(filename: "high.ir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "high ir text")
+!15 = !DIFile(filename: "low.ir", directory: ".", checksumkind: CSK_MD5, checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source: "low ir text")
+!16 = !DILayerLoc(line: 100, column: 1, file: !14, kind: "high ir")
+!17 = !DILayerLoc(line: 7, column: 3, file: !15, kind: "low ir")
 !18 = !DILayerLocList(!16, !17)
 
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !18)

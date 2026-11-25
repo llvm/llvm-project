@@ -1,42 +1,33 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
-;; TODO: Enable once PTXAS changes land.
-;; RUN-TODO: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
-;;
-;; Test that intermediate DIFile.source text generates the
-;; .nv_intermediate_source_section in PTX output. This section contains the
-;; high-level source code from intermediate representations like TileIR.
-;;
-;; The layers live on the DILocation's `irlayers` operand: each
-;; instruction's DILocation carries a DILayerLocList of DILayerLoc entries that
-;; reference the intermediate DIFile. The code_block for a declared source file
-;; is emitted only when some instruction's layer references that file (see
-;; intermediate-source-section-empty.ll for the skip case).
 
-;; Check that .file directives are emitted for the intermediate source files.
-;; The secondary .file name is the intermediate DIFile's carried checksum digest.
+;; The source: text of each intermediate DIFile that a layer refers to is
+;; emitted once, as a .code_block in .nv_intermediate_source_section, so a
+;; consumer can show the intermediate IR without the file on disk. Each block
+;; carries the layer's kind and the file's .file number.
+
+;; Each intermediate file gets a .file named by its checksum.
 ; CHECK-DAG: .file [[FILE123:[0-9]+]] "{{.*}}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 ; CHECK-DAG: .file [[FILE456:[0-9]+]] "{{.*}}bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
-;; Check that the intermediate source section is emitted
 ; CHECK: .nv_intermediate_source_section {
 
-;; First code block with TileIR - sourceFileName matches the file number
+;; .sourceFileName is the file's .file number.
 ; CHECK:   .code_block {
-; CHECK-NEXT:     .ir_name: "TileIR"
+; CHECK-NEXT:     .ir_name: "intermediate ir"
 ; CHECK-NEXT:     .sourceFileName: [[FILE123]]
 ; CHECK-NEXT:     .source_begin
 ; CHECK-NEXT:     %0 = memref.load %arg0[] : memref<f32>
 ; CHECK-NEXT:     .source_end
 
-;; Second code block with TileIR - sourceFileName matches the file number
+;; Likewise for the second file.
 ; CHECK:   .code_block {
-; CHECK-NEXT:     .ir_name: "TileIR"
+; CHECK-NEXT:     .ir_name: "intermediate ir"
 ; CHECK-NEXT:     .sourceFileName: [[FILE456]]
 ; CHECK-NEXT:     .source_begin
 ; CHECK-NEXT:     memref.store %0, %arg1[] : memref<f32>
 ; CHECK-NEXT:     .source_end
 
-;; Close the second code_block, then the section itself.
+;; The section closes after the second block.
 ; CHECK-NEXT: }
 ; CHECK-NEXT: }
 
@@ -62,20 +53,18 @@ attributes #0 = { noinline optnone "target-cpu"="sm_75" }
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 
-;; High-level source file reference for tileIR_source.123, with its shared layer.
-!15 = !DIFile(filename: "tileIR_source.123", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "%0 = memref.load %arg0[] : memref<f32>")
-!17 = !DILayerLoc(line: 100, column: 10, file: !15, kind: "TileIR")
+;; First intermediate file and its layer.
+!15 = !DIFile(filename: "first.ir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "%0 = memref.load %arg0[] : memref<f32>")
+!17 = !DILayerLoc(line: 100, column: 10, file: !15, kind: "intermediate ir")
 !18 = !DILayerLocList(!17)
 
-;; High-level source file reference for tileIR_source.456, with its shared layer.
-!24 = !DIFile(filename: "tileIR_source.456", directory: ".", checksumkind: CSK_MD5, checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source: "memref.store %0, %arg1[] : memref<f32>")
-!26 = !DILayerLoc(line: 200, column: 15, file: !24, kind: "TileIR")
+;; Second intermediate file and its layer.
+!24 = !DIFile(filename: "second.ir", directory: ".", checksumkind: CSK_MD5, checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source: "memref.store %0, %arg1[] : memref<f32>")
+!26 = !DILayerLoc(line: 200, column: 15, file: !24, kind: "intermediate ir")
 !27 = !DILayerLocList(!26)
 
-;; Instruction locations: source DILocation + irlayers.
-;; First two instructions reference tileIR_source.123
+;; The first two instructions use the first file, the last two the second.
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !18)
 !21 = !DILocation(line: 3, column: 5, scope: !8, irlayers: !18)
-;; Last two instructions reference tileIR_source.456
 !22 = !DILocation(line: 4, column: 5, scope: !8, irlayers: !27)
 !23 = !DILocation(line: 5, column: 1, scope: !8, irlayers: !27)
