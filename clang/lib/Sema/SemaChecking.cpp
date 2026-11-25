@@ -17699,40 +17699,6 @@ ExprResult Sema::BuiltinCoopMatrixLoadStore(CallExpr *TheCall,
   return CallResult;
 }
 
-bool Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
-  FunctionDecl *F = TheCall->getDirectCallee();
-  assert(F);
-  DeclarationName MemberName = F->getDeclName();
-  IdentifierInfo *Fname = MemberName.getAsIdentifierInfo();
-  assert(Fname);
-  if (!Fname->isStr("coop_mat_mulAdd"))
-    return false;
-
-  auto MC = TheCall->getArg(2);
-  auto *MOutTy = TheCall->getType()->getAs<CooperativeMatrixType>();
-  auto *M2Ty = MC->getType()->getAs<CooperativeMatrixType>();
-  auto Loc = TheCall->getBeginLoc();
-
-  if (!MOutTy)
-    Diag(Loc, diag::err_invalid_coopmat_arg);
-  if (!M2Ty)
-    Diag(MC->getBeginLoc(), diag::err_invalid_coopmat_arg);
-  if (!MOutTy || !M2Ty)
-    return true;
-
-  if (MOutTy->getUse() != 2) {
-    Diag(Loc, diag::err_invalid_coopmat_use)
-        << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
-    return true;
-  }
-
-  if (!areCoopMatrixTypesCompatible(TheCall->getType(), MC->getType())) {
-    Diag(Loc, diag::err_incompatible_coopmat_types);
-    return true;
-  }
-  return false;
-}
-
 bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
                                 SourceLocation BLoc) {
   auto *M0Ty = ATy->getAs<CooperativeMatrixType>();

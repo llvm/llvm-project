@@ -12143,10 +12143,6 @@ def err_invalid_coopmat_arg
 def err_invalid_coopmat_matrix_operand_type
     : Error<"fourth argument of 'coop_mat_mulAdd' must have enum or integer type">;
 
-def err_invalid_coopmat_assignment
-    : Error<"builtin return value must be assigned to cooperative matrix "
-            "type variable">;
-
 def err_invalid_coopmat_use : Error<"argument of cooperative matrix must have '%0' use">;
 
 def err_invalid_coopmat_element_type

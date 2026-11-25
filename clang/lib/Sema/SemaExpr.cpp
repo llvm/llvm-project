@@ -16187,6 +16187,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   switch (Opc) {
   case BO_Assign:
+#if 0
     if (getLangOpts().OpenCL) {
       bool IsLoadOrInit = false;
       if (CallExpr *Call =
@@ -16205,6 +16206,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
           return ExprError();
       }
     }
+#endif
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {

@@ -40,7 +40,7 @@ typedef float4 __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatVecElem_t; // 
 kernel void test_bad_assignment(__global float *ptr) {
     float bad;
     MatA_t a;
-	bad = coop_mat_load(ptr, a, ROW_MAJOR, 16); // expected-error {{builtin return value must be assigned to cooperative matrix type variable}}
+	bad = coop_mat_load(ptr, a, ROW_MAJOR, 16); // expected-error-re {{assigning to {{.*}} from incompatible type}}
     (void)bad;
 }
 
@@ -82,7 +82,7 @@ void test_invalid_coop_mat_input_for_load(__global float *ptr) {
 void test_invalid_coop_mat_input_for_load_2(__global float *ptr) {
   MatA_t a;
   MatB_t b;
-  b = coop_mat_load(ptr, a, ROW_MAJOR, 16); // expected-error {{incompatible cooperative matrix types}}
+  b = coop_mat_load(ptr, a, ROW_MAJOR, 16); // expected-error-re {{assigning to {{.*}} from incompatible type}}
 }
 
 void test_invalid_coop_mat_input_for_store(__global float *ptr) {
@@ -177,7 +177,7 @@ kernel void test_binary_operation_on_coopmat_with_different_component_types() {
 kernel void test_incompatible_coopmat_assignment() {
     MatA_t a;
     MatB_t b;
-    a = b; // expected-error-re {{assigning to{{.*}}from incompatible type}}
+    a = b; // expected-error-re {{assigning to {{.*}} from incompatible type}}
 }
 
 // Test of cooperative matrix cast assignment.
@@ -202,11 +202,11 @@ void test_coop_mat_init_invalid(void) {
   float4 arr4;
   a = coop_mat_init(a, arr4); // expected-error {{invalid argument of cooperative matrix builtin}}
   a = coop_mat_init(a, (float *)(0x10000000)); // expected-error {{invalid argument of cooperative matrix builtin}}
-  int i = coop_mat_init(a, 10); // expected-error {{builtin return value must be assigned to cooperative matrix type variable}}
+  int i = coop_mat_init(a, 10); // expected-error-re {{initializing {{.*}} with an expression of incompatible type}}
   int value = 0;
   a = coop_mat_init(value, 0.0f); // expected-error {{argument must be a valid cooperative matrix}}
   MatB_t b;
-  a = coop_mat_init(b, 0.0f); // expected-error {{incompatible cooperative matrix types}}
+  a = coop_mat_init(b, 0.0f); // expected-error-re {{assigning to {{.*}} from incompatible type}}
 }
 
 // Test of coop_mat_length.
