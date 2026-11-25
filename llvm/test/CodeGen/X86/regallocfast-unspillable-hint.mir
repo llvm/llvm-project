@@ -1,5 +1,5 @@
-# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -run-pass=regallocfast %s \
-# RUN:   -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -passes=regallocfast %s \
+# RUN:   -filetype=null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 # The fast register allocator prefers a value's hint, a register that the
 # value is copied from or to, by taking a little off that register's spill
@@ -28,7 +28,6 @@
 #     asm volatile("" : : "r"(a) : ALL_GPRS);
 #   }
 name: test_use_with_hint
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi
