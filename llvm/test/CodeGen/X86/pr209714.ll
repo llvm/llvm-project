@@ -1406,7 +1406,7 @@ define i64 @reduce_umax_v8i64_signbit_not(ptr %pa, ptr %pb) {
   ret i64 %res
 }
 
-; Negative tests: xor with a value that is not all-ones must not fold.
+; PR244613 + PR244753 - ensure xor with a non-allones value doesn't fold.
 define i8 @reduce_umax_v16i8_signbit_xor(<16 x i8> %a, i8 %y) {
 ; X86-SSE2-LABEL: reduce_umax_v16i8_signbit_xor:
 ; X86-SSE2:       # %bb.0:
