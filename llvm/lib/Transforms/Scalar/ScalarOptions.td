@@ -160,6 +160,8 @@ defm : BoolField<"irce-skip-profitability-checks", "false", "">;
 // IndVarSimplify.cpp
 defm : BoolField<"disable-lftr", "false",
   "Disable Linear Function Test Replace optimization">;
+defm : BoolField<"disable-indvars-disjoint-or-replacement", "false",
+  "Disable disjoint-or replacement during IndVarSimplify">;
 defm : BoolField<"indvars-post-increment-ranges", "true",
   "Use post increment control-dependent ranges in IndVarSimplify">;
 defm : BoolField<"indvars-predicate-loop-traps", "true",
