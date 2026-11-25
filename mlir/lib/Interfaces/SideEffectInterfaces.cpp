@@ -195,8 +195,10 @@ void DeadnessCache::scheduleInvalidation(Operation *op) {
   // the current IR, so skip queuing a redundant subtree walk.
   if (cache.empty())
     return;
-  // An uncached leaf can affect only its ancestors. Siblings can share the
-  // same request even if they are all erased before the next query.
+  // An operation for which deadness isn't cached can only invalidate
+  // deadness of ancestors (if it is removed). Siblings can share the
+  // same request from a common parent even if they are all erased
+  // before the next query.
   if (op->getNumRegions() || cache.contains(op))
     enqueue(op, Request::Subtree);
   else if (Operation *parent = op->getParentOp())
