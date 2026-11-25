@@ -9,10 +9,10 @@
 define range(i64 0, -9223372036854775808) i64 @test_stack_protector_with_vector_clobber(ptr nofree noundef %0) #0 {
 ; RV64V-LABEL: test_stack_protector_with_vector_clobber:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    li a1, 2
 ; RV64V-NEXT:    ld t2, 0(a0)
 ; RV64V-NEXT:    #APP
 ; RV64V-NEXT:    #NO_APP
+; RV64V-NEXT:    li a1, 2
 ; RV64V-NEXT:    bge t2, a1, .LBB0_2
 ; RV64V-NEXT:  # %bb.1:
 ; RV64V-NEXT:    li a0, 0
