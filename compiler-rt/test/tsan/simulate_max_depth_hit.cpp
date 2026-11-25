@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -o %t
-// RUN: %env_tsan_opts=atexit_sleep_ms=0:abort_on_error=0:simulate_scheduler=random:simulate_iterations=100:simulate_max_depth=100 not %run %t 2>&1 | FileCheck %s
+// RUN: %env_tsan_opts=atexit_sleep_ms=0:abort_on_error=0:simulate_scheduler=random:simulate_iterations=100:simulate_max_depth=100:simulate_schedule_probability=100 not %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <atomic>

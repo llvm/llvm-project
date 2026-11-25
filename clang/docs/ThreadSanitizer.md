@@ -609,7 +609,7 @@ calls to `main` with `__wrap_main` and provides access to the original
     loops or excessive scheduling overhead.
 * - `simulate_schedule_probability`
   - int
-  - 100
+  - 20
   - Probability (0-100%) of performing a context switch at each scheduling
     point. Lower values (e.g., 0) disable context switching, allowing threads
     to run more sequentially. Useful for comparing simulation results against
