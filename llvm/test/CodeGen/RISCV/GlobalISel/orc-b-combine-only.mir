@@ -13,8 +13,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; CHECK-NEXT: $x10 = COPY [[INT]](s64)
+    ; CHECK-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; CHECK-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = G_CONSTANT i64 72340172838076673

@@ -15,8 +15,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_0
@@ -54,8 +54,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 144680345676153346
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_1
@@ -97,8 +97,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 289360691352306692
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_2
@@ -140,8 +140,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 578721382704613384
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_3
@@ -183,8 +183,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1157442765409226768
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_4
@@ -226,8 +226,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2314885530818453536
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_5
@@ -269,8 +269,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4629771061636907072
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_6
@@ -312,8 +312,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9187201950435737472
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: byte_bit_7
@@ -748,8 +748,8 @@ body: |
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; ZBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
     ; ZBB-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[AND]], [[C1]](s64)
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: $x11 = COPY [[SHL]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10, implicit $x11
     ;
@@ -796,8 +796,8 @@ body: |
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; ZBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; ZBB-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[C1]](s64)
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: $x12 = COPY [[LSHR]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10, implicit $x12
     ;
@@ -886,8 +886,8 @@ body: |
     ; ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 144680345676153346
     ; ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; ZBB-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[AND]](s64)
-    ; ZBB-NEXT: $x10 = COPY [[INT]](s64)
+    ; ZBB-NEXT: [[ORC_B:%[0-9]+]]:_(s64) = G_ORC_B [[AND]]
+    ; ZBB-NEXT: $x10 = COPY [[ORC_B]](s64)
     ; ZBB-NEXT: PseudoRET implicit $x10
     ;
     ; NOZBB-LABEL: name: poison_flags
