@@ -151,8 +151,8 @@ The `MemorySSA` IR is shown in comments that precede the instructions they map
 to (if such an instruction exists). For example, `1 = MemoryDef(liveOnEntry)`
 is a `MemoryAccess` (specifically, a `MemoryDef`), and it describes the LLVM
 instruction `store i8 0, ptr %p3`. Other places in `MemorySSA` refer to this
-particular `MemoryDef` as `1` (much like how one can refer to `load i8, ptr
-%p1` in LLVM with `%0`). Again, `MemoryPhi`s don't correspond to any LLVM
+particular `MemoryDef` as `1` (much like how one can refer to `load i8, ptr %p1`
+in LLVM with `%0`). Again, `MemoryPhi`s don't correspond to any LLVM
 Instruction, so the line directly below a `MemoryPhi` isn't special.
 `print<memoryssa-walker>` also asks the walker for the clobber of each
 `MemoryUse` and `MemoryDef`, and prints it after `- clobbered by`. For a

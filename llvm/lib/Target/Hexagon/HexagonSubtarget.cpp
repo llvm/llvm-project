@@ -23,6 +23,8 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -570,6 +572,139 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   }
 }
 
+namespace {
+// Address of a load in the form used by the bank conflict check:
+//   (Base << Shift) + Sym + Offset
+// Sym is null when the offset is a plain immediate.
+struct BankAddr {
+  Register Base;
+  unsigned Shift = 0;
+  const GlobalValue *Sym = nullptr;
+  int64_t Offset = 0;
+  uint64_t Size = 0;
+};
+} // end anonymous namespace
+
+// Decompose a scalar load into a BankAddr. Handles the base + offset form,
+// with either an immediate (memw(Rs+#s11)) or a global address
+// (memw(Rs+##sym)) as the offset, and the shifted-register + global form
+// (memw(Rt<<#u2+##sym)).
+static std::optional<BankAddr> getBankAddr(const MachineInstr &MI,
+                                           const HexagonInstrInfo &HII) {
+  if (!MI.mayLoad() || MI.mayStore() || HII.isMemOp(MI) ||
+      HII.isPostIncrement(MI) || HII.isHLXVec(MI))
+    return std::nullopt;
+  unsigned AddrMode = HII.getAddrMode(MI);
+  if (AddrMode != HexagonII::BaseImmOffset &&
+      AddrMode != HexagonII::BaseLongOffset)
+    return std::nullopt;
+
+  // Operand 0 is the loaded value; the address operands follow.
+  unsigned BasePos = 1;
+  if (HII.isPredicated(MI))
+    ++BasePos;
+
+  BankAddr A;
+  unsigned OffsetPos = BasePos + 1;
+  if (AddrMode == HexagonII::BaseLongOffset) {
+    // Rt << #u2 + ##u32
+    const MachineOperand &ShiftOp = MI.getOperand(BasePos + 1);
+    if (!ShiftOp.isImm())
+      return std::nullopt;
+    A.Shift = ShiftOp.getImm();
+    ++OffsetPos;
+  }
+
+  const MachineOperand &BaseOp = MI.getOperand(BasePos);
+  if (!BaseOp.isReg() || BaseOp.getSubReg() != 0)
+    return std::nullopt;
+  A.Base = BaseOp.getReg();
+
+  const MachineOperand &OffsetOp = MI.getOperand(OffsetPos);
+  if (OffsetOp.isImm()) {
+    A.Offset = OffsetOp.getImm();
+  } else if (OffsetOp.isGlobal()) {
+    // Only a direct reference to the symbol tells where it is relative to the
+    // bank boundaries; GOT, TLS and other relocations do not.
+    if ((OffsetOp.getTargetFlags() & ~HexagonII::HMOTF_ConstExtended) !=
+        HexagonII::MO_NO_FLAG)
+      return std::nullopt;
+    A.Sym = OffsetOp.getGlobal();
+    A.Offset = OffsetOp.getOffset();
+  } else {
+    return std::nullopt;
+  }
+
+  A.Size = HII.getMemAccessSize(MI);
+  return A;
+}
+
+// Return true if the offsets of the two loads can be compared to decide
+// whether they map to the same bank, i.e. whether the symbols (if any)
+// contribute the same value to the bank bits of the address.
+static bool haveComparableSyms(const BankAddr &A0, const BankAddr &A1,
+                               const DataLayout &DL) {
+  if (A0.Sym == A1.Sym)
+    return true;
+  // Different symbols: the linker places each one independently, so their
+  // low address bits are known only from their alignment. A symbol aligned to
+  // the bank period (32 bytes) does not affect the bank bits, the same as a
+  // plain immediate offset (null Sym).
+  const Align BankPeriod(32);
+  auto HasKnownBankBits = [&](const GlobalValue *Sym) {
+    return !Sym || Sym->getPointerAlignment(DL) >= BankPeriod;
+  };
+  return HasKnownBankBits(A0.Sym) && HasKnownBankBits(A1.Sym);
+}
+
+// Return true if loads MI0 and MI1 likely map to the same cache bank and
+// should not be issued in the same packet. If IgnoreSameLine is true, loads
+// that likely read the same cache line, which cannot conflict, are not
+// reported.
+bool HexagonSubtarget::mayHaveBankConflict(const MachineInstr &MI0,
+                                           const MachineInstr &MI1,
+                                           const HexagonInstrInfo &HII,
+                                           bool IgnoreSameLine) {
+  if (!EnableCheckBankConflict)
+    return false;
+  std::optional<BankAddr> A0 = getBankAddr(MI0, HII);
+  // Skip accesses as large as the L1 cache line.
+  if (!A0 || A0->Size == 0 || A0->Size >= 32)
+    return false;
+  std::optional<BankAddr> A1 = getBankAddr(MI1, HII);
+  if (!A1 || A1->Size == 0 || A1->Size >= 32 || A0->Base != A1->Base ||
+      A0->Shift != A1->Shift ||
+      !haveComparableSyms(*A0, *A1, MI0.getMF()->getDataLayout()))
+    return false;
+  // A bank conflict needs two different cache lines. As the bank check
+  // below does, assume the base is 32-byte aligned: offsets within the same
+  // 32-byte block then read the same line and cannot conflict.
+  if (IgnoreSameLine && A0->Sym == A1->Sym &&
+      (A0->Offset & ~int64_t(31)) == (A1->Offset & ~int64_t(31)))
+    return false;
+  // Compare the bank bits of the two offsets. If any of them differ, the
+  // loads go to different banks and can share a packet.
+  //
+  // Which address bits select the bank depends on the access sizes:
+  //
+  //   Load pair                                  Bank bits   Mask
+  //   -----------------------------------------  ---------   ----
+  //   double word + any load                     4:3         0x18
+  //   word/half-word/byte + word/half-word/byte  4:2         0x1C
+  //
+  // Bit 2 only tells two loads apart when neither of them is a double word.
+  // A double word covers both words of its 8-byte slot, so once one is
+  // involved, offsets that differ only in bit 2 still count as a conflict.
+  // Example (same base):
+  //   memw(Rs+#0) and memw(Rs+#4) differ in bit 2  -> no conflict
+  //   memw(Rs+#0) and memh(Rs+#4) differ in bit 2  -> no conflict
+  //   memd(Rs+#0) and memw(Rs+#4) match on 4:3     -> conflict
+  //   memd(Rs+#0) and memd(Rs+#8) differ in bit 3  -> no conflict
+  bool HasDoubleWord = A0->Size == 8 || A1->Size == 8;
+  int64_t BankMask = HasDoubleWord ? 0x18 : 0x1C;
+  return ((A0->Offset ^ A1->Offset) & BankMask) == 0;
+}
+
 void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   if (!EnableCheckBankConflict)
     return;
@@ -581,35 +716,17 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   // between them, we cannot rely on existing edges.
   for (unsigned i = 0, e = DAG->SUnits.size(); i != e; ++i) {
     SUnit &S0 = DAG->SUnits[i];
-    MachineInstr &L0 = *S0.getInstr();
-    if (!L0.mayLoad() || L0.mayStore() ||
-        HII.getAddrMode(L0) != HexagonII::BaseImmOffset)
-      continue;
-    int64_t Offset0;
-    LocationSize Size0 = LocationSize::precise(0);
-    MachineOperand *BaseOp0 = HII.getBaseAndOffset(L0, Offset0, Size0);
-    // Is the access size is longer than the L1 cache line, skip the check.
-    if (BaseOp0 == nullptr || !BaseOp0->isReg() || !Size0.hasValue() ||
-        Size0.getValue() >= 32)
+    if (!getBankAddr(*S0.getInstr(), HII))
       continue;
     // Scan only up to 32 instructions ahead (to avoid n^2 complexity).
     for (unsigned j = i+1, m = std::min(i+32, e); j != m; ++j) {
       SUnit &S1 = DAG->SUnits[j];
-      MachineInstr &L1 = *S1.getInstr();
-      if (!L1.mayLoad() || L1.mayStore() ||
-          HII.getAddrMode(L1) != HexagonII::BaseImmOffset)
+      // Use the conservative check here: the edge only guides the scheduler,
+      // and the packetizer decides whether the loads can share a packet.
+      if (!mayHaveBankConflict(*S0.getInstr(), *S1.getInstr(), HII,
+                               /*IgnoreSameLine=*/false))
         continue;
-      int64_t Offset1;
-      LocationSize Size1 = LocationSize::precise(0);
-      MachineOperand *BaseOp1 = HII.getBaseAndOffset(L1, Offset1, Size1);
-      if (BaseOp1 == nullptr || !BaseOp1->isReg() || !Size0.hasValue() ||
-          Size1.getValue() >= 32 || BaseOp0->getReg() != BaseOp1->getReg())
-        continue;
-      // Check bits 3 and 4 of the offset: if they differ, a bank conflict
-      // is unlikely.
-      if (((Offset0 ^ Offset1) & 0x18) != 0)
-        continue;
-      // Bits 3 and 4 are the same, add an artificial edge and set extra
+      // The loads likely conflict: add an artificial edge and set extra
       // latency.
       SDep A(&S0, SDep::Artificial);
       A.setLatency(1);

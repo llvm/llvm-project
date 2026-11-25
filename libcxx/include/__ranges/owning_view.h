@@ -41,60 +41,60 @@ class owning_view : public view_interface<owning_view<_Rp>> {
   _Rp __r_ = _Rp();
 
 public:
-  _LIBCPP_HIDE_FROM_ABI owning_view()
+  owning_view()
     requires default_initializable<_Rp>
   = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr owning_view(_Rp&& __r) : __r_(std::move(__r)) {}
+  constexpr owning_view(_Rp&& __r) : __r_(std::move(__r)) {}
 
-  _LIBCPP_HIDE_FROM_ABI owning_view(owning_view&&)            = default;
-  _LIBCPP_HIDE_FROM_ABI owning_view& operator=(owning_view&&) = default;
+  owning_view(owning_view&&)            = default;
+  owning_view& operator=(owning_view&&) = default;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Rp& base() & noexcept { return __r_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Rp& base() const& noexcept { return __r_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Rp&& base() && noexcept { return std::move(__r_); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Rp&& base() const&& noexcept { return std::move(__r_); }
+  [[nodiscard]] constexpr _Rp& base() & noexcept { return __r_; }
+  [[nodiscard]] constexpr const _Rp& base() const& noexcept { return __r_; }
+  [[nodiscard]] constexpr _Rp&& base() && noexcept { return std::move(__r_); }
+  [[nodiscard]] constexpr const _Rp&& base() const&& noexcept { return std::move(__r_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Rp> begin() { return ranges::begin(__r_); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Rp> end() { return ranges::end(__r_); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] constexpr iterator_t<_Rp> begin() { return ranges::begin(__r_); }
+  [[nodiscard]] constexpr sentinel_t<_Rp> end() { return ranges::end(__r_); }
+  [[nodiscard]] constexpr auto begin() const
     requires range<const _Rp>
   {
     return ranges::begin(__r_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] constexpr auto end() const
     requires range<const _Rp>
   {
     return ranges::end(__r_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty()
+  [[nodiscard]] constexpr bool empty()
     requires requires { ranges::empty(__r_); }
   {
     return ranges::empty(__r_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const
+  [[nodiscard]] constexpr bool empty() const
     requires requires { ranges::empty(__r_); }
   {
     return ranges::empty(__r_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] constexpr auto size()
     requires sized_range<_Rp>
   {
     return ranges::size(__r_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires sized_range<const _Rp>
   {
     return ranges::size(__r_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto data()
+  [[nodiscard]] constexpr auto data()
     requires contiguous_range<_Rp>
   {
     return ranges::data(__r_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto data() const
+  [[nodiscard]] constexpr auto data() const
     requires contiguous_range<const _Rp>
   {
     return ranges::data(__r_);

@@ -34,8 +34,8 @@ def MPI_Dialect : Dialect {
     [OpenMPI online documentation](https://www.open-mpi.org/doc/current/).
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -28,6 +28,8 @@ module {
                            !cir.long_double<!cir.f80>,
                            !cir.long_double<!cir.f128>)
 
+  cir.func private @opaque_floats(!cir.mfp8, !cir.vector<16 x !cir.mfp8>)
+
   cir.func private @scalars(!cir.bool, !cir.vptr) -> !cir.bool
 
   cir.func private @ptrs(!cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!u8i>>,
@@ -47,7 +49,10 @@ module {
       !cir.ptr<!cir.func<(!cir.ptr<!cir.func<(!s8i)>>) -> !cir.ptr<!s32i>>>)
 
   // The size of a scalable vector is a minimum, so [4] and 4 must differ.
-  cir.func private @vectors(!cir.vector<4 x !s32i>, !cir.vector<[4] x !s32i>,
+  cir.func private @vectors(!cir.vector<4 x !s32i>,
+                            !cir.vector<[4] x !s32i, sve_data>,
+                            !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>,
+                            !cir.vector<8 x !u8i, sve_predicate>,
                             !cir.vector<17 x !cir.bool>,
                             !cir.vector<2 x !cir.double>)
 
@@ -73,12 +78,13 @@ module {
 
 // CHECK: cir.func private @ints(!u8i, !s32i, !s64i, !cir.int<s, 13, bitint>, !u128i_bitint)
 // CHECK: cir.func private @floats(!cir.float, !cir.double, !cir.f16, !cir.bf16, !cir.f80, !cir.f128, !cir.long_double<!cir.double>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f128>)
+// CHECK: cir.func private @opaque_floats(!cir.mfp8, !cir.vector<16 x !cir.mfp8>)
 // CHECK: cir.func private @scalars(!cir.bool, !cir.vptr) -> !cir.bool
 // CHECK: cir.func private @ptrs(!cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!s32i, lang_address_space(offload_global)>)
 // CHECK: cir.func private @arrays(!cir.array<!s32i x 4>, !cir.array<!cir.array<!u8i x 3> x 5>, !cir.array<!cir.ptr<!s32i> x 2>)
 // CHECK: cir.func private @complexes(!cir.complex<!cir.double>, !cir.complex<!s32i>)
 // CHECK: cir.func private @funcs(!cir.ptr<!cir.func<()>>, !cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>, !cir.ptr<!cir.func<(!cir.ptr<!cir.func<(!s8i)>>) -> !cir.ptr<!s32i>>>)
-// CHECK: cir.func private @vectors(!cir.vector<4 x !s32i>, !cir.vector<[4] x !s32i>, !cir.vector<17 x !cir.bool>, !cir.vector<2 x !cir.double>)
+// CHECK: cir.func private @vectors(!cir.vector<4 x !s32i>, !cir.vector<[4] x !s32i, sve_data>, !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>, !cir.vector<8 x !u8i, sve_predicate>, !cir.vector<17 x !cir.bool>, !cir.vector<2 x !cir.double>)
 // CHECK: cir.func private @matrices(!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 2 x !s32i>)
 // CHECK: cir.func private @bitfields(!cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s64i, 20>, #cir.bitfield_decl<!u32i, 3, unnamed>]>, !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!cir.bool, 1>]>)
 // CHECK: cir.func private @member_ptrs(!cir.data_member<!s32i in !rec_S>, !cir.method<!cir.func<(!s32i) -> !s32i> in !rec_S>, !cir.method<!cir.func<()> in !rec_S>)

@@ -267,6 +267,28 @@ public:
 
 } // end anonymous namespace
 
+[[maybe_unused]] static bool hasAtomicLibcallLowering(unsigned Opc) {
+  switch (Opc) {
+  case ISD::ATOMIC_FENCE:
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Helper function that generates an MMO that considers the alignment of the
 // stack, and the size of the stack object
 static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
@@ -1402,6 +1424,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     case TargetLowering::Expand:
       if (ExpandNode(Node))
         return;
+      assert((Action != TargetLowering::Expand ||
+              !hasAtomicLibcallLowering(Node->getOpcode())) &&
+             "atomic operations lowered to calls must use LibCall");
       [[fallthrough]];
     case TargetLowering::LibCall:
       ConvertNodeToLibcall(Node);

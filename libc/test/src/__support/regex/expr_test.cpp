@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "hdr/regex_macros.h"
+#include "src/__support/error_or.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"
 #include "test/UnitTest/Test.h"
@@ -351,16 +352,39 @@ TEST(LlvmLibcRegexExprTest, MemoryLimits) {
   // EmptySet (1), EmptyStr (2), and 'a' (3) occupy the first 3 slots.
   const ExprId lit_a = *pool.make_lit('a');
   ExprId current = lit_a;
-  for (size_t i = 0; i < 9997; ++i) {
+  ExprId chain_24 = INVALID_EXPR_ID;
+  ExprId alt_even = EMPTY_SET_ID;
+  ExprId alt_odd = EMPTY_SET_ID;
+  for (size_t i = 0; pool.size() < ExprPool::MAX_NODE_LIMIT; ++i) {
     auto next = pool.make_concat(lit_a, current);
     ASSERT_TRUE(next.has_value());
     current = *next;
+    if (i == 23)
+      chain_24 = current;
+    // Build two 20-branch Alt spines (spilling ReverseExprIdStack past 16)
+    // before filling the remaining pool slots.
+    if (i < 40) {
+      ExprId &target = (i % 2 == 0) ? alt_even : alt_odd;
+      auto alt_next = pool.make_alt(target, current);
+      ASSERT_TRUE(alt_next.has_value());
+      target = *alt_next;
+    }
   }
 
-  // Next one should fail.
+  // Next one should fail, including when flattening or merging chains/spines
+  // that spill ReverseExprIdStack past its 16-element inline block.
   auto fail = pool.make_concat(lit_a, current);
   ASSERT_FALSE(fail.has_value());
   EXPECT_EQ(fail.error(), REG_ESPACE);
+  auto spilled_fail = pool.make_concat(chain_24, current);
+  ASSERT_FALSE(spilled_fail.has_value());
+  EXPECT_EQ(spilled_fail.error(), REG_ESPACE);
+  auto alt_insert_fail = pool.make_alt(current, alt_even);
+  ASSERT_FALSE(alt_insert_fail.has_value());
+  EXPECT_EQ(alt_insert_fail.error(), REG_ESPACE);
+  auto alt_merge_fail = pool.make_alt(alt_even, alt_odd);
+  ASSERT_FALSE(alt_merge_fail.has_value());
+  EXPECT_EQ(alt_merge_fail.error(), REG_ESPACE);
 
   // A new multi-bit ByteSet at MAX_NODE_LIMIT fails without incrementing
   // byte_set_count.
@@ -431,4 +455,337 @@ TEST(LlvmLibcRegexExprTest, BoundsGuardsAndNullableMask) {
   EXPECT_EQ(pool.get(*rep_bol_0).nullable_mask, uint8_t(0b1111));
   EXPECT_EQ(pool.get(*star_bol).nullable_mask, uint8_t(0b1111));
   EXPECT_EQ(pool.get(*rep_bol_or_a).nullable_mask, uint8_t(0b1010));
+}
+
+namespace {
+
+// Compositional wrapper around ExprPool that unwraps ErrorOr<ExprId> so spine
+// tests read directly as regex algebra instead of boilerplate assertions.
+class ExprBuilder {
+  ExprPool pool;
+
+  ExprId unwrap(LIBC_NAMESPACE::ErrorOr<ExprId> res) {
+    EXPECT_TRUE(res.has_value());
+    return res.has_value() ? *res : INVALID_EXPR_ID;
+  }
+
+public:
+  ExprPool &raw() { return pool; }
+  Expr get(ExprId id) const { return pool.get(id); }
+
+  ExprId lit(char c) { return unwrap(pool.make_lit(c)); }
+  ExprId star(ExprId body) { return unwrap(pool.make_star(body)); }
+  ExprId star(char c) { return star(lit(c)); }
+  ExprId rep(ExprId body, uint16_t min, uint16_t max) {
+    return unwrap(pool.make_repeat(body, min, max));
+  }
+  ExprId rep(char c, uint16_t min, uint16_t max) {
+    return rep(lit(c), min, max);
+  }
+  ExprId cat(ExprId l, ExprId r) { return unwrap(pool.make_concat(l, r)); }
+  ExprId alt(ExprId l, ExprId r) { return unwrap(pool.make_alt(l, r)); }
+
+  template <typename... Rest>
+  ExprId alt(ExprId first, ExprId second, Rest... rest) {
+    return alt(alt(first, second), rest...);
+  }
+
+  // Returns the idx-th distinct two-character literal pair ("a!", "a\"", ...)
+  // for building wide Alt spines without Repeat nodes.
+  ExprId distinct_branch(size_t idx) {
+    return cat(lit(static_cast<char>('a' + (idx / 60))),
+               lit(static_cast<char>('!' + (idx % 60))));
+  }
+
+  // Walks a right-associated Alt spine, verifies right-associativity and
+  // strictly ascending ExprId order, and returns the total branch count.
+  size_t verify_alt_spine(ExprId spine) const {
+    if (spine == INVALID_EXPR_ID)
+      return 0;
+    size_t count = 0;
+    ExprId prev = INVALID_EXPR_ID;
+    ExprId walk = spine;
+    while (walk != EMPTY_SET_ID) {
+      const Expr we = pool.get(walk);
+      const bool is_alt = (we.kind == ExprKind::Alt);
+      const ExprId head = is_alt ? we.bin.left : walk;
+      EXPECT_NE(pool.get(head).kind, ExprKind::Alt);
+      if (prev != INVALID_EXPR_ID)
+        EXPECT_LT(prev, head);
+      prev = head;
+      ++count;
+      walk = is_alt ? we.bin.right : EMPTY_SET_ID;
+    }
+    return count;
+  }
+
+  // Counts occurrences of `target` as a top-level branch of an Alt spine.
+  size_t count_branch(ExprId spine, ExprId target) const {
+    if (spine == INVALID_EXPR_ID)
+      return 0;
+    size_t hits = 0;
+    ExprId walk = spine;
+    while (walk != EMPTY_SET_ID) {
+      const Expr we = pool.get(walk);
+      const bool is_alt = (we.kind == ExprKind::Alt);
+      if ((is_alt ? we.bin.left : walk) == target)
+        ++hits;
+      walk = is_alt ? we.bin.right : EMPTY_SET_ID;
+    }
+    return hits;
+  }
+
+  // Builds a right-associated literal chain cycling `pattern` (`count`
+  // literals) followed by `tail`.  A 3-character cycle ("abc") is asymmetric
+  // at both DEPTH and DEPTH - 1, so reversing rebuild order fails immediately.
+  template <size_t N>
+  ExprId cycle_literals(const char (&pattern)[N], size_t count,
+                        ExprId tail = EMPTY_STR_ID) {
+    static_assert(N > 1, "pattern must contain at least one character");
+    constexpr size_t PERIOD = N - 1;
+    ExprId acc = tail;
+    for (size_t i = count; i > 0 && acc != INVALID_EXPR_ID; --i)
+      acc = cat(lit(pattern[(i - 1) % PERIOD]), acc);
+    return acc;
+  }
+};
+
+} // namespace
+
+TEST(LlvmLibcRegexExprTest, DeepConcatFlatteningAndPrefixCoalesce) {
+  ExprBuilder b;
+  const ExprId lit_d = b.lit('d');
+
+  // Flatten a 500-deep asymmetric left Concat spine (spilling
+  // ReverseExprIdStack's 16-item inline block): P · d == a · (b · (c · ... d)).
+  constexpr size_t DEPTH = 500;
+  const ExprId prefix = b.cycle_literals("abc", DEPTH);
+  const ExprId expected = b.cycle_literals("abc", DEPTH, lit_d);
+  EXPECT_EQ(b.cat(prefix, lit_d), expected);
+
+  // Coalesce 500-deep shared-prefix Concat spines in both argument orders:
+  //   (P · d{1,2}) | (P · d{3,4}) -> P · d{1,4}
+  //   (P · d{1,2}) | (P · d{4,5}) -> Alt (non-adjacent, unmerged)
+  const ExprId p_1_2 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 1, 2));
+  const ExprId p_3_4 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 3, 4));
+  const ExprId p_4_5 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 4, 5));
+  const ExprId p_1_4 = b.cycle_literals("abc", DEPTH, b.rep(lit_d, 1, 4));
+  EXPECT_EQ(b.alt(p_1_2, p_3_4), p_1_4);
+  EXPECT_EQ(b.alt(p_3_4, p_1_2), p_1_4);
+  EXPECT_EQ(b.raw().get(b.alt(p_1_2, p_4_5)).kind, ExprKind::Alt);
+}
+
+TEST(LlvmLibcRegexExprTest, NestedRepeatStarUnwrapping) {
+  ExprBuilder b;
+  const ExprId lit_a = b.lit('a');
+
+  // Unwrap nested repeats with min <= 1: ((a{1,2}){1,3})* -> a*
+  const ExprId rep_1_2 = b.rep(lit_a, 1, 2);
+  EXPECT_EQ(b.star(b.rep(rep_1_2, 1, 3)), b.star(lit_a));
+
+  // Stop unwrapping once min >= 2: ((a{2,3}){0,2})* -> (a{2,3})*
+  const ExprId rep_2_3 = b.rep(lit_a, 2, 3);
+  EXPECT_EQ(b.star(b.rep(rep_2_3, 0, 2)), b.star(rep_2_3));
+}
+
+TEST(LlvmLibcRegexExprTest, WideAltSpineInsertAndBridging) {
+  ExprBuilder b;
+  constexpr size_t BRANCH_COUNT = 600;
+  constexpr size_t ASC_COUNT = 64;
+  // Pre-intern 600 distinct branches in ascending ExprId order.
+  for (size_t i = 0; i < BRANCH_COUNT; ++i)
+    ASSERT_NE(b.distinct_branch(i), INVALID_EXPR_ID) << "iteration " << i;
+
+  const ExprId z_1_2 = b.rep('z', 1, 2);
+  const ExprId z_3_4 = b.rep('z', 3, 4);
+  const ExprId z_5_6 = b.rep('z', 5, 6);
+  const ExprId z_1_6 = b.rep('z', 1, 6);
+
+  // Ascending insertion onto a repeat-bearing spine exercises the formerly
+  // cubic path (scanning past growing prefixes and spilling prefix in
+  // insert_sorted_no_coalesce) and matches descending construction.
+  ExprId asc_spine = z_1_2;
+  ExprId desc_64 = z_1_2;
+  for (size_t i = 0; i < ASC_COUNT; ++i) {
+    asc_spine = b.alt(b.distinct_branch(i), asc_spine);
+    desc_64 = b.alt(b.distinct_branch(ASC_COUNT - 1 - i), desc_64);
+    ASSERT_NE(asc_spine, INVALID_EXPR_ID) << "iteration " << i;
+  }
+  EXPECT_EQ(asc_spine, desc_64);
+  EXPECT_EQ(b.verify_alt_spine(asc_spine), ASC_COUNT + 1);
+
+  // Build a 601-branch spine in descending order (O(BRANCH_COUNT) pool nodes)
+  // so bridging and tail insertion spill ReverseExprIdStack across 38 blocks.
+  ExprId spine = z_1_2;
+  for (size_t i = BRANCH_COUNT; i > 0; --i) {
+    spine = b.alt(b.distinct_branch(i - 1), spine);
+    ASSERT_NE(spine, INVALID_EXPR_ID) << "iteration " << i;
+  }
+
+  // Bridging z{1,2} | z{5,6} | z{3,4} -> z{1,6} across 601 branches commutes,
+  // stays strictly sorted, and replaces all three repeats.
+  const ExprId with_5_6 = b.alt(spine, z_5_6);
+  const ExprId bridged_lr = b.alt(with_5_6, z_3_4);
+  const ExprId bridged_rl = b.alt(z_3_4, with_5_6);
+  EXPECT_EQ(bridged_lr, bridged_rl);
+  EXPECT_EQ(b.verify_alt_spine(bridged_lr), BRANCH_COUNT + 1);
+  EXPECT_EQ(b.count_branch(bridged_lr, z_1_6), size_t(1));
+  EXPECT_EQ(b.count_branch(bridged_lr, z_1_2), size_t(0));
+  EXPECT_EQ(b.count_branch(bridged_lr, z_3_4), size_t(0));
+  EXPECT_EQ(b.count_branch(bridged_lr, z_5_6), size_t(0));
+
+  // Appending a fresh higher-ID branch spills all 601 prefix entries.
+  const ExprId tail_appended = b.alt(bridged_lr, b.lit('~'));
+  EXPECT_EQ(b.verify_alt_spine(tail_appended), BRANCH_COUNT + 2);
+}
+
+TEST(LlvmLibcRegexExprTest, TwoSpineAltMergeSpillAndCommutativity) {
+  ExprBuilder b;
+
+  // Merge two 48-branch Alt spines (spilling ReverseExprIdStack's 16-item
+  // inline block) with shared branches, both plain and with bridged Repeat
+  // intervals: (L | z{1,2} | z{5,6}) | (R | z{3,4}) -> L | R | z{1,6}.
+  ExprId left_plain = EMPTY_SET_ID;
+  ExprId right_plain = EMPTY_SET_ID;
+  for (size_t i = 0; i < 24; ++i) {
+    const ExprId shared = b.distinct_branch(60 + i);
+    left_plain = b.alt(left_plain, b.distinct_branch(i * 2), shared);
+    right_plain = b.alt(right_plain, b.distinct_branch(i * 2 + 1), shared);
+    ASSERT_NE(left_plain, INVALID_EXPR_ID) << "iteration " << i;
+    ASSERT_NE(right_plain, INVALID_EXPR_ID) << "iteration " << i;
+  }
+  const ExprId plain_lr = b.alt(left_plain, right_plain);
+  EXPECT_EQ(plain_lr, b.alt(right_plain, left_plain));
+  EXPECT_EQ(b.alt(left_plain, left_plain), left_plain);
+
+  const ExprId left_rep = b.alt(left_plain, b.rep('z', 1, 2), b.rep('z', 5, 6));
+  const ExprId right_rep = b.alt(right_plain, b.rep('z', 3, 4));
+  const ExprId rep_want = b.alt(plain_lr, b.rep('z', 1, 6));
+  EXPECT_EQ(b.alt(left_rep, right_rep), rep_want);
+  EXPECT_EQ(b.alt(right_rep, left_rep), rep_want);
+
+  // Cross-spine Repeat merges that break commutativity if one spine is
+  // flattened asymmetrically into the other:
+  //   (a | a*) | (ε | a{2,5})      -> ε | a*
+  //   (ε | a)  | (b{1,2} | a{1,2}) commutes in both orders
+  const ExprId a_or_star = b.alt(b.lit('a'), b.star('a'));
+  const ExprId eps_or_a25 = b.alt(EMPTY_STR_ID, b.rep('a', 2, 5));
+  const ExprId eps_or_star = b.alt(EMPTY_STR_ID, b.star('a'));
+  EXPECT_EQ(b.alt(a_or_star, eps_or_a25), eps_or_star);
+  EXPECT_EQ(b.alt(eps_or_a25, a_or_star), eps_or_star);
+
+  const ExprId eps_or_a = b.alt(EMPTY_STR_ID, b.lit('a'));
+  const ExprId b12_or_a12 = b.alt(b.rep('b', 1, 2), b.rep('a', 1, 2));
+  EXPECT_EQ(b.alt(eps_or_a, b12_or_a12), b.alt(b12_or_a12, eps_or_a));
+
+  // Disjoint two-spine merge where low_alt's ExprId precedes high_alt's head.
+  const ExprId low_alt = b.alt(b.distinct_branch(100), b.distinct_branch(101));
+  const ExprId high_alt = b.alt(b.distinct_branch(102), b.distinct_branch(103));
+  ASSERT_LT(low_alt, b.get(high_alt).bin.left);
+  const ExprId merged_disjoint = b.alt(low_alt, high_alt);
+  EXPECT_EQ(merged_disjoint, b.alt(high_alt, low_alt));
+  EXPECT_EQ(b.verify_alt_spine(merged_disjoint), size_t(4));
+}
+
+TEST(LlvmLibcRegexExprTest, AltCoalesceCascadesBetweenKeptAndTail) {
+  ExprBuilder b;
+
+  // Absorbing earlier ε widens a{1,3} -> a{0,3}, unlocking later b{1,2}·a{0,3}:
+  //   a{2,3} | (ε | a | b{1,2}·a{0,3}) -> b{0,2}·a{0,3}.
+  const ExprId concat_spine = b.alt(EMPTY_STR_ID, b.lit('a'),
+                                    b.cat(b.rep('b', 1, 2), b.rep('a', 0, 3)));
+  const ExprId concat_want = b.cat(b.rep('b', 0, 2), b.rep('a', 0, 3));
+  EXPECT_EQ(b.alt(b.rep('a', 2, 3), concat_spine), concat_want);
+  EXPECT_EQ(b.alt(concat_spine, b.rep('a', 2, 3)), concat_want);
+
+  // Absorbing earlier ε turns a{1,∞} into a*, unlocking later b{1,2}·a*:
+  //   a{2,2} | (ε | a | a{3,∞} | b{1,2}·a*) -> b{0,2}·a*.
+  const ExprId star_spine =
+      b.alt(EMPTY_STR_ID, b.lit('a'), b.rep('a', 3, REPEAT_INF),
+            b.cat(b.rep('b', 1, 2), b.star('a')));
+  EXPECT_EQ(b.alt(b.rep('a', 2, 2), star_spine),
+            b.cat(b.rep('b', 0, 2), b.star('a')));
+
+  // Absorbing earlier ε widens a{1,3} -> a{0,3}, unlocking nested
+  // (a{0,3}){2,3}:
+  //   a{2,3} | (ε | a | (a{0,3}){2,3}) -> (a{0,3}){1,3}.
+  const ExprId a_0_3 = b.rep('a', 0, 3);
+  const ExprId nested_spine =
+      b.alt(EMPTY_STR_ID, b.lit('a'), b.rep(a_0_3, 2, 3));
+  EXPECT_EQ(b.alt(b.rep('a', 2, 3), nested_spine), b.rep(a_0_3, 1, 3));
+
+  // Preserving an unrelated middle branch m while bridging z{1,2} and z{5,6}:
+  //   (z{1,2} | m | z{5,6}) | z{3,4} -> m | z{1,6}.
+  const ExprId z_1_2 = b.rep('z', 1, 2);
+  const ExprId m = b.lit('m');
+  const ExprId z_5_6 = b.rep('z', 5, 6);
+  ASSERT_LT(z_1_2, m);
+  ASSERT_LT(m, z_5_6);
+  EXPECT_EQ(b.alt(b.alt(z_1_2, m, z_5_6), b.rep('z', 3, 4)),
+            b.alt(m, b.rep('z', 1, 6)));
+}
+
+TEST(LlvmLibcRegexExprTest, AltCoalescedBranchPlacement) {
+  ExprBuilder b;
+  // Intern in ascending ExprId order (a < b* < d < b{2,3} < f < b{1,3}) so
+  // coalesced results land at each sorted position along the spine.
+  const ExprId a = b.lit('a');
+  const ExprId star_b = b.star('b');
+  const ExprId d = b.lit('d');
+  const ExprId b_2_3 = b.rep('b', 2, 3);
+  const ExprId f = b.lit('f');
+  const ExprId b_1_3 = b.rep('b', 1, 3);
+  ASSERT_LT(a, star_b);
+  ASSERT_LT(star_b, d);
+  ASSERT_LT(d, b_2_3);
+  ASSERT_LT(b_2_3, f);
+  ASSERT_LT(f, b_1_3);
+
+  // Coalesced branch lands at the front: (d | b{2,3}) | b* -> b* | d.
+  EXPECT_EQ(b.alt(b.alt(d, b_2_3), star_b), b.alt(star_b, d));
+
+  // Coalesced branch lands between earlier skipped branches:
+  //   (a | d | b{2,3}) | b*     -> a | b* | d
+  //   (a | d | b{2,3} | f) | b* -> a | b* | d | f
+  EXPECT_EQ(b.alt(b.alt(a, d, b_2_3), star_b), b.alt(a, star_b, d));
+  EXPECT_EQ(b.alt(b.alt(a, d, b_2_3, f), star_b), b.alt(a, star_b, d, f));
+
+  // Coalesced branch sorts past a later branch:
+  //   (a | b{2,3} | f) | b -> a | f | b{1,3}.
+  EXPECT_EQ(b.alt(b.alt(a, b_2_3, f), b.lit('b')), b.alt(a, f, b_1_3));
+
+  // Coalesced branch lands right between skipped and remaining branches
+  // (k < c{0,5} < c{0,2} < w < c{3,5}).
+  const ExprId k = b.lit('k');
+  const ExprId c_0_5 = b.rep('c', 0, 5);
+  const ExprId c_0_2 = b.rep('c', 0, 2);
+  const ExprId w = b.lit('w');
+  const ExprId c_3_5 = b.rep('c', 3, 5);
+  ASSERT_LT(k, c_0_5);
+  ASSERT_LT(c_0_5, w);
+  EXPECT_EQ(b.alt(c_3_5, b.alt(c_0_2, w)), b.alt(c_0_5, w));
+  EXPECT_EQ(b.alt(c_3_5, b.alt(k, c_0_2, w)), b.alt(k, c_0_5, w));
+
+  // Coalescing unwraps to a branch already later in the spine (q* and
+  // (q{2,3})*): (R{0,3}){0,1} | ((R{0,3}){2,∞} | R*) -> R*.
+  const ExprId q_0_3 = b.rep('q', 0, 3);
+  const ExprId q03_2_inf = b.rep(q_0_3, 2, REPEAT_INF);
+  const ExprId star_q = b.star('q');
+  ASSERT_LT(q03_2_inf, star_q);
+  EXPECT_EQ(b.alt(b.rep(q_0_3, 0, 1), b.alt(q03_2_inf, star_q)), star_q);
+
+  const ExprId q_2_3 = b.rep('q', 2, 3);
+  const ExprId r_0_3 = b.rep(q_2_3, 0, 3);
+  const ExprId r03_2_inf = b.rep(r_0_3, 2, REPEAT_INF);
+  const ExprId star_q23 = b.star(q_2_3);
+  ASSERT_LT(r03_2_inf, star_q23);
+  EXPECT_EQ(b.alt(b.rep(r_0_3, 0, 1), b.alt(r03_2_inf, star_q23)), star_q23);
+
+  // Coalescing unwraps to a branch already earlier in the spine
+  // (p* < (p{0,3}){2,∞}): (p{0,3}){0,1} | (p* | (p{0,3}){2,∞}) -> p*.
+  const ExprId star_p = b.star('p');
+  const ExprId p_0_3 = b.rep('p', 0, 3);
+  const ExprId p03_2_inf = b.rep(p_0_3, 2, REPEAT_INF);
+  ASSERT_LT(star_p, p03_2_inf);
+  EXPECT_EQ(b.alt(b.rep(p_0_3, 0, 1), b.alt(star_p, p03_2_inf)), star_p);
 }
