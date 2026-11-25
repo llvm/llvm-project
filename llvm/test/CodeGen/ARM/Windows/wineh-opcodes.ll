@@ -315,7 +315,7 @@ declare arm_aapcs_vfpcc void @useptr(ptr noundef)
 ; CHECK-LABEL: func_fp:
 ; CHECK-NEXT: .seh_proc func_fp
 ; CHECK-NEXT: @ %bb.0:                                @ %entry
-; CHECK-NEXT:         str     r11, [sp, #-4]!
+; CHECK-NEXT:         push.w  {r11}
 ; CHECK-NEXT:         .seh_save_regs_w        {r11}
 ; CHECK-NEXT:         mov     r11, sp
 ; CHECK-NEXT:         .seh_save_sp    r11
@@ -324,7 +324,7 @@ declare arm_aapcs_vfpcc void @useptr(ptr noundef)
 ; CHECK-NEXT:         mov     r0, r11
 
 ; CHECK-NEXT:         .seh_startepilogue
-; CHECK-NEXT:         ldr     r11, [sp], #4
+; CHECK-NEXT:         pop.w   {r11}
 ; CHECK-NEXT:         .seh_save_regs_w        {r11}
 ; CHECK-NEXT:         bx      lr
 ; CHECK-NEXT:         .seh_nop

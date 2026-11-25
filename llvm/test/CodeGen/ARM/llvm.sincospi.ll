@@ -26,7 +26,7 @@ define { half, half } @test_sincospi_f16(half %a) #0 {
 define half @test_sincospi_f16_only_use_sin(half %a) #0 {
 ; CHECK-LABEL: test_sincospi_f16_only_use_sin:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    str lr, [sp, #-4]!
+; CHECK-NEXT:    push.w {lr}
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    bl ___extendhfsf2
 ; CHECK-NEXT:    add r1, sp, #4
@@ -35,7 +35,7 @@ define half @test_sincospi_f16_only_use_sin(half %a) #0 {
 ; CHECK-NEXT:    ldr r0, [sp, #4]
 ; CHECK-NEXT:    bl ___truncsfhf2
 ; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    ldr lr, [sp], #4
+; CHECK-NEXT:    pop.w {lr}
 ; CHECK-NEXT:    bx lr
   %result = call { half, half } @llvm.sincospi.f16(half %a)
   %result.0 = extractvalue { half, half } %result, 0
@@ -45,7 +45,7 @@ define half @test_sincospi_f16_only_use_sin(half %a) #0 {
 define half @test_sincospi_f16_only_use_cos(half %a) #0 {
 ; CHECK-LABEL: test_sincospi_f16_only_use_cos:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    str lr, [sp, #-4]!
+; CHECK-NEXT:    push.w {lr}
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    bl ___extendhfsf2
 ; CHECK-NEXT:    add r1, sp, #4
@@ -54,7 +54,7 @@ define half @test_sincospi_f16_only_use_cos(half %a) #0 {
 ; CHECK-NEXT:    ldr r0, [sp]
 ; CHECK-NEXT:    bl ___truncsfhf2
 ; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    ldr lr, [sp], #4
+; CHECK-NEXT:    pop.w {lr}
 ; CHECK-NEXT:    bx lr
   %result = call { half, half } @llvm.sincospi.f16(half %a)
   %result.1 = extractvalue { half, half } %result, 1
@@ -112,13 +112,13 @@ define { <2 x half>, <2 x half> } @test_sincospi_v2f16(<2 x half> %a) #0 {
 define { float, float } @test_sincospi_f32(float %a) #0 {
 ; CHECK-LABEL: test_sincospi_f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    str lr, [sp, #-4]!
+; CHECK-NEXT:    push.w {lr}
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    mov r2, sp
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    ldrd r1, r0, [sp], #8
-; CHECK-NEXT:    ldr lr, [sp], #4
+; CHECK-NEXT:    pop.w {lr}
 ; CHECK-NEXT:    bx lr
   %result = call { float, float } @llvm.sincospi.f32(float %a)
   ret { float, float } %result
@@ -127,7 +127,7 @@ define { float, float } @test_sincospi_f32(float %a) #0 {
 define { <2 x float>, <2 x float> } @test_sincospi_v2f32(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_sincospi_v2f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    str lr, [sp, #-4]!
+; CHECK-NEXT:    push.w {lr}
 ; CHECK-NEXT:    vpush {d8}
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    vmov d8, r0, r1
@@ -147,7 +147,7 @@ define { <2 x float>, <2 x float> } @test_sincospi_v2f32(<2 x float> %a) #0 {
 ; CHECK-NEXT:    vmov r2, r3, d1
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8}
-; CHECK-NEXT:    ldr lr, [sp], #4
+; CHECK-NEXT:    pop.w {lr}
 ; CHECK-NEXT:    bx lr
   %result = call { <2 x float>, <2 x float> } @llvm.sincospi.v2f32(<2 x float> %a)
   ret { <2 x float>, <2 x float> } %result

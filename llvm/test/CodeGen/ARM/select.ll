@@ -281,7 +281,7 @@ define void @f9() optsize {
 ;
 ; CHECK-NEON-LABEL: f9:
 ; CHECK-NEON:       @ %bb.0: @ %entry
-; CHECK-NEON-NEXT:    str lr, [sp, #-4]!
+; CHECK-NEON-NEXT:    push.w {lr}
 ; CHECK-NEON-NEXT:    sub sp, #8
 ; CHECK-NEON-NEXT:    movs r2, #0
 ; CHECK-NEON-NEXT:    movs r3, #0
@@ -292,7 +292,7 @@ define void @f9() optsize {
 ; CHECK-NEON-NEXT:    strd r1, r0, [sp]
 ; CHECK-NEON-NEXT:    bl _objc_msgSend
 ; CHECK-NEON-NEXT:    add sp, #8
-; CHECK-NEON-NEXT:    ldr lr, [sp], #4
+; CHECK-NEON-NEXT:    pop.w {lr}
 ; CHECK-NEON-NEXT:    bx lr
 entry:
   %cmp = icmp eq ptr undef, inttoptr (i32 4 to ptr)
