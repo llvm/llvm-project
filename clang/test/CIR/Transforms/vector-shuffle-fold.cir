@@ -53,7 +53,7 @@ module  {
   }
 
   // CHECK: cir.func{{.*}} @fold_shuffle_vector_op_test() -> !cir.vector<4 x !s32i> {
-  // CHECK: cir.const #cir.const_vector<[#cir.undef : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
+  // CHECK: cir.const #cir.const_vector<[#cir.poison : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
   // CHECK-SAME: #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
 }
