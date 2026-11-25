@@ -877,6 +877,43 @@ func.func @no_speculate_memref_dim_known_rank_known_dim_out_of_bounds() {
 
 // -----
 
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+func.func @speculate_sparse_tensor_lvl_unknown_lvl(
+// CHECK-LABEL: @speculate_sparse_tensor_lvl_unknown_lvl
+    %t: tensor<?x?xf32, #BSR>, %lvl_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: sparse_tensor.lvl
+  scf.for %i = %lb to %ub step %step {
+    %val = sparse_tensor.lvl %t, %lvl_idx : tensor<?x?xf32, #BSR>
+  }
+
+  return
+}
+
+// #BSR maps 2 dimensions to 4 levels, so level 3 is in bounds.
+func.func @speculate_sparse_tensor_lvl_known_lvl_inbounds(
+// CHECK-LABEL: @speculate_sparse_tensor_lvl_known_lvl_inbounds
+    %t: tensor<?x?xf32, #BSR>, %lb: index, %ub: index, %step: index) {
+  %c3 = arith.constant 3 : index
+  // CHECK: sparse_tensor.lvl
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = sparse_tensor.lvl %t, %c3 : tensor<?x?xf32, #BSR>
+  }
+
+  return
+}
+
+// -----
+
 func.func @no_speculate_divui(
 // CHECK-LABEL: @no_speculate_divui(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
