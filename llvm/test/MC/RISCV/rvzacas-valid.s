@@ -34,41 +34,41 @@ amocas.w.aqrl zero, zero, (a5) # expected-error {{instruction requires the follo
 # CHECK-ASM: encoding: [0x2f,0xb5,0xc5,0x28]
 amocas.d a0, a2, (a1)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
-# rv32-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
-# rv64-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# rv32-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
+# rv64-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# expected-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.d a0, a2, (a1)
 # CHECK-ASM: encoding: [0x2f,0xb5,0xc5,0x28]
 amocas.d a0, a2, 0(a1)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
-# rv32-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
-# rv64-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# rv32-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
+# rv64-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# expected-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.d zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0xb0,0x05,0x28]
 amocas.d zero, zero, (a1)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
-# rv32-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
-# rv64-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# rv32-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
+# rv64-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# expected-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.d.aq zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0xb0,0x05,0x2c]
 amocas.d.aq zero, zero, (a1)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
-# rv32-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
-# rv64-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# rv32-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
+# rv64-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# expected-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.d.rl zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0xb0,0x05,0x2a]
 amocas.d.rl zero, zero, (a1)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
-# rv32-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
-# rv64-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# rv32-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
+# rv64-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# expected-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.d.aqrl zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0xb0,0x05,0x2e]
 amocas.d.aqrl zero, zero, (a1)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
-# rv32-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
-# rv64-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# rv32-note@-2:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV64I Base Instruction Set}}
+# rv64-note@-3:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions), RV32I Base Instruction Set}}
+# expected-note@-4:1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
