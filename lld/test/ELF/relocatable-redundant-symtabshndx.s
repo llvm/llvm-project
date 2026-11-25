@@ -26,10 +26,10 @@
 # RUN: llvm-readelf -S -s %t | FileCheck %s
 #        [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK: [65275] .note.GNU-stack PROGBITS       0000000000000000 000040 000000 00      0   0  1
-# CHECK: [65276] .symtab        SYMTAB          0000000000000000 000040 17e7b8 18     65279 65275  8
-# CHECK: [65277] .symtab_shndx  SYMTAB SECTION INDICES 0000000000000000 17e7f8 03fbf4 04     65276   0  4
-# CHECK: [65278] .shstrtab      STRTAB          0000000000000000 1be3ec 05ceae 00      0   0  1
-# CHECK: [65279] .strtab        STRTAB          0000000000000000 21b29a 00000c 00      0   0  1
+# CHECK-NEXT: [65276] .symtab        SYMTAB          0000000000000000 000040 17e7b8 18     65279 65275  8
+# CHECK-NEXT: [65277] .symtab_shndx  SYMTAB SECTION INDICES 0000000000000000 17e7f8 03fbf4 04     65276   0  4
+# CHECK-NEXT: [65278] .shstrtab      STRTAB          0000000000000000 1be3ec 05ceae 00      0   0  1
+# CHECK-NEXT: [65279] .strtab        STRTAB          0000000000000000 21b29a 00000c 00      0   0  1
 
 # 5) Check we are able to represent symbol foo with section (.bar)
 # CHECK: GLOBAL DEFAULT  65274 foo
