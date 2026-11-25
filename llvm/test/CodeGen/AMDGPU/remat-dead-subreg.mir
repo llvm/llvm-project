@@ -12,7 +12,7 @@ body:             |
     ; GCN: $m0 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_MOV_B64 1, implicit $m0
     ; GCN-NEXT: renamable $sgpr1 = S_MUL_I32 renamable $sgpr1, 3
-    ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr1, %stack.0, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr1, %stack.0, 0, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: renamable $sgpr2 = S_MOV_B32 2, implicit $m0
     ; GCN-NEXT: renamable $sgpr1 = S_MOV_B32 3, implicit $m0
     ; GCN-NEXT: dead [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit killed $sgpr2, implicit killed $sgpr1
@@ -36,7 +36,7 @@ body:             |
     ; GCN: $m0 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_MOV_B64 1, implicit $m0
     ; GCN-NEXT: renamable $sgpr2 = S_MOV_B32 2, implicit $m0
-    ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr2, %stack.0, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr2, %stack.0, 0, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: renamable $sgpr2 = S_MOV_B32 3, implicit $m0
     ; GCN-NEXT: renamable $sgpr0 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sp_reg :: (load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: dead [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit killed $sgpr0, implicit killed $sgpr2
@@ -60,7 +60,7 @@ body:             |
     ; GCN: renamable $sgpr0_sgpr1 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX4_IMM killed renamable $sgpr0_sgpr1, 1, 0
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_MOV_B64 renamable $sgpr10_sgpr11
-    ; GCN-NEXT: SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sp_reg :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.0, 0, implicit $exec, implicit $sp_reg :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_MOV_B64 3, implicit $m0
     ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_MOV_B64 2, implicit $m0
     ; GCN-NEXT: dead [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit killed $sgpr0_sgpr1, implicit killed $sgpr4_sgpr5
@@ -84,7 +84,7 @@ body:             |
     ; GCN: $m0 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_MOV_B64 1, implicit $m0
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_MOV_B64 renamable $sgpr0_sgpr1
-    ; GCN-NEXT: SI_SPILL_S64_SAVE killed renamable $sgpr2_sgpr3, %stack.0, implicit $exec, implicit $sp_reg :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: SI_SPILL_S64_SAVE killed renamable $sgpr2_sgpr3, %stack.0, 0, implicit $exec, implicit $sp_reg :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_MOV_B64 2, implicit $m0
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_MOV_B64 3, implicit $m0
     ; GCN-NEXT: dead [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit killed $sgpr4_sgpr5, implicit killed $sgpr2_sgpr3

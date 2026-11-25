@@ -1737,6 +1737,38 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
+  // Collect the stack slots that are written in parts, by spills writing
+  // different regions of one slot. A spill of a whole register and a spill of
+  // one of its sub-registers both start at the beginning of the slot, so it
+  // takes the size of the store as well as its offset to tell the parts of a
+  // slot apart. This has to happen before frame index elimination, which
+  // replaces the spill pseudos one by one and so cannot see the ones it has
+  // already dealt with.
+  //
+  // Spills of the same region are no reason to preserve anything, they all
+  // write the same bytes of the slot. Note that StackSlotColoring may have
+  // merged the slots of several registers into one, in which case the regions
+  // of the slot are unrelated and preserving them is only unnecessary work.
+  DenseMap<int, std::pair<int64_t, uint64_t>> SpilledRegions;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!SIInstrInfo::isSGPRSpill(MI) || !MI.mayStore())
+        continue;
+
+      int FI;
+      TypeSize MemBytes = TypeSize::getZero();
+      StackOffset Offset = StackOffset::getFixed(0);
+      if (!TII->isStoreToStackSlot(MI, FI, MemBytes, Offset))
+        continue;
+
+      std::pair<int64_t, uint64_t> Region(Offset.getFixed(),
+                                          MemBytes.getKnownMinValue());
+      auto [It, Inserted] = SpilledRegions.try_emplace(FI, Region);
+      if (!Inserted && It->second != Region)
+        FuncInfo->setSlotWrittenInParts(FI);
+    }
+  }
+
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() &&
                                FuncInfo->hasSpilledVGPRs() &&
                                ST.getCLOpts().spill_vgpr_to_agpr;
