@@ -903,7 +903,6 @@ exit:                                             ; preds = %loop2
 
 ; nw of %iv.1 evaluated at scope only holds in the last iteration of
 ; %outer.header. It must not be applied to %iv.2, which wraps in the first.
-; FIXME: Currently %iv.2.lcssa is incorrectly nuw.
 define void @nw_dropped_step_changes_at_scope() {
 ; CHECK-LABEL: 'nw_dropped_step_changes_at_scope'
 ; CHECK-NEXT:  Classifying expressions for: @nw_dropped_step_changes_at_scope
@@ -920,7 +919,7 @@ define void @nw_dropped_step_changes_at_scope() {
 ; CHECK-NEXT:    %iv.1.lcssa = phi i8 [ %iv.1, %inner ]
 ; CHECK-NEXT:    --> {0,+,{1,+,1}<nuw><nsw><%outer.header>}<nuw><%inner> U: full-set S: full-set --> (({-57,+,-1}<nsw><%outer.header> /u {1,+,1}<nuw><nsw><%outer.header>) * {1,+,1}<nuw><nsw><%outer.header>)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer.header: Variant, %inner: Computable }
 ; CHECK-NEXT:    %iv.2.lcssa = phi i8 [ %iv.2, %inner ]
-; CHECK-NEXT:    --> {0,+,2}<nuw><%inner> U: [0,-1) S: [-128,127) --> (2 * ({-57,+,-1}<nsw><%outer.header> /u {1,+,1}<nuw><nsw><%outer.header>)) U: [0,-1) S: [-128,127) Exits: <<Unknown>> LoopDispositions: { %outer.header: Uniform, %inner: Computable }
+; CHECK-NEXT:    --> {0,+,2}<%inner> U: [0,-1) S: [-128,127) --> (2 * ({-57,+,-1}<nsw><%outer.header> /u {1,+,1}<nuw><nsw><%outer.header>)) U: [0,-1) S: [-128,127) Exits: <<Unknown>> LoopDispositions: { %outer.header: Uniform, %inner: Computable }
 ; CHECK-NEXT:    %outer.iv.next = add i8 %outer.iv, 1
 ; CHECK-NEXT:    --> {2,+,1}<nuw><nsw><%outer.header> U: [2,4) S: [2,4) Exits: 3 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @nw_dropped_step_changes_at_scope

@@ -5,7 +5,6 @@ target datalayout = "n8:16:32:64"
 
 ; %iv.2 wraps in the first iteration of %outer.header, so it must not be widened
 ; using nw of %iv.1 evaluated at scope, after %outer.header.
-; FIXME: Currently %iv.2 is incorrectly widened.
 define void @nw_dropped_step_changes_at_scope(ptr %dst) {
 ; CHECK-LABEL: define void @nw_dropped_step_changes_at_scope(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
@@ -15,13 +14,14 @@ define void @nw_dropped_step_changes_at_scope(ptr %dst) {
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[INNER]] ], [ 0, %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i8 [ 0, %[[OUTER_HEADER]] ], [ [[IV_1_NEXT:%.*]], %[[INNER]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ 0, %[[OUTER_HEADER]] ], [ [[IV_2_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[IV_2_EXT:%.*]] = zext i8 [[IV_2]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_2_EXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw i8 [[IV_1]], [[OUTER_IV]]
+; CHECK-NEXT:    [[IV_2_NEXT]] = add i8 [[IV_2]], 2
 ; CHECK-NEXT:    [[INNER_EC:%.*]] = icmp eq i8 [[IV_1_NEXT]], -56
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    br i1 [[INNER_EC]], label %[[OUTER_LATCH]], label %[[INNER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i8 [ [[IV_1]], %[[INNER]] ]
