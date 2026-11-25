@@ -100,6 +100,7 @@ class MIRVocabulary {
   // | 4. Virtual        | Register classes defined by the target, specialized |
   // |    Reg classes    | by virtual and physical registers.                  |
   // +-------------------+-----------------------------------------------------+
+  // Both register sections end with a NoRegClass entry for classless registers.
 
   /// Layout information for the MIR vocabulary. Defines the starting index
   /// and size of each section in the vocabulary.
@@ -127,6 +128,7 @@ class MIRVocabulary {
   ir2vec::VocabStorage Storage;
   std::set<std::string> UniqueBaseOpcodeNames;
   SmallVector<std::string, 24> RegisterOperandNames;
+  static constexpr StringLiteral NoRegClassName = "NoRegClass";
 
   // Some instructions have optional register operands that may be NoRegister.
   // We return a zero vector in such cases.
@@ -177,10 +179,9 @@ class MIRVocabulary {
   LLVM_ABI std::optional<unsigned>
   getCommonOperandIndex(MachineOperand::MachineOperandType OperandType) const;
 
-  /// Get index for a register machine operand. Returns std::nullopt if Reg
-  /// belongs to no register class, which is a valid outcome for some target
-  /// physical registers.
-  LLVM_ABI std::optional<unsigned>
+  /// Get index for a register machine operand. Registers without a register
+  /// class map to the NoRegClass entry.
+  LLVM_ABI unsigned
   getRegisterOperandIndex(Register Reg, const MachineRegisterInfo &MRI) const;
 
   // Accessors for operand types
@@ -207,14 +208,10 @@ class MIRVocabulary {
     if (Reg.isStack())
       return ZeroEmbedding;
 
-    // Registers that belong to no register class have no vocabulary entry;
-    // treat them like the other unmapped cases above.
-    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
-    if (!LocalIndex)
-      return ZeroEmbedding;
     auto SectionID =
         Reg.isPhysical() ? Section::PhyRegisters : Section::VirtRegisters;
-    return Storage[static_cast<unsigned>(SectionID)][*LocalIndex];
+    return Storage[static_cast<unsigned>(SectionID)]
+                  [getRegisterOperandIndex(Reg, MRI)];
   }
 
   /// Get entity ID (flat index) for a common operand type
@@ -233,13 +230,9 @@ class MIRVocabulary {
     if (!Reg.isValid() || Reg.isStack())
       return Layout
           .VirtRegBase; // Return VirtRegBase for invalid/stack registers
-    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
-    // Registers without a register class share the invalid/stack fallback.
-    if (!LocalIndex)
-      return Layout.VirtRegBase;
     size_t BaseOffset =
         Reg.isPhysical() ? Layout.PhyRegBase : Layout.VirtRegBase;
-    return BaseOffset + *LocalIndex;
+    return BaseOffset + getRegisterOperandIndex(Reg, MRI);
   }
 
 public:

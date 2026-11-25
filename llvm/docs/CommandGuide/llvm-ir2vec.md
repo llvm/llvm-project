@@ -309,6 +309,8 @@ For LLVM IR, entities include instruction opcodes (e.g., "Add", "Ret"), types
 For Machine IR, entities include machine opcodes (e.g., "COPY", "ADD"),
 common operands (e.g., "Immediate", "FrameIndex"), physical register classes
 (e.g., "PhyReg_GR32"), and virtual register classes (e.g., "VirtReg_GR32").
+Registers without a register class map to "PhyReg_NoRegClass" or
+"VirtReg_NoRegClass".
 
 ### Embedding Mode Output
 
