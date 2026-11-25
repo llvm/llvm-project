@@ -1,10 +1,16 @@
-//===-- Unittests for string_length ---------------------------------------===//
+//===--  ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// string_length_test.cpp
+// This file contains unit tests for string_length
+// 
+//===----------------------------------------------------------------------===//
+
 
 #include "hdr/stdint_proxy.h"
 #include "src/string/string_length.h"
