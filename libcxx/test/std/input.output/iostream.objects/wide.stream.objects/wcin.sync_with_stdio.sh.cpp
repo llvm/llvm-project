@@ -11,6 +11,10 @@
 // https://gitlab.com/qemu-project/qemu/-/issues/1963
 // UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
+// This test hangs on Android devices that lack shell_v2, which was added in
+// Android N (API 24).
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api=23
+
 // UNSUPPORTED: no-wide-characters
 
 // <iostream>

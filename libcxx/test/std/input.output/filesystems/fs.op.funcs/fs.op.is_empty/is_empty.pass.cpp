@@ -10,6 +10,10 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
+// Starting in Android N (API 24), SELinux policy prevents the shell user from
+// creating a FIFO file.
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
+
 // <filesystem>
 
 // bool is_empty(path const& p);
@@ -112,7 +116,8 @@ static void test_directory_access_denied()
     TEST_THROWS_TYPE(filesystem_error, is_empty(dir));
 }
 
-#ifndef TEST_HAS_NO_FIFOS
+
+#ifndef _WIN32
 static void test_fifo_fails()
 {
     scoped_test_env env;
@@ -125,7 +130,7 @@ static void test_fifo_fails()
 
     TEST_THROWS_TYPE(filesystem_error, is_empty(fifo));
 }
-#endif // TEST_HAS_NO_FIFOS
+#endif // _WIN32
 
 int main(int, char**) {
     signature_test();
@@ -135,7 +140,7 @@ int main(int, char**) {
     test_is_empty_file();
     test_is_empty_fails();
     test_directory_access_denied();
-#ifndef TEST_HAS_NO_FIFOS
+#ifndef _WIN32
     test_fifo_fails();
 #endif
 
