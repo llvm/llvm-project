@@ -1871,7 +1871,6 @@ struct InlayHint {
 };
 llvm::json::Value toJSON(const InlayHint &);
 bool operator==(const InlayHint &, const InlayHint &);
-bool operator<(const InlayHint &, const InlayHint &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, InlayHintKind);
 
 struct ReferenceContext {
