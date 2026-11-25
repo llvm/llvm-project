@@ -25,6 +25,7 @@ add_mlir_dialect_library(MLIRArithDialect
 
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
+  MLIRDataLayoutInterfaces
   MLIRDialect
   MLIRInferIntDivisibilityOpInterface
   MLIRInferIntRangeCommon
