@@ -82,30 +82,30 @@ public:
   static_assert(_Min < _Max, "independent_bits_engine invalid parameters");
 
   // engine characteristics
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
   // constructors and seeding functions
-  _LIBCPP_HIDE_FROM_ABI independent_bits_engine() {}
-  _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(const _Engine& __e) : __e_(__e) {}
+  independent_bits_engine() {}
+  explicit independent_bits_engine(const _Engine& __e) : __e_(__e) {}
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(_Engine&& __e) : __e_(std::move(__e)) {}
+  explicit independent_bits_engine(_Engine&& __e) : __e_(std::move(__e)) {}
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
+  explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
   template <
       class _Sseq,
       __enable_if_t<__is_seed_sequence_v<_Sseq, independent_bits_engine> && !is_convertible<_Sseq, _Engine>::value,
                     int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(_Sseq& __q) : __e_(__q) {}
-  _LIBCPP_HIDE_FROM_ABI void seed() { __e_.seed(); }
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd) { __e_.seed(__sd); }
+  explicit independent_bits_engine(_Sseq& __q) : __e_(__q) {}
+  void seed() { __e_.seed(); }
+  void seed(result_type __sd) { __e_.seed(__sd); }
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, independent_bits_engine>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
+  void seed(_Sseq& __q) {
     __e_.seed(__q);
   }
 
   // generating functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+  [[__nodiscard__]] result_type operator()() {
     if _LIBCPP_CONSTEXPR (_Rp != 0) {
       result_type __sp = 0;
       for (size_t __k = 0; __k < __n0; ++__k) {
@@ -128,13 +128,13 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
+  void discard(unsigned long long __z) {
     for (; __z; --__z)
       (void)operator()();
   }
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
+  [[__nodiscard__]] const _Engine& base() const _NOEXCEPT { return __e_; }
 
   template <class _Eng, size_t _Wp, class _UInt>
   friend bool operator==(const independent_bits_engine<_Eng, _Wp, _UInt>& __x,
@@ -153,37 +153,36 @@ public:
   operator>>(basic_istream<_CharT, _Traits>& __is, independent_bits_engine<_Eng, _Wp, _UInt>& __x);
 
 private:
-  template <size_t __count,
-            __enable_if_t<__count< _Dt, int> = 0> _LIBCPP_HIDE_FROM_ABI static result_type __lshift(result_type __x) {
+  template <size_t __count, __enable_if_t<__count< _Dt, int> = 0> static result_type __lshift(result_type __x) {
     return __x << __count;
   }
 
   template <size_t __count, __enable_if_t<(__count >= _Dt), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static result_type __lshift(result_type) {
+  static result_type __lshift(result_type) {
     return result_type(0);
   }
 };
 
 template <class _Eng, size_t _Wp, class _UInt>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline bool
 operator==(const independent_bits_engine<_Eng, _Wp, _UInt>& __x, const independent_bits_engine<_Eng, _Wp, _UInt>& __y) {
   return __x.base() == __y.base();
 }
 
 template <class _Eng, size_t _Wp, class _UInt>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline bool
 operator!=(const independent_bits_engine<_Eng, _Wp, _UInt>& __x, const independent_bits_engine<_Eng, _Wp, _UInt>& __y) {
   return !(__x == __y);
 }
 
 template <class _CharT, class _Traits, class _Eng, size_t _Wp, class _UInt>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const independent_bits_engine<_Eng, _Wp, _UInt>& __x) {
   return __os << __x.base();
 }
 
 template <class _CharT, class _Traits, class _Eng, size_t _Wp, class _UInt>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, independent_bits_engine<_Eng, _Wp, _UInt>& __x) {
   _Eng __e;
   __is >> __e;

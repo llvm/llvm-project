@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <__config>
+#include <__mutex/once_flag.h>
 #include <__pstl/backends/statpart.h>
+#include <__utility/no_destroy.h>
+
+#include "std_thread_sched.h"
 #include <atomic>
 
 #if defined(__APPLE__)

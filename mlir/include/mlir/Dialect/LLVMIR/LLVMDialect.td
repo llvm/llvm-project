@@ -14,6 +14,7 @@ include "mlir/IR/DialectBase.td"
 def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "::mlir::LLVM";
+  let useDefaultOperationRegistration = 1;
 
   let hasConstantMaterializer = 1;
   let hasAttributes = 1;
