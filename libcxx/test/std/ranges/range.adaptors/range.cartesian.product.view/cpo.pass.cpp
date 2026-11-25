@@ -18,6 +18,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_macros.h"
+
 #include "../range_adaptor_types.h"
 
 // Output-only views are not valid ranges for the product, so the CPO SFINAEs out on them.
@@ -40,11 +42,11 @@ static_assert(!CanBePiped<int (&)[10], decltype((std::views::cartesian_product))
 static_assert(std::same_as<decltype(std::views::cartesian_product), decltype(std::ranges::views::cartesian_product)>);
 
 // views::cartesian_product(args) is expression-equivalent to the expression it returns.
-static_assert(!noexcept(std::views::cartesian_product()));
+LIBCPP_STATIC_ASSERT(!noexcept(std::views::cartesian_product()));
 static_assert(noexcept(std::views::cartesian_product()) == noexcept(std::views::single(std::tuple())));
 
-static_assert(!noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>())));
-static_assert(
+LIBCPP_STATIC_ASSERT(!noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>())));
+LIBCPP_STATIC_ASSERT(
     !noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>(), std::declval<ForwardSizedView&>())));
 static_assert(noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>())) ==
               noexcept(std::ranges::cartesian_product_view<SimpleCommon>(std::declval<SimpleCommon&>())));
