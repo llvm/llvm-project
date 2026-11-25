@@ -39,6 +39,7 @@ add_flang_unittest(FlangOptimizerTests
   Builder/Runtime/StopTest.cpp
   Builder/Runtime/TransformationalTest.cpp
   OpenACC/FIROpenACCGlobalVariableInterfaceTest.cpp
+  OpenACC/FIROpenACCStoreLikeOpInterfaceTest.cpp
   OpenACC/FIROpenACCPointerLikeTypeInterfaceTest.cpp
   OpenACC/FIROpenACCSupportAnalysisTest.cpp
   AliasAnalysisCacheTest.cpp

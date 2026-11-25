@@ -189,6 +189,22 @@ def OutlineIdentityOperandOpInterface
   ];
 }
 
+def StoreLikeOpInterface : OpInterface<"StoreLikeOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    Names the bits an operation stores and the operands that receive them.
+    The source is an SSA operand, the contents of an address operand, a
+    symbol, or a source the operation cannot name.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Appends each value stored by this operation.",
+      "void", "getStoredValues",
+      (ins "::llvm::SmallVectorImpl<::mlir::acc::StoredValue> &":$stored)>,
+  ];
+}
+
 def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
   let cppNamespace = "::mlir::acc";
 
