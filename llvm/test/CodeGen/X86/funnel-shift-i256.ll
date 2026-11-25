@@ -974,8 +974,8 @@ define i256 @fshl_i256_vector(<4 x i64> %v0, <4 x i64> %v1, i256 %a2) nounwind {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movq %xmm1, %r10
-; SSE2-NEXT:    movq %xmm0, %r9
+; SSE2-NEXT:    movq %xmm1, %r9
+; SSE2-NEXT:    movq %xmm0, %r10
 ; SSE2-NEXT:    movq %xmm2, %r8
 ; SSE2-NEXT:    movq %xmm3, %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
@@ -985,30 +985,30 @@ define i256 @fshl_i256_vector(<4 x i64> %v0, <4 x i64> %v1, i256 %a2) nounwind {
 ; SSE2-NEXT:    testb $-128, %cl
 ; SSE2-NEXT:    cmoveq %rdx, %r11
 ; SSE2-NEXT:    cmoveq %rsi, %r8
-; SSE2-NEXT:    cmoveq %r9, %rsi
-; SSE2-NEXT:    cmoveq %r10, %rdx
-; SSE2-NEXT:    cmovneq %r9, %rax
-; SSE2-NEXT:    movq %xmm4, %r9
-; SSE2-NEXT:    cmovneq %r10, %r9
+; SSE2-NEXT:    cmoveq %r10, %rsi
+; SSE2-NEXT:    cmoveq %r9, %rdx
+; SSE2-NEXT:    cmovneq %r10, %rax
+; SSE2-NEXT:    movq %xmm4, %r10
+; SSE2-NEXT:    cmovneq %r9, %r10
 ; SSE2-NEXT:    testb $64, %cl
-; SSE2-NEXT:    cmovneq %rax, %r9
+; SSE2-NEXT:    cmovneq %rax, %r10
 ; SSE2-NEXT:    cmovneq %rdx, %rax
 ; SSE2-NEXT:    cmovneq %rsi, %rdx
 ; SSE2-NEXT:    cmoveq %r11, %r8
 ; SSE2-NEXT:    cmovneq %r11, %rsi
-; SSE2-NEXT:    movq %rsi, %r10
-; SSE2-NEXT:    shldq %cl, %r8, %r10
+; SSE2-NEXT:    movq %rsi, %r9
+; SSE2-NEXT:    shldq %cl, %r8, %r9
 ; SSE2-NEXT:    movq %rdx, %r8
 ; SSE2-NEXT:    shldq %cl, %rsi, %r8
 ; SSE2-NEXT:    movq %rax, %rsi
 ; SSE2-NEXT:    shldq %cl, %rdx, %rsi
 ; SSE2-NEXT:    # kill: def $cl killed $cl killed $rcx
-; SSE2-NEXT:    shldq %cl, %rax, %r9
+; SSE2-NEXT:    shldq %cl, %rax, %r10
 ; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    movq %r9, 24(%rdi)
+; SSE2-NEXT:    movq %r10, 24(%rdi)
 ; SSE2-NEXT:    movq %rsi, 16(%rdi)
 ; SSE2-NEXT:    movq %r8, 8(%rdi)
-; SSE2-NEXT:    movq %r10, (%rdi)
+; SSE2-NEXT:    movq %r9, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: fshl_i256_vector:

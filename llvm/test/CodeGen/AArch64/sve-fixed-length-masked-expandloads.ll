@@ -6091,12 +6091,12 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    adrp x8, .LCPI12_0
-; VBITS_GE_256-NEXT:    fcmeq p1.d, p0/z, z2.d, z1.d
-; VBITS_GE_256-NEXT:    fcmeq p2.d, p0/z, z3.d, z0.d
+; VBITS_GE_256-NEXT:    fcmeq p1.d, p0/z, z2.d, z0.d
+; VBITS_GE_256-NEXT:    fcmeq p2.d, p0/z, z3.d, z1.d
 ; VBITS_GE_256-NEXT:    mov z2.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl4
 ; VBITS_GE_256-NEXT:    mov z3.d, p2/z, #-1 // =0xffffffffffffffff
@@ -6130,16 +6130,16 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.d, x8
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0]
-; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
+; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
 ; VBITS_GE_256-NEXT:  .LBB12_9: // %else26
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB12_10: // %cond.load
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
 ; VBITS_GE_256-NEXT:    ptrue p1.d, vl1
-; VBITS_GE_256-NEXT:    mov z0.d, p1/m, z2.d
+; VBITS_GE_256-NEXT:    mov z1.d, p1/m, z2.d
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB12_2
 ; VBITS_GE_256-NEXT:  .LBB12_11: // %cond.load1
 ; VBITS_GE_256-NEXT:    mov w9, #1 // =0x1
@@ -6148,7 +6148,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #2, .LBB12_3
 ; VBITS_GE_256-NEXT:  .LBB12_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -6157,7 +6157,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #3, .LBB12_4
 ; VBITS_GE_256-NEXT:  .LBB12_13: // %cond.load9
 ; VBITS_GE_256-NEXT:    mov w9, #3 // =0x3
@@ -6166,12 +6166,12 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #4, .LBB12_5
 ; VBITS_GE_256-NEXT:  .LBB12_14: // %cond.load13
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
 ; VBITS_GE_256-NEXT:    ptrue p1.d, vl1
-; VBITS_GE_256-NEXT:    mov z1.d, p1/m, z2.d
+; VBITS_GE_256-NEXT:    mov z0.d, p1/m, z2.d
 ; VBITS_GE_256-NEXT:    tbz w8, #5, .LBB12_6
 ; VBITS_GE_256-NEXT:  .LBB12_15: // %cond.load17
 ; VBITS_GE_256-NEXT:    mov w9, #1 // =0x1
@@ -6180,7 +6180,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
+; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbz w8, #6, .LBB12_7
 ; VBITS_GE_256-NEXT:  .LBB12_16: // %cond.load21
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -6189,7 +6189,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z3.d, x9
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p1/z, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
-; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d2
+; VBITS_GE_256-NEXT:    mov z0.d, p2/m, d2
 ; VBITS_GE_256-NEXT:    tbnz w8, #7, .LBB12_8
 ; VBITS_GE_256-NEXT:    b .LBB12_9
 ;

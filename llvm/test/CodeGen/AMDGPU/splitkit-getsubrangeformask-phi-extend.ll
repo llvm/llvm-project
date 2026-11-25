@@ -1222,7 +1222,9 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[20:23]
 ; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[16:19] offset:64
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[12:15] offset:32
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:48
+; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 0x60, v34
+; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v35, vcc
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
 ; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 0x70, v34
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v35, vcc
 ; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[36:39]
