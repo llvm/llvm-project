@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace lld::macho {
@@ -142,6 +143,9 @@ private:
 // input Section's relocation array, which avoids an allocation per subsection.
 // Appending moves them to a buffer of their own.
 class RelocArray {
+  // Neither the destructor nor erase() destroys the elements.
+  static_assert(std::is_trivially_destructible_v<Relocation>);
+
 public:
   RelocArray() = default;
   RelocArray(const RelocArray &) = delete;

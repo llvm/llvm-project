@@ -24,6 +24,16 @@
 #include "llvm/Support/Allocator.h"
 
 namespace lld {
+// Several functions in this file use thread_local allocators. The use cases
+// assume that the return value outlives the containing parallelForEach (if
+// one exists), which is currently guaranteed: when parallelForEach returns, the
+// threads allocating the TLS are not destroyed.
+//
+// Note: Some ports (e.g. ELF) have lots of global states which are currently
+// infeasible to remove, and context() just adds overhead with no benefit.
+// Allocation performance is more important, so this file uses thread_local
+// allocators instead of doing context indirection and pthread_getspecific.
+
 inline llvm::BumpPtrAllocator &bAllocThreadLocal() {
   thread_local llvm::BumpPtrAllocator alloc;
   return alloc;
@@ -75,15 +85,7 @@ getSpecificAllocSingletonThreadLocal() {
 }
 
 // Create a new instance of T off a thread-local SpecificAlloc, used by code
-// like parallel input section initialization. The use cases assume that the
-// return value outlives the containing parallelForEach (if exists), which is
-// currently guaranteed: when parallelForEach returns, the threads allocating
-// the TLS are not destroyed.
-//
-// Note: Some ports (e.g. ELF) have lots of global states which are currently
-// infeasible to remove, and context() just adds overhead with no benefit. The
-// allocation performance is of higher importance, so we simply use thread_local
-// allocators instead of doing context indirection and pthread_getspecific.
+// like parallel input section initialization.
 template <typename T, typename... U> T *makeThreadLocal(U &&...args) {
   return new (getSpecificAllocSingletonThreadLocal<T>().Allocate())
       T(std::forward<U>(args)...);
