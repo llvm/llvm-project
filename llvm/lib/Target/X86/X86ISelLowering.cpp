@@ -32001,8 +32001,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // than 7, the result will be zero.
       SmallVector<APInt, 8> MaskBits, IdxBits;
       for (unsigned I = 0, E = VT.getSizeInBits() / 128; I != E; ++I) {
-        MaskBits.push_back(APInt(64, 0x0103070F1F3F7FFFULL));
-        IdxBits.push_back(APInt(64, 0x8040201008040201ULL));
+        MaskBits.emplace_back(64, 0x0103070F1F3F7FFFULL);
+        IdxBits.emplace_back(64, 0x8040201008040201ULL);
         MaskBits.push_back(APInt::getZero(64));
         IdxBits.push_back(APInt::getZero(64));
       }
