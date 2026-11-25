@@ -1880,6 +1880,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.align = Align(Info.memVT.getStoreSize());
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    Info.flags |= Flags & MachineMemOperand::MONonTemporal;
     // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
     // flags appropriately.
     Info.order = AtomicOrdering::Monotonic;
@@ -2795,6 +2796,17 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
   return DAG.getMergeValues({ConvertedVal, ArgValue.getValue(1)}, SL);
 }
 
+// Read the cluster ID field of IB_STS2. It is 0 if and only if clusters are
+// disabled.
+static SDValue readClusterIdField(SelectionDAG &DAG, const SDLoc &SL, EVT VT) {
+  using namespace AMDGPU::Hwreg;
+  SDValue ClusterIdField =
+      DAG.getTargetConstant(HwregEncoding::encode(ID_IB_STS2, 6, 4), SL, VT);
+  SDNode *GetReg =
+      DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
+  return SDValue(GetReg, 0);
+}
+
 SDValue SITargetLowering::lowerWorkGroupId(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue WorkGroupIdPV,
@@ -2827,15 +2839,38 @@ SDValue SITargetLowering::lowerWorkGroupId(
   case AMDGPU::ClusterDimsAttr::Kind::NoCluster:
     return ClusterIdXYZ;
   case AMDGPU::ClusterDimsAttr::Kind::Unknown: {
-    using namespace AMDGPU::Hwreg;
-    SDValue ClusterIdField =
-        DAG.getTargetConstant(HwregEncoding::encode(ID_IB_STS2, 6, 4), SL, VT);
-    SDNode *GetReg =
-        DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
-    SDValue ClusterId(GetReg, 0);
+    SDValue ClusterId = readClusterIdField(DAG, SL, VT);
     SDValue Zero = DAG.getConstant(0, SL, VT);
     return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, ClusterIdXYZ,
                        GlobalIdXYZ, DAG.getCondCode(ISD::SETEQ));
+  }
+  }
+
+  llvm_unreachable("nothing should reach here");
+}
+
+SDValue SITargetLowering::lowerClusterWorkGroupValue(
+    SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+    AMDGPUFunctionArgInfo::PreloadedValue PV) const {
+  if (!Subtarget->hasClusters())
+    return DAG.getPOISON(VT);
+
+  // TTMP6 holds these values only if cluster is enabled. The programming model
+  // treats a launch without clusters as an implicit 1x1x1 cluster, so all of
+  // these values are 0.
+  switch (MFI.getClusterDims().getKind()) {
+  case AMDGPU::ClusterDimsAttr::Kind::FixedDims:
+  case AMDGPU::ClusterDimsAttr::Kind::VariableDims:
+    return getPreloadedValue(DAG, MFI, VT, PV);
+  case AMDGPU::ClusterDimsAttr::Kind::NoCluster:
+    return DAG.getConstant(0, SDLoc(), VT);
+  case AMDGPU::ClusterDimsAttr::Kind::Unknown: {
+    SDValue Value = getPreloadedValue(DAG, MFI, VT, PV);
+    SDLoc SL(Value);
+    SDValue ClusterId = readClusterIdField(DAG, SL, VT);
+    SDValue Zero = DAG.getConstant(0, SL, VT);
+    return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, Zero, Value,
+                       DAG.getCondCode(ISD::SETEQ));
   }
   }
 
@@ -2944,6 +2979,10 @@ SDValue SITargetLowering::getPreloadedValue(
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+      if (HasFixedDims) {
+        const std::array<unsigned, 3> &Dims = ClusterDims.getDims();
+        return LoadConstant(Dims[0] * Dims[1] * Dims[2] - 1);
+      }
       Reg = &ClusterWorkGroupMaxFlatID;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
@@ -3950,6 +3989,7 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::AExt:
+      Arg = DAG.getBitcast(VA.getValVT().changeTypeToInteger(), Arg);
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     default:
@@ -4020,28 +4060,7 @@ SDValue SITargetLowering::LowerCallResult(
     } else
       llvm_unreachable("unknown argument location type");
 
-    switch (VA.getLocInfo()) {
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::ZExt:
-      Val = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::SExt:
-      Val = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    default:
-      llvm_unreachable("Unknown loc info!");
-    }
+    Val = convertABITypeToValueType(DAG, Val, VA, DL);
 
     InVals.push_back(Val);
   }
@@ -4832,7 +4851,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
                                   DAG.getConstant(StackAlignMask, dl, VT));
     BaseAddr = DAG.getNode(ISD::AND, dl, VT, TmpAddr,
-                           DAG.getSignedConstant(-ScaledAlignment, dl, VT));
+                           DAG.getSignedConstant(~StackAlignMask, dl, VT));
   }
 
   assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
@@ -5058,16 +5077,7 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
     return SDValue();
 
-  // Prefetch the 64-bit address that a 32-bit constant pointer is cast to, as
-  // a load does.
-  SDValue Ptr = Op.getOperand(1);
-  if (Ptr.getValueType() != MVT::i32)
-    return Op;
-  SmallVector<SDValue, 5> Ops(Op->ops());
-  Ops[1] = DAG.getAddrSpaceCast(SDLoc(Op), MVT::i64, Ptr,
-                                AMDGPUAS::CONSTANT_ADDRESS_32BIT,
-                                AMDGPUAS::CONSTANT_ADDRESS);
-  return SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
+  return Op;
 }
 
 // Work around DAG legality rules only based on the result type.
@@ -11530,51 +11540,30 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                    AMDGPUFunctionArgInfo::WORKGROUP_ID_Z)
                : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_id_y:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_id_z:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
     return Subtarget->hasClusters()
                ? lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4)
                : SDValue();
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {

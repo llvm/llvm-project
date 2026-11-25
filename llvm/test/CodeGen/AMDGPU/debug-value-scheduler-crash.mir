@@ -17,7 +17,6 @@
 ...
 ---
 name:            could_not_use_debug_inst_to_query_mi2mimap
-tracksRegLiveness: true
 frameInfo:
   hasCalls:        true
 body:             |

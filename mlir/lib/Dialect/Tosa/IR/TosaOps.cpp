@@ -2751,6 +2751,15 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
       return emitOpError() << "new shape does not match result rank";
   }
 
+  const TensorType inputType = getInput1().getType();
+  if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
+    const int64_t inputElementsNum = inputType.getNumElements();
+    const int64_t outputElementsNum = outputType.getNumElements();
+    if (inputElementsNum != outputElementsNum)
+      return emitOpError() << "cannot reshape " << inputElementsNum
+                           << " elements into " << outputElementsNum;
+  }
+
   return mlir::success();
 }
 

@@ -49,6 +49,13 @@ def SDT_MipsMTC1_D64 : SDTypeProfile<1, 1, [SDTCisVT<0, f64>,
 
 // Floating Point Compare
 def MipsFPCmp : SDNode<"MipsISD::FPCmp", SDT_MipsFPCmp, [SDNPOutGlue]>;
+def MipsStrictFPCmp : SDNode<"MipsISD::STRICT_FPCmp", SDT_MipsFPCmp,
+                             [SDNPHasChain, SDNPOutGlue]> {
+  let IsStrictFP = true;
+}
+def MipsAnyFPCmp : PatFrags<(ops node:$lhs, node:$rhs, node:$cond),
+                            [(MipsStrictFPCmp node:$lhs, node:$rhs, node:$cond),
+                             (MipsFPCmp node:$lhs, node:$rhs, node:$cond)]>;
 
 // Floating Point Conditional Moves
 def MipsCMovFP_T : SDNode<"MipsISD::CMovFP_T", SDT_MipsCMovFP, [SDNPInGlue]>;
@@ -299,6 +306,9 @@ class CEQS_FT<string typestr, RegisterClass RC,
   let Defs = [FCC0];
   let isCodeGenOnly = 1;
   let hasFCCRegOperand = 1;
+  // All conditions signal invalid on a signaling NaN, and those with cond<3>
+  // set also signal on a quiet NaN.
+  let mayRaiseFPException = 1;
 }
 
 
@@ -820,7 +830,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
               BC1F_FM<1, 1>, ISA_MIPS2_NOT_32R6_64R6;
 
 /// Floating Point Compare
-  def FCMP_S32 : MMRel, CEQS_FT<"s", FGR32, MipsFPCmp>, CEQS_FM<16>,
+  def FCMP_S32 : MMRel, CEQS_FT<"s", FGR32, MipsAnyFPCmp>, CEQS_FM<16>,
                  ISA_MIPS1_NOT_32R6_64R6 {
 
   // FIXME: This is a required to work around the fact that these instructions
@@ -828,7 +838,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
   //        fcc register set is used directly.
   bits<3> fcc = 0;
   }
-  def FCMP_D32 : MMRel, CEQS_FT<"d", AFGR64, MipsFPCmp>, CEQS_FM<17>,
+  def FCMP_D32 : MMRel, CEQS_FT<"d", AFGR64, MipsAnyFPCmp>, CEQS_FM<17>,
                  ISA_MIPS1_NOT_32R6_64R6, FGR_32 {
   // FIXME: This is a required to work around the fact that these instructions
   //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
@@ -837,7 +847,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
   }
 }
 let DecoderNamespace = "MipsFP64" in
-def FCMP_D64 : CEQS_FT<"d", FGR64, MipsFPCmp>, CEQS_FM<17>,
+def FCMP_D64 : CEQS_FT<"d", FGR64, MipsAnyFPCmp>, CEQS_FM<17>,
                ISA_MIPS1_NOT_32R6_64R6, FGR_64 {
   // FIXME: This is a required to work around the fact that thiese instructions
   //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
@@ -855,12 +865,7 @@ class BuildPairF64Base<RegisterOperand RO> :
   PseudoSE<(outs RO:$dst), (ins GPR32Opnd:$lo, GPR32Opnd:$hi),
            [(set RO:$dst, (MipsBuildPairF64 GPR32Opnd:$lo, GPR32Opnd:$hi))]>;
 
-class BuildPairF64Base_FPR<RegisterOperand RO> :
-  PseudoSE<(outs RO:$dst), (ins FGR32Opnd:$lo, FGR32Opnd:$hi),
-           [(set RO:$dst, (MipsBuildPairF64_FPR FGR32Opnd:$lo, FGR32Opnd:$hi))]>;
-
 def BuildPairF64 : BuildPairF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
-def BuildPairF64_FPR : BuildPairF64Base_FPR<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def BuildPairF64_64 : BuildPairF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
 // This pseudo instr gets expanded into 2 mfc1 instrs after register
@@ -928,13 +933,18 @@ def SDC1_M1 : MipsAsmPseudoInst<(outs AFGR64Opnd:$fd),
                                 "s.d\t$fd, ${offset}(${base})">,
               FGR_32, ISA_MIPS1, HARDFLOAT;
 
+def LDC1_M1 : MipsAsmPseudoInst<(outs AFGR64Opnd:$fd),
+                                (ins MemBase:$base, mem_simm16:$offset),
+                                "l.d\t$fd, ${offset}(${base})">,
+              FGR_32, ISA_MIPS1, HARDFLOAT;
+
 //===----------------------------------------------------------------------===//
 // InstAliases.
 //===----------------------------------------------------------------------===//
 def : MipsInstAlias
         <"s.s $fd, ${offset}(${base})",
          (SWC1 FGR32Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
-      ISA_MIPS2, HARDFLOAT;
+      ISA_MIPS1, HARDFLOAT;
 def : MipsInstAlias
         <"s.d $fd, ${offset}(${base})",
          (SDC1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
@@ -951,7 +961,7 @@ def : MipsInstAlias
 def : MipsInstAlias
         <"l.s $fd, ${offset}(${base})",
          (LWC1 FGR32Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
-      ISA_MIPS2, HARDFLOAT;
+      ISA_MIPS1, HARDFLOAT;
 def : MipsInstAlias
         <"l.d $fd, ${offset}(${base})",
          (LDC1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
@@ -960,6 +970,10 @@ def : MipsInstAlias
         <"l.d $fd, ${offset}(${base})",
          (LDC164 FGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_64, ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"l.d $fd, ${offset}(${base})",
+         (LDC1_M1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
+      FGR_32, ISA_MIPS1, HARDFLOAT;
 
 multiclass C_COND_ALIASES<string TypeStr, RegisterOperand RC> {
   def : MipsInstAlias<!strconcat("c.f.", TypeStr, " $fs, $ft"),
@@ -1094,6 +1108,10 @@ def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 0)),
 
 def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 1)),
               (EXTRACT_SUBREG AFGR64Opnd:$src, sub_hi)>;
+
+def : MipsPat<(f64 (MipsBuildPairF64_FPR FGR32Opnd:$lo, FGR32Opnd:$hi)),
+              (REG_SEQUENCE AFGR64, FGR32Opnd:$lo, sub_lo,
+                                    FGR32Opnd:$hi, sub_hi)>, FGR_32;
 
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)), 
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;

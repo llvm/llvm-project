@@ -10,7 +10,6 @@
 name: atomic_store_flat_s32_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -40,7 +39,6 @@ body: |
 name: atomic_store_flat_v2s16_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -70,7 +68,6 @@ body: |
 name: atomic_store_flat_p3_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -100,7 +97,6 @@ body: |
 name: atomic_store_flat_p5_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -130,7 +126,6 @@ body: |
 name: atomic_store_flat_p6_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -160,7 +155,6 @@ body: |
 name: atomic_store_flat_s64_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -190,7 +184,6 @@ body: |
 name: atomic_store_flat_v2s32_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -220,7 +213,6 @@ body: |
 name: atomic_store_flat_v4s16_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -250,7 +242,6 @@ body: |
 name: atomic_store_flat_p0_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -279,7 +270,6 @@ body: |
 name: atomic_store_flat_p1_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

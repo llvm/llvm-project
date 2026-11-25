@@ -1947,7 +1947,7 @@ let mayLoad = 1, Defs = [CC, R0L, R1D] in {
   def TRTR : SideEffectBinarySSa<"trtr", 0xD0>;
 }
 
-let mayLoad = 1, mayStore = 1, Uses = [R0L] in
+let mayLoad = 1, mayStore = 1, Uses = [R0L], Defs = [CC] in
   def TRE : SideEffectBinaryMemMemRRE<"tre", 0xB2A5, GR128, GR64>;
 
 let mayLoad = 1, Uses = [R1D], Defs = [CC] in {
