@@ -10,6 +10,8 @@
 // constant is required, it is kept a constant with a single error naming the
 // attribute (attr-error) instead of the error for the call (explicit-error).
 // A builtin argument error gets an extra note naming the attribute (attr-note).
+// A case label is an exception: the enumerator is relocated there, and the
+// error for the call gets notes suggesting the attribute (explicit-note).
 #ifdef EXPLICIT
 enum E { A = 4 };
 #define X __builtin_preserve_enum_value(*(enum E *)A, 1)
@@ -40,9 +42,9 @@ int rejected(int v, void *p) {
   static int s = X; // explicit-error {{initializer element is not a compile-time constant}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
   int a[8] = {[X] = 1}; // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
   switch (v) {
-  case X: // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
+  case X: // explicit-error {{expression is not an integer constant expression}} explicit-note {{an explicit '__builtin_preserve_enum_value' call is relocated at load time, so it is not a constant}} explicit-note {{a case label with an enumerator of an enum with the 'preserve_access_index' attribute is relocated, and compared like an 'if' condition before the switch}}
     return 1;
-  case 5 ... X + 2: // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
+  case 5 ... X + 2: // explicit-error {{expression is not an integer constant expression}} explicit-note {{an explicit '__builtin_preserve_enum_value' call is relocated at load time, so it is not a constant}} explicit-note {{a case label with an enumerator of an enum with the 'preserve_access_index' attribute is relocated, and compared like an 'if' condition before the switch}}
     return 2;
   }
 #pragma unroll X // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}

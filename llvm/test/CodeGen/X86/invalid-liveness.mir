@@ -14,15 +14,13 @@
 # CHECK: ERROR: Use not jointly dominated by defs.
 name: func
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: gr32 }
 body: |
   bb.0:
     JCC_1 %bb.2, 15, implicit $eflags
     JMP_1 %bb.3
 
   bb.2:
-    %0 = IMPLICIT_DEF
+    %0:gr32 = IMPLICIT_DEF
     JMP_1 %bb.3
 
   bb.3:

@@ -114,12 +114,6 @@ void mock::MockLiboffload::initDefault() {
           assignAs<uint32_t>(PropValue, 0);
           return OL_SUCCESS;
         }
-        case OL_DEVICE_INFO_HALF_FP_SUPPORT:
-        case OL_DEVICE_INFO_DOUBLE_FP_SUPPORT: {
-          EXPECT_EQ(PropSize, sizeof(bool));
-          assignAs<bool>(PropValue, true);
-          return OL_SUCCESS;
-        }
         default:
           ADD_FAILURE();
           return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
@@ -143,11 +137,6 @@ void mock::MockLiboffload::initDefault() {
         }
         case OL_DEVICE_INFO_DRIVER_ID: {
           *PropSizeRet = sizeof(uint32_t);
-          return OL_SUCCESS;
-        }
-        case OL_DEVICE_INFO_HALF_FP_SUPPORT:
-        case OL_DEVICE_INFO_DOUBLE_FP_SUPPORT: {
-          *PropSizeRet = sizeof(bool);
           return OL_SUCCESS;
         }
         default:

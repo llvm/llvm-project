@@ -24,7 +24,6 @@
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/group.hpp>
 #include <sycl/__impl/group_barrier.hpp>
-#include <sycl/__impl/half.hpp>
 #include <sycl/__impl/handler.hpp>
 #include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/memory_enums.hpp>

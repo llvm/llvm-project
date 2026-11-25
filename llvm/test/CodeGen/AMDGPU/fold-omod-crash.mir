@@ -5,7 +5,6 @@
 # the kill flag is cleared on the use of %4 in V_MUL_F32.
 ---
 name: main
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false

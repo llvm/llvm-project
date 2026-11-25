@@ -42,7 +42,9 @@ void Pointer::print(raw_ostream &OS) const {
     if (Address != Obj->getAddress())
       OS << " + " << (Address - Obj->getAddress());
     MemoryObjectState State = Obj->getState();
-    if (State != MemoryObjectState::Alive)
+    if (Obj->isInaccessible())
+      OS << " (inaccessible)";
+    else if (State != MemoryObjectState::Alive)
       OS << (State == MemoryObjectState::Dead ? " (dead)" : " (dangling)");
   } else {
     OS << (Prov->isWildcard() ? "wildcard" : "nullary");

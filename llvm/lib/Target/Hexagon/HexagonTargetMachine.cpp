@@ -187,6 +187,8 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
       C, std::make_unique<HexagonConvergingVLIWScheduler>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  DAG->addMutation(
+      std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   DAG->addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
@@ -223,6 +225,8 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonLowerHLXPairAllocasPass(PR);
+  initializeHexagonMergeActivateWeightPass(PR);
+  initializeHexagonMergeActivateWeight2Pass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -515,6 +519,14 @@ void HexagonPassConfig::addMachineSSAOptimization() {
 }
 
 void HexagonPassConfig::addPreRegAlloc() {
+  // HMX activation/weight pairs must be adjacent before register allocation.
+  // With optimized register allocation, run after the machine scheduler,
+  // which may separate the pairs.
+  if (getOptimizeRegAlloc())
+    insertPass(&MachineSchedulerID, &HexagonMergeActivateWeightID);
+  else
+    insertPass(&PHIEliminationID, &HexagonMergeActivateWeightID);
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
@@ -574,6 +586,8 @@ void HexagonPassConfig::addPreEmitPass() {
     if (!DisableHexagonLiveVars)
       addPass(&HexagonLiveVariablesID);
   }
+
+  addPass(createHexagonMergeActivateWeight2());
 
   // Emit KCFI checks for indirect calls. Must run before packetization so
   // the check and call can be bundled together into a VLIW packet.

@@ -70,6 +70,13 @@
 #define SI_NETBSD 0
 #endif
 
+// NetBSD added <uchar.h> (c8/c16/c32 conversion functions) in NetBSD 10.1.
+#if SANITIZER_NETBSD && __has_include(<uchar.h>)
+#  define SI_NETBSD_UCHAR 1
+#else
+#  define SI_NETBSD_UCHAR 0
+#endif
+
 #if SANITIZER_LINUX
 #define SI_LINUX 1
 #else
@@ -350,6 +357,12 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
    !SI_NOT_AIX)
 #define SANITIZER_INTERCEPT_WCTOMB \
   (SI_FREEBSD || SI_NETBSD || SI_MAC || SI_LINUX_NOT_ANDROID || SI_SOLARIS)
+#define SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB \
+  ((SI_GLIBC && __GLIBC_PREREQ(2, 36)) || SI_NETBSD_UCHAR)
+#define SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB      \
+  (SI_FREEBSD || SI_NETBSD_UCHAR ||                                  \
+   (SI_LINUX_NOT_ANDROID && (!SI_GLIBC || __GLIBC_PREREQ(2, 16))) || \
+   SI_SOLARIS || !SI_NOT_AIX)
 #define SANITIZER_INTERCEPT_TCGETATTR SI_LINUX_NOT_ANDROID || SI_SOLARIS
 #define SANITIZER_INTERCEPT_REALPATH SI_POSIX
 #define SANITIZER_INTERCEPT_CANONICALIZE_FILE_NAME (SI_GLIBC || SI_SOLARIS)

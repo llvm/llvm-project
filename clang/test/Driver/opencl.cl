@@ -43,7 +43,9 @@
 // CHECK-KERNEL-ARG-INFO: "-cc1" {{.*}} "-cl-kernel-arg-info"
 // CHECK-UNSAFE-MATH-OPT: "-cc1" {{.*}} "-cl-unsafe-math-optimizations"
 // CHECK-FAST-RELAXED-MATH: "-cc1" {{.*}} "-cl-fast-relaxed-math"
-// CHECK-MAD-ENABLE: "-cc1" {{.*}} "-cl-mad-enable"
+// CHECK-MAD-ENABLE-NOT: argument unused
+// CHECK-MAD-ENABLE: "-cc1"
+// CHECK-MAD-ENABLE-NOT: "-cl-mad-enable"
 // CHECK-NO-SIGNED-ZEROS: "-cc1" {{.*}} "-cl-no-signed-zeros"
 // NO-NNAN-NOT: "menable-no-nans"
 // NO-NINF-NOT: "menable-no-infs"

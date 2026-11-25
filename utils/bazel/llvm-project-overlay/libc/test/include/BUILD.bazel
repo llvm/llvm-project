@@ -269,6 +269,26 @@ libc_test(
 )
 
 libc_test(
+    name = "math_comparison_macros_test",
+    srcs = ["math_comparison_macros_test.cpp"],
+    full_build_only = True,
+    deps = [
+        "//libc/include:llvm_libc_macros_math_function_macros",
+        "//libc/src/__support/macros/properties:types",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "math_comparison_macros_c_test",
+    srcs = ["math_comparison_macros_test.c"],
+    c_test = True,
+    deps = [
+        "//libc/include:llvm_libc_macros_math_function_macros",
+    ],
+)
+
+libc_test(
     name = "issubnormal_c_test",
     srcs = ["issubnormal_test.c"],
     c_test = True,

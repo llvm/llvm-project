@@ -8,7 +8,6 @@
 # low lane's last-use slot.
 ---
 name: phi_subrange_absent
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_absent
   ; CHECK: bb.0:
@@ -62,7 +61,6 @@ body: |
 # The high lane's segment ends in an earlier layout block. It needs no trim.
 ---
 name: phi_subrange_dead_earlier
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_dead_earlier
   ; CHECK: bb.0:
@@ -107,7 +105,6 @@ body: |
 # Both lanes and the main live range still require normal PHI source trimming.
 ---
 name: phi_subrange_full_live
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_full_live
   ; CHECK: bb.0:
@@ -149,7 +146,6 @@ body: |
 # own copy, not at the main range's last use in the predecessor.
 ---
 name: phi_subrange_separate_uses
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_separate_uses
   ; CHECK: bb.0:
@@ -196,7 +192,6 @@ body: |
 # must wait for the whole function's PHIs to be removed.
 ---
 name: phi_subrange_multiple_successors
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_multiple_successors
   ; CHECK: bb.0:
@@ -278,7 +273,6 @@ body: |
 # shrunk out of the split block.
 ---
 name: phi_subrange_lane_live_out_split_edge
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_lane_live_out_split_edge
   ; CHECK: bb.0:
@@ -342,7 +336,6 @@ body: |
 # split block rather than trimmed at the sub0 copy.
 ---
 name: phi_subrange_lane_live_out_critical_edge
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_lane_live_out_critical_edge
   ; CHECK: bb.0:
@@ -423,7 +416,6 @@ body: |
 # end at the earlier full-register copy.
 ---
 name: phi_subrange_full_and_lane
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_subrange_full_and_lane
   ; CHECK: bb.0:
