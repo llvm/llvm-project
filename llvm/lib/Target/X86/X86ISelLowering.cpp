@@ -32857,7 +32857,7 @@ bool X86TargetLowering::needsCmpXchgNb(unsigned OpWidth) const {
 }
 
 TargetLoweringBase::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+X86TargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   unsigned Size =
       SI->getDataLayout().getTypeSizeInBits(SI->getValueOperand()->getType());
 
@@ -32877,7 +32877,7 @@ X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+X86TargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   unsigned Size = LI->getDataLayout().getTypeSizeInBits(LI->getType());
 
   if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
