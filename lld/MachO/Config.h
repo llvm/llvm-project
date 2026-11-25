@@ -142,6 +142,7 @@ struct Configuration {
   bool noFixupChainsIgnored = false;
   uint16_t chainedFixupsPointerFormat = 0;
   bool emitRelativeMethodLists = false;
+  bool objcMethodListMetadataDiscovery = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;
   bool thinLTOIndexOnly;
