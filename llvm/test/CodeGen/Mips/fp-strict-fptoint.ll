@@ -173,7 +173,6 @@ define i32 @fptoui_i32(double %a) #0 {
 ; MIPS32R6-NEXT:    sub.d $f0, $f12, $f1
 ; MIPS32R6-NEXT:    trunc.w.d $f0, $f0
 ; MIPS32R6-NEXT:    mfc1 $3, $f0
-; MIPS32R6-NEXT:    andi $1, $1, 1
 ; MIPS32R6-NEXT:    seleqz $1, $2, $1
 ; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    xor $2, $3, $1
