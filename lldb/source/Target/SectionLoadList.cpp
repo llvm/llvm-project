@@ -127,9 +127,14 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
     m_addr_to_sect.insert({load_addr, section});
   }
 
-  // Remove the old address->section entry if there was one.
-  if (old_load_addr != LLDB_INVALID_ADDRESS && old_load_addr != load_addr)
-    m_addr_to_sect.erase(old_load_addr);
+  // Remove the old address->section entry if there was one, unless another
+  // section has taken that address since.
+  if (old_load_addr != LLDB_INVALID_ADDRESS && old_load_addr != load_addr) {
+    addr_to_sect_collection::iterator old_pos =
+        m_addr_to_sect.find(old_load_addr);
+    if (old_pos != m_addr_to_sect.end() && old_pos->second == section)
+      m_addr_to_sect.erase(old_pos);
+  }
 
   return true;
 }

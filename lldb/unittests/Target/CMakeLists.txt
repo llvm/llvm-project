@@ -15,6 +15,7 @@ add_lldb_unittest(TargetTests
   RegisterTypeBuilderClangTest.cpp
   RemoteAwarePlatformTest.cpp
   ScratchTypeSystemTest.cpp
+  SectionLoadListTest.cpp
   StackFrameListTest.cpp
   StackFrameRecognizerTest.cpp
   StackIDTest.cpp
