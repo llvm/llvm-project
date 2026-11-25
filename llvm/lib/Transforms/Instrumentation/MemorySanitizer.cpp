@@ -4488,6 +4488,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!MS.TrackOrigins)
       return;
 
+    // TODO: don't update the origin in the cases where the mask ends up being
+    //       all zero (i.e., no bytes stored). Optionally, we could also skip
+    //       the no-op shadow update.
     auto &DL = F.getDataLayout();
     paintOrigin(IRB, getOrigin(V), OriginPtr,
                 DL.getTypeStoreSize(Shadow->getType()),
