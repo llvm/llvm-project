@@ -114,10 +114,15 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 // Smallest table, and the default size (Log2InitSize = 6).
 static constexpr unsigned MinTableSize = 64;
 
-// Default-sized sets start out empty on this shared bucket (NumBuckets == 1)
-// and allocate on first insert, since most are never inserted into. insert()
-// grows before placing a node, so the bucket is never written.
+// Empty default-sized and moved-from sets use this shared bucket
+// (NumBuckets == 1) and allocate on first insert, since most sets are never
+// inserted into. insert() grows before placing a node, so the bucket is never
+// written.
 static FoldingSetNode *const EmptyBucket[1] = {};
+
+static FoldingSetNode **emptyBuckets() {
+  return const_cast<FoldingSetNode **>(EmptyBucket);
+}
 
 static FoldingSetNode **allocBuckets(unsigned N) {
   return static_cast<FoldingSetNode **>(
@@ -129,7 +134,7 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
          "Initial hash table size out of range");
   NumBuckets = 1u << Log2InitSize;
   if (NumBuckets == MinTableSize) {
-    Buckets = const_cast<FoldingSetNode **>(EmptyBucket);
+    Buckets = emptyBuckets();
     NumBuckets = 1;
   } else {
     Buckets = allocBuckets(NumBuckets);
@@ -137,8 +142,8 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
-    : Buckets(std::exchange(Arg.Buckets, nullptr)),
-      NumBuckets(std::exchange(Arg.NumBuckets, 0)),
+    : Buckets(std::exchange(Arg.Buckets, emptyBuckets())),
+      NumBuckets(std::exchange(Arg.NumBuckets, 1)),
       NumNodes(std::exchange(Arg.NumNodes, 0)) {
   Arg.incrementEpoch();
 }
@@ -149,10 +154,10 @@ FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
 
   incrementEpoch();
   RHS.incrementEpoch();
-  if (NumBuckets > 1) // Not empty or moved-from.
+  if (NumBuckets > 1)
     free(Buckets);
-  Buckets = std::exchange(RHS.Buckets, nullptr);
-  NumBuckets = std::exchange(RHS.NumBuckets, 0);
+  Buckets = std::exchange(RHS.Buckets, emptyBuckets());
+  NumBuckets = std::exchange(RHS.NumBuckets, 1);
   NumNodes = std::exchange(RHS.NumNodes, 0);
   return *this;
 }

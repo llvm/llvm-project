@@ -238,6 +238,34 @@ TEST(FoldingSetTest, EmptySetsAreIndependent) {
   EXPECT_TRUE(A.erase(&T));
 }
 
+// A moved-from set is an empty set that can be used again.
+TEST(FoldingSetTest, MovedFromIsEmpty) {
+  TrivialPair T1(1, 10);
+  TrivialPair T2(2, 20);
+  FoldingSetNodeID ID;
+  T2.Profile(ID);
+  auto CheckEmptyAndReusable = [&](FoldingSet<TrivialPair> &Set) {
+    EXPECT_TRUE(Set.empty());
+    EXPECT_EQ(Set.begin(), Set.end());
+    FoldingSetInsertToken Token;
+    EXPECT_EQ(nullptr, Set.lookup(ID, Token));
+    EXPECT_FALSE(Set.erase(&T1));
+    Set.insert(&T2, Token);
+    EXPECT_EQ(&T2, Set.lookup(ID, Token));
+    EXPECT_TRUE(Set.erase(&T2));
+  };
+
+  FoldingSet<TrivialPair> Src(/*Log2InitSize=*/10);
+  Src.insert(&T1);
+  FoldingSet<TrivialPair> Dst(std::move(Src));
+  CheckEmptyAndReusable(Src);
+
+  FoldingSet<TrivialPair> Other;
+  Other = std::move(Dst);
+  CheckEmptyAndReusable(Dst);
+  EXPECT_TRUE(Other.erase(&T1));
+}
+
 TEST(FoldingSetTest, ClearOnNonEmpty) {
   FoldingSet<TrivialPair> Trivial;
   TrivialPair T(99, 42);
