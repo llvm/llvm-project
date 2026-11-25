@@ -70,6 +70,12 @@ public:
   bool approxFunc() const      { return 0 != (Flags & ApproxFunc); }
   /// 'Fast' means all bits are set.
   bool isFast() const          { return all(); }
+  /// Return true if any rewrite-based fast-math flag (reassoc, arcp, contract,
+  /// afn) is set.
+  bool hasRewriteBasedFlags() const {
+    return 0 != (Flags &
+                 (AllowReassoc | AllowReciprocal | AllowContract | ApproxFunc));
+  }
 
   /// Flag setters
   void setAllowReassoc(bool B = true) {
