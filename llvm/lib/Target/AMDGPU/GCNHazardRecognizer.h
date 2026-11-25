@@ -248,6 +248,7 @@ private:
   bool fixSetRegMode(MachineInstr *MI);
   bool fixTDM(MachineInstr *MI);
   bool fixTransF16ToPartialVGPRWriteHazard(MachineInstr *MI);
+  bool fixTDMContextSaveHazard(MachineInstr *MI);
 
   /// Wait states before \p Consumer may read \p Reg, holding \p Producer's
   /// result, as srcC if \p IsSrcC or as srcA/srcB otherwise.

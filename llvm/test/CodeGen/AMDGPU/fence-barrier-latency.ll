@@ -25,6 +25,7 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    s_cmp_eq_u32 s5, 0xffff
 ; CHECK-NEXT:    s_cselect_b32 s8, s4, s8
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    ds_load_b128 v[0:3], v28
@@ -71,6 +72,7 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_wait_tensorcnt 0xa
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
 ; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
 ; CHECK-NEXT:    s_add_co_i32 s4, s4, s5

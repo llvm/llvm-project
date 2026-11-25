@@ -1702,6 +1702,11 @@ defm NeedsTDMDrain : AMDGPUSubtargetFeature<"needs-tdm-drain",
   /*GenPredicate=*/0
 >;
 
+defm TDMContextSaveHazard : AMDGPUSubtargetFeature<"tdm-context-save-hazard",
+  "Every tensor instruction must be immediately followed by a V_NOP",
+  /*GenPredicate=*/0
+>;
+
 defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
   "Needs 2addr LDS instructions to be aligned to payload size",
   /*GenPredicate=*/1
@@ -2644,6 +2649,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
+   FeatureTDMContextSaveHazard,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureMcastFullMaskBug,
@@ -2686,6 +2692,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
+   FeatureTDMContextSaveHazard,
    FeatureNoSleepForever,
    FeatureNoMTypeNC,
    FeatureMcastFullMaskBug,
@@ -2732,6 +2739,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
+   FeatureTDMContextSaveHazard,
    FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
@@ -2761,6 +2769,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
+   FeatureTDMContextSaveHazard,
    FeatureUnusableSAddPCI64,
    FeatureMcastFullMaskBug,
    FeatureTransF16ToPartialVGPRWriteHazard,

@@ -20,6 +20,7 @@ define amdgpu_ps void @tensor_load_to_lds_full_mask(<4 x i32> inreg %d0, <8 x i3
 ; GFX1250-NEXT:    s_cmp_eq_u32 s4, 15
 ; GFX1250-NEXT:    s_cselect_b32 s4, 0, 0x7fff
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1251-LABEL: tensor_load_to_lds_full_mask:
@@ -31,6 +32,7 @@ define amdgpu_ps void @tensor_load_to_lds_full_mask(<4 x i32> inreg %d0, <8 x i3
 ; GFX1251-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1251-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
+; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    s_endpgm
   %d1.mask = insertelement <8 x i32> %d1, i32 65535, i64 0
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1.mask, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -59,6 +61,7 @@ define amdgpu_ps void @tensor_load_to_lds_dynamic_mask_loop(<4 x i32> inreg %d0,
 ; GFX1250-NEXT:    s_cselect_b32 s4, s15, s13
 ; GFX1250-NEXT:    s_add_co_i32 s14, s14, 1
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_cmp_lt_u32 s14, s12
 ; GFX1250-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB1_1
@@ -75,6 +78,7 @@ define amdgpu_ps void @tensor_load_to_lds_dynamic_mask_loop(<4 x i32> inreg %d0,
 ; GFX1251-NEXT:  .LBB1_1: ; %loop
 ; GFX1251-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1251-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
+; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    s_add_co_i32 s13, s13, 1
 ; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1251-NEXT:    s_cmp_lt_u32 s13, s12
