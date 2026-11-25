@@ -109,7 +109,7 @@ TSAN_FLAG(
     "platform.")
 TSAN_FLAG(int, adaptive_delay_relaxed_sample_rate, 10000,
           "Sample 1 in N relaxed atomic operations for delay")
-TSAN_FLAG(int, adaptive_delay_sync_atomic_sample_rate, 20,
+TSAN_FLAG(int, adaptive_delay_sync_atomic_sample_rate, 100,
           "Sample 1 in N acquire/release/seq_cst atomic operations for delay")
 TSAN_FLAG(int, adaptive_delay_mutex_sample_rate, 10,
           "Sample 1 in N mutex/cv operations for delay")
@@ -131,7 +131,7 @@ TSAN_FLAG(int, simulate_start_iteration, 0,
 TSAN_FLAG(int, simulate_max_depth, 10000,
           "Maximum scheduling depth per iteration. If exceeded, the "
           "simulation returns an error after the iteration completes")
-TSAN_FLAG(int, simulate_schedule_probability, 100,
+TSAN_FLAG(int, simulate_schedule_probability, 20,
           "Probability (0-100%) of actually performing a context switch at "
           "each scheduling point. Lower values allow threads to complete more "
           "operations before switching.")
