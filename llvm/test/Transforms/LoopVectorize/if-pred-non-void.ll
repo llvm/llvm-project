@@ -1411,16 +1411,19 @@ define void @predicated_sdiv_used_by_widened_gep(ptr noalias %dst, ptr %src, i1 
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sdiv i64 [[INDEX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP0]], %[[PRED_SDIV_IF]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP1]], %[[PRED_SDIV_IF]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sdiv i64 [[TMP8]], [[X]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP4]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP1]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[WIDE_GEP]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i64> [ [[TMP7]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP5]], %[[PRED_SDIV_IF1]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = getelementptr [4 x i8], ptr [[SRC]], <2 x i64> [[TMP6]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> splat (ptr null)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x ptr> [[PREDPHI]], ptr [[TMP2]], align 8
