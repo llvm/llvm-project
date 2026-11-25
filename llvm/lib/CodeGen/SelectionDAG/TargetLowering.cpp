@@ -4069,7 +4069,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // from the mask are the same as the demanded result elements.
     APInt DemandedMask = DemandedElts;
     APInt UndefMask, ZeroMask;
-    if (SimplifyDemandedVectorElts(Mask, DemandedMask, UndefMask, ZeroMask, TLO,
+    if (!DemandedMask.isAllOnes() &&
+        SimplifyDemandedVectorElts(Mask, DemandedMask, UndefMask, ZeroMask, TLO,
                                    Depth + 1))
       return true;
 
@@ -4085,10 +4086,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     APInt DemandedSrc = APInt::getBitsSet(NumElts, Lo, Hi);
     APInt UndefSrc, ZeroSrc;
-    if (!DemandedSrc.isAllOnes())
-      if (SimplifyDemandedVectorElts(Src, DemandedSrc, UndefSrc, ZeroSrc, TLO,
-                                     Depth + 1))
-        return true;
+    if (!DemandedSrc.isAllOnes() &&
+        SimplifyDemandedVectorElts(Src, DemandedSrc, UndefSrc, ZeroSrc, TLO,
+                                   Depth + 1))
+      return true;
 
     break;
   }
