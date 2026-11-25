@@ -586,7 +586,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
                     ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
-                    ISD::FROUNDEVEN, ISD::FTRUNC})
+                    ISD::FROUNDEVEN, ISD::FTRUNC, ISD::SETCC})
       setOperationAction(Op, MVT::bf16, Promote);
 
     for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
@@ -604,6 +604,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                     ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
                     ISD::STRICT_FTAN})
       setOperationAction(Op, MVT::bf16, Promote);
+
+    setOperationAction(ISD::SELECT_CC, MVT::bf16, Custom);
+    setOperationAction(ISD::FABS, MVT::bf16, Custom);
+    setOperationAction(ISD::FNEG, MVT::bf16, Custom);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
@@ -1785,12 +1789,10 @@ SDValue ARMTargetLowering::MoveToHPR(const SDLoc &dl, SelectionDAG &DAG,
                                      MVT LocVT, MVT ValVT, SDValue Val) const {
   Val = DAG.getNode(ISD::BITCAST, dl, MVT::getIntegerVT(LocVT.getSizeInBits()),
                     Val);
-  if (Subtarget->hasFullFP16()) {
+  if (Subtarget->hasFPRegs16()) {
     Val = DAG.getNode(ARMISD::VMOVhr, dl, ValVT, Val);
   } else {
-    Val = DAG.getNode(ISD::TRUNCATE, dl,
-                      MVT::getIntegerVT(ValVT.getSizeInBits()), Val);
-    Val = DAG.getNode(ISD::BITCAST, dl, ValVT, Val);
+    Val = DAG.getNode(ARMISD::VMOVsr, dl, ValVT, Val);
   }
   return Val;
 }
@@ -5456,6 +5458,25 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
+  // Promote bf16 conditions to f32
+  if (LHS.getValueType() == MVT::bf16) {
+    SDValue Ext1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, LHS);
+    SDValue Ext2 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, RHS);
+    return DAG.getNode(ISD::SELECT_CC, dl, VT, Ext1, Ext2, TrueVal, FalseVal,
+                       Op.getOperand(4));
+  }
+
+  // Without fp16, perform the select via i32. This would be more efficient via
+  // s regs but we do not currently have a node for converting and the
+  // combination for bf16 without fp16 should in theory be relatively rare.
+  if (VT == MVT::bf16 && Subtarget->hasBF16() && !Subtarget->hasFPRegs16()) {
+    SDValue V1 = DAG.getNode(ARMISD::VMOVrs, dl, MVT::i32, TrueVal);
+    SDValue V2 = DAG.getNode(ARMISD::VMOVrs, dl, MVT::i32, FalseVal);
+    SDValue SCC = DAG.getNode(ISD::SELECT_CC, dl, MVT::i32, LHS, RHS, V1, V2,
+                              Op.getOperand(4));
+    return DAG.getNode(ARMISD::VMOVsr, dl, VT, SCC);
+  }
+
   if (isUnsupportedFloatingType(LHS.getValueType())) {
     softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
@@ -5479,6 +5500,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     // sometimes need to swap the operands to the VSEL (which inverts the
     // condition in the sense of firing whenever the previous condition didn't)
     if (Subtarget->hasFPARMv8Base() && (TrueVal.getValueType() == MVT::f16 ||
+                                        TrueVal.getValueType() == MVT::bf16 ||
                                         TrueVal.getValueType() == MVT::f32 ||
                                         TrueVal.getValueType() == MVT::f64)) {
       ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
@@ -10274,6 +10296,24 @@ SDValue ARMTargetLowering::LowerFP_TO_BF16(SDValue Op,
   return DAG.getBitcast(MVT::i32, Res);
 }
 
+static SDValue LowerFABSFNEG(SDValue Op, SelectionDAG &DAG,
+                             const ARMSubtarget *ST) {
+  SDLoc DL(Op);
+  assert(Op.getValueType() == MVT::bf16 && "Unexpected fabs/fneg operation");
+  if (ST->hasFullFP16())
+    return DAG.getBitcast(
+        MVT::bf16, DAG.getNode(Op.getOpcode(), DL, MVT::f16,
+                               DAG.getBitcast(MVT::f16, Op.getOperand(0))));
+
+  SDValue Mov = DAG.getNode(ARMISD::VMOVrs, DL, MVT::i32, Op.getOperand(0));
+  SDValue Mod;
+  if (Op.getOpcode() == ISD::FABS)
+    Mod = DAG.getNode(ISD::AND, DL, MVT::i32, Mov, DAG.getConstant(0x7fff, DL, MVT::i32));
+  else // FNEG
+    Mod = DAG.getNode(ISD::XOR, DL, MVT::i32, Mov, DAG.getConstant(0x8000, DL, MVT::i32));
+  return DAG.getNode(ARMISD::VMOVsr, DL, MVT::bf16, Mod);
+}
+
 SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue LHS = Op.getOperand(0);
@@ -10538,6 +10578,9 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSPONENTRY(Op, DAG);
   case ISD::FP_TO_BF16:
     return LowerFP_TO_BF16(Op, DAG);
+  case ISD::FABS:
+  case ISD::FNEG:
+    return LowerFABSFNEG(Op, DAG, Subtarget);
   case ARMISD::WIN__DBZCHK: return SDValue();
   case ISD::UCMP:
   case ISD::SCMP:
@@ -18464,6 +18507,18 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
   }
 
+  if (VT == MVT::i32 && N->getOpcode() == ISD::ZERO_EXTEND &&
+      N->getOperand(0).getOpcode() == ISD::BITCAST &&
+      N->getOperand(0).getOperand(0).getOpcode() == ARMISD::VMOVsr) {
+    return DAG.getZeroExtendInReg(N->getOperand(0).getOperand(0).getOperand(0),
+                                  DL, MVT::i16);
+  }
+  if (VT == MVT::i32 && N->getOpcode() == ISD::ANY_EXTEND &&
+      N->getOperand(0).getOpcode() == ISD::BITCAST &&
+      N->getOperand(0).getOperand(0).getOpcode() == ARMISD::VMOVsr) {
+    return N->getOperand(0).getOperand(0).getOperand(0);
+  }
+
   return SDValue();
 }
 
@@ -21529,26 +21584,18 @@ SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   EVT SrcVT = SrcVal.getValueType();
   EVT DstVT = Op.getValueType();
 
-  if (DstVT == MVT::bf16) {
-    if (Subtarget->hasBF16() && SrcVT == MVT::f32)
-      return Op;
-    return SDValue();
-  }
-
-  const unsigned DstSz = Op.getValueType().getSizeInBits();
-  const unsigned SrcSz = SrcVT.getSizeInBits();
-  (void)DstSz;
+  [[maybe_unused]] unsigned DstSz = Op.getValueType().getSizeInBits();
+  [[maybe_unused]] unsigned SrcSz = SrcVT.getSizeInBits();
   assert(DstSz < SrcSz && SrcSz <= 64 && DstSz >= 16 &&
          "Unexpected type for custom-lowering FP_ROUND");
 
-  assert((!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()) &&
-         "With both FP DP and 16, any FP conversion is legal!");
+  // Instruction from 32 -> 16 if hasFP16 is valid
+  if (DstVT == MVT::f16 && SrcVT == MVT::f32 && Subtarget->hasFP16())
+    return Op;
+  if (DstVT == MVT::bf16 && SrcVT == MVT::f32 && Subtarget->hasBF16())
+    return Op;
 
   SDLoc Loc(Op);
-
-  // Instruction from 32 -> 16 if hasFP16 is valid
-  if (SrcSz == 32 && Subtarget->hasFP16())
-    return Op;
 
   // Lib call from 32 -> 16 / 64 -> [32, 16]
   RTLIB::Libcall LC = RTLIB::getFPROUND(SrcVT, DstVT);
