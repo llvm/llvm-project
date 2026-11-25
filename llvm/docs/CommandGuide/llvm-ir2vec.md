@@ -36,7 +36,7 @@ instead of string triplets, streamlining the training data preparation workflow.
 
 :::{note}
 For information about using IR2Vec and MIR2Vec programmatically within LLVM
-passes and the C++ API, see the [IR2Vec Embeddings](https://llvm.org/docs/MLGO.html#ir2vec-embeddings)
+passes and the C++ API, see the {ref}`IR2Vec Embeddings <ir2vec-embeddings>`
 section in the MLGO documentation.
 :::
 
@@ -228,6 +228,15 @@ Specify the weight for register operand embeddings (default: 1.0). This controls
 the relative importance of register operands in the final embedding.
 :::
 
+:::{option} --mtriple=<triple>
+Override the target triple of the input. Without it, the triple comes from the
+embedded LLVM IR of the .mir file, or the host triple if there is none.
+:::
+
+:::{option} --mcpu=<cpu>, --mattr=<features>
+Specify the target CPU and features, as in {program}`llc`.
+:::
+
 **triplets** subcommand:
 
 :::{option} <input-file>
@@ -267,7 +276,8 @@ header (MAX_RELATION) indicates the maximum relation ID used.
 For LLVM IR (IR2Vec):
 : - **0** = Type relationship (instruction to its type)
   - **1** = Next relationship (sequential instructions)
-  - **2+** = Argument relationships (Arg0, Arg1, Arg2, ...)
+  - **2+** = Argument relationships (Arg0, Arg1, Arg2, ...). A compare
+    predicate follows the operands as one more argument.
 
 For Machine IR (MIR2Vec):
 : - **0** = Next relationship (sequential instructions)
@@ -300,6 +310,8 @@ For LLVM IR, entities include instruction opcodes (e.g., "Add", "Ret"), types
 For Machine IR, entities include machine opcodes (e.g., "COPY", "ADD"),
 common operands (e.g., "Immediate", "FrameIndex"), physical register classes
 (e.g., "PhyReg_GR32"), and virtual register classes (e.g., "VirtReg_GR32").
+Registers without a register class map to "PhyReg_NoRegClass" or
+"VirtReg_NoRegClass".
 
 ### Embedding Mode Output
 

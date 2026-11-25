@@ -45,6 +45,13 @@ class AtomicOperandChecker {
       return StmtError();
 
     Expr *E = dyn_cast<Expr>(AssocStmt.get());
+
+    // DeclStmt can't be wrapped in a RecoveryExpr, and dropping it causes
+    // template instantiation to not be able to find the declaration, so we have
+    // to continue representing it as itself.
+    if (isa<DeclStmt>(AssocStmt.get()))
+      return AssocStmt;
+
     QualType T = E ? E->getType() : SemaRef.getASTContext().DependentTy;
 
     return RecoveryExpr::Create(SemaRef.getASTContext(), T,
@@ -434,9 +441,8 @@ class AtomicOperandChecker {
       return IDACInfo{
           CheckOperandExpr(
               BinInf->RHS,
-              SemaRef.PDiag(diag::note_acc_atomic_operand_lvalue_scalar
-                            << /*right=*/1
-                            << diag::OACCAtomicOpKind::CompoundAssign)),
+              SemaRef.PDiag(diag::note_acc_atomic_operand_lvalue_scalar)
+                  << /*right=*/1 << diag::OACCAtomicOpKind::CompoundAssign),
           IDACInfo::AssignBinOp, AssignInf.LHS};
 
     BinInf->RHS->Profile(InnerRHS_ID, SemaRef.getASTContext(),

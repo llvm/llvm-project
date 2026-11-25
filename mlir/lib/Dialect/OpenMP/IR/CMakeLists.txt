@@ -17,5 +17,6 @@ add_mlir_dialect_library(MLIROpenMPDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRFuncDialect
+  MLIRLoopLikeInterface
   MLIROpenACCMPCommon
   )

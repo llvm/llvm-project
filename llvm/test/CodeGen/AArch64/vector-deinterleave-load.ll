@@ -3,31 +3,17 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -lower-interleaved-accesses=false < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IADISABLED
 
 define void @aarch64_vector_deinterleave_idx_ld2(ptr %ptr, i64 %idx) {
-; CHECK-IAENABLED-LABEL: aarch64_vector_deinterleave_idx_ld2:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    lsl x8, x1, #2
-; CHECK-IAENABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; CHECK-IAENABLED-NEXT:    add x8, x8, #16
-; CHECK-IAENABLED-NEXT:    add x10, x0, x9
-; CHECK-IAENABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-IAENABLED-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
-; CHECK-IAENABLED-NEXT:    str q0, [x0, x9]
-; CHECK-IAENABLED-NEXT:    str q1, [x0, x8]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: aarch64_vector_deinterleave_idx_ld2:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    lsl x8, x1, #2
-; CHECK-IADISABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; CHECK-IADISABLED-NEXT:    add x8, x8, #16
-; CHECK-IADISABLED-NEXT:    add x9, x0, x9
-; CHECK-IADISABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x9]
-; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    str q2, [x9]
-; CHECK-IADISABLED-NEXT:    str q0, [x0, x8]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsl x8, x1, #2
+; CHECK-NEXT:    and x9, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
+; CHECK-NEXT:    str q0, [x0, x9]
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %a1 = add i64 %idx, 4
@@ -131,3 +117,149 @@ entry:
   store <4 x float> %m12_15, ptr %gep4, align 16
   ret void
 }
+
+define void @aarch64_vector_deinterleave_v8f64_load(ptr %src, ptr %dst0, ptr %dst1) {
+; CHECK-LABEL: aarch64_vector_deinterleave_v8f64_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld2 { v0.2d, v1.2d }, [x0], #32
+; CHECK-NEXT:    ld2 { v2.2d, v3.2d }, [x0]
+; CHECK-NEXT:    stp q0, q2, [x1]
+; CHECK-NEXT:    stp q1, q3, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %wide.vec = load <8 x double>, ptr %src, align 8
+  %strided.vec = tail call { <4 x double>, <4 x double> } @llvm.vector.deinterleave2.v8f64(<8 x double> %wide.vec)
+  %even = extractvalue { <4 x double>, <4 x double> } %strided.vec, 0
+  %odd = extractvalue { <4 x double>, <4 x double> } %strided.vec, 1
+  store <4 x double> %even, ptr %dst0, align 8
+  store <4 x double> %odd, ptr %dst1, align 8
+  ret void
+}
+
+define void @aarch64_vector_deinterleave_v12f64_load(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2) {
+; CHECK-LABEL: aarch64_vector_deinterleave_v12f64_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x0], #48
+; CHECK-NEXT:    ld3 { v3.2d, v4.2d, v5.2d }, [x0]
+; CHECK-NEXT:    stp q0, q3, [x1]
+; CHECK-NEXT:    stp q1, q4, [x2]
+; CHECK-NEXT:    stp q2, q5, [x3]
+; CHECK-NEXT:    ret
+entry:
+  %wide.vec = load <12 x double>, ptr %src, align 8
+  %strided.vec = tail call { <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave3.v12f64(<12 x double> %wide.vec)
+  %stream0 = extractvalue { <4 x double>, <4 x double>, <4 x double> } %strided.vec, 0
+  %stream1 = extractvalue { <4 x double>, <4 x double>, <4 x double> } %strided.vec, 1
+  %stream2 = extractvalue { <4 x double>, <4 x double>, <4 x double> } %strided.vec, 2
+  store <4 x double> %stream0, ptr %dst0, align 8
+  store <4 x double> %stream1, ptr %dst1, align 8
+  store <4 x double> %stream2, ptr %dst2, align 8
+  ret void
+}
+
+define void @aarch64_vector_deinterleave_v16f64_load(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2, ptr %dst3) {
+; CHECK-LABEL: aarch64_vector_deinterleave_v16f64_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0], #64
+; CHECK-NEXT:    ld4 { v4.2d, v5.2d, v6.2d, v7.2d }, [x0]
+; CHECK-NEXT:    stp q0, q4, [x1]
+; CHECK-NEXT:    stp q1, q5, [x2]
+; CHECK-NEXT:    stp q2, q6, [x3]
+; CHECK-NEXT:    stp q3, q7, [x4]
+; CHECK-NEXT:    ret
+entry:
+  %wide.vec = load <16 x double>, ptr %src, align 8
+  %strided.vec = tail call { <4 x double>, <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave4.v16f64(<16 x double> %wide.vec)
+  %stream0 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 0
+  %stream1 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 1
+  %stream2 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 2
+  %stream3 = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } %strided.vec, 3
+  store <4 x double> %stream0, ptr %dst0, align 8
+  store <4 x double> %stream1, ptr %dst1, align 8
+  store <4 x double> %stream2, ptr %dst2, align 8
+  store <4 x double> %stream3, ptr %dst3, align 8
+  ret void
+}
+
+define void @aarch64_vector_deinterleave6_v12f64(ptr %src) {
+; CHECK-LABEL: aarch64_vector_deinterleave6_v12f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x0], #48
+; CHECK-NEXT:    ld3 { v3.2d, v4.2d, v5.2d }, [x0]
+; CHECK-NEXT:    zip1 v16.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip2 v6.2d, v2.2d, v5.2d
+; CHECK-NEXT:    zip2 v7.2d, v1.2d, v4.2d
+; CHECK-NEXT:    zip2 v17.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip1 v18.2d, v2.2d, v5.2d
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v4.2d
+; CHECK-NEXT:    // fake_use: $q16
+; CHECK-NEXT:    // fake_use: $q0
+; CHECK-NEXT:    // fake_use: $q18
+; CHECK-NEXT:    // fake_use: $q17
+; CHECK-NEXT:    // fake_use: $q7
+; CHECK-NEXT:    // fake_use: $q6
+; CHECK-NEXT:    ret
+entry:
+  %wide = load <12 x double>, ptr %src, align 8
+  %parts = call { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } @llvm.vector.deinterleave6.v12f64(<12 x double> %wide)
+  %p0 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 0
+  %p1 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 1
+  %p2 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 2
+  %p3 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 3
+  %p4 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 4
+  %p5 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 5
+  call void (...) @llvm.fake.use(<2 x double> %p0)
+  call void (...) @llvm.fake.use(<2 x double> %p1)
+  call void (...) @llvm.fake.use(<2 x double> %p2)
+  call void (...) @llvm.fake.use(<2 x double> %p3)
+  call void (...) @llvm.fake.use(<2 x double> %p4)
+  call void (...) @llvm.fake.use(<2 x double> %p5)
+  ret void
+}
+
+define void @aarch64_vector_deinterleave8_v16f64_load(ptr %src, ptr %dst) {
+; CHECK-LABEL: aarch64_vector_deinterleave8_v16f64_load:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0], #64
+; CHECK-NEXT:    ld4 { v4.2d, v5.2d, v6.2d, v7.2d }, [x0]
+; CHECK-NEXT:    zip1 v20.2d, v0.2d, v4.2d
+; CHECK-NEXT:    zip2 v16.2d, v3.2d, v7.2d
+; CHECK-NEXT:    zip2 v17.2d, v2.2d, v6.2d
+; CHECK-NEXT:    zip2 v18.2d, v1.2d, v5.2d
+; CHECK-NEXT:    zip2 v19.2d, v0.2d, v4.2d
+; CHECK-NEXT:    zip1 v21.2d, v3.2d, v7.2d
+; CHECK-NEXT:    zip1 v22.2d, v2.2d, v6.2d
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v5.2d
+; CHECK-NEXT:    // fake_use: $q20
+; CHECK-NEXT:    // fake_use: $q0
+; CHECK-NEXT:    // fake_use: $q22
+; CHECK-NEXT:    // fake_use: $q21
+; CHECK-NEXT:    // fake_use: $q19
+; CHECK-NEXT:    // fake_use: $q18
+; CHECK-NEXT:    // fake_use: $q17
+; CHECK-NEXT:    // fake_use: $q16
+; CHECK-NEXT:    ret
+  %wide = load <16 x double>, ptr %src, align 8
+  %parts = call { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } @llvm.vector.deinterleave8.v16f64(<16 x double> %wide)
+  %p0 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 0
+  %p1 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 1
+  %p2 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 2
+  %p3 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 3
+  %p4 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 4
+  %p5 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 5
+  %p6 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 6
+  %p7 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 7
+  call void (...) @llvm.fake.use(<2 x double> %p0)
+  call void (...) @llvm.fake.use(<2 x double> %p1)
+  call void (...) @llvm.fake.use(<2 x double> %p2)
+  call void (...) @llvm.fake.use(<2 x double> %p3)
+  call void (...) @llvm.fake.use(<2 x double> %p4)
+  call void (...) @llvm.fake.use(<2 x double> %p5)
+  call void (...) @llvm.fake.use(<2 x double> %p6)
+  call void (...) @llvm.fake.use(<2 x double> %p7)
+  ret void
+}
+
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-IADISABLED: {{.*}}
+; CHECK-IAENABLED: {{.*}}

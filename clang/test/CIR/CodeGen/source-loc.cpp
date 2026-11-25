@@ -25,28 +25,28 @@ namespace std {
   };
 }
 
-// CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.const_array<
-// LLVM: @.str = private constant 
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @".str" = #cir.const_array<
+// LLVM: @.str = private unnamed_addr constant 
 // OGCG: @.str = private unnamed_addr constant 
 //
-// CIR: cir.global "private" constant cir_private dso_local @".str.1" = #cir.const_array<"void use1()" : !cir.array<!s8i x 11>, trailing_zeros> : !cir.array<!s8i x 12>
-// LLVM: @.str.1 = private constant [{{.*}} x i8] c"void use1
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @".str.1" = #cir.const_array<"void use1()" : !cir.array<!s8i x 11>, trailing_zeros> : !cir.array<!s8i x 12>
+// LLVM: @.str.1 = private unnamed_addr constant [{{.*}} x i8] c"void use1
 // OGCG: @.str.1 = private unnamed_addr constant [{{.*}} x i8] c"void use1
 //
-// CIR: cir.global "private" constant cir_private @".constant" = #cir.const_record<{#cir.global_view<@".str"> : !cir.ptr<!s8i>, #cir.global_view<@".str.1"> : !cir.ptr<!s8i>, #cir.int<{{.*}}> : !u32i, #cir.int<{{.*}}> : !u32i}> : !rec_std3A3Asource_location3A3A__impl
-// LLVM: @.constant = private constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.1, i32 {{.*}}, i32 {{.*}} }
+// CIR: cir.global "private" constant cir_private unnamed_addr @".constant" = #cir.const_record<{#cir.global_view<@".str"> : !cir.ptr<!s8i>, #cir.global_view<@".str.1"> : !cir.ptr<!s8i>, #cir.int<{{.*}}> : !u32i, #cir.int<{{.*}}> : !u32i}> : !rec_std3A3Asource_location3A3A__impl
+// LLVM: @.constant = private unnamed_addr constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.1, i32 {{.*}}, i32 {{.*}} }
 // OGCG: @.constant = private unnamed_addr constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.1, i32 {{.*}}, i32 {{.*}} }
 //
-// CIR: cir.global "private" constant cir_private dso_local @".str.2" = #cir.const_array<"void use2()" : !cir.array<!s8i x 11>, trailing_zeros> : !cir.array<!s8i x 12> {alignment = 1 : i64} loc(#loc1)
-// LLVM: @.str.2 = private constant [{{.*}} x i8] c"void use2
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @".str.2" = #cir.const_array<"void use2()" : !cir.array<!s8i x 11>, trailing_zeros> : !cir.array<!s8i x 12> align(1) loc(#loc1)
+// LLVM: @.str.2 = private unnamed_addr constant [{{.*}} x i8] c"void use2
 // OGCG: @.str.2 = private unnamed_addr constant [{{.*}} x i8] c"void use2
 //
 // Note: the naming difference between LLVM and OGCG here is because of the
 // uniquification differences when we encounter duplicate names. LLVM has a
 // global counter that manages these, CIR just increments the single names, each
 // with its own counter.  As a result, .str and .constant names don't match.
-// CIR: cir.global "private" constant cir_private @".constant.1" = #cir.const_record<{#cir.global_view<@".str"> : !cir.ptr<!s8i>, #cir.global_view<@".str.2"> : !cir.ptr<!s8i>, #cir.int<{{.*}}> : !u32i, #cir.int<{{.*}}> : !u32i}> : !rec_std3A3Asource_location3A3A__impl
-// LLVM: @.constant.1 = private constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.2, i32 {{.*}}, i32 {{.*}} }
+// CIR: cir.global "private" constant cir_private unnamed_addr @".constant.1" = #cir.const_record<{#cir.global_view<@".str"> : !cir.ptr<!s8i>, #cir.global_view<@".str.2"> : !cir.ptr<!s8i>, #cir.int<{{.*}}> : !u32i, #cir.int<{{.*}}> : !u32i}> : !rec_std3A3Asource_location3A3A__impl
+// LLVM: @.constant.1 = private unnamed_addr constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.2, i32 {{.*}}, i32 {{.*}} }
 // OGCG: @.constant.3 = private unnamed_addr constant %"struct.std::source_location::__impl" { ptr @.str, ptr @.str.2, i32 {{.*}}, i32 {{.*}} }
 
 

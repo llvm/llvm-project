@@ -415,6 +415,17 @@ llvm.func @fold_gep(%x : !llvm.ptr) -> !llvm.ptr {
 
 // -----
 
+// CHECK-LABEL: fold_gep_inrange
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: %[[GEP:.*]] = llvm.getelementptr inrange <i64, -4, 4> %[[ARG]][0]
+// CHECK-NEXT: llvm.return %[[GEP]]
+llvm.func @fold_gep_inrange(%x : !llvm.ptr) -> !llvm.ptr {
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %x[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
 // CHECK-LABEL: fold_gep_neg
 // CHECK-SAME: %[[ARG:[[:alnum:]]+]]
 // CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr inbounds %[[ARG]][0, 1]
@@ -537,4 +548,136 @@ llvm.func @metadata_as_value_dedup() -> i32 {
   %3 = llvm.call_intrinsic "llvm.read_register.i32"(%1) : (!llvm.metadata) -> i32
   %4 = llvm.add %2, %3 : i32
   llvm.return %4 : i32
+}
+
+// -----
+
+// `inttoptr(ptrtoint(x))` must NOT be folded to `x`, even when the integer is
+// wide enough to hold every bit of the pointer: the pointer produced by
+// `inttoptr` may carry different (potentially wider) provenance than `x`, so
+// an access that is well-defined through the round-tripped pointer may be
+// undefined through `x`. Doing this fold in InstCombine is a known LLVM
+// miscompile. See:
+//  - https://github.com/llvm/llvm-project/issues/33896
+//  - https://groups.google.com/g/llvm-dev/c/tol05fa7PU0
+//  - https://alive2.llvm.org/ce/z/SboEbP
+//  - https://github.com/llvm/llvm-project/pull/234302
+
+// CHECK-LABEL: llvm.func @no_fold_inttoptr_ptrtoint
+// CHECK-SAME: (%[[PTR:.*]]: !llvm.ptr)
+llvm.func @no_fold_inttoptr_ptrtoint(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // CHECK: %[[INT:.*]] = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i64
+  // CHECK: %[[RES:.*]] = llvm.inttoptr %[[INT]] : i64 to !llvm.ptr
+  // CHECK: llvm.return %[[RES]] : !llvm.ptr
+  %0 = llvm.ptrtoint %ptr : !llvm.ptr to i64
+  %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
+// A chain of branches to single-predecessor blocks merges into one block.
+// CHECK-LABEL: llvm.func @br_merge_single_pred_chain
+// CHECK-NOT: llvm.br
+// CHECK: %[[V:.*]] = llvm.add %{{.*}}, %{{.*}} : i32
+// CHECK: llvm.return %[[V]] : i32
+llvm.func @br_merge_single_pred_chain(%arg0 : i32) -> i32 {
+  llvm.br ^bb1
+^bb1:
+  %0 = llvm.add %arg0, %arg0 : i32
+  llvm.br ^bb2
+^bb2:
+  llvm.return %0 : i32
+}
+
+// -----
+
+// The successor has two predecessors, so the branch stays.
+// CHECK-LABEL: llvm.func @br_no_merge_multi_pred
+// CHECK: llvm.cond_br
+// CHECK: llvm.br ^bb2
+// CHECK: %[[V:.*]] = llvm.add %{{.*}}, %{{.*}} : i32
+llvm.func @br_no_merge_multi_pred(%cond : i1, %arg0 : i32) -> i32 {
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.br ^bb2
+^bb2:
+  %0 = llvm.add %arg0, %arg0 : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// A branch to its own block stays.
+// CHECK-LABEL: llvm.func @br_no_merge_self_loop
+// CHECK: llvm.br ^bb1
+llvm.func @br_no_merge_self_loop(%arg0 : i32) -> i32 {
+  llvm.br ^bb0
+^bb0:
+  %0 = llvm.add %arg0, %arg0 : i32
+  llvm.br ^bb0
+}
+
+// -----
+
+// Block arguments of the merged block are replaced by the branch operands.
+// CHECK-LABEL: llvm.func @br_merge_block_args
+// CHECK: %[[V:.*]] = llvm.add %{{.*}}, %{{.*}} : i32
+// CHECK: llvm.return %[[V]] : i32
+llvm.func @br_merge_block_args(%arg0 : i32) -> i32 {
+  llvm.br ^bb1(%arg0 : i32)
+^bb1(%x : i32):
+  %0 = llvm.add %x, %x : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// Merging would drop the loop annotation on the branch, so it stays.
+// CHECK-LABEL: llvm.func @br_no_merge_loop_annotation
+// CHECK: llvm.br ^bb1 loop_annotation
+llvm.func @br_no_merge_loop_annotation() {
+  llvm.br ^bb1 loop_annotation = #llvm.loop_annotation<disableNonforced = true>
+^bb1:
+  llvm.return
+}
+
+// -----
+
+// A block tag means the successor block address is taken, so it stays.
+// CHECK-LABEL: llvm.func @br_no_merge_blocktag
+// CHECK: llvm.br ^bb1
+// CHECK: llvm.blocktag
+llvm.func @br_no_merge_blocktag() {
+  llvm.br ^bb1
+^bb1:
+  llvm.blocktag <id = 1>
+  llvm.return
+}
+
+// -----
+
+// Block arguments of the merged block are replaced by the branch
+// operands, one per argument.
+// CHECK-LABEL: llvm.func @br_merge_multiple_block_args
+// CHECK-NOT: llvm.br
+// CHECK: %[[V:.*]] = llvm.add %arg0, %arg1 : i32
+// CHECK: llvm.return %[[V]] : i32
+llvm.func @br_merge_multiple_block_args(%arg0 : i32, %arg1 : i32) -> i32 {
+  llvm.br ^bb1(%arg0, %arg1 : i32, i32)
+^bb1(%x : i32, %y : i32):
+  %0 = llvm.add %x, %y : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// A successor holding only its terminator still merges.
+// CHECK-LABEL: llvm.func @br_merge_empty_successor
+// CHECK-NOT: llvm.br
+// CHECK: llvm.return %arg0 : i32
+llvm.func @br_merge_empty_successor(%arg0 : i32) -> i32 {
+  llvm.br ^bb1
+^bb1:
+  llvm.return %arg0 : i32
 }

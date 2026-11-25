@@ -16,24 +16,9 @@ class FrameAPITestCase(TestBase):
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName("c", "a.out")
-        self.trace("breakpoint:", breakpoint)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        _, process, _, _ = lldbutil.run_to_name_breakpoint(
+            self, "c", bkpt_module="a.out"
         )
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         # Keeps track of the number of times 'a' is called where it is within a
         # depth of 3 of the 'c' leaf function.
@@ -129,27 +114,10 @@ class FrameAPITestCase(TestBase):
     def test_frame_api_boundary_condition(self):
         """Exercise SBFrame APIs with boundary condition inputs."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName("c", "a.out")
-        self.trace("breakpoint:", breakpoint)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        _, _, thread, _ = lldbutil.run_to_name_breakpoint(
+            self, "c", bkpt_module="a.out"
         )
 
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
         frame = thread.GetFrameAtIndex(0)
         if self.TraceOn():
             print("frame:", frame)
@@ -167,27 +135,9 @@ class FrameAPITestCase(TestBase):
     def test_frame_api_IsEqual(self):
         """Exercise SBFrame API IsEqual."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName("c", "a.out")
-        self.trace("breakpoint:", breakpoint)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        _, _, thread, _ = lldbutil.run_to_name_breakpoint(
+            self, "c", bkpt_module="a.out"
         )
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
 
         frameEntered = thread.GetFrameAtIndex(0)
         if self.TraceOn():

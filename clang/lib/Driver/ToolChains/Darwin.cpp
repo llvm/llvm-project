@@ -213,7 +213,8 @@ static void AddMachOSysLibRoot(Compilation &C, const ArgList &Args,
   // --isysroot as the syslibroot.
   // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
   // prioritise command line arguments over configuration of `DEFAULT_SYSROOT`.
-  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ);
+      A && !StringRef(A->getValue()).empty()) {
     CmdArgs.push_back("-syslibroot");
     CmdArgs.push_back(A->getValue());
   } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
@@ -455,6 +456,12 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     CmdArgs.push_back("-disable-atexit-based-global-dtor-lowering");
   }
 
+  if (useMachORelocatableDwarf(getToolChain().getTriple(),
+                               getDwarfVersion(getToolChain(), Args))) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-macho-relocatable-dwarf");
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_prebind);
   Args.AddLastArg(CmdArgs, options::OPT_noprebind);
   Args.AddLastArg(CmdArgs, options::OPT_nofixprebinding);
@@ -495,6 +502,9 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_dylinker__install__name);
   Args.AddLastArg(CmdArgs, options::OPT_dylinker);
   Args.AddLastArg(CmdArgs, options::OPT_Mach);
+
+  if (Version >= VersionTuple(900))
+    Args.AddLastArg(CmdArgs, options::OPT_O_Group);
 
   if (LinkerIsLLD) {
     if (auto *CSPGOGenerateArg = getLastCSProfileGenerateArg(Args)) {
@@ -818,7 +828,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // If we have both -nostdlib/nodefaultlibs and -fapple-link-rtlib then
     // we just want to link the builtins, not the other libs like libSystem.
-    if (NoStdOrDefaultLibs && ForceLinkBuiltins) {
+    if (NoStdOrDefaultLibs && ForceLinkBuiltins &&
+        getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_None) {
       getMachOToolChain().AddLinkRuntimeLib(Args, CmdArgs, "builtins");
     } else {
       // Let the tool chain choose which runtime library to link.
@@ -927,6 +938,11 @@ void darwin::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddMachOSysLibRoot(C, Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.AddAllArgs(CmdArgs, options::OPT_F);
+
+  // -iframework should be forwarded as -F.
+  for (const Arg *A : Args.filtered(options::OPT_iframework))
+    CmdArgs.push_back(Args.MakeArgString(std::string("-F") + A->getValue()));
 
   if (!Args.hasFlag(options::OPT_static_lib_warn_no_symbols,
                     options::OPT_no_static_lib_warn_no_symbols,
@@ -938,11 +954,32 @@ void darwin::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  Args.AddLastArg(CmdArgs, options::OPT_filelist);
+  // Add extra linker input arguments which are not treated as inputs
+  // (constructed via -Xarch_).
+  Args.AddAllArgValues(CmdArgs, options::OPT_Zlinker_input);
+
   for (const auto &II : Inputs) {
+    // Add filenames immediately.
     if (II.isFilename()) {
       CmdArgs.push_back(II.getFilename());
+      continue;
     }
+
+    // In some error cases, the input could be Nothing; skip those.
+    if (II.isNothing())
+      continue;
+
+    // Otherwise, this is a linker input argument.
+    const Arg &A = II.getInputArg();
+
+    // libtool only supports a few of the linker input arguments, warn for the
+    // rest.
+    if (A.getOption().matches(options::OPT_filelist) ||
+        A.getOption().matches(options::OPT_l) ||
+        A.getOption().matches(options::OPT_framework))
+      A.renderAsInput(Args, CmdArgs);
+    else
+      D.Diag(diag::warn_drv_unused_argument) << A.getAsString(Args);
   }
 
   // Delete old output archive file if it already exists before generating a new
@@ -1723,7 +1760,7 @@ ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
     const ArgList &Args) const {
   if (Arg* A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt" && Value != "platform")
+    if (Value != "compiler-rt" && Value != "platform" && Value != "none")
       getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
           << Value << "darwin";
   }
@@ -1739,14 +1776,14 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     return MachO::AddLinkRuntimeLibArgs(Args, CmdArgs, ForceLinkBuiltinRT);
 
   // Call once to ensure diagnostic is printed if wrong value was specified
-  GetRuntimeLibType(Args);
+  RuntimeLibType RLT = GetRuntimeLibType(Args);
 
   // Darwin doesn't support real static executables, don't link any runtime
   // libraries with -static.
   if (Args.hasArg(options::OPT_static) ||
       Args.hasArg(options::OPT_fapple_kext) ||
       Args.hasArg(options::OPT_mkernel)) {
-    if (ForceLinkBuiltinRT)
+    if (ForceLinkBuiltinRT && RLT != ToolChain::RLT_None)
       AddLinkRuntimeLib(Args, CmdArgs, "builtins");
     return;
   }
@@ -1861,7 +1898,9 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
         !isTargetIOSSimulator()) ||
        (isTargetMacOSBased() && isMacosxVersionLT(10, 6))))
     CmdArgs.push_back("-lgcc_s.1");
-  AddLinkRuntimeLib(Args, CmdArgs, "builtins");
+
+  if (RLT != ToolChain::RLT_None)
+    AddLinkRuntimeLib(Args, CmdArgs, "builtins");
 }
 
 /// Returns the most appropriate macOS target version for the current process.
@@ -3612,35 +3651,6 @@ void Darwin::addClangTargetOptions(
   if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
                                 options::OPT_fno_define_target_os_macros))
     CC1Args.push_back("-fdefine-target-os-macros");
-
-  // Disable subdirectory modulemap search on sufficiently recent SDKs.
-  if (SDKInfo &&
-      !DriverArgs.hasFlag(options::OPT_fmodulemap_allow_subdirectory_search,
-                          options::OPT_fno_modulemap_allow_subdirectory_search,
-                          false)) {
-    bool RequiresSubdirectorySearch;
-    VersionTuple SDKVersion = SDKInfo->getVersion();
-    switch (TargetPlatform) {
-    default:
-      RequiresSubdirectorySearch = true;
-      break;
-    case MacOS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(15, 0);
-      break;
-    case IPhoneOS:
-    case TvOS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(18, 0);
-      break;
-    case WatchOS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(11, 0);
-      break;
-    case XROS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(2, 0);
-      break;
-    }
-    if (!RequiresSubdirectorySearch)
-      CC1Args.push_back("-fno-modulemap-allow-subdirectory-search");
-  }
 }
 
 void Darwin::addClangCC1ASTargetOptions(
@@ -3776,7 +3786,7 @@ llvm::ExceptionHandling Darwin::GetExceptionModel(const ArgList &Args) const {
   // Darwin uses SjLj exceptions on ARM.
   if (getTriple().getArch() != llvm::Triple::arm &&
       getTriple().getArch() != llvm::Triple::thumb)
-    return llvm::ExceptionHandling::None;
+    return llvm::ExceptionHandling::Default;
 
   // Only watchOS uses the new DWARF/Compact unwinding method.
   llvm::Triple Triple(ComputeLLVMTriple(Args));

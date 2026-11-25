@@ -19,6 +19,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 
 namespace llvm {
 struct DILineInfo;
@@ -114,10 +115,6 @@ public:
 
   // Get filename to use for linker script processing.
   StringRef getNameForScript() const;
-
-  // Check if a non-common symbol should be extracted to override a common
-  // definition.
-  bool shouldExtractForCommon(StringRef name) const;
 
   // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
   // offsets in PLT call stubs.
@@ -259,6 +256,10 @@ public:
   void parse(bool ignoreComdats = false);
   void parseLazy();
 
+  // Intern global symbol names on a worker thread and then set `interned`.
+  void internSymbols();
+  std::atomic<bool> interned = false;
+
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                  const Elf_Shdr &sec);
 
@@ -289,13 +290,13 @@ public:
 
   void initDwarf();
 
-  void initSectionsAndLocalSyms(bool ignoreComdats);
+  void initSectionsAndLocalSyms();
   void postParse();
   void importCmseSymbols();
 
 private:
-  void initializeSections(bool ignoreComdats,
-                          const llvm::object::ELFFile<ELFT> &obj);
+  void initializeSections(const llvm::object::ELFFile<ELFT> &obj);
+  Symbol *insertGlobal(size_t i);
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initDynDbgSymbols();
   void initializeJustSymbols();

@@ -15,7 +15,6 @@ include "mlir/IR/EnumAttr.td"
 
 def MPI_Dialect : Dialect {
   let name = "mpi";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::mpi";
   let description = [{
     This dialect models the Message Passing Interface (MPI), version 
@@ -35,8 +34,8 @@ def MPI_Dialect : Dialect {
     [OpenMPI online documentation](https://www.open-mpi.org/doc/current/).
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 //===----------------------------------------------------------------------===//

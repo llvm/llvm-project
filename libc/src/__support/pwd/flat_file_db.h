@@ -16,10 +16,11 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
-#include "hdr/types/size_t.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/line_reader.h"
+#include "src/__support/dynamic_buffer.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -27,92 +28,48 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace pwd {
 
-struct ReadLineResult {
-  size_t bytes_read;
-  bool truncated;
-  // True only when no data was read because the file stream reached EOF.
-  bool eof;
-};
-
-// Forward declaration of record parser for flat database files.
+// Parses a record in place and fills entry.
+// line is the record bytes including the terminating NUL (line.back() == '\0').
+// scratch is spare writable storage for auxiliary structures (such as pointer
+// arrays) and may be empty. Specialisations that require scratch storage must
+// return Error(ERANGE) prior to modifying the buffer if scratch is
+// insufficient.
 template <typename EntryType>
-bool parse_line(cpp::span<char> line, EntryType *entry);
+ErrorOr<void> parse_line(cpp::span<char> line, cpp::span<char> scratch,
+                         EntryType *entry);
 
 // Generic flat colon-delimited database engine.
 template <typename EntryType> class FlatFileDatabase {
 public:
-  using Matcher = cpp::function<bool(const EntryType &)>;
+  using Matcher = cpp::function_ref<bool(const EntryType &)>;
 
 private:
   const char *file_path;
   File *file = nullptr;
 
-  // Reads a single line from the given file into the provided buffer, stripping
-  // any trailing '\n' and ensuring the result is null-terminated.
-  // Note: POSIX getline/getdelim cannot be used here because user database
-  // lookups (including reentrant _r variants) must operate in-place within a
-  // fixed, bounded buffer without dynamic heap allocations or realloc.
-  LIBC_INLINE static ErrorOr<ReadLineResult> read_line(File *f,
-                                                       cpp::span<char> buf) {
-    if (!f)
-      return Error(EINVAL);
-    if (buf.size() < 2)
-      return Error(ERANGE);
-
-    File::FileLock lock(f);
-    size_t bytes_read = 0;
-    FileIOResult result(0);
-    bool truncated = false;
-
-    for (char &ch : buf.first(buf.size() - 1)) {
-      result = f->read_unlocked(&ch, 1);
-      if (result.has_error())
-        return Error(result.error);
-      if (result.value != 1)
-        break;
-      ++bytes_read;
-      if (ch == '\n')
-        break;
+  // Closes the file stream if open.
+  LIBC_INLINE ErrorOr<void> clear_file_stream() {
+    if (file) {
+      int result = file->close();
+      file = nullptr;
+      if (result != 0)
+        return Error(result);
     }
-
-    bool eof = (bytes_read == 0);
-
-    auto read_span = buf.first(bytes_read);
-    if (result.value == 1 && !read_span.empty() && read_span.back() != '\n') {
-      truncated = true;
-      char c = '\0';
-      while (true) {
-        result = f->read_unlocked(&c, 1);
-        if (result.has_error())
-          return Error(result.error);
-        if (result.value != 1 || c == '\n')
-          break;
-      }
-    }
-
-    if (f->error_unlocked())
-      return Error(EIO);
-
-    // If the line ended with a newline, strip it.
-    if (!read_span.empty() && read_span.back() == '\n')
-      --bytes_read;
-
-    buf[bytes_read] = '\0';
-    return ReadLineResult{bytes_read, truncated, eof};
+    return {};
   }
 
 public:
   LIBC_INLINE constexpr explicit FlatFileDatabase(const char *path)
       : file_path(path) {}
 
+  FlatFileDatabase(const FlatFileDatabase &) = delete;
+  FlatFileDatabase &operator=(const FlatFileDatabase &) = delete;
+
   // Sets or overrides the file path for database operations.
   LIBC_INLINE void set_path(const char *path) {
     if (!path)
       return;
-    if (file) {
-      file->close();
-      file = nullptr;
-    }
+    clear_file_stream();
     file_path = path;
   }
 
@@ -128,24 +85,71 @@ public:
     auto result = file->seek(0, SEEK_SET);
     if (!result.has_value())
       return Error(result.error());
+    file->clearerr();
     return {};
   }
 
   // Closes the database file stream.
-  LIBC_INLINE ErrorOr<void> enddb() {
-    if (file) {
-      int result = file->close();
-      file = nullptr;
-      if (result != 0)
-        return Error(result);
+  LIBC_INLINE ErrorOr<void> enddb() { return clear_file_stream(); }
+
+  // Reads and parses the next record from the database into a fixed buffer.
+  // Returns true if an entry was read, false if EOF was reached, or an Error on
+  // failure. Blank lines are skipped. A record that does not fit in the buffer
+  // is reported as ERANGE and leaves the stream positioned at the start of
+  // that record so an iterating caller can retry with a larger buffer; single-
+  // shot lookup callers close their scoped stream on return.
+  LIBC_INLINE ErrorOr<bool> getnext(EntryType *entry, cpp::span<char> buffer) {
+    if (!entry)
+      return Error(EINVAL);
+    if (buffer.size() < 2)
+      return Error(ERANGE);
+
+    if (!file) {
+      auto res = setdb();
+      if (!res.has_value())
+        return Error(res.error());
     }
-    return {};
+
+    while (true) {
+      auto original_pos = file->tell();
+      auto result = read_line(file, buffer.first(buffer.size() - 1));
+      if (!result.has_value())
+        return Error(result.error());
+
+      ReadLineResult res = result.value();
+      if (res.eof)
+        return false; // EOF
+
+      // Skip blank lines.
+      if (res.bytes_read == 0)
+        continue;
+
+      if (res.truncated) {
+        if (original_pos.has_value())
+          file->seek(original_pos.value(), SEEK_SET);
+        return Error(ERANGE);
+      }
+
+      buffer[res.bytes_read] = '\0';
+
+      // Slicing at bytes_read + 1 includes the terminating null byte; the
+      // remainder of the buffer serves as scratch space.
+      auto parse_res =
+          parse_line<EntryType>(buffer.first(res.bytes_read + 1),
+                                buffer.subspan(res.bytes_read + 1), entry);
+      if (!parse_res.has_value()) {
+        if (parse_res.error() == ERANGE && original_pos.has_value())
+          file->seek(original_pos.value(), SEEK_SET);
+        return Error(parse_res.error());
+      }
+      return true;
+    }
   }
 
-  // Reads and parses the next record from the database. Returns true if an
-  // entry was read, false if EOF was reached, or an Error on failure. Blank
-  // lines are skipped.
-  LIBC_INLINE ErrorOr<bool> getnext(EntryType *entry, cpp::span<char> buffer) {
+  // Reads and parses the next record from the database into a caller-owned
+  // buffer, growing it as needed. Behaves as the fixed-buffer overload except
+  // that a long record grows the buffer rather than producing ERANGE.
+  LIBC_INLINE ErrorOr<bool> getnext(EntryType *entry, DynamicBuffer &buffer) {
     if (!entry)
       return Error(EINVAL);
 
@@ -168,20 +172,35 @@ public:
       if (res.bytes_read == 0)
         continue;
 
-      if (res.truncated)
-        return Error(ERANGE);
+      if (!buffer.reserve(res.bytes_read + 1))
+        return Error(ENOMEM);
+      buffer.span()[res.bytes_read] = '\0';
 
-      if (parse_line(buffer.first(res.bytes_read + 1), entry))
-        return true;
-
-      return Error(EINVAL);
+      while (true) {
+        // Slicing at bytes_read + 1 includes the terminating null byte; the
+        // remainder of the buffer serves as scratch space.
+        auto parse_res = parse_line<EntryType>(
+            buffer.span().first(res.bytes_read + 1),
+            buffer.span().subspan(res.bytes_read + 1), entry);
+        if (parse_res.has_value())
+          return true;
+        if (parse_res.error() != ERANGE)
+          return Error(parse_res.error());
+        if (!buffer.grow())
+          return Error(ENOMEM);
+      }
     }
   }
 
   // Searches for a record matching a given predicate. Returns true if the
   // entry was found, false if it's missing, or an Error if lookup failed.
-  LIBC_INLINE ErrorOr<bool> lookup(Matcher matcher, EntryType *entry,
-                                   cpp::span<char> buffer) {
+  //
+  // When BufferType is cpp::span<char>, lookup never allocates and returns
+  // ERANGE if any record encountered exceeds buffer (matching glibc and
+  // FreeBSD). When BufferType is DynamicBuffer, the buffer grows as needed.
+  template <typename BufferType>
+  LIBC_INLINE ErrorOr<bool> lookup(const Matcher &matcher, EntryType *entry,
+                                   BufferType &buffer) {
     if (!entry)
       return Error(EINVAL);
 

@@ -584,7 +584,9 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   Token *CurTok = nullptr;
   // If the semicolon is missing at the end of REPL input, we want to print
   // the result. Note we shouldn't eat the token since the callback needs it.
-  if (Tok.is(tok::annot_repl_input_end))
+  // Preserve the data on EOF tokens that delimit cached declarations.
+  if (Tok.is(tok::eof) && getLangOpts().IncrementalExtensions &&
+      !Tok.getEofData())
     CurTok = &Tok;
   else
     // Otherwise, eat the semicolon.
@@ -592,7 +594,7 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
 
   StmtResult R = handleExprStmt(Expr, StmtCtx);
   if (CurTok && !R.isInvalid())
-    CurTok->setAnnotationValue(R.get());
+    CurTok->setEofData(R.get());
 
   return R;
 }
@@ -611,8 +613,7 @@ StmtResult Parser::ParseSEHTryBlock() {
     return TryBlock;
 
   StmtResult Handler;
-  if (Tok.is(tok::identifier) &&
-      Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+  if (isTokenSEHExcept()) {
     SourceLocation Loc = ConsumeToken();
     Handler = ParseSEHExceptBlock(Loc);
   } else if (Tok.is(tok::kw___finally)) {
@@ -1316,24 +1317,30 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   }
 
   if (!getLangOpts().CPlusPlus) {
-    if (InitStmt != nullptr && InitStmt->isUsable()) {
-      // Handle the 2 clauses of declaration: (clause1; clause2). We need to
-      // allow NullStmt because that’s what we end up with if we have an empty
-      // attribute-specifier-sequence, which is valid: if ([[]]; true).
-      if (!isa<DeclStmt, AttributedStmt, NullStmt>(InitStmt->get()))
-        // C2y only permits declaration in the first clause of an if condition.
-        Diag(InitStmt->get()->getBeginLoc(),
-             diag::err_c2y_first_condition_clause_is_not_declaration)
-            << InitStmt->get()->getSourceRange();
+    bool HasInitStmt = InitStmt != nullptr && InitStmt->isUsable();
+    // Handle the 2 clauses of declaration: (clause1; clause2). We need to
+    // allow NullStmt because that’s what we end up with if we have an empty
+    // attribute-specifier-sequence, which is valid: if ([[]]; true).
+    if (HasInitStmt &&
+        !isa<DeclStmt, AttributedStmt, NullStmt>(InitStmt->get()))
+      // C2y only permits declaration in the first clause of an if condition.
+      Diag(InitStmt->get()->getBeginLoc(),
+           diag::err_c2y_first_condition_clause_is_not_declaration)
+          << InitStmt->get()->getSourceRange();
 
-      if (Cond.get().first != nullptr)
-        // C2y only permits expression in the second clause of an if condition.
-        Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
-            << Cond.get().first->getSourceRange();
-    } else if (Cond.get().first != nullptr)
-      // Handle: if (int decl = 0) {}.
-      DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
-          << (CK == Sema::ConditionKind::Switch);
+    if (Decl *CondDecl = Cond.get().first; CondDecl && InitStmt != nullptr) {
+      // C2y only permits a declaration as the sole clause of an 'if' or
+      // 'switch' condition; one in the second clause (if (int x = 0; int y =
+      // 0) {}) must be an expression. A declaration in a 'while' condition
+      // (InitStmt == nullptr) has already been diagnosed by ParseCondition.
+      if (HasInitStmt)
+        Diag(CondDecl->getBeginLoc(), diag::err_expected_expression)
+            << CondDecl->getSourceRange();
+      else
+        // Handle: if (int decl = 0) {}.
+        DiagCompat(CondDecl->getBeginLoc(), diag_compat::decl_statement)
+            << (CK == Sema::ConditionKind::Switch);
+    }
   }
 
   if (Tok.is(tok::comma)) {
@@ -2680,16 +2687,13 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
 
   // Borland allows SEH-handlers with 'try'
 
-  if ((Tok.is(tok::identifier) &&
-       Tok.getIdentifierInfo() == getSEHExceptKeyword()) ||
-      Tok.is(tok::kw___finally)) {
+  if (isTokenSEHExcept() || Tok.is(tok::kw___finally)) {
     // TODO: Factor into common return ParseSEHHandlerCommon(...)
     StmtResult Handler;
-    if(Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+    if (isTokenSEHExcept()) {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHExceptBlock(Loc);
-    }
-    else {
+    } else {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHFinallyBlock(Loc);
     }
@@ -2700,8 +2704,7 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
                                     TryLoc,
                                     TryBlock.get(),
                                     Handler.get());
-  }
-  else {
+  } else {
     StmtVector Handlers;
 
     // C++11 attributes can't appear here, despite this context seeming

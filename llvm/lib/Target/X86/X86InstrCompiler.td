@@ -60,7 +60,7 @@ def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
 let SchedRW = [WriteSystem] in {
 
 // x86-64 va_start lowering magic.
-let hasSideEffects = 1, mayStore = 1, Defs = [EFLAGS] in {
+let hasSideEffects = 1, mayStore = 1, isNotDuplicable = 1, Defs = [EFLAGS] in {
 def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al, i8mem:$regsavefi, variable_ops),
@@ -982,7 +982,7 @@ def LCMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$ptr),
 // the base pointer. Indeed, in such situation RBX is a reserved
 // register and the register allocator will ignore any use/def of
 // it. In other words, the register will not fix the clobbering of
-// RBX that will happen when setting the arguments for the instrucion.
+// RBX that will happen when setting the arguments for the instruction.
 //
 // Unlike the actual related instruction, we mark that this one
 // defines RBX (instead of using RBX).
@@ -1410,7 +1410,7 @@ def : Pat<(X86tcret GR32:$dst, timm:$off),
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
 // callee-saved register.
-def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (i32 (load addr:$dst)), timm:$off),
           (TCRETURNmi addr:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotPIC, NotUseIndirectThunkCalls]>;
 
@@ -1436,11 +1436,11 @@ def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
 
 // Don't fold loads into X86tcret requiring too many regs.
 // There wouldn't be enough scratch registers for base+index.
-def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (i64 (load addr:$dst)), timm:$off),
           (TCRETURNmi64 addr:$dst, timm:$off)>,
           Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (i64 (load addr:$dst)), timm:$off),
           (TCRETURN_WINmi64 addr:$dst, timm:$off)>,
           Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls]>;
 
@@ -1535,6 +1535,15 @@ def : Pat<(extloadi64i8 addr:$src),
           (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i16 addr:$src),
           (SUBREG_TO_REG (MOVZX32rm16 addr:$src), sub_32bit)>;
+
+// The mask clears all upper bits, so a wider AND also performs the extension.
+foreach suffix = ["", "_ND"] in {
+  let Predicates = [!if(!eq(suffix, ""), NoNDD, HasNDD)] in
+  def : Pat<(i32 (zext (and_su GR8:$src, imm:$mask))),
+            (!cast<Instruction>(AND32ri#suffix)
+              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src, sub_8bit),
+              (i32 (GetLo32XForm imm:$mask)))>;
+}
 
 // anyext. Define these to do an explicit zero-extend to
 // avoid partial-register updates.

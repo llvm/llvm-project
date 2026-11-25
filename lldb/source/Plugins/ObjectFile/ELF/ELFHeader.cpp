@@ -315,12 +315,14 @@ ELFSymbol::sectionIndexToString(elf_half shndx,
 void ELFSymbol::Dump(lldb_private::Stream *s, uint32_t idx,
                      const lldb_private::DataExtractor *strtab_data,
                      const lldb_private::SectionList *section_list) {
+  llvm::StringRef name;
+  if (strtab_data)
+    name = strtab_data->PeekCStr(st_name).value_or("");
   s->Format("[{0,3}] 0x{1,16:x} 0x{2,16:x} 0x{3,8:x} 0x{4,2:x} ({5,-10} "
             "{-6,13}) 0x{7,-2:x} 0x{8,4:x} ({9,-10}) {10}\n",
             idx, st_value, st_size, st_name, st_info,
             bindingToString(getBinding()), typeToString(getType()), st_other,
-            st_shndx, sectionIndexToString(st_shndx, section_list),
-            strtab_data ? strtab_data->PeekCStr(st_name) : "");
+            st_shndx, sectionIndexToString(st_shndx, section_list), name);
 }
 
 bool ELFSymbol::Parse(const lldb_private::DataExtractor &data,

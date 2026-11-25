@@ -4,14 +4,7 @@
 # Setup Project
 #===============================================================================
 
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
+cmake_minimum_required(VERSION 3.31.0)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -88,16 +81,48 @@ option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)
 
 # Derive the compile flags implied by the language-runtime options.
 set(ORC_RT_COMPILE_FLAGS)
-if(ORC_RT_ENABLE_RTTI)
-  list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  if(ORC_RT_ENABLE_RTTI)
+    list(APPEND ORC_RT_COMPILE_FLAGS /GR)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS /GR-)
+  endif()
+
+  if(ORC_RT_ENABLE_EXCEPTIONS)
+    list(APPEND ORC_RT_COMPILE_FLAGS /EHsc)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS /EHs-c-)
+  endif()
 else()
-  list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
+  if(ORC_RT_ENABLE_RTTI)
+    list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
+  endif()
+
+  if(ORC_RT_ENABLE_EXCEPTIONS)
+    list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+  endif()
 endif()
 
-if(ORC_RT_ENABLE_EXCEPTIONS)
-  list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+# --- Target system ---
+# ORC_RT_TARGET_POSIX is ON if the target gets the shared POSIX host
+# implementation (the host/posix/ directories). Test it, rather than repeating
+# the list of POSIX systems, wherever that implementation is selected.
+if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(ORC_RT_TARGET_POSIX ON)
 else()
-  list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+  set(ORC_RT_TARGET_POSIX OFF)
+endif()
+
+# --- Windows compatibility ---
+if(WIN32)
+  add_compile_definitions(
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+  )
 endif()
 
 # --- Logging ---

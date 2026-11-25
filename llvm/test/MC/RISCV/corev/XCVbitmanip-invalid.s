@@ -73,6 +73,18 @@ cv.insert t0, t1, 32, 0
 cv.insert t0, t1, -1, 0
 # CHECK-ERROR: immediate must be an integer in the range [0, 31]
 
+cv.insert a0, a1, 16, 16
+# CHECK-ERROR: :[[@LINE-1]]:19: error: the sum of the immediate operands must be less than 32
+
+cv.insert a0, a1, 31, 31
+# CHECK-ERROR: :[[@LINE-1]]:19: error: the sum of the immediate operands must be less than 32
+
+cv.insert a0, a1, 1, 31
+# CHECK-ERROR: :[[@LINE-1]]:19: error: the sum of the immediate operands must be less than 32
+
+cv.insert a0, a1, 31, 1
+# CHECK-ERROR: :[[@LINE-1]]:19: error: the sum of the immediate operands must be less than 32
+
 cv.bclr t0, t1
 # CHECK-ERROR: too few operands for instruction
 

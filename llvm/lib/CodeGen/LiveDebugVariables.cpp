@@ -73,6 +73,9 @@ EnableLDV("live-debug-variables", cl::init(true),
 
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
+STATISTIC(NumStaleIndexes, "Number of stale SlotIndexes repaired");
+STATISTIC(NumMergedIntervals,
+          "Number of debug value intervals merged while repairing indexes");
 
 char LiveDebugVariablesWrapperLegacy::ID = 0;
 
@@ -262,13 +265,22 @@ using LocMap = IntervalMap<SlotIndex, DbgVariableValue, 4>;
 /// Non-spilled locations are not added to the map.
 using SpillOffsetMap = DenseMap<unsigned, unsigned>;
 
-/// Cache to save the location where it can be used as the starting
-/// position as input for calling MachineBasicBlock::SkipPHIsLabelsAndDebug.
-/// This is to prevent MachineBasicBlock::SkipPHIsLabelsAndDebug from
-/// repeatedly searching the same set of PHIs/Labels/Debug instructions
-/// if it is called many times for the same block.
-using BlockSkipInstsMap =
-    DenseMap<MachineBasicBlock *, MachineBasicBlock::iterator>;
+/// Caches used by findInsertLocation so that repeated insertions at the same
+/// position don't rescan the debug instructions already inserted there.
+struct InsertLocCache {
+  /// Per block, the last PHI/Label/Debug instruction found by
+  /// MachineBasicBlock::SkipPHIsLabelsAndDebug, used as the starting position
+  /// for the next search at the start of that block.
+  DenseMap<MachineBasicBlock *, MachineBasicBlock::iterator> BlockStart;
+  /// Per instruction, the last debug instruction found after it, used as the
+  /// starting position for the next search after that instruction.
+  DenseMap<const MachineInstr *, MachineBasicBlock::iterator> AfterInstr;
+
+  void clear() {
+    BlockStart.clear();
+    AfterInstr.clear();
+  }
+};
 
 namespace {
 
@@ -307,8 +319,7 @@ class UserValue {
                         ArrayRef<bool> LocSpills,
                         ArrayRef<unsigned> SpillOffsets, LiveIntervals &LIS,
                         const TargetInstrInfo &TII,
-                        const TargetRegisterInfo &TRI,
-                        BlockSkipInstsMap &BBSkipInstsMap);
+                        const TargetRegisterInfo &TRI, InsertLocCache &Cache);
 
   /// Replace OldLocNo ranges with NewRegs ranges where NewRegs
   /// is live. Returns true if any changes were made.
@@ -472,6 +483,9 @@ public:
   bool splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                      LiveIntervals &LIS);
 
+  /// Replace the stale indexes in locInts and trimmedDefs.
+  void canonicalizeIndexes(const SlotIndexes &SI);
+
   /// Rewrite virtual register locations according to the provided virtual
   /// register map. Record the stack slot offsets for the locations that
   /// were spilled.
@@ -485,7 +499,7 @@ public:
                        const TargetInstrInfo &TII,
                        const TargetRegisterInfo &TRI,
                        const SpillOffsetMap &SpillOffsets,
-                       BlockSkipInstsMap &BBSkipInstsMap);
+                       InsertLocCache &Cache);
 
   /// Return DebugLoc of this UserValue.
   const DebugLoc &getDebugLoc() { return dl; }
@@ -503,7 +517,7 @@ class UserLabel {
   /// Insert a DBG_LABEL into MBB at Idx.
   void insertDebugLabel(MachineBasicBlock *MBB, SlotIndex Idx,
                         LiveIntervals &LIS, const TargetInstrInfo &TII,
-                        BlockSkipInstsMap &BBSkipInstsMap);
+                        InsertLocCache &Cache);
 
 public:
   /// Create a new UserLabel.
@@ -518,7 +532,16 @@ public:
 
   /// Recreate DBG_LABEL instruction from data structures.
   void emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
-                      BlockSkipInstsMap &BBSkipInstsMap);
+                      InsertLocCache &Cache);
+
+  /// Replace loc if it is stale, and report whether it was.
+  bool canonicalizeIndex(const SlotIndexes &SI) {
+    bool WasStale = SI.isStaleIndex(loc);
+    loc = SI.canonicalizeIndex(loc);
+    assert(!SI.isStaleIndex(loc) &&
+           "Canonicalized label still refers to an erased instruction");
+    return WasStale;
+  }
 
   /// Return DebugLoc of this UserLabel.
   const DebugLoc &getDebugLoc() { return dl; }
@@ -664,6 +687,9 @@ public:
 
   /// Replace all references to OldReg with NewRegs.
   void splitRegister(Register OldReg, ArrayRef<Register> NewRegs);
+
+  /// Replace every stale index held by this analysis.
+  void canonicalizeIndexes(const SlotIndexes &SI);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
@@ -1549,6 +1575,125 @@ splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
     PImpl->splitRegister(OldReg, NewRegs);
 }
 
+//===----------------------------------------------------------------------===//
+//                        Stale Index Canonicalization
+//===----------------------------------------------------------------------===//
+
+void UserValue::canonicalizeIndexes(const SlotIndexes &SI) {
+  unsigned NumStale = 0;
+  for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I)
+    NumStale += SI.isStaleIndex(I.start()) + SI.isStaleIndex(I.stop());
+  for (SlotIndex Idx : trimmedDefs)
+    NumStale += SI.isStaleIndex(Idx);
+  NumStaleIndexes += NumStale;
+
+  if (NumStale) {
+    // trimmedDefs is looked up by interval start. Remapping it here is safe:
+    // trimmed starts are block slots, so the Stop < Start case below cannot
+    // reach them, and a merge drops a start that then matches nothing.
+    if (!trimmedDefs.empty()) {
+      SmallVector<SlotIndex, 8> Defs(trimmedDefs.begin(), trimmedDefs.end());
+      trimmedDefs.clear();
+      for (SlotIndex Idx : Defs) {
+        SlotIndex Canon = SI.canonicalizeIndex(Idx);
+        if (!SI.isBlockBoundaryIndex(Canon))
+          trimmedDefs.insert(Canon);
+      }
+    }
+
+    // Rebuild rather than move the keys of the existing map: it has to stay
+    // ordered and non-empty at every step, which canonicalization does not
+    // respect.
+    struct CanonicalInterval {
+      SlotIndex Start;
+      SlotIndex Stop;
+      DbgVariableValue Value;
+    };
+    SmallVector<CanonicalInterval, 8> Intervals;
+
+    for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I) {
+      SlotIndex Start = SI.canonicalizeIndex(I.start());
+      SlotIndex Stop = SI.canonicalizeIndex(I.stop());
+
+      // A stale stop can land below a start that sat on the same instruction's
+      // dead slot. Both resolve to the same insert location.
+      if (Stop < Start)
+        Start = Stop;
+
+      if (!Intervals.empty()) {
+        CanonicalInterval &Prev = Intervals.back();
+        if (Start <= Prev.Start) {
+          // Both DBG_VALUEs would be emitted at the same position, where the
+          // later one overrides the earlier before it covers anything.
+          Prev.Stop = std::max(Prev.Stop, Stop);
+          Prev.Value = I.value();
+          ++NumMergedIntervals;
+          continue;
+        }
+        Prev.Stop = std::min(Prev.Stop, Start);
+      }
+      Intervals.push_back({Start, Stop, I.value()});
+    }
+
+    // The map cannot hold empty intervals. Use the smallest extent there is: a
+    // wider one would span more blocks, and emitDebugValues() emits a DBG_VALUE
+    // per block covered.
+    for (CanonicalInterval &Interval : Intervals) {
+      if (Interval.Stop > Interval.Start)
+        continue;
+      Interval.Stop = Interval.Start.getNextSlot();
+      assert(!SI.isStaleIndex(Interval.Stop) &&
+             "No room left for a canonicalized interval");
+    }
+
+    locInts.clear();
+    for (const CanonicalInterval &Interval : Intervals)
+      locInts.insert(Interval.Start, Interval.Stop, Interval.Value);
+  }
+
+#ifndef NDEBUG
+  for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I)
+    assert(!SI.isStaleIndex(I.start()) && !SI.isStaleIndex(I.stop()) &&
+           "Canonicalized interval still refers to an erased instruction");
+  for (SlotIndex Idx : trimmedDefs)
+    assert(!SI.isStaleIndex(Idx) &&
+           "Canonicalized trimmed def still refers to an erased instruction");
+#endif
+}
+
+void LiveDebugVariables::LDVImpl::canonicalizeIndexes(const SlotIndexes &SI) {
+  for (auto &userValue : userValues)
+    userValue->canonicalizeIndexes(SI);
+  for (auto &userLabel : userLabels)
+    NumStaleIndexes += userLabel->canonicalizeIndex(SI);
+
+  // emitDebugValues() walks forwards to the next live instruction, which is the
+  // same iterator as inserting after the preceding one, and stays inside
+  // InstrPos::MBB. Canonicalization is monotonic, so entries sharing a slot are
+  // still re-inserted as one batch.
+  for (InstrPos &Stashed : StashedDebugInstrs) {
+    if (!SI.isStaleIndex(Stashed.Idx))
+      continue;
+    ++NumStaleIndexes;
+    Stashed.Idx = SI.canonicalizeIndex(Stashed.Idx);
+    assert(!SI.isStaleIndex(Stashed.Idx) &&
+           "Canonicalized debug instr still refers to an erased instruction");
+  }
+
+#ifndef NDEBUG
+  // PHI positions are block starts, which are boundaries. A block erased by
+  // removeMBBFromMaps() would make one look stale.
+  for (const auto &P : PHIValToPos)
+    assert(!SI.isStaleIndex(P.second.SI) &&
+           "PHI position refers to an erased instruction");
+#endif
+}
+
+void LiveDebugVariables::canonicalizeIndexes(const SlotIndexes &SI) {
+  if (PImpl)
+    PImpl->canonicalizeIndexes(SI);
+}
+
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
                                  const TargetInstrInfo &TII,
                                  const TargetRegisterInfo &TRI,
@@ -1626,9 +1771,10 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
 }
 
 /// Find an iterator for inserting a DBG_VALUE instruction.
-static MachineBasicBlock::iterator
-findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx, LiveIntervals &LIS,
-                   BlockSkipInstsMap &BBSkipInstsMap) {
+static MachineBasicBlock::iterator findInsertLocation(MachineBasicBlock *MBB,
+                                                      SlotIndex Idx,
+                                                      LiveIntervals &LIS,
+                                                      InsertLocCache &Cache) {
   SlotIndex Start = LIS.getMBBStartIdx(MBB);
   Idx = Idx.getBaseIndex();
 
@@ -1640,35 +1786,47 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx, LiveIntervals &LIS,
       // Retrieve the last PHI/Label/Debug location found when calling
       // SkipPHIsLabelsAndDebug last time. Start searching from there.
       //
-      // Note the iterator kept in BBSkipInstsMap is one step back based
+      // Note the iterator kept in Cache.BlockStart is one step back based
       // on the iterator returned by SkipPHIsLabelsAndDebug last time.
       // One exception is when SkipPHIsLabelsAndDebug returns MBB->begin(),
-      // BBSkipInstsMap won't save it. This is to consider the case that
+      // Cache.BlockStart won't save it. This is to consider the case that
       // new instructions may be inserted at the beginning of MBB after
       // last call of SkipPHIsLabelsAndDebug. If we save MBB->begin() in
-      // BBSkipInstsMap, after new non-phi/non-label/non-debug instructions
+      // Cache.BlockStart, after new non-phi/non-label/non-debug instructions
       // are inserted at the beginning of the MBB, the iterator in
-      // BBSkipInstsMap won't point to the beginning of the MBB anymore.
+      // Cache.BlockStart won't point to the beginning of the MBB anymore.
       // Therefore The next search in SkipPHIsLabelsAndDebug will skip those
       // newly added instructions and that is unwanted.
       MachineBasicBlock::iterator BeginIt;
-      auto MapIt = BBSkipInstsMap.find(MBB);
-      if (MapIt == BBSkipInstsMap.end())
+      auto MapIt = Cache.BlockStart.find(MBB);
+      if (MapIt == Cache.BlockStart.end())
         BeginIt = MBB->begin();
       else
         BeginIt = std::next(MapIt->second);
       auto I = MBB->SkipPHIsLabelsAndDebug(BeginIt);
       if (I != BeginIt)
-        BBSkipInstsMap[MBB] = std::prev(I);
+        Cache.BlockStart[MBB] = std::prev(I);
       return I;
     }
     Idx = Idx.getPrevIndex();
   }
 
   // Don't insert anything after the first terminator, though.
-  auto It = MI->isTerminator() ? MBB->getFirstTerminator()
-                               : std::next(MachineBasicBlock::iterator(MI));
-  return skipDebugInstructionsForward(It, MBB->end());
+  if (MI->isTerminator())
+    return MBB->getFirstTerminator();
+
+  // Resume from the last debug instruction found after MI on a previous call,
+  // so that repeated insertions after MI don't rescan the same debug
+  // instructions.
+  MachineBasicBlock::iterator Prev(MI);
+  if (auto CacheIt = Cache.AfterInstr.find(MI);
+      CacheIt != Cache.AfterInstr.end())
+    Prev = CacheIt->second;
+  auto BeginIt = std::next(Prev);
+  auto I = skipDebugInstructionsForward(BeginIt, MBB->end());
+  if (I != BeginIt)
+    Cache.AfterInstr[MI] = std::prev(I);
+  return I;
 }
 
 /// Find an iterator for inserting the next DBG_VALUE instruction
@@ -1705,12 +1863,11 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
                                  ArrayRef<unsigned> SpillOffsets,
                                  LiveIntervals &LIS, const TargetInstrInfo &TII,
                                  const TargetRegisterInfo &TRI,
-                                 BlockSkipInstsMap &BBSkipInstsMap) {
+                                 InsertLocCache &Cache) {
   SlotIndex MBBEndIdx = LIS.getMBBEndIdx(&*MBB);
   // Only search within the current MBB.
   StopIdx = (MBBEndIdx < StopIdx) ? MBBEndIdx : StopIdx;
-  MachineBasicBlock::iterator I =
-      findInsertLocation(MBB, StartIdx, LIS, BBSkipInstsMap);
+  MachineBasicBlock::iterator I = findInsertLocation(MBB, StartIdx, LIS, Cache);
   // Undef values don't exist in locations so create new "noreg" register MOs
   // for them. See getLocationNo().
   SmallVector<MachineOperand, 8> MOs;
@@ -1773,9 +1930,8 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
 
 void UserLabel::insertDebugLabel(MachineBasicBlock *MBB, SlotIndex Idx,
                                  LiveIntervals &LIS, const TargetInstrInfo &TII,
-                                 BlockSkipInstsMap &BBSkipInstsMap) {
-  MachineBasicBlock::iterator I =
-      findInsertLocation(MBB, Idx, LIS, BBSkipInstsMap);
+                                 InsertLocCache &Cache) {
+  MachineBasicBlock::iterator I = findInsertLocation(MBB, Idx, LIS, Cache);
   ++NumInsertedDebugLabels;
   BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_LABEL))
       .addMetadata(Label);
@@ -1785,7 +1941,7 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
                                 const TargetInstrInfo &TII,
                                 const TargetRegisterInfo &TRI,
                                 const SpillOffsetMap &SpillOffsets,
-                                BlockSkipInstsMap &BBSkipInstsMap) {
+                                InsertLocCache &Cache) {
   MachineFunction::iterator MFEnd = VRM->getMachineFunction().end();
 
   for (LocMap::const_iterator I = locInts.begin(); I.valid();) {
@@ -1816,7 +1972,7 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
 
     LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
     insertDebugValue(&*MBB, Start, Stop, DbgValue, SpilledLocs, LocSpillOffsets,
-                     LIS, TII, TRI, BBSkipInstsMap);
+                     LIS, TII, TRI, Cache);
     // This interval may span multiple basic blocks.
     // Insert a DBG_VALUE into each one.
     while (Stop > MBBEnd) {
@@ -1827,7 +1983,7 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
       MBBEnd = LIS.getMBBEndIdx(&*MBB);
       LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
       insertDebugValue(&*MBB, Start, Stop, DbgValue, SpilledLocs,
-                       LocSpillOffsets, LIS, TII, TRI, BBSkipInstsMap);
+                       LocSpillOffsets, LIS, TII, TRI, Cache);
     }
     LLVM_DEBUG(dbgs() << '\n');
     if (MBB == MFEnd)
@@ -1838,12 +1994,12 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
 }
 
 void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
-                               BlockSkipInstsMap &BBSkipInstsMap) {
+                               InsertLocCache &Cache) {
   LLVM_DEBUG(dbgs() << "\t" << loc);
   MachineFunction::iterator MBB = LIS.getMBBFromIndex(loc)->getIterator();
 
   LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB));
-  insertDebugLabel(&*MBB, loc, LIS, TII, BBSkipInstsMap);
+  insertDebugLabel(&*MBB, loc, LIS, TII, Cache);
 
   LLVM_DEBUG(dbgs() << '\n');
 }
@@ -1853,19 +2009,21 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   if (!MF)
     return;
 
-  BlockSkipInstsMap BBSkipInstsMap;
+  // Instructions may have been erased since the last allocator run.
+  canonicalizeIndexes(*LIS->getSlotIndexes());
+
+  InsertLocCache Cache;
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   SpillOffsetMap SpillOffsets;
   for (auto &userValue : userValues) {
     LLVM_DEBUG(userValue->print(dbgs(), TRI));
     userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
-    userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets,
-                               BBSkipInstsMap);
+    userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets, Cache);
   }
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG LABELS **********\n");
   for (auto &userLabel : userLabels) {
     LLVM_DEBUG(userLabel->print(dbgs(), TRI));
-    userLabel->emitDebugLabel(*LIS, *TII, BBSkipInstsMap);
+    userLabel->emitDebugLabel(*LIS, *TII, Cache);
   }
 
   LLVM_DEBUG(dbgs() << "********** EMITTING DEBUG PHIS **********\n");
@@ -1960,7 +2118,7 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     // insert before it.
     if (Idx == Slots->getMBBStartIdx(MBB)) {
       MachineBasicBlock::iterator InsertPos =
-          findInsertLocation(MBB, Idx, *LIS, BBSkipInstsMap);
+          findInsertLocation(MBB, Idx, *LIS, Cache);
       EmitInstsHere(InsertPos);
       continue;
     }
@@ -1993,7 +2151,7 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   }
 
   EmitDone = true;
-  BBSkipInstsMap.clear();
+  Cache.clear();
 }
 
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {

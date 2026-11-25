@@ -5,6 +5,7 @@ Test breakpoint hit count is reset when target runs.
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 
 class HitcountResetUponRun(TestBase):
@@ -20,38 +21,18 @@ class HitcountResetUponRun(TestBase):
     def test_hitcount_reset_upon_run(self):
         self.build()
 
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            self.BREAKPOINT_TEXT, lldb.SBFileSpec("main.cpp")
-        )
-        self.assertTrue(
-            breakpoint.IsValid() and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
-        )
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        from lldbsuite.test.lldbutil import get_stopped_thread
-
         # Verify 1st breakpoint location is hit.
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(
+            self, self.BREAKPOINT_TEXT, lldb.SBFileSpec("main.cpp")
         )
+        self.assertEqual(breakpoint.GetNumLocations(), 1)
         self.check_stopped_at_breakpoint_and_hit_once(thread, breakpoint)
 
         # Relaunch
         process.Kill()
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
 
         # Verify the hit counts are still one.
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint
         )
         self.check_stopped_at_breakpoint_and_hit_once(thread, breakpoint)

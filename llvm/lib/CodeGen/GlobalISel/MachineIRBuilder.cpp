@@ -9,6 +9,7 @@
 /// This file implements the MachineIRBuidler class.
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -84,11 +85,12 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  return insertInstr(buildInstrNoInsert(TargetOpcode::DBG_VALUE)
-                         .addFrameIndex(FI)
-                         .addImm(0)
-                         .addMetadata(Variable)
-                         .addMetadata(Expr));
+  return insertInstr(
+      BuildMI(getMF(), getDL(), getTII().get(TargetOpcode::DBG_VALUE))
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMetadata(Variable)
+          .addMetadata(Expr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
@@ -99,7 +101,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  auto MIB = buildInstrNoInsert(TargetOpcode::DBG_VALUE);
+  auto MIB = BuildMI(getMF(), getDL(), getTII().get(TargetOpcode::DBG_VALUE));
 
   auto *NumericConstant = [&] () -> const Constant* {
     if (const auto *CE = dyn_cast<ConstantExpr>(&C))
@@ -108,6 +110,8 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     return &C;
   }();
 
+  bool IsIndirect = true;
+  int64_t GlobalOffset;
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -119,12 +123,32 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addFPImm(CFP);
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
     MIB.addImm(0);
+  } else if (const GlobalValue *GV = getDescribableGlobalAddress(
+                 NumericConstant, GlobalOffset, getMF())) {
+    // The address of a global is a direct link-time constant. A displacement
+    // from it rides along in the expression rather than in the operand.
+    MIB.addGlobalAddress(GV);
+    if (GlobalOffset) {
+      SmallVector<uint64_t, 3> Ops;
+      DIExpression::appendOffset(Ops, GlobalOffset);
+      Expr = DIExpression::appendOpsToArg(cast<DIExpression>(Expr), Ops, 0,
+                                          /*StackValue=*/false);
+    }
+    IsIndirect = false;
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(Register());
   }
 
-  MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  // DBG_VALUE spells an indirect location with a zero immediate offset operand
+  // and a direct one with $noreg. isIndirectDebugValue() ignores the offset for
+  // a non-register location operand, but isDebugOffsetImm() does not, and
+  // several consumers ask that instead.
+  if (IsIndirect)
+    MIB.addImm(0);
+  else
+    MIB.addReg(Register());
+  MIB.addMetadata(Variable).addMetadata(Expr);
   return insertInstr(MIB);
 }
 
@@ -132,7 +156,8 @@ MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
   assert(isa<DILabel>(Label) && "not a label");
   assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(State.DL) &&
          "Expected inlined-at fields to agree");
-  auto MIB = buildInstr(TargetOpcode::DBG_LABEL);
+  auto MIB = insertInstr(
+      BuildMI(getMF(), getDL(), getTII().get(TargetOpcode::DBG_LABEL)));
 
   return MIB.addMetadata(Label);
 }
@@ -548,9 +573,9 @@ MachineInstrBuilder MachineIRBuilder::buildZExt(const DstOp &Res,
   return buildInstr(TargetOpcode::G_ZEXT, Res, Op, Flags);
 }
 
-unsigned MachineIRBuilder::getBoolExtOp(bool IsVec, bool IsFP) const {
+unsigned MachineIRBuilder::getBoolExtOp(bool IsVec) const {
   const auto *TLI = getMF().getSubtarget().getTargetLowering();
-  switch (TLI->getBooleanContents(IsVec, IsFP)) {
+  switch (TLI->getBooleanContents(IsVec)) {
   case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
     return TargetOpcode::G_SEXT;
   case TargetLoweringBase::ZeroOrOneBooleanContent:
@@ -561,18 +586,16 @@ unsigned MachineIRBuilder::getBoolExtOp(bool IsVec, bool IsFP) const {
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBoolExt(const DstOp &Res,
-                                                   const SrcOp &Op,
-                                                   bool IsFP) {
-  unsigned ExtOp = getBoolExtOp(getMRI()->getType(Op.getReg()).isVector(), IsFP);
+                                                   const SrcOp &Op) {
+  unsigned ExtOp = getBoolExtOp(getMRI()->getType(Op.getReg()).isVector());
   return buildInstr(ExtOp, Res, Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBoolExtInReg(const DstOp &Res,
                                                         const SrcOp &Op,
-                                                        bool IsVector,
-                                                        bool IsFP) {
+                                                        bool IsVector) {
   const auto *TLI = getMF().getSubtarget().getTargetLowering();
-  switch (TLI->getBooleanContents(IsVector, IsFP)) {
+  switch (TLI->getBooleanContents(IsVector)) {
   case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
     return buildSExtInReg(Res, Op, 1);
   case TargetLoweringBase::ZeroOrOneBooleanContent:
@@ -775,6 +798,17 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
   for (const auto &Op : Ops)
     TmpVec.push_back(buildConstant(EltTy, Op));
+  return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildBuildVectorFConstant(const DstOp &Res,
+                                            ArrayRef<APFloat> Ops) {
+  SmallVector<SrcOp> TmpVec;
+  TmpVec.reserve(Ops.size());
+  LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
+  for (const auto &Op : Ops)
+    TmpVec.push_back(buildFConstant(EltTy, Op));
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 

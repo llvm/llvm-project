@@ -2,7 +2,7 @@
 
 define signext i16 @func1() {
 ; CHECK-LABEL: func1:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.sx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -14,7 +14,7 @@ define signext i16 @func1() {
 
 define i32 @func2() {
 ; CHECK-LABEL: func2:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.sx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -26,7 +26,7 @@ define i32 @func2() {
 
 define i64 @func3() {
 ; CHECK-LABEL: func3:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.sx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -38,7 +38,7 @@ define i64 @func3() {
 
 define zeroext i16 @func5() {
 ; CHECK-LABEL: func5:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.sx %s0, 15(, %s11)
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
@@ -51,7 +51,7 @@ define zeroext i16 @func5() {
 
 define i32 @func6() {
 ; CHECK-LABEL: func6:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.sx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -63,7 +63,7 @@ define i32 @func6() {
 
 define i64 @func7() {
 ; CHECK-LABEL: func7:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.sx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -75,7 +75,7 @@ define i64 @func7() {
 
 define signext i16 @func9() {
 ; CHECK-LABEL: func9:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -87,7 +87,7 @@ define signext i16 @func9() {
 
 define i32 @func10() {
 ; CHECK-LABEL: func10:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -99,7 +99,7 @@ define i32 @func10() {
 
 define i64 @func11() {
 ; CHECK-LABEL: func11:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -111,7 +111,7 @@ define i64 @func11() {
 
 define zeroext i16 @func13() {
 ; CHECK-LABEL: func13:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -123,7 +123,7 @@ define zeroext i16 @func13() {
 
 define zeroext i16 @func14() {
 ; CHECK-LABEL: func14:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -135,7 +135,7 @@ define zeroext i16 @func14() {
 
 define i64 @func15() {
 ; CHECK-LABEL: func15:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -147,7 +147,7 @@ define i64 @func15() {
 
 define i32 @func17() {
 ; CHECK-LABEL: func17:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.sx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -159,7 +159,7 @@ define i32 @func17() {
 
 define i64 @func18() {
 ; CHECK-LABEL: func18:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.sx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -171,7 +171,7 @@ define i64 @func18() {
 
 define zeroext i16 @func20() {
 ; CHECK-LABEL: func20:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.zx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -182,7 +182,7 @@ define zeroext i16 @func20() {
 
 define i64 @func21() {
 ; CHECK-LABEL: func21:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.sx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -194,7 +194,7 @@ define i64 @func21() {
 
 define i32 @func23() {
 ; CHECK-LABEL: func23:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.zx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -206,7 +206,7 @@ define i32 @func23() {
 
 define i64 @func24() {
 ; CHECK-LABEL: func24:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.zx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -218,7 +218,7 @@ define i64 @func24() {
 
 define zeroext i16 @func26() {
 ; CHECK-LABEL: func26:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.zx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -229,7 +229,7 @@ define zeroext i16 @func26() {
 
 define i64 @func27() {
 ; CHECK-LABEL: func27:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.zx %s0, 14(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -241,7 +241,7 @@ define i64 @func27() {
 
 define i64 @func29() {
 ; CHECK-LABEL: func29:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ldl.sx %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -253,7 +253,7 @@ define i64 @func29() {
 
 define i64 @func31() {
 ; CHECK-LABEL: func31:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ldl.sx %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -265,7 +265,7 @@ define i64 @func31() {
 
 define i64 @func33() {
 ; CHECK-LABEL: func33:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ldl.zx %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -277,7 +277,7 @@ define i64 @func33() {
 
 define i64 @func35() {
 ; CHECK-LABEL: func35:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ldl.zx %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -289,7 +289,7 @@ define i64 @func35() {
 
 define signext i8 @func37() {
 ; CHECK-LABEL: func37:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    sll %s0, %s0, 63
 ; CHECK-NEXT:    sra.l %s0, %s0, 63
@@ -303,7 +303,7 @@ define signext i8 @func37() {
 
 define signext i16 @func38() {
 ; CHECK-LABEL: func38:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    sll %s0, %s0, 63
 ; CHECK-NEXT:    sra.l %s0, %s0, 63
@@ -317,7 +317,7 @@ define signext i16 @func38() {
 
 define signext i32 @func39() {
 ; CHECK-LABEL: func39:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    sll %s0, %s0, 63
 ; CHECK-NEXT:    sra.l %s0, %s0, 63
@@ -331,7 +331,7 @@ define signext i32 @func39() {
 
 define signext i64 @func40() {
 ; CHECK-LABEL: func40:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    sll %s0, %s0, 63
 ; CHECK-NEXT:    sra.l %s0, %s0, 63
@@ -345,7 +345,7 @@ define signext i64 @func40() {
 
 define signext i8 @func42() {
 ; CHECK-LABEL: func42:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -357,7 +357,7 @@ define signext i8 @func42() {
 
 define signext i16 @func43() {
 ; CHECK-LABEL: func43:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -369,7 +369,7 @@ define signext i16 @func43() {
 
 define signext i32 @func44() {
 ; CHECK-LABEL: func44:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -381,7 +381,7 @@ define signext i32 @func44() {
 
 define signext i64 @func45() {
 ; CHECK-LABEL: func45:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)

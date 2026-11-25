@@ -27,12 +27,6 @@ cl::opt<bool> dynamicArrayStackToHeapAllocation(
     cl::desc("place all array allocations of dynamic size on the heap"),
     cl::init(false), cl::Hidden);
 
-cl::opt<std::size_t> arrayStackAllocationThreshold(
-    "fstack-array-size",
-    cl::desc(
-        "place all array allocations more than <size> elements on the heap"),
-    cl::init(~static_cast<std::size_t>(0)), cl::Hidden);
-
 cl::opt<bool> ignoreMissingTypeDescriptors(
     "ignore-missing-type-desc",
     cl::desc("ignore failures to find derived type descriptors when "
@@ -44,6 +38,10 @@ cl::opt<bool> skipExternalRttiDefinition(
     llvm::cl::desc("do not define rtti static objects for types belonging to "
                    "other compilation units"),
     cl::Hidden);
+
+/// Force setting the no-alias attribute on fuction arguments when possible.
+llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
+                                 llvm::cl::init(true));
 
 OptimizationLevel defaultOptLevel{OptimizationLevel::O0};
 
@@ -61,6 +59,16 @@ cl::opt<bool> useOldAliasTags(
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
 DisableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+cl::opt<unsigned> loopTripCountVersioningMaxSectionExtent(
+    "loop-tripcount-versioning-max-section-extent",
+    cl::desc("largest declared array extent to version an innermost loop on; "
+             "0 disables"),
+    cl::init(32), cl::Hidden);
+cl::opt<unsigned> loopTripCountVersioningMaxUnrolledOps(
+    "loop-tripcount-versioning-max-unrolled-ops",
+    cl::desc("do not version a loop if declared extent times body size "
+             "exceeds this; 0 removes the limit"),
+    cl::init(300), cl::Hidden);
 EnableOption(AllocationPlacement, "allocation-placement",
              "unified array allocation placement (experimental; replaces "
              "stack-arrays and memory-allocation-opt)");

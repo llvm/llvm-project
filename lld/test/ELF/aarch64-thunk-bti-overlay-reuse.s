@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
-// RUN: ld.lld --script=overlay.ld a.o -o overlay --pic-veneer --print-map
+// RUN: ld.lld --script=overlay.ld a.o -o overlay --pic-veneer
 // RUN: llvm-objdump -d --no-show-raw-insn overlay | FileCheck %s
 
 /// A range extension thunk in a different overlay should not be shared as we
@@ -59,12 +59,12 @@ far:
 //--- overlay.ld
 
 SECTIONS {
-  OVERLAY 0x1000 : {
+  OVERLAY 0x1000 : AT(0x1000) {
     .text.over.01   { *(.text.over.01) }
     .text.over.02   { *(.text.over.02) }
   }
 	.text 0x2000 : { *(.text) }
-  OVERLAY 0x80000000 : {
+  OVERLAY 0x80000000 : AT(0x80000000) {
     .text.far { *(.text.far) }
   }
 }

@@ -1164,7 +1164,7 @@ entry:
 define <4 x i16> @and_constant_mask_poison_3(<4 x i16> %add) {
 ; CHECK-LABEL: @and_constant_mask_poison_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i16> <i16 0, i16 0, i16 0, i16 undef>
+; CHECK-NEXT:    ret <4 x i16> <i16 0, i16 0, i16 0, i16 poison>
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %add, <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 undef>
@@ -1227,7 +1227,7 @@ entry:
 define <4 x i16> @or_constant_mask_poison_3(<4 x i16> %in) {
 ; CHECK-LABEL: @or_constant_mask_poison_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i16> <i16 undef, i16 -1, i16 -1, i16 undef>
+; CHECK-NEXT:    ret <4 x i16> <i16 poison, i16 -1, i16 -1, i16 poison>
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %in, <4 x i16> undef, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>
@@ -1461,7 +1461,7 @@ define <2 x float> @frem_splat_constant1(<2 x float> %x) {
 
 define <2 x i1> @PR40734(<1 x i1> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @PR40734(
-; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <1 x i1> zeroinitializer, <1 x i1> [[X:%.*]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <1 x i1> [[X:%.*]], <1 x i1> zeroinitializer, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[NARROW:%.*]] = shufflevector <4 x i1> [[Y:%.*]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[WIDEN]], [[NARROW]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -2566,4 +2566,42 @@ loop:
 
 exit:
   ret <4 x i32> %shuf1
+}
+
+; Canonicalise the zero vec to the RHS
+
+define <4 x i32> @canonical_zero_vec_rhs(<4 x i32> %x) {
+; CHECK-LABEL: @canonical_zero_vec_rhs(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[SHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x i32> %shuf
+}
+
+define <8 x half> @zero_vec_lhs(<8 x half> %x) {
+; CHECK-LABEL: @zero_vec_lhs(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x half> [[X:%.*]], <8 x half> <half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half poison>, <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+; CHECK-NEXT:    ret <8 x half> [[SHUF]]
+;
+  %shuf = shufflevector <8 x half> zeroinitializer, <8 x half> %x, <8 x i32> <i32 8, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+  ret <8 x half> %shuf
+}
+
+define <4 x i8> @zero_vec_poison(<4 x i8> %x) {
+; CHECK-LABEL: @zero_vec_poison(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> <i8 poison, i8 0, i8 0, i8 0>, <4 x i32> <i32 5, i32 6, i32 7, i32 0>
+; CHECK-NEXT:    ret <4 x i8> [[SHUF]]
+;
+  %shuf = shufflevector <4 x i8> <i8 poison, i8 0, i8 0, i8 0>, <4 x i8> %x,  <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i8> %shuf
+}
+
+define <4 x i8> @zero_vec_poison_select(<4 x i8> %x) {
+; CHECK-LABEL: @zero_vec_poison_select(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> <i8 poison, i8 0, i8 0, i8 poison>, <4 x i32> <i32 poison, i32 5, i32 6, i32 0>
+; CHECK-NEXT:    ret <4 x i8> [[SHUF]]
+;
+  %shuf = shufflevector <4 x i8> <i8 poison, i8 0, i8 0, i8 0>, <4 x i8> %x,  <4 x i32> <i32 0, i32 1, i32 2, i32 4>
+  ret <4 x i8> %shuf
 }

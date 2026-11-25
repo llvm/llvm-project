@@ -213,18 +213,17 @@ define i32 @combine_srem_sdiv(i32 %x) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    call __modsi3
-; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call __divsi3
-; RV32I-NEXT:    add a0, s1, a0
+; RV32I-NEXT:    slli a1, a0, 5
+; RV32I-NEXT:    slli a2, a0, 7
+; RV32I-NEXT:    add a1, a0, a1
+; RV32I-NEXT:    sub s0, s0, a2
+; RV32I-NEXT:    add a1, s0, a1
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -244,23 +243,22 @@ define i32 @combine_srem_sdiv(i32 %x) nounwind {
 ;
 ; RV64I-LABEL: combine_srem_sdiv:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -32
-; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sext.w s0, a0
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __moddi3
-; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call __divdi3
-; RV64I-NEXT:    addw a0, s1, a0
-; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    slli a1, a0, 5
+; RV64I-NEXT:    slli a2, a0, 7
+; RV64I-NEXT:    add a1, a0, a1
+; RV64I-NEXT:    sub s0, s0, a2
+; RV64I-NEXT:    add a1, s0, a1
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: combine_srem_sdiv:

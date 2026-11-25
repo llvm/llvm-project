@@ -93,10 +93,10 @@ public:
   }
 };
 
-#define LIST_REMQUO_TESTS(T, func)                                             \
-  using LlvmLibcRemQuoTest = RemQuoTestTemplate<T>;                            \
-  TEST_F(LlvmLibcRemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }    \
-  TEST_F(LlvmLibcRemQuoTest, EqualNumeratorAndDenominator) {                   \
+#define LIST_REMQUO_TESTS(Name, T, func)                                       \
+  using LlvmLibc##Name##Test = RemQuoTestTemplate<T>;                          \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, EqualNumeratorAndDenominator) {                 \
     testEqualNumeratorAndDenominator(&func);                                   \
   }
 

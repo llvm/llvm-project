@@ -45,6 +45,15 @@ public:
   /// original size will not change the value.
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
+  /// \returns The known bits of a 24-bit multiply (MUL_U24/MUL_I24) with a
+  /// \p BitWidth wide result, given the known bits of its operands. Only the
+  /// low 24 bits of each operand are used, zero- or sign-extended depending on
+  /// \p IsSigned.
+  static KnownBits computeKnownBitsForMul24(const KnownBits &LHSKnown,
+                                            const KnownBits &RHSKnown,
+                                            unsigned BitWidth, bool IsSigned,
+                                            bool SelfMultiply);
+
 protected:
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
@@ -64,8 +73,6 @@ protected:
   static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags);
   static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
                                      SDNodeFlags Flags);
-  SDValue getIsLtSmallestNormal(SelectionDAG &DAG, SDValue Op,
-                                SDNodeFlags Flags) const;
   SDValue getIsFinite(SelectionDAG &DAG, SDValue Op, SDNodeFlags Flags) const;
   std::pair<SDValue, SDValue> getScaledLogInput(SelectionDAG &DAG,
                                                 const SDLoc SL, SDValue Op,
@@ -73,7 +80,6 @@ protected:
 
   SDValue LowerFLOG2(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGCommon(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFLOG10(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                           bool IsLog10, SDNodeFlags Flags) const;
   SDValue lowerFEXP2(SDValue Op, SelectionDAG &DAG) const;
@@ -114,7 +120,6 @@ protected:
   /// Check whether value Val can be supported by v_mov_b64, for the current
   /// target.
   bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
-  bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAssertSZExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -142,7 +147,6 @@ protected:
   getConstantNegateCost(const ConstantFPSDNode *C) const;
 
   bool isConstantCostlierToNegate(SDValue N) const;
-  bool isConstantCheaperToNegate(SDValue N) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -157,7 +161,6 @@ protected:
   /// Return 64-bit value Op as two 32-bit integers.
   std::pair<SDValue, SDValue> split64BitValue(SDValue Op,
                                               SelectionDAG &DAG) const;
-  SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
   /// Split a vector type into two parts. The first part is a power of two
@@ -181,7 +184,6 @@ protected:
   /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG, bool sign) const;
@@ -227,14 +229,15 @@ public:
   unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
                              std::optional<unsigned> ByteOffset) const override;
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
+  bool shouldCombineMemoryType(EVT VT) const;
 
   bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT,
                                     unsigned NumElem,

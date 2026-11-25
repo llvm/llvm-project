@@ -78,12 +78,14 @@ enum struct ErrorCode : int {
 // ClauseType: Either an instance of ClauseT, or a type derived from ClauseT.
 //   This is the clause representation in the code using this infrastructure.
 //
-// HelperType: A class that implements two member functions:
+// HelperType: A class that implements three member functions:
 //   // Return the base object of the given object, if any.
 //   std::optional<Object> getBaseObject(const Object &object) const
 //   // Return the iteration variable of the outermost loop associated
 //   // with the construct being worked on, if any.
 //   std::optional<Object> getLoopIterVar() const
+//   // Is clause C allowed on directive D in version V.
+//   bool isClauseAllowedOnDirective(Clause C, Directive D, Version V) const
 
 template <typename ClauseType, typename HelperType>
 struct ConstructDecompositionT {
@@ -399,7 +401,7 @@ ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *input) {
   auto unique = ::detail::find_unique(leafs, [=](const auto &leaf) {
-    return llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version);
+    return helper.isClauseAllowedOnDirective(input->id, leaf.id, version);
   });
 
   if (unique != leafs.end()) {
@@ -419,7 +421,7 @@ bool ConstructDecompositionT<C, H>::applyToFirst(
     return false;
 
   for (auto &leaf : range) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
+    if (!helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
       continue;
     leaf.clauses.push_back(input);
     return true;
@@ -447,7 +449,7 @@ bool ConstructDecompositionT<C, H>::applyIf(const ClauseTy *input,
                                             Predicate shouldApply) {
   bool applied = false;
   for (auto &leaf : leafs) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
+    if (!helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
       continue;
     if (!shouldApply(leaf))
       continue;
@@ -619,7 +621,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
     for (auto &leaf : leafs) {
       auto found = llvm::find(worksharing, leaf.id);
       if (found != std::end(worksharing) &&
-          llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
+          helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
         return &leaf;
     }
     return static_cast<typename decltype(leafs)::value_type *>(nullptr);
@@ -863,8 +865,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
     // which will fail, since "simd" does not allow it. Add the firstprivate
     // only if some leaf allows it.
     bool allowed = llvm::any_of(leafs, [this](const LeafReprInternal &leaf) {
-      return llvm::omp::isAllowedClauseForDirective(
-          leaf.id, llvm::omp::Clause::OMPC_firstprivate, version);
+      return helper.isClauseAllowedOnDirective(
+          llvm::omp::Clause::OMPC_firstprivate, leaf.id, version);
     });
     if (allowed) {
       auto *firstp = makeClause(
@@ -1058,7 +1060,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // Walk over the leaf constructs starting from the innermost, and apply
   // the clause as required by the spec.
   for (auto &leaf : llvm::reverse(leafs)) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
+    if (!helper.isClauseAllowedOnDirective(input->id, leaf.id, version))
       continue;
     // Found a leaf that allows this clause. Keep track of this for better
     // error reporting.

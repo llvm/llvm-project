@@ -10,4 +10,4 @@
 
 #include "src/math/logbf16.h"
 
-LIST_LOGB_TESTS(float16, LIBC_NAMESPACE::logbf16)
+LIST_LOGB_TESTS(Logbf16, float16, LIBC_NAMESPACE::logbf16)

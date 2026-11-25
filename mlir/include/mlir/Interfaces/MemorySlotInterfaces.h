@@ -10,7 +10,6 @@
 #define MLIR_INTERFACES_MEMORYSLOTINTERFACES_H
 
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -23,7 +22,7 @@ struct MemorySlot {
   /// Pointer to the memory slot, used by operations to refer to it.
   Value ptr;
   /// Type of the value contained in the slot.
-  Type elemType;
+  Type valueType;
 };
 
 /// Memory slot attached with information about its destructuring procedure.
@@ -75,6 +74,9 @@ void populatePromotableAliasMap(PromotableAliaserInterface aliaser,
 /// `rootSlot`. If `op` reaches `rootSlot` through multiple distinct aliases
 /// (e.g., a memcpy between two aliases of the same root), the result is one
 /// of them; use `referencesAtMostOneAliasOfSlot` to rule this out.
+/// If `op` owns its wrapped blocking uses (e.g., `vector.mask` wrapping a
+/// `vector.transfer_read`), the wrapped operation's operands are considered
+/// instead.
 std::optional<MemorySlot> getOpAliasSlot(Operation *op,
                                          const MemorySlot &rootSlot,
                                          const PromotableAliasMap &aliasMap);
@@ -83,7 +85,9 @@ std::optional<MemorySlot> getOpAliasSlot(Operation *op,
 /// distinct alias pointer (the root itself or a single `aliasMap` entry).
 /// Multiple operands referencing the same alias are allowed. This is used to
 /// guard `PromotableMemOpInterface` calls, which assume a single slot per
-/// operation.
+/// operation. If `op` owns its wrapped blocking uses (e.g., `vector.mask`
+/// wrapping a `vector.transfer_read`), the wrapped operation's operands are
+/// considered instead.
 bool referencesAtMostOneAliasOfSlot(Operation *op, const MemorySlot &rootSlot,
                                     const PromotableAliasMap &aliasMap);
 

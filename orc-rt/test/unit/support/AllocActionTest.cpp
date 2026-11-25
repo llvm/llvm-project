@@ -19,10 +19,12 @@
 #include "gtest/gtest.h"
 
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include <cstring>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace {
 
@@ -31,7 +33,7 @@ namespace {
 // in SPS.
 struct IntPtrDeserializer {
   bool deserialize(const char *ArgData, size_t ArgSize,
-                   std::tuple<int *> &Args) {
+                   std::tuple<int *> &Args) noexcept {
     if (ArgSize != sizeof(int *))
       return false;
     memcpy(&std::get<0>(Args), ArgData, sizeof(int *));
@@ -40,7 +42,9 @@ struct IntPtrDeserializer {
 };
 
 struct IdentitySerializer {
-  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) { return B; }
+  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) noexcept {
+    return B;
+  }
 };
 
 WrapperFunctionBuffer makeIntPtrArgBuffer(int *P) {
@@ -52,13 +56,13 @@ WrapperFunctionBuffer makeIntPtrArgBuffer(int *P) {
 } // namespace
 
 static orc_rt_WrapperFunctionBuffer noopAction(const char *ArgData,
-                                               size_t ArgSize) {
+                                               size_t ArgSize) noexcept {
   return WrapperFunctionBuffer().release();
 }
 
 // Increments an int via pointer.
 static orc_rt_WrapperFunctionBuffer
-increment_int_ptr_action(const char *ArgData, size_t ArgSize) {
+increment_int_ptr_action(const char *ArgData, size_t ArgSize) noexcept {
   return AllocActionFunction::handle(ArgData, ArgSize, IntPtrDeserializer(),
                                      IdentitySerializer(),
                                      [](int *P) {
@@ -70,7 +74,7 @@ increment_int_ptr_action(const char *ArgData, size_t ArgSize) {
 
 // Decrements an int via pointer.
 static orc_rt_WrapperFunctionBuffer
-decrement_int_ptr_action(const char *ArgData, size_t ArgSize) {
+decrement_int_ptr_action(const char *ArgData, size_t ArgSize) noexcept {
   return AllocActionFunction::handle(ArgData, ArgSize, IntPtrDeserializer(),
                                      IdentitySerializer(),
                                      [](int *P) {
@@ -82,14 +86,14 @@ decrement_int_ptr_action(const char *ArgData, size_t ArgSize) {
 
 // Always returns an out-of-band error.
 static orc_rt_WrapperFunctionBuffer fail_action(const char *ArgData,
-                                                size_t ArgSize) {
+                                                size_t ArgSize) noexcept {
   return WrapperFunctionBuffer::createOutOfBandError("failed").release();
 }
 
 // Always returns an out-of-band error with a distinct message. Used to tell
 // finalize-path and dealloc-path failures apart in error-reporting tests.
 static orc_rt_WrapperFunctionBuffer fail_action_2(const char *ArgData,
-                                                  size_t ArgSize) {
+                                                  size_t ArgSize) noexcept {
   return WrapperFunctionBuffer::createOutOfBandError("failed_2").release();
 }
 
@@ -125,12 +129,12 @@ TEST(AllocActionTest, RunFinalizationActionsComplete) {
   InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
                             MakeAAOnVal(decrement_int_ptr_action)});
 
-  auto DeallocActions =
-      cantFail(runFinalizeActions(std::move(InitialActions), noErrors));
+  auto DeallocActions = runFinalizeActions(std::move(InitialActions), noErrors);
+  ASSERT_THAT_EXPECTED(DeallocActions, Succeeded());
 
   EXPECT_EQ(Val, 2);
 
-  runDeallocActions(std::move(DeallocActions), noErrors);
+  runDeallocActions(std::move(*DeallocActions), noErrors);
 
   EXPECT_EQ(Val, 0);
 }
@@ -158,14 +162,8 @@ TEST(AllocActionTest, RunFinalizeActionsFail) {
       {MakeAA(increment_int_ptr_action, &AfterFailurePairVal),
        MakeAA(increment_int_ptr_action, &AfterFailurePairVal)});
 
-  auto DeallocActions = runFinalizeActions(std::move(InitialActions), noErrors);
-
-  if (DeallocActions) {
-    ADD_FAILURE() << "Failed to report error from runFinalizeActions";
-    return;
-  }
-
-  EXPECT_EQ(toString(DeallocActions.takeError()), std::string("failed"));
+  ASSERT_THAT_EXPECTED(runFinalizeActions(std::move(InitialActions), noErrors),
+                       FailedWithMessage("failed"));
 
   // First pair fully ran: +1 from its finalize action, +1 from its dealloc
   // action during cleanup.
@@ -191,14 +189,14 @@ TEST(AllocActionTest, RunFinalizeActionsNullFinalize) {
   InitialActions.push_back({AllocAction(nullptr, WrapperFunctionBuffer()),
                             MakeAAOnVal(decrement_int_ptr_action)});
 
-  auto DeallocActions =
-      cantFail(runFinalizeActions(std::move(InitialActions), noErrors));
+  auto DeallocActions = runFinalizeActions(std::move(InitialActions), noErrors);
+  ASSERT_THAT_EXPECTED(DeallocActions, Succeeded());
 
   // Both dealloc actions should be included in the returned list, despite one
   // of them having a null finalize action.
-  EXPECT_EQ(DeallocActions.size(), 2U);
+  EXPECT_EQ(DeallocActions->size(), 2U);
 
-  runDeallocActions(std::move(DeallocActions), noErrors);
+  runDeallocActions(std::move(*DeallocActions), noErrors);
 
   EXPECT_EQ(Val, -1);
 }
@@ -216,13 +214,13 @@ TEST(AllocActionTest, RunFinalizeActionsNullDealloc) {
   InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
                             AllocAction(nullptr, WrapperFunctionBuffer())});
 
-  auto DeallocActions =
-      cantFail(runFinalizeActions(std::move(InitialActions), noErrors));
+  auto DeallocActions = runFinalizeActions(std::move(InitialActions), noErrors);
+  ASSERT_THAT_EXPECTED(DeallocActions, Succeeded());
 
   // Null dealloc actions should be filtered out of the returned list.
-  EXPECT_EQ(DeallocActions.size(), 1U);
+  EXPECT_EQ(DeallocActions->size(), 1U);
 
-  runDeallocActions(std::move(DeallocActions), noErrors);
+  runDeallocActions(std::move(*DeallocActions), noErrors);
 
   EXPECT_EQ(Val, 1);
 }
@@ -284,8 +282,7 @@ TEST(AllocActionTest, RunFinalizeActionsFailReportsCleanupErrors) {
       runFinalizeActions(std::move(InitialActions), AccumulateErrors(ErrMsgs));
 
   // The finalize failure is the returned error...
-  ASSERT_FALSE(DeallocActions);
-  EXPECT_EQ(toString(DeallocActions.takeError()), std::string("failed_2"));
+  ASSERT_THAT_EXPECTED(DeallocActions, FailedWithMessage("failed_2"));
 
   // ...while the cleanup dealloc failure is reported out-of-band.
   ASSERT_EQ(ErrMsgs.size(), 1U);

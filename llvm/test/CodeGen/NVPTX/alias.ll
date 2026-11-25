@@ -47,7 +47,8 @@ attributes #0 = { noreturn }
 
 ;      CHECK: .visible .func noreturn_alias
 ; CHECK-NEXT: ()
-; CHECK-NEXT: .noreturn;
+; CHECK-NEXT: .noreturn
+; CHECK-NEXT: ;
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) a()
 

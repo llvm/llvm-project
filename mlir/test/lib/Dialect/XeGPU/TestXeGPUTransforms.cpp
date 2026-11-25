@@ -327,6 +327,9 @@ struct TestXeGPUPropagateLayouts
       signalPassFailure();
       return;
     }
+    // As in the xegpu-propagate-layout pass, temporary layouts in the input are
+    // stale and must not take part in the propagation.
+    xegpu::removeTemporaryLayoutAttrs(getOperation());
     if (failed(xegpu::propagateLayouts(builder, getOperation(), kind, 32))) {
       signalPassFailure();
     }
@@ -358,6 +361,67 @@ struct TestXeGPUResolveLayoutConflicts
   void runOnOperation() override {
     if (failed(xegpu::resolveLayoutConflicts(getOperation())))
       signalPassFailure();
+  }
+};
+
+struct TestXeGPURematerializeConversionSources
+    : public PassWrapper<TestXeGPURematerializeConversionSources,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestXeGPURematerializeConversionSources)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-rematerialize-conversion-sources";
+  }
+
+  StringRef getDescription() const final {
+    return "Test replacing XeGPU layout conversions of trivially "
+           "rematerializable values by recomputation.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestXeGPURematerializeConversionSources() = default;
+  TestXeGPURematerializeConversionSources(
+      const TestXeGPURematerializeConversionSources &pass) = default;
+
+  void runOnOperation() override {
+    OpBuilder builder(&getContext());
+    xegpu::rematerializeConversionSources(builder, getOperation());
+  }
+};
+
+struct TestXeGPUSinkElementwiseConversions
+    : public PassWrapper<TestXeGPUSinkElementwiseConversions,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestXeGPUSinkElementwiseConversions)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-sink-elementwise-conversions";
+  }
+
+  StringRef getDescription() const final {
+    return "Test sinking of XeGPU layout conversions past elementwise ops.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestXeGPUSinkElementwiseConversions() = default;
+  TestXeGPUSinkElementwiseConversions(
+      const TestXeGPUSinkElementwiseConversions &pass) = default;
+
+  void runOnOperation() override {
+    OpBuilder builder(&getContext());
+    xegpu::sinkElementwiseConversions(builder, getOperation());
   }
 };
 
@@ -558,6 +622,8 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUSgToLaneDistribute>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
+  PassRegistration<TestXeGPURematerializeConversionSources>();
+  PassRegistration<TestXeGPUSinkElementwiseConversions>();
   PassRegistration<TestXeGPUArrayLengthOptimization>();
   PassRegistration<TestXeGPUCoalesceGatherScatter>();
 }

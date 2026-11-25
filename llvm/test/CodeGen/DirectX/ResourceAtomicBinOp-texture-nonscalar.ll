@@ -11,7 +11,7 @@
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
-; CHECK: DXIL atomicrmw requires a texture resource with a scalar integer element type
+; CHECK: DXIL atomicrmw requires a texture resource with a scalar element type
 define i32 @atomic_texture1d_int2(i32 %coord, i32 %value) {
   %texture = call target("dx.Texture", <2 x i32>, 1, 0, 0, 1)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
@@ -25,7 +25,7 @@ define i32 @atomic_texture1d_int2(i32 %coord, i32 %value) {
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
-; CHECK: DXIL atomicrmw requires a texture resource with a scalar integer element type
+; CHECK: DXIL atomicrmw requires a texture resource with a scalar element type
 define i32 @atomic_texture2d_int4(<2 x i32> %coords, i32 %value) {
   %texture = call target("dx.Texture", <4 x i32>, 1, 0, 0, 2)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
@@ -39,7 +39,7 @@ define i32 @atomic_texture2d_int4(<2 x i32> %coords, i32 %value) {
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
-; CHECK: DXIL atomicrmw requires a texture resource with a scalar integer element type
+; CHECK: DXIL atomicrmw requires a texture resource with a scalar element type
 define i64 @atomic_texture2darray_i64x2(<3 x i32> %coords, i64 %value) {
   %texture = call target("dx.Texture", <2 x i64>, 1, 0, 0, 7)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
@@ -53,7 +53,7 @@ define i64 @atomic_texture2darray_i64x2(<3 x i32> %coords, i64 %value) {
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
-; CHECK: DXIL atomicrmw requires a texture resource with a scalar integer element type
+; CHECK: DXIL atomicrmw requires a texture resource with a scalar element type
 define i32 @atomic_texture3d_float4(<3 x i32> %coords, i32 %value) {
   %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 4)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)

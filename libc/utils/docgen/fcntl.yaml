@@ -1,3 +1,19 @@
+posix: posix-2024
+types:
+  mode_t:
+    in-latest-posix: ''
+  off64_t:
+    extension: gnu
+  off_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  struct f_owner_ex:
+    extension: linux
+  struct flock:
+    in-latest-posix: ''
+  struct flock64:
+    extension: gnu
 functions:
   creat:
     in-latest-posix: ''
@@ -11,7 +27,11 @@ functions:
     in-latest-posix: ''
   posix_fallocate:
     in-latest-posix: ''
+  fallocate:
+    c-definition: ''
 
+  posix_fadvise64:
+    extension: gnu
 macros:
   AT_EACCESS:
     in-latest-posix: ''
@@ -119,3 +139,7 @@ macros:
     in-latest-posix: ''
   POSIX_FADV_WILLNEED:
     in-latest-posix: ''
+  F_GETOWN_EX:
+    extension: linux
+  F_SETOWN_EX:
+    extension: linux

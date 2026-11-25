@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -225,6 +226,8 @@ protected:
   // restructure the DbgVariableRecord class then we can template parameterize
   // this array size.
   std::array<Metadata *, 3> DebugValues;
+  // The slot holding the DIAssignID of a dbg_assign record.
+  static constexpr size_t AssignIDIdx = 2;
 
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
@@ -806,9 +809,10 @@ struct AAMDNodes {
   // Shift tbaa.struct Metadata node to start off bytes later
   LLVM_ABI static MDNode *shiftTBAAStruct(MDNode *M, size_t off);
 
-  // Extend tbaa Metadata node to apply to a series of bytes of length len.
-  // A size of -1 denotes an unknown size.
-  LLVM_ABI static MDNode *extendToTBAA(MDNode *TBAA, ssize_t len);
+  // Extend tbaa Metadata node to apply to a series of bytes of length Len.
+  // A size of std::nullopt denotes an unknown size.
+  LLVM_ABI static MDNode *extendToTBAA(MDNode *TBAA,
+                                       std::optional<uint64_t> Len);
 
   /// Given two sets of AAMDNodes that apply to the same pointer,
   /// give the best AAMDNodes that are compatible with both (i.e. a set of
@@ -840,9 +844,9 @@ struct AAMDNodes {
   }
 
   /// Create a new AAMDNode that describes this AAMDNode after extending it to
-  /// apply to a series of bytes of length Len. A size of -1 denotes an unknown
-  /// size.
-  AAMDNodes extendTo(ssize_t Len) const {
+  /// apply to a series of bytes of length Len. A size of std::nullopt denotes
+  /// an unknown size.
+  AAMDNodes extendTo(std::optional<uint64_t> Len) const {
     AAMDNodes Result;
     Result.TBAA = TBAA ? extendToTBAA(TBAA, Len) : nullptr;
     // tbaa.struct contains (offset, size, type) triples. Extending the length
@@ -854,6 +858,10 @@ struct AAMDNodes {
     Result.NoAliasAddrSpace = NoAliasAddrSpace;
     return Result;
   }
+
+  /// Like extendTo(std::optional<uint64_t>), using the value of \p Size if it
+  /// is a constant integer and an unknown size otherwise.
+  LLVM_ABI AAMDNodes extendTo(Value *Size) const;
 
   /// Given two sets of AAMDNodes applying to potentially different locations,
   /// determine the best AAMDNodes that apply to both.
@@ -1262,8 +1270,7 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
-  bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
+  bool isReplaceable() const { return isTemporary(); }
 
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
@@ -1476,6 +1483,10 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+  LLVM_ABI static MDNode *getMergedCalleesMetadata(MDNode *A, MDNode *B);
+  /// Merge !pcsections of two merged instructions: the result requests every
+  /// section that either requests.
+  LLVM_ABI static MDNode *getMergedPCSectionsMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedAllocTokenMetadata(const MDNode *A,
                                                       const MDNode *B);
 
@@ -1594,6 +1605,36 @@ TempMDTuple MDNode::getTemporary(LLVMContext &Context,
 void TempMDNodeDeleter::operator()(MDNode *Node) const {
   MDNode::deleteTemporary(Node);
 }
+
+/// Wrapper around alias scope domain metedata to allow accessing their fields,
+/// including surfacing the optional `i1 disjoint` parameter, hiding the details
+/// of the metadata encoding.
+class AliasScopeDomainNode {
+  const MDNode *Node = nullptr;
+
+public:
+  AliasScopeDomainNode() = default;
+  explicit AliasScopeDomainNode(const MDNode *N) : Node(N) {}
+
+  /// Get the MDNode for this AliasScopeDomainNode.
+  const MDNode *getNode() const { return Node; }
+
+  /// Get the optional human-readable description of this domain or the empty
+  /// string otherwise.
+  StringRef getDescription() const {
+    if (Node->getNumOperands() > 2)
+      if (MDString *N = dyn_cast_or_null<MDString>(Node->getOperand(2)))
+        return N->getString();
+    return StringRef();
+  }
+
+  /// Return true if this domain has disjoint scopes.
+  bool hasDisjointScopes() const {
+    const Constant *Disjoint =
+        mdconst::dyn_extract_or_null<Constant>(Node->getOperand(1));
+    return Disjoint && Disjoint->isOneValue();
+  }
+};
 
 /// This is a simple wrapper around an MDNode which provides a higher-level
 /// interface by hiding the details of how alias analysis information is encoded

@@ -10,4 +10,5 @@
 
 #include "src/math/f16fmaf128.h"
 
-LIST_NARROWING_FMA_TESTS(float16, float128, LIBC_NAMESPACE::f16fmaf128)
+LIST_NARROWING_FMA_TESTS(F16fmaf128, float16, float128,
+                         LIBC_NAMESPACE::f16fmaf128)

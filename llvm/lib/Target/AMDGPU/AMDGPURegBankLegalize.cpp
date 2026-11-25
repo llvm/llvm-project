@@ -96,17 +96,16 @@ FunctionPass *llvm::createAMDGPURegBankLegalizeLegacyPass() {
   return new AMDGPURegBankLegalizeLegacy();
 }
 
-const RegBankLegalizeRules &getRules(const GCNSubtarget &ST,
-                                     MachineRegisterInfo &MRI) {
+const RegBankLegalizeRules &getRules(const GCNSubtarget &ST) {
   static std::mutex GlobalMutex;
   static SmallDenseMap<unsigned, std::unique_ptr<RegBankLegalizeRules>>
       CacheForRuleSet;
   std::lock_guard<std::mutex> Lock(GlobalMutex);
   auto [It, Inserted] = CacheForRuleSet.try_emplace(ST.getGeneration());
   if (Inserted)
-    It->second = std::make_unique<RegBankLegalizeRules>(ST, MRI);
+    It->second = std::make_unique<RegBankLegalizeRules>(ST);
   else
-    It->second->refreshRefs(ST, MRI);
+    It->second->refreshRefs(ST);
   return *It->second;
 }
 
@@ -116,7 +115,6 @@ class AMDGPURegBankLegalizeCombiner {
   const SIRegisterInfo &TRI;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
-  const RegisterBank *VccRB;
 
   static constexpr LLT S1 = LLT::scalar(1);
   static constexpr LLT S16 = LLT::scalar(16);
@@ -128,8 +126,7 @@ public:
                                 const RegisterBankInfo &RBI)
       : B(B), MRI(*B.getMRI()), TRI(TRI),
         SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
-        VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
-        VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {};
+        VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)) {};
 
   bool isLaneMask(Register Reg);
   std::pair<MachineInstr *, Register> tryMatch(Register Src, unsigned Opcode);
@@ -338,8 +335,9 @@ void AMDGPURegBankLegalizeCombiner::tryCombineCopy(MachineInstr &MI) {
 
     B.setInstr(MI);
     // Ensure that truncated bits in BoolSrc are 0.
-    auto One = B.buildConstant({SgprRB, S32}, 1);
-    auto BoolSrc = B.buildAnd({SgprRB, S32}, TruncS32Src, One);
+    LLT Ty = MRI.getType(TruncS32Src);
+    auto One = B.buildConstant({SgprRB, Ty}, 1);
+    auto BoolSrc = B.buildAnd({SgprRB, Ty}, TruncS32Src, One);
     B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC, {Dst}, {BoolSrc});
     eraseInstr(MI, MRI);
   }
@@ -371,7 +369,7 @@ void AMDGPURegBankLegalizeCombiner::tryCombineS1AnyExt(MachineInstr &MI) {
   B.setInstr(MI);
 
   if (DstTy == S32 && TruncSrcTy == S64) {
-    auto Unmerge = B.buildUnmerge({SgprRB, S32}, TruncSrc);
+    auto Unmerge = B.buildUnmerge({SgprRB, DstTy}, TruncSrc);
     MRI.replaceRegWith(Dst, Unmerge.getReg(0));
     eraseInstr(MI, MRI);
     return;
@@ -379,7 +377,7 @@ void AMDGPURegBankLegalizeCombiner::tryCombineS1AnyExt(MachineInstr &MI) {
 
   if (DstTy == S64 && TruncSrcTy == S32) {
     B.buildMergeLikeInstr(MI.getOperand(0).getReg(),
-                          {TruncSrc, B.buildUndef({SgprRB, S32})});
+                          {TruncSrc, B.buildUndef({SgprRB, TruncSrcTy})});
     eraseInstr(MI, MRI);
     return;
   }
@@ -442,11 +440,10 @@ runRegBankLegalize(MachineFunction &MF,
   RAIIMFObserverInstaller MFObserverInstaller(MF, Observer);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
 
   // RegBankLegalizeRules is initialized with assigning sets of IDs to opcodes.
-  const RegBankLegalizeRules &RBLRules = getRules(ST, MRI);
+  const RegBankLegalizeRules &RBLRules = getRules(ST);
 
   // Logic that does legalization based on IDs assigned to Opcode.
   RegBankLegalizeHelper RBLHelper(B, MUI, &VT, RBI, RBLRules);
@@ -505,7 +502,7 @@ runRegBankLegalize(MachineFunction &MF,
     }
   }
 
-  assert(!getAnySgprS1(MRI).isValid() &&
+  assert(!getAnySgprS1(MF.getRegInfo()).isValid() &&
          "Registers with sgpr reg bank and S1 LLT are not legal after "
          "AMDGPURegBankLegalize. Should lower to sgpr S32");
 

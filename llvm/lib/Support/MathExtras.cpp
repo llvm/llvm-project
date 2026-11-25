@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MathExtras.h"
+#include "llvm/ADT/APInt.h"
 
 #ifdef _MSC_VER
 #include <limits>
@@ -64,3 +65,15 @@ namespace llvm {
   }
 
 } // namespace llvm
+
+uint64_t llvm::mulDivNearest(uint64_t X, uint64_t Y, uint64_t Z) {
+  assert(Z && "Division by zero");
+  bool Overflowed = false;
+  uint64_t Product = SaturatingMultiply(X, Y, &Overflowed);
+  if (!Overflowed)
+    return divideNearest(Product, Z);
+  // Adding Z / 2 before the division rounds half up, like divideNearest.
+  APInt WideProduct = APInt(128, X) * APInt(128, Y);
+  APInt Divisor(128, Z);
+  return (WideProduct + Divisor.lshr(1)).udiv(Divisor).getLimitedValue();
+}

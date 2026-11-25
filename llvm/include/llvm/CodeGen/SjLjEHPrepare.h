@@ -13,13 +13,15 @@
 
 namespace llvm {
 
-class TargetMachine;
+class Module;
+class StructType;
+
+/// Returns the type of the function context registered with the SjLj unwinder,
+/// laid out like libgcc's SjLj_Function_Context.
+LLVM_ABI StructType *getSjLjFunctionContextType(const Module &M);
 
 class SjLjEHPreparePass : public RequiredPassInfoMixin<SjLjEHPreparePass> {
-  const TargetMachine *TM;
-
 public:
-  explicit SjLjEHPreparePass(const TargetMachine *TM) : TM(TM) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 

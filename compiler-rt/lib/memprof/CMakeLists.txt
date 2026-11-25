@@ -195,12 +195,12 @@ foreach(arch ${MEMPROF_SUPPORTED_ARCH})
 
   if (SANITIZER_USE_SYMBOLS)
     add_sanitizer_rt_symbols(clang_rt.memprof_cxx
-      ARCHS ${arch})
-    add_dependencies(memprof clang_rt.memprof_cxx-${arch}-symbols)
+      ARCHS ${arch}
+      PARENT_TARGET memprof)
     add_sanitizer_rt_symbols(clang_rt.memprof
       ARCHS ${arch}
+      PARENT_TARGET memprof
       EXTRA memprof.syms.extra)
-    add_dependencies(memprof clang_rt.memprof-${arch}-symbols)
   endif()
 endforeach()
 

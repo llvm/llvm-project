@@ -31,7 +31,7 @@ void AffineForOp::setupPromotion(
   }
 
   getInitsMutable().append(reachingDef);
-  bodyRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  bodyRegion.addArgument(slot.valueType, slot.ptr.getLoc());
   regionsToProcess.insert({&bodyRegion, bodyRegion.getArguments().back()});
 }
 
@@ -47,9 +47,54 @@ Value AffineForOp::finalizePromotion(
   memoryslot::updateTerminator(getBody(), reachingDef, reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
+  resultTypes.push_back(slot.valueType);
 
   IRRewriter rewriter(builder);
+  Operation *newOp =
+      memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
+  return newOp->getResults().back();
+}
+
+//===----------------------------------------------------------------------===//
+// AffineIfOp
+//===----------------------------------------------------------------------===//
+
+bool AffineIfOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                    bool hasValueStores) {
+  return true;
+}
+
+void AffineIfOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  regionsToProcess.insert({&getThenRegion(), reachingDef});
+  regionsToProcess.insert({&getElseRegion(), reachingDef});
+}
+
+Value AffineIfOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  if (!hasValueStores)
+    return reachingDef;
+
+  IRRewriter rewriter(builder);
+
+  memoryslot::updateTerminator(&getThenRegion().back(), reachingDef,
+                               reachingAtBlockEnd);
+
+  if (getElseRegion().hasOneBlock()) {
+    memoryslot::updateTerminator(&getElseRegion().back(), reachingDef,
+                                 reachingAtBlockEnd);
+  } else {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.createBlock(&getElseRegion());
+    AffineYieldOp::create(rewriter, getOperation()->getLoc(), reachingDef);
+  }
+
+  SmallVector<Type> resultTypes(getResultTypes());
+  resultTypes.push_back(slot.valueType);
+
   Operation *newOp =
       memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
   return newOp->getResults().back();

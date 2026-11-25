@@ -1,5 +1,4 @@
-// REQUIRES: ubsan-hip
-// RUN: %clang_ubsan_hip %s -o %t %hip_libs
+// RUN: %clang_hip_ubsan %s -o %t %hip_libs
 // RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error"
 
 // TODO: Device __int128 operands are passed by pointer and dropped on the host.

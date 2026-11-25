@@ -69,12 +69,11 @@ def IRDL_Dialect : Dialect {
     attribute. The rationale of this is to simplify the dialect.
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 
   let name = "irdl";
   let cppNamespace = "::mlir::irdl";
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 #endif // MLIR_DIALECT_IRDL_IR_IRDL

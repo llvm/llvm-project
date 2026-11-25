@@ -199,8 +199,8 @@ public:
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
-        VarD && (!shouldIgnoreRef(DRE, Node->getDecl()) &&
-                 (VarD->hasGlobalStorage() || VarD->isStaticLocal())))
+        VarD && VarD->hasGlobalStorage() &&
+        !shouldIgnoreRef(DRE, Node->getDecl()))
       Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
     return true;
   }
@@ -240,7 +240,8 @@ public:
   }
 
   bool VisitFunctionDecl(FunctionDecl *FD) override {
-    if (FD->isGlobal() || FD->isStatic()) {
+    if ((FD->isGlobal() || FD->isStatic()) &&
+        FD->doesThisDeclarationHaveABody()) {
       if (Stmt *Body = FD->getBody()) {
         VarUseNode *N = G.addNode(FD);
         VarUseCollector Collector(N, G);

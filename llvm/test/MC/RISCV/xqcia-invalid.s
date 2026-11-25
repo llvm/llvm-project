@@ -169,7 +169,7 @@ qc.wrap x3, x30, x23
 
 
 # CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcia' (Qualcomm uC Arithmetic Extension)
 qc.wrapi x0, 12, 2047
 
 # CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)

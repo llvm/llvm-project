@@ -8,7 +8,7 @@ define void @g_i32() nounwind {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    # implicit-def: $a0
+; MIPS32-NEXT:    # implicit-def: $r4
 ; MIPS32-NEXT:    jal f_i32
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -20,7 +20,7 @@ define void @g_i32() nounwind {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64-NEXT:    # implicit-def: $a0_64
+; MIPS64-NEXT:    # implicit-def: $r4_64
 ; MIPS64-NEXT:    jal f_i32
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
@@ -38,7 +38,7 @@ define void @g_i64() nounwind {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    # implicit-def: $a1
+; MIPS32-NEXT:    # implicit-def: $r5
 ; MIPS32-NEXT:    move $4, $5
 ; MIPS32-NEXT:    jal f_i64
 ; MIPS32-NEXT:    nop
@@ -51,7 +51,7 @@ define void @g_i64() nounwind {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64-NEXT:    # implicit-def: $a0_64
+; MIPS64-NEXT:    # implicit-def: $r4_64
 ; MIPS64-NEXT:    jal f_i64
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload

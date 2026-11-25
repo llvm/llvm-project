@@ -22,9 +22,9 @@ define double @bar(ptr %wishart) {
 ;
   %tmp = alloca %struct.Wishart, align 8
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %wishart, i64 16, i1 false), !tbaa.struct !2
-  %lg = load double, ptr %tmp, align 8, !tbaa !4
+  %lg = load double, ptr %tmp, align 8, !tbaa !11
   %m = getelementptr inbounds %struct.Wishart, ptr %tmp, i32 0, i32 1
-  %lm = load i32, ptr %m, align 8, !tbaa !8
+  %lm = load i32, ptr %m, align 8, !tbaa !9
   %call = call double @subcall(double %lg, i32 %lm)
   ret double %call
 }
@@ -36,6 +36,10 @@ define double @bar(ptr %wishart) {
 !6 = !{!"Simple C++ TBAA"}
 !7 = !{!8, !8, i64 0}
 !8 = !{!"int", !5, i64 0}
+!10 = !{!"int", !5}
+!9 = !{!10, !10, i64 0, i64 0}
+!12 = !{!"double", !5}
+!11 = !{!12, !12, i64 0, i64 0}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.

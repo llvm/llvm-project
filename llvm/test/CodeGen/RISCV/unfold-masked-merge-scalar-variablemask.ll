@@ -578,13 +578,11 @@ define i32 @out_constant_varx_mone(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-I-LABEL: out_constant_varx_mone:
 ; CHECK-I:       # %bb.0:
 ; CHECK-I-NEXT:    not a1, a2
-; CHECK-I-NEXT:    and a0, a2, a0
-; CHECK-I-NEXT:    or a0, a0, a1
+; CHECK-I-NEXT:    or a0, a1, a0
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: out_constant_varx_mone:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    and a0, a2, a0
 ; CHECK-ZBB-NEXT:    orn a0, a0, a2
 ; CHECK-ZBB-NEXT:    ret
   %notmask = xor i32 %mask, -1
@@ -764,13 +762,11 @@ define i32 @out_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-I-LABEL: out_constant_mone_vary_invmask:
 ; CHECK-I:       # %bb.0:
 ; CHECK-I-NEXT:    not a0, a2
-; CHECK-I-NEXT:    and a1, a2, a1
 ; CHECK-I-NEXT:    or a0, a0, a1
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: out_constant_mone_vary_invmask:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    and a1, a2, a1
 ; CHECK-ZBB-NEXT:    orn a0, a1, a2
 ; CHECK-ZBB-NEXT:    ret
   %notmask = xor i32 %mask, -1

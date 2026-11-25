@@ -1,0 +1,47 @@
+--- a/generate_compile_commands.py	2026-10-01 04:10:36.955397669 +0000
++++ b/generate_compile_commands.py	2026-10-01 04:10:55.701456613 +0000
+@@ -122,6 +122,16 @@
+         if pbar is not None:
+             pbar.close()
+ 
++    repo_root = BUILD_WORKSPACE_DIRECTORY.parent.parent
++    if (repo_root / ".git").exists() or (repo_root / "llvm").is_dir():
++        dest = repo_root / "compile_commands.json"
++        try:
++            dest.unlink(missing_ok=True)
++            dest.symlink_to(os.path.relpath(BUILD_WORKSPACE_DIRECTORY / "compile_commands.json", repo_root))
++            print(f"Created symlink: {dest} -> utils/bazel/compile_commands.json", file=sys.stderr)
++        except OSError:
++            pass
++
+ 
+ def generate_exec_root() -> Path:
+     """Build things in the source tree, add a symlink to external."""
+@@ -244,7 +254,8 @@
+             source_file = compile_args[i + 1]
+             break
+ 
+-    assert source_file is not None
++    if source_file is None:
++        return None
+     return CompileCommand(
+         path=source_file,
+         args=CompileCommandArgs(compile_args),
+@@ -324,6 +335,8 @@
+         if action.mnemonic == "CppCompile":
+             unseen_actions.remove(action.primary_output_id)
+             compile_command = _get_compile_command(action, munge_command_line)
++            if compile_command is None:
++                continue
+             compile_roots[action.primary_output_id] = compile_command.args
+             queue.put(action)
+             increment_completed_actions()
+@@ -404,7 +417,7 @@
+         "query",
+         nargs="?",
+         help="Bazel query target to generate compile commands for",
+-        default="//... except attr(tags, '\\bmanual\\b', //...)",
++        default="@llvm-project//... except attr(tags, '\\bmanual\\b', @llvm-project//...)",
+     )
+     parser.add_argument(
+         "--extra_aquery_arg",

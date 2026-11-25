@@ -176,8 +176,8 @@ bool X86TargetInfo::initFeatureMap(
 
     if (Feature == "+apxf" || Feature == "-apxf") {
       char Sign = Feature[0];
-      for (const char *Sub :
-           {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
+      for (const char *Sub : {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf",
+                              "cf", "zu", "jmpabs"})
         UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
       continue;
     }
@@ -289,6 +289,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+avx10.2") {
       HasAVX10_2 = true;
       HasFullBFloat16 = true;
+    } else if (Feature == "+avx10v2aux") {
+      HasAVX10_V2_AUX = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -848,6 +850,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX10_2__");
     Builder.defineMacro("__AVX10_2_512__");
   }
+  if (HasAVX10_V2_AUX)
+    Builder.defineMacro("__AVX10_V2_AUX__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -999,7 +1003,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasJMPABS)
     Builder.defineMacro("__JMPABS__");
   if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
-      HasZU && HasJMPABS)
+      HasCF && HasZU && HasJMPABS)
     Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
@@ -1098,6 +1102,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx", true)
       .Case("avx10.1", true)
       .Case("avx10.2", true)
+      .Case("avx10v2aux", true)
       .Case("avx2", true)
       .Case("avx512f", true)
       .Case("avx512cd", true)
@@ -1220,6 +1225,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
       .Case("avx10.2", HasAVX10_2)
+      .Case("avx10v2aux", HasAVX10_V2_AUX)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
@@ -1846,6 +1852,7 @@ void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 }
 
 void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.emplace_back("generic");
   llvm::X86::fillValidTuneCPUList(Values);
 }
 

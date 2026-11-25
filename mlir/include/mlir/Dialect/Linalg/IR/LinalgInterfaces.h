@@ -18,9 +18,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/DestinationStyleOpInterface.h"
-#include "mlir/Interfaces/IndexingMapOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/RawOstreamExtras.h"
@@ -145,6 +142,11 @@ std::optional<SmallVector<int64_t>> isaBroadcastOpInterface(LinalgOp linalgOp);
 ///  `linalg.transpose`. Returns permuted dimensions if true.
 std::optional<SmallVector<int64_t>>
 isaTransposeOpInterface(GenericOp genericOp);
+
+/// Checks whether the `genericOp` is semantically equivalent to a
+/// `linalg.reduce`. Returns the reduction dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaReductionOpInterface(GenericOp genericOp);
 
 /// Checks whether a given `genericOp` is semantically equivalent to a single
 /// linalg elementwise unary op, e.g.

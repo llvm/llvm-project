@@ -57,16 +57,12 @@ define void @ldist(i1 %cond, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:  Check 0:
 ; CHECK-NEXT:    Comparing group GRP0:
 ; CHECK-NEXT:    ptr %A
-; CHECK-NEXT:    ptr %A
 ; CHECK-NEXT:    Against group GRP1:
-; CHECK-NEXT:    ptr %C
 ; CHECK-NEXT:    ptr %C
 ; CHECK-NEXT:  Check 1:
 ; CHECK-NEXT:    Comparing group GRP0:
 ; CHECK-NEXT:    ptr %A
-; CHECK-NEXT:    ptr %A
 ; CHECK-NEXT:    Against group GRP2:
-; CHECK-NEXT:    ptr %B
 ; CHECK-NEXT:    ptr %B
 ; CHECK-NEXT:  LDist: After removing unused Instrs:
 ; CHECK-NEXT:  LDist: Partition 0:

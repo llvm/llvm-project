@@ -12,16 +12,16 @@
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     0.50                        frint32x	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        frint32x	v0.2s, v0.2s
-# CHECK-NEXT:  2      4     1.00                        frint32x	v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        frint32x	v0.4s, v0.4s
 # CHECK-NEXT:  1      3     0.50                        frint32z	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        frint32z	v0.2s, v0.2s
-# CHECK-NEXT:  2      4     1.00                        frint32z	v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        frint32z	v0.4s, v0.4s
 # CHECK-NEXT:  1      3     0.50                        frint64x	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        frint64x	v0.2s, v0.2s
-# CHECK-NEXT:  2      4     1.00                        frint64x	v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        frint64x	v0.4s, v0.4s
 # CHECK-NEXT:  1      3     0.50                        frint64z	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        frint64z	v0.2s, v0.2s
-# CHECK-NEXT:  2      4     1.00                        frint64z	v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        frint64z	v0.4s, v0.4s
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V2UnitB

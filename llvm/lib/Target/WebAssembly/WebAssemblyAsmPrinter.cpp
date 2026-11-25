@@ -61,8 +61,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-extern cl::opt<bool> WasmKeepRegisters;
-
 //===----------------------------------------------------------------------===//
 // Helpers.
 //===----------------------------------------------------------------------===//
@@ -165,9 +163,11 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
     const Function *F, wasm::WasmSignature *Sig, bool &InvokeDetected) {
   MCSymbolWasm *WasmSym = nullptr;
 
-  const bool EnableEmEH =
-      TM.Options.ExceptionModel == ExceptionHandling::Emscripten ||
-      WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj;
+  ExceptionHandling EM = F->getParent()->getExceptionModel();
+  const bool EnableEmEH = EM == ExceptionHandling::Emscripten ||
+                          static_cast<const WebAssemblyTargetMachine &>(TM)
+                              .getCLOpts()
+                              .enable_emscripten_sjlj;
   if (EnableEmEH && isEmscriptenInvokeName(F->getName())) {
     assert(Sig);
     InvokeDetected = true;
@@ -221,7 +221,9 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     // coalesces features before isel, so use the TargetMachine's
     // module-wide subtarget to compute legal value types.
     auto &WasmTM = static_cast<const WebAssemblyTargetMachine &>(TM);
-    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl();
+    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl(
+        WasmTM.getTargetCPU(), WasmTM.getTargetFeatureString(),
+        WasmTM.getTargetABIName(*GV->getParent()));
     const WebAssemblyTargetLowering &TLI = *ST->getTargetLowering();
     computeLegalValueVTs(TLI, GV->getParent()->getContext(),
                          GV->getDataLayout(), GlobalVT, VTs);
@@ -608,8 +610,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   // If we never compiled a single function, Subtarget is null.
   if (!Subtarget) {
     Subtarget = static_cast<WebAssemblyTargetMachine &>(TM).getSubtargetImpl(
-        std::string(TM.getTargetCPU()),
-        std::string(TM.getTargetFeatureString()));
+        TM.getTargetCPU(), TM.getTargetFeatureString(), TM.getTargetABIName(M));
   }
   for (const SubtargetFeatureKV &KV : Subtarget->getAllProcessorFeatures()) {
     EmitFeature(KV.key());

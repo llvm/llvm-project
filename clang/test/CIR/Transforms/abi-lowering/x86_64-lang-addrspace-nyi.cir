@@ -9,10 +9,10 @@ module attributes {
 } {
 
   cir.func @lang_addrspace_ptr(
-      %arg0: !cir.ptr<!s32i, lang_address_space(offload_global)>) {
+      %arg0: !cir.ptr<!s32i, lang_address_space(offload_global)>) requires_call_conv_lowering {
     cir.return
   }
 
 }
 
-// CHECK: op x86_64 calling-convention lowering not yet implemented for type
+// CHECK: op calling-convention lowering not yet implemented for type

@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // SPS controller-interface descriptors for the runtime's NativeDylibManager
-// interface. The instance address of the executor-side manager is passed as
-// the first argument to each call.
+// interface. Instances of the executor-side manager are created by calling
+// DylibMgrCreate, and the instance address is passed as the first argument to
+// each of the other calls.
 //
 // See CallSPSCI.h for a description of the descriptor scheme.
 //
@@ -19,32 +20,51 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolLookupSetSPS.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 
 #include <cstdint>
 
 namespace llvm::orc::rt::sps_ci {
 
-/// The executor-side dylib-manager instance. This is a data symbol -- passed
-/// as the first argument to each call below -- not a wrapper to call.
-inline constexpr char NativeDylibManagerInstanceName[] =
-    "orc_rt_ci_NativeDylibManager_Instance";
+/// Create a new executor-side dylib-manager instance; returns its address.
+/// The instance is owned by the executor, and lives until the executor shuts
+/// down.
+struct DylibMgrCreate {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_create");
+  using SPSSig = shared::SPSExpected<shared::SPSExecutorAddr>();
+};
+
+/// A pre-created executor-side dylib-manager instance. This is a data symbol
+/// (the manager object), not a wrapper to call.
+///
+/// This is published by executors that do not provide DylibMgrCreate --
+/// currently only LLVM's OrcTargetProcess library, whose wrapper functions
+/// have no context through which a new instance could be registered. Executors
+/// built on the ORC runtime provide DylibMgrCreate instead.
+///
+/// FIXME: Remove this once OrcTargetProcess is retired.
+inline constexpr SymbolNameSpec NativeDylibManagerInstanceName =
+    SymbolNameSpec::c("orc_rt_ci_NativeDylibManager_Instance");
 
 /// Open the dylib at the given path with the given mode flags; returns a
 /// handle to it.
 struct DylibMgrOpen {
-  static constexpr char Name[] = "orc_rt_ci_sps_NativeDylibManager_load";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_load");
   using SPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
       shared::SPSExecutorAddr, shared::SPSString, uint64_t);
 };
 
 /// Resolve the given lookup set within the given dylib.
 struct DylibMgrResolve {
-  static constexpr char Name[] = "orc_rt_ci_sps_NativeDylibManager_lookup";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_lookup");
   using SPSSig = shared::SPSExpected<
       shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorAddr>>>(
       shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-      shared::SPSRemoteSymbolLookupSet);
+      shared::SPSSymbolLookupSet);
 };
 
 } // namespace llvm::orc::rt::sps_ci

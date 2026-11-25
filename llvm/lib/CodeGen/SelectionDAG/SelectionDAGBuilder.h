@@ -160,9 +160,9 @@ class SelectionDAGBuilder {
   /// We defer handling these until we do see it.
   MapVector<const Value*, DanglingDebugInfoVector> DanglingDebugInfoMap;
 
-  /// Cache the module flag for whether we should use debug-info assignment
-  /// tracking.
-  bool AssignmentTrackingEnabled = false;
+  /// Cache whether a debug value can name the address of a global directly,
+  /// rather than holding out for a register with it.
+  bool CanDescribeGlobalAddressInLocationList = false;
 
 public:
   /// Loads are not emitted to the program immediately.  We bunch them up and
@@ -617,6 +617,9 @@ private:
   void visitGetElementPtr(const User &I);
   void visitSelect(const User &I);
 
+  void visitBitInsert(const User &I);
+  void visitBitExtract(const User &I);
+
   void visitAlloca(const AllocaInst &I);
   void visitLoad(const LoadInst &I);
   void visitStore(const StoreInst &I);
@@ -624,6 +627,7 @@ private:
   void visitMaskedStore(const CallInst &I, bool IsCompressing = false);
   void visitMaskedGather(const CallInst &I);
   void visitMaskedScatter(const CallInst &I);
+  void visitSpeculativeLoad(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
   void visitAtomicRMW(const AtomicRMWInst &I);
   void visitFence(const FenceInst &I);

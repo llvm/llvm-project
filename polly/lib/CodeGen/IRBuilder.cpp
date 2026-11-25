@@ -60,7 +60,9 @@ void ScopAnnotator::buildAliasScopes(Scop &S) {
   SE = S.getSE();
 
   LLVMContext &Ctx = SE->getContext();
-  AliasScopeDomain = getID(Ctx, MDString::get(Ctx, "polly.alias.scope.domain"));
+  AliasScopeDomain =
+      getID(Ctx, ConstantAsMetadata::get(ConstantInt::getFalse(Ctx)),
+            MDString::get(Ctx, "polly.alias.scope.domain"));
 
   AliasScopeMap.clear();
   OtherAliasScopeListMap.clear();

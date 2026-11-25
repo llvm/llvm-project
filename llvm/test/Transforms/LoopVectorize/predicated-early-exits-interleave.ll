@@ -40,9 +40,9 @@ define i64 @single_exit_in_conditional_block() {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[LOOP_END1:.*]]
 ; CHECK:       [[LOOP_END]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP14]], i1 false)
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP11]], i1 false)
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 4, [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP4]], i1 false)
+; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 0, [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP17]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP19]], i64 [[TMP18]], i64 [[TMP16]]
@@ -120,9 +120,9 @@ define i64 @diamond_with_join_then_exit() {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[LOOP_END:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP17]], i1 false)
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP22]], i1 false)
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE]]
-; CHECK-NEXT:    [[FIRST_ACTIVE_LANE7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP13]], i1 false)
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP15]], i1 false)
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE7]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE7]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = select i1 [[TMP21]], i64 [[TMP20]], i64 [[TMP19]]
@@ -237,9 +237,9 @@ define i64 @three_early_exits() {
 ; CHECK:       [[BLOCK_B]]:
 ; CHECK-NEXT:    br label %[[LOOP_END1:.*]]
 ; CHECK:       [[BLOCK_A]]:
-; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP35]], i1 false)
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP37]], i1 false)
 ; CHECK-NEXT:    [[TMP41:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE]]
-; CHECK-NEXT:    [[FIRST_ACTIVE_LANE8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP34]], i1 false)
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP36]], i1 false)
 ; CHECK-NEXT:    [[TMP42:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE8]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE8]], 4
 ; CHECK-NEXT:    [[TMP44:%.*]] = select i1 [[TMP43]], i64 [[TMP42]], i64 [[TMP41]]

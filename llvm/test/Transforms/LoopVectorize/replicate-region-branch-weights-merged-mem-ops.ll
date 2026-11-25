@@ -250,7 +250,7 @@ exit:
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]]}
 ; CHECK: [[META2]] = distinct !{[[META2]], [[META3:![0-9]+]]}
-; CHECK: [[META3]] = distinct !{[[META3]], !"LVerDomain"}
+; CHECK: [[META3]] = distinct !{[[META3]], i1 false, !"LVerDomain"}
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META3]]}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
@@ -268,7 +268,7 @@ exit:
 ; CHECK: [[META18]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; CHECK: [[META19]] = !{[[META20:![0-9]+]]}
 ; CHECK: [[META20]] = distinct !{[[META20]], [[META21:![0-9]+]]}
-; CHECK: [[META21]] = distinct !{[[META21]], !"LVerDomain"}
+; CHECK: [[META21]] = distinct !{[[META21]], i1 false, !"LVerDomain"}
 ; CHECK: [[META22]] = !{[[META23:![0-9]+]]}
 ; CHECK: [[META23]] = distinct !{[[META23]], [[META21]]}
 ; CHECK: [[META24]] = !{[[META25:![0-9]+]]}

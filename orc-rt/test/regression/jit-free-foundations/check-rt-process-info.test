@@ -1,0 +1,8 @@
+# RUN: orc-rt-process-info-check --print-triple --print-page-size \
+# RUN:     --print-cpu-features \
+# RUN:   | FileCheck %s -DARCH=%host-arch -DOS=%host-os \
+# RUN:     -DVERSION=%host-os-version -DPAGESIZE=%host-page-size
+
+# CHECK:      triple: [[ARCH]]-{{.*}}-[[OS]][[VERSION]]
+# CHECK-NEXT: page-size: [[PAGESIZE]]
+# CHECK-NEXT: cpu-features: {{(\+[a-z0-9_.]+(,\+[a-z0-9_.]+)*)?$}}

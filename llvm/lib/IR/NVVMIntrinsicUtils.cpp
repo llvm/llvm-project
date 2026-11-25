@@ -62,6 +62,16 @@ void nvvm::printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal) {
   }
 }
 
+void nvvm::printMemScope(raw_ostream &OS, const Constant *ImmArgVal) {
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI || CI->getZExtValue() > static_cast<uint64_t>(MemScope::SYS)) {
+    OS << "Unknown memory scope";
+    return;
+  }
+
+  OS << getMemScopeName(static_cast<MemScope>(CI->getZExtValue()));
+}
+
 void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
@@ -199,5 +209,18 @@ void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
                ? "Zero fill"
                : "OOB-NaN fill");
     return;
+  }
+}
+
+void nvvm::printTensormapAllocClass(raw_ostream &OS,
+                                    const Constant *ImmArgVal) {
+  static constexpr StringRef TensormapAllocClasses[] = {"small", "large",
+                                                        "same"};
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    if (Val <= static_cast<uint64_t>(nvvm::TensormapAllocClass::SAME)) {
+      OS << TensormapAllocClasses[Val];
+      return;
+    }
   }
 }

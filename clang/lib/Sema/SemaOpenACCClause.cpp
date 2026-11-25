@@ -1937,10 +1937,14 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
     CurType = AT->getElementType();
   }
 
+  // Pointers of any kind (C/C++ pointers, ObjC object pointers, and block
+  // pointers) and fixed-point types are not valid reduction types: we cannot
+  // generate an initializer or combiner for them.
   auto IsValidMemberOfComposite = [](QualType Ty) {
     return !Ty->isAnyComplexType() &&
            (Ty->isDependentType() ||
-            (Ty->isScalarType() && !Ty->isPointerType()));
+            (Ty->isScalarType() && !Ty->isAnyPointerType() &&
+             !Ty->isBlockPointerType() && !Ty->isFixedPointType()));
   };
 
   // If the type is already scalar, or is dependent, just give up.

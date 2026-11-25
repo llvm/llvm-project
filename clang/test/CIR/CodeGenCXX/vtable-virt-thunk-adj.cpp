@@ -32,11 +32,7 @@ extern constexpr Item items[] = {
 // CIR: %[[THIS_CAST:.*]] = cir.cast bitcast %[[THIS_LOAD]] : !cir.ptr<!rec_C> -> !cir.ptr<!u8i>
 // CIR: %[[VTBL_PTR:.*]] = cir.vtable.get_vptr %[[THIS_CAST]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vptr>
 // CIR: %[[VTBL_LOAD:.*]] = cir.load {{.*}}%[[VTBL_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR: %[[VTBL_CAST:.*]] = cir.cast bitcast %[[VTBL_LOAD]] : !cir.vptr -> !cir.ptr<!u8i>
-// CIR: %[[OFFSET:.*]] = cir.const #cir.int<-24> : !s64i
-// CIR: %[[OFFSET_STRIDE:.*]] = cir.ptr_stride %[[VTBL_CAST]], %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-// CIR: %[[OFFSET_CAST:.*]] = cir.cast bitcast %[[OFFSET_STRIDE]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR: %[[OFFSET_LOAD:.*]] = cir.load align(8) %[[OFFSET_CAST]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[OFFSET_LOAD:.*]] = cir.vtable.get_offset %[[VTBL_LOAD]][-3] : !cir.vptr -> !s64i
 // CIR: %[[APPLY_OFFSET:.*]] = cir.ptr_stride %[[THIS_CAST]], %[[OFFSET_LOAD]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR: %[[CAST_THIS_BACK:.*]] = cir.cast bitcast %[[APPLY_OFFSET]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
 // CIR: cir.call @_ZN1CD1Ev(%[[CAST_THIS_BACK]])
@@ -56,11 +52,7 @@ extern constexpr Item items[] = {
 // CIR: %[[THIS_CAST:.*]] = cir.cast bitcast %[[THIS_LOAD]] : !cir.ptr<!rec_C> -> !cir.ptr<!u8i>
 // CIR: %[[VTBL_PTR:.*]] = cir.vtable.get_vptr %[[THIS_CAST]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vptr>
 // CIR: %[[VTBL_LOAD:.*]] = cir.load {{.*}}%[[VTBL_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR: %[[VTBL_CAST:.*]] = cir.cast bitcast %[[VTBL_LOAD]] : !cir.vptr -> !cir.ptr<!u8i>
-// CIR: %[[OFFSET:.*]] = cir.const #cir.int<-24> : !s64i
-// CIR: %[[OFFSET_STRIDE:.*]] = cir.ptr_stride %[[VTBL_CAST]], %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-// CIR: %[[OFFSET_CAST:.*]] = cir.cast bitcast %[[OFFSET_STRIDE]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR: %[[OFFSET_LOAD:.*]] = cir.load align(8) %[[OFFSET_CAST]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[OFFSET_LOAD:.*]] = cir.vtable.get_offset %[[VTBL_LOAD]][-3] : !cir.vptr -> !s64i
 // CIR: %[[APPLY_OFFSET:.*]] = cir.ptr_stride %[[THIS_CAST]], %[[OFFSET_LOAD]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR: %[[CAST_THIS_BACK:.*]] = cir.cast bitcast %[[APPLY_OFFSET]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
 // CIR: cir.call @_ZN1CD0Ev(%[[CAST_THIS_BACK]])

@@ -31,6 +31,8 @@ CHECK-NEXT: 2
 CHECK-NEXT: # Counter Values:
 CHECK-NEXT: 499500
 CHECK-NEXT: 179900
+CHECK-NEXT: # Num Bitmap Bytes:
+CHECK-NEXT: $0
 CHECK-NEXT: 
 CHECK-NEXT: foo2
 CHECK-NEXT: # Func Hash:
@@ -40,6 +42,8 @@ CHECK-NEXT: 2
 CHECK-NEXT: # Counter Values:
 CHECK-NEXT: 500500
 CHECK-NEXT: 180100
+CHECK-NEXT: # Num Bitmap Bytes:
+CHECK-NEXT: $0
 
 RUN: llvm-profdata merge --instr %p/Inputs/basic.proftext --text --function="foo" --no-function="^foo$" | FileCheck %s --check-prefix=CHECK-FILTER4
 CHECK-FILTER4: foo2
@@ -50,6 +54,8 @@ CHECK-NEXT: 2
 CHECK-NEXT: # Counter Values:
 CHECK-NEXT: 500500
 CHECK-NEXT: 180100
+CHECK-NEXT: # Num Bitmap Bytes:
+CHECK-NEXT: $0
 
 RUN: llvm-profdata merge --sample %p/Inputs/cs-sample.proftext --text --function="main.*@.*_Z5funcBi" | FileCheck %s --check-prefix=CHECK-FILTER5
 CHECK-FILTER5: [main:3.1 @ _Z5funcBi:1 @ _Z8funcLeafi]:500853:20
@@ -66,4 +72,3 @@ CHECK-NEXT:  0: 19
 CHECK-NEXT:  1: 19 _Z8funcLeafi:20
 CHECK-NEXT:  3: 12
 CHECK-NEXT:  !Attributes: 1
-

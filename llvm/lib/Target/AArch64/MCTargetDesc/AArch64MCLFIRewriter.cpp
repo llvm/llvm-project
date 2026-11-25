@@ -17,20 +17,16 @@
 #include "Utils/AArch64BaseInfo.h"
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
-
-static cl::opt<bool>
-    LFIGuardElim("aarch64-lfi-guard-elim", cl::Hidden,
-                 cl::desc("Enable the LFI guard elimination optimization"),
-                 cl::init(true));
 
 namespace llvm::AArch64 {
 struct LFIVariantEntry {
@@ -92,9 +88,15 @@ static constexpr MCRegister LFICtxReg = AArch64::X25;
 // 64-bit loads), so a value of 2 means an actual byte offset of 16.
 static constexpr unsigned LFITPOffset = 2;
 
-// Byte offset from the sandbox base register where the syscall handler address
-// is stored (negative because it is below the sandbox base).
+// Byte offset from the context register where the syscall handler address is
+// stored.
 static constexpr int LFISyscallOffset = -8;
+
+AArch64MCLFIRewriter::AArch64MCLFIRewriter(MCContext &Ctx,
+                                           std::unique_ptr<MCRegisterInfo> &&RI,
+                                           std::unique_ptr<MCInstrInfo> &&II)
+    : MCLFIRewriter(Ctx, std::move(RI), std::move(II)),
+      CLOpts(AArch64_MC::getCLOpts(Ctx.getTargetOptions())) {}
 
 static bool isSyscall(const MCInst &Inst) {
   return Inst.getOpcode() == AArch64::SVC;
@@ -203,6 +205,12 @@ static bool pacWritesLR(const MCInst &Inst) {
   }
 }
 
+static bool isBTIC(const MCInst &Inst) {
+  return Inst.getOpcode() == AArch64::HINT &&
+         Inst.getOperand(0).getImm() ==
+             getBTIHintNum(/*CallTarget=*/true, /*JumpTarget=*/false);
+}
+
 // User-mode DC/IC instructions that take a virtual address operand. Encoded as
 // SYSxt with op1=3, Cn=7, op2=1 where the Cm field selects the operation.
 static bool isVASysOp(const MCInst &Inst) {
@@ -298,13 +306,13 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
   return {};
 }
 
-void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
+void AArch64MCLFIRewriter::onLabel(const MCSymbol *Symbol, MCStreamer &Out) {
   if (Guard)
     return;
 
   // Flush a deferred LR guard before the label, since the label is a potential
   // branch target and code reached through it may use LR for control flow.
-  if (DeferredLRGuard && LastSTI) {
+  if (DeferredLRGuard && LastSTI && !Symbol->isTemporary()) {
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
     DeferredLRGuard = false;
   }
@@ -342,7 +350,7 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
                                        const MCSubtargetInfo &STI) {
   // If x28 already holds the guarded value of Src, this guard is redundant and
   // can be skipped.
-  if (LFIGuardElim && Dest == LFIAddrReg && ActiveGuardReg == Src)
+  if (CLOpts.lfi_guard_elim && Dest == LFIAddrReg && ActiveGuardReg == Src)
     return;
 
   // add Dest, LFIBaseReg, W(Src), uxtw
@@ -557,7 +565,7 @@ void AArch64MCLFIRewriter::rewriteAuthenticatedBranchOrCall(
 // svc #0
 // ->
 // mov x26, x30
-// ldur x30, [x27, #-8]
+// ldur x30, [x25, #-8]
 // blr x30
 // add x30, x27, w26, uxtw
 void AArch64MCLFIRewriter::rewriteSyscall(const MCInst &, MCStreamer &Out,
@@ -565,10 +573,10 @@ void AArch64MCLFIRewriter::rewriteSyscall(const MCInst &, MCStreamer &Out,
   // Save LR to scratch.
   emitMov(LFIScratchReg, AArch64::LR, Out, STI);
 
-  // Load syscall handler address from negative offset from sandbox base.
+  // Load syscall handler address from negative offset from context register.
   emitInst(MCInstBuilder(AArch64::LDURXi)
                .addReg(AArch64::LR)
-               .addReg(LFIBaseReg)
+               .addReg(LFICtxReg)
                .addImm(LFISyscallOffset),
            Out, STI);
 
@@ -903,6 +911,22 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
 
   if (isVASysOp(Inst))
     return rewriteVASysOp(Inst, Out, STI);
+
+  // LFI routes all indirect branches through x28, including tail calls that
+  // would otherwise use x16/x17. AAPCS64 only allows for `bti c` landing
+  // pads for indirect calls though x16/x17.
+  // A BR through any other register (e.g., x28) cannot land on BTI C, so
+  // we promote call landing pads to BTI JC.
+  //
+  // br {x16,x17}
+  // ->
+  // add x28, x27, {w16,w17}, uxtw
+  // br x28
+  if (isBTIC(Inst))
+    return emitInst(MCInstBuilder(AArch64::HINT)
+                        .addImm(getBTIHintNum(/*CallTarget=*/true,
+                                              /*JumpTarget=*/true)),
+                    Out, STI);
 
   if (isExceptionReturn(Inst.getOpcode())) {
     error(Inst, "exception returns are not supported by LFI");

@@ -180,9 +180,8 @@ middle.block:                                     ; preds = %vector.body
   ret i32 %29
 }
 
-declare <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16>, <vscale x 16 x i32>)
+declare <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16>, <vscale x 16 x i16>)
 declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32>, <vscale x 16 x i32>)
-declare <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv8i32(<vscale x 2 x i64>, <vscale x 16 x i32>)
 
 declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32>, <16 x i32>)
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)

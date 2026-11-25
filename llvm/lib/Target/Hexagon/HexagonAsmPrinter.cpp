@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
@@ -764,7 +765,8 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
 
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (!MII->isDebugInstr() && !MII->isImplicitDef())
+      if (!MII->isDebugInstr() && !MII->isImplicitDef() &&
+          MII->getOpcode() != TargetOpcode::FREEZE)
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
   } else {
     HexagonLowerToMC(MCII, MI, MCB, *this);
@@ -785,14 +787,14 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void HexagonAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     emitAttributes();
 }
 
 void HexagonAsmPrinter::emitEndOfAsmFile(Module &M) {
   HexagonTargetStreamer &HTS =
       static_cast<HexagonTargetStreamer &>(*OutStreamer->getTargetStreamer());
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     HTS.finishAttributeSection();
 }
 

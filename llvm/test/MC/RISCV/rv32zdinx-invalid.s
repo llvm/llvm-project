@@ -1,14 +1,17 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=+zdinx %s 2>&1 | FileCheck %s
 
 # Unsupport Odd Registers in RV32
-fadd.d a0, a1, a2 # CHECK: :[[@LINE]]:12: error: double precision floating point operands must use even numbered X register
+fadd.d a0, a1, a2
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set
+# CHECK: :[[@LINE-3]]:12: note: register must be an even-numbered GPR when used as an FP operand
 
 # Not support float registers
 flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
 fadd.d fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
 
 # Invalid instructions
-fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: register must be a FPR
+fsw a5, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point)
 fmv.x.w s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names

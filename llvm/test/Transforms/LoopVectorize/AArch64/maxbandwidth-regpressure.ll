@@ -22,8 +22,10 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ;
 ; CHECK-NOREGS-VP: Cost for VF vscale x 4: 6 (Estimated cost per lane: 1.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 4 from 2 spills of Generic::VectorRC
+; CHECK-NOREGS-VP-NEXT: Spill costs for VF vscale x 8: 8
 ; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 8: 13 (Estimated cost per lane: 1.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 4 from 2 spills of Generic::VectorRC
+; CHECK-NOREGS-VP-NEXT: Spill costs for VF vscale x 16: 8
 ; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 16: 13 (Estimated cost per lane: 0.
 ; CHECK-NOREGS-VP: LV: Selecting VF: vscale x 16.
 entry:
@@ -90,8 +92,10 @@ define void @high_pressure(ptr %a, ptr %b) #0 {
 
 ; CHECK-NOREGS-VP: Cost for VF vscale x 4: 6 (Estimated cost per lane: 1.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 6 from 3 spills of Generic::VectorRC
+; CHECK-NOREGS-VP-NEXT: Spill costs for VF vscale x 8: 10
 ; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 8: 20 (Estimated cost per lane: 2.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 14 from 7 spills of Generic::VectorRC
+; CHECK-NOREGS-VP-NEXT: Spill costs for VF vscale x 16: 18
 ; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 16: 39 (Estimated cost per lane: 2.
 ; CHECK-NOREGS-VP: LV: Selecting VF: vscale x 4.
 entry:

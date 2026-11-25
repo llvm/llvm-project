@@ -82,7 +82,7 @@ static void test_main_thread() {
   PthreadAttrValues values;
   values.populate_from(LIBC_NAMESPACE::pthread_self());
 
-  ASSERT_EQ(values.detachstate, static_cast<int>(PTHREAD_CREATE_DETACHED));
+  ASSERT_EQ(values.detachstate, static_cast<int>(PTHREAD_CREATE_JOINABLE));
   ASSERT_NE(values.stackaddr, static_cast<void *>(nullptr));
   ASSERT_EQ(values.stacksize, static_cast<size_t>(PTHREAD_STACK_DYNAMIC_NP));
   ASSERT_EQ(reinterpret_cast<uintptr_t>(values.stackaddr) % pagesize(),

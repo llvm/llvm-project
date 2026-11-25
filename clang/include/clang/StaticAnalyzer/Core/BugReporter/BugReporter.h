@@ -17,7 +17,6 @@
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -49,6 +48,7 @@ namespace clang {
 class AnalyzerOptions;
 class ASTContext;
 class Decl;
+class Preprocessor;
 class SourceManager;
 class Stmt;
 
@@ -248,7 +248,7 @@ public:
   virtual void Profile(llvm::FoldingSetNodeID& hash) const = 0;
 };
 
-class BasicBugReport : public BugReport {
+class BasicBugReport final : public BugReport {
   PathDiagnosticLocation Location;
   const Decl *DeclWithIssue = nullptr;
 
@@ -788,7 +788,7 @@ protected:
 
 /// The tag upon which the TagVisitor reacts. Add these in order to display
 /// additional PathDiagnosticEventPieces along the path.
-class NoteTag : public DataTag {
+class NoteTag final : public DataTag {
 public:
   using Callback = std::function<std::string(BugReporterContext &,
                                              PathSensitiveBugReport &)>;

@@ -387,7 +387,7 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 
 `fir.unpack_array` lowering:
 
-* If `no_copy` is not present, then call Fortran runtime to do the the copy into the original array. The copy must be made iff `fir.box_addr %var != fir.box_addr %new_var`.
+* If `no_copy` is not present, then call Fortran runtime to do the copy into the original array. The copy must be made iff `fir.box_addr %var != fir.box_addr %new_var`.
 
 * If `stack` is not present, generate:
 

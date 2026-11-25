@@ -26,6 +26,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 struct fltSemantics;
@@ -73,6 +74,9 @@ inline bool isNamedBitField(RecordMemberKind kind) {
 /// Unsized types are those that do not have a size, such as
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
+
+/// Returns true if the type is a `cir::IntType` representing a _BitInt.
+bool isBitIntType(mlir::Type ty);
 
 /// Returns the CIR floating-point type for the given semantics, or a null
 /// type if CIR has no type for it (e.g. PPCDoubleDouble or a Float8 format).

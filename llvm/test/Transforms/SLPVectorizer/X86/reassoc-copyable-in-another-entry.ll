@@ -10,17 +10,17 @@ define i64 @test(i32 %conv, i32 %add) {
 ; CHECK-SAME: i32 [[CONV:%.*]], i32 [[ADD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[CONV]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[CONV]], 1
 ; CHECK-NEXT:    [[ADD63:%.*]] = add i32 [[ADD5]], [[ADD]]
-; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[TMP0]], [[CONV]]
 ; CHECK-NEXT:    [[AND7_5:%.*]] = and i32 [[ADD63]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[CONV]], 1
+; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[TMP0]], [[CONV]]
 ; CHECK-NEXT:    [[NARROW5:%.*]] = or i32 [[AND7_5]], [[CONV]]
+; CHECK-NEXT:    [[AND134:%.*]] = and i32 [[ADD12]], 3
+; CHECK-NEXT:    [[NARROW6:%.*]] = or i32 [[NARROW5]], [[AND134]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[CONV]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[ADD63]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP3]], splat (i32 1)
-; CHECK-NEXT:    [[AND134:%.*]] = and i32 [[ADD12]], 3
-; CHECK-NEXT:    [[NARROW6:%.*]] = or i32 [[NARROW5]], [[AND134]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[AND134]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[NARROW6]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

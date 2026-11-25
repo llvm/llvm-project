@@ -352,7 +352,7 @@ computeOpaqueSize(const ASTContext &ASTCtx, const Pointer &Ptr,
     return TypeSize.getQuantity();
 
   // Check if we need to add the flexible array member size.
-  const VarDecl *Base = OP.getBaseDecl();
+  const VarDecl *Base = OP.getBaseVarDecl();
   if (!Base)
     return TypeSize.getQuantity();
 
@@ -432,10 +432,6 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
     }
 
     if (!UseClosestSurroundingVariable || DetermineForCompleteObject) {
-      // Kind=3 wants a lower bound, so we can't fall back to this.
-      if (Kind == 3 && !DetermineForCompleteObject)
-        return std::nullopt;
-
       if (InvalidBase)
         return std::nullopt;
 

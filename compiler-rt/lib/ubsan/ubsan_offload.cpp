@@ -47,8 +47,7 @@ void report(uptr Pc, __ubsan_report_kind Kind, bool Fatal, const void *Data,
   if (seen(Pc))
     return;
 
-  rpc::Client::Port Port =
-      __ubsan_rpc_client.open<UBSAN_OFFLOAD_REPORT_OPCODE>();
+  rpc::Client::Port Port = __ubsan_rpc_client.open<SANITIZER_OFFLOAD_UBSAN>();
   Port.send([&](rpc::Buffer *Buf, uint32_t) {
     auto &Rep = *reinterpret_cast<__ubsan_offload_report *>(Buf);
     Rep.pc = static_cast<uint64_t>(Pc);

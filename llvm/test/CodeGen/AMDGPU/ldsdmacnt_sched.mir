@@ -21,7 +21,6 @@
 
 ---
 name: tensor_load_tensor_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_load
@@ -70,7 +69,6 @@ body: |
 
 ---
 name: tensor_wait_tensor_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_wait_tensor_load
@@ -119,7 +117,6 @@ body: |
 
 ---
 name: tensor_wait_tensor_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_wait_tensor_wait
@@ -169,13 +166,13 @@ body: |
 
 ---
 name: tensor_load_tensor_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait
     ; DEFAULT: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; DEFAULT-NEXT: S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -184,7 +181,6 @@ body: |
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: tensor_load_tensor_wait
@@ -218,7 +214,6 @@ body: |
 
 ---
 name: tensor_load_tensor_wait1
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait1
@@ -267,7 +262,6 @@ body: |
 
 ---
 name: tensor_load_tensor_wait2
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait2
@@ -275,6 +269,7 @@ body: |
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; DEFAULT-NEXT: S_WAIT_TENSORCNT 1, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -283,7 +278,6 @@ body: |
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: S_WAIT_TENSORCNT 1, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: tensor_load_tensor_wait2
@@ -319,7 +313,6 @@ body: |
 
 ---
 name: async_load_async_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_load
@@ -377,7 +370,6 @@ body: |
 
 ---
 name: async_wait_async_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_wait_async_load
@@ -429,7 +421,6 @@ body: |
 
 ---
 name: async_wait_async_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_wait_async_wait
@@ -481,7 +472,6 @@ body: |
 
 ---
 name: async_load_async_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait
@@ -539,7 +529,6 @@ body: |
 
 ---
 name: async_load_async_wait1
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait1
@@ -596,7 +585,6 @@ body: |
 ...
 ---
 name: async_load_async_wait2
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait2

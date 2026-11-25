@@ -12,10 +12,10 @@
 #include "common_constants.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
@@ -942,10 +942,14 @@ LIBC_INLINE double log1p(double x) {
       if (x + x == 0.0)
         return x + x; // Handle FTZ/DAZ correctly.
 
-      volatile float tp = 1.0f;
-      volatile float tn = -1.0f;
-      bool rdp = (tp - 0x1p-25f != tp);
-      bool rdn = (tn - 0x1p-24f != tn);
+      volatile float tpv = 1.0f;
+      volatile float tnv = -1.0f;
+
+      float tp = tpv - 0x1p-25f;
+      float tn = tnv - 0x1p-25f;
+
+      bool rdp = (tp != tpv);
+      bool rdn = (tn != tnv);
 
       if (x > 0 && rdp) {
         return FPBits_t(x_u - 1).get_val();
@@ -1020,7 +1024,7 @@ LIBC_INLINE double log1p(double x) {
 
   // Perform exact range reduction
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double v_hi = fputil::multiply_add(r, m_dd.hi, -1.0); // Exact.
+  double v_hi = fputil::multiply_sub(r, m_dd.hi, 1.0); // Exact.
 #else
   // c = 1 + idx * 2^-7.
   double c = FPBits_t((static_cast<uint64_t>(idx) << (FRACTION_LEN - 7)) +

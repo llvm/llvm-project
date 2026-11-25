@@ -162,7 +162,7 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
-  Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
+  Builder.setInsertPoint(VPBB->getFirstNonPhi());
 
   // Reuse the mask of the immediate dominator if the VPBB post-dominates the
   // immediate dominator.
@@ -310,6 +310,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     }
   }
 
+  Edges.remove_if([](const auto &X) { return match(X.second, m_Poison()); });
+
   return Edges;
 }
 
@@ -343,7 +345,7 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
     VPValue *EdgeMask;
     {
       VPBuilder::InsertPointGuard Guard(Builder);
-      Builder.setInsertPoint(Dst, getMaskInsertPoint(Dst));
+      Builder.setInsertPoint(getMaskInsertPoint(Dst));
       EdgeMask = createEdgeMask(Src, Dst);
     }
     Mask = Mask ? Builder.createOr(Mask, EdgeMask) : EdgeMask;
@@ -352,7 +354,7 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  Builder.setInsertPoint(VPBB, getMaskInsertPoint(VPBB));
+  Builder.setInsertPoint(getMaskInsertPoint(VPBB));
 
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
@@ -408,8 +410,6 @@ void VPPredicator::run() {
       Header);
   // Non-outer regions with VPBBs only are supported at the moment.
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
-  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
-      Frequencies = vputils::computeExecutionFrequencies(Blocks);
 
   for (VPBasicBlock *VPBB : Blocks) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
@@ -419,19 +419,28 @@ void VPPredicator::run() {
       createBlockInMask(VPBB);
 
     VPValue *BlockMask = getBlockInMask(VPBB);
-    if (!BlockMask)
-      continue;
-
-    // Mask all VPInstructions in the block and record the frequency with
-    // which the masked recipes execute.
-    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
-    for (VPRecipeBase &R : *VPBB) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI)
+    // Lower MaskedCond to logical-and(block-in-mask, x).
+    for (VPInstruction &VPI :
+         make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+      if (VPI.getOpcode() == VPInstruction::MaskedCond) {
+        VPValue *Cond = VPI.getOperand(0);
+        if (BlockMask) {
+          Builder.setInsertPoint(&VPI);
+          Cond = Builder.createLogicalAnd(BlockMask, Cond, VPI.getDebugLoc());
+        }
+        VPI.replaceAllUsesWith(Cond);
+        VPI.eraseFromParent();
         continue;
-      VPI->addMask(BlockMask);
-      if (VPI->isMasked())
-        VPI->setExecutionFrequency(Freq, Plan.getContext());
+      }
+
+      // Mask all VPInstructions in the block.
+      if (BlockMask)
+        VPI.addMask(BlockMask);
+
+      // Drop the execution frequency of unmasked VPInstructions, as they
+      // always execute.
+      if (!VPI.isMasked())
+        VPI.clearExecutionFrequency();
     }
   }
 

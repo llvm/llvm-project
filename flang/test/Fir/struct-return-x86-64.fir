@@ -22,7 +22,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
     return %0 : () -> !fits_in_reg
   }
   func.func @test_dispatch_inreg(%arg0: !fir.ref<!fits_in_reg>, %arg1: !fir.class<!fir.type<somet>>) {
-    %0 = fir.dispatch "bar"(%arg1 : !fir.class<!fir.type<somet>>) (%arg1 : !fir.class<!fir.type<somet>>) -> !fits_in_reg {pass_arg_pos = 0 : i32}
+    %0 = fir.dispatch "bar"(%arg1 : !fir.class<!fir.type<somet>>) (%arg1 : !fir.class<!fir.type<somet>>) -> !fits_in_reg pass_arg_pos(0)
     fir.store %0 to %arg0 : !fir.ref<!fits_in_reg>
     return
   }
@@ -39,7 +39,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
     return %1 : () -> ()
   }
   func.func @test_dispatch_sret(%arg0: !fir.ref<!too_big>, %arg1: !fir.class<!fir.type<somet>>) {
-    %0 = fir.dispatch "bar"(%arg1 : !fir.class<!fir.type<somet>>) (%arg1 : !fir.class<!fir.type<somet>>) -> !too_big {pass_arg_pos = 0 : i32}
+    %0 = fir.dispatch "bar"(%arg1 : !fir.class<!fir.type<somet>>) (%arg1 : !fir.class<!fir.type<somet>>) -> !too_big pass_arg_pos(0)
     fir.store %0 to %arg0 : !fir.ref<!too_big>
     return
   }
@@ -54,12 +54,10 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
 // CHECK-LABEL:   func.func @test_call_inreg(
 // CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>) {
 // CHECK:           %[[VAL_1:.*]] = fir.call @test_inreg() : () -> tuple<i64, f32>
-// CHECK:           %[[VAL_2:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<i64, f32>
 // CHECK:           fir.store %[[VAL_1]] to %[[VAL_3]] : !fir.ref<tuple<i64, f32>>
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<tuple<i64, f32>>) -> !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>
 // CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>
-// CHECK:           llvm.intr.stackrestore %[[VAL_2]] : !llvm.ptr
 // CHECK:           fir.store %[[VAL_5]] to %[[VAL_0]] : !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>
 // CHECK:           return
 // CHECK:         }
@@ -80,13 +78,11 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
 // CHECK-LABEL:   func.func @test_dispatch_inreg(
 // CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>,
 // CHECK-SAME:                                   %[[VAL_1:.*]]: !fir.class<!fir.type<somet>>) {
-// CHECK:           %[[VAL_2:.*]] = fir.dispatch "bar"(%[[VAL_1]] : !fir.class<!fir.type<somet>>) (%[[VAL_1]] : !fir.class<!fir.type<somet>>) -> tuple<i64, f32> {pass_arg_pos = 0 : i32}
-// CHECK:           %[[VAL_3:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK:           %[[VAL_2:.*]] = fir.dispatch "bar"(%[[VAL_1]] : !fir.class<!fir.type<somet>>) (%[[VAL_1]] : !fir.class<!fir.type<somet>>) -> tuple<i64, f32> pass_arg_pos(0)
 // CHECK:           %[[VAL_4:.*]] = fir.alloca tuple<i64, f32>
 // CHECK:           fir.store %[[VAL_2]] to %[[VAL_4]] : !fir.ref<tuple<i64, f32>>
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<tuple<i64, f32>>) -> !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>
 // CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>
-// CHECK:           llvm.intr.stackrestore %[[VAL_3]] : !llvm.ptr
 // CHECK:           fir.store %[[VAL_6]] to %[[VAL_0]] : !fir.ref<!fir.type<t1{i:f32,j:i32,k:f32}>>
 // CHECK:           return
 // CHECK:         }
@@ -94,12 +90,10 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
 
 // CHECK-LABEL:   func.func @test_call_sret(
 // CHECK-SAME:                              %[[VAL_0:.*]]: !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) {
-// CHECK:           %[[VAL_1:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.type<t2{i:!fir.array<5xf32>}>
 // CHECK:           fir.call @test_sret(%[[VAL_2]]) : (!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>> {llvm.align = 8 : i32, llvm.sret = !fir.type<t2{i:!fir.array<5xf32>}>}) -> ()
 // CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) -> !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
 // CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
-// CHECK:           llvm.intr.stackrestore %[[VAL_1]] : !llvm.ptr
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_0]] : !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
 // CHECK:           return
 // CHECK:         }
@@ -114,12 +108,10 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
 // CHECK-LABEL:   func.func @test_dispatch_sret(
 // CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>,
 // CHECK-SAME:                                  %[[VAL_1:.*]]: !fir.class<!fir.type<somet>>) {
-// CHECK:           %[[VAL_2:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.type<t2{i:!fir.array<5xf32>}>
-// CHECK:           fir.dispatch "bar"(%[[VAL_1]] : !fir.class<!fir.type<somet>>) (%[[VAL_3]], %[[VAL_1]] : !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>, !fir.class<!fir.type<somet>>) {pass_arg_pos = 1 : i32}
+// CHECK:           fir.dispatch "bar"(%[[VAL_1]] : !fir.class<!fir.type<somet>>) (%[[VAL_3]], %[[VAL_1]] : !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>, !fir.class<!fir.type<somet>>) pass_arg_pos(1)
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) -> !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
 // CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
-// CHECK:           llvm.intr.stackrestore %[[VAL_2]] : !llvm.ptr
 // CHECK:           fir.store %[[VAL_5]] to %[[VAL_0]] : !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
 // CHECK:           return
 // CHECK:         }

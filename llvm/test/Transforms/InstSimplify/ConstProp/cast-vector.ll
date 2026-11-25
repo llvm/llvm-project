@@ -8,7 +8,7 @@
 define <2 x i16> @test1() null_pointer_is_valid {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i16> <i16 ptrtoint (ptr getelementptr inbounds ([10 x i32], ptr null, i64 0, i64 5) to i16), i16 ptrtoint (ptr getelementptr inbounds ([10 x i32], ptr null, i64 0, i64 7) to i16)>
+; CHECK-NEXT:    ret <2 x i16> <i16 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 20) to i16), i16 ptrtoint (ptr getelementptr inbounds (i8, ptr null, i64 28) to i16)>
 ;
 entry:
   %gep = getelementptr inbounds [10 x i32], ptr null, i16 0, <2 x i16> <i16 5, i16 7>
@@ -23,7 +23,7 @@ entry:
 define <2 x i16> @test2() null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i16> <i16 ptrtoint (ptr getelementptr (i32, ptr null, i64 5) to i16), i16 ptrtoint (ptr getelementptr (i32, ptr null, i64 7) to i16)>
+; CHECK-NEXT:    ret <2 x i16> <i16 ptrtoint (ptr getelementptr (i8, ptr null, i64 20) to i16), i16 ptrtoint (ptr getelementptr (i8, ptr null, i64 28) to i16)>
 ;
 entry:
   %gep = getelementptr i32, ptr null, <2 x i16> <i16 5, i16 7>

@@ -13,8 +13,6 @@
 #ifndef MLIR_DIALECT_PTR_IR_PTRDIALECT_H
 #define MLIR_DIALECT_PTR_IR_PTRDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Ptr/IR/PtrOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_PTR_IR_PTRDIALECT_H

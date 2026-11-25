@@ -36,12 +36,13 @@ using namespace llvm;
 //                              Generic Code
 //===----------------------------------------------------------------------===//
 
-/// Initialize - this method must be called before any actual lowering is
+/// initialize - this method must be called before any actual lowering is
 /// done.  This specifies the current context for codegen, and gives the
 /// lowering implementations a chance to set up their default sections.
-void TargetLoweringObjectFile::Initialize(MCContext &ctx,
-                                          const TargetMachine &TM) {
-  // `Initialize` can be called more than once.
+void TargetLoweringObjectFile::initialize(MCContext &ctx,
+                                          const TargetMachine &TM,
+                                          const Module &M) {
+  // `initialize` can be called more than once.
   delete Mang;
   Mang = new Mangler();
   initMCObjectFileInfo(ctx, TM.isPositionIndependent(),
@@ -148,7 +149,7 @@ void TargetLoweringObjectFile::emitPersonalityValue(
     const MachineModuleInfo *MMI) const {}
 
 void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
-                                                     Module &M) const {
+                                                     const Module &M) const {
   MCContext &C = getContext();
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
@@ -194,7 +195,7 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
 }
 
 void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
-    MCStreamer &Streamer, Module &M,
+    MCStreamer &Streamer, const Module &M,
     std::function<void(MCStreamer &Streamer)> COMDATSymEmitter) const {
   NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName);
   if (!FuncInfo)
@@ -349,19 +350,25 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       }
 
     } else {
-      // The dynamic linker always needs to fix PtrAuth relocations up.
-      if (containsConstantPtrAuth(C))
+      // GOFF: data in the code section is shared by all instances of the
+      // program, while function descriptors and other data live in the WSA
+      // of each instance. The binder rejects a relocation in the code section
+      // that refers to the WSA, even a local one, so every initializer that
+      // needs a relocation goes to the WSA.
+      if (TM.getTargetTriple().isOSBinFormatGOFF())
         return SectionKind::getReadOnlyWithRel();
 
       // In static, ROPI and RWPI relocation models, the linker will resolve
       // all addresses, so the relocation entries will actually be constants by
-      // the time the app starts up.  However, we can't put this into a
-      // mergable section, because the linker doesn't take relocations into
-      // consideration when it tries to merge entries in the section.
+      // the time the app starts up (except for PtrAuth relocations, which the
+      // dynamic linker always needs to fix up).  However, we can't put this
+      // into a mergable section, because the linker doesn't take relocations
+      // into consideration when it tries to merge entries in the section.
       Reloc::Model ReloModel = TM.getRelocationModel();
-      if (ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
-          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
-          !C->needsDynamicRelocation())
+      if ((ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
+           ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
+           !C->needsDynamicRelocation()) &&
+          !containsConstantPtrAuth(C))
         return SectionKind::getReadOnly();
 
       // Otherwise, the dynamic linker needs to fix it up, put it in the

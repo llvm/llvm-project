@@ -17,8 +17,8 @@ template <class K>
 struct support::adapt_operations<std::unordered_multiset<K>> {
   using ValueType = typename std::unordered_multiset<K>::value_type;
   using KeyType   = typename std::unordered_multiset<K>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return k; }
-  static KeyType key_from_value(ValueType const& value) { return value; }
+  static ValueType make_value_from_key(KeyType const& k) { return k; }
+  static KeyType const& key_from_value(ValueType const& value) { return value; }
 
   using InsertionResult = typename std::unordered_multiset<K>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
@@ -29,6 +29,8 @@ struct support::adapt_operations<std::unordered_multiset<K>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::unordered_multiset<int>>("std::unordered_multiset<int>");
+  support::associative_container_benchmarks<std::unordered_multiset<std::string>>(
+      "std::unordered_multiset<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

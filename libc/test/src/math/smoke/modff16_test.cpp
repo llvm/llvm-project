@@ -10,4 +10,4 @@
 
 #include "src/math/modff16.h"
 
-LIST_MODF_TESTS(float16, LIBC_NAMESPACE::modff16)
+LIST_MODF_TESTS(Modff16, float16, LIBC_NAMESPACE::modff16)

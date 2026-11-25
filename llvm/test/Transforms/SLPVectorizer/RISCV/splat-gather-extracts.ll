@@ -22,8 +22,6 @@ define void @splat_trim(ptr %A, ptr %C, ptr %D, ptr %F, ptr %S, ptr %E, ptr %B) 
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[AS2:%.*]] = add i64 [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[AS3:%.*]] = sub i64 [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[SH2:%.*]] = lshr i64 [[AS2]], [[E0]]
-; CHECK-NEXT:    [[SH3:%.*]] = shl i64 [[AS3]], [[F0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[TMP9]], [[TMP10]]
@@ -32,9 +30,11 @@ define void @splat_trim(ptr %A, ptr %C, ptr %D, ptr %F, ptr %S, ptr %E, ptr %B) 
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl <2 x i64> [[TMP11]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr <2 x i64> [[TMP11]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i64> [[TMP14]], <2 x i64> [[TMP15]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[AS13:%.*]] = sub i64 [[SH2]], [[E0]]
-; CHECK-NEXT:    [[AS12:%.*]] = add i64 [[SH3]], [[F0]]
+; CHECK-NEXT:    [[SH2:%.*]] = lshr i64 [[AS2]], [[E0]]
+; CHECK-NEXT:    [[SH3:%.*]] = shl i64 [[AS3]], [[F0]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = add <2 x i64> [[TMP16]], [[TMP13]]
+; CHECK-NEXT:    [[AS12:%.*]] = add i64 [[SH3]], [[F0]]
+; CHECK-NEXT:    [[AS13:%.*]] = sub i64 [[SH2]], [[E0]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i64> [[TMP17]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[AS12]], i64 2
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[AS13]], i64 3

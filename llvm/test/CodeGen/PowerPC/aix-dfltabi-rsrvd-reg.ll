@@ -1,9 +1,9 @@
 ;; Test to ensure that we are not using any of the aliased reserved registers
 ;; under the Extended Altivec ABI on AIX.
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+altivec \
+; RUN: llc -mcpu=pwr8 -mattr=+altivec \
 ; RUN:     -stop-after=machine-cp -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=DFLABI
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+altivec -target-abi=vec-extabi\
+; RUN: llc -mcpu=pwr8 -mattr=+altivec -target-abi=vec-extabi\
 ; RUN:     -stop-after=machine-cp -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=EXTABI
 

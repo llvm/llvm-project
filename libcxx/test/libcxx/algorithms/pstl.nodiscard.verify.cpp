@@ -20,6 +20,7 @@
 void test() {
   int a[]    = {1};
   int b[]    = {1};
+  int c[]    = {1};
   auto pred  = [](auto) { return false; };
   auto pred2 = [](auto, auto) { return false; };
 
@@ -29,6 +30,8 @@ void test() {
   std::any_of(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::none_of(std::execution::par, std::begin(a), std::end(a), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::copy_if(std::execution::par, std::begin(a), std::end(a), std::begin(b), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::count_if(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -55,6 +58,10 @@ void test() {
   std::find_first_of(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::find_first_of(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::includes(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::includes(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::is_heap(std::execution::par, std::begin(a), std::end(a));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -115,4 +122,34 @@ void test() {
   std::search_n(std::execution::par, std::begin(a), std::end(a), 1, 1);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::search_n(std::execution::par, std::begin(a), std::end(a), 1, 1, pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_difference(std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_difference(
+      std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_symmetric_difference(
+      std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_symmetric_difference(
+      std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_intersection(std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_intersection(
+      std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_union(std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_union(std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::partition(std::execution::par, std::begin(a), std::end(a), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stable_partition(std::execution::par, std::begin(a), std::end(a), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::partition_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::begin(c), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::remove_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b), 1);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::remove_copy_if(std::execution::par, std::begin(a), std::end(a), std::begin(b), pred);
 }

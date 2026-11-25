@@ -11,13 +11,13 @@ subroutine test1(a, b)
 
   !  Look at inline constructor case
   ! CHECK: %[[CONST:.*]] = fir.address_of(@_QQro.3xr4.0) : !fir.ref<!fir.array<3xf32>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CONST]](%{{.*}}) {{{.*}}uniq_name = "_QQro.3xr4.0"}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CONST]](%{{.*}}) {{.*}}uniq_name("_QQro.3xr4.0")
   ! CHECK: hlfir.assign %[[DECL]]#0 to %{{.*}}
   a = (/ 1.0, 2.0, 3.0 /)
 
   !  Look at PARAMETER case
   ! CHECK: %[[CONST2:.*]] = fir.address_of(@_QQro.4xi4.1) : !fir.ref<!fir.array<4xi32>>
-  ! CHECK: %[[DECL2:.*]]:2 = hlfir.declare %[[CONST2]](%{{.*}}) {{{.*}}uniq_name = "_QQro.4xi4.1"}
+  ! CHECK: %[[DECL2:.*]]:2 = hlfir.declare %[[CONST2]](%{{.*}}) {{.*}}uniq_name("_QQro.4xi4.1")
   ! CHECK: hlfir.assign %[[DECL2]]#0 to %{{.*}}
   b = constant_array
 end subroutine test1
@@ -117,12 +117,25 @@ subroutine test5(a, array2)
   real :: array2(2)
 
   !  Array ctor with runtime element values and constant extents.
-  !  Concatenation of array values of constant extent.
-  ! CHECK: fir.call @_FortranAInitArrayConstructorVector
-  ! CHECK: fir.address_of(@_QQro.{{.*}})
-  ! CHECK: fir.call @_FortranAPushArrayConstructorValue
-  ! CHECK: fir.call @_FortranAPushArrayConstructorValue
-  ! CHECK: %[[EXPR:.*]] = hlfir.as_expr
+  !  Concatenate the arrays into one inline temporary using ordered loops.
+  ! CHECK: %[[ARRAY2:.*]]:2 = hlfir.declare %[[array2]](
+  ! CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<4xf32>
+  ! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](
+  ! CHECK: %[[CONST:.*]] = fir.address_of(@_QQro.{{.*}})
+  ! CHECK: %[[CONST_DECL:.*]]:2 = hlfir.declare %[[CONST]](
+  ! CHECK: fir.do_loop %[[I:.*]] = %{{.*}} to %{{.*}} step %{{[^ ]+}} {
+  ! CHECK: %[[SOURCE:.*]] = hlfir.designate %[[CONST_DECL]]#0 (%[[I]])
+  ! CHECK: %[[VALUE:.*]] = fir.load %[[SOURCE]]
+  ! CHECK: %[[DEST:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}})
+  ! CHECK: hlfir.assign %[[VALUE]] to %[[DEST]]
+  ! CHECK-NEXT: }
+  ! CHECK: fir.do_loop %[[J:.*]] = %{{.*}} to %{{.*}} step %{{[^ ]+}} {
+  ! CHECK: %[[SOURCE:.*]] = hlfir.designate %[[ARRAY2]]#0 (%[[J]])
+  ! CHECK: %[[VALUE:.*]] = fir.load %[[SOURCE]]
+  ! CHECK: %[[DEST:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}})
+  ! CHECK: hlfir.assign %[[VALUE]] to %[[DEST]]
+  ! CHECK-NEXT: }
+  ! CHECK: %[[EXPR:.*]] = hlfir.as_expr %[[TEMP]]#0 move
   ! CHECK: hlfir.assign %[[EXPR]]
   ! CHECK: hlfir.destroy %[[EXPR]]
   ! CHECK: return
@@ -153,6 +166,6 @@ subroutine test7(a, n)
   a = (/ (CHAR(i), i=1,n) /)
 end subroutine test7
 
-! CHECK: fir.global internal @_QQro.3xr4.0(dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>) {alignment = 64 : i64} constant : !fir.array<3xf32>
+! CHECK: fir.global internal @_QQro.3xr4.0(dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>) <{alignment = 64 : i64}> constant : !fir.array<3xf32>
 
-! CHECK: fir.global internal @_QQro.4xi4.1(dense<[6, 7, 42, 9]> : tensor<4xi32>) {alignment = 64 : i64} constant : !fir.array<4xi32>
+! CHECK: fir.global internal @_QQro.4xi4.1(dense<[6, 7, 42, 9]> : tensor<4xi32>) <{alignment = 64 : i64}> constant : !fir.array<4xi32>

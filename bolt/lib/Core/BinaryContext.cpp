@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -34,6 +35,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -55,6 +57,7 @@ namespace opts {
 
 extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> UpdateDebugSections;
+extern cl::opt<bool> HotFunctionsAtEnd;
 
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
@@ -65,7 +68,6 @@ static cl::opt<bool>
 PrintDebugInfo("print-debug-info",
   cl::desc("print debug info when printing functions"),
   cl::Hidden,
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<bool> PrintRelocations(
@@ -77,7 +79,6 @@ static cl::opt<bool>
 PrintMemData("print-mem-data",
   cl::desc("print memory data annotations when printing functions"),
   cl::Hidden,
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<std::string> CompDirOverride(
@@ -90,12 +91,12 @@ cl::opt<std::string> CompDirOverride(
 static cl::opt<bool> CloneConstantIsland("clone-constant-island",
                                          cl::desc("clone constant islands"),
                                          cl::Hidden, cl::init(true),
-                                         cl::ZeroOrMore, cl::cat(BoltCategory));
+                                         cl::cat(BoltCategory));
 
 static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
-                         cl::ZeroOrMore, cl::cat(BoltCategory));
+                         cl::cat(BoltCategory));
 
 static cl::opt<bool> DropDWOPageCache(
     "drop-dwo-page-cache",
@@ -242,8 +243,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
   // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
-  // make it static to outlive the AsmInfo.
-  static const MCTargetOptions MCOptions;
+  // make it static to outlive the AsmInfo. Point it at the library options
+  // parsed from the command line (e.g. -x86-align-branch*).
+  static const MCTargetOptions MCOptions = [] {
+    MCTargetOptions Options;
+    Options.LibraryOptions = &opts::LibraryOptionsCtx;
+    return Options;
+  }();
   std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
@@ -319,8 +325,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   else if (opts::LargeCodeModel.getNumOccurrences())
     BC->UseLargeCodeModel = opts::LargeCodeModel;
 
-  BC->MAB = std::unique_ptr<MCAsmBackend>(
-      BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
+  BC->MAB = std::unique_ptr<MCAsmBackend>(BC->TheTarget->createMCAsmBackend(
+      *BC->STI, *BC->MRI, BC->Ctx->getTargetOptions()));
 
   BC->setFilename(InputFileName);
 
@@ -352,6 +358,103 @@ bool BinaryContext::forceSymbolRelocations(StringRef SymbolName) const {
     return true;
 
   return false;
+}
+
+namespace {
+
+/// Defines the strict weak ordering for BOLT-produced code sections.
+class CodeSectionOrder {
+public:
+  CodeSectionOrder(StringRef ColdSectionName, StringRef HotTextMoverSectionName,
+                   StringRef MainSectionName, StringRef WarmSectionName,
+                   bool HotText, bool HotFunctionsAtEnd)
+      : ColdSectionName(ColdSectionName),
+        HotTextMoverSectionName(HotTextMoverSectionName),
+        MainSectionName(MainSectionName), WarmSectionName(WarmSectionName),
+        HotText(HotText), HotFunctionsAtEnd(HotFunctionsAtEnd) {}
+
+  bool operator()(StringRef AName, StringRef BName) const {
+    const SectionKind AKind = getKind(AName);
+    const SectionKind BKind = getKind(BName);
+    const unsigned ARank = getRank(AKind);
+    const unsigned BRank = getRank(BKind);
+    if (ARank != BRank)
+      return ARank < BRank;
+
+    if (AKind == SectionKind::Cold) {
+      if (AName.size() != BName.size())
+        return HotFunctionsAtEnd ? AName.size() > BName.size()
+                                 : AName.size() < BName.size();
+      if (AName != BName)
+        return HotFunctionsAtEnd ? AName > BName : AName < BName;
+    }
+
+    return false;
+  }
+
+private:
+  enum class SectionKind { Mover, Main, Warm, Cold, Other };
+
+  SectionKind getKind(StringRef Name) const {
+    if (HotText && Name == HotTextMoverSectionName)
+      return SectionKind::Mover;
+    if (Name == MainSectionName)
+      return SectionKind::Main;
+    if (Name == WarmSectionName)
+      return SectionKind::Warm;
+    if (Name.starts_with(ColdSectionName))
+      return SectionKind::Cold;
+    return SectionKind::Other;
+  }
+
+  unsigned getRank(SectionKind Kind) const {
+    if (Kind == SectionKind::Mover)
+      return 0;
+    if (HotFunctionsAtEnd) {
+      switch (Kind) {
+      case SectionKind::Other:
+        return 1;
+      case SectionKind::Cold:
+        return 2;
+      case SectionKind::Warm:
+        return 3;
+      case SectionKind::Main:
+        return 4;
+      case SectionKind::Mover:
+        llvm_unreachable("handled above");
+      }
+    }
+    switch (Kind) {
+    case SectionKind::Main:
+      return 1;
+    case SectionKind::Warm:
+      return 2;
+    case SectionKind::Cold:
+      return 3;
+    case SectionKind::Other:
+      return 4;
+    case SectionKind::Mover:
+      llvm_unreachable("handled above");
+    }
+    llvm_unreachable("unknown section kind");
+  }
+
+  StringRef ColdSectionName;
+  StringRef HotTextMoverSectionName;
+  StringRef MainSectionName;
+  StringRef WarmSectionName;
+  bool HotText;
+  bool HotFunctionsAtEnd;
+};
+
+} // namespace
+
+bool BinaryContext::compareSectionNames(StringRef A, StringRef B) const {
+  const CodeSectionOrder CompareSections(
+      getColdCodeSectionName(), getHotTextMoverSectionName(),
+      getMainCodeSectionName(), getWarmCodeSectionName(), opts::HotText,
+      opts::HotFunctionsAtEnd);
+  return CompareSections(A, B);
 }
 
 std::unique_ptr<MCObjectWriter>
@@ -1222,6 +1325,9 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     }
   }
 
+  if (BD->isVTable())
+    VTableMap.try_emplace(Address, BD);
+
   return Symbol;
 }
 
@@ -1243,6 +1349,17 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
     }
   }
   return nullptr;
+}
+
+const BinaryData *
+BinaryContext::getVTableContainingAddress(uint64_t Address) const {
+  // Vtables do not overlap, so only the last one starting at or before
+  // Address can contain it.
+  auto VI = VTableMap.upper_bound(Address);
+  if (VI == VTableMap.begin())
+    return nullptr;
+  const BinaryData *VTable = std::prev(VI)->second;
+  return VTable->containsAddress(Address) ? VTable : nullptr;
 }
 
 BinaryData *BinaryContext::getGOTSymbol() {
@@ -2074,10 +2191,8 @@ void BinaryContext::preprocessDebugInfo() {
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
-      std::optional<MD5::MD5Result> Checksum;
-      if (LineTable->Prologue.ContentTypes.HasMD5)
-        Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      const char *Name =
+      StringRef CUCompDir = CU->getCompilationDir();
+      StringRef CUName =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         std::optional<DWARFUnit *> DWOCU = getDWOCU(*DWOID);
@@ -2090,11 +2205,48 @@ void BinaryContext::preprocessDebugInfo() {
           NumMissingDWOs++;
           continue;
         }
-        Name = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
-                               nullptr);
+        CUName = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
+                                 nullptr);
       }
-      BinaryLineTable.setRootFile(CU->getCompilationDir(), Name, Checksum,
-                                  std::nullopt);
+
+      // The file names list should always contain at least one entry with
+      // DWARF 5.
+      assert(!FileNames.empty() &&
+             "Missing root file entry in DWARF 5 line table");
+      std::optional<MD5::MD5Result> Checksum;
+      if (LineTable->Prologue.ContentTypes.HasMD5)
+        Checksum = FileNames[0].Checksum;
+      StringRef CompDir =
+          dwarf::toString(LineTable->Prologue.IncludeDirectories[0], "");
+
+      std::string Name;
+      [[maybe_unused]] bool Success = LineTable->Prologue.getFileNameByIndex(
+          0, CompDir, DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
+          Name);
+      assert(Success &&
+             "Unable to get path of root file in DWARF 5 line table");
+
+      // If the first directory/file name entry is not the same as
+      // DW_AT_comp_dir/DW_AT_name (if the attribute exists), then the input
+      // file has invalid DWARF. Emit a warning in this case, and use the line
+      // table values for setting the root file.
+      if (!CUCompDir.empty() && CompDir != CUCompDir) {
+        this->errs() << "BOLT-WARNING: invalid DWARF detected in " << Filename
+                     << ": the first directory entry in the line table ("
+                     << CompDir
+                     << ") does not match the value of DW_AT_comp_dir ("
+                     << CUCompDir << ") for CU at offset 0x"
+                     << Twine::utohexstr(CUID) << "\n";
+      }
+      if (!CUName.empty() && Name != CUName) {
+        this->errs() << "BOLT-WARNING: invalid DWARF detected in " << Filename
+                     << ": the first file name entry in the line table ("
+                     << Name << ") does not match the value of DW_AT_name ("
+                     << CUName << ") for CU at offset 0x"
+                     << Twine::utohexstr(CUID) << "\n";
+      }
+
+      BinaryLineTable.setRootFile(CompDir, Name, Checksum, std::nullopt);
     }
 
     BinaryLineTable.setDwarfVersion(DwarfVersion);
@@ -2107,7 +2259,7 @@ void BinaryContext::preprocessDebugInfo() {
       continue;
     }
     const uint32_t Offset = DwarfVersion < 5 ? 1 : 0;
-    for (size_t I = 0, Size = FileNames.size(); I != Size; ++I) {
+    for (size_t I = 1 - Offset, Size = FileNames.size(); I != Size; ++I) {
       // Dir indexes start at 1, as DWARF file numbers, and a dir index 0
       // means empty dir.
       StringRef Dir = "";
@@ -2124,8 +2276,8 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
-      cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
-                            DwarfVersion));
+      cantFail(getDwarfFile(Dir, FileName, I + Offset, Checksum, std::nullopt,
+                            CUID, DwarfVersion));
     }
   }
 
@@ -2195,6 +2347,10 @@ void BinaryContext::collectDebugScopeBoundaries() {
     if (std::optional<uint64_t> DWOId = CU->getDWOId())
       releaseDWOCU(*DWOId);
   }
+}
+
+bool BinaryContext::shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const {
+  return (AlignBlocks || PreserveBlocksAlignment) && BB.getAlignment() > 1;
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
@@ -2697,11 +2853,12 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value, bool IsRELR) {
+                                         uint64_t Value, bool IsRELR,
+                                         uint32_t JmpRelocationIndex) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value, IsRELR);
+                                Addend, Value, IsRELR, JmpRelocationIndex);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {
@@ -2850,7 +3007,9 @@ BinaryContext::createInstructionPatch(uint64_t Address,
 BinaryFunction *
 BinaryContext::createThunkBinaryFunction(const std::string &Name) {
   static NameResolver NR;
-  return createInjectedBinaryFunction(NR.uniquify(Name));
+  BinaryFunction *BF = createInjectedBinaryFunction(NR.uniquify(Name));
+  BF->setIsThunk(true);
+  return BF;
 }
 
 std::pair<size_t, size_t>
@@ -2867,7 +3026,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   IndependentCodeEmitter MCEInstance = createIndependentMCCodeEmitter();
   MCContext *LocalCtx = MCEInstance.LocalCtx.get();
   MCAsmBackend *MAB =
-      TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
+      TheTarget->createMCAsmBackend(*STI, *MRI, Ctx->getTargetOptions());
 
   SmallString<256> Code;
   raw_svector_ostream VecOS(Code);
@@ -3036,6 +3195,14 @@ void BinaryContext::deleteJumpTable(uint64_t Address) {
     Parent->JumpTables.erase(Address);
   JumpTables.erase(Address);
   delete JT;
+}
+
+void BinaryContext::detachJumpTable(BinaryFunction &BF, uint64_t Address) {
+  JumpTable *JT = JumpTables.at(Address);
+  llvm::erase(JT->Parents, &BF);
+  BF.JumpTables.erase(Address);
+  if (JT->Parents.empty())
+    deleteJumpTable(Address);
 }
 
 DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(

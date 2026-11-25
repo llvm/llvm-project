@@ -231,7 +231,7 @@ public:
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
   LLVM_ABI Rematerializer(MachineFunction &MF,
-                          SmallVectorImpl<RegionBoundaries> &Regions,
+                          MutableArrayRef<RegionBoundaries> Regions,
                           LiveIntervals &LIS);
 
   /// Goes through the whole MF and identifies all rematerializable registers.
@@ -462,13 +462,13 @@ public:
             std::optional<unsigned> UseRegion = std::nullopt) const;
 
 private:
-  struct DeadDefDelegate : LiveRangeEdit::Delegate {
+  struct LLVM_ABI DeadDefDelegate : LiveRangeEdit::Delegate {
     Rematerializer &Remater;
     DeadDefDelegate(Rematerializer &Remater) : Remater(Remater) {}
     void LRE_WillEraseInstruction(MachineInstr *MI) override;
   };
 
-  SmallVectorImpl<RegionBoundaries> &Regions;
+  MutableArrayRef<RegionBoundaries> Regions;
   MachineRegisterInfo &MRI;
   LiveIntervals &LIS;
   const TargetInstrInfo &TII;
@@ -604,7 +604,7 @@ private:
     /// previously deleted registers.
     SmallVector<MachineInstr *, 1> Defs;
 
-    LLVM_ABI DeadReg(RegisterIdx Idx, const Rematerializer &Remater)
+    DeadReg(RegisterIdx Idx, const Rematerializer &Remater)
         : Idx(Idx), DefReg(Remater.getReg(Idx).getDefReg()),
           Defs(Remater.getReg(Idx).Defs) {}
   };

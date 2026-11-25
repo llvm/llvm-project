@@ -58,7 +58,8 @@ entry:
 !1 = !{ float 2.5 }
 !2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!"omnipotent char", !2}
-!4 = !{!"double", !3}
+!4 = !{!5, !5, i64 0}
+!5 = !{!"double", !3}
 ;.
 ; CHECK: [[DOUBLE_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"double", [[META2:![0-9]+]]}

@@ -30,13 +30,8 @@ class MCSubtargetInfo;
 class MCInstrInfo;
 class MCInst;
 class MCInstrDesc;
+class MCTargetOptions;
 class InstrItineraryData;
-
-namespace cl {
-class OptionCategory;
-}
-
-extern LLVM_ABI cl::OptionCategory MCScheduleOptions;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
@@ -438,7 +433,12 @@ struct MCSchedModel {
   /// Return the buffer size of the resource. If a positive scale factor
   /// is provided and the original buffer size is > 1, the size is scaled
   /// accordingly.
-  LLVM_ABI int getResourceBufferSize(unsigned ProcResourceIdx) const;
+  LLVM_ABI int getResourceBufferSize(unsigned ProcResourceIdx,
+                                     float ReservationStationScaleFactor) const;
+
+  /// Returns the -sched-model-reservation-station-scale-factor value.
+  LLVM_ABI static float
+  getReservationStationScaleFactor(const MCTargetOptions &Options);
 
   /// Returns the default initialized model.
   LLVM_ABI static const MCSchedModel Default;

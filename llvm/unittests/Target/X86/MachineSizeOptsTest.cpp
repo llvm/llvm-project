@@ -77,7 +77,7 @@ class MachineSizeOptsTest : public testing::Test {
     if (!M)
       report_fatal_error("parseIRModule failed");
     M->setTargetTriple(TM->getTargetTriple());
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TM->getTargetTriple().computeDataLayout());
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
     if (Parser->parseMachineFunctions(*M, *MMI))
       report_fatal_error("parseMachineFunctions failed");
@@ -195,7 +195,6 @@ body:             |
 ...
 ---
 name:            f
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1(0x7ebb907a), %bb.2(0x01446f86)

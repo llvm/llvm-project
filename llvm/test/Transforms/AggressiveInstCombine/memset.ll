@@ -4,13 +4,13 @@
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 declare void @llvm.assume(i1)
 
-define void @range_0_1(ptr %dst, i8 %value, i64 %n) {
+define void @range_0_1(ptr %dst, i8 %value, i64 %n) !prof !0 {
 ; CHECK-LABEL: define void @range_0_1(
-; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[LEN:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[DO_MEMSET:.*]], label %[[END:.*]]
+; CHECK-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[DO_MEMSET:.*]], label %[[END:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[DO_MEMSET]]:
 ; CHECK-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
 ; CHECK-NEXT:    br label %[[END]]
@@ -20,6 +20,82 @@ define void @range_0_1(ptr %dst, i8 %value, i64 %n) {
 entry:
   %len = and i64 %n, 1
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %len, i1 false)
+  ret void
+}
+
+define void @range_0_1_value_profile(ptr %dst, i8 %value, i64 %n) !prof !0 {
+; CHECK-LABEL: define void @range_0_1_value_profile(
+; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LEN:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[BB0:.*]], label %[[BB1:.*]], !prof [[PROF2:![0-9]+]]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %len = and i64 %n, 1
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %len, i1 false), !prof !1
+  ret void
+}
+
+define void @range_0_1_value_profile_one_value(ptr %dst, i8 %value, i64 %n) !prof !0 {
+; CHECK-LABEL: define void @range_0_1_value_profile_one_value(
+; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LEN:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[BB0:.*]], label %[[BB1:.*]], !prof [[PROF3:![0-9]+]]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %len = and i64 %n, 1
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %len, i1 false), !prof !2
+  ret void
+}
+
+define void @range_0_1_value_profile_invalid_values(ptr %dst, i8 %value, i64 %n) !prof !0 {
+; CHECK-LABEL: define void @range_0_1_value_profile_invalid_values(
+; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LEN:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[BB0:.*]], label %[[BB1:.*]], !prof [[PROF1]]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %len = and i64 %n, 1
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %len, i1 false), !prof !3
+  ret void
+}
+
+define void @range_0_1_value_profile_double_zero(ptr %dst, i8 %value, i64 %n) !prof !0 {
+; CHECK-LABEL: define void @range_0_1_value_profile_double_zero(
+; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LEN:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[BB0:.*]], label %[[BB1:.*]], !prof [[PROF1]]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %len = and i64 %n, 1
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %len, i1 false), !prof !4
   ret void
 }
 
@@ -109,3 +185,16 @@ entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %n, i1 false)
   ret void
 }
+
+!0 = !{!"function_entry_count", i32 10}
+!1 = !{!"VP", i32 1, i64 5, i64 0, i64 2, i64 1, i64 3}
+!2 = !{!"VP", i32 1, i64 5, i64 1, i64 5}
+!3 = !{!"VP", i32 1, i64 5, i64 2, i64 4, i64 3, i64 1}
+!4 = !{!"VP", i32 1, i64 5, i64 0, i64 0, i64 1, i64 0}
+
+;.
+; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
+; CHECK: [[PROF1]] = !{!"unknown", !"aggressive-instcombine"}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 2}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 5, i32 0}
+;.

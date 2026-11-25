@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgpu13.10 -show-encoding < %s 2>&1 | FileCheck --check-prefix=GFX13-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu13.10 -filetype=null < %s 2>&1 | FileCheck --check-prefix=GFX13-ERR --implicit-check-not=error: %s
 
 buffer_load_b32 v5, off, rsrcidx(s[8:11]), s3 offset:0
 // GFX13-ERR: :[[@LINE-1]]:34: error: rsrcidx operand must be a 32-bit SGPR or VGPR

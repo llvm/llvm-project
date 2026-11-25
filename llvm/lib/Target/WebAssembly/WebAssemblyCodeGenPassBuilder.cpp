@@ -35,23 +35,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
-#include "llvm/Transforms/Utils/LowerInvoke.h"
 
 using namespace llvm;
-
-namespace WebAssembly {
-extern cl::opt<bool> WasmDisableExplicitLocals;
-extern cl::opt<bool> WasmEnableEH;
-extern cl::opt<bool> WasmEnableEmEH;
-extern cl::opt<bool> WasmEnableEmSjLj;
-extern cl::opt<bool> WasmEnableSjLj;
-} // namespace WebAssembly
-
-using llvm::WebAssembly::WasmDisableExplicitLocals;
-using llvm::WebAssembly::WasmEnableEH;
-using llvm::WebAssembly::WasmEnableEmEH;
-using llvm::WebAssembly::WasmEnableEmSjLj;
-using llvm::WebAssembly::WasmEnableSjLj;
 
 namespace {
 
@@ -67,11 +52,7 @@ public:
                                          const CGPassBuilderOption &Opts,
                                          PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {
-    disablePass<MachineLateInstrsCleanupPass, MachineCopyPropagationPass,
-                PostRAMachineSinkingPass, PostRASchedulerPass,
-                FuncletLayoutPass, StackMapLivenessPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
-                MachineBlockPlacementPass>();
+    disablePass<MachineBlockPlacementPass>();
 
     // Currently RegisterCoalesce degrades wasm debug info quality by a
     // significant margin. As a quick fix, disable this for -O1, which is often
@@ -84,6 +65,7 @@ public:
       disablePass<RegisterCoalescerPass>();
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
 
@@ -96,14 +78,13 @@ public:
   Error addRegBankSelect(PassManagerWrapper &PMW) override;
   Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
 
-  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Add signatures to prototype-less function declarations
@@ -121,30 +102,10 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(WebAssemblyOptimizeReturnedPass(), PMW);
 
-  // If exception handling is not enabled and setjmp/longjmp handling is
-  // enabled, we lower invokes into calls and delete unreachable landingpad
-  // blocks. Lowering invokes when there is no EH support is done in
-  // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
-  // passes and Emscripten SjLj handling expects all invokes to be lowered
-  // before.
-  bool EnableEmEH =
-      TM.Options.ExceptionModel == ExceptionHandling::Emscripten ||
-      WasmEnableEmEH;
-  if (!EnableEmEH && !WasmEnableEH) {
-    addFunctionPass(LowerInvokePass(), PMW);
-    // The lower invoke pass may create unreachable code. Remove it in order not
-    // to process dead blocks in setjmp/longjmp handling.
-    addFunctionPass(UnreachableBlockElimPass(), PMW);
-  }
-
-  // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
-  // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
-  // transformation algorithms with Emscripten SjLj, so we run
-  // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj) {
-    flushFPMsToMPM(PMW);
-    addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(EnableEmEH), PMW);
-  }
+  // Wasm SjLj shares Emscripten SjLj's transformation, so it is handled here.
+  // Without Wasm or Emscripten EH, this also lowers invokes.
+  flushFPMsToMPM(PMW);
+  addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(), PMW);
 
   // Expand indirectbr instructions to switches.
   addFunctionPass(IndirectBrExpandPass(TM), PMW);
@@ -235,16 +196,6 @@ Error WebAssemblyCodeGenPassBuilder::addGlobalInstructionSelect(
   return Error::success();
 }
 
-Error WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteFast(
-    PassManagerWrapper &PMW) {
-  return Error::success();
-}
-
-Expected<bool> WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
-    PassManagerWrapper &PMW) {
-  return false;
-}
-
 void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   Base::addPreEmitPass(PMW);
 
@@ -260,8 +211,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
+  addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
@@ -299,7 +249,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyCFGStackifyPass(), PMW);
 
   // Insert explicit local.get and local.set operators.
-  if (!WasmDisableExplicitLocals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyExplicitLocalsPass(), PMW);
 
   // Lower br_unless into br_if.
@@ -313,7 +263,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyRegNumberingPass(), PMW);
 
   // Fix debug_values whose defs have been stackified.
-  if (!WasmDisableExplicitLocals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyDebugFixupPass(), PMW);
 
   // Collect information to prepare for MC lowering / asm printing.
@@ -333,8 +283,6 @@ void WebAssemblyCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(WebAssemblyAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"

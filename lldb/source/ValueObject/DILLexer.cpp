@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILLexer.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -203,11 +204,19 @@ llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
   do {
     if (llvm::Expected<Token> t = Lex(expr, remainder)) {
       Token token = *t;
-      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode))
+      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode)) {
+        LLDB_LOG(GetLog(LLDBLog::Expressions),
+                 "[DILLexer::Create] DIL mode restriction:\n{0}",
+                 llvm::toStringWithoutConsuming(error));
         return error;
+      }
       tokens.push_back(std::move(token));
     } else {
-      return t.takeError();
+      auto error = t.takeError();
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "[DILLexer::Create] DIL lexer failed:\n{0}",
+               llvm::toStringWithoutConsuming(error));
+      return error;
     }
   } while (tokens.back().GetKind() != Token::eof);
   return DILLexer(expr, std::move(tokens));

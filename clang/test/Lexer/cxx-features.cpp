@@ -54,6 +54,10 @@
 #error "wrong value for __cpp_placeholder_variables"
 #endif
 
+#if check(pp_embed, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
+#error "wrong value for __cpp_pp_embed"
+#endif
+
 #if check(trivial_relocatability, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
 #error "wrong value for __cpp_trivial_relocatability"
 #endif

@@ -16,14 +16,14 @@ module attributes {
   // Direct (without coercion) is a true pass-through — function signature
   // and call sites are unchanged.
 
-  cir.func @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i {
+  cir.func @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i requires_call_conv_lowering {
     cir.return %arg0 : !s32i
   }
 
   // CHECK:      cir.func{{.*}} @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i
   // CHECK-NEXT:   cir.return %arg0 : !s32i
 
-  cir.func @caller(%arg0: !s32i, %arg1: !s64i) -> !s32i {
+  cir.func @caller(%arg0: !s32i, %arg1: !s64i) -> !s32i requires_call_conv_lowering {
     %0 = cir.call @passthrough(%arg0, %arg1) : (!s32i, !s64i) -> !s32i
     cir.return %0 : !s32i
   }

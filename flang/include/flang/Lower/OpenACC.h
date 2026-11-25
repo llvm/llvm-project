@@ -18,6 +18,8 @@
 namespace llvm {
 template <typename T, unsigned N>
 class SmallVector;
+template <typename T>
+class SmallVectorImpl;
 class StringRef;
 } // namespace llvm
 
@@ -128,6 +130,21 @@ bool isCollapsedDoConstruct(const Fortran::parser::DoConstruct &);
 
 /// Clear the collapsed DoConstruct tracking set.
 void clearCollapsedDoConstructs();
+
+/// Forget the DOs nested in \p eval whose induction variables an unstructured
+/// acc.loop privatizes. Call it once the evaluations nested in the OpenACC
+/// construct \p eval are lowered.
+void clearIvPrivatizedDoConstructs(const pft::Evaluation &eval);
+
+/// Find the first nested DoConstruct evaluation directly under \p eval,
+/// skipping over any other sibling evaluations (e.g. a CompilerDirective
+/// such as !DIR$ IVDEP) that may appear between loop levels of a collapsed
+/// or tiled loop nest. Evaluations skipped over while searching are
+/// appended, in order, to \p skipped if it is non-null. Returns nullptr if
+/// no nested DoConstruct is found.
+pft::Evaluation *findNestedDoConstructEvaluation(
+    pft::Evaluation &eval,
+    llvm::SmallVectorImpl<pft::Evaluation *> *skipped = nullptr);
 
 /// Checks whether the current insertion point is inside OpenACC compute
 /// construct.

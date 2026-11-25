@@ -314,8 +314,8 @@ void ASTStmtWriter::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
 void ASTStmtWriter::VisitLoopControlStmt(LoopControlStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getKwLoc());
-  Record.push_back(S->hasLabelTarget());
-  if (S->hasLabelTarget()) {
+  Record.push_back(S->isNamed());
+  if (S->isNamed()) {
     Record.AddDeclRef(S->getLabelDecl());
     Record.AddSourceLocation(S->getLabelLoc());
   }
@@ -475,8 +475,22 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
 }
 
 void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getOperatorLoc());
+  Record.push_back(static_cast<uint64_t>(E->getKind()));
+  switch (E->getKind()) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    break;
+  case ReflectionKind::Type:
+    Record.AddTypeSourceInfo(
+        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
+    break;
+  }
+  Code = serialization::EXPR_REFLECT;
 }
 
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
@@ -490,10 +504,10 @@ void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
 static void
 addConstraintSatisfaction(ASTRecordWriter &Record,
                           const ASTConstraintSatisfaction &Satisfaction) {
-  Record.push_back(Satisfaction.IsSatisfied);
-  Record.push_back(Satisfaction.ContainsErrors);
-  if (!Satisfaction.IsSatisfied) {
-    Record.push_back(Satisfaction.NumRecords);
+  Record.push_back(Satisfaction.isSatisfied());
+  Record.push_back(Satisfaction.containsErrors());
+  if (!Satisfaction.isSatisfied()) {
+    Record.push_back(Satisfaction.record_size());
     for (const auto &DetailRecord : Satisfaction) {
       if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(
               DetailRecord)) {
@@ -2152,10 +2166,10 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   VisitExpr(E);
   Record.push_back(E->getNumObjects());
   for (auto &Obj : E->getObjects()) {
-    if (auto *BD = Obj.dyn_cast<BlockDecl *>()) {
+    if (auto *BD = dyn_cast<BlockDecl *>(Obj)) {
       Record.push_back(serialization::COK_Block);
       Record.AddDeclRef(BD);
-    } else if (auto *CLE = Obj.dyn_cast<CompoundLiteralExpr *>()) {
+    } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(Obj)) {
       Record.push_back(serialization::COK_CompoundLiteral);
       Record.AddStmt(CLE);
     }
@@ -2599,8 +2613,11 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
 
 void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
-  Record.push_back(D->getNumClauses());
+  Record.push_back(D->getNumVariants());
   VisitOMPExecutableDirective(D);
+  Record.writeBool(D->hasImplicitOtherwise());
+  for (const OMPTraitInfo *TI : D->traitInfos())
+    Record.writeOMPTraitInfo(TI);
   Code = serialization::STMT_OMP_META_DIRECTIVE;
 }
 
@@ -2645,6 +2662,11 @@ void ASTStmtWriter::VisitOMPReverseDirective(OMPReverseDirective *D) {
 void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPFlattenDirective(OMPFlattenDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+  Code = serialization::STMT_OMP_FLATTEN_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPSplitDirective(OMPSplitDirective *D) {
@@ -3104,6 +3126,12 @@ void ASTStmtWriter::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_TARGET_GENERIC_LOOP_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

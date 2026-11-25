@@ -15,6 +15,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -37,6 +38,18 @@ protected:
     m_term.SetFileDescriptor(m_fd);
   }
 };
+
+TEST(PseudoTerminalTest, OpenPrimaryCloseOnExec) {
+  SubsystemRAII<FileSystem> subsystems;
+  PseudoTerminal pty;
+  // ProcessLaunchInfo::SetUpPtyRedirection() opens the primary this way.
+  ASSERT_THAT_ERROR(
+      pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY | O_CLOEXEC),
+      llvm::Succeeded());
+  int flags = fcntl(pty.GetPrimaryFileDescriptor(), F_GETFD);
+  ASSERT_NE(flags, -1);
+  EXPECT_NE(flags & FD_CLOEXEC, 0);
+}
 
 TEST_F(TerminalTest, PtyIsATerminal) {
   EXPECT_EQ(m_term.IsATerminal(), true);

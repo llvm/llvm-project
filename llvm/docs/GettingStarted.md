@@ -276,7 +276,7 @@ uses the package and provides other details.
 
 | Package | Version | Notes |
 | --- | --- | --- |
-| [CMake](http://cmake.org/) | >=3.20.0 | Makefile/workspace generator |
+| [CMake](http://cmake.org/) | >=3.31.0 | Makefile/workspace generator |
 | [python](http://www.python.org/) | >=3.8 | Build system support, automated testing, misc utilities |
 | [zlib](http://zlib.net) | >=1.2.3.4 | Compression library{sup}`1` |
 | [GNU Make](http://savannah.gnu.org/projects/make) | 3.79, 3.79.1 | Makefile/build processor{sup}`2` |
@@ -720,13 +720,13 @@ Generates system build files.
   including a hand-written lexer, parser, AST, as well as code generation
   support using LLVM- both static (ahead of time) and various approaches to
   Just In Time (JIT) compilation.
-  [Kaleidoscope Tutorial for complete beginner](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html).
+  [Kaleidoscope Tutorial for complete beginner](tutorial/MyFirstLanguageFrontend/index.md).
 
 - BuildingAJIT: Examples of the [BuildingAJIT tutorial] that shows how LLVM’s
   ORC JIT APIs interact with other parts of LLVM. It also teaches how to
   recombine them to build a custom JIT that is suited to your use-case.
 
-[BuildingAJIT tutorial]: https://llvm.org/docs/tutorial/BuildingAJIT1.html
+[BuildingAJIT tutorial]: tutorial/BuildingAJIT1.md
 
 ### `llvm/include`
 

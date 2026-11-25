@@ -136,7 +136,7 @@ define i1 @ule_const_and_ne_const_implies_ult_const(i64 %n) {
 define i1 @sge_and_ne_on_add(i64 %n) {
 ; CHECK-LABEL: define i1 @sge_and_ne_on_add(
 ; CHECK-SAME: i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[N]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[N]], 1
 ; CHECK-NEXT:    [[A:%.*]] = icmp sge i64 [[ADD]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[ADD]], 0
