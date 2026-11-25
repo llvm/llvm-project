@@ -1,23 +1,25 @@
 ; RUN: llc < %s -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -enable-new-pm -verify-machineinstrs | FileCheck %s
+; RUN: sed 's/^declare i32 @_setjmp/declare dllimport i32 @_setjmp/' %s > %t.ll
+; RUN: not llc %t.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERROR
+; RUN: not llc -enable-new-pm %t.ll -o /dev/null 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=ERROR
 
 target triple = "x86_64-pc-windows-msvc"
 
 @env = dso_local global [256 x i8] zeroinitializer, align 16
 
-declare dllimport i32 @_setjmp(ptr, ptr) returns_twice
+declare i32 @_setjmp(ptr, ptr) returns_twice
 declare ptr @llvm.frameaddress.p0(i32)
 declare void @cleanup()
 declare i32 @__CxxFrameHandler3(...)
 
-; The longjmp label goes after the loader-rewritable ICO sequence but before
-; the separate WinEH NOP and the end of the invoke's EH range.
+; The CRT declares _setjmp without dllimport, so enabling ICO does not change
+; the call sequence. The longjmp label must still point to the WinEH NOP.
 define i32 @f() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: f:
-; CHECK:       [[ICO:\.Limpcall[0-9]+]]:
-; CHECK-NEXT:  rex64
-; CHECK-NEXT:  callq __imp__setjmp
-; CHECK-NEXT:  nopl 8(%rax,%rax)
+; CHECK-NOT:   .Limpcall
+; CHECK:       callq _setjmp
 ; CHECK-NEXT:  $cfgsj_f0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  .Ltmp{{[0-9]+}}:{{.*}}# EH_LABEL
@@ -39,10 +41,9 @@ ehcleanup:
 ; CHECK-NEXT:  .symidx $cfgsj_f0
 ; CHECK:       .section .retplne,"yi"
 ; CHECK-NEXT:  .asciz "RetpolineV1"
-; CHECK-NEXT:  .long 16
-; CHECK-NEXT:  .secnum .text
-; CHECK-NEXT:  .long 3
-; CHECK-NEXT:  .secoffset [[ICO]]
+; CHECK-NOT:   .secnum
+
+; ERROR: LLVM ERROR: import call optimization does not support dllimport _setjmp
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 2, !"cfguard", i32 2}

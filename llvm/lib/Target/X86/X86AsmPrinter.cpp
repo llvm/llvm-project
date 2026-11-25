@@ -965,8 +965,16 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     emitCOFFFeatureSymbol(M);
     emitCOFFReplaceableFunctionData(M);
 
-    if (M.getModuleFlag("import-call-optimization"))
+    if (M.getModuleFlag("import-call-optimization")) {
+      // The optimized and unoptimized import call sequences do not share a
+      // return address, so a single longjmp target cannot cover both.
+      if (const Function *Setjmp = M.getFunction("_setjmp");
+          Setjmp && Setjmp->hasDLLImportStorageClass())
+        report_fatal_error(
+            "import call optimization does not support dllimport _setjmp",
+            /*GenCrashDiag=*/false);
       EnableImportCallOptimization = true;
+    }
 
     // Unwind v3 is set for the entire module, not just individual functions.
     if (M.getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3)
