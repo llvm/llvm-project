@@ -31978,7 +31978,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrvuhubsat : HInst<
@@ -31992,7 +31992,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrvwuhrndsat : HInst<
@@ -32006,7 +32006,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrvwuhsat : HInst<
@@ -32020,7 +32020,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrw : HInst<

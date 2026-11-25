@@ -1119,6 +1119,19 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   if (HII.isNewValueStore(MI) && MJ.mayStore())
     return true;
 
+  const auto &MID = MI.getDesc();
+  const auto &MJD = MJ.getDesc();
+  bool isHVXVS3SRC = HexagonII::getTSFlag(MID, HexagonII::isHVXVS3SRCPos);
+  if (isHVXVS3SRC) {
+    bool HVXALU2SRC = HexagonII::getTSFlag(MJD, HexagonII::isHVXALU2SRCPos);
+    if (HVXALU2SRC) // Checking for a Non Unary HVX ALU Operation.
+      return true;
+    const uint64_t V = HII.getType(MJ);
+    // HVX permute instruction cannot be paired with 3 source shift.
+    if (V == HexagonII::TypeCVI_VP)
+      return true;
+  }
+
   switch (MI.getOpcode()) {
   case Hexagon::S2_storew_locked:
   case Hexagon::S4_stored_locked:
