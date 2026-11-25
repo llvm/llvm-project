@@ -1384,6 +1384,29 @@ func.func @conv2d_non_const_zps_f32(%input: tensor<1x2x2x1xf32>, %weights: tenso
 
 // -----
 
+// CHECK-LABEL: @conv2d_non_const_zps_f16_f32_acc
+func.func @conv2d_non_const_zps_f16_f32_acc(%input: tensor<1x2x2x1xf16>, %weights: tensor<1x1x1x1xf16>, %bias: tensor<1xf16>, %input_zp: tensor<1xf16>, %weight_zp: tensor<1xf16>) -> tensor<1x4x4x1xf16> {
+  // CHECK: %[[IZP_IDX:.+]] = arith.constant 0 : index
+  // CHECK: %[[IZP:.+]] = tensor.extract %arg3[%[[IZP_IDX]]] : tensor<1xf16>
+  // CHECK: %[[IZERO:.+]] = arith.constant 0.000000e+00 : f16
+  // CHECK: %[[ICMP:.+]] = arith.cmpf oeq, %[[IZP]], %[[IZERO]] : f16
+  // CHECK: cf.assert %[[ICMP]], "tosa.conv input zero point must be zero for non-int8 types"
+  // CHECK: %[[WZP_IDX:.+]] = arith.constant 0 : index
+  // CHECK: %[[WZP:.+]] = tensor.extract %arg4[%[[WZP_IDX]]] : tensor<1xf16>
+  // CHECK: %[[WZERO:.+]] = arith.constant 0.000000e+00 : f16
+  // CHECK: %[[WCMP:.+]] = arith.cmpf oeq, %[[WZP]], %[[WZERO]] : f16
+  // CHECK: cf.assert %[[WCMP]], "tosa.conv weight zero point must be zero for non-int8 types"
+  // CHECK: %[[PADDED:.+]] = tensor.pad %arg0 low[0, 1, 1, 0] high[0, 1, 1, 0]
+  // CHECK: tensor.yield %[[IZP]] : f16
+  // CHECK: %[[CONV:.+]] = linalg.conv_2d_nhwc_fhwc {
+  // CHECK-SAME: ins(%[[PADDED]], %arg1 : tensor<1x4x4x1xf16>, tensor<1x1x1x1xf16>) outs(%{{.+}} : tensor<1x4x4x1xf32>) -> tensor<1x4x4x1xf32>
+  // CHECK: tosa.cast %[[CONV]] input_unsigned(false) : (tensor<1x4x4x1xf32>) -> tensor<1x4x4x1xf16>
+  %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp pad([1, 1, 1, 1]) stride([1, 1]) dilation([1, 1]) acc_type(f32) : (tensor<1x2x2x1xf16>, tensor<1x1x1x1xf16>, tensor<1xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x4x4x1xf16>
+  return %0 : tensor<1x4x4x1xf16>
+}
+
+// -----
+
 // CHECK-LABEL: @conv2d_non_const_input_zp_i8
 func.func @conv2d_non_const_input_zp_i8(%input: tensor<1x2x2x1xi8>, %weights: tensor<1x1x1x1xi8>, %bias: tensor<1xi32>, %input_zp: tensor<1xi8>) -> tensor<1x4x4x1xi32> {
   // CHECK: %[[IZP_IDX:.+]] = arith.constant 0 : index
@@ -1397,6 +1420,24 @@ func.func @conv2d_non_const_input_zp_i8(%input: tensor<1x2x2x1xi8>, %weights: te
   %weight_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp pad([1, 1, 1, 1]) stride([1, 1]) dilation([1, 1]) acc_type(i32) : (tensor<1x2x2x1xi8>, tensor<1x1x1x1xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x1xi32>
   return %0 : tensor<1x4x4x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @conv2d_non_const_input_zp_const_zero_weight_zp_f32
+func.func @conv2d_non_const_input_zp_const_zero_weight_zp_f32(%input: tensor<1x2x2x1xf32>, %weights: tensor<1x1x1x1xf32>, %bias: tensor<1xf32>, %input_zp: tensor<1xf32>) -> tensor<1x4x4x1xf32> {
+  // CHECK: %[[IZP_IDX:.+]] = arith.constant 0 : index
+  // CHECK: %[[IZP:.+]] = tensor.extract %arg3[%[[IZP_IDX]]] : tensor<1xf32>
+  // CHECK: %[[IZERO:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[ICMP:.+]] = arith.cmpf oeq, %[[IZP]], %[[IZERO]] : f32
+  // CHECK: cf.assert %[[ICMP]], "tosa.conv input zero point must be zero for non-int8 types"
+  // CHECK: %[[PADDED:.+]] = tensor.pad %arg0 low[0, 1, 1, 0] high[0, 1, 1, 0]
+  // CHECK: tensor.yield %[[IZP]] : f32
+  // CHECK: linalg.conv_2d_nhwc_fhwc {
+  // CHECK-SAME: ins(%[[PADDED]], %arg1 : tensor<1x4x4x1xf32>, tensor<1x1x1x1xf32>)
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp pad([1, 1, 1, 1]) stride([1, 1]) dilation([1, 1]) acc_type(f32) : (tensor<1x2x2x1xf32>, tensor<1x1x1x1xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x1xf32>
+  return %0 : tensor<1x4x4x1xf32>
 }
 
 // -----
@@ -1415,6 +1456,25 @@ func.func @conv2d_non_const_weight_zp_i8(%input: tensor<1x2x2x1xi8>, %weights: t
   %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp pad([1, 1, 1, 1]) stride([1, 1]) dilation([1, 1]) acc_type(i32) : (tensor<1x2x2x1xi8>, tensor<1x1x1x1xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x1xi32>
   return %0 : tensor<1x4x4x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @conv2d_const_zero_input_zp_non_const_weight_zp_f32
+func.func @conv2d_const_zero_input_zp_non_const_weight_zp_f32(%input: tensor<1x2x2x1xf32>, %weights: tensor<1x1x1x1xf32>, %bias: tensor<1xf32>, %weight_zp: tensor<1xf32>) -> tensor<1x4x4x1xf32> {
+  // CHECK: %[[WZP_IDX:.+]] = arith.constant 0 : index
+  // CHECK: %[[WZP:.+]] = tensor.extract %arg3[%[[WZP_IDX]]] : tensor<1xf32>
+  // CHECK: %[[WZERO:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[WCMP:.+]] = arith.cmpf oeq, %[[WZP]], %[[WZERO]] : f32
+  // CHECK: cf.assert %[[WCMP]], "tosa.conv weight zero point must be zero for non-int8 types"
+  // CHECK: %[[PAD_ZERO:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[PADDED:.+]] = tensor.pad %arg0 low[0, 1, 1, 0] high[0, 1, 1, 0]
+  // CHECK: tensor.yield %[[PAD_ZERO]] : f32
+  // CHECK: linalg.conv_2d_nhwc_fhwc {
+  // CHECK-SAME: ins(%[[PADDED]], %arg1 : tensor<1x4x4x1xf32>, tensor<1x1x1x1xf32>)
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp pad([1, 1, 1, 1]) stride([1, 1]) dilation([1, 1]) acc_type(f32) : (tensor<1x2x2x1xf32>, tensor<1x1x1x1xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x1xf32>
+  return %0 : tensor<1x4x4x1xf32>
 }
 
 // -----
@@ -1938,6 +1998,29 @@ func.func @conv3d_non_const_zps_i8(%input: tensor<1x3x3x3x1xi8>, %weights: tenso
   // CHECK-SAME: ins(%[[PADDED]], %[[TRANSPOSE]], %[[IZP32]], %[[WZP32]] : tensor<1x4x4x4x1xi8>, tensor<2x1x1x1x2xi8>, i32, i32)
   %0 = tosa.conv3d %input, %weights, %bias, %input_zp, %weight_zp pad([1, 0, 0, 1, 1, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(i32) : (tensor<1x3x3x3x1xi8>, tensor<2x2x1x1x1xi8>, tensor<2xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x3x4x4x2xi32>
   return %0 : tensor<1x3x4x4x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @conv3d_non_const_zps_f32
+func.func @conv3d_non_const_zps_f32(%input: tensor<1x3x3x3x1xf32>, %weights: tensor<2x2x1x1x1xf32>, %bias: tensor<2xf32>, %input_zp: tensor<1xf32>, %weight_zp: tensor<1xf32>) -> tensor<1x3x4x4x2xf32> {
+  // CHECK: %[[IZP_IDX:.+]] = arith.constant 0 : index
+  // CHECK: %[[IZP:.+]] = tensor.extract %arg3[%[[IZP_IDX]]] : tensor<1xf32>
+  // CHECK: %[[IZERO:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[ICMP:.+]] = arith.cmpf oeq, %[[IZP]], %[[IZERO]] : f32
+  // CHECK: cf.assert %[[ICMP]], "tosa.conv input zero point must be zero for non-int8 types"
+  // CHECK: %[[WZP_IDX:.+]] = arith.constant 0 : index
+  // CHECK: %[[WZP:.+]] = tensor.extract %arg4[%[[WZP_IDX]]] : tensor<1xf32>
+  // CHECK: %[[WZERO:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[WCMP:.+]] = arith.cmpf oeq, %[[WZP]], %[[WZERO]] : f32
+  // CHECK: cf.assert %[[WCMP]], "tosa.conv weight zero point must be zero for non-int8 types"
+  // CHECK: %[[PADDED:.+]] = tensor.pad %arg0 low[0, 1, 0, 1, 0] high[0, 0, 1, 0, 0]
+  // CHECK: tensor.yield %[[IZP]] : f32
+  // CHECK: %[[TRANSPOSE:.+]] = linalg.transpose ins(%arg1 : tensor<2x2x1x1x1xf32>) outs(%{{.+}} : tensor<2x1x1x1x2xf32>) permutation = [1, 2, 3, 4, 0]
+  // CHECK: linalg.conv_3d_ndhwc_dhwcf {
+  // CHECK-SAME: ins(%[[PADDED]], %[[TRANSPOSE]] : tensor<1x4x4x4x1xf32>, tensor<2x1x1x1x2xf32>)
+  %0 = tosa.conv3d %input, %weights, %bias, %input_zp, %weight_zp pad([1, 0, 0, 1, 1, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x3x3x3x1xf32>, tensor<2x2x1x1x1xf32>, tensor<2xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x3x4x4x2xf32>
+  return %0 : tensor<1x3x4x4x2xf32>
 }
 
 // -----

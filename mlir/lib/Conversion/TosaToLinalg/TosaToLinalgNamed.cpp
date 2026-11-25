@@ -191,7 +191,7 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
                             TypedAttr padAttr, OpBuilder &rewriter) {
-  // Input should be padded only if necessary.
+  // Avoid creating an unused padding constant when no padding is needed.
   if (llvm::all_of(pad, [](int64_t p) { return p == 0; }))
     return input;
 
@@ -500,23 +500,10 @@ public:
 
     if (isInputZpConstant) {
       const int64_t inputZpConstant = *maybeIZp;
-
-      TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-      if (inputZpConstant != 0) {
-        int64_t intMin =
-            APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
-                .getSExtValue();
-        int64_t intMax =
-            APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
-                .getSExtValue();
-
-        if (inputZpConstant < intMin || inputZpConstant > intMax)
-          return rewriter.notifyMatchFailure(
-              op, "tosa.conv op quantization has zp outside of input range");
-
-        zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpConstant);
-      }
-      input = applyPad(loc, input, pad, zeroAttr, rewriter);
+      TypedAttr padValue = rewriter.getZeroAttr(inputETy);
+      if (inputZpConstant != 0)
+        padValue = rewriter.getIntegerAttr(inputETy, inputZpConstant);
+      input = applyPad(loc, input, pad, padValue, rewriter);
     } else {
       // The non-constant input zero point already has the input's element type,
       // so it can be used directly as the padding value.
