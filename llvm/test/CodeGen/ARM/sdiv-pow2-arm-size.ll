@@ -28,8 +28,7 @@ define dso_local signext i16 @f0(i16 signext %F) local_unnamed_addr #0 {
 ;
 ; NODIV-LABEL: f0:
 ; NODIV:       @ %bb.0: @ %entry
-; NODIV-NEXT:    uxth r1, r0
-; NODIV-NEXT:    add r0, r0, r1, lsr #15
+; NODIV-NEXT:    add r0, r0, r0, lsr #31
 ; NODIV-NEXT:    sxth r0, r0
 ; NODIV-NEXT:    asr r0, r0, #1
 ; NODIV-NEXT:    bx lr
